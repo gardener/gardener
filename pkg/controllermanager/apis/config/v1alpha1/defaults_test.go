@@ -147,12 +147,22 @@ var _ = Describe("Defaults", func() {
 			})
 		})
 	})
+
 	Describe("#SetDefaults_EventControllerConfiguration", func() {
 		It("should correctly default the Event Controller configuration", func() {
 			obj := &EventControllerConfiguration{}
 
 			SetDefaults_EventControllerConfiguration(obj)
 			Expect(obj.TTLNonShootEvents).To(PointTo(Equal(metav1.Duration{Duration: time.Hour})))
+		})
+	})
+
+	Describe("#SetDefaults_ShootRetryControllerConfiguration", func() {
+		It("should correctly default the ShootRetry Controller configuration", func() {
+			obj := &ShootRetryControllerConfiguration{}
+
+			SetDefaults_ShootRetryControllerConfiguration(obj)
+			Expect(obj.RetryPeriod).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Minute})))
 		})
 	})
 })

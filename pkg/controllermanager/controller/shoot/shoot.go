@@ -49,6 +49,7 @@ type Controller struct {
 	shootMaintenanceReconciler reconcile.Reconciler
 	shootQuotaReconciler       reconcile.Reconciler
 	shootRefReconciler         reconcile.Reconciler
+	shootRetryReconciler       reconcile.Reconciler
 	configMapReconciler        reconcile.Reconciler
 	hasSyncedFuncs             []cache.InformerSynced
 
@@ -56,6 +57,7 @@ type Controller struct {
 	shootQuotaQueue        workqueue.RateLimitingInterface
 	shootHibernationQueue  workqueue.RateLimitingInterface
 	shootReferenceQueue    workqueue.RateLimitingInterface
+	shootRetryQueue        workqueue.RateLimitingInterface
 	configMapQueue         workqueue.RateLimitingInterface
 	numberOfRunningWorkers int
 	workerCh               chan int
@@ -106,11 +108,13 @@ func NewShootController(
 		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient, config.Controllers.ShootMaintenance, cloudProfileLister, recorder),
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota, gardenCoreV1beta1Informer),
 		configMapReconciler:        NewConfigMapReconciler(logger.Logger, gardenClient.Client()),
+		shootRetryReconciler:       NewShootRetryReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootRetry),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
 		shootHibernationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-hibernation"),
 		shootReferenceQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-references"),
+		shootRetryQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-retry"),
 		configMapQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "configmaps"),
 
 		workerCh: make(chan int),
@@ -141,6 +145,11 @@ func NewShootController(
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootReferenceAdd,
 		UpdateFunc: shootController.shootReferenceUpdate,
+	})
+
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    shootController.shootRetryAdd,
+		UpdateFunc: shootController.shootRetryUpdate,
 	})
 
 	shootController.hasSyncedFuncs = []cache.InformerSynced{
@@ -184,7 +193,7 @@ func NewShootController(
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuotaWorkers, shootHibernationWorkers, shootReferenceWorkers int) {
+func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuotaWorkers, shootHibernationWorkers, shootReferenceWorkers, shootRetryWorkers int) {
 	var waitGroup sync.WaitGroup
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
@@ -216,6 +225,9 @@ func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuot
 	for i := 0; i < shootReferenceWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootReferenceQueue, "ShootReference", c.shootRefReconciler, &waitGroup, c.workerCh)
 	}
+	for i := 0; i < shootRetryWorkers; i++ {
+		controllerutils.CreateWorker(ctx, c.shootRetryQueue, "Shoot Retry", c.shootRetryReconciler, &waitGroup, c.workerCh)
+	}
 
 	// Shutdown handling
 	<-ctx.Done()
@@ -224,6 +236,7 @@ func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuot
 	c.shootHibernationQueue.ShutDown()
 	c.configMapQueue.ShutDown()
 	c.shootReferenceQueue.ShutDown()
+	c.shootRetryQueue.ShutDown()
 
 	for {
 		var (
@@ -232,7 +245,8 @@ func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuot
 			shootHibernationQueueLength = c.shootHibernationQueue.Len()
 			configMapQueueLength        = c.configMapQueue.Len()
 			referenceQueueLength        = c.shootReferenceQueue.Len()
-			queueLengths                = shootMaintenanceQueueLength + shootQuotaQueueLength + shootHibernationQueueLength + configMapQueueLength + referenceQueueLength
+			shootRetryQueueLength       = c.shootReferenceQueue.Len()
+			queueLengths                = shootMaintenanceQueueLength + shootQuotaQueueLength + shootHibernationQueueLength + configMapQueueLength + referenceQueueLength + shootRetryQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			logger.Logger.Debug("No running Shoot worker and no items left in the queues. Terminated Shoot controller...")

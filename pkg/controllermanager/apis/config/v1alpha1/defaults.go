@@ -109,6 +109,12 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 
+	if obj.Controllers.ShootRetry == nil {
+		obj.Controllers.ShootRetry = &ShootRetryControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+
 	if obj.Controllers.Seed == nil {
 		obj.Controllers.Seed = &SeedControllerConfiguration{
 			ConcurrentSyncs: 5,
@@ -166,6 +172,13 @@ func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
 func SetDefaults_EventControllerConfiguration(obj *EventControllerConfiguration) {
 	if obj.TTLNonShootEvents == nil {
 		obj.TTLNonShootEvents = &metav1.Duration{Duration: 1 * time.Hour}
+	}
+}
+
+// SetDefaults_ShootRetryControllerConfiguration sets defaults for the ShootRetryControllerConfiguration.
+func SetDefaults_ShootRetryControllerConfiguration(obj *ShootRetryControllerConfiguration) {
+	if obj.RetryPeriod == nil {
+		obj.RetryPeriod = &metav1.Duration{Duration: 10 * time.Minute}
 	}
 }
 
