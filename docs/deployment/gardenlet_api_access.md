@@ -41,6 +41,7 @@ Today, the following rules are implemented:
 | `Namespace`              | `get`                                                         | `Namespace` -> `Shoot` -> `Seed`              | Allow `get` requests for `Namespace`s of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
 | `Project`                | `get`                                                         | `Project` -> `Namespace` -> `Shoot` -> `Seed` | Allow `get` requests for `Project`s referenced by the `Namespace` of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
 | `SecretBinding`          | `get`                                                         | `SecretBinding` -> `Shoot` -> `Seed`          | Allow only `get` requests for `SecretBinding`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `Shoot`                  | `get`, `list`, `watch`, `update`, `patch`                     | `Shoot` -> `Seed`                             | Allow `get`, `list`, `watch` requests for all `Shoot`s. Allow only `update`, `patch` requests for `Shoot`s assigned to the `gardenlet`'s `Seed`. |
 | `ShootState`             | `get`, `create`, `update`, `patch`                            | `ShootState` -> `Shoot` -> `Seed`             | Allow only `get`, `create`, `update`, `patch` requests for `ShootState`s belonging by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
 
 ## `SeedAuthorizer` Authorization Webhook Enablement
