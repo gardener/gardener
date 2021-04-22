@@ -234,7 +234,7 @@ var _ = Describe("handler", func() {
 				}
 			})
 
-			DescribeTable("should have no opinion because no allowed verb",
+			DescribeTable("should not allow the request because no allowed verb",
 				func(operation admissionv1.Operation) {
 					request.Operation = operation
 
@@ -273,7 +273,7 @@ var _ = Describe("handler", func() {
 					}))
 				})
 
-				DescribeTable("should forbid the request because the seed name of the related shoot does not match",
+				DescribeTable("should forbid the request because the seed name of the related bucket does not match",
 					func(seedNameInBackupBucket *string) {
 						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupBucket{
 							Spec: gardencorev1beta1.BackupBucketSpec{
@@ -343,7 +343,7 @@ var _ = Describe("handler", func() {
 				}
 			})
 
-			DescribeTable("should have no opinion because no allowed verb",
+			DescribeTable("should not allow the request because no allowed verb",
 				func(operation admissionv1.Operation) {
 					request.Operation = operation
 
@@ -382,7 +382,7 @@ var _ = Describe("handler", func() {
 					}))
 				})
 
-				DescribeTable("should forbid the request because the seed name of the related shoot does not match",
+				DescribeTable("should forbid the request because the seed name of the related entry does not match",
 					func(seedNameInBackupEntry, seedNameInBackupBucket *string) {
 						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
 							Spec: gardencorev1beta1.BackupEntrySpec{
@@ -537,6 +537,111 @@ var _ = Describe("handler", func() {
 				It("should allow the request because seed name is ambiguous", func() {
 					request.Name = "some-different-seed"
 					request.UserInfo = ambiguousUser
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+			})
+		})
+
+		Context("when requested for Seeds", func() {
+			var name string
+
+			BeforeEach(func() {
+				name = "foo"
+
+				request.Name = name
+				request.UserInfo = seedUser
+				request.Resource = metav1.GroupVersionResource{
+					Group:    gardencorev1beta1.SchemeGroupVersion.Group,
+					Resource: "seeds",
+				}
+			})
+
+			DescribeTable("should not allow the request because no allowed verb",
+				func(operation admissionv1.Operation) {
+					request.Operation = operation
+
+					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+						AdmissionResponse: admissionv1.AdmissionResponse{
+							Allowed: false,
+							Result: &metav1.Status{
+								Code:    int32(http.StatusBadRequest),
+								Message: fmt.Sprintf("unexpected operation: %q", operation),
+							},
+						},
+					}))
+				},
+
+				Entry("update", admissionv1.Update),
+				Entry("delete", admissionv1.Delete),
+				Entry("connect", admissionv1.Connect),
+			)
+
+			Context("when operation is create", func() {
+				BeforeEach(func() {
+					request.Operation = admissionv1.Create
+				})
+
+				It("should return an error because decoding the object failed", func() {
+					request.Object.Raw = []byte(`{]`)
+
+					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+						AdmissionResponse: admissionv1.AdmissionResponse{
+							Allowed: false,
+							Result: &metav1.Status{
+								Code:    int32(http.StatusBadRequest),
+								Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
+							},
+						},
+					}))
+				})
+
+				DescribeTable("should forbid the request because the seed name of the object does not match",
+					func(seedNameOfObject string) {
+						objData, err := runtime.Encode(encoder, &gardencorev1beta1.Seed{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: seedNameOfObject,
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to seed %q", seedName),
+								},
+							},
+						}))
+					},
+
+					Entry("seed name is different", "some-different-seed"),
+				)
+
+				It("should allow the request because seed name matches", func() {
+					objData, err := runtime.Encode(encoder, &gardencorev1beta1.Seed{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: seedName,
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					request.Object.Raw = objData
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+
+				It("should allow the request because seed name is ambiguous", func() {
+					request.UserInfo = ambiguousUser
+
+					objData, err := runtime.Encode(encoder, &gardencorev1beta1.Seed{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "some-different-seed",
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					request.Object.Raw = objData
 
 					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 				})

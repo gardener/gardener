@@ -45,6 +45,7 @@ var (
 	backupBucketResource = gardencorev1beta1.Resource("backupbuckets")
 	backupEntryResource  = gardencorev1beta1.Resource("backupentries")
 	leaseResource        = coordinationv1.Resource("leases")
+	seedResource         = gardencorev1beta1.Resource("seeds")
 	shootStateResource   = gardencorev1beta1.Resource("shootstates")
 )
 
@@ -92,6 +93,8 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		return h.admitBackupEntry(ctx, seedName, request)
 	case leaseResource:
 		return h.admitLease(seedName, request)
+	case seedResource:
+		return h.admitSeed(seedName, request)
 	case shootStateResource:
 		return h.admitShootState(ctx, seedName, request)
 	}
@@ -144,6 +147,19 @@ func (h *handler) admitLease(seedName string, request admission.Request) admissi
 	}
 
 	return h.admit(seedName, &request.Name)
+}
+
+func (h *handler) admitSeed(seedName string, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	seed := &gardencorev1beta1.Seed{}
+	if err := h.decoder.Decode(request, seed); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	return h.admit(seedName, &seed.Name)
 }
 
 func (h *handler) admitShootState(ctx context.Context, seedName string, request admission.Request) admission.Response {

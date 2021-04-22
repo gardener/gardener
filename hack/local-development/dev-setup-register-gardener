@@ -353,6 +353,7 @@ $ADMISSION_CONTROLLER_PORT_STRING
     resources:
     - backupbuckets
     - backupentries
+    - seeds
     - shootstates
   - apiGroups:
     - coordination.k8s.io

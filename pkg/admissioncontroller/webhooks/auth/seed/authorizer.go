@@ -68,6 +68,7 @@ var (
 	namespaceResource              = corev1.Resource("namespaces")
 	projectResource                = gardencorev1beta1.Resource("projects")
 	secretBindingResource          = gardencorev1beta1.Resource("secretbindings")
+	seedResource                   = gardencorev1beta1.Resource("seeds")
 	shootResource                  = gardencorev1beta1.Resource("shoots")
 	shootStateResource             = gardencorev1alpha1.Resource("shootstates")
 )
@@ -123,6 +124,12 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
 			return a.authorizeRead(seedName, graph.VertexTypeSecretBinding, attrs)
+		case seedResource:
+			return a.authorize(seedName, graph.VertexTypeSeed, attrs,
+				[]string{"update", "patch", "delete"},
+				[]string{"create", "get", "list", "watch"},
+				[]string{"status"},
+			)
 		case shootResource:
 			return a.authorize(seedName, graph.VertexTypeShoot, attrs,
 				[]string{"update", "patch"},
