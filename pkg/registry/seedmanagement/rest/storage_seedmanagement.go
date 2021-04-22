@@ -52,6 +52,7 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	storage["managedseeds/status"] = managedSeedStorage.Status
 	storage["managedseedsets"] = managedSeedSetStorage.ManagedSeedSet
 	storage["managedseedsets/status"] = managedSeedSetStorage.Status
+	storage["managedseedsets/scale"] = managedSeedSetStorage.Scale
 
 	return storage
 }
