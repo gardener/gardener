@@ -280,7 +280,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 				},
 				Spec: corev1.PodSpec{
 					AutomountServiceAccountToken: pointer.BoolPtr(false),
-					PriorityClassName:            "system-cluster-critical",
+					PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane,
 					DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 					Containers: []corev1.Container{
 						{
