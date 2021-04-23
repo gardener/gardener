@@ -66,7 +66,6 @@ type GardenletControllerFactory struct {
 	cfg                    *config.GardenletConfiguration
 	gardenClusterIdentity  string
 	identity               *gardencorev1beta1.Gardener
-	gardenNamespace        string
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	k8sInformers           kubeinformers.SharedInformerFactory
@@ -80,7 +79,7 @@ func NewGardenletControllerFactory(
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	cfg *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener,
-	gardenClusterIdentity, gardenNamespace string,
+	gardenClusterIdentity string,
 	recorder record.EventRecorder,
 	healthManager healthz.Manager,
 ) *GardenletControllerFactory {
@@ -88,7 +87,6 @@ func NewGardenletControllerFactory(
 		cfg:                    cfg,
 		identity:               identity,
 		gardenClusterIdentity:  gardenClusterIdentity,
-		gardenNamespace:        gardenNamespace,
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
 		k8sInformers:           kubeInformerFactory,

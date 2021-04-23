@@ -221,7 +221,6 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 type Gardenlet struct {
 	Config                 *config.GardenletConfiguration
 	Identity               *gardencorev1beta1.Gardener
-	GardenNamespace        string
 	GardenClusterIdentity  string
 	ClientMap              clientmap.ClientMap
 	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
@@ -371,7 +370,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		}
 	}
 
-	identity, gardenNamespace, err := determineGardenletIdentity()
+	identity, err := determineGardenletIdentity()
 	if err != nil {
 		return nil, err
 	}
@@ -395,7 +394,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	return &Gardenlet{
 		Identity:               identity,
 		GardenClusterIdentity:  clusterIdentity,
-		GardenNamespace:        gardenNamespace,
 		Config:                 cfg,
 		Logger:                 logger,
 		Recorder:               recorder,
@@ -498,7 +496,6 @@ func (g *Gardenlet) startControllers(ctx context.Context) error {
 		g.Config,
 		g.Identity,
 		g.GardenClusterIdentity,
-		g.GardenNamespace,
 		g.Recorder,
 		g.HealthManager,
 	).Run(ctx)
@@ -508,19 +505,18 @@ func (g *Gardenlet) startControllers(ctx context.Context) error {
 // we need to identify for still ongoing operations whether another Gardenlet instance is
 // still operating the respective Shoots. When running locally, we generate a random string because
 // there is no container id.
-func determineGardenletIdentity() (*gardencorev1beta1.Gardener, string, error) {
+func determineGardenletIdentity() (*gardencorev1beta1.Gardener, error) {
 	var (
 		validID     = regexp.MustCompile(`([0-9a-f]{64})`)
 		gardenletID string
 
-		gardenletName   string
-		gardenNamespace = v1beta1constants.GardenNamespace
-		err             error
+		gardenletName string
+		err           error
 	)
 
 	gardenletName, err = os.Hostname()
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to get hostname: %v", err)
+		return nil, fmt.Errorf("unable to get hostname: %v", err)
 	}
 
 	// If running inside a Kubernetes cluster (as container) we can read the container id from the proc file system.
@@ -559,20 +555,15 @@ func determineGardenletIdentity() (*gardencorev1beta1.Gardener, string, error) {
 	if gardenletID == "" {
 		gardenletID, err = gardenerutils.GenerateRandomString(64)
 		if err != nil {
-			return nil, "", fmt.Errorf("unable to generate gardenletID: %v", err)
+			return nil, fmt.Errorf("unable to generate gardenletID: %v", err)
 		}
-	}
-
-	// If running inside a Kubernetes cluster we will have a service account mount.
-	if ns, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
-		gardenNamespace = string(ns)
 	}
 
 	return &gardencorev1beta1.Gardener{
 		ID:      gardenletID,
 		Name:    gardenletName,
 		Version: version.Get().GitVersion,
-	}, gardenNamespace, nil
+	}, nil
 }
 
 func extractID(line string) string {
