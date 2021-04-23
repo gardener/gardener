@@ -22,6 +22,6 @@ We provide a central operator UI, which we call the "Gardener Dashboard". It tal
 
 #### Overview Architecture Diagram
 
-![Missing](https://github.com/gardener/documentation/blob/master/images/GardenerArchitecture.png)
+![Gardener Detailed Architecture Diagram](gardener-architecture-detailed.png)
 
 Note: The `kubelet` as well as the pods inside the "shoot" cluster talk through the front-door (load balancer IP; public Internet) to its "shoot" cluster API server running in the "seed" cluster. The reverse communication from the API server to the pod, service, and node networks happens through a VPN connection that we deploy into "seed" and "shoot" clusters.
