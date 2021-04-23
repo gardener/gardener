@@ -31,6 +31,28 @@ tests:
   external_labels:
     seed: aws
   input_series:
+  # FluentBitDown
+  - series: 'fluentbit_input_bytes_total{pod="fluent-bit-test"}'
+    values: '1+1x3 4+0x370'
+  alert_rule_test:
+  - eval_time: 370m
+    alertname: FluentBitIdleInputPlugins
+    exp_alerts:
+    - exp_labels:
+        service: logging
+        severity: warning
+        type: seed
+        visibility: operator
+        pod: fluent-bit-test
+      exp_annotations:
+        description: >
+          The input plugins of Fluent-bit pod fluent-bit-test running on seed aws haven't collected any logs for the last 6 hours.
+        summary: Fluent-bit input plugins haven't process any data for the past 6 hours
+
+- interval: 1m
+  external_labels:
+    seed: aws
+  input_series:
   # FluentBitReceivesLogsWithoutMetadata
   - series: 'fluentbit_loki_gardener_logs_without_metadata_total{pod="fluent-bit-test"}'
     values: '0+0x3 0+1x30'
