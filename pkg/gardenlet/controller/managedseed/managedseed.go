@@ -35,7 +35,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -63,7 +62,6 @@ type Controller struct {
 
 	managedSeedInformer runtimecache.Informer
 	seedInformer        runtimecache.Informer
-	secretInformer      runtimecache.Informer
 
 	managedSeedQueue workqueue.RateLimitingInterface
 
@@ -90,11 +88,6 @@ func NewManagedSeedController(ctx context.Context, clientMap clientmap.ClientMap
 		return nil, fmt.Errorf("could not get Seed informer: %w", err)
 	}
 
-	secretInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
-	if err != nil {
-		return nil, fmt.Errorf("could not get Secret informer: %w", err)
-	}
-
 	valuesHelper := NewValuesHelper(config, imageVector)
 	actuator := newActuator(gardenClient, clientMap, valuesHelper, recorder, logger)
 	reconciler := newReconciler(gardenClient, actuator, config.Controllers.ManagedSeed, logger)
@@ -106,7 +99,6 @@ func NewManagedSeedController(ctx context.Context, clientMap clientmap.ClientMap
 		reconciler:          reconciler,
 		managedSeedInformer: managedSeedInformer,
 		seedInformer:        seedInformer,
-		secretInformer:      secretInformer,
 		managedSeedQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ManagedSeed"),
 		workerCh:            make(chan int),
 		logger:              logger,
@@ -143,22 +135,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		Logger:                     c.logger,
 	})
 
-	// Add event handler for controlled seed secrets
-	c.secretInformer.AddEventHandler(&kutils.ControlledResourceEventHandler{
-		ControllerTypes: []kutils.ControllerType{
-			{
-				Type: &seedmanagementv1alpha1.ManagedSeed{},
-			},
-		},
-		Ctx:                        ctx,
-		Reader:                     c.gardenClient.Cache(),
-		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterSecret),
-		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedAdd(obj) }),
-		Scheme:                     kubernetes.GardenScheme,
-		Logger:                     c.logger,
-	})
-
-	if !cache.WaitForCacheSync(ctx.Done(), c.managedSeedInformer.HasSynced, c.seedInformer.HasSynced, c.secretInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.managedSeedInformer.HasSynced, c.seedInformer.HasSynced) {
 		c.logger.Error("Timed out waiting for caches to sync")
 		return
 	}

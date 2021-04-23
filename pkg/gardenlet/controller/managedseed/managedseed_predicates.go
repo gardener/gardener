@@ -15,7 +15,6 @@
 package managedseed
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -37,25 +36,6 @@ func (c *Controller) filterSeed(obj, _, controller client.Object, deleted bool) 
 
 	if ms.DeletionTimestamp != nil && deleted {
 		c.logger.Debugf("Managed seed %s is deleting and seed %s no longer exists", kutil.ObjectName(ms), kutil.ObjectName(seed))
-		return true
-	}
-	return false
-}
-
-func (c *Controller) filterSecret(obj, _, controller client.Object, deleted bool) bool {
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		return false
-	}
-	ms, ok := controller.(*seedmanagementv1alpha1.ManagedSeed)
-	if !ok {
-		return false
-	}
-
-	// TODO Return true if the secret was deleted or updated and metadata / data don't match its checksum
-
-	if ms.DeletionTimestamp != nil && deleted {
-		c.logger.Debugf("Managed seed %s is deleting and secret %s no longer exists", kutil.ObjectName(ms), kutil.ObjectName(secret))
 		return true
 	}
 	return false
