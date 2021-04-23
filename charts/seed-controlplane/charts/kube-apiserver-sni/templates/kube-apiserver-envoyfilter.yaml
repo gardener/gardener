@@ -35,6 +35,7 @@ spec:
           prefix_ranges:
           - address_prefix: {{ .Values.apiserverClusterIP }}
             prefix_len: 32
+  {{- if .Values.reversedVPN.enabled }}
   - applyTo: NETWORK_FILTER
     match:
       context: GATEWAY
@@ -63,3 +64,4 @@ spec:
                   upgrade_configs:
                   - upgrade_type: CONNECT
                     connect_config: {}
+  {{- end }}
