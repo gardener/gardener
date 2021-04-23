@@ -19,8 +19,10 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/api"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/validation"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/fields"
@@ -65,10 +67,29 @@ func (s Strategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object)
 	oldManagedSeedSet := old.(*seedmanagement.ManagedSeedSet)
 	newManagedSeedSet.Status = oldManagedSeedSet.Status
 
-	if !apiequality.Semantic.DeepEqual(oldManagedSeedSet.Spec, newManagedSeedSet.Spec) ||
-		oldManagedSeedSet.DeletionTimestamp == nil && newManagedSeedSet.DeletionTimestamp != nil {
+	if mustIncreaseGeneration(oldManagedSeedSet, newManagedSeedSet) {
 		newManagedSeedSet.Generation = oldManagedSeedSet.Generation + 1
 	}
+}
+
+func mustIncreaseGeneration(oldManagedSeedSet, newManagedSeedSet *seedmanagement.ManagedSeedSet) bool {
+	// The spec changed
+	if !apiequality.Semantic.DeepEqual(oldManagedSeedSet.Spec, newManagedSeedSet.Spec) {
+		return true
+	}
+
+	// The deletion timestamp was set
+	if oldManagedSeedSet.DeletionTimestamp == nil && newManagedSeedSet.DeletionTimestamp != nil {
+		return true
+	}
+
+	// The operation annotation was added with value "reconcile"
+	if kutil.HasMetaDataAnnotation(&newManagedSeedSet.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile) {
+		delete(newManagedSeedSet.Annotations, v1beta1constants.GardenerOperation)
+		return true
+	}
+
+	return false
 }
 
 // Validate validates the given object.

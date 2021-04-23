@@ -17,9 +17,8 @@ package managedseedset_test
 import (
 	"context"
 
-	"k8s.io/utils/pointer"
-
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
 	. "github.com/gardener/gardener/pkg/registry/seedmanagement/managedseedset"
 
@@ -27,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Strategy", func() {
@@ -56,6 +56,16 @@ var _ = Describe("Strategy", func() {
 
 			strategy.PrepareForUpdate(ctx, newManagedSeedSet, oldManagedSeedSet)
 			Expect(newManagedSeedSet.Generation).To(Equal(oldManagedSeedSet.Generation + 1))
+		})
+
+		It("should increase the generation if the operation annotation with value reconcile was added", func() {
+			newManagedSeedSet.Annotations = map[string]string{
+				v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+			}
+
+			strategy.PrepareForUpdate(ctx, newManagedSeedSet, oldManagedSeedSet)
+			Expect(newManagedSeedSet.Generation).To(Equal(oldManagedSeedSet.Generation + 1))
+			Expect(newManagedSeedSet.Annotations).To(BeEmpty())
 		})
 
 		It("should not increase the generation if neither the spec has changed nor the deletion timestamp is set", func() {
