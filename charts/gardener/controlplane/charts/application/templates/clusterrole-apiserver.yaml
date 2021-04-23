@@ -1,0 +1,19 @@
+{{- if .Values.global.apiserver.enabled }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:system:gardener-apiserver
+  labels:
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - "*"
+{{- end }}

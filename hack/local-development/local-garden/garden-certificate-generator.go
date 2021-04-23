@@ -38,6 +38,11 @@ const (
 	kubeAPIServerIPAddressesKey = "kubeAPIServerIPAddresses"
 	kubeAPIServerCertNamesKey   = "kubeAPIServerDNSNames"
 
+	gardenerAdmissionControllerName = "gardener.cloud:system:admission-controller"
+	gardenerAPIServerName           = "gardener.cloud:system:apiserver"
+	gardenerControllerManagerName   = "gardener.cloud:system:controller-manager"
+	gardenerSchedulerName           = "gardener.cloud:system:scheduler"
+
 	serviceAccountKey = "sa"
 )
 
@@ -236,10 +241,10 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 				APIServerURL: "localhost:2443",
 			},
 		},
-		// Secret definition for controller-manager-config kubeconfig
+		// Secret definition for kube-controller-manager kubeconfig
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "default-controller-manager",
+				Name: "default-kube-controller-manager",
 
 				CommonName:   user.KubeControllerManager,
 				Organization: []string{user.SystemPrivilegedGroup},
@@ -257,6 +262,68 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 			Name:       serviceAccountKey,
 			Bits:       4096,
 			UsedForSSH: false,
+		},
+		// Secret definitions for gardener components
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name:       "gardener-admission-controller",
+				CommonName: gardenerAdmissionControllerName,
+				CertType:   secrets.ClientCert,
+				SigningCA:  caCertificate,
+			},
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  "local-garden",
+				APIServerURL: "localhost:2443",
+			},
+		},
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name:       "gardener-apiserver",
+				CommonName: gardenerAPIServerName,
+				CertType:   secrets.ClientCert,
+				SigningCA:  caCertificate,
+			},
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  "local-garden",
+				APIServerURL: "localhost:2443",
+			},
+		},
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name:       "gardener-controller-manager",
+				CommonName: gardenerControllerManagerName,
+				CertType:   secrets.ClientCert,
+				SigningCA:  caCertificate,
+			},
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  "local-garden",
+				APIServerURL: "localhost:2443",
+			},
+		},
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name:       "gardener-scheduler",
+				CommonName: gardenerSchedulerName,
+				CertType:   secrets.ClientCert,
+				SigningCA:  caCertificate,
+			},
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  "local-garden",
+				APIServerURL: "localhost:2443",
+			},
+		},
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name:         "gardenlet",
+				CommonName:   v1beta1constants.SeedUserNamePrefix + v1beta1constants.SeedUserNameSuffixAmbiguous,
+				Organization: []string{v1beta1constants.SeedsGroup},
+				CertType:     secrets.ClientCert,
+				SigningCA:    caCertificate,
+			},
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  "local-garden",
+				APIServerURL: "localhost:2443",
+			},
 		},
 	}
 
@@ -316,7 +383,6 @@ func saveToFile(fileName string, key string) error {
 }
 
 func main() {
-
 	var keyFilePath, certFilesPath, kubeConfigFilesPath string
 
 	flag.StringVar(&keyFilePath, "keys-path", "./certificates/keys", "path to certs-directory")
@@ -369,5 +435,4 @@ func main() {
 			}
 		}
 	}
-
 }

@@ -241,6 +241,8 @@ make remote-garden-down
 
 > Note: The minimum K8S version of the remote cluster that can be used as Garden cluster is `1.19.x`.
 
+> ⚠️ Please be aware that in the remote garden setup all Gardener components run with administrative permissions, i.e., there is no fine-grained access control via RBAC (as opposed to productive installations of Gardener).
+
 #### Prepare the Gardener
 
 Now, that you have started your local cluster, we can go ahead and register the Gardener API Server.

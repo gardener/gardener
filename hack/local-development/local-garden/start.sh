@@ -42,6 +42,9 @@ for i in 1..10; do
   echo "# Waiting until Kube-Apiserver is available"
 done
 
+echo "# Configuring RBAC resources for Gardener components"
+$(dirname $0)/configure-rbac
+
 echo "# Applying proxy RBAC for the extension controller"
 echo "# After this step, you can start using the cluster at KUBECONFIG=hack/local-development/local-garden/kubeconfigs/default-admin.conf"
 $(dirname $0)/apply-rbac-garden-ns
