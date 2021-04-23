@@ -18,8 +18,10 @@ import (
 	"strings"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -98,17 +100,44 @@ var _ = Describe("Seed Validation Tests", func() {
 			Expect(errorList).To(HaveLen(0))
 		})
 
-		It("should forbid Seed resources with empty metadata", func() {
-			seed.ObjectMeta = metav1.ObjectMeta{}
+		DescribeTable("Seed metadata",
+			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
+				seed.ObjectMeta = objectMeta
 
-			errorList := ValidateSeed(seed)
+				errorList := ValidateSeed(seed)
 
-			Expect(errorList).To(HaveLen(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.name"),
-			}))
-		})
+				Expect(errorList).To(matcher)
+			},
+
+			Entry("should forbid Seed with empty metadata",
+				metav1.ObjectMeta{},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid Seed with empty name",
+				metav1.ObjectMeta{Name: ""},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid Seed with '.' in the name (not a DNS-1123 label compliant name)",
+				metav1.ObjectMeta{Name: "seed.test"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid Seed with '_' in the name (not a DNS-1123 subdomain)",
+				metav1.ObjectMeta{Name: "seed_test"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+		)
 
 		It("should forbid Seed specification with empty or invalid keys", func() {
 			invalidCIDR := "invalid-cidr"
