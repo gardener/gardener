@@ -9,3 +9,5 @@ istioIngressGateway:
   labels:
     istio: ingressgateway
 internalDNSNameApiserver: api.internal
+reversedVPN:
+  enabled: false

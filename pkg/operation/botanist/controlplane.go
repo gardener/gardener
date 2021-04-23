@@ -890,6 +890,9 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
 			InternalDNSNameApiserver: b.outOfClusterAPIServerFQDN(),
+			ReversedVPN: controlplane.ReversedVPN{
+				Enabled: b.Shoot.ReversedVPNEnabled,
+			},
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
@@ -918,6 +921,9 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
 			InternalDNSNameApiserver: b.outOfClusterAPIServerFQDN(),
+			ReversedVPN: controlplane.ReversedVPN{
+				Enabled: b.Shoot.ReversedVPNEnabled,
+			},
 		},
 		b.Shoot.SeedNamespace,
 		b.K8sSeedClient.ChartApplier(),
