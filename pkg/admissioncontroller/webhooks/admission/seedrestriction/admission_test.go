@@ -34,6 +34,7 @@ import (
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -460,6 +461,79 @@ var _ = Describe("handler", func() {
 					Entry("seed name is equal but bucket's seed name is nil", &seedName, nil),
 					Entry("seed name is equal but bucket's seed name is different", &seedName, pointer.StringPtr("some-different-seed")),
 				)
+			})
+		})
+
+		Context("when requested for Leases", func() {
+			var name, namespace string
+
+			BeforeEach(func() {
+				name, namespace = "foo", "bar"
+
+				request.Name = name
+				request.Namespace = namespace
+				request.UserInfo = seedUser
+				request.Resource = metav1.GroupVersionResource{
+					Group:    coordinationv1.SchemeGroupVersion.Group,
+					Resource: "leases",
+				}
+			})
+
+			DescribeTable("should not allow the request because no allowed verb",
+				func(operation admissionv1.Operation) {
+					request.Operation = operation
+
+					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+						AdmissionResponse: admissionv1.AdmissionResponse{
+							Allowed: false,
+							Result: &metav1.Status{
+								Code:    int32(http.StatusBadRequest),
+								Message: fmt.Sprintf("unexpected operation: %q", operation),
+							},
+						},
+					}))
+				},
+
+				Entry("update", admissionv1.Update),
+				Entry("delete", admissionv1.Delete),
+				Entry("connect", admissionv1.Connect),
+			)
+
+			Context("when operation is create", func() {
+				BeforeEach(func() {
+					request.Operation = admissionv1.Create
+				})
+
+				DescribeTable("should forbid the request because the seed name of the lease does not match",
+					func(seedNameInLease string) {
+						request.Name = seedNameInLease
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to seed %q", seedName),
+								},
+							},
+						}))
+					},
+
+					Entry("seed name is different", "some-different-seed"),
+				)
+
+				It("should allow the request because seed name matches", func() {
+					request.Name = seedName
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+
+				It("should allow the request because seed name is ambiguous", func() {
+					request.Name = "some-different-seed"
+					request.UserInfo = ambiguousUser
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
 			})
 		})
 	})

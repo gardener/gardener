@@ -354,6 +354,14 @@ $ADMISSION_CONTROLLER_PORT_STRING
     - backupbuckets
     - backupentries
     - shootstates
+  - apiGroups:
+    - coordination.k8s.io
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    resources:
+    - leases
   failurePolicy: Fail
   clientConfig:
     url: https://127.0.0.1:$ADMISSION_CONTROLLER_SECURE_PORT/webhooks/admission/seedrestriction
