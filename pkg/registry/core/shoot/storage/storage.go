@@ -44,7 +44,7 @@ type ShootStorage struct {
 }
 
 // NewStorage creates a new ShootStorage object.
-func NewStorage(optsGetter generic.RESTOptionsGetter, shootStateStore *genericregistry.Store) ShootStorage {
+func NewStorage(optsGetter generic.RESTOptionsGetter, shootStateStore *genericregistry.Store, max time.Duration) ShootStorage {
 	shootRest, shootStatusRest := NewREST(optsGetter)
 
 	s := ShootStorage{
@@ -54,9 +54,10 @@ func NewStorage(optsGetter generic.RESTOptionsGetter, shootStateStore *genericre
 
 	if utilfeature.DefaultFeatureGate.Enabled(features.AdminKubeconfigRequest) {
 		s.AdminKubeconfig = &AdminKubeconfigREST{
-			shootStateStorage: shootStateStore,
-			shootStorage:      shootRest,
-			now:               time.Now,
+			shootStateStorage:    shootStateStore,
+			shootStorage:         shootRest,
+			now:                  time.Now,
+			maxExpirationSeconds: int64(max.Seconds()),
 		}
 	}
 

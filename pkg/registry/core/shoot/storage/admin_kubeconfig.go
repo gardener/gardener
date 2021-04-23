@@ -43,9 +43,10 @@ import (
 
 // AdminKubeconfigREST implements a RESTStorage for shoots/adminkubeconfig.
 type AdminKubeconfigREST struct {
-	shootStateStorage getter
-	shootStorage      getter
-	now               func() time.Time
+	shootStateStorage    getter
+	shootStorage         getter
+	now                  func() time.Time
+	maxExpirationSeconds int64
 }
 
 var (
@@ -129,6 +130,10 @@ func (r *AdminKubeconfigREST) Create(ctx context.Context, name string, obj runti
 	caCert, err := secrets.LoadCertificate("", caInfoData.PrivateKey, caInfoData.Certificate)
 	if err != nil {
 		return nil, errors.NewInternalError(err)
+	}
+
+	if r.maxExpirationSeconds > 0 && out.Spec.ExpirationSeconds > r.maxExpirationSeconds {
+		out.Spec.ExpirationSeconds = r.maxExpirationSeconds
 	}
 
 	validity := time.Duration(out.Spec.ExpirationSeconds) * time.Second
