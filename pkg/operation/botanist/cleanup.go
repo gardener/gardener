@@ -31,6 +31,7 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -242,4 +243,10 @@ func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
 	)
 
 	return cleanResourceFn(namespaceCleanOps, c, &corev1.NamespaceList{}, NamespaceMatchingLabelsSelector, NamespaceMatchingFieldsSelector, ZeroGracePeriod, FinalizeAfterFiveMinutes, NamespaceErrorToleration)(ctx)
+}
+
+// CleanVolumeAttachments cleans up all VolumeAttachments in the cluster, waits for them to be gone and finalizes any
+// remaining ones after five minutes.
+func CleanVolumeAttachments(ctx context.Context, c client.Client) error {
+	return cleanResourceFn(utilclient.DefaultCleanOps(), c, &storagev1.VolumeAttachmentList{}, ZeroGracePeriod, FinalizeAfterFiveMinutes)(ctx)
 }
