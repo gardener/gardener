@@ -22,11 +22,13 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 )
@@ -91,7 +93,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		case cloudProfileResource:
 			return a.authorizeRead(seedName, graph.VertexTypeCloudProfile, attrs)
 		case configMapResource:
-			return a.authorizeRead(seedName, graph.VertexTypeConfigMap, attrs)
+			return a.authorizeConfigMap(seedName, attrs)
 		case controllerInstallationResource:
 			return a.authorize(seedName, graph.VertexTypeControllerInstallation, attrs,
 				[]string{"update", "patch"},
@@ -120,6 +122,17 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 	}
 
 	return auth.DecisionNoOpinion, "", nil
+}
+
+func (a *authorizer) authorizeConfigMap(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	if attrs.GetVerb() == "get" &&
+		attrs.GetNamespace() == metav1.NamespaceSystem &&
+		attrs.GetName() == v1beta1constants.ClusterIdentity {
+
+		return auth.DecisionAllow, "", nil
+	}
+
+	return a.authorizeRead(seedName, graph.VertexTypeConfigMap, attrs)
 }
 
 func (a *authorizer) authorizeRead(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
