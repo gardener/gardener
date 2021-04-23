@@ -59,6 +59,7 @@ var (
 	cloudProfileResource           = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource              = corev1.Resource("configmaps")
 	controllerInstallationResource = gardencorev1beta1.Resource("controllerinstallations")
+	eventResource                  = corev1.Resource("events")
 	managedSeedResource            = seedmanagementv1alpha1.Resource("managedseeds")
 	namespaceResource              = corev1.Resource("namespaces")
 	projectResource                = gardencorev1beta1.Resource("projects")
@@ -100,6 +101,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"get", "list", "watch"},
 				[]string{"status"},
 			)
+		case eventResource:
+			return a.authorizeEvents(seedName, attrs)
 		case managedSeedResource:
 			return a.authorize(seedName, graph.VertexTypeManagedSeed, attrs,
 				[]string{"update", "patch"},
@@ -133,6 +136,18 @@ func (a *authorizer) authorizeConfigMap(seedName string, attrs auth.Attributes) 
 	}
 
 	return a.authorizeRead(seedName, graph.VertexTypeConfigMap, attrs)
+}
+
+func (a *authorizer) authorizeEvents(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	if ok, reason := a.checkVerb(seedName, attrs, "create"); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	if ok, reason := a.checkSubresource(seedName, attrs); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	return auth.DecisionAllow, "", nil
 }
 
 func (a *authorizer) authorizeRead(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
