@@ -22,7 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -30,6 +30,7 @@ import (
 	"github.com/onsi/gomega/matchers"
 	gomegatypes "github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -53,6 +54,7 @@ var _ = Describe("graph", func() {
 		fakeInformerControllerInstallation *controllertest.FakeInformer
 		fakeInformerManagedSeed            *controllertest.FakeInformer
 		fakeInformerShootState             *controllertest.FakeInformer
+		fakeInformerLease                  *controllertest.FakeInformer
 		fakeInformers                      *informertest.FakeInformers
 
 		logger logr.Logger
@@ -84,6 +86,8 @@ var _ = Describe("graph", func() {
 		managedSeed1 *seedmanagementv1alpha1.ManagedSeed
 
 		shootState1 *metav1.PartialObjectMetadata
+
+		lease1 *coordinationv1.Lease
 	)
 
 	BeforeEach(func() {
@@ -99,6 +103,7 @@ var _ = Describe("graph", func() {
 		fakeInformerControllerInstallation = &controllertest.FakeInformer{}
 		fakeInformerManagedSeed = &controllertest.FakeInformer{}
 		fakeInformerShootState = &controllertest.FakeInformer{}
+		fakeInformerLease = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
@@ -112,6 +117,7 @@ var _ = Describe("graph", func() {
 				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"): fakeInformerControllerInstallation,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):       fakeInformerManagedSeed,
 				metav1.SchemeGroupVersion.WithKind("PartialObjectMetadata"):             fakeInformerShootState,
+				coordinationv1.SchemeGroupVersion.WithKind("Lease"):                     fakeInformerLease,
 			},
 		}
 
@@ -195,6 +201,10 @@ var _ = Describe("graph", func() {
 		shootState1 = &metav1.PartialObjectMetadata{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "shootstate1ns", Name: "shootstate1"},
 		}
+
+		lease1 = &coordinationv1.Lease{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "gardener-system-seed-lease", Name: "lease1"},
+		}
 	})
 
 	It("should behave as expected for gardencorev1beta1.Seed", func() {
@@ -204,7 +214,7 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (irrelevant change)")
 		seed1Copy := seed1.DeepCopy()
@@ -214,7 +224,7 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (remove secret ref)")
 		seed1Copy = seed1.DeepCopy()
@@ -224,7 +234,7 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(Equal(2))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (remove backup secret ref)")
 		seed1Copy = seed1.DeepCopy()
@@ -234,7 +244,7 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(Equal(1))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("update (both secret refs)")
 		seed1Copy = seed1.DeepCopy()
@@ -245,7 +255,7 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeTrue())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeTrue())
 
 		By("delete")
 		fakeInformerSeed.Delete(seed1)
@@ -253,7 +263,7 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name)).To(BeFalse())
-		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name)).To(BeFalse())
 	})
 
 	It("should behave as expected for gardencorev1beta1.Shoot", func() {
@@ -653,6 +663,27 @@ var _ = Describe("graph", func() {
 		Expect(graph.HasPathFrom(VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name)).To(BeFalse())
 	})
 
+	It("should behave as expected for coordinationv1.Lease", func() {
+		By("add")
+		fakeInformerLease.Add(lease1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name)).To(BeTrue())
+
+		By("delete")
+		fakeInformerLease.Delete(lease1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name)).To(BeFalse())
+
+		By("add unrelated")
+		lease1.Namespace = "foo"
+		fakeInformerLease.Add(lease1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name)).To(BeFalse())
+	})
+
 	It("should behave as expected with more objects modified in parallel", func() {
 		var (
 			nodes, edges int
@@ -671,7 +702,7 @@ var _ = Describe("graph", func() {
 			nodes, edges = nodes+4, edges+3
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
-			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
 		}()
 		wg.Add(1)
 		go func() {
@@ -754,6 +785,15 @@ var _ = Describe("graph", func() {
 			defer lock.Unlock()
 			nodes, edges = nodes+2, edges+1
 			paths[VertexTypeShootState] = append(paths[VertexTypeShootState], pathExpectation{VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerLease.Add(lease1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+2, edges+1
+			paths[VertexTypeLease] = append(paths[VertexTypeLease], pathExpectation{VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name, BeTrue()})
 		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(Equal(nodes))
@@ -869,6 +909,15 @@ var _ = Describe("graph", func() {
 			nodes, edges = nodes-2, edges-1
 			paths[VertexTypeShootState] = append(paths[VertexTypeShootState], pathExpectation{VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name, BeFalse()})
 		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerLease.Delete(lease1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes-2, edges-1
+			paths[VertexTypeLease] = append(paths[VertexTypeLease], pathExpectation{VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name, BeFalse()})
+		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(Equal(nodes), "node count")
 		Expect(graph.graph.Edges().Len()).To(Equal(edges), "edge count")
@@ -887,7 +936,7 @@ var _ = Describe("graph", func() {
 			nodes, edges = nodes-1, edges-1
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1SecretRef.Namespace, seed1SecretRef.Name, VertexTypeSeed, "", seed1.Name, BeTrue()})
 			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeSecret, seed1BackupSecretRef.Namespace, seed1BackupSecretRef.Name, VertexTypeSeed, "", seed1.Name, BeFalse()})
-			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gardenerutils.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
+			paths[VertexTypeSeed] = append(paths[VertexTypeSeed], pathExpectation{VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed1.Name), VertexTypeSeed, "", seed1.Name, BeTrue()})
 		}()
 		wg.Add(1)
 		go func() {
@@ -983,6 +1032,15 @@ var _ = Describe("graph", func() {
 			nodes, edges = nodes+2, edges+1
 			paths[VertexTypeShootState] = append(paths[VertexTypeShootState], pathExpectation{VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name, BeTrue()})
 		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerLease.Add(lease1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+2, edges+1
+			paths[VertexTypeLease] = append(paths[VertexTypeLease], pathExpectation{VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name, BeTrue()})
+		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(Equal(nodes), "node count")
 		Expect(graph.graph.Edges().Len()).To(Equal(edges), "edge count")
@@ -1072,6 +1130,14 @@ var _ = Describe("graph", func() {
 			lock.Lock()
 			defer lock.Unlock()
 			paths[VertexTypeShootState] = append(paths[VertexTypeShootState], pathExpectation{VertexTypeShootState, shootState1.Namespace, shootState1.Name, VertexTypeShoot, shootState1.Namespace, shootState1.Name, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerLease.Delete(lease1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeLease] = append(paths[VertexTypeLease], pathExpectation{VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name, BeFalse()})
 		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(BeZero())
