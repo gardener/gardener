@@ -39,5 +39,11 @@ and CI/CD systems internally.
 products across cloud providers and manage its clusters for different environments.
 - [PingCAP](https://pingcap.com/) uses Gardener to build its managed database service known as [TiDB Cloud](https://pingcap.com/tidb-cloud/) on mainstream cloud providers.
 
+Service provider adopters
+
+- [23 Technologies](https://23technologies.cloud/) uses Gardener to offer
+an enterprise-class Kubernetes engine for industrial use cases as well as
+cloud service providers and offers managed and professional services for it.
+
 If you’re using Gardener and aren’t on this list, feel free to
 [submit a pull request](https://github.com/gardener/gardener/pulls)!
