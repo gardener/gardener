@@ -17,6 +17,8 @@ package v1alpha1
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -122,6 +124,14 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 }
 
 func setDefaultsGardenletConfiguration(obj *configv1alpha1.GardenletConfiguration, name, namespace string) {
+	// Initialize resources
+	if obj.Resources == nil {
+		obj.Resources = &configv1alpha1.ResourcesConfiguration{}
+	}
+
+	// Set resources defaults
+	setDefaultsResources(obj.Resources)
+
 	// Initialize seed config
 	if obj.SeedConfig == nil {
 		obj.SeedConfig = &configv1alpha1.SeedConfig{}
@@ -129,6 +139,15 @@ func setDefaultsGardenletConfiguration(obj *configv1alpha1.GardenletConfiguratio
 
 	// Set seed spec defaults
 	setDefaultsSeedSpec(&obj.SeedConfig.SeedTemplate.Spec, name, namespace, false)
+}
+
+func setDefaultsResources(obj *configv1alpha1.ResourcesConfiguration) {
+	if _, ok := obj.Capacity[gardencorev1beta1.ResourceShoots]; !ok {
+		if obj.Capacity == nil {
+			obj.Capacity = make(corev1.ResourceList)
+		}
+		obj.Capacity[gardencorev1beta1.ResourceShoots] = resource.MustParse("250")
+	}
 }
 
 func setDefaultsSeedSpec(spec *gardencorev1beta1.SeedSpec, name, namespace string, withSecretRef bool) {
