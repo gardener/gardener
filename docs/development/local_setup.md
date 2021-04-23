@@ -18,7 +18,7 @@ This setup is based on [minikube](https://github.com/kubernetes/minikube), a Kub
 Install latest version of Golang. For MacOS you could use [Homebrew](https://brew.sh/):
 
 ```bash
-brew install golang
+brew install go
 ```
 
 For other OS, please check [Go installation documentation](https://golang.org/doc/install).
@@ -61,7 +61,9 @@ On other OS, please check the [Git installation documentation](https://git-scm.c
 
 We use `OpenVPN` to establish network connectivity from the control plane running in the Seed cluster to the Shoot's worker nodes running in private networks.
 To harden the security we need to generate another secret to encrypt the network traffic ([details](https://openvpn.net/index.php/open-source/documentation/howto.html#security)).
-Please install the `openvpn` binary. On MacOS run
+Please install the `openvpn` binary.
+
+On MacOS run
 
 ```bash
 brew install openvpn
@@ -73,6 +75,13 @@ On other OS, please check the [OpenVPN downloads page](https://openvpn.net/index
 ## Installing Minikube
 
 You'll need to have [minikube](https://github.com/kubernetes/minikube#installation) installed and running.
+
+On MacOS run
+
+```bash
+brew install minikube
+```
+
 > Note: Gardener is working only with self-contained kubeconfig files because of [security issue](https://banzaicloud.com/blog/kubeconfig-security/). You can configure your minikube to create self-contained kubeconfig files via:
 > ```bash
 > minikube config set embed-certs true
@@ -99,6 +108,7 @@ brew install iproute2mac
 ```bash
 go get -u github.com/bronze1man/yaml2json
 brew install jq
+export PATH=$PATH:$(go env GOPATH)/bin
 ```
 
 ## Installing GNU Parallel
@@ -256,12 +266,13 @@ namespace/garden-dev created
 deployment.apps/etcd created
 service/etcd created
 service/gardener-apiserver created
-service/gardener-controller-manager created
+service/gardener-admission-controller created
 endpoints/gardener-apiserver created
-endpoints/gardener-controller-manager created
+endpoints/gardener-admission-controller created
 apiservice.apiregistration.k8s.io/v1alpha1.core.gardener.cloud created
 apiservice.apiregistration.k8s.io/v1beta1.core.gardener.cloud created
-validatingwebhookconfiguration.admissionregistration.k8s.io/gardener-controller-manager created
+apiservice.apiregistration.k8s.io/v1alpha1.seedmanagement.gardener.cloud created
+apiservice.apiregistration.k8s.io/v1alpha1.settings.gardener.cloud created
 ```
 
 Optionally, you can switch off the `Logging` feature gate of Gardenlet to save resources:
@@ -382,7 +393,7 @@ kubectl apply -f dev/05-project-dev.yaml
 Make sure that the Project is successfully reconciled:
 
 ```bash
-$ k get project dev
+$ kubectl get project dev
 NAME   NAMESPACE    STATUS   OWNER                  CREATOR            AGE
 dev    garden-dev   Ready    john.doe@example.com   kubernetes-admin   6s
 ```
@@ -401,7 +412,7 @@ The [Known Extension Implementations](../../extensions/README.md#known-extension
 As a convention, example ControllerRegistration manifest for an extension is located under `example/controller-registration.yaml` in the corresponding repository (for example for AWS the ControllerRegistration can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/controller-registration.yaml)). An example creation of ControllerRegistration for provider-aws:
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-aws/$VERSION/example/controller-registration.yaml
+kubectl apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-aws/master/example/controller-registration.yaml
 ```
 
 #### 5. Register a Seed
