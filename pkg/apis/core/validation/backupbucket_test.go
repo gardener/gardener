@@ -22,8 +22,10 @@ import (
 
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 )
 
 var _ = Describe("validation", func() {
@@ -56,16 +58,44 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(HaveLen(0))
 		})
 
-		It("should forbid BackupBucket resources with empty metadata", func() {
-			backupBucket.ObjectMeta = metav1.ObjectMeta{}
+		DescribeTable("BackupBucket metadata",
+			func(objectMeta metav1.ObjectMeta, matcher gomegatypes.GomegaMatcher) {
+				backupBucket.ObjectMeta = objectMeta
 
-			errorList := ValidateBackupBucket(backupBucket)
+				errorList := ValidateBackupBucket(backupBucket)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.name"),
-			}))))
-		})
+				Expect(errorList).To(matcher)
+			},
+
+			Entry("should forbid BackupBucket with empty metadata",
+				metav1.ObjectMeta{},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid BackupBucket with empty name",
+				metav1.ObjectMeta{Name: ""},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid BackupBucket with '.' in the name (not a DNS-1123 label compliant name)",
+				metav1.ObjectMeta{Name: "backup-bucket.test"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+			Entry("should forbid BackupBucket with '_' in the name (not a DNS-1123 subdomain)",
+				metav1.ObjectMeta{Name: "backup-bucket_test"},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("metadata.name"),
+				}))),
+			),
+		)
 
 		It("should forbid BackupBucket specification with empty or invalid keys", func() {
 			backupBucket.Spec.Provider.Type = ""

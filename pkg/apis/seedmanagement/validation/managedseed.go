@@ -42,7 +42,7 @@ func ValidateManagedSeed(managedSeed *seedmanagement.ManagedSeed) field.ErrorLis
 		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "namespace"), managedSeed.Namespace, "namespace must be garden"))
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&managedSeed.ObjectMeta, true, corevalidation.ValidateName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&managedSeed.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateManagedSeedSpec(&managedSeed.Spec, field.NewPath("spec"), false)...)
 
 	return allErrs
