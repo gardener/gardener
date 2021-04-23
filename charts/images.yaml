@@ -125,9 +125,9 @@ images:
   repository: quay.io/prometheus/blackbox-exporter
   tag: v0.18.0
 - name: metrics-server
-  sourceRepository: github.com/kubernetes-incubator/metrics-server
+  sourceRepository: github.com/kubernetes-sigs/metrics-server
   repository: k8s.gcr.io/metrics-server/metrics-server
-  tag: v0.4.2
+  tag: v0.4.3
 
 # Shoot core addons
 - name: vpn-shoot
