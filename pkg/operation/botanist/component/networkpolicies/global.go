@@ -50,14 +50,16 @@ type networkPolicyTransformer struct {
 }
 
 func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTransformer {
-	var transformers []networkPolicyTransformer
-
-	transformers = append(transformers,
-		networkPolicyTransformer{
+	return []networkPolicyTransformer{
+		{
 			name: "allow-to-aggregate-prometheus",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {
-					obj.Annotations = map[string]string{v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with '%s=%s' to the aggregate-prometheus.", v1beta1constants.LabelNetworkPolicyToAggregatePrometheus, v1beta1constants.LabelNetworkPolicyAllowed)}
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
+							"'%s=%s' to the aggregate-prometheus.", v1beta1constants.LabelNetworkPolicyToAggregatePrometheus,
+							v1beta1constants.LabelNetworkPolicyAllowed),
+					}
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
@@ -86,11 +88,15 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 			},
 		},
 
-		networkPolicyTransformer{
+		{
 			name: "allow-to-all-shoot-apiservers",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {
-					obj.Annotations = map[string]string{v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with '%s=%s' to all the shoot apiservers running in the seed cluster.", v1beta1constants.LabelNetworkPolicyToAllShootAPIServers, v1beta1constants.LabelNetworkPolicyAllowed)}
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
+							"'%s=%s' to all the shoot apiservers running in the seed cluster.",
+							v1beta1constants.LabelNetworkPolicyToAllShootAPIServers, v1beta1constants.LabelNetworkPolicyAllowed),
+					}
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
@@ -133,11 +139,15 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 			},
 		},
 
-		networkPolicyTransformer{
+		{
 			name: "allow-to-blocked-cidrs",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {
-					obj.Annotations = map[string]string{v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with '%s=%s' to CloudProvider's specific metadata service IP.", v1beta1constants.LabelNetworkPolicyToBlockedCIDRs, v1beta1constants.LabelNetworkPolicyAllowed)}
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
+							"'%s=%s' to CloudProvider's specific metadata service IP.", v1beta1constants.LabelNetworkPolicyToBlockedCIDRs,
+							v1beta1constants.LabelNetworkPolicyAllowed),
+					}
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
@@ -162,11 +172,16 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 			},
 		},
 
-		networkPolicyTransformer{
+		{
 			name: "allow-to-dns",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {
-					obj.Annotations = map[string]string{v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with '%s=%s' to DNS running in '%s'. In practice, most of the Pods which require network Egress need this label.", v1beta1constants.LabelNetworkPolicyToDNS, v1beta1constants.LabelNetworkPolicyAllowed, metav1.NamespaceSystem)}
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
+							"'%s=%s' to DNS running in '%s'. In practice, most of the Pods which require network Egress "+
+							"need this label.", v1beta1constants.LabelNetworkPolicyToDNS, v1beta1constants.LabelNetworkPolicyAllowed,
+							metav1.NamespaceSystem),
+					}
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
@@ -223,11 +238,14 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 			},
 		},
 
-		networkPolicyTransformer{
+		{
 			name: "deny-all",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {
-					obj.Annotations = map[string]string{v1beta1constants.GardenerDescription: "Disables all Ingress and Egress traffic into/from this namespace."}
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: "Disables all Ingress and Egress traffic into/from this " +
+							"namespace.",
+					}
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
@@ -246,11 +264,16 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 			},
 		},
 
-		networkPolicyTransformer{
+		{
 			name: "allow-to-private-networks",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {
-					obj.Annotations = map[string]string{v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with '%s=%s' to the Private networks (RFC1918), Carrier-grade NAT (RFC6598) except for (1) CloudProvider's specific metadata service IP, (2) Seed networks, (3) Shoot networks", v1beta1constants.LabelNetworkPolicyToPrivateNetworks, v1beta1constants.LabelNetworkPolicyAllowed)}
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
+							"'%s=%s' to the Private networks (RFC1918), Carrier-grade NAT (RFC6598) except for "+
+							"(1) CloudProvider's specific metadata service IP, (2) Seed networks, (3) Shoot networks",
+							v1beta1constants.LabelNetworkPolicyToPrivateNetworks, v1beta1constants.LabelNetworkPolicyAllowed),
+					}
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
@@ -267,11 +290,18 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 			},
 		},
 
-		networkPolicyTransformer{
+		{
 			name: "allow-to-public-networks",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {
-					obj.Annotations = map[string]string{v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with '%s=%s' to all Public network IPs, except for (1) Private networks (RFC1918), (2) Carrier-grade NAT (RFC6598), (3) CloudProvider's specific metadata service IP. In practice, this blocks Egress traffic to all networks in the Seed cluster and only traffic to public IPv4 addresses.", v1beta1constants.LabelNetworkPolicyToPublicNetworks, v1beta1constants.LabelNetworkPolicyAllowed)}
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
+							"'%s=%s' to all Public network IPs, except for (1) Private networks (RFC1918), "+
+							"(2) Carrier-grade NAT (RFC6598), (3) CloudProvider's specific metadata service IP. In "+
+							"practice, this blocks Egress traffic to all networks in the Seed cluster and only traffic "+
+							"to public IPv4 addresses.", v1beta1constants.LabelNetworkPolicyToPublicNetworks,
+							v1beta1constants.LabelNetworkPolicyAllowed),
+					}
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
@@ -298,9 +328,7 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 				}
 			},
 		},
-	)
-
-	return transformers
+	}
 }
 
 func protocolPtr(protocol corev1.Protocol) *corev1.Protocol {

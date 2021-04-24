@@ -74,7 +74,7 @@ func ToNetworkPolicyPeersWithExceptions(networks []net.IPNet, except ...string) 
 }
 
 // NetworkPolicyPeersWithExceptions returns a list of networkingv1.NetworkPolicyPeers whose ipBlock.cidr points to
-// // `networks` and whose ipBlock.except points to `except`.
+// `networks` and whose ipBlock.except points to `except`.
 func NetworkPolicyPeersWithExceptions(networks []string, except ...string) ([]networkingv1.NetworkPolicyPeer, error) {
 	var ipNets []net.IPNet
 

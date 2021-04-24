@@ -83,7 +83,12 @@ func (n *networkPolicies) getNetworkPolicyTransformers(values Values) []networkP
 			name: "allow-to-shoot-networks",
 			transform: func(obj *networkingv1.NetworkPolicy) func() error {
 				return func() error {
-					obj.Annotations = map[string]string{v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with '%s=%s' to IPv4 blocks belonging to the Shoot network. In practice, this should be used by components which use 'vpn-seed' to communicate to Pods in the Shoot cluster.", v1beta1constants.LabelNetworkPolicyToShootNetworks, v1beta1constants.LabelNetworkPolicyAllowed)}
+					obj.Annotations = map[string]string{
+						v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with "+
+							"'%s=%s' to IPv4 blocks belonging to the Shoot network. In practice, this should be used by "+
+							"components which use 'vpn-seed' to communicate to Pods in the Shoot cluster.",
+							v1beta1constants.LabelNetworkPolicyToShootNetworks, v1beta1constants.LabelNetworkPolicyAllowed),
+					}
 					obj.Spec = networkingv1.NetworkPolicySpec{
 						PodSelector: metav1.LabelSelector{
 							MatchLabels: map[string]string{
