@@ -75,6 +75,7 @@ replace (
 	google.golang.org/grpc => google.golang.org/grpc v1.27.0 // keep this value in sync with k8s.io/apiserver
 	k8s.io/api => k8s.io/api v0.20.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.20.2
+	// once this is updated to v0.20.7 or higher, please remove the workaround in the revendor rule in the Makefile
 	k8s.io/apimachinery => k8s.io/apimachinery v0.20.2
 	k8s.io/apiserver => k8s.io/apiserver v0.20.2
 	k8s.io/client-go => k8s.io/client-go v0.20.2
