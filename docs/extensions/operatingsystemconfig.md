@@ -42,15 +42,18 @@ The high-level flow is as follows:
 
 1. After the VM has been provisioned the `downloader` script starts and fetches the appropriate `Secret` for its worker pool (containing the "original" user-data) and applies it.
 
-### Detailed bootstrap flow with the feature gate `BootstrapTokenForVMs` enabled
+### Detailed bootstrap flow with the feature gate `BootstrapTokenProvidedByWorker` enabled
 
-If the featureFlag `BootstrapTokenForVMs` is enabled a file with the content "<<BOOTSTRAP_TOKEN>>" is added to the operatingsystem-config.
-It is passed to the worker controller (here MCM).
+If the feature gate `BootstrapTokenProvidedByWorker` is enabled a file with the content `"<<BOOTSTRAP_TOKEN>>"` is added to the `OperatingSystemConfig`.
+It is passed to the worker controller.
 
-The worker controller generates a temporary token for every new worker instance(node).
-It replaces the "<<BOOTSTRAP_TOKEN>>" string with the created token and adds it to the user-data placed on the vm on startup.
+The worker controller has to guarantee that:
+- a temporary bootstrap token is created.
+- the `"<<BOOTSTRAP_TOKEN>>"` in the user data is replaced by the generated token.
+One implementation of that is depicted in the picture where the MCM creates a temporary token and replaces the placeholder.
 
-The cloud-config-downloader(original user-data) will then refer to the new temporary bootstrap-token in the kubelet-bootstrap script.
+As part of the user-data the bootstrap-token is placed on the newly created VM under a defined path.
+The cloud-config-script will then refer to the file path of the added bootstrap token in the kubelet-bootstrap script.
 
 ![Bootstrap flow with shortlived bootstrapTokens](./images/bootstrap_token.png)
 

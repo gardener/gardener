@@ -96,10 +96,11 @@ const (
 	// PathCredentialsClientKey is a constant for a path containing the 'client private key' credentials part for the
 	// download.
 	PathCredentialsClientKey = PathCredentialsDirectory + "/client.key"
-	// PathBootstrapToken Path to machine bootstraptoken
+	// PathBootstrapToken is the path on the shoot worker nodes at which the the bootstrap token for the kubelet
+	// bootstrap are stored
 	PathBootstrapToken = PathCredentialsDirectory + "/bootstrap-token"
-	// BootstrapTokenString is the token that is expected to be replaced by the worker controller with the actual token
-	BootstrapTokenString = "<<BOOTSTRAP_TOKEN>>"
+	// BootstrapTokenPlaceholder is the token that is expected to be replaced by the worker controller with the actual token
+	BootstrapTokenPlaceholder = "<<BOOTSTRAP_TOKEN>>"
 	// PathDownloadedCloudConfig is the path on the shoot worker nodes at which the downloaded cloud-config user-data
 	// will be stored.
 	PathDownloadedCloudConfig = PathDownloadsDirectory + "/cloud_config"
@@ -203,7 +204,7 @@ WantedBy=multi-user.target`),
 		},
 	}
 
-	if gardenletfeatures.FeatureGate.Enabled(features.BootstrapTokenForVMs) {
+	if gardenletfeatures.FeatureGate.Enabled(features.BootstrapTokenProvidedByWorker) {
 		files = append(files,
 			extensionsv1alpha1.File{
 				Path:        PathBootstrapToken,
@@ -211,7 +212,7 @@ WantedBy=multi-user.target`),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
-						Data:     utils.EncodeBase64([]byte(BootstrapTokenString)),
+						Data:     utils.EncodeBase64([]byte(BootstrapTokenPlaceholder)),
 					},
 					TransmitUnencoded: pointer.BoolPtr(true),
 				},

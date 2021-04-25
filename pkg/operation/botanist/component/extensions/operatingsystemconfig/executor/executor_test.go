@@ -198,9 +198,9 @@ fi
 md5sum ${PATH_CCD_SCRIPT} > ${PATH_CCD_SCRIPT_CHECKSUM}
 
 BOOTSTRAP_TOKEN="` + bootstrapToken + `"
-# If a worker controller created bootstrapToken exists then use it
+# If a bootstrap token created by the Worker extension exists then use it
 if [[ -f "/var/lib/cloud-config-downloader/credentials/bootstrap-token" ]]; then
-  BOOTSTRAP_TOKEN=$(cat "/var/lib/cloud-config-downloader/credentials/bootstrap-token")
+  BOOTSTRAP_TOKEN="$(cat "/var/lib/cloud-config-downloader/credentials/bootstrap-token")"
 fi
 
 if [[ ! -f "/var/lib/kubelet/kubeconfig-real" ]] || [[ ! -f "/var/lib/kubelet/pki/kubelet-client-current.pem" ]]; then
@@ -228,9 +228,7 @@ EOF
 
 else
   rm -f "/var/lib/kubelet/kubeconfig-bootstrap"
-  if [[ -f "/var/lib/cloud-config-downloader/credentials/bootstrap-token" ]]; then
-    rm -f "/var/lib/cloud-config-downloader/credentials/bootstrap-token"
-  fi
+  rm -f "/var/lib/cloud-config-downloader/credentials/bootstrap-token"
 fi
 
 NODENAME=

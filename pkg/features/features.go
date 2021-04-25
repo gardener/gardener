@@ -96,8 +96,8 @@ const (
 	// alpha: v1.22.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
 
-	// BootstrapTokenForVMs
+	// BootstrapTokenProvidedByWorker
 	// owner: @beckermax
-	// alpha: v1.21.0
-	BootstrapTokenForVMs featuregate.Feature = "BootstrapTokenForVMs"
+	// alpha: v1.22.0
+	BootstrapTokenProvidedByWorker featuregate.Feature = "BootstrapTokenProvidedByWorker"
 )
