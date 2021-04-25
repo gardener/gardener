@@ -98,8 +98,7 @@ var _ = Describe("Downloader", func() {
 					Permissions: pointer.Int32Ptr(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "b64",
-							Data:     utils.EncodeBase64([]byte("<<BOOTSTRAP_TOKEN>>")),
+							Data: "<<BOOTSTRAP_TOKEN>>",
 						},
 						TransmitUnencoded: pointer.BoolPtr(true),
 					},
@@ -116,8 +115,7 @@ var _ = Describe("Downloader", func() {
 					Permissions: pointer.Int32Ptr(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
-							Encoding: "b64",
-							Data:     utils.EncodeBase64([]byte("<<BOOTSTRAP_TOKEN>>")),
+							Data: "<<BOOTSTRAP_TOKEN>>",
 						},
 						TransmitUnencoded: pointer.BoolPtr(true),
 					}}))

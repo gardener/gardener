@@ -211,8 +211,7 @@ WantedBy=multi-user.target`),
 				Permissions: pointer.Int32Ptr(0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
-						Encoding: "b64",
-						Data:     utils.EncodeBase64([]byte(BootstrapTokenPlaceholder)),
+						Data: BootstrapTokenPlaceholder,
 					},
 					TransmitUnencoded: pointer.BoolPtr(true),
 				},
