@@ -140,7 +140,6 @@ var _ = Describe("ProjectStaleControl", func() {
 				gardenCoreInformerFactory.Core().V1beta1().Plants().Lister(),
 				gardenCoreInformerFactory.Core().V1beta1().BackupEntries().Lister(),
 				gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Lister(),
-				gardenCoreInformerFactory.Core().V1beta1().Quotas().Lister(),
 				kubeCoreInformerFactory.Core().V1().Secrets().Lister(),
 			)
 

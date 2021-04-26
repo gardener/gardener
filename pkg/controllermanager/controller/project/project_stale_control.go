@@ -46,7 +46,6 @@ func NewProjectStaleReconciler(
 	plantLister gardencorelisters.PlantLister,
 	backupEntryLister gardencorelisters.BackupEntryLister,
 	secretBindingLister gardencorelisters.SecretBindingLister,
-	quotaLister gardencorelisters.QuotaLister,
 	secretLister kubecorev1listers.SecretLister,
 ) reconcile.Reconciler {
 	return &projectStaleReconciler{
@@ -57,7 +56,6 @@ func NewProjectStaleReconciler(
 		plantLister:         plantLister,
 		backupEntryLister:   backupEntryLister,
 		secretBindingLister: secretBindingLister,
-		quotaLister:         quotaLister,
 		secretLister:        secretLister,
 	}
 }
@@ -70,7 +68,6 @@ type projectStaleReconciler struct {
 	plantLister         gardencorelisters.PlantLister
 	backupEntryLister   gardencorelisters.BackupEntryLister
 	secretBindingLister gardencorelisters.SecretBindingLister
-	quotaLister         gardencorelisters.QuotaLister
 	secretLister        kubecorev1listers.SecretLister
 }
 
@@ -94,7 +91,7 @@ func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcil
 
 type projectInUseChecker struct {
 	resource  string
-	checkFunc func(string) (bool, error)
+	checkFunc func(context.Context, string) (bool, error)
 }
 
 // NowFunc is the same like metav1.Now.
@@ -139,7 +136,7 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 		{"Secrets", r.projectInUseDueToSecrets},
 		{"Quotas", r.projectInUseDueToQuotas},
 	} {
-		projectInUse, err := check.checkFunc(*project.Spec.Namespace)
+		projectInUse, err := check.checkFunc(ctx, *project.Spec.Namespace)
 		if err != nil {
 			return err
 		}
@@ -170,22 +167,22 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 	return r.gardenClient.Delete(ctx, project)
 }
 
-func (r *projectStaleReconciler) projectInUseDueToShoots(namespace string) (bool, error) {
+func (r *projectStaleReconciler) projectInUseDueToShoots(_ context.Context, namespace string) (bool, error) {
 	shootList, err := r.shootLister.Shoots(namespace).List(labels.Everything())
 	return len(shootList) > 0, err
 }
 
-func (r *projectStaleReconciler) projectInUseDueToPlants(namespace string) (bool, error) {
+func (r *projectStaleReconciler) projectInUseDueToPlants(_ context.Context, namespace string) (bool, error) {
 	plantList, err := r.plantLister.Plants(namespace).List(labels.Everything())
 	return len(plantList) > 0, err
 }
 
-func (r *projectStaleReconciler) projectInUseDueToBackupEntries(namespace string) (bool, error) {
+func (r *projectStaleReconciler) projectInUseDueToBackupEntries(_ context.Context, namespace string) (bool, error) {
 	backupEntryList, err := r.backupEntryLister.BackupEntries(namespace).List(labels.Everything())
 	return len(backupEntryList) > 0, err
 }
 
-func (r *projectStaleReconciler) projectInUseDueToSecrets(namespace string) (bool, error) {
+func (r *projectStaleReconciler) projectInUseDueToSecrets(_ context.Context, namespace string) (bool, error) {
 	secretList, err := r.secretLister.Secrets(namespace).List(labels.Everything())
 	if err != nil {
 		return false, err
@@ -201,13 +198,13 @@ func (r *projectStaleReconciler) projectInUseDueToSecrets(namespace string) (boo
 	})
 }
 
-func (r *projectStaleReconciler) projectInUseDueToQuotas(namespace string) (bool, error) {
-	quotaList, err := r.quotaLister.Quotas(namespace).List(labels.Everything())
-	if err != nil {
+func (r *projectStaleReconciler) projectInUseDueToQuotas(ctx context.Context, namespace string) (bool, error) {
+	quotaList := &gardencorev1beta1.QuotaList{}
+	if err := r.gardenClient.List(ctx, quotaList, client.InNamespace(namespace)); err != nil {
 		return false, err
 	}
 
-	quotaNames := computeQuotaNames(quotaList)
+	quotaNames := computeQuotaNames(quotaList.Items)
 	if quotaNames.Len() == 0 {
 		return false, nil
 	}
@@ -321,7 +318,7 @@ func computeSecretNames(secretList []*corev1.Secret) sets.String {
 }
 
 // computeQuotaNames determines the names of Quotas from the given slice.
-func computeQuotaNames(quotaList []*gardencorev1beta1.Quota) sets.String {
+func computeQuotaNames(quotaList []gardencorev1beta1.Quota) sets.String {
 	names := sets.NewString()
 
 	for _, quota := range quotaList {
