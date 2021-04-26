@@ -45,30 +45,27 @@ func NewProjectStaleReconciler(
 	shootLister gardencorelisters.ShootLister,
 	plantLister gardencorelisters.PlantLister,
 	backupEntryLister gardencorelisters.BackupEntryLister,
-	secretBindingLister gardencorelisters.SecretBindingLister,
 	secretLister kubecorev1listers.SecretLister,
 ) reconcile.Reconciler {
 	return &projectStaleReconciler{
-		logger:              l,
-		config:              config,
-		gardenClient:        gardenClient,
-		shootLister:         shootLister,
-		plantLister:         plantLister,
-		backupEntryLister:   backupEntryLister,
-		secretBindingLister: secretBindingLister,
-		secretLister:        secretLister,
+		logger:            l,
+		config:            config,
+		gardenClient:      gardenClient,
+		shootLister:       shootLister,
+		plantLister:       plantLister,
+		backupEntryLister: backupEntryLister,
+		secretLister:      secretLister,
 	}
 }
 
 type projectStaleReconciler struct {
-	logger              logrus.FieldLogger
-	gardenClient        client.Client
-	config              *config.ProjectControllerConfiguration
-	shootLister         gardencorelisters.ShootLister
-	plantLister         gardencorelisters.PlantLister
-	backupEntryLister   gardencorelisters.BackupEntryLister
-	secretBindingLister gardencorelisters.SecretBindingLister
-	secretLister        kubecorev1listers.SecretLister
+	logger            logrus.FieldLogger
+	gardenClient      client.Client
+	config            *config.ProjectControllerConfiguration
+	shootLister       gardencorelisters.ShootLister
+	plantLister       gardencorelisters.PlantLister
+	backupEntryLister gardencorelisters.BackupEntryLister
+	secretLister      kubecorev1listers.SecretLister
 }
 
 func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -182,7 +179,7 @@ func (r *projectStaleReconciler) projectInUseDueToBackupEntries(_ context.Contex
 	return len(backupEntryList) > 0, err
 }
 
-func (r *projectStaleReconciler) projectInUseDueToSecrets(_ context.Context, namespace string) (bool, error) {
+func (r *projectStaleReconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
 	secretList, err := r.secretLister.Secrets(namespace).List(labels.Everything())
 	if err != nil {
 		return false, err
@@ -193,7 +190,7 @@ func (r *projectStaleReconciler) projectInUseDueToSecrets(_ context.Context, nam
 		return false, nil
 	}
 
-	return r.relevantSecretBindingsInUse(func(secretBinding *gardencorev1beta1.SecretBinding) bool {
+	return r.relevantSecretBindingsInUse(ctx, func(secretBinding gardencorev1beta1.SecretBinding) bool {
 		return secretBinding.SecretRef.Namespace == namespace && secretNames.Has(secretBinding.SecretRef.Name)
 	})
 }
@@ -209,7 +206,7 @@ func (r *projectStaleReconciler) projectInUseDueToQuotas(ctx context.Context, na
 		return false, nil
 	}
 
-	return r.relevantSecretBindingsInUse(func(secretBinding *gardencorev1beta1.SecretBinding) bool {
+	return r.relevantSecretBindingsInUse(ctx, func(secretBinding gardencorev1beta1.SecretBinding) bool {
 		for _, quota := range secretBinding.Quotas {
 			return quota.Namespace == namespace && quotaNames.Has(quota.Name)
 		}
@@ -217,14 +214,14 @@ func (r *projectStaleReconciler) projectInUseDueToQuotas(ctx context.Context, na
 	})
 }
 
-func (r *projectStaleReconciler) relevantSecretBindingsInUse(isSecretBindingRelevantFunc func(secretBinding *gardencorev1beta1.SecretBinding) bool) (bool, error) {
-	secretBindingList, err := r.secretBindingLister.List(labels.Everything())
-	if err != nil {
+func (r *projectStaleReconciler) relevantSecretBindingsInUse(ctx context.Context, isSecretBindingRelevantFunc func(secretBinding gardencorev1beta1.SecretBinding) bool) (bool, error) {
+	secretBindingList := &gardencorev1beta1.SecretBindingList{}
+	if err := r.gardenClient.List(ctx, secretBindingList); err != nil {
 		return false, err
 	}
 
 	namespaceToSecretBindingNames := make(map[string]sets.String)
-	for _, secretBinding := range secretBindingList {
+	for _, secretBinding := range secretBindingList.Items {
 		if !isSecretBindingRelevantFunc(secretBinding) {
 			continue
 		}

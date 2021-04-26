@@ -94,9 +94,6 @@ func NewProjectController(
 		backupEntryInformer = gardenCoreV1beta1Informer.BackupEntries()
 		backupEntryLister   = backupEntryInformer.Lister()
 
-		secretBindingInformer = gardenCoreV1beta1Informer.SecretBindings()
-		secretBindingLister   = secretBindingInformer.Lister()
-
 		secretInformer = corev1Informer.Secrets()
 		secretLister   = secretInformer.Lister()
 	)
@@ -104,7 +101,7 @@ func NewProjectController(
 	projectController := &Controller{
 		gardenClient:           gardenClient.Client(),
 		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder),
-		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client(), shootLister, plantLister, backupEntryLister, secretBindingLister, secretLister),
+		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client(), shootLister, plantLister, backupEntryLister, secretLister),
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		workerCh:               make(chan int),
