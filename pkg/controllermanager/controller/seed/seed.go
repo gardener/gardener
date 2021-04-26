@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -52,8 +51,6 @@ type Controller struct {
 	seedQueue          workqueue.RateLimitingInterface
 	seedLifecycleQueue workqueue.RateLimitingInterface
 
-	shootLister gardencorelisters.ShootLister
-
 	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -65,7 +62,6 @@ type Controller struct {
 func NewSeedController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	gardenInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
@@ -88,11 +84,6 @@ func NewSeedController(
 	}
 
 	var (
-		gardenCoreV1beta1Informer = gardenInformerFactory.Core().V1beta1()
-
-		shootInformer = gardenCoreV1beta1Informer.Shoots()
-		shootLister   = shootInformer.Lister()
-
 		leaseInformer = kubeInformerFactory.Coordination().V1().Leases()
 		leaseLister   = leaseInformer.Lister()
 
@@ -103,11 +94,10 @@ func NewSeedController(
 	seedController := &Controller{
 		config:                config,
 		seedReconciler:        NewDefaultControl(logger.Logger, gardenClient, secretLister),
-		lifeCycleReconciler:   NewLifecycleDefaultControl(logger.Logger, gardenClient, leaseLister, shootLister, config),
+		lifeCycleReconciler:   NewLifecycleDefaultControl(logger.Logger, gardenClient, leaseLister, config),
 		recorder:              recorder,
 		seedBackupReconciler:  NewDefaultBackupBucketControl(logger.Logger, gardenClient),
 		seedBackupBucketQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
-		shootLister:           shootLister,
 		seedLifecycleQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
 		seedQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed"),
 		workerCh:              make(chan int),
@@ -138,7 +128,6 @@ func NewSeedController(
 	seedController.hasSyncedFuncs = []cache.InformerSynced{
 		backupBucketInformer.HasSynced,
 		seedInformer.HasSynced,
-		shootInformer.Informer().HasSynced,
 		leaseInformer.Informer().HasSynced,
 		secretInformer.Informer().HasSynced,
 	}

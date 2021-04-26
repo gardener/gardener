@@ -21,7 +21,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -32,7 +31,6 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	coordinationlister "k8s.io/client-go/listers/coordination/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
@@ -55,14 +53,12 @@ func NewLifecycleDefaultControl(
 	logger logrus.FieldLogger,
 	gardenClient kubernetes.Interface,
 	leaseLister coordinationlister.LeaseLister,
-	shootLister gardencorelisters.ShootLister,
 	config *config.ControllerManagerConfiguration,
 ) *livecycleReconciler {
 	return &livecycleReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
 		leaseLister:  leaseLister,
-		shootLister:  shootLister,
 		config:       config,
 	}
 }
@@ -71,7 +67,6 @@ type livecycleReconciler struct {
 	logger       logrus.FieldLogger
 	gardenClient kubernetes.Interface
 	leaseLister  coordinationlister.LeaseLister
-	shootLister  gardencorelisters.ShootLister
 	config       *config.ControllerManagerConfiguration
 }
 
@@ -147,14 +142,14 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 	seedLogger.Debugf("Gardenlet didn't send a heartbeat for at least %s - setting the shoot conditions/constraints to 'unknown' for all shoots on this seed", c.config.Controllers.Seed.ShootMonitorPeriod.Duration)
 
-	shootList, err := c.shootLister.List(labels.Everything())
-	if err != nil {
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := c.gardenClient.Client().List(ctx, shootList); err != nil {
 		return reconcileResult(err)
 	}
 
 	var fns []flow.TaskFn
 
-	for _, shoot := range shootList {
+	for _, shoot := range shootList.Items {
 		if shoot.Spec.SeedName == nil || *shoot.Spec.SeedName != seed.Name {
 			continue
 		}
@@ -171,7 +166,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	return reconcileAfter(1 * time.Minute)
 }
 
-func setShootStatusToUnknown(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot) error {
+func setShootStatusToUnknown(ctx context.Context, g gardencore.Interface, shoot gardencorev1beta1.Shoot) error {
 	var (
 		reason = "StatusUnknown"
 		msg    = "Gardenlet stopped sending heartbeats."
