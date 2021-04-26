@@ -109,6 +109,8 @@ if name == 'autoscaler':
     names = ['cluster-autoscaler']
 elif name == 'vpn':
     names = ['vpn-seed', 'vpn-shoot']
+elif name == 'vpn2':
+    names = ['vpn-seed-server']
 elif name == 'external-dns-management':
     names = ['dns-controller-manager']
 elif name == 'logging':
