@@ -88,9 +88,6 @@ func NewProjectController(
 		shootInformer = gardenCoreV1beta1Informer.Shoots()
 		shootLister   = shootInformer.Lister()
 
-		plantInformer = gardenCoreV1beta1Informer.Plants()
-		plantLister   = plantInformer.Lister()
-
 		secretInformer = corev1Informer.Secrets()
 		secretLister   = secretInformer.Lister()
 	)
@@ -98,7 +95,7 @@ func NewProjectController(
 	projectController := &Controller{
 		gardenClient:           gardenClient.Client(),
 		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder),
-		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client(), shootLister, plantLister, secretLister),
+		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client(), shootLister, secretLister),
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		workerCh:               make(chan int),

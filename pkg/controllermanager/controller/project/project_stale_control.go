@@ -43,7 +43,6 @@ func NewProjectStaleReconciler(
 	config *config.ProjectControllerConfiguration,
 	gardenClient client.Client,
 	shootLister gardencorelisters.ShootLister,
-	plantLister gardencorelisters.PlantLister,
 	secretLister kubecorev1listers.SecretLister,
 ) reconcile.Reconciler {
 	return &projectStaleReconciler{
@@ -51,7 +50,6 @@ func NewProjectStaleReconciler(
 		config:       config,
 		gardenClient: gardenClient,
 		shootLister:  shootLister,
-		plantLister:  plantLister,
 		secretLister: secretLister,
 	}
 }
@@ -61,7 +59,6 @@ type projectStaleReconciler struct {
 	gardenClient client.Client
 	config       *config.ProjectControllerConfiguration
 	shootLister  gardencorelisters.ShootLister
-	plantLister  gardencorelisters.PlantLister
 	secretLister kubecorev1listers.SecretLister
 }
 
@@ -166,9 +163,12 @@ func (r *projectStaleReconciler) projectInUseDueToShoots(_ context.Context, name
 	return len(shootList) > 0, err
 }
 
-func (r *projectStaleReconciler) projectInUseDueToPlants(_ context.Context, namespace string) (bool, error) {
-	plantList, err := r.plantLister.Plants(namespace).List(labels.Everything())
-	return len(plantList) > 0, err
+func (r *projectStaleReconciler) projectInUseDueToPlants(ctx context.Context, namespace string) (bool, error) {
+	plantList := &gardencorev1beta1.PlantList{}
+	if err := r.gardenClient.List(ctx, plantList, client.InNamespace(namespace)); err != nil {
+		return false, err
+	}
+	return len(plantList.Items) > 0, nil
 }
 
 func (r *projectStaleReconciler) projectInUseDueToBackupEntries(ctx context.Context, namespace string) (bool, error) {

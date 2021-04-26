@@ -137,7 +137,6 @@ var _ = Describe("ProjectStaleControl", func() {
 				cfg,
 				k8sGardenRuntimeClient,
 				gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(),
-				gardenCoreInformerFactory.Core().V1beta1().Plants().Lister(),
 				kubeCoreInformerFactory.Core().V1().Secrets().Lister(),
 			)
 
