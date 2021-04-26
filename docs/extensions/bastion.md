@@ -2,7 +2,7 @@
 
 The Gardener project allows users to connect to Shoot worker nodes via SSH. As nodes are usually firewalled and not directly accessible from the public internet, [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) introduced the concept of "Bastions". A bastion is a dedicated server that only serves to allow SSH ingress to the worker nodes.
 
-`Bastion` resources are usually created by `gardenctl` when a user wants to establish an SSH connection. They contain the user's public SSH key and IP address, in order to provision the server accordingly: The public key is put onto the Bastion and SSH ingress is only authorized for the given IP address (in fact, it's not a single IP address, but a set of IP ranges, however for most purposes a single IP is be used).
+`Bastion` resources contain the user's public SSH key and IP address, in order to provision the server accordingly: The public key is put onto the Bastion and SSH ingress is only authorized for the given IP address (in fact, it's not a single IP address, but a set of IP ranges, however for most purposes a single IP is be used).
 
 ## What is the lifespan of `Bastion`?
 

@@ -102,6 +102,7 @@
     * [`DNSProvider` and `DNSEntry` resources](extensions/dns.md)
   * IaaS/Cloud providers
     * [Control plane customization webhooks](extensions/controlplane-webhooks.md)
+    * [`Bastion` resource](extensions/bastion.md)
     * [`ControlPlane` resource](extensions/controlplane.md)
     * [`ControlPlane` exposure resource](extensions/controlplane-exposure.md)
     * [`Infrastructure` resource](extensions/infrastructure.md)

@@ -47,7 +47,7 @@ type AddArgs struct {
 	Type string
 }
 
-// DefaultPredicates returns the default predicates for a controlplane reconciler.
+// DefaultPredicates returns the default predicates for a bastion reconciler.
 func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 	if ignoreOperationAnnotation {
 		return []predicate.Predicate{
@@ -58,7 +58,6 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 	return []predicate.Predicate{
 		predicate.Or(
 			extensionspredicate.HasOperationAnnotation(),
-			extensionspredicate.LastOperationNotSuccessful(),
 			extensionspredicate.IsDeleting(),
 		),
 	}
@@ -67,7 +66,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 // Add creates a new Bastion Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(mgr, args.Actuator)
+	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator)
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	return add(mgr, args, predicates)
 }

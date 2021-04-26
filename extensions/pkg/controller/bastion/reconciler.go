@@ -19,14 +19,10 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
@@ -37,32 +33,28 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
-const (
-	// EventBastionReconciliation an event reason to describe bastion reconciliation.
-	EventBastionReconciliation string = "BastionReconciliation"
-	// EventBastionDeletion an event reason to describe bastion deletion.
-	EventBastionDeletion string = "BastionDeletion"
-)
-
 type reconciler struct {
 	logger   logr.Logger
 	actuator Actuator
 
-	client   client.Client
-	reader   client.Reader
-	recorder record.EventRecorder
+	client        client.Client
+	reader        client.Reader
+	statusUpdater extensionscontroller.StatusUpdater
 }
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // bastion resources of Gardener's `extensions.gardener.cloud` API group.
-func NewReconciler(mgr manager.Manager, actuator Actuator) reconcile.Reconciler {
+func NewReconciler(actuator Actuator) reconcile.Reconciler {
+	logger := log.Log.WithName(ControllerName)
+
 	return extensionscontroller.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.Bastion{} },
 		&reconciler{
-			logger:   log.Log.WithName(ControllerName),
-			actuator: actuator,
-			recorder: mgr.GetEventRecorderFor(ControllerName),
-		})
+			logger:        log.Log.WithName(ControllerName),
+			actuator:      actuator,
+			statusUpdater: extensionscontroller.NewStatusUpdater(logger),
+		},
+	)
 }
 
 func (r *reconciler) InjectFunc(f inject.Func) error {
@@ -71,6 +63,7 @@ func (r *reconciler) InjectFunc(f inject.Func) error {
 
 func (r *reconciler) InjectClient(client client.Client) error {
 	r.client = client
+	r.statusUpdater.InjectClient(client)
 	return nil
 }
 
@@ -113,22 +106,17 @@ func (r *reconciler) reconcile(ctx context.Context, bastion *extensionsv1alpha1.
 		return reconcile.Result{}, err
 	}
 
-	if err := r.updateStatusProcessing(ctx, bastion, operationType, "Reconciling the bastion"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, bastion, operationType, "Reconciling the bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logger.Info("Starting the reconciliation of bastion", "bastion", bastion.Name)
-	r.recorder.Event(bastion, corev1.EventTypeNormal, EventBastionReconciliation, "Reconciling the bastion")
 	if err := r.actuator.Reconcile(ctx, bastion, cluster); err != nil {
-		msg := "Error reconciling bastion"
-		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), bastion, operationType, msg)
+		_ = r.statusUpdater.Error(ctx, bastion, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling bastion")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	msg := "Successfully reconciled bastion"
-	r.logger.Info(msg, "bastion", bastion.Name)
-	r.recorder.Event(bastion, corev1.EventTypeNormal, EventBastionReconciliation, msg)
-	if err := r.updateStatusSuccess(ctx, bastion, operationType, msg); err != nil {
+	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -142,24 +130,18 @@ func (r *reconciler) delete(ctx context.Context, bastion *extensionsv1alpha1.Bas
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(bastion.ObjectMeta, bastion.Status.LastOperation)
-	if err := r.updateStatusProcessing(ctx, bastion, operationType, "Deleting the bastion"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, bastion, operationType, "Deleting the bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	r.logger.Info("Starting the deletion of bastion", "bastion", bastion.Name)
-	r.recorder.Event(bastion, corev1.EventTypeNormal, EventBastionDeletion, "Deleting the bastion")
 
 	if err := r.actuator.Delete(ctx, bastion, cluster); err != nil {
-		msg := "Error deleting bastion"
-		r.recorder.Eventf(bastion, corev1.EventTypeWarning, EventBastionDeletion, "%s: %+v", msg, err)
-		_ = r.updateStatusError(ctx, extensionscontroller.ReconcileErrCauseOrErr(err), bastion, operationType, msg)
+		_ = r.statusUpdater.Error(ctx, bastion, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error deleting bastion")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	msg := "Successfully deleted bastion"
-	r.logger.Info(msg, "bastion", bastion.Name)
-	r.recorder.Event(bastion, corev1.EventTypeNormal, EventBastionDeletion, msg)
-	if err := r.updateStatusSuccess(ctx, bastion, operationType, msg); err != nil {
+	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled bastion"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -169,27 +151,4 @@ func (r *reconciler) delete(ctx context.Context, bastion *extensionsv1alpha1.Bas
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *reconciler) updateStatusProcessing(ctx context.Context, bastion *extensionsv1alpha1.Bastion, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, bastion, func() error {
-		bastion.Status.LastOperation = extensionscontroller.LastOperation(lastOperationType, gardencorev1beta1.LastOperationStateProcessing, 1, description)
-		return nil
-	})
-}
-
-func (r *reconciler) updateStatusError(ctx context.Context, err error, bastion *extensionsv1alpha1.Bastion, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, bastion, func() error {
-		bastion.Status.ObservedGeneration = bastion.Generation
-		bastion.Status.LastOperation, bastion.Status.LastError = extensionscontroller.ReconcileError(lastOperationType, gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err)), 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
-		return nil
-	})
-}
-
-func (r *reconciler) updateStatusSuccess(ctx context.Context, bastion *extensionsv1alpha1.Bastion, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, r.client, bastion, func() error {
-		bastion.Status.ObservedGeneration = bastion.Generation
-		bastion.Status.LastOperation, bastion.Status.LastError = extensionscontroller.ReconcileSucceeded(lastOperationType, description)
-		return nil
-	})
 }
