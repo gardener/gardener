@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package common
+package networkpolicies
 
 import (
 	"net"
+
+	networkingv1 "k8s.io/api/networking/v1"
 )
 
 // Private8BitBlock returns a private network (RFC1918) 10.0.0.0/8 IPv4 block
@@ -49,21 +51,10 @@ func AllPrivateNetworkBlocks() []net.IPNet {
 	}
 }
 
-// ToExceptNetworks returns a list of maps with `network` key containing one of `networks`
-// and `except` key containgn list of `cidr` which are part of those CIDRs.
-//
-// Calling
-// `ToExceptNetworks(AllPrivateNetworkBlocks(),"10.10.0.0/24","172.16.1.0/24","192.168.1.0/24","100.64.1.0/24")`
-// produces:
-//
-// [
-//		{"network": "10.0.0.0/8", "except": ["10.10.0.0/24"]},
-//		{"network": "172.16.0.0/12", "except": ["172.16.1.0/24"]},
-//		{"network": "192.168.0.0/16", "except": ["192.168.1.0/24"]},
-//		{"network": "100.64.0.0/10", "except": ["100.64.1.0/24"]},
-// ]
-func ToExceptNetworks(networks []net.IPNet, except ...string) ([]interface{}, error) {
-	result := []interface{}{}
+// ToNetworkPolicyPeersWithExceptions returns a list of networkingv1.NetworkPolicyPeers whose ipBlock.cidr points to
+// `networks` and whose ipBlock.except points to `except`.
+func ToNetworkPolicyPeersWithExceptions(networks []net.IPNet, except ...string) ([]networkingv1.NetworkPolicyPeer, error) {
+	var result []networkingv1.NetworkPolicyPeer
 
 	for _, n := range networks {
 		excluded, err := excludeBlock(&n, except...)
@@ -71,48 +62,47 @@ func ToExceptNetworks(networks []net.IPNet, except ...string) ([]interface{}, er
 			return nil, err
 		}
 
-		result = append(result, map[string]interface{}{
-			"network": n.String(),
-			"except":  excluded,
+		result = append(result, networkingv1.NetworkPolicyPeer{
+			IPBlock: &networkingv1.IPBlock{
+				CIDR:   n.String(),
+				Except: excluded,
+			},
 		})
 	}
+
 	return result, nil
 }
 
-// ExceptNetworks returns a list of maps with `network` key containing one of `networks`
-// and `except` key containgn list of `cidr` which are part of those CIDRs.
-//
-// Calling
-// `ExceptNetworks([]garden.CIDR{"10.0.0.0/8","172.16.0.0/12"},"10.10.0.0/24","172.16.1.0/24")`
-// produces:
-//
-// [
-//		{"network": "10.0.0.0/8", "except": ["10.10.0.0/24"]},
-//		{"network": "172.16.0.0/12", "except": ["172.16.1.0/24"]},
-// ]
-func ExceptNetworks(networks []string, except ...string) ([]interface{}, error) {
-	ipNets := []net.IPNet{}
+// NetworkPolicyPeersWithExceptions returns a list of networkingv1.NetworkPolicyPeers whose ipBlock.cidr points to
+// `networks` and whose ipBlock.except points to `except`.
+func NetworkPolicyPeersWithExceptions(networks []string, except ...string) ([]networkingv1.NetworkPolicyPeer, error) {
+	var ipNets []net.IPNet
+
 	for _, n := range networks {
 		_, net, err := net.ParseCIDR(string(n))
 		if err != nil {
 			return nil, err
 		}
+
 		ipNets = append(ipNets, *net)
 	}
-	return ToExceptNetworks(ipNets, except...)
+
+	return ToNetworkPolicyPeersWithExceptions(ipNets, except...)
 }
 
 func excludeBlock(parentBlock *net.IPNet, cidrs ...string) ([]string, error) {
-	matchedCIDRs := []string{}
+	var matchedCIDRs []string
 
 	for _, cidr := range cidrs {
-		ip, ipNet, err := net.ParseCIDR(string(cidr))
+		ip, ipNet, err := net.ParseCIDR(cidr)
 		if err != nil {
 			return matchedCIDRs, err
 		}
+
 		if parentBlock.Contains(ip) && !ipNet.Contains(parentBlock.IP) {
 			matchedCIDRs = append(matchedCIDRs, cidr)
 		}
 	}
+
 	return matchedCIDRs, nil
 }

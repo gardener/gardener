@@ -291,6 +291,3 @@ istio:
 
 nginxIngress:
   enabled: false
-
-global-network-policies:
-  denyAll: false

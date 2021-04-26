@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
@@ -620,19 +621,6 @@ func RunReconcileSeedFlow(
 	applierOptions[hvpaGK] = retainStatusInformation
 	applierOptions[issuerGK] = retainStatusInformation
 
-	networks := []string{
-		seed.Info.Spec.Networks.Pods,
-		seed.Info.Spec.Networks.Services,
-	}
-	if v := seed.Info.Spec.Networks.Nodes; v != nil {
-		networks = append(networks, *v)
-	}
-
-	privateNetworks, err := common.ToExceptNetworks(common.AllPrivateNetworkBlocks(), networks...)
-	if err != nil {
-		return err
-	}
-
 	var (
 		grafanaTLSOverride    = grafanaTLS
 		prometheusTLSOverride = prometheusTLS
@@ -803,11 +791,6 @@ func RunReconcileSeedFlow(
 		"istio": map[string]interface{}{
 			"enabled": gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio),
 		},
-		"global-network-policies": map[string]interface{}{
-			"denyAll":         false,
-			"privateNetworks": privateNetworks,
-			"sniEnabled":      gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI,
-		},
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": monitoringBasicAuth,
 		},
@@ -831,10 +814,18 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	return runCreateSeedFlow(ctx, k8sSeedClient, k8sGardenClient, imageVector, imageVectorOverwrites, seed, seedLogger)
+	return runCreateSeedFlow(ctx, k8sSeedClient, k8sGardenClient, imageVector, imageVectorOverwrites, seed, seedLogger, anySNI)
 }
 
-func runCreateSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, imageVector imagevector.ImageVector, imageVectorOverwrites map[string]string, seed *Seed, seedLogger *logrus.Entry) error {
+func runCreateSeedFlow(
+	ctx context.Context,
+	sc, gc kubernetes.Interface,
+	imageVector imagevector.ImageVector,
+	imageVectorOverwrites map[string]string,
+	seed *Seed,
+	seedLogger *logrus.Entry,
+	anySNI bool,
+) error {
 	kubernetesVersion, err := semver.NewVersion(sc.Version())
 	if err != nil {
 		return err
@@ -854,6 +845,20 @@ func runCreateSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, imageVe
 	}
 
 	dnsEntry := getManagedIngressDNSEntry(sc, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress, seedLogger)
+
+	networks := []string{seed.Info.Spec.Networks.Pods, seed.Info.Spec.Networks.Services}
+	if v := seed.Info.Spec.Networks.Nodes; v != nil {
+		networks = append(networks, *v)
+	}
+	privateNetworkPeers, err := networkpolicies.ToNetworkPolicyPeersWithExceptions(networkpolicies.AllPrivateNetworkBlocks(), networks...)
+	if err != nil {
+		return err
+	}
+	networkPolicies := networkpolicies.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{
+		SNIEnabled:          gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI,
+		DenyAllTraffic:      false,
+		PrivateNetworkPeers: privateNetworkPeers,
+	})
 
 	grmImage, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager, imagevector.RuntimeVersion(sc.Version()), imagevector.TargetVersion(sc.Version()))
 	if err != nil {
@@ -904,7 +909,11 @@ func runCreateSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, imageVe
 	}
 
 	var (
-		g                 = flow.NewGraph("Seed cluster creation")
+		g = flow.NewGraph("Seed cluster creation")
+		_ = g.Add(flow.Task{
+			Name: "Ensuring network policies",
+			Fn:   networkPolicies.Deploy,
+		})
 		deployDNSProvider = g.Add(flow.Task{
 			Name: "Deploying DNS Provider",
 			Fn:   flow.TaskFn(createDNSProviderTask(sc.Client(), seed.Info.Spec.DNS)).DoIf(seed.Info.Spec.DNS.Provider != nil),
@@ -920,7 +929,7 @@ func runCreateSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, imageVe
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying DNS Provider (if existing)",
-			Fn:           flow.TaskFn(destroyDNSProviderTask(sc.Client(), seedLogger)).DoIf(seed.Info.Spec.DNS.Provider == nil),
+			Fn:           flow.TaskFn(destroyDNSProviderTask(sc.Client())).DoIf(seed.Info.Spec.DNS.Provider == nil),
 			Dependencies: flow.NewTaskIDs(destroyDNSEntry),
 		})
 		deployResourceManager = g.Add(flow.Task{
@@ -988,7 +997,7 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 		})
 		destroyDNSProvider = g.Add(flow.Task{
 			Name:         "Destroying DNS Provider",
-			Fn:           destroyDNSProviderTask(sc.Client(), seedLogger),
+			Fn:           destroyDNSProviderTask(sc.Client()),
 			Dependencies: flow.NewTaskIDs(destroyDNSEntry),
 		})
 		noControllerInstallations = g.Add(flow.Task{
@@ -1102,7 +1111,7 @@ func createDNSProviderTask(seedClient client.Client, dnsConfig gardencorev1beta1
 	}
 }
 
-func destroyDNSProviderTask(seedClient client.Client, seedLogger *logrus.Entry) func(ctx context.Context) error {
+func destroyDNSProviderTask(seedClient client.Client) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		return kutil.DeleteObjects(ctx, seedClient, emptyDNSProvider(), emptyDNSProviderSecret())
 	}
