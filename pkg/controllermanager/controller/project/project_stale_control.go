@@ -24,6 +24,7 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -46,7 +47,6 @@ func NewProjectStaleReconciler(
 	backupEntryLister gardencorelisters.BackupEntryLister,
 	secretBindingLister gardencorelisters.SecretBindingLister,
 	quotaLister gardencorelisters.QuotaLister,
-	namespaceLister kubecorev1listers.NamespaceLister,
 	secretLister kubecorev1listers.SecretLister,
 ) reconcile.Reconciler {
 	return &projectStaleReconciler{
@@ -58,7 +58,6 @@ func NewProjectStaleReconciler(
 		backupEntryLister:   backupEntryLister,
 		secretBindingLister: secretBindingLister,
 		quotaLister:         quotaLister,
-		namespaceLister:     namespaceLister,
 		secretLister:        secretLister,
 	}
 }
@@ -72,7 +71,6 @@ type projectStaleReconciler struct {
 	backupEntryLister   gardencorelisters.BackupEntryLister
 	secretBindingLister gardencorelisters.SecretBindingLister
 	quotaLister         gardencorelisters.QuotaLister
-	namespaceLister     kubecorev1listers.NamespaceLister
 	secretLister        kubecorev1listers.SecretLister
 }
 
@@ -112,8 +110,8 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 	projectLogger.Infof("[STALE PROJECT RECONCILE]")
 
 	// Skip projects whose namespace is annotated with the skip-stale-check annotation.
-	namespace, err := r.namespaceLister.Get(*project.Spec.Namespace)
-	if err != nil {
+	namespace := &corev1.Namespace{}
+	if err := r.gardenClient.Get(ctx, kutil.Key(*project.Spec.Namespace), namespace); err != nil {
 		return err
 	}
 

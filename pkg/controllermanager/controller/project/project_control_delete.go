@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +31,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, gardenAPIReader client.Reader) (reconcile.Result, error) {
@@ -75,8 +77,8 @@ func isNamespaceEmpty(ctx context.Context, reader client.Reader, namespace strin
 }
 
 func (r *projectReconciler) releaseNamespace(ctx context.Context, gardenClient client.Client, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
-	namespace, err := r.namespaceLister.Get(namespaceName)
-	if err != nil {
+	namespace := &corev1.Namespace{}
+	if err := r.gardenClient.Client().Get(ctx, kutil.Key(namespaceName), namespace); err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
@@ -114,10 +116,10 @@ func (r *projectReconciler) releaseNamespace(ctx context.Context, gardenClient c
 				namespace.OwnerReferences = append(namespace.OwnerReferences[:i], namespace.OwnerReferences[i+1:]...)
 			}
 		}
-		err = gardenClient.Update(ctx, namespace)
+		err := gardenClient.Update(ctx, namespace)
 		return true, err
 	}
 
-	err = gardenClient.Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...)
+	err := gardenClient.Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...)
 	return false, client.IgnoreNotFound(err)
 }

@@ -96,9 +96,6 @@ func NewProjectController(
 		quotaInformer = gardenCoreV1beta1Informer.Quotas()
 		quotaLister   = quotaInformer.Lister()
 
-		namespaceInformer = corev1Informer.Namespaces()
-		namespaceLister   = namespaceInformer.Lister()
-
 		secretInformer = corev1Informer.Secrets()
 		secretLister   = secretInformer.Lister()
 
@@ -107,8 +104,8 @@ func NewProjectController(
 
 	projectController := &Controller{
 		gardenClient:           gardenClient.Client(),
-		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder, namespaceLister),
-		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client(), shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, namespaceLister, secretLister),
+		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder),
+		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client(), shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, secretLister),
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		workerCh:               make(chan int),
@@ -127,7 +124,6 @@ func NewProjectController(
 
 	projectController.hasSyncedFuncs = append(projectController.hasSyncedFuncs,
 		projectInformer.HasSynced,
-		namespaceInformer.Informer().HasSynced,
 		roleBindingInformer.Informer().HasSynced,
 	)
 
