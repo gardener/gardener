@@ -351,6 +351,16 @@ func RunReconcileSeedFlow(
 		if err := common.DeleteHvpa(ctx, k8sSeedClient, v1beta1constants.GardenNamespace); client.IgnoreNotFound(err) != nil {
 			return err
 		}
+	} else {
+		// Clean up stale vpa objects
+		resources := []client.Object{
+			&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "prometheus-vpa", Namespace: v1beta1constants.GardenNamespace}},
+			&autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "aggregate-prometheus-vpa", Namespace: v1beta1constants.GardenNamespace}},
+		}
+
+		if err := kutil.DeleteObjects(ctx, k8sSeedClient.Client(), resources...); err != nil {
+			return err
+		}
 	}
 
 	// Fetch component-specific dependency-watchdog configuration
@@ -538,6 +548,26 @@ func RunReconcileSeedFlow(
 	} else {
 		if err := common.DeleteSeedLoggingStack(ctx, k8sSeedClient.Client()); err != nil {
 			return err
+		}
+	}
+
+	// Monitoring resource values
+	monitoringResources := map[string]interface{}{
+		"prometheus":           map[string]interface{}{},
+		"aggregate-prometheus": map[string]interface{}{},
+	}
+
+	if hvpaEnabled {
+		for resource := range monitoringResources {
+			currentResources, err := kutil.GetContainerResourcesInStatefulSet(ctx, k8sSeedClient.Client(), kutil.Key(v1beta1constants.GardenNamespace, resource))
+			if err != nil {
+				return err
+			}
+			if len(currentResources) != 0 && currentResources[resource] != nil {
+				monitoringResources[resource] = map[string]interface{}{
+					resource: currentResources[resource],
+				}
+			}
 		}
 	}
 
@@ -742,11 +772,13 @@ func RunReconcileSeedFlow(
 			"reserve-excess-capacity": desiredExcessCapacity(),
 		},
 		"prometheus": map[string]interface{}{
+			"resources":               monitoringResources["prometheus"],
 			"storage":                 seed.GetValidVolumeSize("10Gi"),
 			"additionalScrapeConfigs": centralScrapeConfigs.String(),
 			"additionalCAdvisorScrapeConfigMetricRelabelConfigs": centralCAdvisorScrapeConfigMetricRelabelConfigs.String(),
 		},
 		"aggregatePrometheus": map[string]interface{}{
+			"resources":  monitoringResources["aggregate-prometheus"],
 			"storage":    seed.GetValidVolumeSize("20Gi"),
 			"seed":       seed.Info.Name,
 			"hostName":   prometheusHost,

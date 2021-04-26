@@ -60,9 +60,7 @@ spec:
           successThreshold: 1
           timeoutSeconds: 3
         resources:
-          requests:
-            cpu: 30m
-            memory: 500Mi
+          {{- toYaml .Values.prometheus.resources.prometheus | nindent 10 }}
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config
@@ -81,12 +79,7 @@ spec:
         - -volume-dir=/etc/prometheus/config
         - -volume-dir=/etc/prometheus/rules
         resources:
-          requests:
-            cpu: 5m
-            memory: 10Mi
-          limits:
-            cpu: 10m
-            memory: 20Mi
+          {{- index .Values.prometheus.resources "prometheus-config-reloader" | toYaml | nindent 10 }}
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config

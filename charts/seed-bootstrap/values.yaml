@@ -1,17 +1,111 @@
 priorityClassName: foo
 
 prometheus:
+  resources:
+    prometheus:
+      limits:
+        cpu: 500m
+        memory: 2000Mi
+      requests:
+        cpu: 300m
+        memory: 1000Mi
+    prometheus-config-reloader:
+      limits:
+        cpu: 20m
+        memory: 50Mi
+      requests:
+        cpu: 10m
+        memory: 25Mi
   port: 9090
   storage: 10Gi
   additionalScrapeConfigs: ""
   additionalCAdvisorScrapeConfigMetricRelabelConfigs: ""
+  hvpa:
+    enabled: false
+    minAllowed:
+      cpu: 100m
+      memory: 1000M
+    targetAverageUtilizationCpu: 80
+    targetAverageUtilizationMemory: 80
+    scaleUpStabilization:
+      stabilizationDuration: "5m"
+      minChange:
+        cpu:
+          value: "100m"
+          percentage: 80
+        memory:
+          value: 300M
+          percentage: 80
+    scaleDownStabilization:
+      stabilizationDuration: "24h"
+      minChange:
+        cpu:
+          value: "200m"
+          percentage: 80
+        memory:
+          value: 500M
+          percentage: 80
+    limitsRequestsGapScaleParams:
+      cpu:
+        value: "300m"
+        percentage: 40
+      memory:
+        value: "1000M"
+        percentage: 40
 
 aggregatePrometheus:
+  resources:
+    prometheus:
+      limits:
+        cpu: 500m
+        memory: 2000Mi
+      requests:
+        cpu: 300m
+        memory: 1000Mi
+    prometheus-config-reloader:
+      limits:
+        cpu: 20m
+        memory: 20Mi
+      requests:
+        cpu: 10m
+        memory: 10Mi
   port: 9090
   storage: 20Gi
   seed: seed
   hostName: p.seed-1.example.com
   secretName: prometheus-tls
+  hvpa:
+    enabled: false
+    minAllowed:
+      cpu: 100m
+      memory: 1000M
+    targetAverageUtilizationCpu: 80
+    targetAverageUtilizationMemory: 80
+    scaleUpStabilization:
+      stabilizationDuration: "5m"
+      minChange:
+        cpu:
+          value: "100m"
+          percentage: 80
+        memory:
+          value: 300M
+          percentage: 80
+    scaleDownStabilization:
+      stabilizationDuration: "24h"
+      minChange:
+        cpu:
+          value: "200m"
+          percentage: 80
+        memory:
+          value: 500M
+          percentage: 80
+    limitsRequestsGapScaleParams:
+      cpu:
+        value: "300m"
+        percentage: 40
+      memory:
+        value: "1000M"
+        percentage: 40
 
 grafana:
   hostName: p.seed-1.example.com
