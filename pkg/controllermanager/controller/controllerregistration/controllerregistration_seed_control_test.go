@@ -20,7 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -33,97 +32,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 )
 
-var _ = Describe("Controller", func() {
-	logger.Logger = logger.NewNopLogger()
-
-	var (
-		gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
-
-		queue                           *fakeQueue
-		controllerRegistrationSeedQueue *fakeQueue
-		c                               *Controller
-
-		seedName = "seed"
-	)
-
-	BeforeEach(func() {
-		gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-		seedInformer := gardenCoreInformerFactory.Core().V1beta1().Seeds()
-		seedLister := seedInformer.Lister()
-
-		queue = &fakeQueue{}
-		controllerRegistrationSeedQueue = &fakeQueue{}
-
-		c = &Controller{
-			controllerRegistrationQueue:     queue,
-			controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
-			seedLister:                      seedLister,
-		}
-	})
-
-	Describe("#reconcileControllerRegistrationSeedKey", func() {
-		It("should return an error because the key cannot be split", func() {
-			Expect(c.reconcileControllerRegistrationSeedKey("a/b/c")).To(HaveOccurred())
-		})
-
-		It("should return nil because object not found", func() {
-			c.seedLister = newFakeSeedLister(c.seedLister, nil, nil, apierrors.NewNotFound(schema.GroupResource{}, seedName))
-
-			Expect(c.reconcileControllerRegistrationSeedKey(seedName)).NotTo(HaveOccurred())
-		})
-
-		It("should return err because object not found", func() {
-			err := errors.New("error")
-
-			c.seedLister = newFakeSeedLister(c.seedLister, nil, nil, err)
-
-			Expect(c.reconcileControllerRegistrationSeedKey(seedName)).To(Equal(err))
-		})
-
-		It("should return the result of the reconciliation (nil)", func() {
-			obj := &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
-				},
-			}
-
-			c.controllerRegistrationSeedControl = &fakeControllerRegistrationSeedControl{}
-			c.seedLister = newFakeSeedLister(c.seedLister, obj, nil, nil)
-
-			Expect(c.reconcileControllerRegistrationSeedKey(seedName)).NotTo(HaveOccurred())
-		})
-
-		It("should return the result of the reconciliation (error)", func() {
-			obj := &gardencorev1beta1.Seed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
-				},
-			}
-
-			c.controllerRegistrationSeedControl = &fakeControllerRegistrationSeedControl{result: errors.New("")}
-			c.seedLister = newFakeSeedLister(c.seedLister, obj, nil, nil)
-
-			Expect(c.reconcileControllerRegistrationSeedKey(seedName)).To(HaveOccurred())
-		})
-	})
-})
-
-type fakeControllerRegistrationSeedControl struct {
-	result error
-}
-
-func (f *fakeControllerRegistrationSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
-	return f.result
-}
-
-var _ = Describe("ControllerRegistrationSeedControl", func() {
+var _ = Describe("controllerRegistrationReconciler", func() {
 	var (
 		ctx       = context.TODO()
 		nopLogger = logger.NewFieldLogger(logger.NewNopLogger(), "", "")
