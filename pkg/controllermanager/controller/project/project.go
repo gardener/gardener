@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
@@ -59,7 +58,6 @@ type Controller struct {
 func NewProjectController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
@@ -82,11 +80,7 @@ func NewProjectController(
 	}
 
 	var (
-		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
-		corev1Informer            = kubeInformerFactory.Core().V1()
-
-		shootInformer = gardenCoreV1beta1Informer.Shoots()
-		shootLister   = shootInformer.Lister()
+		corev1Informer = kubeInformerFactory.Core().V1()
 
 		secretInformer = corev1Informer.Secrets()
 		secretLister   = secretInformer.Lister()
@@ -95,7 +89,7 @@ func NewProjectController(
 	projectController := &Controller{
 		gardenClient:           gardenClient.Client(),
 		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder),
-		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client(), shootLister, secretLister),
+		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client(), secretLister),
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		workerCh:               make(chan int),

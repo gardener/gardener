@@ -136,7 +136,6 @@ var _ = Describe("ProjectStaleControl", func() {
 				logger.NewNopLogger(),
 				cfg,
 				k8sGardenRuntimeClient,
-				gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(),
 				kubeCoreInformerFactory.Core().V1().Secrets().Lister(),
 			)
 

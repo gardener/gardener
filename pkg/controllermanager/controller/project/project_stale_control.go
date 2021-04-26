@@ -21,7 +21,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -42,14 +41,12 @@ func NewProjectStaleReconciler(
 	l logrus.FieldLogger,
 	config *config.ProjectControllerConfiguration,
 	gardenClient client.Client,
-	shootLister gardencorelisters.ShootLister,
 	secretLister kubecorev1listers.SecretLister,
 ) reconcile.Reconciler {
 	return &projectStaleReconciler{
 		logger:       l,
 		config:       config,
 		gardenClient: gardenClient,
-		shootLister:  shootLister,
 		secretLister: secretLister,
 	}
 }
@@ -58,7 +55,6 @@ type projectStaleReconciler struct {
 	logger       logrus.FieldLogger
 	gardenClient client.Client
 	config       *config.ProjectControllerConfiguration
-	shootLister  gardencorelisters.ShootLister
 	secretLister kubecorev1listers.SecretLister
 }
 
@@ -158,9 +154,12 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 	return r.gardenClient.Delete(ctx, project)
 }
 
-func (r *projectStaleReconciler) projectInUseDueToShoots(_ context.Context, namespace string) (bool, error) {
-	shootList, err := r.shootLister.Shoots(namespace).List(labels.Everything())
-	return len(shootList) > 0, err
+func (r *projectStaleReconciler) projectInUseDueToShoots(ctx context.Context, namespace string) (bool, error) {
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := r.gardenClient.List(ctx, shootList, client.InNamespace(namespace)); err != nil {
+		return false, err
+	}
+	return len(shootList.Items) > 0, nil
 }
 
 func (r *projectStaleReconciler) projectInUseDueToPlants(ctx context.Context, namespace string) (bool, error) {
@@ -233,7 +232,7 @@ func (r *projectStaleReconciler) relevantSecretBindingsInUse(ctx context.Context
 		}
 	}
 
-	return r.secretBindingInUse(namespaceToSecretBindingNames)
+	return r.secretBindingInUse(ctx, namespaceToSecretBindingNames)
 }
 
 func (r *projectStaleReconciler) markProjectAsNotStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project) error {
@@ -271,18 +270,18 @@ func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client 
 	})
 }
 
-func (r *projectStaleReconciler) secretBindingInUse(namespaceToSecretBindingNames map[string]sets.String) (bool, error) {
+func (r *projectStaleReconciler) secretBindingInUse(ctx context.Context, namespaceToSecretBindingNames map[string]sets.String) (bool, error) {
 	if len(namespaceToSecretBindingNames) == 0 {
 		return false, nil
 	}
 
 	for namespace, secretBindingNames := range namespaceToSecretBindingNames {
-		shootList, err := r.shootLister.Shoots(namespace).List(labels.Everything())
-		if err != nil {
+		shootList := &gardencorev1beta1.ShootList{}
+		if err := r.gardenClient.List(ctx, shootList, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 
-		for _, shoot := range shootList {
+		for _, shoot := range shootList.Items {
 			if secretBindingNames.Has(shoot.Spec.SecretBindingName) {
 				return true, nil
 			}
