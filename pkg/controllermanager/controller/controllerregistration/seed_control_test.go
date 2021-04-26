@@ -16,9 +16,9 @@ package controllerregistration
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,21 +26,18 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 var _ = Describe("Controller", func() {
-	logger.Logger = logger.NewNopLogger()
-
 	var (
-		gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
-
 		seedQueue          *fakeQueue
 		controllerRegQueue *fakeQueue
 		c                  *Controller
@@ -50,16 +47,11 @@ var _ = Describe("Controller", func() {
 	)
 
 	BeforeEach(func() {
-		gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-		seedInformer := gardenCoreInformerFactory.Core().V1beta1().Seeds()
-		seedLister := seedInformer.Lister()
-
 		seedQueue = &fakeQueue{}
 		controllerRegQueue = &fakeQueue{}
 		c = &Controller{
 			seedQueue:                       seedQueue,
 			controllerRegistrationSeedQueue: controllerRegQueue,
-			seedLister:                      seedLister,
 		}
 
 		obj = &gardencorev1beta1.Seed{
@@ -167,73 +159,29 @@ var _ = Describe("Controller", func() {
 			Expect(controllerRegQueue.items[0]).To(Equal(seedName))
 		})
 	})
-
-	Describe("#reconcileSeedKey", func() {
-		It("should return an error because the key cannot be split", func() {
-			Expect(c.reconcileSeedKey("a/b/c")).To(HaveOccurred())
-		})
-
-		It("should return nil because object not found", func() {
-			c.seedLister = newFakeSeedLister(c.seedLister, nil, nil, apierrors.NewNotFound(schema.GroupResource{}, seedName))
-
-			Expect(c.reconcileSeedKey(seedName)).NotTo(HaveOccurred())
-		})
-
-		It("should return err because object not found", func() {
-			err := errors.New("error")
-
-			c.seedLister = newFakeSeedLister(c.seedLister, nil, nil, err)
-
-			Expect(c.reconcileSeedKey(seedName)).To(Equal(err))
-		})
-
-		It("should return the result of the reconciliation (nil)", func() {
-			c.seedControl = &fakeSeedControl{}
-			c.seedLister = newFakeSeedLister(c.seedLister, obj, nil, nil)
-
-			Expect(c.reconcileSeedKey(seedName)).To(BeNil())
-		})
-
-		It("should return the result of the reconciliation (error)", func() {
-			c.seedControl = &fakeSeedControl{result: errors.New("")}
-			c.seedLister = newFakeSeedLister(c.seedLister, obj, nil, nil)
-
-			Expect(c.reconcileSeedKey(seedName)).To(HaveOccurred())
-		})
-	})
 })
 
-type fakeSeedControl struct {
-	result error
-}
-
-func (f *fakeSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
-	return f.result
-}
-
-var _ = Describe("SeedControl", func() {
-	const (
-		finalizerName = "core.gardener.cloud/controllerregistration"
-	)
+var _ = Describe("seedReconciler", func() {
+	const finalizerName = "core.gardener.cloud/controllerregistration"
 
 	var (
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
 
-		d *defaultSeedControl
+		reconciler reconcile.Reconciler
 
 		ctx      = context.TODO()
 		fakeErr  = fmt.Errorf("fake err")
 		seedName = "seed"
-		obj      *gardencorev1beta1.Seed
+		seed     *gardencorev1beta1.Seed
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
-		d = &defaultSeedControl{c}
-		obj = &gardencorev1beta1.Seed{
+		reconciler = NewSeedReconciler(logger.NewNopLogger(), c)
+		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            seedName,
 				ResourceVersion: "42",
@@ -246,16 +194,41 @@ var _ = Describe("SeedControl", func() {
 	})
 
 	Describe("#Reconcile", func() {
+		It("should return nil because object not found", func() {
+			c.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return err because object reading failed", func() {
+			c.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).To(MatchError(fakeErr))
+		})
+
 		Context("deletion timestamp not set", func() {
+			BeforeEach(func() {
+				c.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+					*obj = *seed
+					return nil
+				})
+			})
+
 			It("should ensure the finalizer (error)", func() {
-				err := apierrors.NewNotFound(schema.GroupResource{}, seedName)
+				errToReturn := apierrors.NewNotFound(schema.GroupResource{}, seedName)
 
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
-					return err
+					return errToReturn
 				})
 
-				Expect(d.Reconcile(obj)).To(HaveOccurred())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).To(MatchError(errToReturn))
 			})
 
 			It("should ensure the finalizer (no error)", func() {
@@ -264,27 +237,38 @@ var _ = Describe("SeedControl", func() {
 					return nil
 				})
 
-				Expect(d.Reconcile(obj)).NotTo(HaveOccurred())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
 		Context("deletion timestamp set", func() {
 			BeforeEach(func() {
 				now := metav1.Now()
-				obj.DeletionTimestamp = &now
-				obj.Finalizers = []string{FinalizerName}
+				seed.DeletionTimestamp = &now
+				seed.Finalizers = []string{FinalizerName}
+
+				c.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+					*obj = *seed
+					return nil
+				})
 			})
 
 			It("should do nothing because finalizer is not present", func() {
-				obj.Finalizers = nil
+				seed.Finalizers = nil
 
-				Expect(d.Reconcile(obj)).NotTo(HaveOccurred())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should return an error because installation list failed", func() {
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).Return(fakeErr)
 
-				Expect(d.Reconcile(obj)).To(MatchError(fakeErr))
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).To(MatchError(fakeErr))
 			})
 
 			It("should return an error because installation referencing seed exists", func() {
@@ -301,8 +285,9 @@ var _ = Describe("SeedControl", func() {
 					return nil
 				})
 
-				err := d.Reconcile(obj)
-				Expect(err.Error()).To(ContainSubstring("cannot remove finalizer"))
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).To(MatchError(ContainSubstring("cannot remove finalizer")))
 			})
 
 			It("should remove the finalizer (error)", func() {
@@ -316,7 +301,9 @@ var _ = Describe("SeedControl", func() {
 					return fakeErr
 				})
 
-				Expect(d.Reconcile(obj)).To(HaveOccurred())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).To(MatchError(fakeErr))
 			})
 
 			It("should remove the finalizer (no error)", func() {
@@ -330,7 +317,9 @@ var _ = Describe("SeedControl", func() {
 					return nil
 				})
 
-				Expect(d.Reconcile(obj)).NotTo(HaveOccurred())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: seedName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

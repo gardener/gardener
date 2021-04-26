@@ -20,13 +20,14 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 
+	"github.com/sirupsen/logrus"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (c *Controller) seedAdd(obj interface{}, addToControllerRegistrationQueue bool) {
@@ -64,66 +65,48 @@ func (c *Controller) seedDelete(obj interface{}) {
 	c.controllerRegistrationSeedQueue.Add(key)
 }
 
-func (c *Controller) reconcileSeedKey(key string) error {
-	_, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return err
+// NewSeedReconciler creates a new instance of a reconciler which reconciles Seeds.
+func NewSeedReconciler(logger logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
+	return &seedReconciler{
+		logger:       logger,
+		gardenClient: gardenClient,
 	}
-
-	seed, err := c.seedLister.Get(name)
-	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[CONTROLLERREGISTRATION SEED RECONCILE] %s - skipping because Seed has been deleted", key)
-		return nil
-	}
-	if err != nil {
-		logger.Logger.Infof("[CONTROLLERREGISTRATION SEED RECONCILE] %s - unable to retrieve object from store: %v", key, err)
-		return err
-	}
-
-	return c.seedControl.Reconcile(seed)
 }
 
-// SeedControlInterface implements the control logic for updating Seeds. It is implemented as an interface to allow
-// for extensions that provide different semantics. Currently, there is only one implementation.
-type SeedControlInterface interface {
-	Reconcile(*gardencorev1beta1.Seed) error
-}
-
-// NewDefaultSeedControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for Seeds. You should use an instance returned from NewDefaultSeedControl()
-// for any scenario other than testing.
-func NewDefaultSeedControl(gardenClient client.Client) SeedControlInterface {
-	return &defaultSeedControl{gardenClient}
-}
-
-type defaultSeedControl struct {
+type seedReconciler struct {
+	logger       logrus.FieldLogger
 	gardenClient client.Client
 }
 
-func (c *defaultSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
-	var (
-		ctx  = context.TODO()
-		seed = obj.DeepCopy()
-	)
+func (r *seedReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	seed := &gardencorev1beta1.Seed{}
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, seed); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			return reconcile.Result{}, nil
+		}
+		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+		return reconcile.Result{}, err
+	}
 
 	if seed.DeletionTimestamp != nil {
 		if !controllerutil.ContainsFinalizer(seed, FinalizerName) {
-			return nil
+			return reconcile.Result{}, nil
 		}
 
 		controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-		if err := c.gardenClient.List(ctx, controllerInstallationList); err != nil {
-			return err
+		if err := r.gardenClient.List(ctx, controllerInstallationList); err != nil {
+			return reconcile.Result{}, err
 		}
 
 		for _, controllerInstallation := range controllerInstallationList.Items {
 			if controllerInstallation.Spec.SeedRef.Name == seed.Name {
-				return fmt.Errorf("cannot remove finalizer of Seed %q because still found at least one ControllerInstallation", seed.Name)
+				return reconcile.Result{}, fmt.Errorf("cannot remove finalizer of Seed %q because still found at least one ControllerInstallation", seed.Name)
 			}
 		}
 
-		return controllerutils.PatchRemoveFinalizers(ctx, c.gardenClient, seed, FinalizerName)
+		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, seed, FinalizerName)
 	}
 
-	return controllerutils.PatchAddFinalizers(ctx, c.gardenClient, seed, FinalizerName)
+	return reconcile.Result{}, controllerutils.PatchAddFinalizers(ctx, r.gardenClient, seed, FinalizerName)
 }

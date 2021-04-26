@@ -43,7 +43,7 @@ type Controller struct {
 
 	controllerRegistrationReconciler     reconcile.Reconciler
 	controllerRegistrationSeedReconciler reconcile.Reconciler
-	seedControl                          SeedControlInterface
+	seedReconciler                       reconcile.Reconciler
 	hasSyncedFuncs                       []cache.InformerSynced
 
 	controllerRegistrationQueue     workqueue.RateLimitingInterface
@@ -90,7 +90,7 @@ func NewController(ctx context.Context, clientMap clientmap.ClientMap) (*Control
 
 		controllerRegistrationReconciler:     NewControllerRegistrationReconciler(logger.Logger, gardenClient.Client()),
 		controllerRegistrationSeedReconciler: NewControllerRegistrationSeedReconciler(logger.Logger, gardenClient),
-		seedControl:                          NewDefaultSeedControl(gardenClient.Client()),
+		seedReconciler:                       NewSeedReconciler(logger.Logger, gardenClient.Client()),
 
 		controllerRegistrationQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration"),
 		controllerRegistrationSeedQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration-seed"),
@@ -166,7 +166,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.controllerRegistrationQueue, "ControllerRegistration", c.controllerRegistrationReconciler, &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.controllerRegistrationSeedQueue, "ControllerRegistration-Seed", c.controllerRegistrationSeedReconciler, &waitGroup, c.workerCh)
-		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.seedReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
