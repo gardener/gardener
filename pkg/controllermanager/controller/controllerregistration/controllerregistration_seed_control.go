@@ -79,17 +79,15 @@ type RegistrationSeedControlInterface interface {
 func NewDefaultControllerRegistrationSeedControl(
 	gardenClient kubernetes.Interface,
 	secretLister corev1listers.SecretLister,
-	backupBucketLister gardencorelisters.BackupBucketLister,
 	seedLister gardencorelisters.SeedLister,
 ) RegistrationSeedControlInterface {
-	return &defaultControllerRegistrationSeedControl{gardenClient, secretLister, backupBucketLister, seedLister}
+	return &defaultControllerRegistrationSeedControl{gardenClient, secretLister, seedLister}
 }
 
 type defaultControllerRegistrationSeedControl struct {
-	gardenClient       kubernetes.Interface
-	secretLister       corev1listers.SecretLister
-	backupBucketLister gardencorelisters.BackupBucketLister
-	seedLister         gardencorelisters.SeedLister
+	gardenClient kubernetes.Interface
+	secretLister corev1listers.SecretLister
+	seedLister   gardencorelisters.SeedLister
 }
 
 // Reconcile reconciles the ControllerInstallations for given Seed object. It computes the desired list of
@@ -115,8 +113,8 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 		return err
 	}
 
-	backupBucketList, err := c.backupBucketLister.List(labels.Everything())
-	if err != nil {
+	backupBucketList := &gardencorev1beta1.BackupBucketList{}
+	if err := c.gardenClient.Client().List(ctx, backupBucketList); err != nil {
 		return err
 	}
 
@@ -183,15 +181,18 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 // computeKindTypesForBackupBucket computes the list of wanted kind/type combinations for extension resources based on the
 // the list of existing BackupBucket resources.
 func computeKindTypesForBackupBuckets(
-	backupBucketList []*gardencorev1beta1.BackupBucket,
+	backupBucketList *gardencorev1beta1.BackupBucketList,
 	seedName string,
-) (sets.String, map[string]*gardencorev1beta1.BackupBucket) {
+) (
+	sets.String,
+	map[string]gardencorev1beta1.BackupBucket,
+) {
 	var (
 		wantedKindTypeCombinations = sets.NewString()
-		buckets                    = make(map[string]*gardencorev1beta1.BackupBucket)
+		buckets                    = make(map[string]gardencorev1beta1.BackupBucket)
 	)
 
-	for _, backupBucket := range backupBucketList {
+	for _, backupBucket := range backupBucketList.Items {
 		buckets[backupBucket.Name] = backupBucket
 
 		if backupBucket.Spec.SeedName == nil || *backupBucket.Spec.SeedName != seedName {
@@ -209,7 +210,7 @@ func computeKindTypesForBackupBuckets(
 func computeKindTypesForBackupEntries(
 	logger *logrus.Entry,
 	backupEntryList *gardencorev1beta1.BackupEntryList,
-	buckets map[string]*gardencorev1beta1.BackupBucket,
+	buckets map[string]gardencorev1beta1.BackupBucket,
 	seedName string,
 ) sets.String {
 	wantedKindTypeCombinations := sets.NewString()

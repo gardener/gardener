@@ -185,15 +185,17 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				},
 			},
 		}
-		backupBucketList = []*gardencorev1beta1.BackupBucket{
-			backupBucket1,
-			backupBucket2,
-			backupBucket3,
+		backupBucketList = &gardencorev1beta1.BackupBucketList{
+			Items: []gardencorev1beta1.BackupBucket{
+				*backupBucket1,
+				*backupBucket2,
+				*backupBucket3,
+			},
 		}
-		buckets = map[string]*gardencorev1beta1.BackupBucket{
-			backupBucket1.Name: backupBucket1,
-			backupBucket2.Name: backupBucket2,
-			backupBucket3.Name: backupBucket3,
+		buckets = map[string]gardencorev1beta1.BackupBucket{
+			backupBucket1.Name: *backupBucket1,
+			backupBucket2.Name: *backupBucket2,
+			backupBucket3.Name: *backupBucket3,
 		}
 
 		backupEntry1 = &gardencorev1beta1.BackupEntry{
@@ -567,7 +569,7 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 
 	Describe("#computeKindTypesForBackupBuckets", func() {
 		It("should return empty results for empty input", func() {
-			kindTypes, bs := computeKindTypesForBackupBuckets(nil, seedName)
+			kindTypes, bs := computeKindTypesForBackupBuckets(&gardencorev1beta1.BackupBucketList{}, seedName)
 
 			Expect(kindTypes.Len()).To(BeZero())
 			Expect(bs).To(BeEmpty())

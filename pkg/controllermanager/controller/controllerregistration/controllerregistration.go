@@ -70,6 +70,11 @@ func NewController(
 		return nil, err
 	}
 
+	backupBucketInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupBucket{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
+	}
+
 	controllerRegistrationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerRegistration{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerRegistration Informer: %w", err)
@@ -78,9 +83,6 @@ func NewController(
 	var (
 		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
 		k8sCoreInformer    = kubeInformerFactory.Core().V1()
-
-		backupBucketInformer = gardenCoreInformer.BackupBuckets()
-		backupBucketLister   = backupBucketInformer.Lister()
 
 		backupEntryInformer = gardenCoreInformer.BackupEntries()
 
@@ -102,7 +104,7 @@ func NewController(
 
 	controller := &Controller{
 		controllerRegistrationReconciler:  NewControllerRegistrationReconciler(logger.Logger, gardenClient.Client()),
-		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(gardenClient, secretLister, backupBucketLister, seedLister),
+		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(gardenClient, secretLister, seedLister),
 		seedControl:                       NewDefaultSeedControl(clientMap, controllerInstallationLister),
 
 		seedLister: seedLister,
@@ -114,7 +116,7 @@ func NewController(
 		workerCh: make(chan int),
 	}
 
-	backupBucketInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	backupBucketInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.backupBucketAdd,
 		UpdateFunc: controller.backupBucketUpdate,
 		DeleteFunc: controller.backupBucketDelete,
@@ -150,7 +152,7 @@ func NewController(
 	})
 
 	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs,
-		backupBucketInformer.Informer().HasSynced,
+		backupBucketInformer.HasSynced,
 		backupEntryInformer.Informer().HasSynced,
 		controllerRegistrationInformer.HasSynced,
 		controllerInstallationInformer.Informer().HasSynced,
