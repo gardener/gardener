@@ -15,37 +15,10 @@
 package terraformer
 
 import (
-	"fmt"
 	"regexp"
 	"sort"
 	"strings"
 )
-
-// retrieveTerraformErrors gets a map <logList> whose keys are pod names and whose values are the corresponding logs,
-// and it parses the logs for Terraform errors. If none are found, it will return nil, and otherwise the list of
-// found errors as string slice.
-func retrieveTerraformErrors(podName, logs string) []string {
-	var (
-		foundErrors = map[string]struct{}{}
-		errorList   []string
-	)
-
-	errorMessage := findTerraformErrors(logs)
-
-	// Add the errorMessage to the list of found errors (only if it does not already exist).
-	if _, ok := foundErrors[errorMessage]; !ok && errorMessage != "" {
-		foundErrors[errorMessage] = struct{}{}
-	}
-
-	for message := range foundErrors {
-		errorList = append(errorList, fmt.Sprintf("-> Pod '%s' reported:\n%s", podName, message))
-	}
-
-	if len(errorList) == 0 {
-		return nil
-	}
-	return errorList
-}
 
 // findTerraformErrors gets the <output> of a Terraform run and parses it to find the occurred
 // errors (which will be returned). If no errors occurred, an empty string will be returned.

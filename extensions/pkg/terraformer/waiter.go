@@ -50,11 +50,15 @@ func (t *terraformer) WaitForCleanEnvironment(ctx context.Context) error {
 
 // waitForPod waits for the Terraform Pod to be completed (either successful or failed).
 // It checks the Pod status field to identify the state.
-func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *corev1.Pod, deadline time.Duration) int32 {
-	// 'terraform plan' returns exit code 2 if the plan succeeded and there is a diff
-	// If we can't read the terminated state of the container we simply force that the Terraform
-	// job gets created.
-	var exitCode int32 = 2
+func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *corev1.Pod, deadline time.Duration) (int32, string) {
+	var (
+		// 'terraform plan' returns exit code 2 if the plan succeeded and there is a diff
+		// If we can't read the terminated state of the container we simply force that the Terraform
+		// job gets created.
+		exitCode           int32 = 2
+		terminationMessage       = ""
+	)
+
 	ctx, cancel := context.WithTimeout(ctx, deadline)
 	defer cancel()
 
@@ -81,6 +85,7 @@ func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *c
 		if (phase == corev1.PodSucceeded || phase == corev1.PodFailed) && len(containerStatuses) > 0 {
 			if containerStateTerminated := containerStatuses[0].State.Terminated; containerStateTerminated != nil {
 				exitCode = containerStateTerminated.ExitCode
+				terminationMessage = containerStateTerminated.Message
 			}
 			return retry.Ok()
 		}
@@ -91,5 +96,5 @@ func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *c
 		exitCode = 1
 	}
 
-	return exitCode
+	return exitCode, terminationMessage
 }
