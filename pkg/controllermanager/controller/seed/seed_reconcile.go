@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -60,18 +59,16 @@ func (c *Controller) seedAdd(obj interface{}) {
 // NewDefaultControl returns a new instance of the default implementation that
 // implements the documented semantics for seeds.
 // You should use an instance returned from NewDefaultControl() for any scenario other than testing.
-func NewDefaultControl(logger logrus.FieldLogger, gardenClient kubernetes.Interface, secretLister corev1listers.SecretLister) *reconciler {
+func NewDefaultControl(logger logrus.FieldLogger, gardenClient kubernetes.Interface) *reconciler {
 	return &reconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
-		secretLister: secretLister,
 	}
 }
 
 type reconciler struct {
 	logger       logrus.FieldLogger
 	gardenClient kubernetes.Interface
-	secretLister corev1listers.SecretLister
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
@@ -125,18 +122,18 @@ func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient kuber
 	var fns []flow.TaskFn
 	exclude := sets.NewString(existingSecrets...)
 
-	secrets, err := r.secretLister.Secrets(namespace).List(gardenRoleSelector)
-	if err != nil {
+	secretList := &corev1.SecretList{}
+	if err := r.gardenClient.Client().List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
 		return err
 	}
 
-	for _, s := range secrets {
+	for _, s := range secretList.Items {
 		secret := s
 		if exclude.Has(secret.Name) {
 			continue
 		}
 		fns = append(fns, func(ctx context.Context) error {
-			return client.IgnoreNotFound(gardenClient.Client().Delete(ctx, secret))
+			return client.IgnoreNotFound(gardenClient.Client().Delete(ctx, &secret))
 		})
 	}
 
@@ -144,8 +141,8 @@ func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient kuber
 }
 
 func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient kubernetes.Interface, namespace *corev1.Namespace) ([]string, error) {
-	secretsGardenRole, err := r.secretLister.Secrets(v1beta1constants.GardenNamespace).List(gardenRoleSelector)
-	if err != nil {
+	secretList := &corev1.SecretList{}
+	if err := r.gardenClient.Client().List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
 		return nil, err
 	}
 
@@ -153,7 +150,8 @@ func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient kuberne
 		fns         []flow.TaskFn
 		secretNames []string
 	)
-	for _, s := range secretsGardenRole {
+
+	for _, s := range secretList.Items {
 		secret := s
 		secretNames = append(secretNames, secret.Name)
 		fns = append(fns, func(ctx context.Context) error {

@@ -202,7 +202,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 	metricsCollectors = append(metricsCollectors, secretBindingController)
 
-	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.k8sInformers, f.cfg, f.recorder)
+	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}

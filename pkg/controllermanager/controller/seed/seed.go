@@ -21,37 +21,35 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
+
 	"github.com/prometheus/client_golang/prometheus"
-	kubeinformers "k8s.io/client-go/informers"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller controls Seeds.
 type Controller struct {
-	config *config.ControllerManagerConfiguration
+	gardenClient client.Client
+	config       *config.ControllerManagerConfiguration
 
 	seedReconciler       reconcile.Reconciler
 	lifeCycleReconciler  reconcile.Reconciler
 	seedBackupReconciler reconcile.Reconciler
-
-	recorder record.EventRecorder
+	hasSyncedFuncs       []cache.InformerSynced
 
 	seedBackupBucketQueue workqueue.RateLimitingInterface
+	seedQueue             workqueue.RateLimitingInterface
+	seedLifecycleQueue    workqueue.RateLimitingInterface
 
-	seedQueue          workqueue.RateLimitingInterface
-	seedLifecycleQueue workqueue.RateLimitingInterface
-
-	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
@@ -62,9 +60,7 @@ type Controller struct {
 func NewSeedController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	config *config.ControllerManagerConfiguration,
-	recorder record.EventRecorder,
 ) (
 	*Controller,
 	error,
@@ -78,22 +74,23 @@ func NewSeedController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
 	}
+	secretInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Secret Informer: %w", err)
+	}
 	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
 
-	var (
-		secretInformer = kubeInformerFactory.Core().V1().Secrets()
-		secretLister   = kubeInformerFactory.Core().V1().Secrets().Lister()
-	)
-
 	seedController := &Controller{
-		config:                config,
-		seedReconciler:        NewDefaultControl(logger.Logger, gardenClient, secretLister),
-		lifeCycleReconciler:   NewLifecycleDefaultControl(logger.Logger, gardenClient, config),
-		recorder:              recorder,
-		seedBackupReconciler:  NewDefaultBackupBucketControl(logger.Logger, gardenClient),
+		gardenClient: gardenClient.Client(),
+		config:       config,
+
+		seedReconciler:       NewDefaultControl(logger.Logger, gardenClient),
+		lifeCycleReconciler:  NewLifecycleDefaultControl(logger.Logger, gardenClient, config),
+		seedBackupReconciler: NewDefaultBackupBucketControl(logger.Logger, gardenClient),
+
 		seedBackupBucketQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
 		seedLifecycleQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
 		seedQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed"),
@@ -113,7 +110,7 @@ func NewSeedController(
 		AddFunc: seedController.seedAdd,
 	})
 
-	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	secretInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: filterGardenSecret,
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    func(obj interface{}) { seedController.gardenSecretAdd(ctx, obj) },
@@ -125,7 +122,7 @@ func NewSeedController(
 	seedController.hasSyncedFuncs = []cache.InformerSynced{
 		backupBucketInformer.HasSynced,
 		seedInformer.HasSynced,
-		secretInformer.Informer().HasSynced,
+		secretInformer.HasSynced,
 	}
 
 	return seedController, nil
