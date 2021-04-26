@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
+	rbacv1 "k8s.io/api/rbac/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -75,11 +76,14 @@ func NewProjectController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
+	roleBindingInformer, err := gardenClient.Cache().GetInformer(ctx, &rbacv1.RoleBinding{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get RoleBinding Informer: %w", err)
+	}
 
 	var (
 		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
 		corev1Informer            = kubeInformerFactory.Core().V1()
-		rbacv1Informer            = kubeInformerFactory.Rbac().V1()
 
 		shootInformer = gardenCoreV1beta1Informer.Shoots()
 		shootLister   = shootInformer.Lister()
@@ -98,8 +102,6 @@ func NewProjectController(
 
 		secretInformer = corev1Informer.Secrets()
 		secretLister   = secretInformer.Lister()
-
-		roleBindingInformer = rbacv1Informer.RoleBindings()
 	)
 
 	projectController := &Controller{
@@ -117,14 +119,14 @@ func NewProjectController(
 		DeleteFunc: projectController.projectDelete,
 	})
 
-	roleBindingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	roleBindingInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(oldObj, newObj interface{}) { projectController.roleBindingUpdate(ctx, oldObj, newObj) },
 		DeleteFunc: func(obj interface{}) { projectController.roleBindingDelete(ctx, obj) },
 	})
 
 	projectController.hasSyncedFuncs = append(projectController.hasSyncedFuncs,
 		projectInformer.HasSynced,
-		roleBindingInformer.Informer().HasSynced,
+		roleBindingInformer.HasSynced,
 	)
 
 	return projectController, nil
