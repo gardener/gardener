@@ -22,7 +22,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
@@ -33,6 +32,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -41,12 +41,12 @@ const FinalizerName = "core.gardener.cloud/controllerregistration"
 
 // Controller controls ControllerRegistration.
 type Controller struct {
+	gardenClient client.Client
+
 	controllerRegistrationReconciler  reconcile.Reconciler
 	controllerRegistrationSeedControl RegistrationSeedControlInterface
 	seedControl                       SeedControlInterface
 	hasSyncedFuncs                    []cache.InformerSynced
-
-	seedLister gardencorelisters.SeedLister
 
 	controllerRegistrationQueue     workqueue.RateLimitingInterface
 	controllerRegistrationSeedQueue workqueue.RateLimitingInterface
@@ -74,15 +74,17 @@ func NewController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
 	}
-
 	backupEntryInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
 	}
-
 	controllerRegistrationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerRegistration{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerRegistration Informer: %w", err)
+	}
+	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
 
 	var (
@@ -91,9 +93,6 @@ func NewController(
 
 		controllerInstallationInformer = gardenCoreInformer.ControllerInstallations()
 		controllerInstallationLister   = controllerInstallationInformer.Lister()
-
-		seedInformer = gardenCoreInformer.Seeds()
-		seedLister   = seedInformer.Lister()
 
 		shootInformer = gardenCoreInformer.Shoots()
 
@@ -106,17 +105,16 @@ func NewController(
 	)
 
 	controller := &Controller{
-		controllerRegistrationReconciler:  NewControllerRegistrationReconciler(logger.Logger, gardenClient.Client()),
-		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(gardenClient, secretLister, seedLister),
-		seedControl:                       NewDefaultSeedControl(clientMap, controllerInstallationLister),
+		gardenClient: gardenClient.Client(),
 
-		seedLister: seedLister,
+		controllerRegistrationReconciler:  NewControllerRegistrationReconciler(logger.Logger, gardenClient.Client()),
+		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(gardenClient, secretLister),
+		seedControl:                       NewDefaultSeedControl(clientMap, controllerInstallationLister),
 
 		controllerRegistrationQueue:     controllerRegistrationQueue,
 		controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
 		seedQueue:                       seedQueue,
-
-		workerCh: make(chan int),
+		workerCh:                        make(chan int),
 	}
 
 	backupBucketInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -132,8 +130,8 @@ func NewController(
 	})
 
 	controllerRegistrationInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.controllerRegistrationAdd,
-		UpdateFunc: controller.controllerRegistrationUpdate,
+		AddFunc:    func(obj interface{}) { controller.controllerRegistrationAdd(ctx, obj) },
+		UpdateFunc: func(oldObj, newObj interface{}) { controller.controllerRegistrationUpdate(ctx, oldObj, newObj) },
 		DeleteFunc: controller.controllerRegistrationDelete,
 	})
 
@@ -142,7 +140,7 @@ func NewController(
 		UpdateFunc: controller.controllerInstallationUpdate,
 	})
 
-	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	seedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { controller.seedAdd(obj, true) },
 		UpdateFunc: controller.seedUpdate,
 		DeleteFunc: controller.seedDelete,
@@ -159,7 +157,7 @@ func NewController(
 		backupEntryInformer.HasSynced,
 		controllerRegistrationInformer.HasSynced,
 		controllerInstallationInformer.Informer().HasSynced,
-		seedInformer.Informer().HasSynced,
+		seedInformer.HasSynced,
 		shootInformer.Informer().HasSynced,
 	)
 

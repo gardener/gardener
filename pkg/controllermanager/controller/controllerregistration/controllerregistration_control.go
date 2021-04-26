@@ -23,32 +23,31 @@ import (
 
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (c *Controller) controllerRegistrationAdd(obj interface{}) {
+func (c *Controller) controllerRegistrationAdd(ctx context.Context, obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return
 	}
 	c.controllerRegistrationQueue.Add(key)
 
-	seedList, err := c.seedLister.List(labels.Everything())
-	if err != nil {
+	seedList := &gardencorev1beta1.SeedList{}
+	if err := c.gardenClient.List(ctx, seedList); err != nil {
 		return
 	}
 
-	for _, seed := range seedList {
+	for _, seed := range seedList.Items {
 		c.controllerRegistrationSeedQueue.Add(seed.Name)
 	}
 }
 
-func (c *Controller) controllerRegistrationUpdate(oldObj, newObj interface{}) {
-	c.controllerRegistrationAdd(newObj)
+func (c *Controller) controllerRegistrationUpdate(ctx context.Context, _, newObj interface{}) {
+	c.controllerRegistrationAdd(ctx, newObj)
 }
 
 func (c *Controller) controllerRegistrationDelete(obj interface{}) {

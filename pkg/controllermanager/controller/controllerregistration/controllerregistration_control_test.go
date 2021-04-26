@@ -16,7 +16,6 @@ package controllerregistration
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -33,177 +32,187 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 var _ = Describe("Controller", func() {
 	var (
-		log = logger.NewNopLogger()
+		ctx     = context.TODO()
+		fakeErr = fmt.Errorf("fake err")
+		log     = logger.NewNopLogger()
 
-		gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
-
-		queue                           *fakeQueue
-		controllerRegistrationSeedQueue *fakeQueue
-		c                               *Controller
+		ctrl *gomock.Controller
+		c    *mockclient.MockClient
 
 		controllerRegistrationName = "controllerRegistration"
 	)
 
 	BeforeEach(func() {
-		gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-		seedInformer := gardenCoreInformerFactory.Core().V1beta1().Seeds()
-		seedLister := seedInformer.Lister()
-
-		queue = &fakeQueue{}
-		controllerRegistrationSeedQueue = &fakeQueue{}
-
-		c = &Controller{
-			controllerRegistrationQueue:     queue,
-			controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
-			seedLister:                      seedLister,
-		}
+		ctrl = gomock.NewController(GinkgoT())
+		c = mockclient.NewMockClient(ctrl)
 	})
 
-	Describe("#controllerRegistrationAdd", func() {
-		It("should do nothing because the object key computation fails", func() {
-			obj := "foo"
+	AfterEach(func() {
+		ctrl.Finish()
+	})
 
-			c.controllerRegistrationAdd(obj)
+	Describe("controller", func() {
+		var (
+			queue                           *fakeQueue
+			controllerRegistrationSeedQueue *fakeQueue
+			controller                      *Controller
+		)
 
-			Expect(queue.Len()).To(BeZero())
+		BeforeEach(func() {
+			queue = &fakeQueue{}
+			controllerRegistrationSeedQueue = &fakeQueue{}
+			controller = &Controller{
+				gardenClient:                    c,
+				controllerRegistrationQueue:     queue,
+				controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
+			}
 		})
 
-		It("should add the object to the queue", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
+		Describe("#controllerRegistrationAdd", func() {
+			It("should do nothing because the object key computation fails", func() {
+				obj := "foo"
 
-			c.controllerRegistrationAdd(obj)
+				controller.controllerRegistrationAdd(ctx, obj)
 
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+				Expect(queue.Len()).To(BeZero())
+			})
+
+			It("should add the object to the queue", func() {
+				obj := &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: controllerRegistrationName,
+					},
+				}
+
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{}))
+
+				controller.controllerRegistrationAdd(ctx, obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+			})
+
+			It("should add the object to the queue and not enqueue any seeds due to list error", func() {
+				obj := &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: controllerRegistrationName,
+					},
+				}
+
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).Return(fakeErr)
+
+				controller.controllerRegistrationAdd(ctx, obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+			})
+
+			It("should add the object to the queue and enqueue all seeds", func() {
+				obj := &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: controllerRegistrationName,
+					},
+				}
+
+				var (
+					seed1    = "seed1"
+					seed2    = "seed2"
+					seedList = []gardencorev1beta1.Seed{
+						{ObjectMeta: metav1.ObjectMeta{Name: seed1}},
+						{ObjectMeta: metav1.ObjectMeta{Name: seed2}},
+					}
+				)
+
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
+					(&gardencorev1beta1.SeedList{Items: seedList}).DeepCopyInto(obj)
+					return nil
+				})
+
+				controller.controllerRegistrationAdd(ctx, obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+				Expect(controllerRegistrationSeedQueue.Len()).To(Equal(len(seedList)))
+				Expect(controllerRegistrationSeedQueue.items[0]).To(Equal(seed1))
+				Expect(controllerRegistrationSeedQueue.items[1]).To(Equal(seed2))
+			})
 		})
 
-		It("should add the object to the queue and not enqueue any seeds due to list error", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
-			c.seedLister = newFakeSeedLister(c.seedLister, nil, nil, errors.New("err"))
+		Describe("#controllerRegistrationUpdate", func() {
+			It("should do nothing because the object key computation fails", func() {
+				obj := "foo"
 
-			c.controllerRegistrationAdd(obj)
+				controller.controllerRegistrationUpdate(ctx, nil, obj)
 
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+				Expect(queue.Len()).To(BeZero())
+			})
+
+			It("should add the object to the queue", func() {
+				obj := &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: controllerRegistrationName,
+					},
+				}
+
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{}))
+
+				controller.controllerRegistrationUpdate(ctx, nil, obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+			})
 		})
 
-		It("should add the object to the queue and enqueue all seeds", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
+		Describe("#controllerRegistrationDelete", func() {
+			It("should do nothing because the object key computation fails", func() {
+				obj := "foo"
 
-			var (
-				seed1 = "seed1"
-				seed2 = "seed2"
-			)
-			seedList := []*gardencorev1beta1.Seed{
-				{ObjectMeta: metav1.ObjectMeta{Name: seed1}},
-				{ObjectMeta: metav1.ObjectMeta{Name: seed2}},
-			}
-			c.seedLister = newFakeSeedLister(c.seedLister, nil, seedList, nil)
+				controller.controllerRegistrationDelete(obj)
 
-			c.controllerRegistrationAdd(obj)
+				Expect(queue.Len()).To(BeZero())
+			})
 
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			Expect(controllerRegistrationSeedQueue.Len()).To(Equal(len(seedList)))
-			Expect(controllerRegistrationSeedQueue.items[0]).To(Equal(seed1))
-			Expect(controllerRegistrationSeedQueue.items[1]).To(Equal(seed2))
+			It("should add the object to the queue (tomb stone)", func() {
+				obj := cache.DeletedFinalStateUnknown{
+					Key: controllerRegistrationName,
+				}
+
+				controller.controllerRegistrationDelete(obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+			})
+
+			It("should add the object to the queue", func() {
+				obj := &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: controllerRegistrationName,
+					},
+				}
+
+				controller.controllerRegistrationDelete(obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+			})
 		})
 	})
 
-	Describe("#controllerRegistrationUpdate", func() {
-		It("should do nothing because the object key computation fails", func() {
-			obj := "foo"
-
-			c.controllerRegistrationUpdate(nil, obj)
-
-			Expect(queue.Len()).To(BeZero())
-		})
-
-		It("should add the object to the queue", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
-
-			c.controllerRegistrationUpdate(nil, obj)
-
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-		})
-	})
-
-	Describe("#controllerRegistrationDelete", func() {
-		It("should do nothing because the object key computation fails", func() {
-			obj := "foo"
-
-			c.controllerRegistrationDelete(obj)
-
-			Expect(queue.Len()).To(BeZero())
-		})
-
-		It("should add the object to the queue (tomb stone)", func() {
-			obj := cache.DeletedFinalStateUnknown{
-				Key: controllerRegistrationName,
-			}
-
-			c.controllerRegistrationDelete(obj)
-
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-		})
-
-		It("should add the object to the queue", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
-
-			c.controllerRegistrationDelete(obj)
-
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-		})
-	})
-
-	Describe("#Reconcile", func() {
+	Describe("controllerRegistrationReconciler", func() {
 		const finalizerName = "core.gardener.cloud/controllerregistration"
 
 		var (
-			ctx     = context.TODO()
-			fakeErr = fmt.Errorf("fake err")
-
-			ctrl *gomock.Controller
-			c    *mockclient.MockClient
-
 			reconciler             reconcile.Reconciler
 			controllerRegistration *gardencorev1beta1.ControllerRegistration
 		)
 
 		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			c = mockclient.NewMockClient(ctrl)
-
 			reconciler = NewControllerRegistrationReconciler(log, c)
 			controllerRegistration = &gardencorev1beta1.ControllerRegistration{
 				ObjectMeta: metav1.ObjectMeta{
@@ -211,10 +220,6 @@ var _ = Describe("Controller", func() {
 					ResourceVersion: "42",
 				},
 			}
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
 		})
 
 		It("should return nil because object not found", func() {

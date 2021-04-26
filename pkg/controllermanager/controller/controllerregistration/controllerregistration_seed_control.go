@@ -24,7 +24,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
@@ -79,15 +78,13 @@ type RegistrationSeedControlInterface interface {
 func NewDefaultControllerRegistrationSeedControl(
 	gardenClient kubernetes.Interface,
 	secretLister corev1listers.SecretLister,
-	seedLister gardencorelisters.SeedLister,
 ) RegistrationSeedControlInterface {
-	return &defaultControllerRegistrationSeedControl{gardenClient, secretLister, seedLister}
+	return &defaultControllerRegistrationSeedControl{gardenClient, secretLister}
 }
 
 type defaultControllerRegistrationSeedControl struct {
 	gardenClient kubernetes.Interface
 	secretLister corev1listers.SecretLister
-	seedLister   gardencorelisters.SeedLister
 }
 
 // Reconcile reconciles the ControllerInstallations for given Seed object. It computes the desired list of
@@ -128,7 +125,7 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 		return err
 	}
 
-	secrets, err := gardenpkg.ReadGardenSecretsFromLister(ctx, c.secretLister, c.seedLister, gardenerutils.ComputeGardenNamespace(seed.Name))
+	secrets, err := gardenpkg.ReadGardenSecretsFromLister(ctx, c.secretLister, c.gardenClient.Client(), gardenerutils.ComputeGardenNamespace(seed.Name))
 	if err != nil {
 		return err
 	}
