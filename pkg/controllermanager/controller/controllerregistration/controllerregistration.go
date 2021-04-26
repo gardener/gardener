@@ -75,6 +75,11 @@ func NewController(
 		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
 	}
 
+	backupEntryInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
+	}
+
 	controllerRegistrationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerRegistration{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerRegistration Informer: %w", err)
@@ -83,8 +88,6 @@ func NewController(
 	var (
 		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
 		k8sCoreInformer    = kubeInformerFactory.Core().V1()
-
-		backupEntryInformer = gardenCoreInformer.BackupEntries()
 
 		controllerInstallationInformer = gardenCoreInformer.ControllerInstallations()
 		controllerInstallationLister   = controllerInstallationInformer.Lister()
@@ -122,7 +125,7 @@ func NewController(
 		DeleteFunc: controller.backupBucketDelete,
 	})
 
-	backupEntryInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	backupEntryInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.backupEntryAdd,
 		UpdateFunc: controller.backupEntryUpdate,
 		DeleteFunc: controller.backupEntryDelete,
@@ -153,7 +156,7 @@ func NewController(
 
 	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs,
 		backupBucketInformer.HasSynced,
-		backupEntryInformer.Informer().HasSynced,
+		backupEntryInformer.HasSynced,
 		controllerRegistrationInformer.HasSynced,
 		controllerInstallationInformer.Informer().HasSynced,
 		seedInformer.Informer().HasSynced,
