@@ -41,7 +41,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
-	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -77,14 +76,12 @@ type RegistrationSeedControlInterface interface {
 // for any scenario other than testing.
 func NewDefaultControllerRegistrationSeedControl(
 	gardenClient kubernetes.Interface,
-	secretLister corev1listers.SecretLister,
 ) RegistrationSeedControlInterface {
-	return &defaultControllerRegistrationSeedControl{gardenClient, secretLister}
+	return &defaultControllerRegistrationSeedControl{gardenClient}
 }
 
 type defaultControllerRegistrationSeedControl struct {
 	gardenClient kubernetes.Interface
-	secretLister corev1listers.SecretLister
 }
 
 // Reconcile reconciles the ControllerInstallations for given Seed object. It computes the desired list of
@@ -125,7 +122,7 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 		return err
 	}
 
-	secrets, err := gardenpkg.ReadGardenSecretsFromLister(ctx, c.secretLister, c.gardenClient.Client(), gardenerutils.ComputeGardenNamespace(seed.Name))
+	secrets, err := gardenpkg.ReadGardenSecretsFromReader(ctx, c.gardenClient.Client(), gardenerutils.ComputeGardenNamespace(seed.Name))
 	if err != nil {
 		return err
 	}

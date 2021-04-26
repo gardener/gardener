@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,14 +54,7 @@ type Controller struct {
 }
 
 // NewController instantiates a new ControllerRegistration controller.
-func NewController(
-	ctx context.Context,
-	clientMap clientmap.ClientMap,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
-) (
-	*Controller,
-	error,
-) {
+func NewController(ctx context.Context, clientMap clientmap.ClientMap) (*Controller, error) {
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, err
@@ -93,27 +85,16 @@ func NewController(
 		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
 
-	var (
-		k8sCoreInformer = kubeInformerFactory.Core().V1()
-
-		secretInformer = k8sCoreInformer.Secrets()
-		secretLister   = secretInformer.Lister()
-
-		controllerRegistrationQueue     = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration")
-		controllerRegistrationSeedQueue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration-seed")
-		seedQueue                       = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed")
-	)
-
 	controller := &Controller{
 		gardenClient: gardenClient.Client(),
 
 		controllerRegistrationReconciler:  NewControllerRegistrationReconciler(logger.Logger, gardenClient.Client()),
-		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(gardenClient, secretLister),
+		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(gardenClient),
 		seedControl:                       NewDefaultSeedControl(gardenClient.Client()),
 
-		controllerRegistrationQueue:     controllerRegistrationQueue,
-		controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
-		seedQueue:                       seedQueue,
+		controllerRegistrationQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration"),
+		controllerRegistrationSeedQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration-seed"),
+		seedQueue:                       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		workerCh:                        make(chan int),
 	}
 
