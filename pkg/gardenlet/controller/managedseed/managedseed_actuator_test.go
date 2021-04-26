@@ -758,7 +758,7 @@ var _ = Describe("Actuator", func() {
 						"Reason": Equal(gardencorev1beta1.EventDeleting),
 					}),
 				))
-				Expect(wait).To(Equal(false))
+				Expect(wait).To(Equal(true))
 				Expect(removeFinalizer).To(Equal(false))
 			})
 
@@ -867,7 +867,7 @@ var _ = Describe("Actuator", func() {
 						"Reason": Equal(gardencorev1beta1.EventDeleting),
 					}),
 				))
-				Expect(wait).To(Equal(false))
+				Expect(wait).To(Equal(true))
 				Expect(removeFinalizer).To(Equal(false))
 			})
 

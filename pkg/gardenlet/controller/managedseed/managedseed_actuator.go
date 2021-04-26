@@ -267,7 +267,7 @@ func (a *actuator) Delete(ctx context.Context, ms *seedmanagementv1alpha1.Manage
 		} else {
 			a.deletingInfoEventf(ms, "Waiting for seed %s secrets to be deleted", ms.Name)
 		}
-		return status, false, false, nil
+		return status, true, false, nil
 	}
 
 	// Delete garden namespace from the shoot if it still exists and is not already deleting
