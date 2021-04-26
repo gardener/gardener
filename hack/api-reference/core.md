@@ -4101,7 +4101,7 @@ Kubernetes meta/v1.Duration
 </tr>
 <tr>
 <td>
-<code>NodeMonitorGracePeriod</code></br>
+<code>nodeMonitorGracePeriod</code></br>
 <em>
 <a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
 Kubernetes meta/v1.Duration
@@ -4110,7 +4110,7 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy. Defaults to 2m.</p>
+<p>nodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.</p>
 </td>
 </tr>
 </tbody>
