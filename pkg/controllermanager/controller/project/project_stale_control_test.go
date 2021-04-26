@@ -20,7 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	"github.com/gardener/gardener/pkg/logger"
@@ -35,7 +34,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	kubecoreinformers "k8s.io/client-go/informers"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -45,11 +43,8 @@ var _ = Describe("ProjectStaleControl", func() {
 		var (
 			ctx = context.TODO()
 
-			ctrl                         *gomock.Controller
-			k8sGardenRuntimeClient       *mockclient.MockClient
-			k8sGardenRuntimeStatusWriter *mockclient.MockStatusWriter
-			gardenCoreInformerFactory    gardencoreinformers.SharedInformerFactory
-			kubeCoreInformerFactory      kubecoreinformers.SharedInformerFactory
+			ctrl                   *gomock.Controller
+			k8sGardenRuntimeClient *mockclient.MockClient
 
 			oldTimenowFunc func() time.Time
 
@@ -89,9 +84,6 @@ var _ = Describe("ProjectStaleControl", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
-			k8sGardenRuntimeStatusWriter = mockclient.NewMockStatusWriter(ctrl)
-			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			kubeCoreInformerFactory = kubecoreinformers.NewSharedInformerFactory(nil, 0)
 
 			logger.Logger = logger.NewNopLogger()
 
@@ -134,28 +126,38 @@ var _ = Describe("ProjectStaleControl", func() {
 
 			reconciler = NewProjectStaleReconciler(logger.NewNopLogger(), cfg, k8sGardenRuntimeClient)
 
-			k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
-			Expect(kubeCoreInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(namespace)).To(Succeed())
+			k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project) error {
+				*obj = *project
+				return nil
+			})
 		})
 
-		Describe("#ReconcileStaleProject", func() {
-			It("should do nothing because the project has no namespace", func() {
-				project.Spec.Namespace = nil
+		Describe("projectStaleReconciler", func() {
+			Context("early exit", func() {
+				It("should do nothing because the project has no namespace", func() {
+					project.Spec.Namespace = nil
 
-				_, result := reconciler.Reconcile(ctx, request)
-				Expect(result).To(Succeed())
+					_, result := reconciler.Reconcile(ctx, request)
+					Expect(result).To(Succeed())
+				})
+			})
+
+			BeforeEach(func() {
+				k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(namespaceName), gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Namespace) error {
+					*obj = *namespace
+					return nil
+				})
 			})
 
 			It("should mark the project as 'not stale' because the namespace has the skip-stale-check annotation", func() {
 				nowFunc := func() metav1.Time {
 					return metav1.Time{Time: time.Date(100, 1, 1, 0, 0, 0, 0, time.UTC)}
 				}
-				defer test.WithVar(&NowFunc, nowFunc)
+				defer test.WithVar(&NowFunc, nowFunc)()
 
 				namespace.Annotations = map[string]string{v1beta1constants.ProjectSkipStaleCheck: "true"}
-				Expect(kubeCoreInformerFactory.Core().V1().Namespaces().Informer().GetStore().Update(namespace)).To(Succeed())
 
-				expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
+				expectNonStaleMarking(k8sGardenRuntimeClient, project)
 
 				_, result := reconciler.Reconcile(ctx, request)
 				Expect(result).To(Succeed())
@@ -165,11 +167,11 @@ var _ = Describe("ProjectStaleControl", func() {
 				nowFunc := func() metav1.Time {
 					return metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
 				}
-				defer test.WithVar(&NowFunc, nowFunc)
+				defer test.WithVar(&NowFunc, nowFunc)()
 
 				project.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, minimumLifetimeDays-1, 0, 0, 0, 0, time.UTC)}
 
-				expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
+				expectNonStaleMarking(k8sGardenRuntimeClient, project)
 
 				_, result := reconciler.Reconcile(ctx, request)
 				Expect(result).To(Succeed())
@@ -187,93 +189,155 @@ var _ = Describe("ProjectStaleControl", func() {
 
 				Describe("project should be marked as not stale", func() {
 					It("has shoots", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
-						Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.ShootList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{*shoot}}).DeepCopyInto(list)
+							return nil
+						})
 
-						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
+						expectNonStaleMarking(k8sGardenRuntimeClient, project)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("has plants", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
-						Expect(gardenCoreInformerFactory.Core().V1beta1().Plants().Informer().GetStore().Add(plant)).To(Succeed())
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.PlantList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.PlantList{Items: []gardencorev1beta1.Plant{*plant}}).DeepCopyInto(list)
+							return nil
+						})
 
-						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
+						expectNonStaleMarking(k8sGardenRuntimeClient, project)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("has backupentries", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
-						Expect(gardenCoreInformerFactory.Core().V1beta1().BackupEntries().Informer().GetStore().Add(backupEntry)).To(Succeed())
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntryList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupEntryList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.BackupEntryList{Items: []gardencorev1beta1.BackupEntry{*backupEntry}}).DeepCopyInto(list)
+							return nil
+						})
 
-						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
+						expectNonStaleMarking(k8sGardenRuntimeClient, project)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("has secrets that are used by shoots in the same namespace", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
-						Expect(kubeCoreInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
-						Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
-						Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntryList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
+							(&corev1.SecretList{Items: []corev1.Secret{*secret}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.SecretBindingList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.ShootList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{*shoot}}).DeepCopyInto(list)
+							return nil
+						})
 
-						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
+						expectNonStaleMarking(k8sGardenRuntimeClient, project)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("has secrets that are used by shoots in another namespace", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
 						otherNamespace := namespaceName + "other"
 						secretBinding.Namespace = otherNamespace
 						shoot.Namespace = otherNamespace
 
-						Expect(kubeCoreInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
-						Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
-						Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntryList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
+							(&corev1.SecretList{Items: []corev1.Secret{*secret}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.SecretBindingList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(otherNamespace)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.ShootList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{*shoot}}).DeepCopyInto(list)
+							return nil
+						})
 
-						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
+						expectNonStaleMarking(k8sGardenRuntimeClient, project)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("has quotas that are used by shoots in the same namespace", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
-						Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(quota)).To(Succeed())
-						Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
-						Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntryList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.QuotaList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.QuotaList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.QuotaList{Items: []gardencorev1beta1.Quota{*quota}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.SecretBindingList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.ShootList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{*shoot}}).DeepCopyInto(list)
+							return nil
+						})
 
-						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
+						expectNonStaleMarking(k8sGardenRuntimeClient, project)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("has quotas that are used by shoots in another namespace", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
 						otherNamespace := namespaceName + "other"
 						secretBinding.Namespace = otherNamespace
 						shoot.Namespace = otherNamespace
 
-						Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(quota)).To(Succeed())
-						Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
-						Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntryList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.QuotaList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.QuotaList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.QuotaList{Items: []gardencorev1beta1.Quota{*quota}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.SecretBindingList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(otherNamespace)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.ShootList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.ShootList{Items: []gardencorev1beta1.Shoot{*shoot}}).DeepCopyInto(list)
+							return nil
+						})
 
-						expectNonStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nowFunc)
+						expectNonStaleMarking(k8sGardenRuntimeClient, project)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
@@ -283,52 +347,86 @@ var _ = Describe("ProjectStaleControl", func() {
 
 				Describe("project should be marked as stale", func() {
 					It("has secrets that are unused", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
-						Expect(kubeCoreInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
-						Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntryList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *corev1.SecretList, opts ...client.ListOption) error {
+							(&corev1.SecretList{Items: []corev1.Secret{*secret}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.SecretBindingList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.QuotaList{}), client.InNamespace(namespaceName))
 
-						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nil, nil, nowFunc)
+						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, nowFunc)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("has quotas that are unused", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
-						Expect(gardenCoreInformerFactory.Core().V1beta1().Quotas().Informer().GetStore().Add(quota)).To(Succeed())
-						Expect(gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Informer().GetStore().Add(secretBinding)).To(Succeed())
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntryList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.QuotaList{}), client.InNamespace(namespaceName)).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.QuotaList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.QuotaList{Items: []gardencorev1beta1.Quota{*quota}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SecretBindingList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.SecretBindingList, opts ...client.ListOption) error {
+							(&gardencorev1beta1.SecretBindingList{Items: []gardencorev1beta1.SecretBinding{*secretBinding}}).DeepCopyInto(list)
+							return nil
+						})
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
 
-						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nil, nil, nowFunc)
+						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, nowFunc)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("it is not used", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
-						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, nil, nil, nowFunc)
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntryList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.QuotaList{}), client.InNamespace(namespaceName))
+
+						expectStaleMarking(k8sGardenRuntimeClient, project, nil, nil, nowFunc)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("should not set the auto delete timestamp because stale grace period is not exceeded", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
 						staleSinceTimestamp := metav1.Time{Time: nowFunc().Add(-24*time.Hour*time.Duration(staleGracePeriodDays) + time.Hour)}
 						project.Status.StaleSinceTimestamp = &staleSinceTimestamp
 
-						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, &staleSinceTimestamp, nil, nowFunc)
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntryList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.QuotaList{}), client.InNamespace(namespaceName))
+
+						expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, nil, nowFunc)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("should set the auto delete timestamp because stale grace period is exceeded", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
 						var (
 							staleSinceTimestamp      = metav1.Time{Time: nowFunc().Add(-24 * time.Hour * time.Duration(staleGracePeriodDays))}
@@ -336,53 +434,49 @@ var _ = Describe("ProjectStaleControl", func() {
 						)
 						project.Status.StaleSinceTimestamp = &staleSinceTimestamp
 
-						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntryList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.QuotaList{}), client.InNamespace(namespaceName))
 
-						_, result := reconciler.Reconcile(ctx, request)
-						Expect(result).To(Succeed())
-					})
-
-					It("should extend the project's stale grace period", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
-
-						var (
-							staleSinceTimestamp      = metav1.Time{Time: nowFunc().Add(-24 * time.Hour * time.Duration(staleGracePeriodDays))}
-							staleAutoDeleteTimestamp = metav1.Time{Time: staleSinceTimestamp.Add(24 * time.Hour * time.Duration(staleExpirationTimeDays))}
-							oldTime                  = metav1.Time{Time: staleSinceTimestamp.Add(-24*time.Hour*time.Duration(staleExpirationTimeDays) + time.Hour)}
-						)
-
-						project.Status.StaleSinceTimestamp = &oldTime
-						project.Status.StaleAutoDeleteTimestamp = &oldTime
-
-						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
+						expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
 					})
 
 					It("should delete the project if the auto delete timestamp is exceeded", func() {
-						defer test.WithVar(&NowFunc, nowFunc)
+						defer test.WithVar(&NowFunc, nowFunc)()
 
 						var (
 							staleSinceTimestamp      = metav1.Time{Time: nowFunc().Add(-24 * time.Hour * 3 * time.Duration(staleExpirationTimeDays))}
 							staleAutoDeleteTimestamp = nowFunc()
 						)
+
 						project.Status.StaleSinceTimestamp = &staleSinceTimestamp
 						project.Status.StaleAutoDeleteTimestamp = &staleAutoDeleteTimestamp
 
-						expectStaleMarking(k8sGardenRuntimeClient, k8sGardenRuntimeStatusWriter, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.PlantList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupEntryList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(namespaceName))
+						k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.QuotaList{}), client.InNamespace(namespaceName))
+
+						expectStaleMarking(k8sGardenRuntimeClient, project, &staleSinceTimestamp, &staleAutoDeleteTimestamp, nowFunc)
 
 						gutil.TimeNow = func() time.Time {
 							return time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC)
 						}
 
-						k8sGardenRuntimeClient.EXPECT().Get(context.TODO(), kutil.Key(projectName), project)
-						project.Annotations = map[string]string{
+						k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(projectName), project)
+						projectCopy := project.DeepCopy()
+						projectCopy.Annotations = map[string]string{
 							gutil.ConfirmationDeletion:         "true",
 							v1beta1constants.GardenerTimestamp: gutil.TimeNow().UTC().String(),
 						}
-						k8sGardenRuntimeClient.EXPECT().Update(context.TODO(), project)
-						k8sGardenRuntimeClient.EXPECT().Delete(context.TODO(), project)
+						k8sGardenRuntimeClient.EXPECT().Update(ctx, projectCopy)
+						k8sGardenRuntimeClient.EXPECT().Delete(ctx, projectCopy)
 
 						_, result := reconciler.Reconcile(ctx, request)
 						Expect(result).To(Succeed())
@@ -393,36 +487,27 @@ var _ = Describe("ProjectStaleControl", func() {
 	})
 })
 
-func expectNonStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, k8sGardenRuntimeStatusWriter *mockclient.MockStatusWriter, project *gardencorev1beta1.Project, nowFunc func() metav1.Time) {
-	k8sGardenRuntimeClient.EXPECT().Get(context.TODO(), kutil.Key(project.Name), project).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project) error {
-		someTime := nowFunc()
-		obj.Status.StaleSinceTimestamp = &someTime
-		obj.Status.StaleAutoDeleteTimestamp = &someTime
-		return nil
-	})
+func expectNonStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, project *gardencorev1beta1.Project) {
+	k8sGardenRuntimeClient.EXPECT().Status().Return(k8sGardenRuntimeClient)
 
-	project.Status.StaleSinceTimestamp = nil
-	project.Status.StaleAutoDeleteTimestamp = nil
+	projectPatched := project.DeepCopy()
+	projectPatched.Status.StaleSinceTimestamp = nil
+	projectPatched.Status.StaleAutoDeleteTimestamp = nil
 
-	k8sGardenRuntimeClient.EXPECT().Status().Return(k8sGardenRuntimeStatusWriter)
-	k8sGardenRuntimeStatusWriter.EXPECT().Update(context.TODO(), project)
+	test.EXPECTPatch(context.TODO(), k8sGardenRuntimeClient, projectPatched, project, types.StrategicMergePatchType)
 }
 
-func expectStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, k8sGardenRuntimeStatusWriter *mockclient.MockStatusWriter, project *gardencorev1beta1.Project, staleSinceTimestamp, staleAutoDeleteTimestamp *metav1.Time, nowFunc func() metav1.Time) {
-	k8sGardenRuntimeClient.EXPECT().Get(context.TODO(), kutil.Key(project.Name), project).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project) error {
-		project.DeepCopyInto(obj)
-		return nil
-	})
+func expectStaleMarking(k8sGardenRuntimeClient *mockclient.MockClient, project *gardencorev1beta1.Project, staleSinceTimestamp, staleAutoDeleteTimestamp *metav1.Time, nowFunc func() metav1.Time) {
+	k8sGardenRuntimeClient.EXPECT().Status().Return(k8sGardenRuntimeClient)
 
+	projectPatched := project.DeepCopy()
 	if staleSinceTimestamp == nil {
 		now := nowFunc()
-		project.Status.StaleSinceTimestamp = &now
+		projectPatched.Status.StaleSinceTimestamp = &now
 	} else {
-		project.Status.StaleSinceTimestamp = staleSinceTimestamp
+		projectPatched.Status.StaleSinceTimestamp = staleSinceTimestamp
 	}
+	projectPatched.Status.StaleAutoDeleteTimestamp = staleAutoDeleteTimestamp
 
-	project.Status.StaleAutoDeleteTimestamp = staleAutoDeleteTimestamp
-
-	k8sGardenRuntimeClient.EXPECT().Status().Return(k8sGardenRuntimeStatusWriter)
-	k8sGardenRuntimeStatusWriter.EXPECT().Update(context.TODO(), project)
+	test.EXPECTPatch(context.TODO(), k8sGardenRuntimeClient, projectPatched, project, types.StrategicMergePatchType)
 }
