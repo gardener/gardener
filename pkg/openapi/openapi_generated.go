@@ -2887,7 +2887,7 @@ func schema_pkg_apis_core_v1alpha1_KubeControllerManagerConfig(ref common.Refere
 					},
 					"nodeMonitorGracePeriod": {
 						SchemaProps: spec.SchemaProps{
-							Description: "nodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.",
+							Description: "NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -9286,7 +9286,7 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 					},
 					"nodeMonitorGracePeriod": {
 						SchemaProps: spec.SchemaProps{
-							Description: "nodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.",
+							Description: "NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},

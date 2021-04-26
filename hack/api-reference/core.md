@@ -4110,7 +4110,7 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>nodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.</p>
+<p>NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.</p>
 </td>
 </tr>
 </tbody>

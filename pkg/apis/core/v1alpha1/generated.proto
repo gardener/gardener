@@ -811,7 +811,7 @@ message KubeControllerManagerConfig {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration podEvictionTimeout = 4;
 
-  // nodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
+  // NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration nodeMonitorGracePeriod = 5;
 }
