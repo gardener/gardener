@@ -20,9 +20,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -54,20 +54,18 @@ func (c *Controller) shootQuotaDelete(obj interface{}) {
 
 // NewShootQuotaReconciler creates a new instance of a reconciler which checks handles Shoots using SecretBindings that
 // references Quotas.
-func NewShootQuotaReconciler(l logrus.FieldLogger, gardenClient client.Client, cfg config.ShootQuotaControllerConfiguration, k8sGardenCoreInformers gardencoreinformers.Interface) reconcile.Reconciler {
+func NewShootQuotaReconciler(l logrus.FieldLogger, gardenClient client.Client, cfg config.ShootQuotaControllerConfiguration) reconcile.Reconciler {
 	return &shootQuotaReconciler{
-		logger:                 l,
-		cfg:                    cfg,
-		gardenClient:           gardenClient,
-		k8sGardenCoreInformers: k8sGardenCoreInformers,
+		logger:       l,
+		cfg:          cfg,
+		gardenClient: gardenClient,
 	}
 }
 
 type shootQuotaReconciler struct {
-	logger                 logrus.FieldLogger
-	cfg                    config.ShootQuotaControllerConfiguration
-	gardenClient           client.Client
-	k8sGardenCoreInformers gardencoreinformers.Interface
+	logger       logrus.FieldLogger
+	cfg          config.ShootQuotaControllerConfiguration
+	gardenClient client.Client
 }
 
 func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -81,16 +79,16 @@ func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.
 		return reconcile.Result{}, err
 	}
 
-	secretBinding, err := r.k8sGardenCoreInformers.SecretBindings().Lister().SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName)
-	if err != nil {
+	secretBinding := &gardencorev1beta1.SecretBinding{}
+	if err := r.gardenClient.Get(ctx, kutil.Key(shoot.Namespace, shoot.Spec.SecretBindingName), secretBinding); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	var clusterLifeTime *int32
 
 	for _, quotaRef := range secretBinding.Quotas {
-		quota, err := r.k8sGardenCoreInformers.Quotas().Lister().Quotas(quotaRef.Namespace).Get(quotaRef.Name)
-		if err != nil {
+		quota := &gardencorev1beta1.Quota{}
+		if err := r.gardenClient.Get(ctx, kutil.Key(quotaRef.Namespace, quotaRef.Name), quota); err != nil {
 			return reconcile.Result{}, err
 		}
 
