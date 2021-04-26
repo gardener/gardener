@@ -1669,6 +1669,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 					"Field": Equal("spec.kubernetes.kubeControllerManager.podEvictionTimeout"),
 				}))))
 			})
+
+			It("should prevent setting a negative node monitor grace period", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{Duration: -1}
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeMonitorGracePeriod"),
+				}))))
+			})
+
+			It("should prevent setting the node monitor grace period to 0", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeMonitorGracePeriod = &metav1.Duration{}
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeControllerManager.nodeMonitorGracePeriod"),
+				}))))
+			})
 		})
 
 		Context("KubeProxy validation", func() {

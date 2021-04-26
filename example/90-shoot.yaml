@@ -173,6 +173,7 @@ spec:
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s
+  #   nodeMonitorGracePeriod: 2m0s
   #   featureGates:
   #     SomeKubernetesFeature: true
   #   horizontalPodAutoscaler:
