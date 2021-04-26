@@ -16,6 +16,7 @@ package event
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -30,53 +31,69 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller controls Events.
 type Controller struct {
-	clientMap              clientmap.ClientMap
-	cfg                    *config.EventControllerConfiguration
+	gardenClient client.Client
+	cfg          *config.EventControllerConfiguration
+
+	reconciler     reconcile.Reconciler
+	hasSyncedFuncs []cache.InformerSynced
+
 	eventQueue             workqueue.RateLimitingInterface
 	numberOfRunningWorkers int
 	workerCh               chan int
 }
 
 // NewController instantiates a new event controller
-func NewController(clientMap clientmap.ClientMap, cfg *config.EventControllerConfiguration) *Controller {
+func NewController(
+	ctx context.Context,
+	clientMap clientmap.ClientMap,
+	cfg *config.EventControllerConfiguration,
+) (
+	*Controller,
+	error,
+) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
+	}
+
+	eventInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Event{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Event Informer: %w", err)
+	}
+
 	controller := &Controller{
-		clientMap:  clientMap,
-		cfg:        cfg,
+		gardenClient: gardenClient.Client(),
+		cfg:          cfg,
+
+		reconciler: NewEventReconciler(logger.Logger, gardenClient.Client(), cfg),
+
 		eventQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "event"),
 		workerCh:   make(chan int),
 	}
 
-	return controller
+	eventInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: controller.enqueueEvent,
+	})
+
+	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs, eventInformer.HasSynced)
+
+	return controller, nil
 }
 
 // Run runs the Controller
 func (c *Controller) Run(ctx context.Context) {
 	var waitGroup sync.WaitGroup
 
-	if c.cfg == nil {
+	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
+		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
-
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		logger.Logger.Errorf("failed to get garden client: %v", err)
-		return
-	}
-
-	eventInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Event{})
-	if err != nil {
-		logger.Logger.Errorf("failed to get event informer: %v", err)
-		return
-	}
-
-	eventInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: c.enqueueEvent,
-	})
 
 	go func() {
 		for res := range c.workerCh {
@@ -88,7 +105,7 @@ func (c *Controller) Run(ctx context.Context) {
 	logger.Logger.Info("Event controller initialized.")
 
 	for i := 0; i < c.cfg.ConcurrentSyncs; i++ {
-		controllerutils.CreateWorker(ctx, c.eventQueue, "Event", reconcile.Func(c.reconcileEvent), &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.eventQueue, "Event", c.reconciler, &waitGroup, c.workerCh)
 	}
 
 	<-ctx.Done()

@@ -39,6 +39,7 @@ import (
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	"github.com/gardener/gardener/pkg/controllerutils/metrics"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -155,6 +156,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
 
 	// Initialize the workqueue metrics collection.
+	var metricsCollectors []metrics.ControllerMetricsCollector
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	// Create controllers.
@@ -162,68 +164,58 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, cloudProfileController)
 
 	controllerRegistrationController, err := controllerregistrationcontroller.NewController(ctx, f.clientMap)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerRegistration controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, controllerRegistrationController)
 
 	csrController, err := csrcontroller.NewCSRController(ctx, f.clientMap)
 	if err != nil {
 		return fmt.Errorf("failed initializing CSR controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, csrController)
 
 	plantController, err := plantcontroller.NewController(ctx, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Plant controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, plantController)
 
 	projectController, err := projectcontroller.NewProjectController(ctx, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, projectController)
 
 	quotaController, err := quotacontroller.NewQuotaController(ctx, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Quota controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, quotaController)
 
 	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing SecretBinding controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, secretBindingController)
 
-	var (
-		seedController  = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
-		eventController = eventcontroller.NewController(f.clientMap, f.cfg.Controllers.Event)
-	)
+	seedController := seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
+	metricsCollectors = append(metricsCollectors, seedController)
 
 	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, f.k8sInformers, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, shootController)
 
 	managedSeedSetController, err := managedseedsetcontroller.NewManagedSeedSetController(ctx, f.clientMap, f.cfg, f.recorder, logger.Logger)
 	if err != nil {
 		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
 	}
-
-	// Initialize the Controller metrics collection.
-	gardenmetrics.RegisterControllerMetrics(
-		controllermanager.ControllerWorkerSum,
-		controllermanager.ScrapeFailures,
-		cloudProfileController,
-		controllerRegistrationController,
-		csrController,
-		quotaController,
-		plantController,
-		projectController,
-		secretBindingController,
-		seedController,
-		shootController,
-		eventController,
-		managedSeedSetController,
-	)
+	metricsCollectors = append(metricsCollectors, managedSeedSetController)
 
 	go cloudProfileController.Run(ctx, f.cfg.Controllers.CloudProfile.ConcurrentSyncs)
 	go controllerRegistrationController.Run(ctx, f.cfg.Controllers.ControllerRegistration.ConcurrentSyncs)
@@ -234,8 +226,20 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs)
 	go seedController.Run(ctx, f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs, f.cfg.Controllers.ShootRetry.ConcurrentSyncs)
-	go eventController.Run(ctx)
 	go managedSeedSetController.Run(ctx, f.cfg.Controllers.ManagedSeedSet.ConcurrentSyncs)
+
+	if eventControllerConfig := f.cfg.Controllers.Event; eventControllerConfig != nil {
+		eventController, err := eventcontroller.NewController(ctx, f.clientMap, eventControllerConfig)
+		if err != nil {
+			return fmt.Errorf("failed initializing Event controller: %w", err)
+		}
+		metricsCollectors = append(metricsCollectors, eventController)
+
+		go eventController.Run(ctx)
+	}
+
+	// Initialize the Controller metrics collection.
+	gardenmetrics.RegisterControllerMetrics(controllermanager.ControllerWorkerSum, controllermanager.ScrapeFailures, metricsCollectors...)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
 
