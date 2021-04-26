@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/go-logr/logr"
@@ -51,12 +52,16 @@ var _ = auth.Authorizer(&authorizer{})
 var (
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
-	cloudProfileResource  = gardencorev1beta1.Resource("cloudprofiles")
-	configMapResource     = corev1.Resource("configmaps")
-	namespaceResource     = corev1.Resource("namespaces")
-	projectResource       = gardencorev1beta1.Resource("projects")
-	secretBindingResource = gardencorev1beta1.Resource("secretbindings")
-	shootStateResource    = gardencorev1alpha1.Resource("shootstates")
+	backupBucketResource           = gardencorev1beta1.Resource("backupbuckets")
+	backupEntryResource            = gardencorev1beta1.Resource("backupentries")
+	cloudProfileResource           = gardencorev1beta1.Resource("cloudprofiles")
+	configMapResource              = corev1.Resource("configmaps")
+	controllerInstallationResource = gardencorev1beta1.Resource("controllerinstallations")
+	managedSeedResource            = seedmanagementv1alpha1.Resource("managedseeds")
+	namespaceResource              = corev1.Resource("namespaces")
+	projectResource                = gardencorev1beta1.Resource("projects")
+	secretBindingResource          = gardencorev1beta1.Resource("secretbindings")
+	shootStateResource             = gardencorev1alpha1.Resource("shootstates")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
@@ -71,55 +76,87 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 	if attrs.IsResourceRequest() {
 		requestResource := schema.GroupResource{Group: attrs.GetAPIGroup(), Resource: attrs.GetResource()}
 		switch requestResource {
+		case backupBucketResource:
+			return a.authorize(seedName, graph.VertexTypeBackupBucket, attrs,
+				[]string{"update", "patch", "delete"},
+				[]string{"create", "get", "list", "watch"},
+				[]string{"status"},
+			)
+		case backupEntryResource:
+			return a.authorize(seedName, graph.VertexTypeBackupEntry, attrs,
+				[]string{"update", "patch"},
+				[]string{"create", "get", "list", "watch"},
+				[]string{"status"},
+			)
 		case cloudProfileResource:
-			return a.authorizeGet(seedName, graph.VertexTypeCloudProfile, attrs)
+			return a.authorizeRead(seedName, graph.VertexTypeCloudProfile, attrs)
 		case configMapResource:
-			return a.authorizeGet(seedName, graph.VertexTypeConfigMap, attrs)
+			return a.authorizeRead(seedName, graph.VertexTypeConfigMap, attrs)
+		case controllerInstallationResource:
+			return a.authorize(seedName, graph.VertexTypeControllerInstallation, attrs,
+				[]string{"update", "patch"},
+				[]string{"get", "list", "watch"},
+				[]string{"status"},
+			)
+		case managedSeedResource:
+			return a.authorize(seedName, graph.VertexTypeManagedSeed, attrs,
+				[]string{"update", "patch"},
+				[]string{"get", "list", "watch"},
+				[]string{"status"},
+			)
 		case namespaceResource:
-			return a.authorizeGet(seedName, graph.VertexTypeNamespace, attrs)
+			return a.authorizeRead(seedName, graph.VertexTypeNamespace, attrs)
 		case projectResource:
-			return a.authorizeGet(seedName, graph.VertexTypeProject, attrs)
+			return a.authorizeRead(seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
-			return a.authorizeGet(seedName, graph.VertexTypeSecretBinding, attrs)
+			return a.authorizeRead(seedName, graph.VertexTypeSecretBinding, attrs)
 		case shootStateResource:
-			return a.authorizeShootState(seedName, attrs)
+			return a.authorize(seedName, graph.VertexTypeShootState, attrs,
+				[]string{"get", "update", "patch"},
+				[]string{"create"},
+				nil,
+			)
 		}
 	}
 
 	return auth.DecisionNoOpinion, "", nil
 }
 
-func (a *authorizer) authorizeGet(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
-	if ok, reason := a.checkVerb(seedName, attrs, "get"); !ok {
-		return auth.DecisionNoOpinion, reason, nil
-	}
-
-	if ok, reason := a.checkSubresource(seedName, attrs); !ok {
-		return auth.DecisionNoOpinion, reason, nil
-	}
-
-	return a.authorize(seedName, fromType, attrs)
+func (a *authorizer) authorizeRead(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
+	return a.authorize(seedName, fromType, attrs, []string{"get"}, nil, nil)
 }
 
-func (a *authorizer) authorizeShootState(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	if ok, reason := a.checkVerb(seedName, attrs, "get", "create", "update", "patch"); !ok {
+func (a *authorizer) authorize(
+	seedName string,
+	fromType graph.VertexType,
+	attrs auth.Attributes,
+	allowedVerbs []string,
+	alwaysAllowedVerbs []string,
+	allowedSubresources []string,
+) (
+	auth.Decision,
+	string,
+	error,
+) {
+	if ok, reason := a.checkSubresource(seedName, attrs, allowedSubresources...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
-	if ok, reason := a.checkSubresource(seedName, attrs); !ok {
-		return auth.DecisionNoOpinion, reason, nil
-	}
-
-	// When a new ShootState is created then it doesn't yet exist in the graph, so we only handle update operations
-	// here. The create case is handled in the SeedRestriction admission handler.
-	if attrs.GetVerb() == "create" {
+	// When a new object is created then it doesn't yet exist in the graph, so usually such requests are always allowed
+	// as the 'create case' is typically handled in the SeedRestriction admission handler. Similarly, resources for
+	// which the gardenlet has a controller need to be listed/watched, so those verbs would also be allowed here.
+	if utils.ValueExists(attrs.GetVerb(), alwaysAllowedVerbs) {
 		return auth.DecisionAllow, "", nil
 	}
 
-	return a.authorize(seedName, graph.VertexTypeShootState, attrs)
+	if ok, reason := a.checkVerb(seedName, attrs, append(alwaysAllowedVerbs, allowedVerbs...)...); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	return a.hasPathFrom(seedName, fromType, attrs)
 }
 
-func (a *authorizer) authorize(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) hasPathFrom(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
 	if len(attrs.GetName()) == 0 {
 		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
 		return auth.DecisionNoOpinion, "No Object name found", nil
