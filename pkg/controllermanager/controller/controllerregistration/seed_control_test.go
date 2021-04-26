@@ -31,10 +31,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
@@ -221,31 +217,22 @@ var _ = Describe("SeedControl", func() {
 	)
 
 	var (
-		ctrl                   *gomock.Controller
-		clientMap              clientmap.ClientMap
-		k8sGardenRuntimeClient *mockclient.MockClient
-
-		gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
+		ctrl *gomock.Controller
+		c    *mockclient.MockClient
 
 		d *defaultSeedControl
 
 		ctx      = context.TODO()
+		fakeErr  = fmt.Errorf("fake err")
 		seedName = "seed"
 		obj      *gardencorev1beta1.Seed
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
-		k8sGardenClient := fakeclientset.NewClientSetBuilder().WithClient(k8sGardenRuntimeClient).Build()
+		c = mockclient.NewMockClient(ctrl)
 
-		clientMap = fake.NewClientMap().AddClient(keys.ForGarden(), k8sGardenClient)
-
-		gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-		controllerInstallationInformer := gardenCoreInformerFactory.Core().V1beta1().ControllerInstallations()
-		controllerInstallationLister := controllerInstallationInformer.Lister()
-
-		d = &defaultSeedControl{clientMap, controllerInstallationLister}
+		d = &defaultSeedControl{c}
 		obj = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            seedName,
@@ -263,21 +250,19 @@ var _ = Describe("SeedControl", func() {
 			It("should ensure the finalizer (error)", func() {
 				err := apierrors.NewNotFound(schema.GroupResource{}, seedName)
 
-				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}), gomock.Any()).
-					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-						Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
-						return err
-					})
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
+					return err
+				})
 
 				Expect(d.Reconcile(obj)).To(HaveOccurred())
 			})
 
 			It("should ensure the finalizer (no error)", func() {
-				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}), gomock.Any()).
-					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-						Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
-						return nil
-					})
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
+					return nil
+				})
 
 				Expect(d.Reconcile(obj)).NotTo(HaveOccurred())
 			})
@@ -297,51 +282,53 @@ var _ = Describe("SeedControl", func() {
 			})
 
 			It("should return an error because installation list failed", func() {
-				err := errors.New("err")
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).Return(fakeErr)
 
-				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, nil, err)
-
-				Expect(d.Reconcile(obj)).To(Equal(err))
+				Expect(d.Reconcile(obj)).To(MatchError(fakeErr))
 			})
 
 			It("should return an error because installation referencing seed exists", func() {
-				controllerInstallationList := []*gardencorev1beta1.ControllerInstallation{
-					{
-						Spec: gardencorev1beta1.ControllerInstallationSpec{
-							SeedRef: corev1.ObjectReference{
-								Name: seedName,
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
+					(&gardencorev1beta1.ControllerInstallationList{Items: []gardencorev1beta1.ControllerInstallation{
+						{
+							Spec: gardencorev1beta1.ControllerInstallationSpec{
+								SeedRef: corev1.ObjectReference{
+									Name: seedName,
+								},
 							},
 						},
-					},
-				}
-
-				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, controllerInstallationList, nil)
+					}}).DeepCopyInto(obj)
+					return nil
+				})
 
 				err := d.Reconcile(obj)
 				Expect(err.Error()).To(ContainSubstring("cannot remove finalizer"))
 			})
 
 			It("should remove the finalizer (error)", func() {
-				err := errors.New("some err")
-				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, nil, nil)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
+					(&gardencorev1beta1.ControllerInstallationList{}).DeepCopyInto(obj)
+					return nil
+				})
 
-				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}), gomock.Any()).
-					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-						Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
-						return err
-					})
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
+					return fakeErr
+				})
 
 				Expect(d.Reconcile(obj)).To(HaveOccurred())
 			})
 
 			It("should remove the finalizer (no error)", func() {
-				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, nil, nil)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
+					(&gardencorev1beta1.ControllerInstallationList{}).DeepCopyInto(obj)
+					return nil
+				})
 
-				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}), gomock.Any()).
-					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-						Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
-						return nil
-					})
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
+					return nil
+				})
 
 				Expect(d.Reconcile(obj)).NotTo(HaveOccurred())
 			})

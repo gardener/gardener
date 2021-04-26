@@ -19,17 +19,14 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func (c *Controller) seedAdd(obj interface{}, addToControllerRegistrationQueue bool) {
@@ -95,13 +92,12 @@ type SeedControlInterface interface {
 // NewDefaultSeedControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for Seeds. You should use an instance returned from NewDefaultSeedControl()
 // for any scenario other than testing.
-func NewDefaultSeedControl(clientMap clientmap.ClientMap, controllerInstallationLister gardencorelisters.ControllerInstallationLister) SeedControlInterface {
-	return &defaultSeedControl{clientMap, controllerInstallationLister}
+func NewDefaultSeedControl(gardenClient client.Client) SeedControlInterface {
+	return &defaultSeedControl{gardenClient}
 }
 
 type defaultSeedControl struct {
-	clientMap                    clientmap.ClientMap
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister
+	gardenClient client.Client
 }
 
 func (c *defaultSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
@@ -110,29 +106,24 @@ func (c *defaultSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
 		seed = obj.DeepCopy()
 	)
 
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	if seed.DeletionTimestamp != nil {
 		if !controllerutil.ContainsFinalizer(seed, FinalizerName) {
 			return nil
 		}
 
-		controllerInstallationList, err := c.controllerInstallationLister.List(labels.Everything())
-		if err != nil {
+		controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+		if err := c.gardenClient.List(ctx, controllerInstallationList); err != nil {
 			return err
 		}
 
-		for _, controllerInstallation := range controllerInstallationList {
+		for _, controllerInstallation := range controllerInstallationList.Items {
 			if controllerInstallation.Spec.SeedRef.Name == seed.Name {
 				return fmt.Errorf("cannot remove finalizer of Seed %q because still found at least one ControllerInstallation", seed.Name)
 			}
 		}
 
-		return controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), seed, FinalizerName)
+		return controllerutils.PatchRemoveFinalizers(ctx, c.gardenClient, seed, FinalizerName)
 	}
 
-	return controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), seed, FinalizerName)
+	return controllerutils.PatchAddFinalizers(ctx, c.gardenClient, seed, FinalizerName)
 }

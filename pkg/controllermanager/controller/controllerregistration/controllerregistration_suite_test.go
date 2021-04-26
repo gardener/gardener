@@ -44,29 +44,6 @@ func (f *fakeQueue) Len() int {
 	return len(f.items)
 }
 
-type fakeControllerInstallationLister struct {
-	gardencorelisters.ControllerInstallationLister
-
-	listResult []*gardencorev1beta1.ControllerInstallation
-	listErr    error
-}
-
-func newFakeControllerInstallationLister(controllerInstallationLister gardencorelisters.ControllerInstallationLister, listResult []*gardencorev1beta1.ControllerInstallation, listErr error) *fakeControllerInstallationLister {
-	return &fakeControllerInstallationLister{
-		ControllerInstallationLister: controllerInstallationLister,
-
-		listResult: listResult,
-		listErr:    listErr,
-	}
-}
-
-func (c *fakeControllerInstallationLister) List(labels.Selector) ([]*gardencorev1beta1.ControllerInstallation, error) {
-	if c.listErr != nil {
-		return nil, c.listErr
-	}
-	return c.listResult, nil
-}
-
 type fakeSeedLister struct {
 	gardencorelisters.SeedLister
 

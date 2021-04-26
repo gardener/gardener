@@ -78,6 +78,10 @@ func NewController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
 	}
+	controllerInstallationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
+	}
 	controllerRegistrationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerRegistration{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ControllerRegistration Informer: %w", err)
@@ -90,9 +94,6 @@ func NewController(
 	var (
 		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
 		k8sCoreInformer    = kubeInformerFactory.Core().V1()
-
-		controllerInstallationInformer = gardenCoreInformer.ControllerInstallations()
-		controllerInstallationLister   = controllerInstallationInformer.Lister()
 
 		shootInformer = gardenCoreInformer.Shoots()
 
@@ -109,7 +110,7 @@ func NewController(
 
 		controllerRegistrationReconciler:  NewControllerRegistrationReconciler(logger.Logger, gardenClient.Client()),
 		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(gardenClient, secretLister),
-		seedControl:                       NewDefaultSeedControl(clientMap, controllerInstallationLister),
+		seedControl:                       NewDefaultSeedControl(gardenClient.Client()),
 
 		controllerRegistrationQueue:     controllerRegistrationQueue,
 		controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
@@ -135,7 +136,7 @@ func NewController(
 		DeleteFunc: controller.controllerRegistrationDelete,
 	})
 
-	controllerInstallationInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	controllerInstallationInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.controllerInstallationAdd,
 		UpdateFunc: controller.controllerInstallationUpdate,
 	})
@@ -156,7 +157,7 @@ func NewController(
 		backupBucketInformer.HasSynced,
 		backupEntryInformer.HasSynced,
 		controllerRegistrationInformer.HasSynced,
-		controllerInstallationInformer.Informer().HasSynced,
+		controllerInstallationInformer.HasSynced,
 		seedInformer.HasSynced,
 		shootInformer.Informer().HasSynced,
 	)
