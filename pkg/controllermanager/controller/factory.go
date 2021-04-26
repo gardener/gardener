@@ -23,7 +23,6 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
@@ -62,21 +61,19 @@ import (
 
 // GardenControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenControllerFactory struct {
-	cfg                    *config.ControllerManagerConfiguration
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	k8sInformers           kubeinformers.SharedInformerFactory
-	recorder               record.EventRecorder
+	cfg          *config.ControllerManagerConfiguration
+	clientMap    clientmap.ClientMap
+	k8sInformers kubeinformers.SharedInformerFactory
+	recorder     record.EventRecorder
 }
 
 // NewGardenControllerFactory creates a new factory for controllers for the Garden API group.
-func NewGardenControllerFactory(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, cfg *config.ControllerManagerConfiguration, recorder record.EventRecorder) *GardenControllerFactory {
+func NewGardenControllerFactory(clientMap clientmap.ClientMap, kubeInformerFactory kubeinformers.SharedInformerFactory, cfg *config.ControllerManagerConfiguration, recorder record.EventRecorder) *GardenControllerFactory {
 	return &GardenControllerFactory{
-		cfg:                    cfg,
-		clientMap:              clientMap,
-		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		k8sInformers:           kubeInformerFactory,
-		recorder:               recorder,
+		cfg:          cfg,
+		clientMap:    clientMap,
+		k8sInformers: kubeInformerFactory,
+		recorder:     recorder,
 	}
 }
 
@@ -120,35 +117,9 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return err
 	}
 
-	var (
-		// Garden core informers
-		backupBucketInformer           = f.k8sGardenCoreInformers.Core().V1beta1().BackupBuckets().Informer()
-		backupEntryInformer            = f.k8sGardenCoreInformers.Core().V1beta1().BackupEntries().Informer()
-		cloudProfileInformer           = f.k8sGardenCoreInformers.Core().V1beta1().CloudProfiles().Informer()
-		controllerRegistrationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerRegistrations().Informer()
-		controllerInstallationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerInstallations().Informer()
-		quotaInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Quotas().Informer()
-		plantInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Plants().Informer()
-		projectInformer                = f.k8sGardenCoreInformers.Core().V1beta1().Projects().Informer()
-		secretBindingInformer          = f.k8sGardenCoreInformers.Core().V1beta1().SecretBindings().Informer()
-		seedInformer                   = f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Informer()
-		shootInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Informer()
-		// Kubernetes core informers
-		configMapInformer   = f.k8sInformers.Core().V1().ConfigMaps().Informer()
-		csrInformer         = f.k8sInformers.Certificates().V1beta1().CertificateSigningRequests().Informer()
-		namespaceInformer   = f.k8sInformers.Core().V1().Namespaces().Informer()
-		secretInformer      = f.k8sInformers.Core().V1().Secrets().Informer()
-		roleBindingInformer = f.k8sInformers.Rbac().V1().RoleBindings().Informer()
-		leaseInformer       = f.k8sInformers.Coordination().V1().Leases().Informer()
-	)
-
-	f.k8sGardenCoreInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, plantInformer.HasSynced, cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, projectInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
-		return errors.New("Timed out waiting for Garden core caches to sync")
-	}
-
+	secretInformer := f.k8sInformers.Core().V1().Secrets().Informer()
 	f.k8sInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), configMapInformer.HasSynced, csrInformer.HasSynced, namespaceInformer.HasSynced, secretInformer.HasSynced, roleBindingInformer.HasSynced, leaseInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), secretInformer.HasSynced) {
 		return errors.New("Timed out waiting for Kube caches to sync")
 	}
 
