@@ -152,7 +152,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return errors.New("Timed out waiting for Kube caches to sync")
 	}
 
-	runtime.Must(garden.BootstrapCluster(ctx, k8sGardenClient, v1beta1constants.GardenNamespace, f.k8sInformers.Core().V1().Secrets().Lister()))
+	runtime.Must(garden.BootstrapCluster(ctx, k8sGardenClient))
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
 
 	// Initialize the workqueue metrics collection.

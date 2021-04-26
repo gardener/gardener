@@ -33,7 +33,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -340,10 +339,8 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 	return secretsMap, nil
 }
 
-var monitoringRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.In, v1beta1constants.GardenRoleGlobalMonitoring)
-
 // BootstrapCluster bootstraps the Garden cluster and deploys various required manifests.
-func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface, gardenNamespace string, secretLister kubecorev1listers.SecretLister) error {
+func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface) error {
 	// Check whether the Kubernetes version of the Garden cluster is at least 1.16 (least supported K8s version of Gardener).
 	minGardenVersion := "1.16"
 	gardenVersionOK, err := version.CompareVersions(k8sGardenClient.Version(), ">=", minGardenVersion)
@@ -354,13 +351,18 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface,
 		return fmt.Errorf("the Kubernetes version of the Garden cluster must be at least %s", minGardenVersion)
 	}
 
-	secrets, err := secretLister.Secrets(v1beta1constants.GardenNamespace).List(labels.NewSelector().Add(monitoringRoleReq))
-	if err != nil {
+	secretList := &corev1.SecretList{}
+	if err := k8sGardenClient.Client().List(
+		ctx,
+		secretList,
+		client.InNamespace(v1beta1constants.GardenNamespace),
+		client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleGlobalMonitoring},
+	); err != nil {
 		return err
 	}
 
-	if len(secrets) < 1 {
-		if _, err = generateMonitoringSecret(ctx, k8sGardenClient, gardenNamespace); err != nil {
+	if len(secretList.Items) < 1 {
+		if _, err = generateMonitoringSecret(ctx, k8sGardenClient); err != nil {
 			return err
 		}
 	}
@@ -368,7 +370,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface,
 	return nil
 }
 
-func generateMonitoringSecret(ctx context.Context, k8sGardenClient kubernetes.Interface, gardenNamespace string) (*corev1.Secret, error) {
+func generateMonitoringSecret(ctx context.Context, k8sGardenClient kubernetes.Interface) (*corev1.Secret, error) {
 	basicAuthSecret := &secretutils.BasicAuthSecretConfig{
 		Name:   "monitoring-ingress-credentials",
 		Format: secretutils.BasicAuthFormatNormal,
@@ -384,7 +386,7 @@ func generateMonitoringSecret(ctx context.Context, k8sGardenClient kubernetes.In
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      basicAuthSecret.Name,
-			Namespace: gardenNamespace,
+			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, k8sGardenClient.Client(), secret, func() error {
