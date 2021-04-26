@@ -177,7 +177,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Quota controller: %w", err)
 	}
 
-	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.recorder)
+	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing SecretBinding controller: %w", err)
 	}
