@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
@@ -59,7 +58,6 @@ type Controller struct {
 func NewController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 ) (
 	*Controller,
@@ -90,12 +88,13 @@ func NewController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
 	}
+	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+	}
 
 	var (
-		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
-		k8sCoreInformer    = kubeInformerFactory.Core().V1()
-
-		shootInformer = gardenCoreInformer.Shoots()
+		k8sCoreInformer = kubeInformerFactory.Core().V1()
 
 		secretInformer = k8sCoreInformer.Secrets()
 		secretLister   = secretInformer.Lister()
@@ -147,7 +146,7 @@ func NewController(
 		DeleteFunc: controller.seedDelete,
 	})
 
-	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.shootAdd,
 		UpdateFunc: controller.shootUpdate,
 		DeleteFunc: controller.shootDelete,
@@ -159,7 +158,7 @@ func NewController(
 		controllerRegistrationInformer.HasSynced,
 		controllerInstallationInformer.HasSynced,
 		seedInformer.HasSynced,
-		shootInformer.Informer().HasSynced,
+		shootInformer.HasSynced,
 	)
 
 	return controller, nil
