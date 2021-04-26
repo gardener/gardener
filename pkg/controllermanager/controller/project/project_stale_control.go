@@ -29,9 +29,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -41,13 +39,11 @@ func NewProjectStaleReconciler(
 	l logrus.FieldLogger,
 	config *config.ProjectControllerConfiguration,
 	gardenClient client.Client,
-	secretLister kubecorev1listers.SecretLister,
 ) reconcile.Reconciler {
 	return &projectStaleReconciler{
 		logger:       l,
 		config:       config,
 		gardenClient: gardenClient,
-		secretLister: secretLister,
 	}
 }
 
@@ -55,7 +51,6 @@ type projectStaleReconciler struct {
 	logger       logrus.FieldLogger
 	gardenClient client.Client
 	config       *config.ProjectControllerConfiguration
-	secretLister kubecorev1listers.SecretLister
 }
 
 func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -179,12 +174,12 @@ func (r *projectStaleReconciler) projectInUseDueToBackupEntries(ctx context.Cont
 }
 
 func (r *projectStaleReconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
-	secretList, err := r.secretLister.Secrets(namespace).List(labels.Everything())
-	if err != nil {
+	secretList := &corev1.SecretList{}
+	if err := r.gardenClient.List(ctx, secretList, client.InNamespace(namespace)); err != nil {
 		return false, err
 	}
 
-	secretNames := computeSecretNames(secretList)
+	secretNames := computeSecretNames(secretList.Items)
 	if secretNames.Len() == 0 {
 		return false, nil
 	}
@@ -293,7 +288,7 @@ func (r *projectStaleReconciler) secretBindingInUse(ctx context.Context, namespa
 
 // computeSecretNames determines the names of Secrets that are of type Opaque and don't have owner references to a
 // Shoot.
-func computeSecretNames(secretList []*corev1.Secret) sets.String {
+func computeSecretNames(secretList []corev1.Secret) sets.String {
 	names := sets.NewString()
 
 	for _, secret := range secretList {

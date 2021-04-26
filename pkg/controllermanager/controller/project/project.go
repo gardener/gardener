@@ -30,7 +30,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	rbacv1 "k8s.io/api/rbac/v1"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -58,7 +57,6 @@ type Controller struct {
 func NewProjectController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
 ) (
@@ -79,17 +77,10 @@ func NewProjectController(
 		return nil, fmt.Errorf("failed to get RoleBinding Informer: %w", err)
 	}
 
-	var (
-		corev1Informer = kubeInformerFactory.Core().V1()
-
-		secretInformer = corev1Informer.Secrets()
-		secretLister   = secretInformer.Lister()
-	)
-
 	projectController := &Controller{
 		gardenClient:           gardenClient.Client(),
 		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder),
-		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client(), secretLister),
+		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client()),
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		workerCh:               make(chan int),

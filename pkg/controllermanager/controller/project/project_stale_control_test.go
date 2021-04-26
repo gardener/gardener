@@ -132,12 +132,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			}
 			request = reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name}}
 
-			reconciler = NewProjectStaleReconciler(
-				logger.NewNopLogger(),
-				cfg,
-				k8sGardenRuntimeClient,
-				kubeCoreInformerFactory.Core().V1().Secrets().Lister(),
-			)
+			reconciler = NewProjectStaleReconciler(logger.NewNopLogger(), cfg, k8sGardenRuntimeClient)
 
 			k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}))
 			Expect(kubeCoreInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(namespace)).To(Succeed())
