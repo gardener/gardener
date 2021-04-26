@@ -31,7 +31,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -112,22 +111,20 @@ func (c *Controller) plantDelete(obj interface{}) {
 }
 
 // NewPlantReconciler creates a new instance of a reconciler which reconciles Plants.
-func NewPlantReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, gardenClient client.Client, config *config.PlantControllerConfiguration, secretsLister kubecorev1listers.SecretLister) reconcile.Reconciler {
+func NewPlantReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, gardenClient client.Client, config *config.PlantControllerConfiguration) reconcile.Reconciler {
 	return &plantReconciler{
-		logger:        l,
-		clientMap:     clientMap,
-		gardenClient:  gardenClient,
-		config:        config,
-		secretsLister: secretsLister,
+		logger:       l,
+		clientMap:    clientMap,
+		gardenClient: gardenClient,
+		config:       config,
 	}
 }
 
 type plantReconciler struct {
-	logger        logrus.FieldLogger
-	clientMap     clientmap.ClientMap
-	gardenClient  client.Client
-	config        *config.PlantControllerConfiguration
-	secretsLister kubecorev1listers.SecretLister
+	logger       logrus.FieldLogger
+	clientMap    clientmap.ClientMap
+	gardenClient client.Client
+	config       *config.PlantControllerConfiguration
 }
 
 func (r *plantReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -168,8 +165,8 @@ func (r *plantReconciler) reconcile(ctx context.Context, plant *gardencorev1beta
 		conditionEveryNodeReady     = gardencorev1beta1helper.GetOrInitCondition(plant.Status.Conditions, gardencorev1beta1.PlantEveryNodeReady)
 	)
 
-	kubeconfigSecret, err := r.secretsLister.Secrets(plant.Namespace).Get(plant.Spec.SecretRef.Name)
-	if err != nil {
+	kubeconfigSecret := &corev1.Secret{}
+	if err := r.gardenClient.Get(ctx, kutil.Key(plant.Namespace, plant.Spec.SecretRef.Name), kubeconfigSecret); err != nil {
 		if apierrors.IsNotFound(err) {
 			return updateStatusToUnknown(ctx, gardenClient, plant, "Referenced Plant secret could not be found.", conditionAPIServerAvailable, conditionEveryNodeReady)
 		}

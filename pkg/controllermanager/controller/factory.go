@@ -162,7 +162,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing CSR controller: %w", err)
 	}
 
-	plantController, err := plantcontroller.NewController(ctx, f.clientMap, f.k8sInformers, f.cfg)
+	plantController, err := plantcontroller.NewController(ctx, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Plant controller: %w", err)
 	}
