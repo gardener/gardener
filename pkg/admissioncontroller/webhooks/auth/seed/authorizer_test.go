@@ -416,7 +416,7 @@ var _ = Describe("Seed", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get create update patch]"))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get update patch]"))
 				},
 
 				Entry("list", "list"),
@@ -653,7 +653,7 @@ var _ = Describe("Seed", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch create update patch delete]"))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get list watch update patch delete]"))
 			})
 
 			It("should have no opinion because no allowed subresource", func() {
@@ -744,7 +744,7 @@ var _ = Describe("Seed", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get list watch create update patch]"))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get list watch update patch]"))
 
 				},
 

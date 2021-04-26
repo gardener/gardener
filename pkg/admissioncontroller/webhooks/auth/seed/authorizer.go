@@ -78,13 +78,13 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		switch requestResource {
 		case backupBucketResource:
 			return a.authorize(seedName, graph.VertexTypeBackupBucket, attrs,
-				[]string{"get", "list", "watch", "create", "update", "patch", "delete"},
+				[]string{"update", "patch", "delete"},
 				[]string{"create", "get", "list", "watch"},
 				[]string{"status"},
 			)
 		case backupEntryResource:
 			return a.authorize(seedName, graph.VertexTypeBackupEntry, attrs,
-				[]string{"get", "list", "watch", "create", "update", "patch"},
+				[]string{"update", "patch"},
 				[]string{"create", "get", "list", "watch"},
 				[]string{"status"},
 			)
@@ -94,13 +94,13 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(seedName, graph.VertexTypeConfigMap, attrs)
 		case controllerInstallationResource:
 			return a.authorize(seedName, graph.VertexTypeControllerInstallation, attrs,
-				[]string{"get", "list", "watch", "update", "patch"},
+				[]string{"update", "patch"},
 				[]string{"get", "list", "watch"},
 				[]string{"status"},
 			)
 		case managedSeedResource:
 			return a.authorize(seedName, graph.VertexTypeManagedSeed, attrs,
-				[]string{"get", "list", "watch", "update", "patch"},
+				[]string{"update", "patch"},
 				[]string{"get", "list", "watch"},
 				[]string{"status"},
 			)
@@ -112,7 +112,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(seedName, graph.VertexTypeSecretBinding, attrs)
 		case shootStateResource:
 			return a.authorize(seedName, graph.VertexTypeShootState, attrs,
-				[]string{"get", "create", "update", "patch"},
+				[]string{"get", "update", "patch"},
 				[]string{"create"},
 				nil,
 			)
@@ -138,10 +138,6 @@ func (a *authorizer) authorize(
 	string,
 	error,
 ) {
-	if ok, reason := a.checkVerb(seedName, attrs, allowedVerbs...); !ok {
-		return auth.DecisionNoOpinion, reason, nil
-	}
-
 	if ok, reason := a.checkSubresource(seedName, attrs, allowedSubresources...); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
@@ -151,6 +147,10 @@ func (a *authorizer) authorize(
 	// which the gardenlet has a controller need to be listed/watched, so those verbs would also be allowed here.
 	if utils.ValueExists(attrs.GetVerb(), alwaysAllowedVerbs) {
 		return auth.DecisionAllow, "", nil
+	}
+
+	if ok, reason := a.checkVerb(seedName, attrs, append(alwaysAllowedVerbs, allowedVerbs...)...); !ok {
+		return auth.DecisionNoOpinion, reason, nil
 	}
 
 	return a.hasPathFrom(seedName, fromType, attrs)
