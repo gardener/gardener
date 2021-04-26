@@ -73,7 +73,7 @@ func NewProjectController(
 
 	projectInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Project{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+		return nil, fmt.Errorf("failed to get Project Informer: %w", err)
 	}
 
 	var (

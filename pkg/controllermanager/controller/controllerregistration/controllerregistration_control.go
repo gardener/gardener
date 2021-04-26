@@ -19,29 +19,26 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (c *Controller) controllerRegistrationAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 	c.controllerRegistrationQueue.Add(key)
 
 	seedList, err := c.seedLister.List(labels.Everything())
 	if err != nil {
-		logger.Logger.Errorf("error listing seeds: %+v", err)
 		return
 	}
 
@@ -57,78 +54,53 @@ func (c *Controller) controllerRegistrationUpdate(oldObj, newObj interface{}) {
 func (c *Controller) controllerRegistrationDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 	c.controllerRegistrationQueue.Add(key)
 }
 
-func (c *Controller) reconcileControllerRegistrationKey(key string) error {
-	_, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return err
+// NewControllerRegistrationReconciler creates a new instance of a reconciler which reconciles ControllerRegistrations.
+func NewControllerRegistrationReconciler(logger logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
+	return &controllerRegistrationReconciler{
+		logger:       logger,
+		gardenClient: gardenClient,
 	}
-
-	controllerRegistration, err := c.controllerRegistrationLister.Get(name)
-	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[CONTROLLERREGISTRATION RECONCILE] %s - skipping because ControllerRegistration has been deleted", key)
-		return nil
-	}
-	if err != nil {
-		logger.Logger.Infof("[CONTROLLERREGISTRATION RECONCILE] %s - unable to retrieve object from store: %v", key, err)
-		return err
-	}
-
-	return c.controllerRegistrationControl.Reconcile(controllerRegistration)
 }
 
-// ControlInterface implements the control logic for updating ControllerRegistrations. It is implemented as an interface to allow
-// for extensions that provide different semantics. Currently, there is only one implementation.
-type ControlInterface interface {
-	Reconcile(*gardencorev1beta1.ControllerRegistration) error
+type controllerRegistrationReconciler struct {
+	logger       logrus.FieldLogger
+	gardenClient client.Client
 }
 
-// NewDefaultControllerRegistrationControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for ControllerRegistrations. You should use an instance returned from NewDefaultControllerRegistrationControl()
-// for any scenario other than testing.
-func NewDefaultControllerRegistrationControl(clientMap clientmap.ClientMap, controllerInstallationLister gardencorelisters.ControllerInstallationLister) ControlInterface {
-	return &defaultControllerRegistrationControl{clientMap, controllerInstallationLister}
-}
-
-type defaultControllerRegistrationControl struct {
-	clientMap                    clientmap.ClientMap
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister
-}
-
-func (c *defaultControllerRegistrationControl) Reconcile(obj *gardencorev1beta1.ControllerRegistration) error {
-	var (
-		ctx                    = context.TODO()
-		controllerRegistration = obj.DeepCopy()
-	)
-
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
+func (r *controllerRegistrationReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, controllerRegistration); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			return reconcile.Result{}, nil
+		}
+		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+		return reconcile.Result{}, err
 	}
 
 	if controllerRegistration.DeletionTimestamp != nil {
 		if !controllerutil.ContainsFinalizer(controllerRegistration, FinalizerName) {
-			return nil
+			return reconcile.Result{}, nil
 		}
 
-		controllerInstallationList, err := c.controllerInstallationLister.List(labels.Everything())
-		if err != nil {
-			return err
+		controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+		if err := r.gardenClient.List(ctx, controllerInstallationList); err != nil {
+			return reconcile.Result{}, err
 		}
 
-		for _, controllerInstallation := range controllerInstallationList {
+		for _, controllerInstallation := range controllerInstallationList.Items {
 			if controllerInstallation.Spec.RegistrationRef.Name == controllerRegistration.Name {
-				return fmt.Errorf("cannot remove finalizer of ControllerRegistration %q because still found at least one ControllerInstallation", controllerRegistration.Name)
+				return reconcile.Result{}, fmt.Errorf("cannot remove finalizer of ControllerRegistration %q because still found at least one ControllerInstallation", controllerRegistration.Name)
 			}
 		}
 
-		return controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), controllerRegistration, FinalizerName)
+		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, controllerRegistration, FinalizerName)
 	}
 
-	return controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), controllerRegistration, FinalizerName)
+	return reconcile.Result{}, controllerutils.PatchAddFinalizers(ctx, r.gardenClient, controllerRegistration, FinalizerName)
 }

@@ -55,8 +55,6 @@ var _ = Describe("Controller", func() {
 
 	BeforeEach(func() {
 		gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-		controllerRegistrationInformer := gardenCoreInformerFactory.Core().V1beta1().ControllerRegistrations()
-		controllerRegistrationLister := controllerRegistrationInformer.Lister()
 		seedInformer := gardenCoreInformerFactory.Core().V1beta1().Seeds()
 		seedLister := seedInformer.Lister()
 
@@ -65,7 +63,6 @@ var _ = Describe("Controller", func() {
 
 		c = &Controller{
 			controllerRegistrationQueue:     queue,
-			controllerRegistrationLister:    controllerRegistrationLister,
 			controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
 			seedLister:                      seedLister,
 		}
@@ -461,15 +458,17 @@ var _ = Describe("ControllerRegistrationSeedControl", func() {
 				},
 			},
 		}
-		controllerRegistrationList = []*gardencorev1beta1.ControllerRegistration{
-			controllerRegistration1,
-			controllerRegistration2,
-			controllerRegistration3,
-			controllerRegistration4,
-			controllerRegistration5,
-			controllerRegistration6,
-			controllerRegistration7,
-			controllerRegistration8,
+		controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
+			Items: []gardencorev1beta1.ControllerRegistration{
+				*controllerRegistration1,
+				*controllerRegistration2,
+				*controllerRegistration3,
+				*controllerRegistration4,
+				*controllerRegistration5,
+				*controllerRegistration6,
+				*controllerRegistration7,
+				*controllerRegistration8,
+			},
 		}
 		controllerRegistrations = map[string]controllerRegistration{
 			controllerRegistration1.Name: {obj: controllerRegistration1},

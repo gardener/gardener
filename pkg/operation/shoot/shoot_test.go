@@ -387,40 +387,42 @@ var _ = Describe("shoot", func() {
 		var (
 			shoot                      *gardencorev1beta1.Shoot
 			seed                       *gardencorev1beta1.Seed
-			controllerRegistrationList []*gardencorev1beta1.ControllerRegistration
+			controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList
 			internalDomain             *garden.Domain
 			externalDomain             *garden.Domain
 		)
 
 		BeforeEach(func() {
-			controllerRegistrationList = []*gardencorev1beta1.ControllerRegistration{
-				{
-					Spec: gardencorev1beta1.ControllerRegistrationSpec{
-						Resources: []gardencorev1beta1.ControllerResource{
-							{
-								Kind: extensionsv1alpha1.ContainerRuntimeResource,
-								Type: extensionType3,
+			controllerRegistrationList = &gardencorev1beta1.ControllerRegistrationList{
+				Items: []gardencorev1beta1.ControllerRegistration{
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind: extensionsv1alpha1.ContainerRuntimeResource,
+									Type: extensionType3,
+								},
 							},
 						},
 					},
-				},
-				{
-					Spec: gardencorev1beta1.ControllerRegistrationSpec{
-						Resources: []gardencorev1beta1.ControllerResource{
-							{
-								Kind: extensionsv1alpha1.ExtensionResource,
-								Type: extensionType1,
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind: extensionsv1alpha1.ExtensionResource,
+									Type: extensionType1,
+								},
 							},
 						},
 					},
-				},
-				{
-					Spec: gardencorev1beta1.ControllerRegistrationSpec{
-						Resources: []gardencorev1beta1.ControllerResource{
-							{
-								Kind:            extensionsv1alpha1.ExtensionResource,
-								Type:            extensionType2,
-								GloballyEnabled: pointer.BoolPtr(true),
+					{
+						Spec: gardencorev1beta1.ControllerRegistrationSpec{
+							Resources: []gardencorev1beta1.ControllerResource{
+								{
+									Kind:            extensionsv1alpha1.ExtensionResource,
+									Type:            extensionType2,
+									GloballyEnabled: pointer.BoolPtr(true),
+								},
 							},
 						},
 					},

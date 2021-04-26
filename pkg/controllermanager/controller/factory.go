@@ -157,6 +157,11 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
 	}
 
+	controllerRegistrationController, err := controllerregistrationcontroller.NewController(ctx, f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers)
+	if err != nil {
+		return fmt.Errorf("failed initializing ControllerRegistration controller: %w", err)
+	}
+
 	csrController, err := csrcontroller.NewCSRController(ctx, f.clientMap)
 	if err != nil {
 		return fmt.Errorf("failed initializing CSR controller: %w", err)
@@ -183,9 +188,8 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 
 	var (
-		controllerRegistrationController = controllerregistrationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers)
-		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
-		eventController                  = eventcontroller.NewController(f.clientMap, f.cfg.Controllers.Event)
+		seedController  = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
+		eventController = eventcontroller.NewController(f.clientMap, f.cfg.Controllers.Event)
 	)
 
 	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
@@ -202,8 +206,8 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	gardenmetrics.RegisterControllerMetrics(
 		controllermanager.ControllerWorkerSum,
 		controllermanager.ScrapeFailures,
-		controllerRegistrationController,
 		cloudProfileController,
+		controllerRegistrationController,
 		csrController,
 		quotaController,
 		plantController,
