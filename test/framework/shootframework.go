@@ -56,7 +56,7 @@ type ShootConfig struct {
 }
 
 // ShootFramework represents the shoot test framework that includes
-// test functions that can be executed ona specific shoot
+// test functions that can be executed on a specific shoot
 type ShootFramework struct {
 	*GardenerFramework
 	TestDescription
