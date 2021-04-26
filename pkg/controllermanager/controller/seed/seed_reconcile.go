@@ -20,15 +20,12 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,47 +57,54 @@ func (c *Controller) seedAdd(obj interface{}) {
 	c.seedEnqueue(seed)
 }
 
+// NewDefaultControl returns a new instance of the default implementation that
+// implements the documented semantics for seeds.
+// You should use an instance returned from NewDefaultControl() for any scenario other than testing.
+func NewDefaultControl(logger logrus.FieldLogger, gardenClient kubernetes.Interface, secretLister corev1listers.SecretLister) *reconciler {
+	return &reconciler{
+		logger:       logger,
+		gardenClient: gardenClient,
+		secretLister: secretLister,
+	}
+}
+
 type reconciler struct {
-	clientMap    clientmap.ClientMap
+	logger       logrus.FieldLogger
+	gardenClient kubernetes.Interface
 	secretLister corev1listers.SecretLister
-	seedLister   gardencorelisters.SeedLister
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	seedObj, err := r.seedLister.Get(req.Name)
+	seed := &gardencorev1beta1.Seed{}
+	err := r.gardenClient.Client().Get(ctx, req.NamespacedName, seed)
 	if apierrors.IsNotFound(err) {
-		logger.Logger.Infof("[SEED] Stopping operations for Seed %s since it has been deleted", req.Name)
+		r.logger.Infof("[SEED] Stopping operations for Seed %s since it has been deleted", req.Name)
 		return reconcileResult(nil)
 	}
 	if err != nil {
-		logger.Logger.Infof("[SEED] %s - unable to retrieve object from store: %v", req.Name, err)
+		r.logger.Infof("[SEED] %s - unable to retrieve object from store: %v", req.Name, err)
 		return reconcileResult(err)
-	}
-
-	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcileResult(fmt.Errorf("failed to get garden client: %w", err))
 	}
 
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: gardenerutils.ComputeGardenNamespace(seedObj.Name),
+			Name: gardenerutils.ComputeGardenNamespace(seed.Name),
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), namespace, func() error {
-		namespace.OwnerReferences = []metav1.OwnerReference{*metav1.NewControllerRef(seedObj, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.gardenClient.Client(), namespace, func() error {
+		namespace.OwnerReferences = []metav1.OwnerReference{*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))}
 		return nil
 	}); err != nil {
 		return reconcileResult(err)
 	}
 
-	syncedSecrets, err := r.syncGardenSecrets(ctx, gardenClient, namespace)
+	syncedSecrets, err := r.syncGardenSecrets(ctx, r.gardenClient, namespace)
 	if err != nil {
 		return reconcileResult(fmt.Errorf("failed to sync garden secrets: %v", err))
 	}
 
-	if err := r.cleanupStaleSecrets(ctx, gardenClient, syncedSecrets, namespace.Name); err != nil {
+	if err := r.cleanupStaleSecrets(ctx, r.gardenClient, syncedSecrets, namespace.Name); err != nil {
 		return reconcileResult(fmt.Errorf("failed to clean up secrets in seed namespace: %v", err))
 	}
 
@@ -173,19 +177,4 @@ func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient kuberne
 	}
 
 	return secretNames, flow.Parallel(fns...)(ctx)
-}
-
-// NewDefaultControl returns a new instance of the default implementation that
-// implements the documented semantics for seeds.
-// You should use an instance returned from NewDefaultControl() for any scenario other than testing.
-func NewDefaultControl(
-	clientMap clientmap.ClientMap,
-	secretLister corev1listers.SecretLister,
-	seedLister gardencorelisters.SeedLister,
-) *reconciler {
-	return &reconciler{
-		clientMap:    clientMap,
-		secretLister: secretLister,
-		seedLister:   seedLister,
-	}
 }

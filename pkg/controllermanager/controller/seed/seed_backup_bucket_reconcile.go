@@ -20,10 +20,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
 
+	"github.com/sirupsen/logrus"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,16 +61,16 @@ func (c *Controller) backupBucketUpdate(oldObj, newObj interface{}) {
 }
 
 // NewDefaultBackupBucketControl returns a new default control to checks backup buckets of related seeds.
-func NewDefaultBackupBucketControl(gardenClient kubernetes.Interface, seedLister gardencorelisters.SeedLister) *backupBucketReconciler {
+func NewDefaultBackupBucketControl(logger logrus.FieldLogger, gardenClient kubernetes.Interface) *backupBucketReconciler {
 	return &backupBucketReconciler{
+		logger:       logger,
 		gardenClient: gardenClient,
-		seedLister:   seedLister,
 	}
 }
 
 type backupBucketReconciler struct {
+	logger       logrus.FieldLogger
 	gardenClient kubernetes.Interface
-	seedLister   gardencorelisters.SeedLister
 }
 
 type backupBucketInfo struct {
@@ -84,13 +83,13 @@ func (b *backupBucketInfo) String() string {
 }
 
 func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	seed, err := b.seedLister.Get(req.Name)
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := b.gardenClient.Client().Get(ctx, req.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Logger.Debugf("[BACKUPBUCKET SEED RECONCILE] %s - skipping because Seed has been deleted", req.NamespacedName)
+			b.logger.Debugf("[BACKUPBUCKET SEED RECONCILE] %s - skipping because Seed has been deleted", req.NamespacedName)
 			return reconcileResult(nil)
 		}
-		logger.Logger.Infof("[BACKUPBUCKET SEED RECONCILE] %s - unable to retrieve seed object from store: %v", req.NamespacedName, err)
+		b.logger.Infof("[BACKUPBUCKET SEED RECONCILE] %s - unable to retrieve seed object from store: %v", req.NamespacedName, err)
 		return reconcileResult(err)
 	}
 

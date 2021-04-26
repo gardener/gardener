@@ -20,13 +20,11 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	"github.com/gardener/gardener/pkg/logger"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
-	mockkubernetes "github.com/gardener/gardener/pkg/mock/client-go/kubernetes"
+	mockclientgo "github.com/gardener/gardener/pkg/mock/client-go/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -45,7 +43,10 @@ import (
 )
 
 var _ = Describe("SeedReconciler", func() {
-	var ctrl *gomock.Controller
+	var (
+		ctx  = context.TODO()
+		ctrl *gomock.Controller
+	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
@@ -57,14 +58,14 @@ var _ = Describe("SeedReconciler", func() {
 
 	Describe("#Reconcile", func() {
 		var (
-			cl          *mockclient.MockClient
-			k           *mockkubernetes.MockInterface
-			corev1If    *mockcorev1.MockCoreV1Interface
-			namespaceIf *mockcorev1.MockNamespaceInterface
-			secretIf    *mockcorev1.MockSecretInterface
+			k8sGardenClient *mockkubernetes.MockInterface
+			cl              *mockclient.MockClient
+			k               *mockclientgo.MockInterface
+			corev1If        *mockcorev1.MockCoreV1Interface
+			namespaceIf     *mockcorev1.MockNamespaceInterface
+			secretIf        *mockcorev1.MockSecretInterface
 
 			control reconcile.Reconciler
-			cm      *fakeclientmap.ClientMap
 
 			secrets   []*corev1.Secret
 			seed      *gardencorev1beta1.Seed
@@ -72,6 +73,7 @@ var _ = Describe("SeedReconciler", func() {
 		)
 
 		BeforeEach(func() {
+			k8sGardenClient = mockkubernetes.NewMockInterface(ctrl)
 			cl = mockclient.NewMockClient(ctrl)
 			seed = &gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -98,13 +100,9 @@ var _ = Describe("SeedReconciler", func() {
 				Expect(coreInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 			}
 
-			fakeGardenClientSet := fakeclientset.NewClientSetBuilder().
-				WithKubernetes(k).
-				WithClient(cl).
-				Build()
-			cm = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(), fakeGardenClientSet).Build()
+			control = NewDefaultControl(logger.NewNopLogger(), k8sGardenClient, coreInformerFactory.Core().V1().Secrets().Lister())
 
-			control = NewDefaultControl(cm, coreInformerFactory.Core().V1().Secrets().Lister(), gardenInformerFactory.Core().V1beta1().Seeds().Lister())
+			k8sGardenClient.EXPECT().Client().Return(cl).AnyTimes()
 		})
 
 		Context("when seed exists", func() {
@@ -116,7 +114,7 @@ var _ = Describe("SeedReconciler", func() {
 
 			BeforeEach(func() {
 				cl = mockclient.NewMockClient(ctrl)
-				k = mockkubernetes.NewMockInterface(ctrl)
+				k = mockclientgo.NewMockInterface(ctrl)
 				corev1If = mockcorev1.NewMockCoreV1Interface(ctrl)
 				namespaceIf = mockcorev1.NewMockNamespaceInterface(ctrl)
 				secretIf = mockcorev1.NewMockSecretInterface(ctrl)
@@ -132,6 +130,11 @@ var _ = Describe("SeedReconciler", func() {
 				addedSecret = createSecret("new", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar"))
 				deletedSecret = createSecret("stale", seedNamespace.Name, "foo", "role", []byte("bar"))
 				secrets = []*corev1.Secret{addedSecret, newSecret, oldSecret, deletedSecret}
+
+				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+					*obj = *seed
+					return nil
+				})
 			})
 
 			It("should update the namespace and sync secrets", func() {
@@ -166,6 +169,11 @@ var _ = Describe("SeedReconciler", func() {
 			})
 
 			It("should create and copy assets", func() {
+				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+					*obj = *seed
+					return nil
+				})
+
 				cl.EXPECT().Get(context.Background(), kutil.Key(gardenerutils.ComputeGardenNamespace(seed.Name)), gomock.AssignableToTypeOf(&corev1.Namespace{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 				cl.EXPECT().Create(context.Background(), namespace).Return(nil)
 				cl.EXPECT().Get(context.Background(), kutil.Key(namespace.Name, secrets[0].Name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
@@ -179,8 +187,10 @@ var _ = Describe("SeedReconciler", func() {
 			})
 
 			It("should not create and copy assets if seed cannot be found", func() {
+				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
 				defer test.WithVar(&logger.Logger, logger.NewNopLogger())()
-				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: kutil.Key("Gone")})
+				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(result).To(Equal(reconcile.Result{}))
 			})
