@@ -89,13 +89,20 @@ var _ = Describe("Etcd", func() {
 			Begin: "1234",
 			End:   "5678",
 		}
-		now                         = time.Time{}
-		quota                       = resource.MustParse("8Gi")
-		garbageCollectionPolicy     = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
-		garbageCollectionPeriod     = metav1.Duration{Duration: 12 * time.Hour}
+		now                     = time.Time{}
+		quota                   = resource.MustParse("8Gi")
+		garbageCollectionPolicy = druidv1alpha1.GarbageCollectionPolicy(druidv1alpha1.GarbageCollectionPolicyExponential)
+		garbageCollectionPeriod = metav1.Duration{Duration: 12 * time.Hour}
+		compressionPolicy       = druidv1alpha1.GzipCompression
+		compressionSpec         = druidv1alpha1.CompressionSpec{
+			Enabled: true,
+			Policy:  &compressionPolicy,
+		}
 		updateModeAuto              = hvpav1alpha1.UpdateModeAuto
 		updateModeMaintenanceWindow = hvpav1alpha1.UpdateModeMaintenanceWindow
 		containerPolicyOff          = autoscalingv1beta2.ContainerScalingModeOff
+		metricsBasic                = druidv1alpha1.Basic
+		metricsExtensive            = druidv1alpha1.Extensive
 
 		networkPolicyName = "allow-etcd"
 		etcdName          = "etcd-" + testRole
@@ -259,7 +266,7 @@ var _ = Describe("Etcd", func() {
 						},
 						ServerPort:              &PortEtcdServer,
 						ClientPort:              &PortEtcdClient,
-						Metrics:                 druidv1alpha1.Basic,
+						Metrics:                 &metricsBasic,
 						DefragmentationSchedule: &defragSchedule,
 						Quota:                   &quota,
 					},
@@ -268,6 +275,7 @@ var _ = Describe("Etcd", func() {
 						Resources:               resourcesContainerBackupRestore,
 						GarbageCollectionPolicy: &garbageCollectionPolicy,
 						GarbageCollectionPeriod: &garbageCollectionPeriod,
+						SnapshotCompression:     &compressionSpec,
 					},
 					StorageCapacity:     &storageCapacityQuantity,
 					VolumeClaimTemplate: pointer.StringPtr(etcdName),
@@ -276,7 +284,7 @@ var _ = Describe("Etcd", func() {
 
 			if class == ClassImportant {
 				obj.Spec.Annotations["cluster-autoscaler.kubernetes.io/safe-to-evict"] = "false"
-				obj.Spec.Etcd.Metrics = druidv1alpha1.Extensive
+				obj.Spec.Etcd.Metrics = &metricsExtensive
 				obj.Spec.VolumeClaimTemplate = pointer.StringPtr(testRole + "-etcd")
 			}
 

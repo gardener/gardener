@@ -688,6 +688,14 @@ spec:
               description: BackupSpec defines parametes associated with the full and
                 delta snapshots of etcd
               properties:
+                compression:
+                  description: SnapshotCompression defines the specification for compression of Snapshots.
+                  properties:
+                    enabled:
+                      type: boolean
+                    policy:
+                      type: string
+                  type: object
                 deltaSnapshotMemoryLimit:
                   description: DeltaSnapshotMemoryLimit defines the memory limit after
                     which delta snapshots will be taken

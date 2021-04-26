@@ -30,6 +30,23 @@ const (
 	Basic MetricsLevel = "basic"
 	// Extensive is a constant for metrics level extensive.
 	Extensive MetricsLevel = "extensive"
+
+	// GzipCompression is constant for gzip compression policy.
+	GzipCompression CompressionPolicy = "gzip"
+	// LzwCompression is constant for lzw compression policy.
+	LzwCompression CompressionPolicy = "lzw"
+	// ZlibCompression is constant for zlib compression policy.
+	ZlibCompression CompressionPolicy = "zlib"
+
+	// DefaultCompression is constant for default compression policy(only if compression is enabled).
+	DefaultCompression CompressionPolicy = GzipCompression
+	// DefaultCompressionEnabled is constant to define whether to compress the snapshots or not.
+	DefaultCompressionEnabled = false
+
+	// Periodic is a constant to set auto-compaction-mode 'periodic' for duration based retention.
+	Periodic CompactionMode = "periodic"
+	// Revision is a constant to set auto-compaction-mode 'revision' for revision number based retention.
+	Revision CompactionMode = "revision"
 )
 
 // MetricsLevel defines the level 'basic' or 'extensive'.
@@ -42,6 +59,15 @@ type GarbageCollectionPolicy string
 
 // StorageProvider defines the type of object store provider for storing backups.
 type StorageProvider string
+
+// CompressionPolicy defines the type of policy for compression of snapshots.
+// +kubebuilder:validation:Enum=gzip;lzw;zlib
+type CompressionPolicy string
+
+// CompactionMode defines the auto-compaction-mode: 'periodic' or 'revision'.
+// 'periodic' for duration based retention and 'revision' for revision number based retention.
+// +kubebuilder:validation:Enum=periodic;revision
+type CompactionMode string
 
 // StoreSpec defines parameters related to ObjectStore persisting backups
 type StoreSpec struct {
@@ -65,11 +91,19 @@ type TLSConfig struct {
 	TLSCASecretRef corev1.SecretReference `json:"tlsCASecretRef"`
 }
 
+// CompressionSpec defines parameters related to compression of Snapshots(full as well as delta).
+type CompressionSpec struct {
+	// +optional
+	Enabled bool `json:"enabled,omitempty"`
+	// +optional
+	Policy *CompressionPolicy `json:"policy,omitempty"`
+}
+
 // BackupSpec defines parametes associated with the full and delta snapshots of etcd
 type BackupSpec struct {
 	// Port define the port on which etcd-backup-restore server will exposed.
 	// +optional
-	Port *int `json:"port,omitempty"`
+	Port *int32 `json:"port,omitempty"`
 	// +optional
 	TLS *TLSConfig `json:"tls,omitempty"`
 	// Image defines the etcd container image and tag
@@ -97,9 +131,12 @@ type BackupSpec struct {
 	// DeltaSnapshotMemoryLimit defines the memory limit after which delta snapshots will be taken
 	// +optional
 	DeltaSnapshotMemoryLimit *resource.Quantity `json:"deltaSnapshotMemoryLimit,omitempty"`
+	// SnapshotCompression defines the specification for compression of Snapshots.
+	// +optional
+	SnapshotCompression *CompressionSpec `json:"compression,omitempty"`
 }
 
-// EtcdConfig defines parametes associated etcd deployed
+// EtcdConfig defines parameters associated etcd deployed
 type EtcdConfig struct {
 	// Quota defines the etcd DB quota.
 	// +optional
@@ -108,9 +145,9 @@ type EtcdConfig struct {
 	// +optional
 	DefragmentationSchedule *string `json:"defragmentationSchedule,omitempty"`
 	// +optional
-	ServerPort *int `json:"serverPort,omitempty"`
+	ServerPort *int32 `json:"serverPort,omitempty"`
 	// +optional
-	ClientPort *int `json:"clientPort,omitempty"`
+	ClientPort *int32 `json:"clientPort,omitempty"`
 	// Image defines the etcd container image and tag
 	// +optional
 	Image *string `json:"image,omitempty"`
@@ -118,13 +155,23 @@ type EtcdConfig struct {
 	AuthSecretRef *corev1.SecretReference `json:"authSecretRef,omitempty"`
 	// Metrics defines the level of detail for exported metrics of etcd, specify 'extensive' to include histogram metrics.
 	// +optional
-	Metrics MetricsLevel `json:"metrics,omitempty"`
+	Metrics *MetricsLevel `json:"metrics,omitempty"`
 	// Resources defines the compute Resources required by etcd container.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 	// +optional
 	TLS *TLSConfig `json:"tls,omitempty"`
+}
+
+// SharedConfig defines parameters shared and used by Etcd as well as backup-restore sidecar.
+type SharedConfig struct {
+	// AutoCompactionMode defines the auto-compaction-mode:'periodic' mode or 'revision' mode for etcd and embedded-Etcd of backup-restore sidecar.
+	// +optional
+	AutoCompactionMode *CompactionMode `json:"autoCompactionMode,omitempty"`
+	//AutoCompactionRetention defines the auto-compaction-retention length for etcd as well as for embedded-Etcd of backup-restore sidecar.
+	// +optional
+	AutoCompactionRetention *string `json:"autoCompactionRetention,omitempty"`
 }
 
 // EtcdSpec defines the desired state of Etcd
@@ -141,6 +188,8 @@ type EtcdSpec struct {
 	Etcd EtcdConfig `json:"etcd"`
 	// +required
 	Backup BackupSpec `json:"backup"`
+	// +optional
+	Common SharedConfig `json:"sharedConfig,omitempty"`
 	// +required
 	Replicas int `json:"replicas"`
 	// PriorityClassName is the name of a priority class that shall be used for the etcd pods.

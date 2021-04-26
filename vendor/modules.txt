@@ -98,7 +98,7 @@ github.com/gardener/component-spec/bindings-go/apis/v2/jsonscheme
 github.com/gardener/component-spec/bindings-go/apis/v2/validation
 github.com/gardener/component-spec/bindings-go/codec
 github.com/gardener/component-spec/bindings-go/utils/selector
-# github.com/gardener/etcd-druid v0.3.0
+# github.com/gardener/etcd-druid v0.5.0
 ## explicit
 github.com/gardener/etcd-druid/api/v1alpha1
 # github.com/gardener/external-dns-management v0.7.18
