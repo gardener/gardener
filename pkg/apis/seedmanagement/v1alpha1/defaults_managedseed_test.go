@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -123,6 +125,11 @@ var _ = Describe("Defaults", func() {
 									APIVersion: configv1alpha1.SchemeGroupVersion.String(),
 									Kind:       "GardenletConfiguration",
 								},
+								Resources: &configv1alpha1.ResourcesConfiguration{
+									Capacity: corev1.ResourceList{
+										gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
+									},
+								},
 								SeedConfig: &configv1alpha1.SeedConfig{},
 							},
 						},
@@ -167,6 +174,11 @@ var _ = Describe("Defaults", func() {
 								TypeMeta: metav1.TypeMeta{
 									APIVersion: configv1alpha1.SchemeGroupVersion.String(),
 									Kind:       "GardenletConfiguration",
+								},
+								Resources: &configv1alpha1.ResourcesConfiguration{
+									Capacity: corev1.ResourceList{
+										gardencorev1beta1.ResourceShoots: resource.MustParse("250"),
+									},
 								},
 								SeedConfig: &configv1alpha1.SeedConfig{
 									SeedTemplate: gardencorev1beta1.SeedTemplate{
