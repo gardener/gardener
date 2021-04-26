@@ -44,28 +44,25 @@ func NewProjectStaleReconciler(
 	gardenClient client.Client,
 	shootLister gardencorelisters.ShootLister,
 	plantLister gardencorelisters.PlantLister,
-	backupEntryLister gardencorelisters.BackupEntryLister,
 	secretLister kubecorev1listers.SecretLister,
 ) reconcile.Reconciler {
 	return &projectStaleReconciler{
-		logger:            l,
-		config:            config,
-		gardenClient:      gardenClient,
-		shootLister:       shootLister,
-		plantLister:       plantLister,
-		backupEntryLister: backupEntryLister,
-		secretLister:      secretLister,
+		logger:       l,
+		config:       config,
+		gardenClient: gardenClient,
+		shootLister:  shootLister,
+		plantLister:  plantLister,
+		secretLister: secretLister,
 	}
 }
 
 type projectStaleReconciler struct {
-	logger            logrus.FieldLogger
-	gardenClient      client.Client
-	config            *config.ProjectControllerConfiguration
-	shootLister       gardencorelisters.ShootLister
-	plantLister       gardencorelisters.PlantLister
-	backupEntryLister gardencorelisters.BackupEntryLister
-	secretLister      kubecorev1listers.SecretLister
+	logger       logrus.FieldLogger
+	gardenClient client.Client
+	config       *config.ProjectControllerConfiguration
+	shootLister  gardencorelisters.ShootLister
+	plantLister  gardencorelisters.PlantLister
+	secretLister kubecorev1listers.SecretLister
 }
 
 func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -174,9 +171,12 @@ func (r *projectStaleReconciler) projectInUseDueToPlants(_ context.Context, name
 	return len(plantList) > 0, err
 }
 
-func (r *projectStaleReconciler) projectInUseDueToBackupEntries(_ context.Context, namespace string) (bool, error) {
-	backupEntryList, err := r.backupEntryLister.BackupEntries(namespace).List(labels.Everything())
-	return len(backupEntryList) > 0, err
+func (r *projectStaleReconciler) projectInUseDueToBackupEntries(ctx context.Context, namespace string) (bool, error) {
+	backupEntryList := &gardencorev1beta1.BackupEntryList{}
+	if err := r.gardenClient.List(ctx, backupEntryList, client.InNamespace(namespace)); err != nil {
+		return false, err
+	}
+	return len(backupEntryList.Items) > 0, nil
 }
 
 func (r *projectStaleReconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {

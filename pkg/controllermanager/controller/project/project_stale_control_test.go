@@ -138,7 +138,6 @@ var _ = Describe("ProjectStaleControl", func() {
 				k8sGardenRuntimeClient,
 				gardenCoreInformerFactory.Core().V1beta1().Shoots().Lister(),
 				gardenCoreInformerFactory.Core().V1beta1().Plants().Lister(),
-				gardenCoreInformerFactory.Core().V1beta1().BackupEntries().Lister(),
 				kubeCoreInformerFactory.Core().V1().Secrets().Lister(),
 			)
 
