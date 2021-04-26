@@ -23,6 +23,7 @@ package github.com.gardener.gardener.pkg.apis.core.v1alpha1;
 import "github.com/gardener/gardener/pkg/apis/core/v1beta1/generated.proto";
 import "k8s.io/api/autoscaling/v1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
+import "k8s.io/api/networking/v1/generated.proto";
 import "k8s.io/api/rbac/v1/generated.proto";
 import "k8s.io/apimachinery/pkg/api/resource/generated.proto";
 import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
@@ -222,6 +223,80 @@ message BackupEntryStatus {
   // at the beginning of a create/reconcile operation. It is used when moving the BackupEntry between seeds.
   // +optional
   optional string seedName = 4;
+}
+
+// Bastion holds details about an SSH bastion for a shoot cluster.
+message Bastion {
+  // Standard object metadata.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Specification of the Bastion.
+  optional BastionSpec spec = 2;
+
+  // Most recently observed status of the Bastion.
+  // +optional
+  optional BastionStatus status = 3;
+}
+
+// BastionIngressPolicy represents an ingress policy for SSH bastion hosts.
+message BastionIngressPolicy {
+  // IPBlock defines an IP block that is allowed to access the bastion.
+  optional k8s.io.api.networking.v1.IPBlock ipBlock = 1;
+}
+
+// BastionList is a list of Bastion objects.
+message BastionList {
+  // Standard list object metadata.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  // Items is the list of Bastion.
+  repeated Bastion items = 2;
+}
+
+// BastionSpec is the specification of a Bastion.
+message BastionSpec {
+  // ShootRef defines the target shoot for a Bastion.
+  optional k8s.io.api.core.v1.LocalObjectReference shootRef = 1;
+
+  // SeedName is the name of the seed to which this Bastion is currently scheduled. This field is populated
+  // at the beginning of a create/reconcile operation.
+  // +optional
+  optional string seedName = 2;
+
+  // ProviderType is cloud provider used by the referenced Shoot.
+  // +optional
+  optional string providerType = 3;
+
+  // SSHPublicKey is the user's public key.
+  optional string sshPublicKey = 4;
+
+  // Ingress controls from where the created bastion host should be reachable.
+  repeated BastionIngressPolicy ingress = 5;
+}
+
+// BastionStatus holds the most recently observed status of the Bastion.
+message BastionStatus {
+  // Ingress holds the public IP and/or hostname of the bastion instance.
+  // +optional
+  optional k8s.io.api.core.v1.LoadBalancerIngress ingress = 1;
+
+  // Conditions represents the latest available observations of a Bastion's current state.
+  // +patchMergeKey=type
+  // +patchStrategy=merge
+  // +optional
+  repeated Condition conditions = 2;
+
+  // LastHeartbeatTimestamp is the time when the bastion was last marked as
+  // not to be deleted. When this is set, the ExpirationTimestamp is advanced
+  // as well.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastHeartbeatTimestamp = 3;
+
+  // ExpirationTimestamp is the time after which a Bastion is supposed to be
+  // garbage collected.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 4;
 }
 
 // CRI contains information about the Container Runtimes.

@@ -24,6 +24,10 @@ const (
 	// the Seed cluster of a core.gardener.cloud/v1beta1 BackupEntry.
 	BackupEntrySeedName = "spec.seedName"
 
+	// BastionSeedName is the field selector path for finding
+	// the Seed cluster of a core.gardener.cloud/v1alpha1 Bastion.
+	BastionSeedName = "spec.seedName"
+
 	// ProjectNamespace is the field selector path for filtering by namespace
 	// for core.gardener.cloud/{v1beta1,v1beta1} Project.
 	ProjectNamespace = "spec.namespace"

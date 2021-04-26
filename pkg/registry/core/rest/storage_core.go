@@ -21,6 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	backupbucketstore "github.com/gardener/gardener/pkg/registry/core/backupbucket/storage"
 	backupentrystore "github.com/gardener/gardener/pkg/registry/core/backupentry/storage"
+	bastionstore "github.com/gardener/gardener/pkg/registry/core/bastion/storage"
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/core/cloudprofile/storage"
 	controllerdeploymentstore "github.com/gardener/gardener/pkg/registry/core/controllerdeployment/storage"
 	controllerinstallationstore "github.com/gardener/gardener/pkg/registry/core/controllerinstallation/storage"
@@ -66,6 +67,10 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	backupEntryStorage := backupentrystore.NewStorage(restOptionsGetter)
 	storage["backupentries"] = backupEntryStorage.BackupEntry
 	storage["backupentries/status"] = backupEntryStorage.Status
+
+	bastionStorage := bastionstore.NewStorage(restOptionsGetter)
+	storage["bastions"] = bastionStorage.Bastion
+	storage["bastions/status"] = bastionStorage.Status
 
 	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
 	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile

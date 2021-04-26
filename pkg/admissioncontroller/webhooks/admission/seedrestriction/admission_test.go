@@ -469,6 +469,87 @@ var _ = Describe("handler", func() {
 			})
 		})
 
+		Context("when requested for Bastions", func() {
+			var name string
+
+			BeforeEach(func() {
+				name = "foo"
+
+				request.Name = name
+				request.UserInfo = seedUser
+				request.Resource = metav1.GroupVersionResource{
+					Group:    gardencorev1alpha1.SchemeGroupVersion.Group,
+					Resource: "bastions",
+				}
+			})
+
+			DescribeTable("should have no opinion because no allowed verb",
+				func(operation admissionv1.Operation) {
+					request.Operation = operation
+
+					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+						AdmissionResponse: admissionv1.AdmissionResponse{
+							Allowed: false,
+							Result: &metav1.Status{
+								Code:    int32(http.StatusBadRequest),
+								Message: fmt.Sprintf("unexpected operation: %q", operation),
+							},
+						},
+					}))
+				},
+
+				Entry("update", admissionv1.Update),
+				Entry("delete", admissionv1.Delete),
+				Entry("connect", admissionv1.Connect),
+			)
+
+			Context("when operation is create", func() {
+				BeforeEach(func() {
+					request.Operation = admissionv1.Create
+				})
+
+				It("should return an error because decoding the object failed", func() {
+					request.Object.Raw = []byte(`{]`)
+
+					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+						AdmissionResponse: admissionv1.AdmissionResponse{
+							Allowed: false,
+							Result: &metav1.Status{
+								Code:    int32(http.StatusBadRequest),
+								Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
+							},
+						},
+					}))
+				})
+
+				It("should allow the request because seed name matches", func() {
+					objData, err := runtime.Encode(encoder, &gardencorev1alpha1.Bastion{
+						Spec: gardencorev1alpha1.BastionSpec{
+							SeedName: &seedName,
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					request.Object.Raw = objData
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+
+				It("should allow the request because seed name is ambiguous", func() {
+					request.UserInfo = ambiguousUser
+
+					objData, err := runtime.Encode(encoder, &gardencorev1alpha1.Bastion{
+						Spec: gardencorev1alpha1.BastionSpec{
+							SeedName: pointer.StringPtr("some-different-seed"),
+						},
+					})
+					Expect(err).NotTo(HaveOccurred())
+					request.Object.Raw = objData
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+			})
+		})
+
 		Context("when requested for Leases", func() {
 			var name, namespace string
 

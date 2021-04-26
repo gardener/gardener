@@ -83,15 +83,13 @@ The following is a list of involved components, that either need to be newly int
     - on creation, sets `metadata.annotations["gardener.cloud/created-by"]` according to the user that created the resource
     - when `gardener.cloud/operation: keepalive` is set it will be removed by GAPI from the annotations and `status.lastHeartbeatTimestamp` will be set with the current timestamp. The `status.expirationTimestamp` will be calculated by taking the last heartbeat timestamp and adding `x` minutes (configurable, default `60` Minutes).
     - validates that only the creator of the bastion (see `gardener.cloud/created-by` annotation) can update `spec.ingress`
+    - validates that a Bastion can only be created for a Shoot if that Shoot is already assigned to a Seed
+    - sets `spec.seedName` and `spec.providerType` based on the `spec.shootRef`
 3. `gardenlet`
     - Watches `Bastion` resource for own seed under api group `operations.gardener.cloud` in the garden cluster
     - Creates `Bastion` custom resource under api group `extensions.gardener.cloud/v1alpha1` in the seed cluster
       - Populates bastion user data under field under `spec.userData` similar to https://github.com/gardener/gardenctl/blob/1e3e5fa1d5603e2161f45046ba7c6b5b4107369e/pkg/cmd/ssh.go#L160-L171. By this means the `spec.sshPublicKey` from the `Bastion` resource in the garden cluster will end up in the `authorized_keys` file on the bastion host.
-4. `GCM`:
-    - During reconcile of the `Bastion` resource:
-      - according to `spec.shootRef`, sets the `status.seedName`
-      - according to `spec.shootRef`, sets the `status.providerType`
-5. Gardener extension provider <infra> / Bastion Controller on Seed:
+4. Gardener extension provider <infra> / Bastion Controller on Seed:
     - With own `Bastion` Custom Resource Definition in the seed under the api group `extensions.gardener.cloud/v1alpha1`
     - Watches `Bastion` custom resources that are created by the `gardenlet` in the seed
     - Controller reads `cloudprovider` credentials from seed-shoot namespace
@@ -101,23 +99,23 @@ The following is a list of involved components, that either need to be newly int
     - Updates status of `Bastion` resource:
         - With bastion IP under `status.ingress.ip` or hostname under `status.ingress.hostname`
         - Updates the `status.lastOperation` with the status of the last reconcile operation
-6. `gardenlet`
+5. `gardenlet`
     - Syncs back the `status.ingress` and `status.conditions` of the `Bastion` resource in the seed to the garden cluster in case it changed
-7. `gardenctl`
+6. `gardenctl`
     - initiates `ssh` session once `status.conditions['BastionReady']` is true of the `Bastion` resource in the garden cluster
         - locates private `ssh` key matching `spec["sshPublicKey"]` which was configured beforehand by the user
         - reads bastion IP (`status.ingress.ip`) or hostname (`status.ingress.hostname`)
         - reads the private key from the `ssh` key pair for the shoot node
         - opens `ssh` connection to the bastion and from there to the respective shoot node
     - runs heartbeat in parallel as long as the `ssh` session is open by annotating the `Bastion` resource with `gardener.cloud/operation: keepalive`
-8. `GCM`:
+7. `GCM`:
     - Once `status.expirationTimestamp` is reached, the `Bastion` will be marked for deletion
-9. `gardenlet`:
+8. `gardenlet`:
     - Once the `Bastion` resource in the garden cluster is marked for deletion, it marks the `Bastion` resource in the seed for deletion
-10. Gardener extension provider <infra> / Bastion Controller on Seed:
+9. Gardener extension provider <infra> / Bastion Controller on Seed:
     - all created resources will be cleaned up
     - On succes, removes finalizer on `Bastion` resource in seed
-11. `gardenlet`:
+10. `gardenlet`:
     - removes finalizer on `Bastion` resource in garden cluster
 
 ### Resource Example
@@ -137,6 +135,10 @@ spec:
   shootRef: # namespace cannot be set / it's the same as .metadata.namespace
     name: my-cluster # immutable
 
+  # the following fields are set by the GAPI
+  seedName: aws-eu2
+  providerType: aws
+
   sshPublicKey: c3NoLXJzYSAuLi4K # immutable, public `ssh` key of the user
 
   ingress: # can only be updated by the creator of the bastion
@@ -144,14 +146,11 @@ spec:
       cidr: 1.2.3.4/32 # public IP of the user. CIDR is a string representing the IP Block. Valid examples are "192.168.1.1/24" or "2001:db9::/64"
 
 status:
-  # the following fields are set by the GCM
-  seedName: aws-eu2
-  providerType: aws
-
   # the following fields are managed by the controller in the seed and synced by gardenlet
   ingress: # IP or hostname of the bastion
     ip: 1.2.3.5
     # hostname: foo.bar
+
   conditions:
   - type: BastionReady # when the `status` is true of condition type `BastionReady`, the client can initiate the `ssh` connection
     status: 'True'

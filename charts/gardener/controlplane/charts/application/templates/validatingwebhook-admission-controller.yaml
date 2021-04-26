@@ -122,6 +122,7 @@ webhooks:
     resources:
     - backupbuckets
     - backupentries
+    - bastions
     - shootstates
   - apiGroups:
     - core.gardener.cloud

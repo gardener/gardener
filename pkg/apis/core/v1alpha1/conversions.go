@@ -77,6 +77,18 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 		return err
 	}
 
+	if err := scheme.AddConversionFunc((*Bastion)(nil), (*core.Bastion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_Bastion_To_core_Bastion(a.(*Bastion), b.(*core.Bastion), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*BastionSpec)(nil), (*core.BastionSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_BastionSpec_To_core_BastionSpec(a.(*BastionSpec), b.(*core.BastionSpec), scope)
+	}); err != nil {
+		return err
+	}
+
 	if err := scheme.AddConversionFunc((*Seed)(nil), (*core.Seed)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_Seed_To_core_Seed(a.(*Seed), b.(*core.Seed), scope)
 	}); err != nil {
@@ -121,6 +133,18 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 
 	if err := scheme.AddConversionFunc((*core.BackupEntrySpec)(nil), (*BackupEntrySpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_core_BackupEntrySpec_To_v1alpha1_BackupEntrySpec(a.(*core.BackupEntrySpec), b.(*BackupEntrySpec), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*core.Bastion)(nil), (*Bastion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_Bastion_To_v1alpha1_Bastion(a.(*core.Bastion), b.(*Bastion), scope)
+	}); err != nil {
+		return err
+	}
+
+	if err := scheme.AddConversionFunc((*core.BastionSpec)(nil), (*BastionSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_core_BastionSpec_To_v1alpha1_BastionSpec(a.(*core.BastionSpec), b.(*BastionSpec), scope)
 	}); err != nil {
 		return err
 	}

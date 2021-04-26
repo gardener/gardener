@@ -22,6 +22,8 @@ type BackupBucketExpansion interface{}
 
 type BackupEntryExpansion interface{}
 
+type BastionExpansion interface{}
+
 type CloudProfileExpansion interface{}
 
 type ControllerDeploymentExpansion interface{}

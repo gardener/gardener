@@ -19,6 +19,27 @@ import (
 	"errors"
 	"flag"
 
+	"github.com/gardener/gardener/pkg/api"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+	"github.com/gardener/gardener/pkg/apiserver"
+	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	"github.com/gardener/gardener/pkg/apiserver/storage"
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardenexternalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
+	seedmanagementinformer "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
+	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
+	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	"github.com/gardener/gardener/pkg/openapi"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
@@ -43,27 +64,6 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/pkg/api"
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
-	"github.com/gardener/gardener/pkg/apiserver"
-	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	"github.com/gardener/gardener/pkg/apiserver/storage"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
-	gardenversionedcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardenexternalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
-	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
-	seedmanagementinformer "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
-	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
-	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
-	"github.com/gardener/gardener/pkg/openapi"
 )
 
 // NewCommandStartGardenerAPIServer creates a *cobra.Command object with default parameters.
@@ -378,6 +378,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	resourceEncodingConfig.SetResourceEncoding(gardencore.Resource("shootstates"), gardencorev1alpha1.SchemeGroupVersion, gardencore.SchemeGroupVersion)
 	// TODO: `ShootExtensionStatus` is not yet promoted to `core.gardener.cloud/v1beta1` - this can be removed once `ShootExtensionStatus` got promoted.
 	resourceEncodingConfig.SetResourceEncoding(gardencore.Resource("shootextensionstatuses"), gardencorev1alpha1.SchemeGroupVersion, gardencore.SchemeGroupVersion)
+	resourceEncodingConfig.SetResourceEncoding(gardencore.Resource("bastions"), gardencorev1alpha1.SchemeGroupVersion, gardencore.SchemeGroupVersion)
 
 	storageFactory := &storage.GardenerStorageFactory{
 		DefaultStorageFactory: serverstorage.NewDefaultStorageFactory(

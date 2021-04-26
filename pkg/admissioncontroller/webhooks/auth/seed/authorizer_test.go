@@ -809,6 +809,100 @@ var _ = Describe("Seed", func() {
 			})
 		})
 
+		Context("when requested for Bastions", func() {
+			var (
+				name, namespace string
+				attrs           *auth.AttributesRecord
+			)
+
+			BeforeEach(func() {
+				name, namespace = "foo", "bar"
+				attrs = &auth.AttributesRecord{
+					User:            seedUser,
+					Name:            name,
+					Namespace:       namespace,
+					APIGroup:        gardencorev1alpha1.SchemeGroupVersion.Group,
+					Resource:        "bastions",
+					ResourceRequest: true,
+					Verb:            "list",
+				}
+			})
+
+			DescribeTable("should allow with consulting the graph because verb is get, list, watch, create",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				},
+
+				Entry("get", "get"),
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+				Entry("create", "create"),
+			)
+
+			DescribeTable("should deny because verb is not allowed",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get list watch update patch]"))
+
+				},
+
+				Entry("delete", "delete"),
+				Entry("deletecollection", "deletecollection"),
+			)
+
+			It("should have no opinion because no allowed subresource", func() {
+				attrs.Subresource = "foo"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
+			})
+
+			DescribeTable("should return correct result if path exists",
+				func(verb, subresource string) {
+					attrs.Verb = verb
+					attrs.Subresource = subresource
+
+					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeBastion, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+
+					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeBastion, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					decision, reason, err = authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				},
+
+				Entry("patch w/o subresource", "patch", ""),
+				Entry("patch w/ subresource", "patch", "status"),
+				Entry("update w/o subresource", "update", ""),
+				Entry("update w/ subresource", "update", "status"),
+			)
+
+			It("should allow because seed name is ambiguous", func() {
+				attrs.User = ambiguousUser
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+		})
+
 		Context("when requested for ManagedSeeds", func() {
 			var (
 				name, namespace string

@@ -48,7 +48,7 @@ spec:
           description: Spec is the specification of this Bastion.
           properties:
             ingress:
-              description: Ingress controls from where the creation bastion host should be reachable.
+              description: Ingress controls from where the created bastion host should be reachable.
               items:
                 description: BastionIngressPolicy represents an ingress policy for SSH bastion hosts.
                 properties:

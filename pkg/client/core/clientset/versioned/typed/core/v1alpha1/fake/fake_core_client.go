@@ -36,6 +36,10 @@ func (c *FakeCoreV1alpha1) BackupEntries(namespace string) v1alpha1.BackupEntryI
 	return &FakeBackupEntries{c, namespace}
 }
 
+func (c *FakeCoreV1alpha1) Bastions(namespace string) v1alpha1.BastionInterface {
+	return &FakeBastions{c, namespace}
+}
+
 func (c *FakeCoreV1alpha1) CloudProfiles() v1alpha1.CloudProfileInterface {
 	return &FakeCloudProfiles{c}
 }
