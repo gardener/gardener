@@ -84,9 +84,6 @@ func NewSeedController(
 	}
 
 	var (
-		leaseInformer = kubeInformerFactory.Coordination().V1().Leases()
-		leaseLister   = leaseInformer.Lister()
-
 		secretInformer = kubeInformerFactory.Core().V1().Secrets()
 		secretLister   = kubeInformerFactory.Core().V1().Secrets().Lister()
 	)
@@ -94,7 +91,7 @@ func NewSeedController(
 	seedController := &Controller{
 		config:                config,
 		seedReconciler:        NewDefaultControl(logger.Logger, gardenClient, secretLister),
-		lifeCycleReconciler:   NewLifecycleDefaultControl(logger.Logger, gardenClient, leaseLister, config),
+		lifeCycleReconciler:   NewLifecycleDefaultControl(logger.Logger, gardenClient, config),
 		recorder:              recorder,
 		seedBackupReconciler:  NewDefaultBackupBucketControl(logger.Logger, gardenClient),
 		seedBackupBucketQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
@@ -128,7 +125,6 @@ func NewSeedController(
 	seedController.hasSyncedFuncs = []cache.InformerSynced{
 		backupBucketInformer.HasSynced,
 		seedInformer.HasSynced,
-		leaseInformer.Informer().HasSynced,
 		secretInformer.Informer().HasSynced,
 	}
 

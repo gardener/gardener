@@ -31,7 +31,6 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	coordinationlister "k8s.io/client-go/listers/coordination/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,13 +51,11 @@ func (c *Controller) seedLifecycleAdd(obj interface{}) {
 func NewLifecycleDefaultControl(
 	logger logrus.FieldLogger,
 	gardenClient kubernetes.Interface,
-	leaseLister coordinationlister.LeaseLister,
 	config *config.ControllerManagerConfiguration,
 ) *livecycleReconciler {
 	return &livecycleReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
-		leaseLister:  leaseLister,
 		config:       config,
 	}
 }
@@ -66,7 +63,6 @@ func NewLifecycleDefaultControl(
 type livecycleReconciler struct {
 	logger       logrus.FieldLogger
 	gardenClient kubernetes.Interface
-	leaseLister  coordinationlister.LeaseLister
 	config       *config.ControllerManagerConfiguration
 }
 
@@ -89,8 +85,8 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 		return reconcileAfter(10 * time.Second)
 	}
 
-	observedSeedLease, err := c.leaseLister.Leases(gardencorev1beta1.GardenerSeedLeaseNamespace).Get(seed.Name)
-	if client.IgnoreNotFound(err) != nil {
+	observedSeedLease := &coordinationv1.Lease{}
+	if err := c.gardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), observedSeedLease); client.IgnoreNotFound(err) != nil {
 		return reconcileResult(err)
 	}
 
