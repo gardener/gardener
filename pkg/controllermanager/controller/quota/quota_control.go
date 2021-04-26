@@ -21,7 +21,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -58,20 +57,18 @@ func (c *Controller) quotaDelete(obj interface{}) {
 }
 
 // NewQuotaReconciler creates a new instance of a reconciler which reconciles Quotas.
-func NewQuotaReconciler(l logrus.FieldLogger, gardenClient client.Client, recorder record.EventRecorder, secretBindingLister gardencorelisters.SecretBindingLister) reconcile.Reconciler {
+func NewQuotaReconciler(l logrus.FieldLogger, gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
 	return &quotaReconciler{
-		logger:              l,
-		gardenClient:        gardenClient,
-		recorder:            recorder,
-		secretBindingLister: secretBindingLister,
+		logger:       l,
+		gardenClient: gardenClient,
+		recorder:     recorder,
 	}
 }
 
 type quotaReconciler struct {
-	logger              logrus.FieldLogger
-	gardenClient        client.Client
-	recorder            record.EventRecorder
-	secretBindingLister gardencorelisters.SecretBindingLister
+	logger       logrus.FieldLogger
+	gardenClient client.Client
+	recorder     record.EventRecorder
 }
 
 func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -95,7 +92,7 @@ func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 			return reconcile.Result{}, nil
 		}
 
-		associatedSecretBindings, err := controllerutils.DetermineSecretBindingAssociations(quota, r.secretBindingLister)
+		associatedSecretBindings, err := controllerutils.DetermineSecretBindingAssociations(ctx, r.gardenClient, quota)
 		if err != nil {
 			quotaLogger.Error(err.Error())
 			return reconcile.Result{}, err

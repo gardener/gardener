@@ -19,11 +19,9 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -66,14 +64,14 @@ func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader
 
 // DetermineSecretBindingAssociations gets a <bindingLister> to determine the SecretBinding
 // resources which are associated to given Quota <obj>.
-func DetermineSecretBindingAssociations(quota *gardencorev1beta1.Quota, bindingLister gardencorelisters.SecretBindingLister) ([]string, error) {
-	var associatedBindings []string
-	bindings, err := bindingLister.List(labels.Everything())
-	if err != nil {
+func DetermineSecretBindingAssociations(ctx context.Context, c client.Client, quota *gardencorev1beta1.Quota) ([]string, error) {
+	bindings := &gardencorev1beta1.SecretBindingList{}
+	if err := c.List(ctx, bindings); err != nil {
 		return nil, err
 	}
 
-	for _, binding := range bindings {
+	var associatedBindings []string
+	for _, binding := range bindings.Items {
 		for _, quotaRef := range binding.Quotas {
 			if quotaRef.Name == quota.Name && quotaRef.Namespace == quota.Namespace {
 				associatedBindings = append(associatedBindings, fmt.Sprintf("%s/%s", binding.Namespace, binding.Name))

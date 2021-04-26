@@ -172,7 +172,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
 	}
 
-	quotaController, err := quotacontroller.NewQuotaController(ctx, f.clientMap, f.k8sGardenCoreInformers, f.recorder)
+	quotaController, err := quotacontroller.NewQuotaController(ctx, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Quota controller: %w", err)
 	}

@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
@@ -51,7 +50,6 @@ type Controller struct {
 func NewQuotaController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	recorder record.EventRecorder,
 ) (
 	*Controller,
@@ -67,10 +65,8 @@ func NewQuotaController(
 		return nil, fmt.Errorf("failed to get Quota Informer: %w", err)
 	}
 
-	var secretBindingLister = gardenCoreInformerFactory.Core().V1beta1().SecretBindings().Lister()
-
 	quotaController := &Controller{
-		reconciler: NewQuotaReconciler(logger.Logger, gardenClient.Client(), recorder, secretBindingLister),
+		reconciler: NewQuotaReconciler(logger.Logger, gardenClient.Client(), recorder),
 		quotaQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Quota"),
 		workerCh:   make(chan int),
 	}
