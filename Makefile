@@ -165,6 +165,8 @@ revendor:
 	@GO111MODULE=on go mod vendor
 	@GO111MODULE=on go mod tidy
 	@curl -sSLo hack/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/$(CR_VERSION)/hack/setup-envtest.sh
+# TODO: Remove this once k8s.io/apimachinery is upgraded to v0.20.7, see https://github.com/kubernetes/kubernetes/pull/101326
+	@sed -i '169s/if skippy < 0 {/if (skippy < 0) || (iNdEx+skippy) < 0 {/' vendor/k8s.io/apimachinery/pkg/api/resource/quantity_proto.go
 
 .PHONY: clean
 clean:
