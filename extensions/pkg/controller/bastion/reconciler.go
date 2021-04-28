@@ -86,11 +86,6 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	if extensionscontroller.IsFailed(cluster) {
-		r.logger.Info("Stop reconciling Bastion of failed Shoot.", "name", bastion.Name)
-		return reconcile.Result{}, nil
-	}
-
 	operationType := gardencorev1beta1helper.ComputeOperationType(bastion.ObjectMeta, bastion.Status.LastOperation)
 
 	switch {
