@@ -40,15 +40,15 @@ helm template \
   --set global.scheduler.enabled=true | \
 KUBECONFIG=$KUBECONFIGPATH kubectl apply -f -
 
-if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:admission-controller" > /dev/null; then
+if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:admission-controller" >/dev/null 2>&1; then
   KUBECONFIG=$KUBECONFIGPATH kubectl create clusterrolebinding "gardener.cloud:system:admission-controller" --clusterrole="gardener.cloud:system:admission-controller" --user="gardener.cloud:system:admission-controller"
 fi
-if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:apiserver" > /dev/null; then
+if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:apiserver" >/dev/null 2>&1; then
   KUBECONFIG=$KUBECONFIGPATH kubectl create clusterrolebinding "gardener.cloud:system:apiserver" --clusterrole="gardener.cloud:system:gardener-apiserver" --user="gardener.cloud:system:apiserver"
 fi
-if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:controller-manager" > /dev/null; then
+if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:controller-manager" >/dev/null 2>&1; then
   KUBECONFIG=$KUBECONFIGPATH kubectl create clusterrolebinding "gardener.cloud:system:controller-manager" --clusterrole="gardener.cloud:system:gardener-controller-manager" --user="gardener.cloud:system:controller-manager"
 fi
-if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:scheduler" > /dev/null; then
+if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:scheduler" >/dev/null 2>&1; then
   KUBECONFIG=$KUBECONFIGPATH kubectl create clusterrolebinding "gardener.cloud:system:scheduler" --clusterrole="gardener.cloud:system:gardener-scheduler" --user="gardener.cloud:system:scheduler"
 fi
