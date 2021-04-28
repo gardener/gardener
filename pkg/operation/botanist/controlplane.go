@@ -838,7 +838,7 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
-			InternalDNSNameApiserver: b.outOfClusterAPIServerFQDN(),
+			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
 			ReversedVPN: kubeapiserverexposure.ReversedVPN{
 				Enabled: b.Shoot.ReversedVPNEnabled,
 			},
@@ -858,7 +858,7 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
 		&kubeapiserverexposure.SNIValues{
-			ApiserverClusterIP: clusterIP,
+			APIServerClusterIP: clusterIP,
 			NamespaceUID:       b.SeedNamespaceObject.UID,
 			Hosts: []string{
 				gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
@@ -869,7 +869,7 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
-			InternalDNSNameApiserver: b.outOfClusterAPIServerFQDN(),
+			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
 			ReversedVPN: kubeapiserverexposure.ReversedVPN{
 				Enabled: b.Shoot.ReversedVPNEnabled,
 			},

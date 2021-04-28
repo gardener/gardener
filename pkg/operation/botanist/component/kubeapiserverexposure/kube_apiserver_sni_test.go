@@ -63,7 +63,7 @@ var _ = Describe("#SNI", func() {
 
 		defaultDepWaiter = NewSNI(&SNIValues{
 			Hosts:              []string{"foo.bar"},
-			ApiserverClusterIP: "1.1.1.1",
+			APIServerClusterIP: "1.1.1.1",
 			IstioIngressGateway: IstioIngressGateway{
 				Namespace: "istio-foo",
 				Labels:    map[string]string{"foo": "bar"},

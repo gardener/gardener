@@ -15,22 +15,30 @@
 package kubeapiserverexposure
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
+	"text/template"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/Masterminds/sprig"
 	protobuftypes "github.com/gogo/protobuf/types"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -39,9 +47,9 @@ import (
 type SNIValues struct {
 	Hosts                    []string
 	NamespaceUID             types.UID
-	ApiserverClusterIP       string
+	APIServerClusterIP       string
+	APIServerInternalDNSName string
 	IstioIngressGateway      IstioIngressGateway
-	InternalDNSNameApiserver string
 	ReversedVPN              ReversedVPN
 }
 
@@ -60,6 +68,7 @@ type ReversedVPN struct {
 // kube-apiserver SNI access.
 func NewSNI(
 	client client.Client,
+	applier kubernetes.Applier,
 	namespace string,
 	values *SNIValues,
 ) component.DeployWaiter {
@@ -69,6 +78,7 @@ func NewSNI(
 
 	return &sni{
 		client:    client,
+		applier:   applier,
 		namespace: namespace,
 		values:    values,
 	}
@@ -76,6 +86,7 @@ func NewSNI(
 
 type sni struct {
 	client    client.Client
+	applier   kubernetes.Applier
 	namespace string
 	values    *SNIValues
 }
@@ -83,11 +94,32 @@ type sni struct {
 func (s *sni) Deploy(ctx context.Context) error {
 	var (
 		destinationRule = s.emptyDestinationRule()
+		envoyFilter     = s.emptyEnvoyFilter()
 		gateway         = s.emptyGateway()
 		virtualService  = s.emptyVirtualService()
 
-		hostName = fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain)
+		hostName                  = fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain)
+		envoyFilterSpec           bytes.Buffer
+		envoyFilterTemplateValues = map[string]interface{}{
+			"name":                     envoyFilter.Name,
+			"namespace":                envoyFilter.Namespace,
+			"namespaceUID":             s.values.NamespaceUID,
+			"host":                     hostName,
+			"port":                     servicePort,
+			"workloadSelectorLabels":   s.values.IstioIngressGateway.Labels,
+			"apiServerClusterIP":       s.values.APIServerClusterIP,
+			"apiServerInternalDNSName": s.values.APIServerInternalDNSName,
+			"reversedVPNEnabled":       s.values.ReversedVPN.Enabled,
+			"vpnSeedServerServiceName": vpnseedserver.ServiceName,
+		}
 	)
+
+	if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues); err != nil {
+		return err
+	}
+	if err := s.applier.ApplyManifest(ctx, kubernetes.NewManifestReader(envoyFilterSpec.Bytes()), kubernetes.DefaultMergeFuncs); err != nil {
+		return err
+	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, s.client, destinationRule, func() error {
 		destinationRule.Labels = getLabels()
@@ -167,6 +199,7 @@ func (s *sni) Destroy(ctx context.Context) error {
 		ctx,
 		s.client,
 		s.emptyDestinationRule(),
+		s.emptyEnvoyFilter(),
 		s.emptyGateway(),
 		s.emptyVirtualService(),
 	)
@@ -177,6 +210,10 @@ func (s *sni) WaitCleanup(_ context.Context) error { return nil }
 
 func (s *sni) emptyDestinationRule() *istionetworkingv1beta1.DestinationRule {
 	return &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
+}
+
+func (s *sni) emptyEnvoyFilter() *istionetworkingv1alpha3.EnvoyFilter {
+	return &istionetworkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: s.namespace, Namespace: s.values.IstioIngressGateway.Namespace}}
 }
 
 func (s *sni) emptyGateway() *istionetworkingv1beta1.Gateway {
@@ -201,4 +238,19 @@ func AnyDeployedSNI(ctx context.Context, c client.Client) (bool, error) {
 	}
 
 	return len(l.Items) > 0, nil
+}
+
+var (
+	//go:embed templates/envoyfilter.yaml
+	envoyFilterSpecTemplateContent string
+	envoyFilterSpecTemplate        *template.Template
+)
+
+func init() {
+	var err error
+	envoyFilterSpecTemplate, err = template.
+		New("envoy-filter-spec").
+		Funcs(sprig.TxtFuncMap()).
+		Parse(envoyFilterSpecTemplateContent)
+	utilruntime.Must(err)
 }
