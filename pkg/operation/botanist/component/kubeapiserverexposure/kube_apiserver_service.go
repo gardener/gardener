@@ -17,10 +17,9 @@ package kubeapiserverexposure
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -28,11 +27,13 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
-	kubeAPIServerChartName = "kube-apiserver-service"
+	servicePortName = "kube-apiserver"
 )
 
 // ServiceValues configure the kube-apiserver service.
@@ -42,22 +43,29 @@ type ServiceValues struct {
 	SNIPhase                  component.Phase
 }
 
+// serviceValues configure the kube-apiserver service.
+// this one is not exposed as not all values should be configured
+// from the outside.
+type serviceValues struct {
+	annotations              map[string]string
+	serviceType              corev1.ServiceType
+	enableSNI                bool
+	enableKonnectivityTunnel bool
+	gardenerManaged          bool
+}
+
 // NewService creates a new instance of DeployWaiter for a specific DNS entry.
 // <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps().
 func NewService(
+	logger logrus.FieldLogger,
+	crclient client.Client,
 	values *ServiceValues,
 	serviceKey client.ObjectKey,
 	sniServiceKey client.ObjectKey,
-	applier kubernetes.ChartApplier,
-	chartsRootPath string,
-	logger logrus.FieldLogger,
-	crclient client.Client,
 	waiter retry.Ops,
 	clusterIPFunc func(clusterIP string),
 	ingressFunc func(ingressIP string),
 ) component.DeployWaiter {
-	var loadBalancerServiceKey client.ObjectKey
-
 	if waiter == nil {
 		waiter = retry.DefaultOps()
 	}
@@ -70,47 +78,46 @@ func NewService(
 		ingressFunc = func(_ string) {}
 	}
 
-	internalValues := &serviceValues{
-		Name: serviceKey.Name,
-	}
+	var (
+		internalValues         = &serviceValues{}
+		loadBalancerServiceKey client.ObjectKey
+	)
 
 	if values != nil {
 		switch values.SNIPhase {
 		case component.PhaseEnabled:
-			internalValues.ServiceType = corev1.ServiceTypeClusterIP
-			internalValues.EnableSNI = true
-			internalValues.GardenerManaged = true
+			internalValues.serviceType = corev1.ServiceTypeClusterIP
+			internalValues.enableSNI = true
+			internalValues.gardenerManaged = true
 			loadBalancerServiceKey = sniServiceKey
 		case component.PhaseEnabling:
 			// existing traffic must still access the old loadbalancer
 			// IP (due to DNS cache).
-			internalValues.ServiceType = corev1.ServiceTypeLoadBalancer
-			internalValues.EnableSNI = true
-			internalValues.GardenerManaged = false
+			internalValues.serviceType = corev1.ServiceTypeLoadBalancer
+			internalValues.enableSNI = true
+			internalValues.gardenerManaged = false
 			loadBalancerServiceKey = sniServiceKey
 		case component.PhaseDisabling:
-			internalValues.ServiceType = corev1.ServiceTypeLoadBalancer
-			internalValues.EnableSNI = true
-			internalValues.GardenerManaged = true
+			internalValues.serviceType = corev1.ServiceTypeLoadBalancer
+			internalValues.enableSNI = true
+			internalValues.gardenerManaged = true
 			loadBalancerServiceKey = serviceKey
 		default:
-			internalValues.ServiceType = corev1.ServiceTypeLoadBalancer
-			internalValues.EnableSNI = false
-			internalValues.GardenerManaged = false
+			internalValues.serviceType = corev1.ServiceTypeLoadBalancer
+			internalValues.enableSNI = false
+			internalValues.gardenerManaged = false
 			loadBalancerServiceKey = serviceKey
 		}
 
-		internalValues.Annotations = values.Annotations
-		internalValues.EnableKonnectivityTunnel = values.KonnectivityTunnelEnabled
+		internalValues.annotations = values.Annotations
+		internalValues.enableKonnectivityTunnel = values.KonnectivityTunnelEnabled
 	}
 
 	return &service{
-		ChartApplier:           applier,
-		chartPath:              filepath.Join(chartsRootPath, "seed-controlplane", "charts", kubeAPIServerChartName),
-		client:                 crclient,
 		logger:                 logger,
+		client:                 crclient,
 		values:                 internalValues,
-		service:                serviceKey,
+		serviceKey:             serviceKey,
 		loadBalancerServiceKey: loadBalancerServiceKey,
 		waiter:                 waiter,
 		clusterIPFunc:          clusterIPFunc,
@@ -118,23 +125,58 @@ func NewService(
 	}
 }
 
+type service struct {
+	logger                 logrus.FieldLogger
+	client                 client.Client
+	values                 *serviceValues
+	serviceKey             client.ObjectKey
+	loadBalancerServiceKey client.ObjectKey
+	waiter                 retry.Ops
+	clusterIPFunc          func(clusterIP string)
+	ingressFunc            func(ingressIP string)
+}
+
 func (s *service) Deploy(ctx context.Context) error {
-	if err := s.Apply(
-		ctx,
-		s.chartPath,
-		s.service.Namespace,
-		kubeAPIServerChartName,
-		kubernetes.Values(s.values),
-	); err != nil {
+	obj := s.emptyService()
+
+	if _, err := controllerutil.CreateOrUpdate(ctx, s.client, obj, func() error {
+		obj.Annotations = s.values.annotations
+		if s.values.enableSNI {
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "networking.istio.io/exportTo", "*")
+		}
+
+		obj.Labels = getLabels()
+		if s.values.gardenerManaged {
+			metav1.SetMetaDataLabel(&obj.ObjectMeta, v1beta1constants.LabelAPIServerExposure, v1beta1constants.LabelAPIServerExposureGardenerManaged)
+		}
+
+		obj.Spec.Type = s.values.serviceType
+		obj.Spec.Selector = getLabels()
+
+		desiredPorts := []corev1.ServicePort{
+			{
+				Name:       servicePortName,
+				Protocol:   corev1.ProtocolTCP,
+				Port:       443,
+				TargetPort: intstr.FromInt(443),
+			},
+		}
+		if s.values.enableKonnectivityTunnel && !s.values.enableSNI {
+			desiredPorts = append(desiredPorts, corev1.ServicePort{
+				Name:       "konnectivity-server",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       8132,
+				TargetPort: intstr.FromInt(8132),
+			})
+		}
+		obj.Spec.Ports = kutil.ReconcileServicePorts(obj.Spec.Ports, desiredPorts)
+
+		return nil
+	}); err != nil {
 		return err
 	}
 
-	service := &corev1.Service{}
-	if err := s.client.Get(ctx, s.service, service); err != nil {
-		return err
-	}
-
-	s.clusterIPFunc(service.Spec.ClusterIP)
+	s.clusterIPFunc(obj.Spec.ClusterIP)
 	return nil
 }
 
@@ -153,7 +195,8 @@ func (s *service) Wait(ctx context.Context) error {
 			s.client,
 			&corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: s.loadBalancerServiceKey.Name, Namespace: s.loadBalancerServiceKey.Namespace,
+					Name:      s.loadBalancerServiceKey.Name,
+					Namespace: s.loadBalancerServiceKey.Namespace,
 				},
 			},
 		)
@@ -172,30 +215,12 @@ func (s *service) WaitCleanup(ctx context.Context) error {
 }
 
 func (s *service) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.service.Name, Namespace: s.service.Namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.serviceKey.Name, Namespace: s.serviceKey.Namespace}}
 }
 
-// serviceValues configure the kube-apiserver service.
-// this one is not exposed as not all values should be configured
-// from the outside.
-type serviceValues struct {
-	EnableSNI                bool               `json:"enableSNI,omitempty"`
-	EnableKonnectivityTunnel bool               `json:"enableKonnectivityTunnel,omitempty"`
-	GardenerManaged          bool               `json:"gardenerManaged,omitempty"`
-	Name                     string             `json:"name,omitempty"`
-	Annotations              map[string]string  `json:"annotations,omitempty"`
-	ServiceType              corev1.ServiceType `json:"serviceType,omitempty"`
-}
-
-type service struct {
-	values                 *serviceValues
-	service                client.ObjectKey
-	loadBalancerServiceKey client.ObjectKey
-	kubernetes.ChartApplier
-	chartPath     string
-	logger        logrus.FieldLogger
-	client        client.Client
-	waiter        retry.Ops
-	clusterIPFunc func(clusterIP string)
-	ingressFunc   func(ingressIP string)
+func getLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
+		v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
+	}
 }

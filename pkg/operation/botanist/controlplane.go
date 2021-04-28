@@ -772,6 +772,8 @@ func (b *Botanist) getKubeApiServerServiceAnnotations(sniPhase component.Phase) 
 
 func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.DeployWaiter {
 	return kubeapiserverexposure.NewService(
+		b.Logger,
+		b.K8sSeedClient.Client(),
 		&kubeapiserverexposure.ServiceValues{
 			Annotations:               b.getKubeApiServerServiceAnnotations(sniPhase),
 			KonnectivityTunnelEnabled: b.Shoot.KonnectivityTunnelEnabled,
@@ -779,10 +781,6 @@ func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.Dep
 		},
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
 		client.ObjectKey{Name: *b.Config.SNI.Ingress.ServiceName, Namespace: *b.Config.SNI.Ingress.Namespace},
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		b.Logger,
-		b.K8sSeedClient.DirectClient(),
 		nil,
 		b.setAPIServerServiceClusterIP,
 		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.DirectClient()) },

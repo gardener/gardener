@@ -17,8 +17,6 @@ package kubeapiserverexposure_test
 import (
 	"context"
 
-	cr "github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
@@ -28,28 +26,22 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("#Service", func() {
-	const (
-		deployNS    = "test-chart-namespace"
-		serviceName = "test-deploy"
-	)
 	var (
-		ca                 kubernetes.ChartApplier
-		ctx                context.Context
-		c                  client.Client
-		expected           *corev1.Service
-		log                logrus.FieldLogger
-		defaultDepWaiter   component.DeployWaiter
+		log logrus.FieldLogger
+		ctx context.Context
+		c   client.Client
+
+		defaultDepWaiter component.DeployWaiter
+		expected         *corev1.Service
+
 		ingressIP          string
 		clusterIP          string
 		sniPhase           component.Phase
@@ -61,28 +53,30 @@ var _ = Describe("#Service", func() {
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
 		log = logger.NewNopLogger()
+		ctx = context.TODO()
 
 		s := runtime.NewScheme()
-		Expect(corev1.AddToScheme(s)).NotTo(HaveOccurred())
-
-		c = fake.NewFakeClientWithScheme(s)
+		Expect(corev1.AddToScheme(s)).To(Succeed())
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		ingressIP = ""
 		clusterIP = ""
 		sniPhase = component.PhaseUnknown
 		enableKonnectivity = false
-		serviceObjKey = client.ObjectKey{Name: serviceName, Namespace: deployNS}
+		serviceObjKey = client.ObjectKey{Name: "test-deploy", Namespace: "test-namespace"}
 		sniServiceObjKey = client.ObjectKey{Name: "foo", Namespace: "bar"}
-
 		clusterIPFunc = func(c string) { clusterIP = c }
 		ingressIPFunc = func(c string) { ingressIP = c }
 
 		expected = &corev1.Service{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Kind:       "Service",
+			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceName,
-				Namespace: deployNS,
+				Name:      serviceObjKey.Name,
+				Namespace: serviceObjKey.Namespace,
 				Labels: map[string]string{
 					"app":  "kubernetes",
 					"role": "apiserver",
@@ -104,35 +98,10 @@ var _ = Describe("#Service", func() {
 			},
 		}
 
-		renderer := cr.NewWithServerVersion(&version.Info{})
-		ca = kubernetes.NewChartApplier(
-			renderer,
-			kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})),
-		)
-	})
-
-	JustBeforeEach(func() {
-		defaultDepWaiter = NewService(
-			&ServiceValues{
-				Annotations:               map[string]string{"foo": "bar"},
-				KonnectivityTunnelEnabled: enableKonnectivity,
-				SNIPhase:                  sniPhase,
-			},
-			serviceObjKey,
-			sniServiceObjKey,
-			ca,
-			chartsRoot(),
-			log,
-			c,
-			&fakeOps{},
-			clusterIPFunc,
-			ingressIPFunc,
-		)
-
 		sniService := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "bar",
+				Name:      sniServiceObjKey.Name,
+				Namespace: sniServiceObjKey.Namespace,
 			},
 			Status: corev1.ServiceStatus{
 				LoadBalancer: corev1.LoadBalancerStatus{
@@ -141,9 +110,26 @@ var _ = Describe("#Service", func() {
 			},
 		}
 
-		Expect(c.Create(ctx, sniService)).NotTo(HaveOccurred())
-		Expect(c.Create(ctx, expected)).NotTo(HaveOccurred())
+		Expect(c.Create(ctx, sniService)).To(Succeed())
+		Expect(c.Create(ctx, expected)).To(Succeed())
 		expected.ResourceVersion = "2"
+	})
+
+	JustBeforeEach(func() {
+		defaultDepWaiter = NewService(
+			log,
+			c,
+			&ServiceValues{
+				Annotations:               map[string]string{"foo": "bar"},
+				KonnectivityTunnelEnabled: enableKonnectivity,
+				SNIPhase:                  sniPhase,
+			},
+			serviceObjKey,
+			sniServiceObjKey,
+			&fakeOps{},
+			clusterIPFunc,
+			ingressIPFunc,
+		)
 	})
 
 	Context("Konnectivity enabled", func() {
@@ -159,34 +145,33 @@ var _ = Describe("#Service", func() {
 		})
 
 		It("deploys service", func() {
-			Expect(defaultDepWaiter.Deploy(ctx)).NotTo(HaveOccurred())
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			actual := &corev1.Service{}
-			Expect(c.Get(ctx, serviceObjKey, actual)).NotTo(HaveOccurred())
+			Expect(c.Get(ctx, serviceObjKey, actual)).To(Succeed())
 
-			Expect(actual).To(DeepDerivativeEqual(expected))
+			Expect(actual).To(DeepEqual(expected))
 
 			Expect(ingressIP).To(BeEmpty())
 			Expect(clusterIP).To(Equal("1.1.1.1"))
 		})
-
 	})
 
 	var assertDisabledSNI = func() {
 		It("deploys service", func() {
-			Expect(defaultDepWaiter.Deploy(ctx)).NotTo(HaveOccurred())
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			actual := &corev1.Service{}
-			Expect(c.Get(ctx, serviceObjKey, actual)).NotTo(HaveOccurred())
+			Expect(c.Get(ctx, serviceObjKey, actual)).To(Succeed())
 
-			Expect(actual).To(DeepDerivativeEqual(expected))
+			Expect(actual).To(DeepEqual(expected))
 
 			Expect(ingressIP).To(BeEmpty())
 			Expect(clusterIP).To(Equal("1.1.1.1"))
 		})
 
 		It("waits for service", func() {
-			Expect(defaultDepWaiter.Deploy(ctx)).NotTo(HaveOccurred())
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			expected.Status = corev1.ServiceStatus{
 				LoadBalancer: corev1.LoadBalancerStatus{
@@ -195,21 +180,21 @@ var _ = Describe("#Service", func() {
 			}
 
 			key := client.ObjectKeyFromObject(expected)
-			Expect(c.Get(ctx, key, expected)).NotTo(HaveOccurred())
-			Expect(c.Status().Update(ctx, expected)).NotTo(HaveOccurred())
-			Expect(defaultDepWaiter.Wait(ctx)).NotTo(HaveOccurred())
+			Expect(c.Get(ctx, key, expected)).To(Succeed())
+			Expect(c.Status().Update(ctx, expected)).To(Succeed())
+			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
 			Expect(ingressIP).To(Equal("3.3.3.3"))
 		})
 
 		It("deletes service", func() {
-			Expect(defaultDepWaiter.Destroy(ctx)).NotTo(HaveOccurred())
+			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(BeNotFoundError())
 		})
 
 		It("waits for deletion service", func() {
-			Expect(defaultDepWaiter.Destroy(ctx)).NotTo(HaveOccurred())
-			Expect(defaultDepWaiter.WaitCleanup(ctx)).NotTo(HaveOccurred())
+			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(BeNotFoundError())
 		})
@@ -217,31 +202,31 @@ var _ = Describe("#Service", func() {
 
 	var assertEnabledSNI = func() {
 		It("deploys service", func() {
-			Expect(defaultDepWaiter.Deploy(ctx)).NotTo(HaveOccurred())
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			actual := &corev1.Service{}
-			Expect(c.Get(ctx, serviceObjKey, actual)).NotTo(HaveOccurred())
+			Expect(c.Get(ctx, serviceObjKey, actual)).To(Succeed())
 
-			Expect(actual).To(DeepDerivativeEqual(expected))
+			Expect(actual).To(DeepEqual(expected))
 			Expect(clusterIP).To(Equal("1.1.1.1"))
 		})
 
 		It("waits for service", func() {
-			Expect(defaultDepWaiter.Deploy(ctx)).NotTo(HaveOccurred())
-			Expect(defaultDepWaiter.Wait(ctx)).NotTo(HaveOccurred())
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
 
 			Expect(ingressIP).To(Equal("2.2.2.2"))
 		})
 
 		It("deletes service", func() {
-			Expect(defaultDepWaiter.Destroy(ctx)).NotTo(HaveOccurred())
+			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(BeNotFoundError())
 		})
 
 		It("waits for deletion service", func() {
-			Expect(defaultDepWaiter.Destroy(ctx)).NotTo(HaveOccurred())
-			Expect(defaultDepWaiter.WaitCleanup(ctx)).NotTo(HaveOccurred())
+			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
+			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
 
 			Expect(c.Get(ctx, serviceObjKey, &corev1.Service{})).To(BeNotFoundError())
 		})
