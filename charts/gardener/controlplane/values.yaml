@@ -383,6 +383,9 @@ global:
         shootReference:
           concurrentSyncs: 5
           protectAuditPolicyConfigMaps: false
+        shootRetry:
+          concurrentSyncs: 5
+          retryPeriod: 10m
         managedSeedSet:
           concurrentSyncs: 5
           syncPeriod: 30m

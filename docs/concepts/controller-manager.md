@@ -120,6 +120,11 @@ The Shoot Reference Controller can inspect the following references:
 
 Further checks might be added in the future.
 
+
+### Shoot Retry Controller
+
+The Shoot Retry Controller is responsible for retrying certain failed Shoots. Currently the controller retries only failed Shoots with error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`. 
+
 ### Seed Controller
 
 The Seed controller in the Gardener Controller Manager reconciles `Seed` objects with the help of the following reconcilers.

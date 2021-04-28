@@ -40,6 +40,9 @@ func SetObjectDefaults_ControllerManagerConfiguration(in *ControllerManagerConfi
 	if in.Controllers.Event != nil {
 		SetDefaults_EventControllerConfiguration(in.Controllers.Event)
 	}
+	if in.Controllers.ShootRetry != nil {
+		SetDefaults_ShootRetryControllerConfiguration(in.Controllers.ShootRetry)
+	}
 	if in.Controllers.ManagedSeedSet != nil {
 		SetDefaults_ManagedSeedSetControllerConfiguration(in.Controllers.ManagedSeedSet)
 	}

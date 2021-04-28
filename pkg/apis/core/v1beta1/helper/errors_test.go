@@ -39,6 +39,8 @@ var _ = Describe("errors", func() {
 		Entry("unauthorized with coder", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized), "", NewErrorWithCodes("", gardencorev1beta1.ErrorInfraUnauthorized)),
 		Entry("quota exceeded", errors.New("limitexceeded"), "", NewErrorWithCodes("limitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded)),
 		Entry("quota exceeded with coder", NewErrorWithCodes("limitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded), "", NewErrorWithCodes("limitexceeded", gardencorev1beta1.ErrorInfraQuotaExceeded)),
+		Entry("request throttling", errors.New("message=cannot get hosted zones: Throttling"), "", NewErrorWithCodes("message=cannot get hosted zones: Throttling", gardencorev1beta1.ErrorInfraRateLimitsExceeded)),
+		Entry("request throttling coder", NewErrorWithCodes("message=cannot get hosted zones: Throttling", gardencorev1beta1.ErrorInfraRateLimitsExceeded), "", NewErrorWithCodes("message=cannot get hosted zones: Throttling", gardencorev1beta1.ErrorInfraRateLimitsExceeded)),
 		Entry("insufficient privileges", errors.New("accessdenied"), "", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges)),
 		Entry("insufficient privileges with coder", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges), "", NewErrorWithCodes("accessdenied", gardencorev1beta1.ErrorInfraInsufficientPrivileges)),
 		Entry("infrastructure dependencies", errors.New("pendingverification"), "", NewErrorWithCodes("pendingverification", gardencorev1beta1.ErrorInfraDependencies)),
@@ -70,6 +72,7 @@ var _ = Describe("errors", func() {
 		configurationProblemError        = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorConfigurationProblem}}
 		infraInsufficientPrivilegesError = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraInsufficientPrivileges}}
 		infraQuotaExceededError          = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded}}
+		infraReteLimitsExceededError     = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraRateLimitsExceeded}}
 		infraDependenciesError           = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraDependencies}}
 		infraResourcesDepletedError      = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraResourcesDepleted}}
 		cleanupClusterResourcesError     = gardencorev1beta1.LastError{Codes: []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorCleanupClusterResources}}
@@ -84,7 +87,17 @@ var _ = Describe("errors", func() {
 		Entry("no error given", nil, BeFalse()),
 		Entry("only errors with non-retryable error codes", []gardencorev1beta1.LastError{unauthorizedError, infraInsufficientPrivilegesError, infraQuotaExceededError, infraDependenciesError, configurationProblemError}, BeTrue()),
 		Entry("only errors with retryable error codes", []gardencorev1beta1.LastError{infraResourcesDepletedError, cleanupClusterResourcesError}, BeFalse()),
-		Entry("errors with both retryable and not retryable error codes", []gardencorev1beta1.LastError{unauthorizedError, configurationProblemError, infraInsufficientPrivilegesError, infraQuotaExceededError, infraDependenciesError, infraResourcesDepletedError, cleanupClusterResourcesError}, BeTrue()),
+		Entry("errors with both retryable and not retryable error codes", []gardencorev1beta1.LastError{unauthorizedError, configurationProblemError, infraInsufficientPrivilegesError, infraQuotaExceededError, infraReteLimitsExceededError, infraDependenciesError, infraResourcesDepletedError, cleanupClusterResourcesError}, BeTrue()),
 		Entry("errors without error codes", []gardencorev1beta1.LastError{errorWithoutCodes}, BeFalse()),
+	)
+
+	DescribeTable("#HasErrorCode",
+		func(lastErrors []gardencorev1beta1.LastError, code gardencorev1beta1.ErrorCode, matcher GomegaMatcher) {
+			Expect(HasErrorCode(lastErrors, code)).To(matcher)
+		},
+
+		Entry("should return false when no error given", nil, gardencorev1beta1.ErrorInfraRateLimitsExceeded, BeFalse()),
+		Entry("should return false when error code is not present", []gardencorev1beta1.LastError{unauthorizedError, infraInsufficientPrivilegesError}, gardencorev1beta1.ErrorInfraRateLimitsExceeded, BeFalse()),
+		Entry("should return true when error code is present", []gardencorev1beta1.LastError{unauthorizedError, infraInsufficientPrivilegesError, infraReteLimitsExceededError}, gardencorev1beta1.ErrorInfraRateLimitsExceeded, BeTrue()),
 	)
 })

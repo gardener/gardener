@@ -85,6 +85,9 @@ type ControllerManagerControllerConfiguration struct {
 	// ShootReference defines the configuration of the ShootReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
 	// +optional
 	ShootReference *ShootReferenceControllerConfiguration `json:"shootReference,omitempty"`
+	// ShootRetry defines the configuration of the ShootRetry controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	// +optional
+	ShootRetry *ShootRetryControllerConfiguration `json:"shootRetry,omitempty"`
 	// ManagedSeedSet defines the configuration of the ManagedSeedSet controller.
 	// +optional
 	ManagedSeedSet *ManagedSeedSetControllerConfiguration `json:"managedSeedSet,omitempty"`
@@ -240,6 +243,18 @@ type ShootReferenceControllerConfiguration struct {
 	// audit policies and referenced in Shoots.
 	// +optional
 	ProtectAuditPolicyConfigMaps *bool `json:"protectAuditPolicyConfigMaps,omitempty"`
+}
+
+// ShootRetryControllerConfiguration defines the configuration of the
+// ShootRetry controller.
+type ShootRetryControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// RetryPeriod is the retry period for retrying failed Shoots that match certain criterion.
+	// Defaults to 10m.
+	// +optional
+	RetryPeriod *metav1.Duration `json:"retryPeriod,omitempty"`
 }
 
 // ManagedSeedSetControllerConfiguration defines the configuration of the

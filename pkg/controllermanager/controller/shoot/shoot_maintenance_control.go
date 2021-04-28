@@ -216,7 +216,7 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		}
 	}
 
-	shootLogger.Infof("[SHOOT MAINTENANCE] completed for %s/%s", shoot.Namespace, shoot.Name)
+	shootLogger.Infof("[SHOOT MAINTENANCE] completed")
 	return nil
 }
 

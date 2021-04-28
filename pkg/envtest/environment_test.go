@@ -58,7 +58,7 @@ var _ = Describe("GardenerTestEnvironment", func() {
 	})
 
 	It("should be able to manipulate resource from settings.gardener.cloud/v1alpha1", func() {
-		managedSeed := &settingsv1alpha1.OpenIDConnectPreset{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "garden"}}
-		Expect(testClient.Create(ctx, managedSeed)).To(MatchError(ContainSubstring("OpenIDConnectPreset.settings.gardener.cloud \"foo\" is invalid")))
+		openIDConnectPreset := &settingsv1alpha1.OpenIDConnectPreset{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "garden"}}
+		Expect(testClient.Create(ctx, openIDConnectPreset)).To(MatchError(ContainSubstring("OpenIDConnectPreset.settings.gardener.cloud \"foo\" is invalid")))
 	})
 })

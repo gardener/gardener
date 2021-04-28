@@ -72,6 +72,8 @@ type ControllerManagerControllerConfiguration struct {
 	ShootHibernation ShootHibernationControllerConfiguration
 	// ShootReference defines the configuration of the ShootReference controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
 	ShootReference *ShootReferenceControllerConfiguration
+	// ShootRetry defines the configuration of the ShootRetry controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	ShootRetry *ShootRetryControllerConfiguration
 	// ManagedSeedSet defines the configuration of the ManagedSeedSet controller.
 	ManagedSeedSet *ManagedSeedSetControllerConfiguration
 }
@@ -214,6 +216,16 @@ type ShootReferenceControllerConfiguration struct {
 	// ProtectAuditPolicyConfigMaps controls whether the shoot reference controller shall protect ConfigMaps containing
 	// audit policies and referenced in Shoots.
 	ProtectAuditPolicyConfigMaps *bool
+}
+
+// ShootRetryControllerConfiguration defines the configuration of the
+// ShootRetry controller.
+type ShootRetryControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+	// RetryPeriod is the retry period for retrying failed Shoots that match certain criterion.
+	RetryPeriod *metav1.Duration
 }
 
 // ManagedSeedSetControllerConfiguration defines the configuration of the
