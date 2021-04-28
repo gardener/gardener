@@ -33,10 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const (
-	gatewayName = v1beta1constants.DeploymentNameKubeAPIServer
-)
-
 // SNIValues configure the kube-apiserver service SNI.
 type SNIValues struct {
 	Hosts                    []string
@@ -84,24 +80,46 @@ type sni struct {
 
 func (s *sni) Deploy(ctx context.Context) error {
 	var (
+		gateway        = s.emptyGateway()
 		virtualService = s.emptyVirtualService()
 	)
+
+	if _, err := controllerutil.CreateOrUpdate(ctx, s.client, gateway, func() error {
+		gateway.Labels = getLabels()
+		gateway.Spec = istioapinetworkingv1beta1.Gateway{
+			Selector: s.values.IstioIngressGateway.Labels,
+			Servers: []*istioapinetworkingv1beta1.Server{{
+				Hosts: s.values.Hosts,
+				Port: &istioapinetworkingv1beta1.Port{
+					Number:   servicePort,
+					Name:     "tls",
+					Protocol: "TLS",
+				},
+				Tls: &istioapinetworkingv1beta1.ServerTLSSettings{
+					Mode: istioapinetworkingv1beta1.ServerTLSSettings_PASSTHROUGH,
+				},
+			}},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, s.client, virtualService, func() error {
 		virtualService.Labels = getLabels()
 		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
 			ExportTo: []string{"*"},
 			Hosts:    s.values.Hosts,
-			Gateways: []string{gatewayName},
+			Gateways: []string{gateway.Name},
 			Tls: []*istioapinetworkingv1beta1.TLSRoute{{
 				Match: []*istioapinetworkingv1beta1.TLSMatchAttributes{{
-					Port:     443,
+					Port:     servicePort,
 					SniHosts: s.values.Hosts,
 				}},
 				Route: []*istioapinetworkingv1beta1.RouteDestination{{
 					Destination: &istioapinetworkingv1beta1.Destination{
 						Host: fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain),
-						Port: &istioapinetworkingv1beta1.PortSelector{Number: 443},
+						Port: &istioapinetworkingv1beta1.PortSelector{Number: servicePort},
 					},
 				}},
 			}},
@@ -118,12 +136,17 @@ func (s *sni) Destroy(ctx context.Context) error {
 	return kutil.DeleteObjects(
 		ctx,
 		s.client,
+		s.emptyGateway(),
 		s.emptyVirtualService(),
 	)
 }
 
 func (s *sni) Wait(_ context.Context) error        { return nil }
 func (s *sni) WaitCleanup(_ context.Context) error { return nil }
+
+func (s *sni) emptyGateway() *istionetworkingv1beta1.Gateway {
+	return &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
+}
 
 func (s *sni) emptyVirtualService() *istionetworkingv1beta1.VirtualService {
 	return &istionetworkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}

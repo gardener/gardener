@@ -21,6 +21,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -34,6 +35,7 @@ import (
 
 const (
 	servicePortName = "kube-apiserver"
+	servicePort     = 443
 )
 
 // ServiceValues configure the kube-apiserver service.
@@ -157,8 +159,8 @@ func (s *service) Deploy(ctx context.Context) error {
 			{
 				Name:       servicePortName,
 				Protocol:   corev1.ProtocolTCP,
-				Port:       443,
-				TargetPort: intstr.FromInt(443),
+				Port:       servicePort,
+				TargetPort: intstr.FromInt(kubeapiserver.Port),
 			},
 		}
 		if s.values.enableKonnectivityTunnel && !s.values.enableSNI {
