@@ -17,12 +17,14 @@ package kubeapiserverexposure
 import (
 	"context"
 	"fmt"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	protobuftypes "github.com/gogo/protobuf/types"
 	istioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -80,9 +82,37 @@ type sni struct {
 
 func (s *sni) Deploy(ctx context.Context) error {
 	var (
-		gateway        = s.emptyGateway()
-		virtualService = s.emptyVirtualService()
+		destinationRule = s.emptyDestinationRule()
+		gateway         = s.emptyGateway()
+		virtualService  = s.emptyVirtualService()
+
+		hostName = fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain)
 	)
+
+	if _, err := controllerutil.CreateOrUpdate(ctx, s.client, destinationRule, func() error {
+		destinationRule.Labels = getLabels()
+		destinationRule.Spec = istioapinetworkingv1beta1.DestinationRule{
+			ExportTo: []string{"*"},
+			Host:     hostName,
+			TrafficPolicy: &istioapinetworkingv1beta1.TrafficPolicy{
+				ConnectionPool: &istioapinetworkingv1beta1.ConnectionPoolSettings{
+					Tcp: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
+						MaxConnections: 5000,
+						TcpKeepalive: &istioapinetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+							Time:     protobuftypes.DurationProto(7200 * time.Second),
+							Interval: protobuftypes.DurationProto(75 * time.Second),
+						},
+					},
+				},
+				Tls: &istioapinetworkingv1beta1.ClientTLSSettings{
+					Mode: istioapinetworkingv1beta1.ClientTLSSettings_DISABLE,
+				},
+			},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, s.client, gateway, func() error {
 		gateway.Labels = getLabels()
@@ -118,7 +148,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 				}},
 				Route: []*istioapinetworkingv1beta1.RouteDestination{{
 					Destination: &istioapinetworkingv1beta1.Destination{
-						Host: fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain),
+						Host: hostName,
 						Port: &istioapinetworkingv1beta1.PortSelector{Number: servicePort},
 					},
 				}},
@@ -136,6 +166,7 @@ func (s *sni) Destroy(ctx context.Context) error {
 	return kutil.DeleteObjects(
 		ctx,
 		s.client,
+		s.emptyDestinationRule(),
 		s.emptyGateway(),
 		s.emptyVirtualService(),
 	)
@@ -143,6 +174,10 @@ func (s *sni) Destroy(ctx context.Context) error {
 
 func (s *sni) Wait(_ context.Context) error        { return nil }
 func (s *sni) WaitCleanup(_ context.Context) error { return nil }
+
+func (s *sni) emptyDestinationRule() *istionetworkingv1beta1.DestinationRule {
+	return &istionetworkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
+}
 
 func (s *sni) emptyGateway() *istionetworkingv1beta1.Gateway {
 	return &istionetworkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: s.namespace}}
