@@ -17,7 +17,6 @@ package kubeapiserverexposure_test
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -52,8 +51,4 @@ func (o *fakeOps) Until(ctx context.Context, interval time.Duration, f retry.Fun
 // UntilTimeout implements Ops.
 func (o *fakeOps) UntilTimeout(ctx context.Context, interval, timeout time.Duration, f retry.Func) error {
 	return o.Until(ctx, 0, f)
-}
-
-func chartsRoot() string {
-	return filepath.Join("../", "../", "../", "../", "../", "charts")
 }

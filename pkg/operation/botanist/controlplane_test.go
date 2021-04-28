@@ -108,9 +108,8 @@ var _ = Describe("controlplane", func() {
 						},
 					},
 				},
-				Garden:         &garden.Garden{},
-				Logger:         logrus.NewEntry(logger.NewNopLogger()),
-				ChartsRootPath: "../../../charts",
+				Garden: &garden.Garden{},
+				Logger: logrus.NewEntry(logger.NewNopLogger()),
 			},
 		}
 
