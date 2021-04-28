@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -235,6 +234,8 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 	}
 
 	if pod != nil {
+		podLogger := logger.WithValues("pod", client.ObjectKey{Namespace: t.namespace, Name: pod.Name})
+
 		// TODO: remove after several releases
 		// ensure ownerRef for already existing state configmaps
 		if err := t.ensureStateHasOwnerRef(ctx); err != nil {
@@ -242,35 +243,36 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 		}
 
 		// Wait for the Terraform apply/destroy Pod to be completed
-		exitCode := t.waitForPod(ctx, logger, pod, t.deadlinePod)
+		exitCode, terminationMessage := t.waitForPod(ctx, logger, pod, t.deadlinePod)
 		succeeded := exitCode == 0
 		if succeeded {
-			logger.Info("Terraformer pod finished successfully")
+			podLogger.Info("Terraformer pod finished successfully")
 		} else {
-			logger.Info("Terraformer pod finished with error", "exitCode", exitCode)
+			podLogger.Info("Terraformer pod finished with error", "exitCode", exitCode)
+
+			if terminationMessage != "" {
+				podLogger.V(1).Info("Termination message of Terraformer pod: " + terminationMessage)
+			} else {
+				// fall back to pod logs as termination message
+				podLogger.V(1).Info("Fetching logs of Terraformer pod as termination message is empty")
+				terminationMessage, err = t.retrievePodLogs(ctx, podLogger, pod)
+				if err != nil {
+					podLogger.Error(err, "Could not retrieve logs of Terraformer pod")
+					return err
+				}
+				podLogger.V(1).Info("Logs of Terraformer pod: " + terminationMessage)
+			}
 		}
 
-		// Retrieve the logs of the pod
-		logger.V(1).Info("Fetching the logs for Terraformer pod")
-		logs, err := t.retrievePodLogs(ctx, logger, pod)
-		if err != nil {
-			logger.Error(err, "Could not retrieve the logs of the Terraformer pod")
-			return err
-		}
-		logger.V(1).Info("Logs of Terraformer pod: "+logs, "pod", client.ObjectKey{Namespace: t.namespace, Name: pod.Name})
-
-		// Delete the Terraformer Pod
-		logger.Info("Cleaning up Terraformer pod")
+		podLogger.Info("Cleaning up Terraformer pod")
 		if err := t.client.Delete(ctx, pod); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 
-		// Evaluate whether the execution was successful or not
-		logger.Info("Terraformer execution has been completed")
 		if !succeeded {
-			errorMessage := fmt.Sprintf("Terraform execution for command '%s' could not be completed.", command)
-			if terraformErrors := retrieveTerraformErrors(pod.Name, logs); terraformErrors != nil {
-				errorMessage += fmt.Sprintf(" The following issues have been found in the logs:\n\n%s", strings.Join(terraformErrors, "\n\n"))
+			errorMessage := fmt.Sprintf("Terraform execution for command '%s' could not be completed", command)
+			if terraformErrors := findTerraformErrors(terminationMessage); terraformErrors != "" {
+				errorMessage += fmt.Sprintf(":\n\n%s", terraformErrors)
 			}
 			return gardencorev1beta1helper.DetermineError(errors.New(errorMessage), errorMessage)
 		}
@@ -388,7 +390,8 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 						corev1.ResourceMemory: resource.MustParse("1.5Gi"),
 					},
 				},
-				Env: t.env(),
+				Env:                    t.env(),
+				TerminationMessagePath: "/terraform-termination-log",
 			}},
 			RestartPolicy:                 corev1.RestartPolicyNever,
 			ServiceAccountName:            name,
