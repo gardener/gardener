@@ -98,11 +98,16 @@ func (n *node) addTargets(taskIDs ...TaskID) {
 // Opts are options for a Flow execution. If they are not set, they
 // are left blank and don't affect the Flow.
 type Opts struct {
-	Logger           logrus.FieldLogger
+	// Logger is used to log any output during flow execution.
+	Logger logrus.FieldLogger
+	// ProgressReporter is used to report the progress during flow execution.
 	ProgressReporter ProgressReporter
-	ErrorCleaner     func(ctx context.Context, taskID string)
-	ErrorContext     *utilerrors.ErrorContext
-	Context          context.Context
+	// ErrorCleaner is used to clean up a previously failed task.
+	ErrorCleaner func(ctx context.Context, taskID string)
+	// ErrorContext is used to store any error related context.
+	ErrorContext *utilerrors.ErrorContext
+	// Context is the context used during flow execution.
+	Context context.Context
 }
 
 // Run starts an execution of a Flow.
