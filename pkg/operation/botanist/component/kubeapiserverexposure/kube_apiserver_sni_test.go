@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane_test
+package kubeapiserverexposure_test
 
 import (
 	"context"
@@ -22,24 +22,22 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 
 	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("#KubeAPIServerSNI", func() {
+var _ = Describe("#SNI", func() {
 	const (
 		deployNS   = "test-chart-namespace"
 		deployName = "test-deploy"
@@ -63,7 +61,7 @@ var _ = Describe("#KubeAPIServerSNI", func() {
 			kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})),
 		)
 
-		defaultDepWaiter = NewKubeAPIServerSNI(&KubeAPIServerSNIValues{
+		defaultDepWaiter = NewSNI(&SNIValues{
 			Hosts:              []string{"foo.bar"},
 			ApiserverClusterIP: "1.1.1.1",
 			IstioIngressGateway: IstioIngressGateway{
@@ -71,7 +69,7 @@ var _ = Describe("#KubeAPIServerSNI", func() {
 				Labels:    map[string]string{"foo": "bar"},
 			},
 			Name:         deployName,
-			NamespaceUID: types.UID("123456"),
+			NamespaceUID: "123456",
 		}, deployNS, ca, chartsRoot())
 	})
 

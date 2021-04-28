@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane
+package kubeapiserverexposure
 
 import (
 	"context"
@@ -27,8 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// kubeAPIServiceValues configure the kube-apiserver service SNI.
-type KubeAPIServerSNIValues struct {
+// SNIValues configure the kube-apiserver service SNI.
+type SNIValues struct {
 	Hosts                    []string            `json:"hosts,omitempty"`
 	Name                     string              `json:"name,omitempty"`
 	NamespaceUID             types.UID           `json:"namespaceUID,omitempty"`
@@ -49,20 +49,19 @@ type ReversedVPN struct {
 	Enabled bool `json:"enabled,omitempty"`
 }
 
-// NewKubeAPIServerSNI creates a new instance of DeployWaiter which deploys Istio resources for
+// NewSNI creates a new instance of DeployWaiter which deploys Istio resources for
 // kube-apiserver SNI access.
-func NewKubeAPIServerSNI(
-	values *KubeAPIServerSNIValues,
+func NewSNI(
+	values *SNIValues,
 	namespace string,
 	applier kubernetes.ChartApplier,
 	chartsRootPath string,
-
 ) component.DeployWaiter {
 	if values == nil {
-		values = &KubeAPIServerSNIValues{}
+		values = &SNIValues{}
 	}
 
-	return &kubeAPIServerSNI{
+	return &sni{
 		ChartApplier: applier,
 		chartPath:    filepath.Join(chartsRootPath, "seed-controlplane", "charts", "kube-apiserver-sni"),
 		values:       values,
@@ -70,36 +69,36 @@ func NewKubeAPIServerSNI(
 	}
 }
 
-type kubeAPIServerSNI struct {
-	values    *KubeAPIServerSNIValues
+type sni struct {
+	values    *SNIValues
 	namespace string
 	kubernetes.ChartApplier
 	chartPath string
 }
 
-func (k *kubeAPIServerSNI) Deploy(ctx context.Context) error {
-	return k.Apply(
+func (s *sni) Deploy(ctx context.Context) error {
+	return s.Apply(
 		ctx,
-		k.chartPath,
-		k.namespace,
-		k.values.Name,
-		kubernetes.Values(k.values),
+		s.chartPath,
+		s.namespace,
+		s.values.Name,
+		kubernetes.Values(s.values),
 	)
 }
 
-func (k *kubeAPIServerSNI) Destroy(ctx context.Context) error {
-	return k.Delete(
+func (s *sni) Destroy(ctx context.Context) error {
+	return s.Delete(
 		ctx,
-		k.chartPath,
-		k.namespace,
-		k.values.Name,
-		kubernetes.Values(k.values),
+		s.chartPath,
+		s.namespace,
+		s.values.Name,
+		kubernetes.Values(s.values),
 		kubernetes.TolerateErrorFunc(meta.IsNoMatchError),
 	)
 }
 
-func (k *kubeAPIServerSNI) Wait(ctx context.Context) error        { return nil }
-func (k *kubeAPIServerSNI) WaitCleanup(ctx context.Context) error { return nil }
+func (s *sni) Wait(ctx context.Context) error        { return nil }
+func (s *sni) WaitCleanup(ctx context.Context) error { return nil }
 
 // AnyDeployedSNI returns true if any SNI is deployed in the cluster.
 func AnyDeployedSNI(ctx context.Context, c client.Client) (bool, error) {

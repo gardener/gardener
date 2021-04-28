@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane_test
+package kubeapiserverexposure_test
 
 import (
 	"context"
@@ -21,9 +21,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	. "github.com/gardener/gardener/pkg/operation/botanist/controlplane"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -34,12 +36,9 @@ import (
 	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("#KubeAPIServerService", func() {
+var _ = Describe("#Service", func() {
 	const (
 		deployNS    = "test-chart-namespace"
 		serviceName = "test-deploy"
@@ -113,8 +112,8 @@ var _ = Describe("#KubeAPIServerService", func() {
 	})
 
 	JustBeforeEach(func() {
-		defaultDepWaiter = NewKubeAPIService(
-			&KubeAPIServiceValues{
+		defaultDepWaiter = NewService(
+			&ServiceValues{
 				Annotations:               map[string]string{"foo": "bar"},
 				KonnectivityTunnelEnabled: enableKonnectivity,
 				SNIPhase:                  sniPhase,

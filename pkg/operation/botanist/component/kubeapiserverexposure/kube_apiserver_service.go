@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane
+package kubeapiserverexposure
 
 import (
 	"context"
@@ -35,17 +35,17 @@ const (
 	kubeAPIServerChartName = "kube-apiserver-service"
 )
 
-// KubeAPIServiceValues configure the kube-apiserver service.
-type KubeAPIServiceValues struct {
+// ServiceValues configure the kube-apiserver service.
+type ServiceValues struct {
 	Annotations               map[string]string
 	KonnectivityTunnelEnabled bool
 	SNIPhase                  component.Phase
 }
 
-// NewKubeAPIService creates a new instance of DeployWaiter for a specific DNS entry.
+// NewService creates a new instance of DeployWaiter for a specific DNS entry.
 // <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps().
-func NewKubeAPIService(
-	values *KubeAPIServiceValues,
+func NewService(
+	values *ServiceValues,
 	serviceKey client.ObjectKey,
 	sniServiceKey client.ObjectKey,
 	applier kubernetes.ChartApplier,
@@ -55,7 +55,6 @@ func NewKubeAPIService(
 	waiter retry.Ops,
 	clusterIPFunc func(clusterIP string),
 	ingressFunc func(ingressIP string),
-
 ) component.DeployWaiter {
 	var loadBalancerServiceKey client.ObjectKey
 
@@ -71,7 +70,7 @@ func NewKubeAPIService(
 		ingressFunc = func(_ string) {}
 	}
 
-	internalValues := &kubeAPIServiceValues{
+	internalValues := &serviceValues{
 		Name: serviceKey.Name,
 	}
 
@@ -105,82 +104,81 @@ func NewKubeAPIService(
 		internalValues.EnableKonnectivityTunnel = values.KonnectivityTunnelEnabled
 	}
 
-	return &kubeAPIService{
+	return &service{
 		ChartApplier:           applier,
 		chartPath:              filepath.Join(chartsRootPath, "seed-controlplane", "charts", kubeAPIServerChartName),
 		client:                 crclient,
 		logger:                 logger,
 		values:                 internalValues,
 		service:                serviceKey,
-		loadBalancerServicekey: loadBalancerServiceKey,
+		loadBalancerServiceKey: loadBalancerServiceKey,
 		waiter:                 waiter,
 		clusterIPFunc:          clusterIPFunc,
 		ingressFunc:            ingressFunc,
 	}
 }
 
-func (d *kubeAPIService) Deploy(ctx context.Context) error {
-	if err := d.Apply(
+func (s *service) Deploy(ctx context.Context) error {
+	if err := s.Apply(
 		ctx,
-		d.chartPath,
-		d.service.Namespace,
+		s.chartPath,
+		s.service.Namespace,
 		kubeAPIServerChartName,
-		kubernetes.Values(d.values),
+		kubernetes.Values(s.values),
 	); err != nil {
 		return err
 	}
 
 	service := &corev1.Service{}
-	if err := d.client.Get(ctx, d.service, service); err != nil {
+	if err := s.client.Get(ctx, s.service, service); err != nil {
 		return err
 	}
 
-	d.clusterIPFunc(service.Spec.ClusterIP)
-
+	s.clusterIPFunc(service.Spec.ClusterIP)
 	return nil
 }
 
-func (d *kubeAPIService) Destroy(ctx context.Context) error {
-	return client.IgnoreNotFound(d.client.Delete(ctx, d.getService()))
+func (s *service) Destroy(ctx context.Context) error {
+	return client.IgnoreNotFound(s.client.Delete(ctx, s.emptyService()))
 }
 
-func (d *kubeAPIService) Wait(ctx context.Context) error {
+func (s *service) Wait(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	return d.waiter.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
+	return s.waiter.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		// this ingress can be either the kube-apiserver's service or istio's IGW loadbalancer.
 		loadBalancerIngress, err := kutil.GetLoadBalancerIngress(
 			ctx,
-			d.client,
+			s.client,
 			&corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: d.loadBalancerServicekey.Name, Namespace: d.loadBalancerServicekey.Namespace,
+					Name: s.loadBalancerServiceKey.Name, Namespace: s.loadBalancerServiceKey.Namespace,
 				},
 			},
 		)
 		if err != nil {
-			d.logger.Info("Waiting until the KubeAPI Server ingress LoadBalancer deployed in the Seed cluster is ready...")
+			s.logger.Info("Waiting until the KubeAPI Server ingress LoadBalancer deployed in the Seed cluster is ready...")
 			// TODO(AC): This is a quite optimistic check / we should differentiate here
 			return retry.MinorError(fmt.Errorf("KubeAPI Server ingress LoadBalancer deployed in the Seed cluster is ready: %v", err))
 		}
-		d.ingressFunc(loadBalancerIngress)
+		s.ingressFunc(loadBalancerIngress)
 		return retry.Ok()
 	})
 }
 
-func (d *kubeAPIService) WaitCleanup(ctx context.Context) error {
-	return kutil.WaitUntilResourceDeleted(ctx, d.client, d.getService(), 5*time.Second)
+func (s *service) WaitCleanup(ctx context.Context) error {
+	return kutil.WaitUntilResourceDeleted(ctx, s.client, s.emptyService(), 5*time.Second)
 }
 
-func (d *kubeAPIService) getService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: d.service.Name, Namespace: d.service.Namespace}}
+func (s *service) emptyService() *corev1.Service {
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: s.service.Name, Namespace: s.service.Namespace}}
 }
 
-// kubeAPIServiceValues configure the kube-apiserver service.
+// serviceValues configure the kube-apiserver service.
 // this one is not exposed as not all values should be configured
 // from the outside.
-type kubeAPIServiceValues struct {
+type serviceValues struct {
 	EnableSNI                bool               `json:"enableSNI,omitempty"`
 	EnableKonnectivityTunnel bool               `json:"enableKonnectivityTunnel,omitempty"`
 	GardenerManaged          bool               `json:"gardenerManaged,omitempty"`
@@ -189,10 +187,10 @@ type kubeAPIServiceValues struct {
 	ServiceType              corev1.ServiceType `json:"serviceType,omitempty"`
 }
 
-type kubeAPIService struct {
-	values                 *kubeAPIServiceValues
+type service struct {
+	values                 *serviceValues
 	service                client.ObjectKey
-	loadBalancerServicekey client.ObjectKey
+	loadBalancerServiceKey client.ObjectKey
 	kubernetes.ChartApplier
 	chartPath     string
 	logger        logrus.FieldLogger
