@@ -4099,6 +4099,20 @@ Kubernetes meta/v1.Duration
 <p>PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>nodeMonitorGracePeriod</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeProxyConfig">KubeProxyConfig

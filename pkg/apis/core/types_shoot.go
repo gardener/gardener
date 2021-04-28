@@ -498,6 +498,8 @@ type KubeControllerManagerConfig struct {
 	NodeCIDRMaskSize *int32
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes.
 	PodEvictionTimeout *metav1.Duration
+	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
+	NodeMonitorGracePeriod *metav1.Duration
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.

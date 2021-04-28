@@ -1411,6 +1411,11 @@ func (in *KubeControllerManagerConfig) DeepCopyInto(out *KubeControllerManagerCo
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.NodeMonitorGracePeriod != nil {
+		in, out := &in.NodeMonitorGracePeriod, &out.NodeMonitorGracePeriod
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 

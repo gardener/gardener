@@ -629,6 +629,9 @@ type KubeControllerManagerConfig struct {
 	// PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.
 	// +optional
 	PodEvictionTimeout *metav1.Duration `json:"podEvictionTimeout,omitempty" protobuf:"bytes,4,opt,name=podEvictionTimeout"`
+	// NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.
+	// +optional
+	NodeMonitorGracePeriod *metav1.Duration `json:"nodeMonitorGracePeriod,omitempty" protobuf:"bytes,5,opt,name=nodeMonitorGracePeriod"`
 }
 
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.

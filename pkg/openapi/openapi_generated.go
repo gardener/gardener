@@ -2885,6 +2885,12 @@ func schema_pkg_apis_core_v1alpha1_KubeControllerManagerConfig(ref common.Refere
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"nodeMonitorGracePeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},
@@ -9275,6 +9281,12 @@ func schema_pkg_apis_core_v1beta1_KubeControllerManagerConfig(ref common.Referen
 					"podEvictionTimeout": {
 						SchemaProps: spec.SchemaProps{
 							Description: "PodEvictionTimeout defines the grace period for deleting pods on failed nodes. Defaults to 2m.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"nodeMonitorGracePeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "NodeMonitorGracePeriod defines the grace period before an unresponsive node is marked unhealthy.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},

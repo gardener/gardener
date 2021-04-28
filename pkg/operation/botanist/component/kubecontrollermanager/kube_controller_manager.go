@@ -404,12 +404,17 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		podEvictionTimeout = *v
 	}
 
+	nodeMonitorGracePeriod := metav1.Duration{Duration: 2 * time.Minute}
+	if v := k.config.NodeMonitorGracePeriod; v != nil {
+		nodeMonitorGracePeriod = *v
+	}
+
 	command = append(command,
 		fmt.Sprintf("--horizontal-pod-autoscaler-sync-period=%s", defaultHorizontalPodAutoscalerConfig.SyncPeriod.Duration.String()),
 		fmt.Sprintf("--horizontal-pod-autoscaler-tolerance=%v", *defaultHorizontalPodAutoscalerConfig.Tolerance),
 		fmt.Sprintf("--kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
 		"--leader-elect=true",
-		"--node-monitor-grace-period=120s",
+		fmt.Sprintf("--node-monitor-grace-period=%s", nodeMonitorGracePeriod.Duration),
 		fmt.Sprintf("--pod-eviction-timeout=%s", podEvictionTimeout.Duration),
 		fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--service-account-private-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey),
