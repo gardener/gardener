@@ -832,8 +832,10 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 // DefaultKubeAPIServerSNI returns a deployer for kube-apiserver SNI.
 func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 	return component.OpDestroy(kubeapiserverexposure.NewSNI(
+		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.Applier(),
+		b.Shoot.SeedNamespace,
 		&kubeapiserverexposure.SNIValues{
-			Name: v1beta1constants.DeploymentNameKubeAPIServer,
 			IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
@@ -843,9 +845,6 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 				Enabled: b.Shoot.ReversedVPNEnabled,
 			},
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
 	))
 }
 
@@ -857,6 +856,9 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 	b.APIServerClusterIP = clusterIP
 
 	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
+		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.Applier(),
+		b.Shoot.SeedNamespace,
 		&kubeapiserverexposure.SNIValues{
 			APIServerClusterIP: clusterIP,
 			NamespaceUID:       b.SeedNamespaceObject.UID,
@@ -864,7 +866,6 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 				gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 			},
-			Name: v1beta1constants.DeploymentNameKubeAPIServer,
 			IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
@@ -874,9 +875,6 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				Enabled: b.Shoot.ReversedVPNEnabled,
 			},
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
 	)
 }
 
