@@ -19,7 +19,25 @@ groups:
         description: >
           There are no fluent-bit pods running on seed: {{$externalLabels.seed}}.
           No logs will be collected.
-  
+
+    - alert: FluentBitIdleInputPlugins
+      expr: |
+        sum by (pod) (
+          increase(
+            fluentbit_input_bytes_total{pod=~"fluent-bit.*"}[4m]
+          )
+        ) == 0
+      for: 6h
+      labels:
+        severity: warning
+        service: logging
+        type: seed
+        visibility: operator
+      annotations:
+        summary: Fluent-bit input plugins haven't process any data for the past 6 hours
+        description: >
+          The input plugins of Fluent-bit pod {{$labels.pod}} running on seed {{$externalLabels.seed}} haven't collected any logs for the last 6 hours.
+
     - alert: FluentBitReceivesLogsWithoutMetadata
       expr: |
         sum by (pod) (
@@ -37,7 +55,7 @@ groups:
         description: >
           {{$labels.pod}} receives logs without metadata on seed:
           {{$externalLabels.seed}}. These logs will be dropped.
-  
+
     - alert: FluentBitSendsOoOLogs
       expr: |
         sum by (pod) (
@@ -55,7 +73,7 @@ groups:
         description: >
           {{$labels.pod}} on seed: {{$externalLabels.seed}} sends OutOfOrder logs
           to the Loki. These logs will be dropped.
-  
+
     - alert: FluentBitGardenerLokiPluginErrors
       expr: |
         sum by (pod) (
