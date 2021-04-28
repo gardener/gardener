@@ -167,7 +167,14 @@ func (a *authorizer) hasPathFrom(seedName string, fromType graph.VertexType, att
 		return auth.DecisionAllow, "", nil
 	}
 
-	if !a.graph.HasPathFrom(fromType, attrs.GetNamespace(), attrs.GetName(), graph.VertexTypeSeed, "", seedName) {
+	// If the request is made for a namespace then the attributes.Namespace field is not empty. It contains the name of
+	// the namespace.
+	namespace := attrs.GetNamespace()
+	if fromType == graph.VertexTypeNamespace {
+		namespace = ""
+	}
+
+	if !a.graph.HasPathFrom(fromType, namespace, attrs.GetName(), graph.VertexTypeSeed, "", seedName) {
 		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
 		return auth.DecisionNoOpinion, fmt.Sprintf("no relationship found between seed '%s' and this object", seedName), nil
 	}

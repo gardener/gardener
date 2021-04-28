@@ -66,7 +66,6 @@ type GardenletControllerFactory struct {
 	cfg                    *config.GardenletConfiguration
 	gardenClusterIdentity  string
 	identity               *gardencorev1beta1.Gardener
-	gardenNamespace        string
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 	k8sInformers           kubeinformers.SharedInformerFactory
@@ -80,7 +79,7 @@ func NewGardenletControllerFactory(
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	cfg *config.GardenletConfiguration, identity *gardencorev1beta1.Gardener,
-	gardenClusterIdentity, gardenNamespace string,
+	gardenClusterIdentity string,
 	recorder record.EventRecorder,
 	healthManager healthz.Manager,
 ) *GardenletControllerFactory {
@@ -88,7 +87,6 @@ func NewGardenletControllerFactory(
 		cfg:                    cfg,
 		identity:               identity,
 		gardenClusterIdentity:  gardenClusterIdentity,
-		gardenNamespace:        gardenNamespace,
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
 		k8sInformers:           kubeInformerFactory,
@@ -146,15 +144,11 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		runtime.Must(err)
 	}
 
-	gardenNamespace := &corev1.Namespace{}
-	// Use api reader here since we don't want to cache all namespaces of the Garden cluster.
-	runtime.Must(k8sGardenClient.APIReader().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
-
 	// Initialize the workqueue metrics collection.
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	var (
-		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace, f.gardenClusterIdentity)
+		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, f.gardenClusterIdentity)
 		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
 		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
 	)
