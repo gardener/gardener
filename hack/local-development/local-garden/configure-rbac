@@ -16,11 +16,13 @@
 
 source $(dirname "${0}")/../common/helpers
 
+KUBECONFIGPATH=${1:-"$(dirname $0)/kubeconfigs/default-admin.conf"}
+
 gardenlet_admin_templates=""
 
 if is_seedauthorizer_enabled; then
-  kubectl delete clusterrole/gardener.cloud:system:seeds        --ignore-not-found
-  kubectl delete clusterrolebinding/gardener.cloud:system:seeds --ignore-not-found
+  KUBECONFIG=$KUBECONFIGPATH kubectl delete clusterrole/gardener.cloud:system:seeds        --ignore-not-found
+  KUBECONFIG=$KUBECONFIGPATH kubectl delete clusterrolebinding/gardener.cloud:system:seeds --ignore-not-found
 else
   gardenlet_admin_templates="-x templates/clusterrole-seeds.yaml -x templates/clusterrolebinding-seeds.yaml"
 fi
@@ -36,17 +38,17 @@ helm template \
   --set global.apiserver.enabled=true \
   --set global.controller.enabled=true \
   --set global.scheduler.enabled=true | \
-kubectl apply -f -
+KUBECONFIG=$KUBECONFIGPATH kubectl apply -f -
 
-if ! kubectl get clusterrolebinding "gardener.cloud:system:admission-controller" > /dev/null; then
-  kubectl create clusterrolebinding "gardener.cloud:system:admission-controller" --clusterrole="gardener.cloud:system:admission-controller" --user="gardener.cloud:system:admission-controller"
+if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:admission-controller" > /dev/null; then
+  KUBECONFIG=$KUBECONFIGPATH kubectl create clusterrolebinding "gardener.cloud:system:admission-controller" --clusterrole="gardener.cloud:system:admission-controller" --user="gardener.cloud:system:admission-controller"
 fi
-if ! kubectl get clusterrolebinding "gardener.cloud:system:apiserver" > /dev/null; then
-  kubectl create clusterrolebinding "gardener.cloud:system:apiserver" --clusterrole="gardener.cloud:system:gardener-apiserver" --user="gardener.cloud:system:apiserver"
+if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:apiserver" > /dev/null; then
+  KUBECONFIG=$KUBECONFIGPATH kubectl create clusterrolebinding "gardener.cloud:system:apiserver" --clusterrole="gardener.cloud:system:gardener-apiserver" --user="gardener.cloud:system:apiserver"
 fi
-if ! kubectl get clusterrolebinding "gardener.cloud:system:controller-manager" > /dev/null; then
-  kubectl create clusterrolebinding "gardener.cloud:system:controller-manager" --clusterrole="gardener.cloud:system:gardener-controller-manager" --user="gardener.cloud:system:controller-manager"
+if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:controller-manager" > /dev/null; then
+  KUBECONFIG=$KUBECONFIGPATH kubectl create clusterrolebinding "gardener.cloud:system:controller-manager" --clusterrole="gardener.cloud:system:gardener-controller-manager" --user="gardener.cloud:system:controller-manager"
 fi
-if ! kubectl get clusterrolebinding "gardener.cloud:system:scheduler" > /dev/null; then
-  kubectl create clusterrolebinding "gardener.cloud:system:scheduler" --clusterrole="gardener.cloud:system:gardener-scheduler" --user="gardener.cloud:system:scheduler"
+if ! KUBECONFIG=$KUBECONFIGPATH kubectl get clusterrolebinding "gardener.cloud:system:scheduler" > /dev/null; then
+  KUBECONFIG=$KUBECONFIGPATH kubectl create clusterrolebinding "gardener.cloud:system:scheduler" --clusterrole="gardener.cloud:system:gardener-scheduler" --user="gardener.cloud:system:scheduler"
 fi
