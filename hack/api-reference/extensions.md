@@ -14,6 +14,8 @@ Resource Types:
 </li><li>
 <a href="#extensions.gardener.cloud/v1alpha1.BackupEntry">BackupEntry</a>
 </li><li>
+<a href="#extensions.gardener.cloud/v1alpha1.Bastion">Bastion</a>
+</li><li>
 <a href="#extensions.gardener.cloud/v1alpha1.Cluster">Cluster</a>
 </li><li>
 <a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntime">ContainerRuntime</a>
@@ -284,6 +286,126 @@ BackupEntryStatus
 </td>
 <td>
 <em>(Optional)</em>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.Bastion">Bastion
+</h3>
+<p>
+<p>Bastion is a bastion or jump host that is dynamically created
+to provide SSH access to shoot nodes.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>Bastion</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.BastionSpec">
+BastionSpec
+</a>
+</em>
+</td>
+<td>
+<p>Spec is the specification of this Bastion.</p>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>userData</code></br>
+<em>
+[]byte
+</em>
+</td>
+<td>
+<p>UserData is the base64-encoded user data for the bastion instance. This should
+contain code to provision the SSH key on the bastion instance.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ingress</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.BastionIngressPolicy">
+[]BastionIngressPolicy
+</a>
+</em>
+</td>
+<td>
+<p>Ingress controls from where the creation bastion host should be reachable.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.BastionStatus">
+BastionStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Status is the bastion&rsquo;s status.</p>
 </td>
 </tr>
 </tbody>
@@ -1535,6 +1657,146 @@ DefaultStatus
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.BastionIngressPolicy">BastionIngressPolicy
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.BastionSpec">BastionSpec</a>)
+</p>
+<p>
+<p>BastionIngressPolicy represents an ingress policy for SSH bastion hosts.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>ipBlock</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#ipblock-v1-networking">
+Kubernetes networking/v1.IPBlock
+</a>
+</em>
+</td>
+<td>
+<p>IPBlock defines an IP block that is allowed to access the bastion.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.BastionSpec">BastionSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Bastion">Bastion</a>)
+</p>
+<p>
+<p>BastionSpec contains the specification for an SSH bastion host.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>userData</code></br>
+<em>
+[]byte
+</em>
+</td>
+<td>
+<p>UserData is the base64-encoded user data for the bastion instance. This should
+contain code to provision the SSH key on the bastion instance.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ingress</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.BastionIngressPolicy">
+[]BastionIngressPolicy
+</a>
+</em>
+</td>
+<td>
+<p>Ingress controls from where the creation bastion host should be reachable.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.BastionStatus">BastionStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.Bastion">Bastion</a>)
+</p>
+<p>
+<p>BastionStatus holds the most recently observed status of the Bastion.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultStatus</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">
+DefaultStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultStatus</code> are embedded into this type.)
+</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ingress</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#loadbalanceringress-v1-core">
+Kubernetes core/v1.LoadBalancerIngress
+</a>
+</em>
+</td>
+<td>
+<p>Ingress is the external IP and/or hostname of the bastion host.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="extensions.gardener.cloud/v1alpha1.CRIConfig">CRIConfig
 </h3>
 <p>
@@ -2000,6 +2262,7 @@ bool
 (<em>Appears on:</em>
 <a href="#extensions.gardener.cloud/v1alpha1.BackupBucketSpec">BackupBucketSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.BackupEntrySpec">BackupEntrySpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.BastionSpec">BastionSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeSpec">ContainerRuntimeSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneSpec">ControlPlaneSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ExtensionSpec">ExtensionSpec</a>, 
@@ -2052,6 +2315,7 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 (<em>Appears on:</em>
 <a href="#extensions.gardener.cloud/v1alpha1.BackupBucketStatus">BackupBucketStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.BackupEntryStatus">BackupEntryStatus</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.BastionStatus">BastionStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeStatus">ContainerRuntimeStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneStatus">ControlPlaneStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ExtensionStatus">ExtensionStatus</a>, 
