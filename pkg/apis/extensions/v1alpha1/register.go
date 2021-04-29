@@ -47,6 +47,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&BackupBucketList{},
 		&BackupEntry{},
 		&BackupEntryList{},
+		&Bastion{},
+		&BastionList{},
 		&Cluster{},
 		&ClusterList{},
 		&ContainerRuntime{},

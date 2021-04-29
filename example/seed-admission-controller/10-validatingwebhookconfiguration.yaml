@@ -33,6 +33,7 @@ webhooks:
     resources:
     - backupbuckets
     - backupentries
+    - bastions
     - containerruntimes
     - controlplanes
     - extensions

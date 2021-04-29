@@ -143,6 +143,7 @@ func getValidatingWebhookConfig() *admissionregistrationv1beta1.ValidatingWebhoo
 					Resources: []string{
 						"backupbuckets",
 						"backupentries",
+						"bastions",
 						"containerruntimes",
 						"controlplanes",
 						"extensions",

@@ -72,6 +72,7 @@ rules:
   resources:
   - backupbuckets
   - backupentries
+  - bastions
   - containerruntimes
   - controlplanes
   - extensions
@@ -290,6 +291,7 @@ webhooks:
     resources:
     - backupbuckets
     - backupentries
+    - bastions
     - containerruntimes
     - controlplanes
     - extensions
