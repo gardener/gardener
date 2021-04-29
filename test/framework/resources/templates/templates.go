@@ -27,6 +27,12 @@ const (
 	// LoggerAppName is the name of the logger app deployment template
 	LoggerAppName = "logger-app.yaml.tpl"
 
+	// VPNTunnelDeploymentName is the name of the vpn deployment template
+	VPNTunnelDeploymentName = "vpntunnel.yaml.tpl"
+
+	// VPNTunnelCopyDeploymentName is the name of the vpn copy deployment template
+	VPNTunnelCopyDeploymentName = "vpntunnel-copy.yaml.tpl"
+
 	// PodAntiAffinityDeploymentName is the name of the pod anti affinity deployment template
 	PodAntiAffinityDeploymentName = "pod-anti-affinity-deployment.yaml.tpl"
 
