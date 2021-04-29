@@ -42,9 +42,14 @@ Today, the following rules are implemented:
 | `Namespace`              | `get`                                                         | `Namespace` -> `Shoot` -> `Seed`              | Allow `get` requests for `Namespace`s of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
 | `Project`                | `get`                                                         | `Project` -> `Namespace` -> `Shoot` -> `Seed` | Allow `get` requests for `Project`s referenced by the `Namespace` of `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
 | `SecretBinding`          | `get`                                                         | `SecretBinding` -> `Shoot` -> `Seed`          | Allow only `get` requests for `SecretBinding`s referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
-| `Seed`                   | `get`, `list`, `watch`, `create`, `update`, `patch`, `delete` | `Seed`                                        | Allow `get`, `list`, `watch` requests for all `Seed`s. Allow only `create`, `update`, `patch`, `delete` requests for the `gardenlet`'s `Seed`s. |
+| `Seed`                   | `get`, `list`, `watch`, `create`, `update`, `patch`, `delete` | `Seed`                                        | Allow `get`, `list`, `watch` requests for all `Seed`s. Allow only `create`, `update`, `patch`, `delete` requests for the `gardenlet`'s `Seed`s. [1] |
 | `Shoot`                  | `get`, `list`, `watch`, `update`, `patch`                     | `Shoot` -> `Seed`                             | Allow `get`, `list`, `watch` requests for all `Shoot`s. Allow only `update`, `patch` requests for `Shoot`s assigned to the `gardenlet`'s `Seed`. |
 | `ShootState`             | `get`, `create`, `update`, `patch`                            | `ShootState` -> `Shoot` -> `Seed`             | Allow only `get`, `create`, `update`, `patch` requests for `ShootState`s belonging by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+
+[1] If you use `ManagedSeed` resources then the gardenlet reconciling them ("parent gardenlet") may be allowed to submit certain requests for the `Seed` resources resulting out of such `ManagedSeed` reconciliations (even if the "parent gardenlet" is not responsible for them): 
+
+- ℹ️ It is allowed to delete the `Seed` resources if the corresponding `ManagedSeed` objects already have a `deletionTimestamp` (this is secure as gardenlets themselves don't have permissions for deleting `ManagedSeed`s).
+- ⚠ It is allowed to create or update `Seed` resources if the corresponding `ManagedSeed` objects use a seed template, i.e., `.spec.seedTemplate != nil`. In this case, there is at least one gardenlet in your system which is responsible for two or more `Seed`s. Please keep in mind that this use case is not recommended for production scenarios (you should only have one dedicated gardenlet per seed cluster), hence, the security improvements discussed in this document might be limited.   
 
 ## `SeedAuthorizer` Authorization Webhook Enablement
 

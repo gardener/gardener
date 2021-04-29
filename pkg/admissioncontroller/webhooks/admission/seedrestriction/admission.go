@@ -22,10 +22,14 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,6 +58,9 @@ func New(ctx context.Context, logger logr.Logger, cache cache.Cache) (*handler, 
 	// Initialize caches here to ensure the readyz informer check will only succeed once informers required for this
 	// handler have synced so that http requests can be served quicker with pre-syncronized caches.
 	if _, err := cache.GetInformer(ctx, &gardencorev1beta1.BackupBucket{}); err != nil {
+		return nil, err
+	}
+	if _, err := cache.GetInformer(ctx, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
 		return nil, err
 	}
 	if _, err := cache.GetInformer(ctx, &gardencorev1beta1.Shoot{}); err != nil {
@@ -94,7 +101,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	case leaseResource:
 		return h.admitLease(seedName, request)
 	case seedResource:
-		return h.admitSeed(seedName, request)
+		return h.admitSeed(ctx, seedName, request)
 	case shootStateResource:
 		return h.admitShootState(ctx, seedName, request)
 	}
@@ -149,8 +156,8 @@ func (h *handler) admitLease(seedName string, request admission.Request) admissi
 	return h.admit(seedName, &request.Name)
 }
 
-func (h *handler) admitSeed(seedName string, request admission.Request) admission.Response {
-	if request.Operation != admissionv1.Create {
+func (h *handler) admitSeed(ctx context.Context, seedName string, request admission.Request) admission.Response {
+	if request.Operation == admissionv1.Connect {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
@@ -159,7 +166,51 @@ func (h *handler) admitSeed(seedName string, request admission.Request) admissio
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	return h.admit(seedName, &seed.Name)
+	response := h.admit(seedName, &seed.Name)
+	if response.Allowed {
+		return response
+	}
+
+	// If the request is not allowed then we check whether the Seed object in question is the result of a ManagedSeed
+	// reconciliation. In this case, the another gardenlet (the "parent gardenlet") which is usually responsible for a
+	// different seed is doing the request.
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := h.cacheReader.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+		if apierrors.IsNotFound(err) {
+			return response
+		}
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	switch request.Operation {
+	case admissionv1.Create, admissionv1.Update:
+		// If a gardenlet tries to create/update a Seed belonging to a ManagedSeed then the request may only be
+		// considered further if the `.spec.seedTemplate` is set.
+		if managedSeed.Spec.SeedTemplate == nil {
+			return response
+		}
+	case admissionv1.Delete:
+		// If a gardenlet tries to delete a Seed belonging to a ManagedSeed then the request may only be considered
+		// further if the `.spec.deletionTimestamp` is set (gardenlets themselves are not allowed to delete ManagedSeeds,
+		// so it's safe to only continue if somebody else has set this deletion timestamp).
+		if managedSeed.DeletionTimestamp == nil {
+			return admission.Errored(http.StatusForbidden, fmt.Errorf("object can only be deleted if corresponding ManagedSeed has a deletion timestamp"))
+		}
+	}
+
+	// If for whatever reason the `.spec.shoot` is nil then we exit early.
+	if managedSeed.Spec.Shoot == nil {
+		return response
+	}
+
+	// Check if the `.spec.seedName` of the Shoot referenced in the `.spec.shoot.name` field of the ManagedSeed matches
+	// the seed name of the requesting gardenlet.
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := h.cacheReader.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	return h.admit(seedName, shoot.Spec.SeedName)
 }
 
 func (h *handler) admitShootState(ctx context.Context, seedName string, request admission.Request) admission.Response {

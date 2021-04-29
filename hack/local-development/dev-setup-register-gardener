@@ -353,7 +353,6 @@ $ADMISSION_CONTROLLER_PORT_STRING
     resources:
     - backupbuckets
     - backupentries
-    - seeds
     - shootstates
   - apiGroups:
     - coordination.k8s.io
@@ -363,6 +362,16 @@ $ADMISSION_CONTROLLER_PORT_STRING
     - CREATE
     resources:
     - leases
+  - apiGroups:
+    - core.gardener.cloud
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - seeds
   failurePolicy: Fail
   clientConfig:
     url: https://127.0.0.1:$ADMISSION_CONTROLLER_SECURE_PORT/webhooks/admission/seedrestriction

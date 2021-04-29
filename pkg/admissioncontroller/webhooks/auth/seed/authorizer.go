@@ -133,8 +133,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(seedName, graph.VertexTypeSecretBinding, attrs)
 		case seedResource:
 			return a.authorize(seedName, graph.VertexTypeSeed, attrs,
-				[]string{"update", "patch", "delete"},
-				[]string{"create", "get", "list", "watch"},
+				nil,
+				[]string{"create", "update", "patch", "delete", "get", "list", "watch"},
 				[]string{"status"},
 			)
 		case shootResource:
