@@ -34,7 +34,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	kretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -139,15 +138,16 @@ func (a *actuator) Delete(ctx context.Context) error {
 // reportBackupBucketProgress will update the phase and error in the BackupBucket manifest `status` section
 // by the current progress of the Flow execution.
 func (a *actuator) reportBackupBucketProgress(ctx context.Context, stats *flow.Stats) {
-	if err := kutil.TryUpdateStatus(ctx, kretry.DefaultBackoff, a.gardenClient.DirectClient(), a.backupBucket, func() error {
-		if a.backupBucket.Status.LastOperation == nil {
-			return fmt.Errorf("last operation of BackupBucket %s/%s is unset", a.backupBucket.Namespace, a.backupBucket.Name)
-		}
-		a.backupBucket.Status.LastOperation.Description = makeDescription(stats)
-		a.backupBucket.Status.LastOperation.Progress = stats.ProgressPercent()
-		a.backupBucket.Status.LastOperation.LastUpdateTime = metav1.Now()
-		return nil
-	}); err != nil {
+	patch := client.MergeFrom(a.backupBucket.DeepCopy())
+
+	if a.backupBucket.Status.LastOperation == nil {
+		a.backupBucket.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+	}
+	a.backupBucket.Status.LastOperation.Description = makeDescription(stats)
+	a.backupBucket.Status.LastOperation.Progress = stats.ProgressPercent()
+	a.backupBucket.Status.LastOperation.LastUpdateTime = metav1.Now()
+
+	if err := a.gardenClient.Client().Status().Patch(ctx, a.backupBucket, patch); err != nil {
 		a.logger.Warnf("could not report backupbucket progress with description: %s: %v", makeDescription(stats), err)
 	}
 }
@@ -270,11 +270,10 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 			}
 
 			if generatedSecretRef != nil || backupBucket.Status.ProviderStatus != nil {
-				return kutil.TryUpdateStatus(ctx, kretry.DefaultBackoff, a.gardenClient.DirectClient(), a.backupBucket, func() error {
-					a.backupBucket.Status.GeneratedSecretRef = generatedSecretRef
-					a.backupBucket.Status.ProviderStatus = backupBucket.Status.ProviderStatus
-					return nil
-				})
+				patch := client.MergeFrom(a.backupBucket.DeepCopy())
+				a.backupBucket.Status.GeneratedSecretRef = generatedSecretRef
+				a.backupBucket.Status.ProviderStatus = backupBucket.Status.ProviderStatus
+				return a.gardenClient.Client().Status().Patch(ctx, a.backupBucket, patch)
 			}
 
 			return nil
