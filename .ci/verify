@@ -34,7 +34,7 @@ if [ $use_cache = yes ] ; then
   echo "> retrieving all cached dirs from concourse cache dir"
   for cache in "${cache_dirs[@]}" ; do
     mkdir -p "$cache"
-    cache_name=$(echo "$cache" | tr ' /' '_')
+    cache_name=$(echo "$cache" | tr ' /' '_' | cut -c 2-)
     if [ -d "$concourse_cache_dir/$cache_name" ] ; then
       rm -rf "$cache"
       mv "$concourse_cache_dir/$cache_name" "$cache"
@@ -46,7 +46,7 @@ if [ $use_cache = yes ] ; then
 
   echo "> moving all cached dirs back to concourse cache dir"
   for cache in "${cache_dirs[@]}" ; do
-    cache_name=$(echo "$cache" | tr ' /' '_')
+    cache_name=$(echo "$cache" | tr ' /' '_' | cut -c 2-)
     rm -rf "$concourse_cache_dir/$cache_name"
     mv "$cache" "$concourse_cache_dir/$cache_name"
   done
