@@ -36,7 +36,8 @@ if [ $use_cache = yes ] ; then
     mkdir -p "$cache"
     cache_name=$(echo "$cache" | tr ' /' '_')
     if [ -d "$concourse_cache_dir/$cache_name" ] ; then
-      cp -TR "$concourse_cache_dir/$cache_name" "$cache"
+      rm -rf "$cache"
+      mv "$concourse_cache_dir/$cache_name" "$cache"
     fi
   done
 
@@ -46,7 +47,8 @@ if [ $use_cache = yes ] ; then
   echo "> moving all cached dirs back to concourse cache dir"
   for cache in "${cache_dirs[@]}" ; do
     cache_name=$(echo "$cache" | tr ' /' '_')
-    cp -TR "$cache" "$concourse_cache_dir/$cache_name"
+    rm -rf "$concourse_cache_dir/$cache_name"
+    mv "$cache" "$concourse_cache_dir/$cache_name"
   done
 else
   make verify-extended
