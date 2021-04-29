@@ -452,7 +452,7 @@ func validateProvider(c *validationContext) field.ErrorList {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), worker.Volume, validVolumeTypes))
 		}
 		if ok, minSize := validateVolumeSize(c.cloudProfile.Spec.VolumeTypes, c.cloudProfile.Spec.MachineTypes, worker.Machine.Type, worker.Volume); !ok {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "size"), worker.Volume.VolumeSize, []string{fmt.Sprintf(">= %s", minSize)}))
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("volume", "size"), worker.Volume.VolumeSize, fmt.Sprintf("size must be >= %s", minSize)))
 		}
 
 		allErrs = append(allErrs, validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, worker, oldWorker, idxPath)...)
