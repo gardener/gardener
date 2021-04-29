@@ -17,15 +17,12 @@ package gardener
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"strconv"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -56,26 +53,13 @@ func CheckIfDeletionIsConfirmed(obj client.Object) error {
 	return nil
 }
 
-// ConfirmDeletion adds Gardener's deletion confirmation annotation to the given object and sends an UPDATE request.
-func ConfirmDeletion(ctx context.Context, c client.Client, obj client.Object) error {
-	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-			if !errors.IsNotFound(err) {
-				return err
-			}
-			return nil
-		}
-
-		existing := obj.DeepCopyObject()
-		kubernetes.SetMetaDataAnnotation(obj, ConfirmationDeletion, "true")
-		kubernetes.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-
-		if reflect.DeepEqual(existing, obj) {
-			return nil
-		}
-
-		return c.Update(ctx, obj)
-	})
+// ConfirmDeletion adds Gardener's deletion confirmation and timestamp annotation to the given object and sends a PATCH
+// request. It does not ignore `NotFound` errors while patching.
+func ConfirmDeletion(ctx context.Context, w client.Writer, obj client.Object) error {
+	patch := client.MergeFrom(obj.DeepCopyObject())
+	kutil.SetMetaDataAnnotation(obj, ConfirmationDeletion, "true")
+	kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+	return w.Patch(ctx, obj, patch)
 }
 
 func confirmationAnnotationRequiredError() error {

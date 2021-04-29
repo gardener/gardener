@@ -237,11 +237,8 @@ var _ = Describe("#ContainerRuntimee", func() {
 			mc := mockclient.NewMockClient(ctrl)
 			// check if the containerruntime exist
 			mc.EXPECT().List(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.ContainerRuntimeList{}), client.InNamespace(namespace)).SetArg(1, extensionsv1alpha1.ContainerRuntimeList{Items: []extensionsv1alpha1.ContainerRuntime{expectedContainerRuntime}})
-			mc.EXPECT().Get(ctx, kutil.Key(namespace, containerRuntimeName), gomock.AssignableToTypeOf(&extensionsv1alpha1.ContainerRuntime{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, n *extensionsv1alpha1.ContainerRuntime) error {
-				return nil
-			})
 			// add deletion confirmation and Timestamp annotation
-			mc.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.ContainerRuntime{})).Return(nil)
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.ContainerRuntime{}), gomock.Any())
 			mc.EXPECT().Delete(ctx, &expectedContainerRuntime).Times(1).Return(fmt.Errorf("some random error"))
 
 			defaultDepWaiter = containerruntime.New(log, mc, &containerruntime.Values{

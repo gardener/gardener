@@ -282,11 +282,7 @@ var _ = Describe("#Interface", func() {
 		It("should not return error when it's not found", func() {
 			c.
 				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), infra).
-				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
-			c.
-				EXPECT().
-				Delete(ctx, infra).
+				Patch(gomock.Any(), gomock.AssignableToTypeOf(infra), gomock.Any()).
 				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
 			Expect(deployWaiter.Destroy(ctx)).To(Succeed())
@@ -307,10 +303,7 @@ var _ = Describe("#Interface", func() {
 
 			c.
 				EXPECT().
-				Get(ctx, kutil.Key(namespace, name), infra)
-			c.
-				EXPECT().
-				Update(ctx, infraCopy)
+				Patch(ctx, infraCopy, gomock.Any())
 			c.
 				EXPECT().
 				Delete(ctx, infraCopy)
@@ -333,10 +326,7 @@ var _ = Describe("#Interface", func() {
 
 			c.
 				EXPECT().
-				Get(ctx, kutil.Key(namespace, name), infra)
-			c.
-				EXPECT().
-				Update(ctx, infraCopy)
+				Patch(ctx, infraCopy, gomock.Any())
 			c.
 				EXPECT().
 				Delete(ctx, infraCopy).

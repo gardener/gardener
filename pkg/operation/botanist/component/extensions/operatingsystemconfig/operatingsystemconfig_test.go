@@ -507,9 +507,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 				mc := mockclient.NewMockClient(ctrl)
 				// check if the operatingsystemconfigs exist
 				mc.EXPECT().List(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.OperatingSystemConfigList{}), client.InNamespace(namespace)).SetArg(1, extensionsv1alpha1.OperatingSystemConfigList{Items: []extensionsv1alpha1.OperatingSystemConfig{expectedOSC}})
-				mc.EXPECT().Get(ctx, kutil.Key(namespace, expectedOSC.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.OperatingSystemConfig{}))
 				// add deletion confirmation and Timestamp annotation
-				mc.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.OperatingSystemConfig{})).Return(nil)
+				mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.OperatingSystemConfig{}), gomock.Any())
 				mc.EXPECT().Delete(ctx, &expectedOSC).Return(fakeErr)
 
 				defaultDepWaiter = New(log, mc, &Values{Namespace: namespace}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)

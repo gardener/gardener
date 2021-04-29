@@ -201,10 +201,9 @@ var _ = Describe("#BackupEntry", func() {
 				}}
 
 			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, kutil.Key(name), gomock.AssignableToTypeOf(&extensionsv1alpha1.BackupEntry{}))
 
 			// add deletion confirmation and timestamp annotation
-			mc.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.BackupEntry{})).Return(nil)
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.BackupEntry{}), gomock.Any()).Return(nil)
 			mc.EXPECT().Delete(ctx, &expected).Times(1).Return(fakeErr)
 
 			defaultDepWaiter = backupentry.New(log, mc, &backupentry.Values{Name: name}, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)

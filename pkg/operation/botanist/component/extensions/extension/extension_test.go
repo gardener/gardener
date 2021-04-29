@@ -200,11 +200,8 @@ var _ = Describe("Extension", func() {
 			mc := mockclient.NewMockClient(ctrl)
 			// check if the extensions exist
 			mc.EXPECT().List(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.ExtensionList{}), client.InNamespace(namespace)).SetArg(1, extensionsv1alpha1.ExtensionList{Items: []extensionsv1alpha1.Extension{expectedExtension}})
-			mc.EXPECT().Get(ctx, kutil.Key(namespace, expectedExtension.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Extension{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, n *extensionsv1alpha1.Extension) error {
-				return nil
-			})
 			// add deletion confirmation and Timestamp annotation
-			mc.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Extension{})).Return(nil)
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Extension{}), gomock.Any())
 			mc.EXPECT().Delete(ctx, &expectedExtension).Times(1).Return(fakeErr)
 
 			defaultDepWaiter = extension.New(log, mc, &extension.Values{
