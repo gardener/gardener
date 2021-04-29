@@ -3,7 +3,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: gardener.cloud:controller-manager:admin
+  name: gardener.cloud:system:controller-manager
   labels:
     app: gardener
     role: apiserver
@@ -13,7 +13,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gardener.cloud:system:gardener-controller-manager
+  name: gardener.cloud:system:controller-manager
 subjects:
 - kind: ServiceAccount
   name: "{{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}"
