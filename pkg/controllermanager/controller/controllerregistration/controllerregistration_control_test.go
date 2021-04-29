@@ -90,7 +90,7 @@ var _ = Describe("Controller", func() {
 					},
 				}
 
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{}))
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
 
 				controller.controllerRegistrationAdd(ctx, obj)
 
@@ -105,7 +105,7 @@ var _ = Describe("Controller", func() {
 					},
 				}
 
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).Return(fakeErr)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{})).Return(fakeErr)
 
 				controller.controllerRegistrationAdd(ctx, obj)
 
@@ -123,14 +123,14 @@ var _ = Describe("Controller", func() {
 				var (
 					seed1    = "seed1"
 					seed2    = "seed2"
-					seedList = []gardencorev1beta1.Seed{
+					seedList = []metav1.PartialObjectMetadata{
 						{ObjectMeta: metav1.ObjectMeta{Name: seed1}},
 						{ObjectMeta: metav1.ObjectMeta{Name: seed2}},
 					}
 				)
 
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-					(&gardencorev1beta1.SeedList{Items: seedList}).DeepCopyInto(obj)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{})).DoAndReturn(func(_ context.Context, obj *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+					(&metav1.PartialObjectMetadataList{Items: seedList}).DeepCopyInto(obj)
 					return nil
 				})
 
@@ -160,7 +160,7 @@ var _ = Describe("Controller", func() {
 					},
 				}
 
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{}))
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
 
 				controller.controllerRegistrationUpdate(ctx, nil, obj)
 
