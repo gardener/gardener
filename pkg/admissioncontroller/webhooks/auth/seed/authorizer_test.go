@@ -748,7 +748,7 @@ var _ = Describe("Seed", func() {
 				Entry("create", "create"),
 			)
 
-			DescribeTable("should deny because verb is not allowed",
+			DescribeTable("should have no opinion because verb is not allowed",
 				func(verb string) {
 					attrs.Verb = verb
 
@@ -841,7 +841,7 @@ var _ = Describe("Seed", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should deny because verb is not allowed",
+			DescribeTable("should have no opinion because verb is not allowed",
 				func(verb string) {
 					attrs.Verb = verb
 
@@ -934,7 +934,7 @@ var _ = Describe("Seed", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should deny because verb is not allowed",
+			DescribeTable("should have no opinion because verb is not allowed",
 				func(verb string) {
 					attrs.Verb = verb
 
@@ -1013,7 +1013,7 @@ var _ = Describe("Seed", func() {
 				}
 			})
 
-			DescribeTable("should allow without consulting the graph because verb is get, list, or watch",
+			DescribeTable("should allow without consulting the graph because verb is create",
 				func(verb string) {
 					attrs.Verb = verb
 
@@ -1026,7 +1026,7 @@ var _ = Describe("Seed", func() {
 				Entry("create", "create"),
 			)
 
-			DescribeTable("should deny because verb is not allowed",
+			DescribeTable("should have no opinion because verb is not allowed",
 				func(verb string) {
 					attrs.Verb = verb
 
@@ -1089,7 +1089,7 @@ var _ = Describe("Seed", func() {
 				Entry("create", "create"),
 			)
 
-			DescribeTable("should deny because verb is not allowed",
+			DescribeTable("should have no opinion because verb is not allowed",
 				func(verb string) {
 					attrs.Verb = verb
 

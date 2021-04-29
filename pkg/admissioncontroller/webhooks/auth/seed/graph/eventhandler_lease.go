@@ -65,8 +65,6 @@ func (g *graph) handleLeaseCreate(lease *coordinationv1.Lease) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	g.deleteVertex(VertexTypeLease, lease.Namespace, lease.Name)
-
 	var (
 		leaseVertex = g.getOrCreateVertex(VertexTypeLease, lease.Namespace, lease.Name)
 		seedVertex  = g.getOrCreateVertex(VertexTypeSeed, "", lease.Name)
