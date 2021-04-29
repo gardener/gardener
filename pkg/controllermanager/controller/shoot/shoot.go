@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
@@ -68,7 +67,6 @@ type Controller struct {
 func NewShootController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
@@ -91,12 +89,7 @@ func NewShootController(
 	}
 
 	var (
-		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
-		corev1Informer            = kubeInformerFactory.Core().V1()
-
-		cloudProfileInformer = gardenCoreV1beta1Informer.CloudProfiles()
-		cloudProfileLister   = cloudProfileInformer.Lister()
-
+		corev1Informer = kubeInformerFactory.Core().V1()
 		secretInformer = corev1Informer.Secrets()
 		secretLister   = secretInformer.Lister()
 	)
@@ -105,8 +98,8 @@ func NewShootController(
 		config: config,
 
 		shootHibernationReconciler: NewShootHibernationReconciler(logger.Logger, gardenClient, NewHibernationScheduleRegistry(), recorder),
-		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient, config.Controllers.ShootMaintenance, cloudProfileLister, recorder),
-		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota, gardenCoreV1beta1Informer),
+		shootMaintenanceReconciler: NewShootMaintenanceReconciler(logger.Logger, gardenClient, config.Controllers.ShootMaintenance, recorder),
+		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota),
 		configMapReconciler:        NewConfigMapReconciler(logger.Logger, gardenClient.Client()),
 		shootRetryReconciler:       NewShootRetryReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootRetry),
 
@@ -154,7 +147,6 @@ func NewShootController(
 
 	shootController.hasSyncedFuncs = []cache.InformerSynced{
 		shootInformer.HasSynced,
-		gardenCoreV1beta1Informer.Quotas().Informer().HasSynced,
 		configMapInformer.HasSynced,
 	}
 

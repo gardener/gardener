@@ -23,7 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -77,22 +76,20 @@ func (c *Controller) shootMaintenanceDelete(obj interface{}) {
 }
 
 // NewShootMaintenanceReconciler creates a new instance of a reconciler which maintains Shoots.
-func NewShootMaintenanceReconciler(l logrus.FieldLogger, gardenClient kubernetes.Interface, config config.ShootMaintenanceControllerConfiguration, cloudProfileLister gardencorelisters.CloudProfileLister, recorder record.EventRecorder) reconcile.Reconciler {
+func NewShootMaintenanceReconciler(l logrus.FieldLogger, gardenClient kubernetes.Interface, config config.ShootMaintenanceControllerConfiguration, recorder record.EventRecorder) reconcile.Reconciler {
 	return &shootMaintenanceReconciler{
-		logger:             l,
-		gardenClient:       gardenClient,
-		config:             config,
-		cloudProfileLister: cloudProfileLister,
-		recorder:           recorder,
+		logger:       l,
+		gardenClient: gardenClient,
+		config:       config,
+		recorder:     recorder,
 	}
 }
 
 type shootMaintenanceReconciler struct {
-	logger             logrus.FieldLogger
-	gardenClient       kubernetes.Interface
-	config             config.ShootMaintenanceControllerConfiguration
-	cloudProfileLister gardencorelisters.CloudProfileLister
-	recorder           record.EventRecorder
+	logger       logrus.FieldLogger
+	gardenClient kubernetes.Interface
+	config       config.ShootMaintenanceControllerConfiguration
+	recorder     record.EventRecorder
 }
 
 func (r *shootMaintenanceReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -139,8 +136,8 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 	shootLogger := r.logger.WithField("shoot", key)
 	shootLogger.Infof("[SHOOT MAINTENANCE] %s", key)
 
-	cloudProfile, err := r.cloudProfileLister.Get(shoot.Spec.CloudProfileName)
-	if err != nil {
+	cloudProfile := &gardencorev1beta1.CloudProfile{}
+	if err := r.gardenClient.Client().Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return err
 	}
 

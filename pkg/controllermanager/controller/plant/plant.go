@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
-	kubeinformers "k8s.io/client-go/informers"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,7 +55,6 @@ type Controller struct {
 func NewController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	config *config.ControllerManagerConfiguration,
 ) (
 	*Controller,
@@ -70,15 +69,14 @@ func NewController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Plant Informer: %w", err)
 	}
-
-	var (
-		secretInformer = kubeInformerFactory.Core().V1().Secrets()
-		secretLister   = secretInformer.Lister()
-	)
+	secretInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Secret Informer: %w", err)
+	}
 
 	controller := &Controller{
 		gardenClient: gardenClient.Client(),
-		reconciler:   NewPlantReconciler(logger.Logger, clientMap, gardenClient.Client(), config.Controllers.Plant, secretLister),
+		reconciler:   NewPlantReconciler(logger.Logger, clientMap, gardenClient.Client(), config.Controllers.Plant),
 		plantQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "plant"),
 		workerCh:     make(chan int),
 	}
@@ -89,13 +87,13 @@ func NewController(
 		DeleteFunc: controller.plantDelete,
 	})
 
-	secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	secretInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { controller.reconcilePlantForMatchingSecret(ctx, obj) },
 		UpdateFunc: func(oldObj, newObj interface{}) { controller.plantSecretUpdate(ctx, oldObj, newObj) },
 		DeleteFunc: func(obj interface{}) { controller.reconcilePlantForMatchingSecret(ctx, obj) },
 	})
 
-	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs, plantInformer.HasSynced, secretInformer.Informer().HasSynced)
+	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs, plantInformer.HasSynced, secretInformer.HasSynced)
 
 	return controller, nil
 }

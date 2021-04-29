@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
@@ -29,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -52,8 +50,6 @@ type Controller struct {
 func NewSecretBindingController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	gardenInformerFactory gardencoreinformers.SharedInformerFactory,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	recorder record.EventRecorder,
 ) (
 	*Controller,
@@ -69,13 +65,8 @@ func NewSecretBindingController(
 		return nil, fmt.Errorf("failed to get SecretBinding Informer: %w", err)
 	}
 
-	var (
-		secretLister = kubeInformerFactory.Core().V1().Secrets().Lister()
-		shootLister  = gardenInformerFactory.Core().V1beta1().Shoots().Lister()
-	)
-
 	secretBindingController := &Controller{
-		reconciler:         NewSecretBindingReconciler(logger.Logger, gardenClient.Client(), recorder, secretLister, shootLister),
+		reconciler:         NewSecretBindingReconciler(logger.Logger, gardenClient.Client(), recorder),
 		secretBindingQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
 		workerCh:           make(chan int),
 	}
