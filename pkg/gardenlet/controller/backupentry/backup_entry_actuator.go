@@ -36,7 +36,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -208,15 +207,16 @@ func (a *actuator) Migrate(ctx context.Context) error {
 // reportBackupEntryProgress will update the phase and error in the BackupEntry manifest `status` section
 // by the current progress of the Flow execution.
 func (a *actuator) reportBackupEntryProgress(ctx context.Context, stats *flow.Stats) {
-	if err := kutil.TryUpdateStatus(ctx, kretry.DefaultBackoff, a.gardenClient.DirectClient(), a.backupEntry, func() error {
-		if a.backupEntry.Status.LastOperation == nil {
-			return fmt.Errorf("last operation of BackupEntry %s/%s is unset", a.backupEntry.Namespace, a.backupEntry.Name)
-		}
-		a.backupEntry.Status.LastOperation.Description = makeDescription(stats)
-		a.backupEntry.Status.LastOperation.Progress = stats.ProgressPercent()
-		a.backupEntry.Status.LastOperation.LastUpdateTime = metav1.Now()
-		return nil
-	}); err != nil {
+	patch := client.MergeFrom(a.backupEntry.DeepCopy())
+
+	if a.backupEntry.Status.LastOperation == nil {
+		a.backupEntry.Status.LastOperation = &gardencorev1beta1.LastOperation{}
+	}
+	a.backupEntry.Status.LastOperation.Description = makeDescription(stats)
+	a.backupEntry.Status.LastOperation.Progress = stats.ProgressPercent()
+	a.backupEntry.Status.LastOperation.LastUpdateTime = metav1.Now()
+
+	if err := a.gardenClient.Client().Status().Patch(ctx, a.backupEntry, patch); err != nil {
 		a.logger.Warnf("could not report backupEntry progress with description: %s, %v", makeDescription(stats), err)
 	}
 }
