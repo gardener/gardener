@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
 	"github.com/Masterminds/semver"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -254,10 +253,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 
 	if shoot.Spec.Provider.Type != cloudProfile.Spec.Type {
 		return apierrors.NewBadRequest(fmt.Sprintf("cloud provider in shoot (%s) is not equal to cloud provider in profile (%s)", shoot.Spec.Provider.Type, cloudProfile.Spec.Type))
-	}
-
-	if err := v.validateShootedSeed(a, shoot, oldShoot); err != nil {
-		return err
 	}
 
 	var (
@@ -904,40 +899,6 @@ func ensureMachineImage(oldWorkers []core.Worker, worker core.Worker, images []c
 	}
 
 	return getDefaultMachineImage(images, imageName)
-}
-
-func (v ValidateShoot) validateShootedSeed(a admission.Attributes, shoot, oldShoot *core.Shoot) error {
-	if shoot.Namespace != v1beta1constants.GardenNamespace {
-		return nil
-	}
-
-	oldVal, oldOk := oldShoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed]
-	if !oldOk || len(oldVal) == 0 {
-		return nil
-	}
-
-	val, ok := shoot.Annotations[v1beta1constants.AnnotationShootUseAsSeed]
-	if ok && len(val) != 0 {
-		return nil
-	}
-
-	if _, err := v.seedLister.Get(shoot.Name); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return apierrors.NewInternalError(fmt.Errorf("could not get seed '%s' to verify that annotation '%s' can be removed: %v", shoot.Name, v1beta1constants.AnnotationShootUseAsSeed, err))
-	}
-
-	shoots, err := v.shootLister.List(labels.Everything())
-	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not list shoots to verify that annotation '%s' can be removed: %v", v1beta1constants.AnnotationShootUseAsSeed, err))
-	}
-
-	if admissionutils.IsSeedUsedByShoot(shoot.Name, shoots) {
-		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed '%s' which is still used by shoot(s)", shoot.Name))
-	}
-
-	return nil
 }
 
 func addInfrastructureDeploymentTask(shoot *core.Shoot) {
