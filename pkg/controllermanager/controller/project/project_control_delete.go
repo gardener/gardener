@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -36,12 +35,12 @@ import (
 
 func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, gardenAPIReader client.Reader) (reconcile.Result, error) {
 	if namespace := project.Spec.Namespace; namespace != nil {
-		isEmpty, err := isNamespaceEmpty(ctx, gardenAPIReader, *namespace)
+		inUse, err := kutil.IsNamespaceInUse(ctx, gardenAPIReader, *namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
 		}
 
-		if !isEmpty {
+		if inUse {
 			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots.", *namespace)
 
 			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectTerminating })
@@ -63,17 +62,6 @@ func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1bet
 	}
 
 	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName)
-}
-
-// isNamespaceEmpty checks if there are no more Shoots left inside the given namespace.
-func isNamespaceEmpty(ctx context.Context, reader client.Reader, namespace string) (bool, error) {
-	shoots := &metav1.PartialObjectMetadataList{}
-	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
-	if err := reader.List(ctx, shoots, client.InNamespace(namespace), client.Limit(1)); err != nil {
-		return false, err
-	}
-
-	return len(shoots.Items) == 0, nil
 }
 
 func (r *projectReconciler) releaseNamespace(ctx context.Context, gardenClient client.Client, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {

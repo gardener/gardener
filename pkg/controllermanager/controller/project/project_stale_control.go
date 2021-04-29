@@ -150,27 +150,15 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 }
 
 func (r *projectStaleReconciler) projectInUseDueToShoots(ctx context.Context, namespace string) (bool, error) {
-	shootList := &gardencorev1beta1.ShootList{}
-	if err := r.gardenClient.List(ctx, shootList, client.InNamespace(namespace)); err != nil {
-		return false, err
-	}
-	return len(shootList.Items) > 0, nil
+	return kutil.IsNamespaceInUse(ctx, r.gardenClient, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 }
 
 func (r *projectStaleReconciler) projectInUseDueToPlants(ctx context.Context, namespace string) (bool, error) {
-	plantList := &gardencorev1beta1.PlantList{}
-	if err := r.gardenClient.List(ctx, plantList, client.InNamespace(namespace)); err != nil {
-		return false, err
-	}
-	return len(plantList.Items) > 0, nil
+	return kutil.IsNamespaceInUse(ctx, r.gardenClient, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("PlantList"))
 }
 
 func (r *projectStaleReconciler) projectInUseDueToBackupEntries(ctx context.Context, namespace string) (bool, error) {
-	backupEntryList := &gardencorev1beta1.BackupEntryList{}
-	if err := r.gardenClient.List(ctx, backupEntryList, client.InNamespace(namespace)); err != nil {
-		return false, err
-	}
-	return len(backupEntryList.Items) > 0, nil
+	return kutil.IsNamespaceInUse(ctx, r.gardenClient, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntryList"))
 }
 
 func (r *projectStaleReconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
@@ -190,7 +178,9 @@ func (r *projectStaleReconciler) projectInUseDueToSecrets(ctx context.Context, n
 }
 
 func (r *projectStaleReconciler) projectInUseDueToQuotas(ctx context.Context, namespace string) (bool, error) {
-	quotaList := &gardencorev1beta1.QuotaList{}
+	quotaList := &metav1.PartialObjectMetadataList{}
+	quotaList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("QuotaList"))
+
 	if err := r.gardenClient.List(ctx, quotaList, client.InNamespace(namespace)); err != nil {
 		return false, err
 	}
@@ -309,7 +299,7 @@ func computeSecretNames(secretList []corev1.Secret) sets.String {
 }
 
 // computeQuotaNames determines the names of Quotas from the given slice.
-func computeQuotaNames(quotaList []gardencorev1beta1.Quota) sets.String {
+func computeQuotaNames(quotaList []metav1.PartialObjectMetadata) sets.String {
 	names := sets.NewString()
 
 	for _, quota := range quotaList {

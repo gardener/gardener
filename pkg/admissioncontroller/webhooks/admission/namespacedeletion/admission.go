@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -132,12 +133,12 @@ func (h *handler) admitNamespace(ctx context.Context, request admission.Request)
 		return acadmission.Allowed("namespace is already marked for deletion")
 	case project.DeletionTimestamp != nil:
 		// if project is marked for deletion we need to wait until all shoots in the namespace are gone
-		namespaceEmpty, err := h.isNamespaceEmpty(ctx, namespace.Name)
+		namespaceInUse, err := kutil.IsNamespaceInUse(ctx, h.apiReader, namespace.Name, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
 
-		if namespaceEmpty {
+		if !namespaceInUse {
 			return acadmission.Allowed("namespace doesn't contain any shoots")
 		}
 
@@ -147,15 +148,4 @@ func (h *handler) admitNamespace(ctx context.Context, request admission.Request)
 	// Namespace is not yet marked for deletion and project is not marked as well. We do not admit and respond that
 	// namespace deletion is only allowed via project deletion.
 	return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("direct deletion of namespace %q is not permitted (you must delete the corresponding project %q)", namespace.Name, project.Name))
-}
-
-// isNamespaceEmpty checks if there are no more Shoots left inside the given namespace.
-func (h *handler) isNamespaceEmpty(ctx context.Context, namespace string) (bool, error) {
-	shoots := &metav1.PartialObjectMetadataList{}
-	shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
-	if err := h.apiReader.List(ctx, shoots, client.InNamespace(namespace), client.Limit(1)); err != nil {
-		return false, err
-	}
-
-	return len(shoots.Items) == 0, nil
 }

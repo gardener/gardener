@@ -18,7 +18,9 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -67,4 +69,16 @@ func DeleteObjectsFromListConditionally(ctx context.Context, c client.Client, li
 	}
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+// IsNamespaceInUse checks if there are is at least one object of the given kind left inside the given namespace.
+func IsNamespaceInUse(ctx context.Context, reader client.Reader, namespace string, gvk schema.GroupVersionKind) (bool, error) {
+	objects := &metav1.PartialObjectMetadataList{}
+	objects.SetGroupVersionKind(gvk)
+
+	if err := reader.List(ctx, objects, client.InNamespace(namespace), client.Limit(1)); err != nil {
+		return true, err
+	}
+
+	return len(objects.Items) > 0, nil
 }
