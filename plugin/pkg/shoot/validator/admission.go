@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -449,11 +451,56 @@ func validateProvider(c *validationContext) field.ErrorList {
 		if ok, validVolumeTypes := validateVolumeTypes(c.cloudProfile.Spec.VolumeTypes, worker.Volume, oldWorker.Volume, c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, worker.Zones); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "type"), worker.Volume, validVolumeTypes))
 		}
+		if ok, minSize := validateVolumeSize(c.cloudProfile.Spec.VolumeTypes, c.cloudProfile.Spec.MachineTypes, worker.Machine.Type, worker.Volume); !ok {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volume", "size"), worker.Volume.VolumeSize, []string{fmt.Sprintf(">= %s", minSize)}))
+		}
 
 		allErrs = append(allErrs, validateZones(c.cloudProfile.Spec.Regions, c.shoot.Spec.Region, c.oldShoot.Spec.Region, worker, oldWorker, idxPath)...)
 	}
 
 	return allErrs
+}
+
+func validateVolumeSize(volumeTypeConstraints []core.VolumeType, machineTypeConstraints []core.MachineType, machineType string, volume *core.Volume) (bool, string) {
+	if volume == nil {
+		return true, ""
+	}
+
+	volSize, err := resource.ParseQuantity(volume.VolumeSize)
+	if err != nil {
+		// don't fail here, this is the shoot validator's job
+		return true, ""
+	}
+	volType := volume.Type
+	if volType == nil {
+		return true, ""
+	}
+
+	// Check machine type constraints first since they override any other constraint for volume types.
+	for _, machineTypeConstraint := range machineTypeConstraints {
+		if machineType != machineTypeConstraint.Name {
+			continue
+		}
+		if machineTypeConstraint.Storage == nil || machineTypeConstraint.Storage.MinSize == nil {
+			continue
+		}
+		if machineTypeConstraint.Storage.Type != *volType {
+			continue
+		}
+		if volSize.Cmp(*machineTypeConstraint.Storage.MinSize) < 0 {
+			return false, machineTypeConstraint.Storage.MinSize.String()
+		}
+	}
+
+	// Now check more common volume type constraints.
+	for _, volumeTypeConstraint := range volumeTypeConstraints {
+		if volumeTypeConstraint.Name == *volType && volumeTypeConstraint.MinSize != nil {
+			if volSize.Cmp(*volumeTypeConstraint.MinSize) < 0 {
+				return false, volumeTypeConstraint.MinSize.String()
+			}
+		}
+	}
+	return true, ""
 }
 
 func validateDNSDomainUniqueness(shootLister corelisters.ShootLister, name string, dns *core.DNS) (field.ErrorList, error) {

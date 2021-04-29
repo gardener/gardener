@@ -1166,10 +1166,16 @@ message MachineTypeStorage {
   optional string class = 1;
 
   // StorageSize is the storage size.
+  // +optional
   optional k8s.io.apimachinery.pkg.api.resource.Quantity size = 2;
 
   // Type is the type of the storage.
   optional string type = 3;
+
+  // MinSize is the minimal supported storage size.
+  // This overrides any other common minimum size configuration from `spec.volumeTypes[*].minSize`.
+  // +optional
+  optional k8s.io.apimachinery.pkg.api.resource.Quantity minSize = 4;
 }
 
 // Maintenance contains information about the time window for maintenance operations and which
@@ -2192,6 +2198,10 @@ message VolumeType {
   // Usable defines if the volume type can be used for shoot clusters.
   // +optional
   optional bool usable = 3;
+
+  // MinSize is the minimal supported storage size.
+  // +optional
+  optional k8s.io.apimachinery.pkg.api.resource.Quantity minSize = 4;
 }
 
 // WatchCacheSizes contains configuration of the API server's watch cache sizes.

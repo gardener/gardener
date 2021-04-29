@@ -5601,6 +5601,7 @@ k8s.io/apimachinery/pkg/api/resource.Quantity
 </em>
 </td>
 <td>
+<em>(Optional)</em>
 <p>StorageSize is the storage size.</p>
 </td>
 </tr>
@@ -5613,6 +5614,21 @@ string
 </td>
 <td>
 <p>Type is the type of the storage.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>minSize</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/api/resource#Quantity">
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MinSize is the minimal supported storage size.
+This overrides any other common minimum size configuration from <code>spec.volumeTypes[*].minSize</code>.</p>
 </td>
 </tr>
 </tbody>
@@ -9244,6 +9260,20 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Usable defines if the volume type can be used for shoot clusters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>minSize</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/api/resource#Quantity">
+k8s.io/apimachinery/pkg/api/resource.Quantity
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MinSize is the minimal supported storage size.</p>
 </td>
 </tr>
 </tbody>

@@ -158,9 +158,14 @@ type MachineTypeStorage struct {
 	// Class is the class of the storage type.
 	Class string `json:"class" protobuf:"bytes,1,opt,name=class"`
 	// StorageSize is the storage size.
-	StorageSize resource.Quantity `json:"size" protobuf:"bytes,2,opt,name=size"`
+	// +optional
+	StorageSize *resource.Quantity `json:"size,omitempty" protobuf:"bytes,2,opt,name=size"`
 	// Type is the type of the storage.
 	Type string `json:"type" protobuf:"bytes,3,opt,name=type"`
+	// MinSize is the minimal supported storage size.
+	// This overrides any other common minimum size configuration from `spec.volumeTypes[*].minSize`.
+	// +optional
+	MinSize *resource.Quantity `json:"minSize,omitempty" protobuf:"bytes,4,opt,name=minSize"`
 }
 
 // Region contains certain properties of a region.
@@ -200,6 +205,9 @@ type VolumeType struct {
 	// Usable defines if the volume type can be used for shoot clusters.
 	// +optional
 	Usable *bool `json:"usable,omitempty" protobuf:"varint,3,opt,name=usable"`
+	// MinSize is the minimal supported storage size.
+	// +optional
+	MinSize *resource.Quantity `json:"minSize,omitempty" protobuf:"bytes,4,opt,name=minSize"`
 }
 
 const (

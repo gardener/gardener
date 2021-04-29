@@ -43,12 +43,14 @@ spec:
   # storage: # optional (not needed in every environment, may only be specified if no volumeTypes have been specified)
   #   class: standard
   #   type: default
-  #   size: 20Gi
+  #   size: 20Gi     # optional, either size or minSize must be configured
+  #   minSize: 10Gi  # optional, either size or minSize must be configured
     usable: true
   volumeTypes: # optional (not needed in every environment, may only be specified if no machineType has a `storage` field)
   - name: gp2
     class: standard
     usable: true
+  # minSize: # optional
   - name: io1
     class: premium
     usable: true

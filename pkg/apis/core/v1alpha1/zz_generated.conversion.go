@@ -3277,8 +3277,9 @@ func Convert_core_MachineType_To_v1alpha1_MachineType(in *core.MachineType, out 
 
 func autoConvert_v1alpha1_MachineTypeStorage_To_core_MachineTypeStorage(in *MachineTypeStorage, out *core.MachineTypeStorage, s conversion.Scope) error {
 	out.Class = in.Class
-	out.StorageSize = in.StorageSize
+	out.StorageSize = (*resource.Quantity)(unsafe.Pointer(in.StorageSize))
 	out.Type = in.Type
+	out.MinSize = (*resource.Quantity)(unsafe.Pointer(in.MinSize))
 	return nil
 }
 
@@ -3289,8 +3290,9 @@ func Convert_v1alpha1_MachineTypeStorage_To_core_MachineTypeStorage(in *MachineT
 
 func autoConvert_core_MachineTypeStorage_To_v1alpha1_MachineTypeStorage(in *core.MachineTypeStorage, out *MachineTypeStorage, s conversion.Scope) error {
 	out.Class = in.Class
-	out.StorageSize = in.StorageSize
+	out.StorageSize = (*resource.Quantity)(unsafe.Pointer(in.StorageSize))
 	out.Type = in.Type
+	out.MinSize = (*resource.Quantity)(unsafe.Pointer(in.MinSize))
 	return nil
 }
 
@@ -4926,6 +4928,7 @@ func autoConvert_v1alpha1_VolumeType_To_core_VolumeType(in *VolumeType, out *cor
 	out.Class = in.Class
 	out.Name = in.Name
 	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
+	out.MinSize = (*resource.Quantity)(unsafe.Pointer(in.MinSize))
 	return nil
 }
 
@@ -4938,6 +4941,7 @@ func autoConvert_core_VolumeType_To_v1alpha1_VolumeType(in *core.VolumeType, out
 	out.Class = in.Class
 	out.Name = in.Name
 	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
+	out.MinSize = (*resource.Quantity)(unsafe.Pointer(in.MinSize))
 	return nil
 }
 
