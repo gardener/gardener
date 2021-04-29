@@ -20,18 +20,15 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/logger"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -130,17 +127,17 @@ func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Re
 			errorMsg += fmt.Sprintf("\n* %s", bb.String())
 		}
 
-		if updateErr := patchSeedCondition(ctx, gardenClient.GardenCore(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
+		if updateErr := patchSeedCondition(ctx, gardenClient.Client(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionFalse, "BackupBucketsError", errorMsg)); updateErr != nil {
 			return reconcileResult(updateErr)
 		}
 	case bbCount > 0:
-		if updateErr := patchSeedCondition(ctx, gardenClient.GardenCore(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
+		if updateErr := patchSeedCondition(ctx, gardenClient.Client(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionTrue, "BackupBucketsAvailable", "Backup Buckets are available.")); updateErr != nil {
 			return reconcileResult(updateErr)
 		}
 	case bbCount == 0:
-		if updateErr := patchSeedCondition(ctx, gardenClient.GardenCore(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
+		if updateErr := patchSeedCondition(ctx, gardenClient.Client(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionUnknown, "BackupBucketsGone", "Backup Buckets are gone.")); updateErr != nil {
 			return reconcileResult(updateErr)
 		}
@@ -149,21 +146,16 @@ func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	return reconcileResult(nil)
 }
 
-func patchSeedCondition(ctx context.Context, gardenClientSet gardencoreclientset.Interface, seed *gardencorev1beta1.Seed, condition gardencorev1beta1.Condition) error {
+func patchSeedCondition(ctx context.Context, c client.StatusClient, seed *gardencorev1beta1.Seed, condition gardencorev1beta1.Condition) error {
+	patch := client.StrategicMergeFrom(seed.DeepCopy())
+
 	conditions := gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, condition)
 	if !gardencorev1beta1helper.ConditionsNeedUpdate(seed.Status.Conditions, conditions) {
 		return nil
 	}
 
-	seedCopy := seed.DeepCopy()
-	seedCopy.Status.Conditions = conditions
-	patchBytes, err := kutil.CreateTwoWayMergePatch(seed, seedCopy)
-	if err != nil {
-		return fmt.Errorf("could not create data for status patch: %s", err)
-	}
-
-	_, patchErr := gardenClientSet.CoreV1beta1().Seeds().Patch(ctx, seed.Name, types.StrategicMergePatchType, patchBytes, metav1.PatchOptions{}, "status")
-	return patchErr
+	seed.Status.Conditions = conditions
+	return c.Status().Patch(ctx, seed, patch)
 }
 
 // NewDefaultBackupBucketControl returns a new default control to checks backup buckets of related seeds.
