@@ -46,7 +46,6 @@ data:
     egressSelections:
     - name: cluster
       connection:
-        {{- if semverCompare ">= 1.18" .Values.kubernetesVersion }}
         proxyProtocol: HTTPConnect
         transport:
           tcp:
@@ -55,26 +54,10 @@ data:
               caBundle: /etc/srv/kubernetes/envoy/ca.crt
               clientCert: /etc/srv/kubernetes/envoy/tls.crt
               clientKey: /etc/srv/kubernetes/envoy/tls.key
-        {{- else }}
-        type: http-connect
-        httpConnect:
-          url: https://vpn-seed-server:9443
-          caBundle: /etc/srv/kubernetes/envoy/ca.crt
-          clientCert: /etc/srv/kubernetes/envoy/tls.crt
-          clientKey: /etc/srv/kubernetes/envoy/tls.key
-        {{- end }}
     - name: {{ if semverCompare "< 1.20" .Values.kubernetesVersion }}master{{ else }}controlplane{{ end }}
       connection:
-        {{- if semverCompare ">= 1.18" .Values.kubernetesVersion }}
         proxyProtocol: Direct
-        {{- else }}
-        type: direct
-        {{- end }}
     - name: etcd
       connection:
-        {{- if semverCompare ">= 1.18" .Values.kubernetesVersion }}
         proxyProtocol: Direct
-        {{- else }}
-        type: direct
-        {{- end }}
 {{- end }}
