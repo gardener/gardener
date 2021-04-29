@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -165,7 +164,7 @@ func (p *provider) Wait(ctx context.Context) error {
 
 		return retry.MinorError(providerErr)
 	}); err != nil {
-		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed to create DNS emptyProvider for %q DNS record: %q (status=%s, message=%s)", p.values.Name, err.Error(), status, message))
+		return fmt.Errorf("Failed to create DNS emptyProvider for %q DNS record: %q (status=%s, message=%s)", p.values.Name, err.Error(), status, message)
 	}
 
 	return nil

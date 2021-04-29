@@ -22,7 +22,6 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -124,7 +123,7 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 		}
 
 		errWithLogs := fmt.Errorf("%s, logs of newest pod:\n%s", err.Error(), logs)
-		return gardencorev1beta1helper.DetermineError(errWithLogs, errWithLogs.Error())
+		return errWithLogs
 	}
 
 	return nil

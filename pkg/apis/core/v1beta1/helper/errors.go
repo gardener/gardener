@@ -85,42 +85,34 @@ func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 		coder   Coder
 		message = err.Error()
 		codes   = sets.NewString()
+
+		knownCodes = map[gardencorev1beta1.ErrorCode]func(string) bool{
+			gardencorev1beta1.ErrorInfraUnauthorized:             unauthorizedRegexp.MatchString,
+			gardencorev1beta1.ErrorInfraQuotaExceeded:            quotaExceededRegexp.MatchString,
+			gardencorev1beta1.ErrorInfraRateLimitsExceeded:       rateLimitsExceededRegexp.MatchString,
+			gardencorev1beta1.ErrorInfraInsufficientPrivileges:   insufficientPrivilegesRegexp.MatchString,
+			gardencorev1beta1.ErrorInfraDependencies:             dependenciesRegexp.MatchString,
+			gardencorev1beta1.ErrorRetryableInfraDependencies:    retryableDependenciesRegexp.MatchString,
+			gardencorev1beta1.ErrorInfraResourcesDepleted:        resourcesDepletedRegexp.MatchString,
+			gardencorev1beta1.ErrorConfigurationProblem:          configurationProblemRegexp.MatchString,
+			gardencorev1beta1.ErrorRetryableConfigurationProblem: retryableConfigurationProblemRegexp.MatchString,
+		}
 	)
 
 	// try to re-use codes from error
 	if errors.As(err, &coder) {
 		for _, code := range coder.Codes() {
 			codes.Insert(string(code))
+			// found codes don't need to be checked any more
+			delete(knownCodes, code)
 		}
 	}
 
 	// determine error codes
-	if unauthorizedRegexp.MatchString(message) {
-		codes.Insert(string(gardencorev1beta1.ErrorInfraUnauthorized))
-	}
-	if quotaExceededRegexp.MatchString(message) {
-		codes.Insert(string(gardencorev1beta1.ErrorInfraQuotaExceeded))
-	}
-	if rateLimitsExceededRegexp.MatchString(message) {
-		codes.Insert(string(gardencorev1beta1.ErrorInfraRateLimitsExceeded))
-	}
-	if insufficientPrivilegesRegexp.MatchString(message) {
-		codes.Insert(string(gardencorev1beta1.ErrorInfraInsufficientPrivileges))
-	}
-	if dependenciesRegexp.MatchString(message) {
-		codes.Insert(string(gardencorev1beta1.ErrorInfraDependencies))
-	}
-	if retryableDependenciesRegexp.MatchString(message) {
-		codes.Insert(string(gardencorev1beta1.ErrorRetryableInfraDependencies))
-	}
-	if resourcesDepletedRegexp.MatchString(message) {
-		codes.Insert(string(gardencorev1beta1.ErrorInfraResourcesDepleted))
-	}
-	if configurationProblemRegexp.MatchString(message) {
-		codes.Insert(string(gardencorev1beta1.ErrorConfigurationProblem))
-	}
-	if retryableConfigurationProblemRegexp.MatchString(message) {
-		codes.Insert(string(gardencorev1beta1.ErrorRetryableConfigurationProblem))
+	for code, matchFn := range knownCodes {
+		if !codes.Has(string(code)) && matchFn(message) {
+			codes.Insert(string(code))
+		}
 	}
 
 	// compute error code list based on code string set
@@ -172,7 +164,7 @@ func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 		lastErrors = append(lastErrors, *LastErrorWithTaskID(
 			partError.Error(),
 			utilerrors.GetID(partError),
-			ExtractErrorCodes(errors2.Cause(partError))...))
+			DetermineErrorCodes(errors2.Cause(partError))...))
 	}
 
 	return &WrappedLastErrors{
