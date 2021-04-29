@@ -522,6 +522,12 @@ var _ = Describe("handler", func() {
 					Entry("seed name is different", "some-different-seed"),
 				)
 
+				It("should allow the request because lease is used for leader-election", func() {
+					request.Name = "gardenlet-leader-election"
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+
 				It("should allow the request because seed name matches", func() {
 					request.Name = seedName
 

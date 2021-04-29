@@ -25,6 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	eventsv1 "k8s.io/api/events/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -994,7 +995,7 @@ var _ = Describe("Seed", func() {
 			})
 		})
 
-		Context("when requested for Events", func() {
+		Context("when requested for corev1.Events", func() {
 			var (
 				name, namespace string
 				attrs           *auth.AttributesRecord
@@ -1007,6 +1008,69 @@ var _ = Describe("Seed", func() {
 					Name:            name,
 					Namespace:       namespace,
 					APIGroup:        corev1.SchemeGroupVersion.Group,
+					Resource:        "events",
+					ResourceRequest: true,
+					Verb:            "create",
+				}
+			})
+
+			DescribeTable("should allow without consulting the graph because verb is create",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				},
+
+				Entry("create", "create"),
+			)
+
+			DescribeTable("should have no opinion because verb is not allowed",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create]"))
+
+				},
+
+				Entry("get", "get"),
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+				Entry("update", "update"),
+				Entry("patch", "patch"),
+				Entry("delete", "delete"),
+				Entry("deletecollection", "deletecollection"),
+			)
+
+			It("should have no opinion because request is for a subresource", func() {
+				attrs.Subresource = "status"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+			})
+		})
+
+		Context("when requested for events.k8s.io/v1.Events", func() {
+			var (
+				name, namespace string
+				attrs           *auth.AttributesRecord
+			)
+
+			BeforeEach(func() {
+				name, namespace = "foo", "bar"
+				attrs = &auth.AttributesRecord{
+					User:            seedUser,
+					Name:            name,
+					Namespace:       namespace,
+					APIGroup:        eventsv1.SchemeGroupVersion.Group,
 					Resource:        "events",
 					ResourceRequest: true,
 					Verb:            "create",

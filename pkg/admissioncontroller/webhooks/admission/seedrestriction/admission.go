@@ -23,7 +23,6 @@ import (
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -138,6 +137,10 @@ func (h *handler) admitBackupEntry(ctx context.Context, seedName string, request
 func (h *handler) admitLease(seedName string, request admission.Request) admission.Response {
 	if request.Operation != admissionv1.Create {
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	if request.Name == "gardenlet-leader-election" {
+		return admission.Allowed("")
 	}
 
 	return h.admit(seedName, &request.Name)

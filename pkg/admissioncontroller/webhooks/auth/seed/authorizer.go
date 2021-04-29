@@ -29,6 +29,7 @@ import (
 	"github.com/go-logr/logr"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
@@ -60,7 +61,8 @@ var (
 	cloudProfileResource           = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource              = corev1.Resource("configmaps")
 	controllerInstallationResource = gardencorev1beta1.Resource("controllerinstallations")
-	eventResource                  = corev1.Resource("events")
+	eventCoreResource              = corev1.Resource("events")
+	eventResource                  = eventsv1.Resource("events")
 	leaseResource                  = coordinationv1.Resource("leases")
 	managedSeedResource            = seedmanagementv1alpha1.Resource("managedseeds")
 	namespaceResource              = corev1.Resource("namespaces")
@@ -104,7 +106,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"get", "list", "watch"},
 				[]string{"status"},
 			)
-		case eventResource:
+		case eventCoreResource, eventResource:
 			return a.authorizeEvents(seedName, attrs)
 		case leaseResource:
 			return a.authorizeLease(seedName, attrs)
