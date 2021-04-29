@@ -86,16 +86,16 @@ func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 		message = err.Error()
 		codes   = sets.NewString()
 
-		knownCodes = map[string]func(string) bool{
-			string(gardencorev1beta1.ErrorInfraUnauthorized):             unauthorizedRegexp.MatchString,
-			string(gardencorev1beta1.ErrorInfraQuotaExceeded):            quotaExceededRegexp.MatchString,
-			string(gardencorev1beta1.ErrorInfraRateLimitsExceeded):       rateLimitsExceededRegexp.MatchString,
-			string(gardencorev1beta1.ErrorInfraInsufficientPrivileges):   insufficientPrivilegesRegexp.MatchString,
-			string(gardencorev1beta1.ErrorInfraDependencies):             dependenciesRegexp.MatchString,
-			string(gardencorev1beta1.ErrorRetryableInfraDependencies):    retryableDependenciesRegexp.MatchString,
-			string(gardencorev1beta1.ErrorInfraResourcesDepleted):        resourcesDepletedRegexp.MatchString,
-			string(gardencorev1beta1.ErrorConfigurationProblem):          configurationProblemRegexp.MatchString,
-			string(gardencorev1beta1.ErrorRetryableConfigurationProblem): retryableConfigurationProblemRegexp.MatchString,
+		knownCodes = map[gardencorev1beta1.ErrorCode]func(string) bool{
+			gardencorev1beta1.ErrorInfraUnauthorized:             unauthorizedRegexp.MatchString,
+			gardencorev1beta1.ErrorInfraQuotaExceeded:            quotaExceededRegexp.MatchString,
+			gardencorev1beta1.ErrorInfraRateLimitsExceeded:       rateLimitsExceededRegexp.MatchString,
+			gardencorev1beta1.ErrorInfraInsufficientPrivileges:   insufficientPrivilegesRegexp.MatchString,
+			gardencorev1beta1.ErrorInfraDependencies:             dependenciesRegexp.MatchString,
+			gardencorev1beta1.ErrorRetryableInfraDependencies:    retryableDependenciesRegexp.MatchString,
+			gardencorev1beta1.ErrorInfraResourcesDepleted:        resourcesDepletedRegexp.MatchString,
+			gardencorev1beta1.ErrorConfigurationProblem:          configurationProblemRegexp.MatchString,
+			gardencorev1beta1.ErrorRetryableConfigurationProblem: retryableConfigurationProblemRegexp.MatchString,
 		}
 	)
 
@@ -104,14 +104,14 @@ func DetermineErrorCodes(err error) []gardencorev1beta1.ErrorCode {
 		for _, code := range coder.Codes() {
 			codes.Insert(string(code))
 			// found codes don't need to be checked any more
-			delete(knownCodes, string(code))
+			delete(knownCodes, code)
 		}
 	}
 
 	// determine error codes
 	for code, matchFn := range knownCodes {
-		if !codes.Has(code) && matchFn(message) {
-			codes.Insert(code)
+		if !codes.Has(string(code)) && matchFn(message) {
+			codes.Insert(string(code))
 		}
 	}
 
