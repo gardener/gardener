@@ -72,7 +72,7 @@ func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, re
 	}
 
 	logger := logger.NewFieldLogger(r.logger, "controllerregistration-seed", seed.Name)
-	logger.Infof("[CONTROLLERINSTALLATION SEED] Reconciling %s", seed.Name)
+	logger.Info("[CONTROLLERINSTALLATION SEED] Reconciling")
 
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
 	if err := r.gardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
