@@ -48,6 +48,12 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 
+	if obj.Controllers.ControllerDeployment == nil {
+		obj.Controllers.ControllerDeployment = &ControllerDeploymentControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+
 	if obj.Controllers.ControllerRegistration == nil {
 		obj.Controllers.ControllerRegistration = &ControllerRegistrationControllerConfiguration{
 			ConcurrentSyncs: 5,

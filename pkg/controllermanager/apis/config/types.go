@@ -50,6 +50,8 @@ type ControllerManagerConfiguration struct {
 type ControllerManagerControllerConfiguration struct {
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	CloudProfile *CloudProfileControllerConfiguration
+	// ControllerDeployment defines the configuration of the ControllerDeployment controller.
+	ControllerDeployment *ControllerDeploymentControllerConfiguration
 	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
 	ControllerRegistration *ControllerRegistrationControllerConfiguration
 	// Event defines the configuration of the Event controller.  If unset, the event controller will be disabled.
@@ -81,6 +83,14 @@ type ControllerManagerControllerConfiguration struct {
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
 // controller.
 type CloudProfileControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+}
+
+// ControllerDeploymentControllerConfiguration defines the configuration of the
+// ControllerDeployment controller.
+type ControllerDeploymentControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int

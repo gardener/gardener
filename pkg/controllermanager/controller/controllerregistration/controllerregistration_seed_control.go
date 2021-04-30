@@ -419,10 +419,10 @@ func deployNeededInstallations(
 			controllerRegistration = controllerRegistrations[registrationName].obj
 		)
 		if controllerRegistration.Spec.Deployment != nil && len(controllerRegistration.Spec.Deployment.DeploymentRefs) > 0 {
-			var err error
 			// Today, only one DeploymentRef element is allowed, which is why can simply pick the first one from the slice.
 			controllerDeployment = &gardencorev1beta1.ControllerDeployment{}
-			if err = c.Get(ctx, kutil.Key(controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name), controllerDeployment); err != nil {
+
+			if err := c.Get(ctx, kutil.Key(controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name), controllerDeployment); err != nil {
 				return fmt.Errorf("cannot deploy ControllerInstallation because the referenced ControllerDeployment cannot be retrieved: %v", err)
 			}
 		}

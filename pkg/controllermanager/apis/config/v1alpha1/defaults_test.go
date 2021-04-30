@@ -46,6 +46,9 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.CloudProfile).NotTo(BeNil())
 			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).To(Equal(5))
 
+			Expect(obj.Controllers.ControllerDeployment).NotTo(BeNil())
+			Expect(obj.Controllers.ControllerDeployment.ConcurrentSyncs).To(Equal(5))
+
 			Expect(obj.Controllers.ControllerRegistration).NotTo(BeNil())
 			Expect(obj.Controllers.ControllerRegistration.ConcurrentSyncs).To(Equal(5))
 
