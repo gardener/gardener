@@ -28,6 +28,7 @@ import (
 	gonumgraph "gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/simple"
 	"gonum.org/v1/gonum/graph/traverse"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,6 +71,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
 		{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
 		{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
+		{&coordinationv1.Lease{}, g.setupLeaseWatch},
 		{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
 		{&gardencorev1beta1.Project{}, g.setupProjectWatch},
 		{&gardencorev1beta1.SecretBinding{}, g.setupSecretBindingWatch},

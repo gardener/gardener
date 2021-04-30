@@ -30,6 +30,8 @@ const (
 	VertexTypeControllerInstallation
 	// VertexTypeControllerRegistration is a constant for a 'ControllerRegistration' vertex.
 	VertexTypeControllerRegistration
+	// VertexTypeLease is a constant for a 'Lease' vertex.
+	VertexTypeLease
 	// VertexTypeManagedSeed is a constant for a 'ManagedSeed' vertex.
 	VertexTypeManagedSeed
 	// VertexTypeNamespace is a constant for a 'Namespace' vertex.
@@ -55,6 +57,7 @@ var vertexTypes = map[VertexType]string{
 	VertexTypeConfigMap:              "ConfigMap",
 	VertexTypeControllerInstallation: "ControllerInstallation",
 	VertexTypeControllerRegistration: "ControllerRegistration",
+	VertexTypeLease:                  "Lease",
 	VertexTypeManagedSeed:            "ManagedSeed",
 	VertexTypeNamespace:              "Namespace",
 	VertexTypeProject:                "Project",
@@ -72,9 +75,9 @@ type vertex struct {
 	id         int64
 }
 
-func newVertex(VertexType VertexType, namespace, name string, id int64) *vertex {
+func newVertex(vertexType VertexType, namespace, name string, id int64) *vertex {
 	return &vertex{
-		vertexType: VertexType,
+		vertexType: vertexType,
 		name:       name,
 		namespace:  namespace,
 		id:         id,

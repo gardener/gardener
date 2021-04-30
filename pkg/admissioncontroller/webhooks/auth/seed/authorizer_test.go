@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed"
 	graphpkg "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	mockgraph "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph/mock"
@@ -27,12 +25,15 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	eventsv1 "k8s.io/api/events/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	coordinationv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -216,6 +217,17 @@ var _ = Describe("Seed", func() {
 					ResourceRequest: true,
 					Verb:            "get",
 				}
+			})
+
+			It("should allow because cluster-identity is retrieved", func() {
+				attrs.Name = "cluster-identity"
+				attrs.Namespace = "kube-system"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
 			})
 
 			It("should allow because path to seed exists", func() {
@@ -721,7 +733,7 @@ var _ = Describe("Seed", func() {
 				}
 			})
 
-			DescribeTable("should allow with consulting the graph because verb is get, list, watch, create",
+			DescribeTable("should allow without consulting the graph because verb is get, list, watch, create",
 				func(verb string) {
 					attrs.Verb = verb
 
@@ -737,7 +749,7 @@ var _ = Describe("Seed", func() {
 				Entry("create", "create"),
 			)
 
-			DescribeTable("should deny because verb is not allowed",
+			DescribeTable("should have no opinion because verb is not allowed",
 				func(verb string) {
 					attrs.Verb = verb
 
@@ -830,7 +842,7 @@ var _ = Describe("Seed", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should deny because verb is not allowed",
+			DescribeTable("should have no opinion because verb is not allowed",
 				func(verb string) {
 					attrs.Verb = verb
 
@@ -923,7 +935,7 @@ var _ = Describe("Seed", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should deny because verb is not allowed",
+			DescribeTable("should have no opinion because verb is not allowed",
 				func(verb string) {
 					attrs.Verb = verb
 
@@ -970,6 +982,223 @@ var _ = Describe("Seed", func() {
 				Entry("patch w/ subresource", "patch", "status"),
 				Entry("update w/o subresource", "update", ""),
 				Entry("update w/ subresource", "update", "status"),
+			)
+
+			It("should allow because seed name is ambiguous", func() {
+				attrs.User = ambiguousUser
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+		})
+
+		Context("when requested for corev1.Events", func() {
+			var (
+				name, namespace string
+				attrs           *auth.AttributesRecord
+			)
+
+			BeforeEach(func() {
+				name, namespace = "foo", "bar"
+				attrs = &auth.AttributesRecord{
+					User:            seedUser,
+					Name:            name,
+					Namespace:       namespace,
+					APIGroup:        corev1.SchemeGroupVersion.Group,
+					Resource:        "events",
+					ResourceRequest: true,
+					Verb:            "create",
+				}
+			})
+
+			DescribeTable("should allow without consulting the graph because verb is create",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				},
+
+				Entry("create", "create"),
+			)
+
+			DescribeTable("should have no opinion because verb is not allowed",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create]"))
+
+				},
+
+				Entry("get", "get"),
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+				Entry("update", "update"),
+				Entry("patch", "patch"),
+				Entry("delete", "delete"),
+				Entry("deletecollection", "deletecollection"),
+			)
+
+			It("should have no opinion because request is for a subresource", func() {
+				attrs.Subresource = "status"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+			})
+		})
+
+		Context("when requested for events.k8s.io/v1.Events", func() {
+			var (
+				name, namespace string
+				attrs           *auth.AttributesRecord
+			)
+
+			BeforeEach(func() {
+				name, namespace = "foo", "bar"
+				attrs = &auth.AttributesRecord{
+					User:            seedUser,
+					Name:            name,
+					Namespace:       namespace,
+					APIGroup:        eventsv1.SchemeGroupVersion.Group,
+					Resource:        "events",
+					ResourceRequest: true,
+					Verb:            "create",
+				}
+			})
+
+			DescribeTable("should allow without consulting the graph because verb is create",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				},
+
+				Entry("create", "create"),
+			)
+
+			DescribeTable("should have no opinion because verb is not allowed",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create]"))
+
+				},
+
+				Entry("get", "get"),
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+				Entry("update", "update"),
+				Entry("patch", "patch"),
+				Entry("delete", "delete"),
+				Entry("deletecollection", "deletecollection"),
+			)
+
+			It("should have no opinion because request is for a subresource", func() {
+				attrs.Subresource = "status"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+			})
+		})
+
+		Context("when requested for Leases", func() {
+			var (
+				name, namespace string
+				attrs           *auth.AttributesRecord
+			)
+
+			BeforeEach(func() {
+				name, namespace = "foo", "bar"
+				attrs = &auth.AttributesRecord{
+					User:            seedUser,
+					Name:            name,
+					Namespace:       namespace,
+					APIGroup:        coordinationv1.SchemeGroupVersion.Group,
+					Resource:        "leases",
+					ResourceRequest: true,
+					Verb:            "get",
+				}
+			})
+
+			DescribeTable("should allow without consulting the graph because verb is create",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				},
+
+				Entry("create", "create"),
+			)
+
+			DescribeTable("should have no opinion because verb is not allowed",
+				func(verb string) {
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get update]"))
+
+				},
+
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+				Entry("patch", "patch"),
+				Entry("delete", "delete"),
+				Entry("deletecollection", "deletecollection"),
+			)
+
+			It("should have no opinion because no allowed subresource", func() {
+				attrs.Subresource = "foo"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+			})
+
+			DescribeTable("should return correct result if path exists",
+				func(verb string) {
+					attrs.Verb = verb
+
+					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeLease, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+
+					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeLease, namespace, name, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+					decision, reason, err = authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionNoOpinion))
+					Expect(reason).To(ContainSubstring("no relationship found"))
+				},
+
+				Entry("get", "get"),
+				Entry("update", "update"),
 			)
 
 			It("should allow because seed name is ambiguous", func() {

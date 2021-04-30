@@ -23,9 +23,9 @@ import (
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,6 +44,7 @@ var (
 	// group and the resource (but it ignores the version).
 	backupBucketResource = gardencorev1beta1.Resource("backupbuckets")
 	backupEntryResource  = gardencorev1beta1.Resource("backupentries")
+	leaseResource        = coordinationv1.Resource("leases")
 	shootStateResource   = gardencorev1beta1.Resource("shootstates")
 )
 
@@ -89,6 +90,8 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		return h.admitBackupBucket(seedName, request)
 	case backupEntryResource:
 		return h.admitBackupEntry(ctx, seedName, request)
+	case leaseResource:
+		return h.admitLease(seedName, request)
 	case shootStateResource:
 		return h.admitShootState(ctx, seedName, request)
 	}
@@ -129,6 +132,18 @@ func (h *handler) admitBackupEntry(ctx context.Context, seedName string, request
 	}
 
 	return h.admit(seedName, backupBucket.Spec.SeedName)
+}
+
+func (h *handler) admitLease(seedName string, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	if request.Name == "gardenlet-leader-election" {
+		return admission.Allowed("")
+	}
+
+	return h.admit(seedName, &request.Name)
 }
 
 func (h *handler) admitShootState(ctx context.Context, seedName string, request admission.Request) admission.Response {

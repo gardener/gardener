@@ -22,11 +22,15 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/go-logr/logr"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 )
@@ -57,6 +61,9 @@ var (
 	cloudProfileResource           = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource              = corev1.Resource("configmaps")
 	controllerInstallationResource = gardencorev1beta1.Resource("controllerinstallations")
+	eventCoreResource              = corev1.Resource("events")
+	eventResource                  = eventsv1.Resource("events")
+	leaseResource                  = coordinationv1.Resource("leases")
 	managedSeedResource            = seedmanagementv1alpha1.Resource("managedseeds")
 	namespaceResource              = corev1.Resource("namespaces")
 	projectResource                = gardencorev1beta1.Resource("projects")
@@ -67,6 +74,7 @@ var (
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
 // because older Gardenlet versions might not be compatible at the time this authorization plugin is enabled.
 // With `DecisionNoOpinion`, RBAC will be respected in the authorization chain afterwards.
+
 func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.Decision, string, error) {
 	seedName, isSeed := seedidentity.FromUserInfoInterface(attrs.GetUser())
 	if !isSeed {
@@ -91,13 +99,17 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		case cloudProfileResource:
 			return a.authorizeRead(seedName, graph.VertexTypeCloudProfile, attrs)
 		case configMapResource:
-			return a.authorizeRead(seedName, graph.VertexTypeConfigMap, attrs)
+			return a.authorizeConfigMap(seedName, attrs)
 		case controllerInstallationResource:
 			return a.authorize(seedName, graph.VertexTypeControllerInstallation, attrs,
 				[]string{"update", "patch"},
 				[]string{"get", "list", "watch"},
 				[]string{"status"},
 			)
+		case eventCoreResource, eventResource:
+			return a.authorizeEvents(seedName, attrs)
+		case leaseResource:
+			return a.authorizeLease(seedName, attrs)
 		case managedSeedResource:
 			return a.authorize(seedName, graph.VertexTypeManagedSeed, attrs,
 				[]string{"update", "patch"},
@@ -116,10 +128,56 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"create"},
 				nil,
 			)
+		default:
+			a.logger.Info(
+				"unhandled resource request",
+				"seed", seedName,
+				"group", attrs.GetAPIGroup(),
+				"version", attrs.GetAPIVersion(),
+				"resource", attrs.GetResource(),
+				"verb", attrs.GetVerb(),
+			)
 		}
 	}
 
 	return auth.DecisionNoOpinion, "", nil
+}
+
+func (a *authorizer) authorizeConfigMap(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	if attrs.GetVerb() == "get" &&
+		attrs.GetNamespace() == metav1.NamespaceSystem &&
+		attrs.GetName() == v1beta1constants.ClusterIdentity {
+
+		return auth.DecisionAllow, "", nil
+	}
+
+	return a.authorizeRead(seedName, graph.VertexTypeConfigMap, attrs)
+}
+
+func (a *authorizer) authorizeEvents(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	if ok, reason := a.checkVerb(seedName, attrs, "create"); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	if ok, reason := a.checkSubresource(seedName, attrs); !ok {
+		return auth.DecisionNoOpinion, reason, nil
+	}
+
+	return auth.DecisionAllow, "", nil
+}
+
+func (a *authorizer) authorizeLease(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	if attrs.GetName() == "gardenlet-leader-election" &&
+		utils.ValueExists(attrs.GetVerb(), []string{"create", "get", "watch", "update"}) {
+
+		return auth.DecisionAllow, "", nil
+	}
+
+	return a.authorize(seedName, graph.VertexTypeLease, attrs,
+		[]string{"get", "update"},
+		[]string{"create"},
+		nil,
+	)
 }
 
 func (a *authorizer) authorizeRead(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
