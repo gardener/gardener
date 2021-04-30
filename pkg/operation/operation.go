@@ -500,7 +500,7 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	ownerReference := metav1.NewControllerRef(o.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
 	ownerReference.BlockOwnerDeletion = pointer.BoolPtr(false)
 
-	_, err := controllerutils.PatchOrCreate(ctx, o.K8sGardenClient.Client(), shootState, func() error {
+	_, err := controllerutils.StrategicMergePatchOrCreate(ctx, o.K8sGardenClient.Client(), shootState, func() error {
 		shootState.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 		return nil
 	})
