@@ -68,13 +68,16 @@ fi
 
 md5sum ${PATH_CCD_SCRIPT} > ${PATH_CCD_SCRIPT_CHECKSUM}
 
-BOOTSTRAP_TOKEN="{{ .bootstrapToken }}"
-# If a bootstrap token created by the Worker extension exists then use it
-if [[ -f "{{ .pathBootstrapToken }}" ]]; then
-  BOOTSTRAP_TOKEN="$(cat "{{ .pathBootstrapToken }}")"
-fi
-
 if [[ ! -f "{{ .pathKubeletKubeconfigReal }}" ]] || [[ ! -f "{{ .pathKubeletDirectory }}/pki/kubelet-client-current.pem" ]]; then
+  BOOTSTRAP_TOKEN="{{ .bootstrapToken }}"
+  # If a bootstrap token file exists and the placeholder got replaced by the Worker extension then use it
+  if [[ -f "{{ .pathBootstrapToken }}" ]]; then
+    FILE_CONTENT="$(cat "{{ .pathBootstrapToken }}")"
+    if [[ $FILE_CONTENT != "{{ .bootstrapTokenPlaceholder }}" ]] && [[ $FILE_CONTENT != "{{ .bootstrapTokenPlaceholderB64 }}" ]]; then
+      BOOTSTRAP_TOKEN="$FILE_CONTENT"
+    fi
+  fi
+
   cat <<EOF > "{{ .pathKubeletKubeconfigBootstrap }}"
 ---
 apiVersion: v1

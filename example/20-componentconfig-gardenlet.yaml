@@ -97,7 +97,6 @@ featureGates:
   MountHostCADirectories: false
   SeedKubeScheduler: false
   ReversedVPN: false
-  BootstrapTokenProvidedByWorker: false
 seedSelector: {} # selects all seeds, only use for development purposes
 # seedConfig:
 #   metadata:

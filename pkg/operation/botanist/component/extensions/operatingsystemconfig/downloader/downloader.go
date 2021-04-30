@@ -22,8 +22,6 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -204,19 +202,17 @@ WantedBy=multi-user.target`),
 		},
 	}
 
-	if gardenletfeatures.FeatureGate.Enabled(features.BootstrapTokenProvidedByWorker) {
-		files = append(files,
-			extensionsv1alpha1.File{
-				Path:        PathBootstrapToken,
-				Permissions: pointer.Int32Ptr(0644),
-				Content: extensionsv1alpha1.FileContent{
-					Inline: &extensionsv1alpha1.FileContentInline{
-						Data: BootstrapTokenPlaceholder,
-					},
-					TransmitUnencoded: pointer.BoolPtr(true),
+	files = append(files,
+		extensionsv1alpha1.File{
+			Path:        PathBootstrapToken,
+			Permissions: pointer.Int32Ptr(0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Data: BootstrapTokenPlaceholder,
 				},
-			})
-	}
+				TransmitUnencoded: pointer.BoolPtr(true),
+			},
+		})
 
 	return units, files, nil
 }

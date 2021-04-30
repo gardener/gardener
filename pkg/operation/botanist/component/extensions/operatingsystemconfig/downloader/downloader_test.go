@@ -16,7 +16,6 @@ package downloader_test
 
 import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/utils"
 
@@ -26,11 +25,6 @@ import (
 )
 
 var _ = Describe("Downloader", func() {
-	BeforeEach(func() {
-		gardenletfeatures.RegisterFeatureGates()
-		Expect(gardenletfeatures.FeatureGate.SetFromMap(map[string]bool{"BootstrapTokenProvidedByWorker": true})).To(Succeed())
-	})
-
 	Describe("#Config", func() {
 		It("should properly render the expected units and files", func() {
 			units, files, err := Config(ccdSecretName, apiServerURL)
@@ -104,22 +98,6 @@ var _ = Describe("Downloader", func() {
 					},
 				}))
 		})
-		It("should not include the bootstrap_token file (w/o BootstrapTokenProvidedByWorker)",
-			func() {
-				Expect(gardenletfeatures.FeatureGate.SetFromMap(map[string]bool{"BootstrapTokenProvidedByWorker": false})).To(Succeed())
-
-				_, files, err := Config(ccdSecretName, apiServerURL)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(files).ToNot(ContainElement(extensionsv1alpha1.File{
-					Path:        "/var/lib/cloud-config-downloader/credentials/bootstrap-token",
-					Permissions: pointer.Int32Ptr(0644),
-					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{
-							Data: "<<BOOTSTRAP_TOKEN>>",
-						},
-						TransmitUnencoded: pointer.BoolPtr(true),
-					}}))
-			})
 	})
 
 	Describe("#GenerateRBACResourcesData", func() {

@@ -96,6 +96,8 @@ func Script(
 		"pathExecutionLastDate":          PathExecutionLastDate,
 		"pathKubeletKubeconfigBootstrap": kubelet.PathKubeconfigBootstrap,
 		"pathKubeletKubeconfigReal":      kubelet.PathKubeconfigReal,
+		"bootstrapTokenPlaceholder":      downloader.BootstrapTokenPlaceholder,
+		"bootstrapTokenPlaceholderB64":   utils.EncodeBase64([]byte(downloader.BootstrapTokenPlaceholder)),
 		"cloudConfigUserData":            utils.EncodeBase64(cloudConfigUserData),
 		"cloudConfigDownloaderName":      downloader.Name,
 		"executionMinDelaySeconds":       downloader.UnitRestartSeconds,

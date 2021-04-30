@@ -42,9 +42,9 @@ The high-level flow is as follows:
 
 1. After the VM has been provisioned the `downloader` script starts and fetches the appropriate `Secret` for its worker pool (containing the "original" user-data) and applies it.
 
-### Detailed bootstrap flow with the feature gate `BootstrapTokenProvidedByWorker` enabled
+### Detailed bootstrap flow with a worker generated bootstrap-token
 
-If the feature gate `BootstrapTokenProvidedByWorker` is enabled a file with the content `"<<BOOTSTRAP_TOKEN>>"` is added to the `OperatingSystemConfig`.
+With gardener v1.23 a file with the content "<<BOOTSTRAP_TOKEN>>" is added to the operatingsystem-config.
 It is passed to the worker controller.
 
 The worker controller has to guarantee that:
@@ -54,6 +54,8 @@ One implementation of that is depicted in the picture where the MCM creates a te
 
 As part of the user-data the bootstrap-token is placed on the newly created VM under a defined path.
 The cloud-config-script will then refer to the file path of the added bootstrap token in the kubelet-bootstrap script.
+
+If either the worker controller does not replace the `<<BOOTSTRAP_TOKEN>>` or the os-provider-extension does not support the `transmit-unencoded` flag then the bootstrap flow will fall back to the old flow of using a shared bootstrap_token between workers of a Shoot.
 
 ![Bootstrap flow with shortlived bootstrapTokens](./images/bootstrap_token.png)
 
