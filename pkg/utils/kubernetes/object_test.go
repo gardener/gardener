@@ -140,4 +140,41 @@ var _ = Describe("Object", func() {
 			Expect(DeleteObjectsFromListConditionally(ctx, c, listObject, predicateFn)).To(Succeed())
 		})
 	})
+
+	Describe("#IsNamespaceInUse", func() {
+		var (
+			group                     = "group"
+			version                   = "v43"
+			kind                      = "kind"
+			gvk                       = schema.GroupVersionKind{Group: group, Version: version, Kind: kind}
+			partialObjectMetadataList = &metav1.PartialObjectMetadataList{TypeMeta: metav1.TypeMeta{APIVersion: group + "/" + version, Kind: kind}}
+		)
+
+		It("should return an error because the listing failed", func() {
+			c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.Limit(1)).Return(fakeErr)
+
+			inUse, err := IsNamespaceInUse(ctx, c, namespace, gvk)
+			Expect(err).To(MatchError(fakeErr))
+			Expect(inUse).To(BeTrue())
+		})
+
+		It("should return true because objects found", func() {
+			c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.Limit(1)).DoAndReturn(func(_ context.Context, list *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+				(&metav1.PartialObjectMetadataList{Items: []metav1.PartialObjectMetadata{{}}}).DeepCopyInto(list)
+				return nil
+			})
+
+			inUse, err := IsNamespaceInUse(ctx, c, namespace, gvk)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeTrue())
+		})
+
+		It("should return false because no objects found", func() {
+			c.EXPECT().List(ctx, partialObjectMetadataList, client.InNamespace(namespace), client.Limit(1))
+
+			inUse, err := IsNamespaceInUse(ctx, c, namespace, gvk)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(inUse).To(BeFalse())
+		})
+	})
 })

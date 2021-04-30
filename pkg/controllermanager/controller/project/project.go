@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
@@ -30,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
-	kubeinformers "k8s.io/client-go/informers"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -58,8 +57,6 @@ type Controller struct {
 func NewProjectController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
 ) (
@@ -75,40 +72,15 @@ func NewProjectController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Project Informer: %w", err)
 	}
-
-	var (
-		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
-		corev1Informer            = kubeInformerFactory.Core().V1()
-		rbacv1Informer            = kubeInformerFactory.Rbac().V1()
-
-		shootInformer = gardenCoreV1beta1Informer.Shoots()
-		shootLister   = shootInformer.Lister()
-
-		plantInformer = gardenCoreV1beta1Informer.Plants()
-		plantLister   = plantInformer.Lister()
-
-		backupEntryInformer = gardenCoreV1beta1Informer.BackupEntries()
-		backupEntryLister   = backupEntryInformer.Lister()
-
-		secretBindingInformer = gardenCoreV1beta1Informer.SecretBindings()
-		secretBindingLister   = secretBindingInformer.Lister()
-
-		quotaInformer = gardenCoreV1beta1Informer.Quotas()
-		quotaLister   = quotaInformer.Lister()
-
-		namespaceInformer = corev1Informer.Namespaces()
-		namespaceLister   = namespaceInformer.Lister()
-
-		secretInformer = corev1Informer.Secrets()
-		secretLister   = secretInformer.Lister()
-
-		roleBindingInformer = rbacv1Informer.RoleBindings()
-	)
+	roleBindingInformer, err := gardenClient.Cache().GetInformer(ctx, &rbacv1.RoleBinding{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get RoleBinding Informer: %w", err)
+	}
 
 	projectController := &Controller{
 		gardenClient:           gardenClient.Client(),
-		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder, namespaceLister),
-		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client(), shootLister, plantLister, backupEntryLister, secretBindingLister, quotaLister, namespaceLister, secretLister),
+		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder),
+		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client()),
 		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
 		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
 		workerCh:               make(chan int),
@@ -120,15 +92,14 @@ func NewProjectController(
 		DeleteFunc: projectController.projectDelete,
 	})
 
-	roleBindingInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	roleBindingInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(oldObj, newObj interface{}) { projectController.roleBindingUpdate(ctx, oldObj, newObj) },
 		DeleteFunc: func(obj interface{}) { projectController.roleBindingDelete(ctx, obj) },
 	})
 
 	projectController.hasSyncedFuncs = append(projectController.hasSyncedFuncs,
 		projectInformer.HasSynced,
-		namespaceInformer.Informer().HasSynced,
-		roleBindingInformer.Informer().HasSynced,
+		roleBindingInformer.HasSynced,
 	)
 
 	return projectController, nil

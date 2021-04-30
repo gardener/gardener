@@ -25,7 +25,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,22 +64,20 @@ func (c *Controller) projectDelete(obj interface{}) {
 }
 
 // NewProjectReconciler creates a new instance of a reconciler which reconciles Projects.
-func NewProjectReconciler(l logrus.FieldLogger, config *config.ProjectControllerConfiguration, gardenClient kubernetes.Interface, recorder record.EventRecorder, namespaceLister kubecorev1listers.NamespaceLister) reconcile.Reconciler {
+func NewProjectReconciler(l logrus.FieldLogger, config *config.ProjectControllerConfiguration, gardenClient kubernetes.Interface, recorder record.EventRecorder) reconcile.Reconciler {
 	return &projectReconciler{
-		logger:          l,
-		config:          config,
-		gardenClient:    gardenClient,
-		recorder:        recorder,
-		namespaceLister: namespaceLister,
+		logger:       l,
+		config:       config,
+		gardenClient: gardenClient,
+		recorder:     recorder,
 	}
 }
 
 type projectReconciler struct {
-	logger          logrus.FieldLogger
-	config          *config.ProjectControllerConfiguration
-	gardenClient    kubernetes.Interface
-	recorder        record.EventRecorder
-	namespaceLister kubecorev1listers.NamespaceLister
+	logger       logrus.FieldLogger
+	config       *config.ProjectControllerConfiguration
+	gardenClient kubernetes.Interface
+	recorder     record.EventRecorder
 }
 
 func (r *projectReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {

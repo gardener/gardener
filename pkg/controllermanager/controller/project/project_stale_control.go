@@ -21,17 +21,18 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -41,39 +42,18 @@ func NewProjectStaleReconciler(
 	l logrus.FieldLogger,
 	config *config.ProjectControllerConfiguration,
 	gardenClient client.Client,
-	shootLister gardencorelisters.ShootLister,
-	plantLister gardencorelisters.PlantLister,
-	backupEntryLister gardencorelisters.BackupEntryLister,
-	secretBindingLister gardencorelisters.SecretBindingLister,
-	quotaLister gardencorelisters.QuotaLister,
-	namespaceLister kubecorev1listers.NamespaceLister,
-	secretLister kubecorev1listers.SecretLister,
 ) reconcile.Reconciler {
 	return &projectStaleReconciler{
-		logger:              l,
-		config:              config,
-		gardenClient:        gardenClient,
-		shootLister:         shootLister,
-		plantLister:         plantLister,
-		backupEntryLister:   backupEntryLister,
-		secretBindingLister: secretBindingLister,
-		quotaLister:         quotaLister,
-		namespaceLister:     namespaceLister,
-		secretLister:        secretLister,
+		logger:       l,
+		config:       config,
+		gardenClient: gardenClient,
 	}
 }
 
 type projectStaleReconciler struct {
-	logger              logrus.FieldLogger
-	gardenClient        client.Client
-	config              *config.ProjectControllerConfiguration
-	shootLister         gardencorelisters.ShootLister
-	plantLister         gardencorelisters.PlantLister
-	backupEntryLister   gardencorelisters.BackupEntryLister
-	secretBindingLister gardencorelisters.SecretBindingLister
-	quotaLister         gardencorelisters.QuotaLister
-	namespaceLister     kubecorev1listers.NamespaceLister
-	secretLister        kubecorev1listers.SecretLister
+	logger       logrus.FieldLogger
+	gardenClient client.Client
+	config       *config.ProjectControllerConfiguration
 }
 
 func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -96,7 +76,7 @@ func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcil
 
 type projectInUseChecker struct {
 	resource  string
-	checkFunc func(string) (bool, error)
+	checkFunc func(context.Context, string) (bool, error)
 }
 
 // NowFunc is the same like metav1.Now.
@@ -112,8 +92,8 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 	projectLogger.Infof("[STALE PROJECT RECONCILE]")
 
 	// Skip projects whose namespace is annotated with the skip-stale-check annotation.
-	namespace, err := r.namespaceLister.Get(*project.Spec.Namespace)
-	if err != nil {
+	namespace := &corev1.Namespace{}
+	if err := r.gardenClient.Get(ctx, kutil.Key(*project.Spec.Namespace), namespace); err != nil {
 		return err
 	}
 
@@ -141,7 +121,7 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 		{"Secrets", r.projectInUseDueToSecrets},
 		{"Quotas", r.projectInUseDueToQuotas},
 	} {
-		projectInUse, err := check.checkFunc(*project.Spec.Namespace)
+		projectInUse, err := check.checkFunc(ctx, *project.Spec.Namespace)
 		if err != nil {
 			return err
 		}
@@ -172,49 +152,57 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 	return r.gardenClient.Delete(ctx, project)
 }
 
-func (r *projectStaleReconciler) projectInUseDueToShoots(namespace string) (bool, error) {
-	shootList, err := r.shootLister.Shoots(namespace).List(labels.Everything())
-	return len(shootList) > 0, err
+func (r *projectStaleReconciler) projectInUseDueToShoots(ctx context.Context, namespace string) (bool, error) {
+	return kutil.IsNamespaceInUse(ctx, r.gardenClient, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 }
 
-func (r *projectStaleReconciler) projectInUseDueToPlants(namespace string) (bool, error) {
-	plantList, err := r.plantLister.Plants(namespace).List(labels.Everything())
-	return len(plantList) > 0, err
+func (r *projectStaleReconciler) projectInUseDueToPlants(ctx context.Context, namespace string) (bool, error) {
+	return kutil.IsNamespaceInUse(ctx, r.gardenClient, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("PlantList"))
 }
 
-func (r *projectStaleReconciler) projectInUseDueToBackupEntries(namespace string) (bool, error) {
-	backupEntryList, err := r.backupEntryLister.BackupEntries(namespace).List(labels.Everything())
-	return len(backupEntryList) > 0, err
+func (r *projectStaleReconciler) projectInUseDueToBackupEntries(ctx context.Context, namespace string) (bool, error) {
+	return kutil.IsNamespaceInUse(ctx, r.gardenClient, namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntryList"))
 }
 
-func (r *projectStaleReconciler) projectInUseDueToSecrets(namespace string) (bool, error) {
-	secretList, err := r.secretLister.Secrets(namespace).List(labels.Everything())
-	if err != nil {
+func (r *projectStaleReconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
+	var (
+		noControlPlaneSecretsReq = utils.MustNewRequirement(
+			v1beta1constants.GardenRole,
+			selection.NotIn,
+			v1beta1constants.ControlPlaneSecretRoles...,
+		)
+		uncontrolledSecretSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noControlPlaneSecretsReq)}
+	)
+
+	secretList := &corev1.SecretList{}
+	if err := r.gardenClient.List(ctx, secretList, client.InNamespace(namespace), uncontrolledSecretSelector); err != nil {
 		return false, err
 	}
 
-	secretNames := computeSecretNames(secretList)
+	secretNames := computeSecretNames(secretList.Items)
 	if secretNames.Len() == 0 {
 		return false, nil
 	}
 
-	return r.relevantSecretBindingsInUse(func(secretBinding *gardencorev1beta1.SecretBinding) bool {
+	return r.relevantSecretBindingsInUse(ctx, func(secretBinding gardencorev1beta1.SecretBinding) bool {
 		return secretBinding.SecretRef.Namespace == namespace && secretNames.Has(secretBinding.SecretRef.Name)
 	})
 }
 
-func (r *projectStaleReconciler) projectInUseDueToQuotas(namespace string) (bool, error) {
-	quotaList, err := r.quotaLister.Quotas(namespace).List(labels.Everything())
-	if err != nil {
+func (r *projectStaleReconciler) projectInUseDueToQuotas(ctx context.Context, namespace string) (bool, error) {
+	quotaList := &metav1.PartialObjectMetadataList{}
+	quotaList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("QuotaList"))
+
+	if err := r.gardenClient.List(ctx, quotaList, client.InNamespace(namespace)); err != nil {
 		return false, err
 	}
 
-	quotaNames := computeQuotaNames(quotaList)
+	quotaNames := computeQuotaNames(quotaList.Items)
 	if quotaNames.Len() == 0 {
 		return false, nil
 	}
 
-	return r.relevantSecretBindingsInUse(func(secretBinding *gardencorev1beta1.SecretBinding) bool {
+	return r.relevantSecretBindingsInUse(ctx, func(secretBinding gardencorev1beta1.SecretBinding) bool {
 		for _, quota := range secretBinding.Quotas {
 			return quota.Namespace == namespace && quotaNames.Has(quota.Name)
 		}
@@ -222,14 +210,14 @@ func (r *projectStaleReconciler) projectInUseDueToQuotas(namespace string) (bool
 	})
 }
 
-func (r *projectStaleReconciler) relevantSecretBindingsInUse(isSecretBindingRelevantFunc func(secretBinding *gardencorev1beta1.SecretBinding) bool) (bool, error) {
-	secretBindingList, err := r.secretBindingLister.List(labels.Everything())
-	if err != nil {
+func (r *projectStaleReconciler) relevantSecretBindingsInUse(ctx context.Context, isSecretBindingRelevantFunc func(secretBinding gardencorev1beta1.SecretBinding) bool) (bool, error) {
+	secretBindingList := &gardencorev1beta1.SecretBindingList{}
+	if err := r.gardenClient.List(ctx, secretBindingList); err != nil {
 		return false, err
 	}
 
 	namespaceToSecretBindingNames := make(map[string]sets.String)
-	for _, secretBinding := range secretBindingList {
+	for _, secretBinding := range secretBindingList.Items {
 		if !isSecretBindingRelevantFunc(secretBinding) {
 			continue
 		}
@@ -241,7 +229,7 @@ func (r *projectStaleReconciler) relevantSecretBindingsInUse(isSecretBindingRele
 		}
 	}
 
-	return r.secretBindingInUse(namespaceToSecretBindingNames)
+	return r.secretBindingInUse(ctx, namespaceToSecretBindingNames)
 }
 
 func (r *projectStaleReconciler) markProjectAsNotStale(ctx context.Context, client client.Client, project *gardencorev1beta1.Project) error {
@@ -279,18 +267,18 @@ func (r *projectStaleReconciler) markProjectAsStale(ctx context.Context, client 
 	})
 }
 
-func (r *projectStaleReconciler) secretBindingInUse(namespaceToSecretBindingNames map[string]sets.String) (bool, error) {
+func (r *projectStaleReconciler) secretBindingInUse(ctx context.Context, namespaceToSecretBindingNames map[string]sets.String) (bool, error) {
 	if len(namespaceToSecretBindingNames) == 0 {
 		return false, nil
 	}
 
 	for namespace, secretBindingNames := range namespaceToSecretBindingNames {
-		shootList, err := r.shootLister.Shoots(namespace).List(labels.Everything())
-		if err != nil {
+		shootList := &gardencorev1beta1.ShootList{}
+		if err := r.gardenClient.List(ctx, shootList, client.InNamespace(namespace)); err != nil {
 			return false, err
 		}
 
-		for _, shoot := range shootList {
+		for _, shoot := range shootList.Items {
 			if secretBindingNames.Has(shoot.Spec.SecretBindingName) {
 				return true, nil
 			}
@@ -302,7 +290,7 @@ func (r *projectStaleReconciler) secretBindingInUse(namespaceToSecretBindingName
 
 // computeSecretNames determines the names of Secrets that are of type Opaque and don't have owner references to a
 // Shoot.
-func computeSecretNames(secretList []*corev1.Secret) sets.String {
+func computeSecretNames(secretList []corev1.Secret) sets.String {
 	names := sets.NewString()
 
 	for _, secret := range secretList {
@@ -323,7 +311,7 @@ func computeSecretNames(secretList []*corev1.Secret) sets.String {
 }
 
 // computeQuotaNames determines the names of Quotas from the given slice.
-func computeQuotaNames(quotaList []*gardencorev1beta1.Quota) sets.String {
+func computeQuotaNames(quotaList []metav1.PartialObjectMetadata) sets.String {
 	names := sets.NewString()
 
 	for _, quota := range quotaList {
