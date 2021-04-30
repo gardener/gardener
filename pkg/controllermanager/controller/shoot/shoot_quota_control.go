@@ -126,11 +126,15 @@ func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.
 
 		// We have to annotate the Shoot to confirm the deletion.
 		if err := gutil.ConfirmDeletion(ctx, r.gardenClient, shoot); err != nil {
+			if apierrors.IsNotFound(err) {
+				r.logger.Info("Shoot already gone")
+				return reconcile.Result{}, nil
+			}
 			return reconcile.Result{}, err
 		}
 
 		// Now we are allowed to delete the Shoot (to set the deletionTimestamp).
-		return reconcile.Result{}, r.gardenClient.Delete(ctx, shoot)
+		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, shoot))
 	}
 
 	return reconcile.Result{RequeueAfter: r.cfg.SyncPeriod.Duration}, nil

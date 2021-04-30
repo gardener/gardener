@@ -207,13 +207,8 @@ var _ = Describe("#Network", func() {
 				}}
 
 			mc := mockclient.NewMockClient(ctrl)
-			// check if the Network exist
-			mc.EXPECT().Get(ctx, kutil.Key(networkNs, networkName), gomock.AssignableToTypeOf(&extensionsv1alpha1.Network{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, n *extensionsv1alpha1.Network) error {
-				return nil
-			})
-
 			// add deletion confirmation and Timestamp annotation
-			mc.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Network{})).Return(nil)
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Network{}), gomock.Any())
 
 			mc.EXPECT().Delete(ctx, &expected).Times(1).Return(fmt.Errorf("some random error"))
 

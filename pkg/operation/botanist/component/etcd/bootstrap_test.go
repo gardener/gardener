@@ -473,7 +473,6 @@ status: {}
 
 	Context("cleanup", func() {
 		var (
-			crdName         = "etcds.druid.gardener.cloud"
 			secret          = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: managedResourceSecretName}}
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
@@ -482,16 +481,7 @@ status: {}
 				},
 			}
 
-			timeNowFunc              = func() time.Time { return time.Time{} }
-			crdWithConfirmedDeletion = &apiextensionsv1beta1.CustomResourceDefinition{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: crdName,
-					Annotations: map[string]string{
-						"confirmation.gardener.cloud/deletion": "true",
-						"gardener.cloud/timestamp":             timeNowFunc().String(),
-					},
-				},
-			}
+			timeNowFunc = func() time.Time { return time.Time{} }
 		)
 
 		Describe("#Destroy", func() {
@@ -505,8 +495,7 @@ status: {}
 				noMatchError := &meta.NoKindMatchError{}
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(noMatchError)
 
-				c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
-				c.EXPECT().Update(gomock.Any(), gomock.Any())
+				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{}), gomock.Any())
 				c.EXPECT().Delete(gomock.Any(), gomock.Any())
 				c.EXPECT().Delete(gomock.Any(), gomock.Any())
 
@@ -517,8 +506,7 @@ status: {}
 				notFoundError := apierrors.NewNotFound(schema.GroupResource{}, "etcd")
 				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})).Return(notFoundError)
 
-				c.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any())
-				c.EXPECT().Update(gomock.Any(), gomock.Any())
+				c.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{}), gomock.Any())
 				c.EXPECT().Delete(gomock.Any(), gomock.Any())
 				c.EXPECT().Delete(gomock.Any(), gomock.Any())
 
@@ -539,28 +527,18 @@ status: {}
 			})
 
 			It("should fail when the deletion confirmation fails", func() {
-				oldTimeNow := gutil.TimeNow
-				defer func() { gutil.TimeNow = oldTimeNow }()
-				gutil.TimeNow = timeNowFunc
-
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-					c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
-					c.EXPECT().Update(ctx, crdWithConfirmedDeletion).Return(fakeErr),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{}), gomock.Any()).Return(fakeErr),
 				)
 
 				Expect(bootstrapper.Destroy(ctx)).To(MatchError(fakeErr))
 			})
 
 			It("should fail when the managed resource deletion fails", func() {
-				oldTimeNow := gutil.TimeNow
-				defer func() { gutil.TimeNow = oldTimeNow }()
-				gutil.TimeNow = timeNowFunc
-
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-					c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
-					c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{}), gomock.Any()),
 					c.EXPECT().Delete(ctx, managedResource).Return(fakeErr),
 				)
 
@@ -568,14 +546,9 @@ status: {}
 			})
 
 			It("should fail when the secret deletion fails", func() {
-				oldTimeNow := gutil.TimeNow
-				defer func() { gutil.TimeNow = oldTimeNow }()
-				gutil.TimeNow = timeNowFunc
-
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-					c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
-					c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{}), gomock.Any()),
 					c.EXPECT().Delete(ctx, managedResource),
 					c.EXPECT().Delete(ctx, secret).Return(fakeErr),
 				)
@@ -584,14 +557,9 @@ status: {}
 			})
 
 			It("should successfully delete all resources", func() {
-				oldTimeNow := gutil.TimeNow
-				defer func() { gutil.TimeNow = oldTimeNow }()
-				gutil.TimeNow = timeNowFunc
-
 				gomock.InOrder(
 					c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.EtcdList{})),
-					c.EXPECT().Get(ctx, kutil.Key(crdName), gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{})),
-					c.EXPECT().Update(ctx, crdWithConfirmedDeletion),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&apiextensionsv1beta1.CustomResourceDefinition{}), gomock.Any()),
 					c.EXPECT().Delete(ctx, managedResource),
 					c.EXPECT().Delete(ctx, secret),
 				)

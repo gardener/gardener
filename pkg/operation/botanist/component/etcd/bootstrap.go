@@ -294,7 +294,7 @@ func (b *bootstrapper) Destroy(ctx context.Context) error {
 		return fmt.Errorf("cannot debootstrap etcd-druid because there are still druidv1alpha1.Etcd resources left in the cluster")
 	}
 
-	if err := gutil.ConfirmDeletion(ctx, b.client, &apiextensionsv1beta1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}); err != nil {
+	if err := gutil.ConfirmDeletion(ctx, b.client, &apiextensionsv1beta1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: crdName}}); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 

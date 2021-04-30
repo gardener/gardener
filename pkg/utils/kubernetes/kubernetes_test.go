@@ -104,22 +104,6 @@ var _ = Describe("kubernetes", func() {
 		})
 	})
 
-	Describe("#CreateTwoWayMergePatch", func() {
-		It("should fail for two different object types", func() {
-			_, err := CreateTwoWayMergePatch(&corev1.ConfigMap{}, &corev1.Secret{})
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("Should correctly create a patch", func() {
-			patch, err := CreateTwoWayMergePatch(
-				&corev1.ConfigMap{Data: map[string]string{"foo": "bar"}},
-				&corev1.ConfigMap{Data: map[string]string{"foo": "baz"}})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(patch).To(Equal([]byte(`{"data":{"foo":"baz"}}`)))
-		})
-	})
-
 	DescribeTable("#SetMetaDataLabel",
 		func(labels map[string]string, key, value string, expectedLabels map[string]string) {
 			original := &metav1.ObjectMeta{Labels: labels}

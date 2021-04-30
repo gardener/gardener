@@ -16,20 +16,19 @@ package gardener_test
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -69,16 +68,20 @@ var _ = Describe("DeletionConfirmation", func() {
 
 	Describe("#ConfirmDeletion", func() {
 		var (
+			ctx     context.Context
 			ctrl    *gomock.Controller
-			c       *mockclient.MockClient
+			c       client.Client
 			now     time.Time
 			mockNow *mocktime.MockNow
+			obj     client.Object
 		)
 
 		BeforeEach(func() {
+			ctx = context.Background()
 			ctrl = gomock.NewController(GinkgoT())
 			mockNow = mocktime.NewMockNow(ctrl)
-			c = mockclient.NewMockClient(ctrl)
+			obj = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+			c = fake.NewClientBuilder().WithObjects(obj).Build()
 		})
 
 		AfterEach(func() {
@@ -86,84 +89,38 @@ var _ = Describe("DeletionConfirmation", func() {
 		})
 
 		It("should add the deletion confirmation annotation for an object without annotations", func() {
-			var (
-				ctx = context.TODO()
-				obj = &corev1.Namespace{}
-			)
-
-			defer test.WithVars(&TimeNow, mockNow.Do)()
-
-			expectedObj := obj.DeepCopy()
-			expectedObj.Annotations = map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
-
+			defer test.WithVars(
+				&TimeNow, mockNow.Do,
+			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj)
-			c.EXPECT().Update(ctx, expectedObj)
+			expectedAnnotations := map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
 
 			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+			Expect(obj.GetAnnotations()).To(Equal(expectedAnnotations))
 		})
 
 		It("should add the deletion confirmation annotation for an object with annotations", func() {
-			var (
-				ctx = context.TODO()
-				obj = &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							"foo": "bar",
-						},
-					},
-				}
-			)
-
-			defer test.WithVars(&TimeNow, mockNow.Do)()
-
-			expectedObj := obj.DeepCopy()
-			expectedObj.Annotations[ConfirmationDeletion] = "true"
-			expectedObj.Annotations[v1beta1constants.GardenerTimestamp] = now.UTC().String()
-
+			defer test.WithVars(
+				&TimeNow, mockNow.Do,
+			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj)
-			c.EXPECT().Update(ctx, expectedObj)
+
+			obj.SetAnnotations(map[string]string{"foo": "bar"})
+			expectedAnnotations := map[string]string{"foo": "bar", ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
 
 			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(obj), obj)).To(Succeed())
+			Expect(obj.GetAnnotations()).To(Equal(expectedAnnotations))
 		})
 
-		It("should ignore non-existing objects", func() {
-			var (
-				ctx         = context.TODO()
-				obj         = &corev1.Namespace{}
-				expectedObj = obj.DeepCopy()
-			)
+		It("should fail for non-existing objects", func() {
+			Expect(c.Delete(ctx, obj)).To(Succeed())
 
-			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj).Return(apierrors.NewNotFound(corev1.Resource("namespaces"), ""))
-
-			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
-			Expect(obj).To(Equal(expectedObj))
-		})
-
-		It("should retry on conflict and add the deletion confirmation annotation", func() {
-			var (
-				ctx     = context.TODO()
-				baseObj = &corev1.Namespace{}
-				obj     = baseObj.DeepCopy()
-			)
-
-			defer test.WithVars(&TimeNow, mockNow.Do)()
-
-			expectedObj := obj.DeepCopy()
-			expectedObj.Annotations = map[string]string{ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
-
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), obj)
-			c.EXPECT().Update(ctx, expectedObj).Return(apierrors.NewConflict(corev1.Resource("namespaces"), "", errors.New("conflict")))
-			c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), expectedObj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
-				baseObj.DeepCopyInto(obj.(*corev1.Namespace))
-				return nil
-			})
-			c.EXPECT().Update(ctx, expectedObj)
-
-			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())
+			Expect(ConfirmDeletion(ctx, c, obj)).To(BeNotFoundError())
 		})
 	})
 })

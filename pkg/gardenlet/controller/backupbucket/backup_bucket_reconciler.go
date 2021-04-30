@@ -37,7 +37,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -97,7 +96,7 @@ func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kub
 		return reconcile.Result{}, err
 	}
 
-	if updateErr := updateBackupBucketStatusProcessing(ctx, gardenClient.DirectClient(), backupBucket, "Reconciliation of Backup Bucket state in progress.", 2); updateErr != nil {
+	if updateErr := updateBackupBucketStatusProcessing(ctx, gardenClient.Client(), backupBucket, "Reconciliation of Backup Bucket state in progress.", 2); updateErr != nil {
 		backupBucketLogger.Errorf("Could not update the BackupBucket status after reconciliation start: %+v", updateErr)
 		return reconcile.Result{}, updateErr
 	}
@@ -130,14 +129,14 @@ func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kub
 		}
 		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, "%s", reconcileErr.Description)
 
-		if updateErr := updateBackupBucketStatusError(ctx, gardenClient.DirectClient(), backupBucket, reconcileErr.Description+" Operation will be retried.", reconcileErr); updateErr != nil {
+		if updateErr := updateBackupBucketStatusError(ctx, gardenClient.Client(), backupBucket, reconcileErr.Description+" Operation will be retried.", reconcileErr); updateErr != nil {
 			backupBucketLogger.Errorf("Could not update the BackupBucket status after deletion error: %+v", updateErr)
 			return reconcile.Result{}, updateErr
 		}
 		return reconcile.Result{}, errors.New(reconcileErr.Description)
 	}
 
-	if updateErr := updateBackupBucketStatusSucceeded(ctx, gardenClient.DirectClient(), backupBucket, "Backup Bucket has been successfully reconciled."); updateErr != nil {
+	if updateErr := updateBackupBucketStatusSucceeded(ctx, gardenClient.Client(), backupBucket, "Backup Bucket has been successfully reconciled."); updateErr != nil {
 		backupBucketLogger.Errorf("Could not update the Shoot status after reconciliation success: %+v", updateErr)
 		return reconcile.Result{}, updateErr
 	}
@@ -152,21 +151,22 @@ func (r *reconciler) deleteBackupBucket(ctx context.Context, gardenClient kubern
 		return reconcile.Result{}, nil
 	}
 
-	if updateErr := updateBackupBucketStatusProcessing(ctx, gardenClient.DirectClient(), backupBucket, "Deletion of Backup Bucket in progress.", 2); updateErr != nil {
+	if updateErr := updateBackupBucketStatusProcessing(ctx, gardenClient.Client(), backupBucket, "Deletion of Backup Bucket in progress.", 2); updateErr != nil {
 		backupBucketLogger.Errorf("Could not update the BackupBucket status after deletion start: %+v", updateErr)
 		return reconcile.Result{}, updateErr
 	}
 
-	associatedBackupEntries := make([]string, 0)
 	backupEntryList := &gardencorev1beta1.BackupEntryList{}
-	if err := gardenClient.DirectClient().List(ctx, backupEntryList); err != nil {
+	if err := gardenClient.APIReader().List(ctx, backupEntryList); err != nil {
 		backupBucketLogger.Errorf("Could not list the backup entries associated with backupbucket: %s", err)
 		return reconcile.Result{}, err
 	}
 
+	// TODO: use a field-selector for this
+	associatedBackupEntries := make([]string, 0)
 	for _, entry := range backupEntryList.Items {
 		if entry.Spec.BucketName == backupBucket.Name {
-			associatedBackupEntries = append(associatedBackupEntries, fmt.Sprintf("%s/%s", entry.Namespace, entry.Name))
+			associatedBackupEntries = append(associatedBackupEntries, client.ObjectKeyFromObject(&entry).String())
 		}
 	}
 
@@ -195,13 +195,13 @@ func (r *reconciler) deleteBackupBucket(ctx context.Context, gardenClient kubern
 		}
 		r.recorder.Eventf(backupBucket, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, "%s", deleteErr.Description)
 
-		if updateErr := updateBackupBucketStatusError(ctx, gardenClient.DirectClient(), backupBucket, deleteErr.Description+" Operation will be retried.", deleteErr); updateErr != nil {
+		if updateErr := updateBackupBucketStatusError(ctx, gardenClient.Client(), backupBucket, deleteErr.Description+" Operation will be retried.", deleteErr); updateErr != nil {
 			backupBucketLogger.Errorf("Could not update the BackupBucket status after deletion error: %+v", updateErr)
 			return reconcile.Result{}, updateErr
 		}
 		return reconcile.Result{}, errors.New(deleteErr.Description)
 	}
-	if updateErr := updateBackupBucketStatusSucceeded(ctx, gardenClient.DirectClient(), backupBucket, "Backup Bucket has been successfully deleted."); updateErr != nil {
+	if updateErr := updateBackupBucketStatusSucceeded(ctx, gardenClient.Client(), backupBucket, "Backup Bucket has been successfully deleted."); updateErr != nil {
 		backupBucketLogger.Errorf("Could not update the BackupBucket status after deletion successful: %+v", updateErr)
 		return reconcile.Result{}, updateErr
 	}
@@ -222,66 +222,68 @@ func (r *reconciler) deleteBackupBucket(ctx context.Context, gardenClient kubern
 	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName)
 }
 
-func updateBackupBucketStatusProcessing(ctx context.Context, c client.Client, bb *gardencorev1beta1.BackupBucket, message string, progress int32) error {
-	return kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, c, bb, func() error {
-		bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
-			Type:           gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
-			State:          gardencorev1beta1.LastOperationStateProcessing,
-			Progress:       progress,
-			Description:    message,
-			LastUpdateTime: metav1.Now(),
-		}
-		return nil
-	})
+func updateBackupBucketStatusProcessing(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string, progress int32) error {
+	patch := client.MergeFrom(bb.DeepCopy())
+	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
+		State:          gardencorev1beta1.LastOperationStateProcessing,
+		Progress:       progress,
+		Description:    message,
+		LastUpdateTime: metav1.Now(),
+	}
+	return c.Status().Patch(ctx, bb, patch)
 }
 
-func updateBackupBucketStatusError(ctx context.Context, c client.Client, bb *gardencorev1beta1.BackupBucket, message string, lastError *gardencorev1beta1.LastError) error {
-	return kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, c, bb, func() error {
-		var progress int32 = 1
-		if bb.Status.LastOperation != nil {
-			progress = bb.Status.LastOperation.Progress
-		}
-		bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
-			Type:           gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
-			State:          gardencorev1beta1.LastOperationStateError,
-			Progress:       progress,
-			Description:    message,
-			LastUpdateTime: metav1.Now(),
-		}
-		bb.Status.LastError = lastError
-		return nil
-	})
+func updateBackupBucketStatusError(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string, lastError *gardencorev1beta1.LastError) error {
+	patch := client.MergeFrom(bb.DeepCopy())
+
+	var progress int32 = 1
+	if bb.Status.LastOperation != nil {
+		progress = bb.Status.LastOperation.Progress
+	}
+	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
+		State:          gardencorev1beta1.LastOperationStateError,
+		Progress:       progress,
+		Description:    message,
+		LastUpdateTime: metav1.Now(),
+	}
+	bb.Status.LastError = lastError
+
+	return c.Status().Patch(ctx, bb, patch)
 }
 
-func updateBackupBucketStatusPending(ctx context.Context, c client.Client, bb *gardencorev1beta1.BackupBucket, message string) error {
-	return kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, c, bb, func() error {
-		var progress int32 = 1
-		if bb.Status.LastOperation != nil {
-			progress = bb.Status.LastOperation.Progress
-		}
-		bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
-			Type:           gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
-			State:          gardencorev1beta1.LastOperationStatePending,
-			Progress:       progress,
-			Description:    message,
-			LastUpdateTime: metav1.Now(),
-		}
-		bb.Status.ObservedGeneration = bb.Generation
-		return nil
-	})
+func updateBackupBucketStatusPending(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string) error {
+	patch := client.MergeFrom(bb.DeepCopy())
+
+	var progress int32 = 1
+	if bb.Status.LastOperation != nil {
+		progress = bb.Status.LastOperation.Progress
+	}
+	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
+		State:          gardencorev1beta1.LastOperationStatePending,
+		Progress:       progress,
+		Description:    message,
+		LastUpdateTime: metav1.Now(),
+	}
+	bb.Status.ObservedGeneration = bb.Generation
+
+	return c.Status().Patch(ctx, bb, patch)
 }
 
-func updateBackupBucketStatusSucceeded(ctx context.Context, c client.Client, bb *gardencorev1beta1.BackupBucket, message string) error {
-	return kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, c, bb, func() error {
-		bb.Status.LastError = nil
-		bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
-			Type:           gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
-			State:          gardencorev1beta1.LastOperationStateSucceeded,
-			Progress:       100,
-			Description:    message,
-			LastUpdateTime: metav1.Now(),
-		}
-		bb.Status.ObservedGeneration = bb.Generation
-		return nil
-	})
+func updateBackupBucketStatusSucceeded(ctx context.Context, c client.StatusClient, bb *gardencorev1beta1.BackupBucket, message string) error {
+	patch := client.MergeFrom(bb.DeepCopy())
+
+	bb.Status.LastError = nil
+	bb.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           gardencorev1beta1helper.ComputeOperationType(bb.ObjectMeta, bb.Status.LastOperation),
+		State:          gardencorev1beta1.LastOperationStateSucceeded,
+		Progress:       100,
+		Description:    message,
+		LastUpdateTime: metav1.Now(),
+	}
+	bb.Status.ObservedGeneration = bb.Generation
+
+	return c.Status().Patch(ctx, bb, patch)
 }

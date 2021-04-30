@@ -268,10 +268,8 @@ var _ = Describe("extensions", func() {
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			mc := mockclient.NewMockClient(ctrl)
-			// check if the extension CR exists
-			mc.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).SetArg(2, *expected).Return(nil)
 			// add deletion confirmation and Timestamp annotation
-			mc.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).Return(nil)
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{}), gomock.Any()).SetArg(1, *expected).Return(nil)
 			mc.EXPECT().Delete(ctx, expected).Times(1).Return(fmt.Errorf("some random error"))
 
 			Expect(DeleteExtensionCR(ctx, mc, func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} }, namespace, name)).To(HaveOccurred())

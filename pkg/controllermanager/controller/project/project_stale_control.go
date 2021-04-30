@@ -147,9 +147,13 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 
 	projectLogger.Infof("[STALE PROJECT RECONCILE] Deleting Project now because it's auto-delete timestamp is expired")
 	if err := gutil.ConfirmDeletion(ctx, r.gardenClient, project); err != nil {
+		if apierrors.IsNotFound(err) {
+			projectLogger.Info("Project already gone")
+			return nil
+		}
 		return err
 	}
-	return r.gardenClient.Delete(ctx, project)
+	return client.IgnoreNotFound(r.gardenClient.Delete(ctx, project))
 }
 
 func (r *projectStaleReconciler) projectInUseDueToShoots(ctx context.Context, namespace string) (bool, error) {

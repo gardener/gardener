@@ -41,7 +41,6 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -399,7 +398,7 @@ func (c *defaultControl) updateSeedStatus(
 	capacity, allocatable corev1.ResourceList,
 	updateConditions ...gardencorev1beta1.Condition,
 ) error {
-	seedCopy := seed.DeepCopy()
+	patch := client.StrategicMergeFrom(seed.DeepCopy())
 
 	seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, updateConditions...)
 	seed.Status.ObservedGeneration = seed.Generation
@@ -408,13 +407,7 @@ func (c *defaultControl) updateSeedStatus(
 	seed.Status.Capacity = capacity
 	seed.Status.Allocatable = allocatable
 
-	patchBytes, err := kutil.CreateTwoWayMergePatch(seedCopy, seed)
-	if err != nil {
-		logger.Logger.Errorf("Could not update the Seed status: %+v", err)
-		return fmt.Errorf("failed to patch bytes")
-	}
-
-	if err := cl.Status().Patch(ctx, seed, client.RawPatch(types.StrategicMergePatchType, patchBytes)); err != nil {
+	if err := cl.Status().Patch(ctx, seed, patch); err != nil {
 		logger.Logger.Errorf("Could not update the Seed status: %+v", err)
 		return err
 	}

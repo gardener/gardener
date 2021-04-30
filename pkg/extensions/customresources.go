@@ -149,6 +149,9 @@ func DeleteExtensionCR(
 	obj.SetName(name)
 
 	if err := gutil.ConfirmDeletion(ctx, c, obj); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 
@@ -460,11 +463,11 @@ func WaitUntilExtensionCRsMigrated(
 }
 
 // AnnotateExtensionObjectWithOperation annotates the extension resource with the provided operation annotation value.
-func AnnotateExtensionObjectWithOperation(ctx context.Context, c client.Client, extensionObj extensionsv1alpha1.Object, operation string) error {
+func AnnotateExtensionObjectWithOperation(ctx context.Context, w client.Writer, extensionObj extensionsv1alpha1.Object, operation string) error {
 	extensionObjCopy := extensionObj.DeepCopyObject()
 	kutil.SetMetaDataAnnotation(extensionObj, v1beta1constants.GardenerOperation, operation)
 	kutil.SetMetaDataAnnotation(extensionObj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-	return c.Patch(ctx, extensionObj, client.MergeFrom(extensionObjCopy))
+	return w.Patch(ctx, extensionObj, client.MergeFrom(extensionObjCopy))
 }
 
 func applyFuncToExtensionResources(

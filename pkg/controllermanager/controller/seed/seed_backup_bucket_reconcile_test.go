@@ -19,20 +19,18 @@ import (
 	"encoding/json"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockgardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned/mock"
-	mockgardencorev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1/mock"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -51,35 +49,40 @@ var _ = Describe("BackupBucketReconciler", func() {
 
 	Describe("#Reconcile", func() {
 		var (
-			c               *mockgardencore.MockInterface
-			gardenIface     *mockgardencorev1beta1.MockCoreV1beta1Interface
-			seedIface       *mockgardencorev1beta1.MockSeedInterface
+			cm *fakeclientmap.ClientMap
+			c  *mockclient.MockClient
+			sw *mockclient.MockStatusWriter
+
 			seed, seedPatch *gardencorev1beta1.Seed
 			bbs             []*gardencorev1beta1.BackupBucket
 
 			control             reconcile.Reconciler
-			cm                  *fakeclientmap.ClientMap
 			coreInformerFactory coreinformers.SharedInformerFactory
 		)
 
 		BeforeEach(func() {
-			c = mockgardencore.NewMockInterface(ctrl)
-			gardenIface = mockgardencorev1beta1.NewMockCoreV1beta1Interface(ctrl)
-			seedIface = mockgardencorev1beta1.NewMockSeedInterface(ctrl)
+			c = mockclient.NewMockClient(ctrl)
+			sw = mockclient.NewMockStatusWriter(ctrl)
+			c.EXPECT().Status().Return(sw).AnyTimes()
 			seed = &gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "seed",
 				},
 			}
+
+			fakeGardenClientSet := fakeclientset.NewClientSetBuilder().WithClient(c).Build()
+			cm = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(), fakeGardenClientSet).Build()
+
 			seedPatch = &gardencorev1beta1.Seed{}
-			c.EXPECT().CoreV1beta1().Return(gardenIface)
-			gardenIface.EXPECT().Seeds().Return(seedIface)
 		})
 
 		JustBeforeEach(func() {
-			seedIface.EXPECT().Patch(context.Background(), seed.Name, types.StrategicMergePatchType, gomock.Any(), metav1.PatchOptions{}, "status").DoAndReturn(
-				func(_ context.Context, _ string, _ types.PatchType, patchData []byte, _ metav1.PatchOptions, _ string) (*gardencorev1beta1.Seed, error) {
-					return nil, json.Unmarshal(patchData, seedPatch)
+			sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(seed), gomock.Any()).DoAndReturn(
+				func(_ context.Context, obj client.Object, patch client.Patch) error {
+					patchData, err := patch.Data(obj)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(json.Unmarshal(patchData, seedPatch)).To(Succeed())
+					return nil
 				})
 
 			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
@@ -88,9 +91,6 @@ var _ = Describe("BackupBucketReconciler", func() {
 				backupBucket := bb
 				Expect(coreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
 			}
-
-			fakeGardenClientSet := fakeclientset.NewClientSetBuilder().WithGardenCore(c).Build()
-			cm = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(), fakeGardenClientSet).Build()
 
 			control = NewDefaultBackupBucketControl(cm, coreInformerFactory.Core().V1beta1().BackupBuckets().Lister(), coreInformerFactory.Core().V1beta1().Seeds().Lister())
 		})

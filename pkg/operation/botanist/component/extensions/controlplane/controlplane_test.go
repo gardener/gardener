@@ -243,8 +243,7 @@ var _ = Describe("ControlPlane", func() {
 			}
 
 			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
-			mc.EXPECT().Update(ctx, obj)
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}), gomock.Any())
 			mc.EXPECT().Delete(ctx, obj).Return(fakeErr)
 
 			err := controlplane.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Destroy(ctx)
@@ -268,8 +267,7 @@ var _ = Describe("ControlPlane", func() {
 			}
 
 			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, kutil.Key(obj.Namespace, obj.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
-			mc.EXPECT().Update(ctx, obj)
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}), gomock.Any())
 			mc.EXPECT().Delete(ctx, obj).Return(fakeErr)
 
 			err := controlplane.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Destroy(ctx)
