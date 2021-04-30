@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -41,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
@@ -66,7 +68,10 @@ func (c *Controller) controllerInstallationUpdate(oldObj, newObj interface{}) {
 		return
 	}
 
-	if new.DeletionTimestamp == nil && old.Spec.RegistrationRef.ResourceVersion == new.Spec.RegistrationRef.ResourceVersion && old.Spec.SeedRef.ResourceVersion == new.Spec.SeedRef.ResourceVersion {
+	if new.DeletionTimestamp == nil &&
+		reflect.DeepEqual(old.Spec.DeploymentRef, new.Spec.DeploymentRef) &&
+		old.Spec.RegistrationRef.ResourceVersion == new.Spec.RegistrationRef.ResourceVersion &&
+		old.Spec.SeedRef.ResourceVersion == new.Spec.SeedRef.ResourceVersion {
 		return
 	}
 
@@ -129,25 +134,25 @@ func (c *defaultControllerInstallationControl) Reconcile(obj *gardencorev1beta1.
 	var (
 		controllerInstallation = obj.DeepCopy()
 		logger                 = logger.NewFieldLogger(logger.Logger, "controllerinstallation", controllerInstallation.Name)
+		ctx                    = context.TODO()
 	)
 
-	if isResponsible, err := c.isResponsible(controllerInstallation); !isResponsible || err != nil {
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	if isResponsible, err := c.isResponsible(ctx, gardenClient.Client(), controllerInstallation); !isResponsible || err != nil {
 		return err
 	}
 
 	if controllerInstallation.DeletionTimestamp != nil {
 		return c.delete(controllerInstallation, logger)
 	}
-	return c.reconcile(controllerInstallation, logger)
+	return c.reconcile(ctx, gardenClient, controllerInstallation, logger)
 }
 
-func (c *defaultControllerInstallationControl) reconcile(controllerInstallation *gardencorev1beta1.ControllerInstallation, logger logrus.FieldLogger) error {
-	ctx := context.TODO()
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
-	}
-
+func (c *defaultControllerInstallationControl) reconcile(ctx context.Context, gardenClient kubernetes.Interface, controllerInstallation *gardencorev1beta1.ControllerInstallation, logger logrus.FieldLogger) error {
 	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), controllerInstallation, FinalizerName); err != nil {
 		return err
 	}
@@ -189,8 +194,20 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
+	var providerConfig *runtime.RawExtension
+	if deploymentRef := controllerInstallation.Spec.DeploymentRef; deploymentRef != nil {
+		controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
+		if err := gardenClient.Client().Get(ctx, kutil.Key(deploymentRef.Name), controllerDeployment); err != nil {
+			return err
+		}
+		providerConfig = &controllerDeployment.Spec.ProviderConfig
+	} else {
+		providerConfig = controllerRegistration.Spec.Deployment.ProviderConfig
+	}
+
 	var helmDeployment HelmDeployment
-	if err := json.Unmarshal(controllerRegistration.Spec.Deployment.ProviderConfig.Raw, &helmDeployment); err != nil {
+
+	if err := json.Unmarshal(providerConfig.Raw, &helmDeployment); err != nil {
 		conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "ChartInformationInvalid", fmt.Sprintf("Chart Information cannot be unmarshalled: %+v", err))
 		return err
 	}
@@ -353,13 +370,20 @@ func updateConditions(ctx context.Context, gardenClient kubernetes.Interface, co
 	)
 }
 
-func (c *defaultControllerInstallationControl) isResponsible(controllerInstallation *gardencorev1beta1.ControllerInstallation) (bool, error) {
+func (c *defaultControllerInstallationControl) isResponsible(ctx context.Context, cl client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation) (bool, error) {
 	controllerRegistration, err := c.controllerRegistrationLister.Get(controllerInstallation.Spec.RegistrationRef.Name)
 	if err != nil {
 		return false, err
 	}
 
 	if deployment := controllerRegistration.Spec.Deployment; deployment != nil {
+		if deploymentName := controllerInstallation.Spec.DeploymentRef; deploymentName != nil {
+			controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
+			if err := cl.Get(ctx, kutil.Key(deploymentName.Name), controllerDeployment); err != nil {
+				return false, err
+			}
+			return controllerDeployment.Spec.Type == installationTypeHelm, nil
+		}
 		if deployment.Type != nil {
 			return *deployment.Type == installationTypeHelm, nil
 		}

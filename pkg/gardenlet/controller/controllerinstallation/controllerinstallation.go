@@ -48,15 +48,13 @@ type Controller struct {
 
 	seedQueue  workqueue.RateLimitingInterface
 	seedLister gardencorelisters.SeedLister
-	seedSynced cache.InformerSynced
-
-	controllerRegistrationSynced cache.InformerSynced
 
 	controllerInstallationQueue  workqueue.RateLimitingInterface
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
-	controllerInstallationSynced cache.InformerSynced
 
 	controllerInstallationCareQueue workqueue.RateLimitingInterface
+
+	hasSyncedFuncs []cache.InformerSynced
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -99,9 +97,6 @@ func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gard
 		workerCh: make(chan int),
 	}
 
-	controller.seedSynced = seedInformer.Informer().HasSynced
-	controller.controllerRegistrationSynced = controllerRegistrationInformer.Informer().HasSynced
-
 	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
 		Handler: cache.ResourceEventHandlerFuncs{
@@ -118,7 +113,11 @@ func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gard
 		},
 	})
 
-	controller.controllerInstallationSynced = controllerInstallationInformer.Informer().HasSynced
+	controller.hasSyncedFuncs = []cache.InformerSynced{
+		seedInformer.Informer().HasSynced,
+		controllerRegistrationInformer.Informer().HasSynced,
+		controllerInstallationInformer.Informer().HasSynced,
+	}
 
 	return controller
 }
@@ -127,7 +126,7 @@ func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gard
 func (c *Controller) Run(ctx context.Context, workers, careWorkers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.seedSynced, c.controllerRegistrationSynced, c.controllerInstallationSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
