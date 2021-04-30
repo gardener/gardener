@@ -435,7 +435,7 @@ func getShootWorkerResources(shoot *core.Shoot, cloudProfile *core.CloudProfile)
 
 		if worker.Volume == nil {
 			for _, machineType := range cloudProfile.Spec.MachineTypes {
-				if worker.Machine.Type == machineType.Name && machineType.Storage != nil {
+				if worker.Machine.Type == machineType.Name && machineType.Storage != nil && machineType.Storage.StorageSize != nil {
 					workerCopy.Volume = &core.Volume{
 						Type:       &machineType.Storage.Type,
 						VolumeSize: machineType.Storage.StorageSize.String(),

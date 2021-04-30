@@ -3820,7 +3820,6 @@ func schema_pkg_apis_core_v1alpha1_MachineTypeStorage(ref common.ReferenceCallba
 					"size": {
 						SchemaProps: spec.SchemaProps{
 							Description: "StorageSize is the storage size.",
-							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
@@ -3832,8 +3831,14 @@ func schema_pkg_apis_core_v1alpha1_MachineTypeStorage(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
+					"minSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MinSize is the minimal supported storage size. This overrides any other common minimum size configuration from `spec.volumeTypes[*].minSize`.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
 				},
-				Required: []string{"class", "size", "type"},
+				Required: []string{"class", "type"},
 			},
 		},
 		Dependencies: []string{
@@ -6852,10 +6857,18 @@ func schema_pkg_apis_core_v1alpha1_VolumeType(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"minSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MinSize is the minimal supported storage size.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
 				},
 				Required: []string{"class", "name"},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 
@@ -10219,7 +10232,6 @@ func schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref common.ReferenceCallbac
 					"size": {
 						SchemaProps: spec.SchemaProps{
 							Description: "StorageSize is the storage size.",
-							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 						},
 					},
@@ -10231,8 +10243,14 @@ func schema_pkg_apis_core_v1beta1_MachineTypeStorage(ref common.ReferenceCallbac
 							Format:      "",
 						},
 					},
+					"minSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MinSize is the minimal supported storage size. This overrides any other common minimum size configuration from `spec.volumeTypes[*].minSize`.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
 				},
-				Required: []string{"class", "size", "type"},
+				Required: []string{"class", "type"},
 			},
 		},
 		Dependencies: []string{
@@ -13130,10 +13148,18 @@ func schema_pkg_apis_core_v1beta1_VolumeType(ref common.ReferenceCallback) commo
 							Format:      "",
 						},
 					},
+					"minSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MinSize is the minimal supported storage size.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
 				},
 				Required: []string{"class", "name"},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 

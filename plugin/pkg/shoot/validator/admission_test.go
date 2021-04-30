@@ -72,7 +72,10 @@ var _ = Describe("validator", func() {
 					},
 				},
 			}
-			volumeType = "volume-type-1"
+			volumeType        = "volume-type-1"
+			volumeType2       = "volume-type-2"
+			minVolSize        = resource.MustParse("100Gi")
+			minVolSizeMachine = resource.MustParse("50Gi")
 
 			seedPodsCIDR     = "10.241.128.0/17"
 			seedServicesCIDR = "10.241.0.0/17"
@@ -126,11 +129,26 @@ var _ = Describe("validator", func() {
 							Memory: resource.MustParse("100Gi"),
 							Usable: &falseVar,
 						},
+						{
+							Name:   "machine-type-2",
+							CPU:    resource.MustParse("2"),
+							GPU:    resource.MustParse("0"),
+							Memory: resource.MustParse("100Gi"),
+							Storage: &core.MachineTypeStorage{
+								Type:    volumeType,
+								MinSize: &minVolSizeMachine,
+							},
+						},
 					},
 					VolumeTypes: []core.VolumeType{
 						{
-							Name:  "volume-type-1",
+							Name:  volumeType,
 							Class: "super-premium",
+						},
+						{
+							Name:    volumeType2,
+							Class:   "super-premium",
+							MinSize: &minVolSize,
 						},
 					},
 					Regions: []core.Region{
@@ -1781,6 +1799,55 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("should reject due to wrong volume size (volume type constraint)", func() {
+					boundaryVolSize := minVolSize
+					boundaryVolSize.Add(resource.MustParse("-1"))
+
+					boundaryVolSizeMachine := minVolSizeMachine
+					boundaryVolSizeMachine.Add(resource.MustParse("-1"))
+
+					shoot.Spec.Provider.Workers = []core.Worker{
+						{
+							Machine: core.Machine{
+								Type: "machine-type-1",
+							},
+							Volume: &core.Volume{
+								Type:       &volumeType2,
+								VolumeSize: boundaryVolSize.String(),
+							},
+						},
+						{
+							Machine: core.Machine{
+								Type: "machine-type-2",
+							},
+							Volume: &core.Volume{
+								Type:       &volumeType,
+								VolumeSize: boundaryVolSize.String(),
+							},
+						},
+						{
+							Machine: core.Machine{
+								Type: "machine-type-2",
+							},
+							Volume: &core.Volume{
+								Type:       &volumeType,
+								VolumeSize: boundaryVolSizeMachine.String(),
+							},
+						},
+					}
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err.Error()).To(ContainSubstring("spec.provider.workers[0].volume.size"))
+					Expect(err.Error()).To(ContainSubstring("spec.provider.workers[2].volume.size"))
 				})
 			})
 		})

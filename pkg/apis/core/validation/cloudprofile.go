@@ -242,6 +242,34 @@ func validateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) 
 		allErrs = append(allErrs, validateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
 		allErrs = append(allErrs, validateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
 		allErrs = append(allErrs, validateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+
+		if machineType.Storage != nil {
+			allErrs = append(allErrs, validateMachineTypeStorage(*machineType.Storage, idxPath.Child("storage"))...)
+		}
+	}
+
+	return allErrs
+}
+
+func validateMachineTypeStorage(storage core.MachineTypeStorage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if storage.StorageSize == nil && storage.MinSize == nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, storage, `must either configure "size" or "minSize"`))
+		return allErrs
+	}
+
+	if storage.StorageSize != nil && storage.MinSize != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, storage, `not allowed to configure both "size" and "minSize"`))
+		return allErrs
+	}
+
+	if storage.StorageSize != nil {
+		allErrs = append(allErrs, validateResourceQuantityValue("size", *storage.StorageSize, fldPath.Child("size"))...)
+	}
+
+	if storage.MinSize != nil {
+		allErrs = append(allErrs, validateResourceQuantityValue("minSize", *storage.MinSize, fldPath.Child("minSize"))...)
 	}
 
 	return allErrs
@@ -341,9 +369,8 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 
 	for i, volumeType := range volumeTypes {
 		idxPath := fldPath.Index(i)
-		namePath := idxPath.Child("name")
-		classPath := idxPath.Child("class")
 
+		namePath := idxPath.Child("name")
 		if len(volumeType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
 		}
@@ -355,7 +382,11 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 		names[volumeType.Name] = struct{}{}
 
 		if len(volumeType.Class) == 0 {
-			allErrs = append(allErrs, field.Required(classPath, "must provide a class"))
+			allErrs = append(allErrs, field.Required(idxPath.Child("class"), "must provide a class"))
+		}
+
+		if volumeType.MinSize != nil {
+			allErrs = append(allErrs, validateResourceQuantityValue("minSize", *volumeType.MinSize, idxPath.Child("minSize"))...)
 		}
 	}
 
