@@ -21,13 +21,13 @@ import (
 	gardencoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 var gardenScheme *runtime.Scheme
@@ -41,7 +41,7 @@ func init() {
 // cluster by adding the shoot, seed, and cloudprofile specification.
 func SyncClusterResourceToSeed(
 	ctx context.Context,
-	client client.Client,
+	client client.Writer,
 	clusterName string,
 	shoot *gardencorev1beta1.Shoot,
 	cloudProfile *gardencorev1beta1.CloudProfile,
@@ -90,7 +90,7 @@ func SyncClusterResourceToSeed(
 		shootObj.ManagedFields = nil
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, client, cluster, func() error {
+	_, err := controllerutils.MergePatchOrCreate(ctx, client, cluster, func() error {
 		if cloudProfileObj != nil {
 			cluster.Spec.CloudProfile = runtime.RawExtension{Object: cloudProfileObj}
 		}
