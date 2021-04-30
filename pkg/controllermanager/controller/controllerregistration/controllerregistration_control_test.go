@@ -16,9 +16,9 @@ package controllerregistration
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,378 +26,328 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 var _ = Describe("Controller", func() {
-	logger.Logger = logger.NewNopLogger()
-
 	var (
-		gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
+		ctx     = context.TODO()
+		fakeErr = fmt.Errorf("fake err")
+		log     = logger.NewNopLogger()
 
-		queue                           *fakeQueue
-		controllerRegistrationSeedQueue *fakeQueue
-		c                               *Controller
+		ctrl *gomock.Controller
+		c    *mockclient.MockClient
 
 		controllerRegistrationName = "controllerRegistration"
-	)
-
-	BeforeEach(func() {
-		gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-		controllerRegistrationInformer := gardenCoreInformerFactory.Core().V1beta1().ControllerRegistrations()
-		controllerRegistrationLister := controllerRegistrationInformer.Lister()
-		seedInformer := gardenCoreInformerFactory.Core().V1beta1().Seeds()
-		seedLister := seedInformer.Lister()
-
-		queue = &fakeQueue{}
-		controllerRegistrationSeedQueue = &fakeQueue{}
-
-		c = &Controller{
-			controllerRegistrationQueue:     queue,
-			controllerRegistrationLister:    controllerRegistrationLister,
-			controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
-			seedLister:                      seedLister,
-		}
-	})
-
-	Describe("#controllerRegistrationAdd", func() {
-		It("should do nothing because the object key computation fails", func() {
-			obj := "foo"
-
-			c.controllerRegistrationAdd(obj)
-
-			Expect(queue.Len()).To(BeZero())
-		})
-
-		It("should add the object to the queue", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
-
-			c.controllerRegistrationAdd(obj)
-
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-		})
-
-		It("should add the object to the queue and not enqueue any seeds due to list error", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
-			c.seedLister = newFakeSeedLister(c.seedLister, nil, nil, errors.New("err"))
-
-			c.controllerRegistrationAdd(obj)
-
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-		})
-
-		It("should add the object to the queue and enqueue all seeds", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
-
-			var (
-				seed1 = "seed1"
-				seed2 = "seed2"
-			)
-			seedList := []*gardencorev1beta1.Seed{
-				{ObjectMeta: metav1.ObjectMeta{Name: seed1}},
-				{ObjectMeta: metav1.ObjectMeta{Name: seed2}},
-			}
-			c.seedLister = newFakeSeedLister(c.seedLister, nil, seedList, nil)
-
-			c.controllerRegistrationAdd(obj)
-
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			Expect(controllerRegistrationSeedQueue.Len()).To(Equal(len(seedList)))
-			Expect(controllerRegistrationSeedQueue.items[0]).To(Equal(seed1))
-			Expect(controllerRegistrationSeedQueue.items[1]).To(Equal(seed2))
-		})
-	})
-
-	Describe("#controllerRegistrationUpdate", func() {
-		It("should do nothing because the object key computation fails", func() {
-			obj := "foo"
-
-			c.controllerRegistrationUpdate(nil, obj)
-
-			Expect(queue.Len()).To(BeZero())
-		})
-
-		It("should add the object to the queue", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
-
-			c.controllerRegistrationUpdate(nil, obj)
-
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-		})
-	})
-
-	Describe("#controllerRegistrationDelete", func() {
-		It("should do nothing because the object key computation fails", func() {
-			obj := "foo"
-
-			c.controllerRegistrationDelete(obj)
-
-			Expect(queue.Len()).To(BeZero())
-		})
-
-		It("should add the object to the queue (tomb stone)", func() {
-			obj := cache.DeletedFinalStateUnknown{
-				Key: controllerRegistrationName,
-			}
-
-			c.controllerRegistrationDelete(obj)
-
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-		})
-
-		It("should add the object to the queue", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
-
-			c.controllerRegistrationDelete(obj)
-
-			Expect(queue.Len()).To(Equal(1))
-			Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-		})
-	})
-
-	Describe("#reconcileControllerRegistrationKey", func() {
-		It("should return an error because the key cannot be split", func() {
-			Expect(c.reconcileControllerRegistrationKey("a/b/c")).To(HaveOccurred())
-		})
-
-		It("should return nil because object not found", func() {
-			c.controllerRegistrationLister = newFakeControllerRegistrationLister(c.controllerRegistrationLister, nil, apierrors.NewNotFound(schema.GroupResource{}, controllerRegistrationName))
-
-			Expect(c.reconcileControllerRegistrationKey(controllerRegistrationName)).NotTo(HaveOccurred())
-		})
-
-		It("should return err because object not found", func() {
-			err := errors.New("error")
-
-			c.controllerRegistrationLister = newFakeControllerRegistrationLister(c.controllerRegistrationLister, nil, err)
-
-			Expect(c.reconcileControllerRegistrationKey(controllerRegistrationName)).To(Equal(err))
-		})
-
-		It("should return the result of the reconciliation (nil)", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
-
-			c.controllerRegistrationControl = &fakeControllerRegistrationControl{}
-			c.controllerRegistrationLister = newFakeControllerRegistrationLister(c.controllerRegistrationLister, obj, nil)
-
-			Expect(c.reconcileControllerRegistrationKey(controllerRegistrationName)).To(BeNil())
-		})
-
-		It("should return the result of the reconciliation (error)", func() {
-			obj := &gardencorev1beta1.ControllerRegistration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: controllerRegistrationName,
-				},
-			}
-
-			c.controllerRegistrationControl = &fakeControllerRegistrationControl{result: errors.New("")}
-			c.controllerRegistrationLister = newFakeControllerRegistrationLister(c.controllerRegistrationLister, obj, nil)
-
-			Expect(c.reconcileControllerRegistrationKey(controllerRegistrationName)).To(HaveOccurred())
-		})
-	})
-})
-
-type fakeControllerRegistrationControl struct {
-	result error
-}
-
-func (f *fakeControllerRegistrationControl) Reconcile(obj *gardencorev1beta1.ControllerRegistration) error {
-	return f.result
-}
-
-type fakeControllerRegistrationLister struct {
-	gardencorelisters.ControllerRegistrationLister
-
-	getResult *gardencorev1beta1.ControllerRegistration
-	getErr    error
-}
-
-func newFakeControllerRegistrationLister(controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, getResult *gardencorev1beta1.ControllerRegistration, getErr error) *fakeControllerRegistrationLister {
-	return &fakeControllerRegistrationLister{
-		ControllerRegistrationLister: controllerRegistrationLister,
-
-		getResult: getResult,
-		getErr:    getErr,
-	}
-}
-
-func (c *fakeControllerRegistrationLister) Get(string) (*gardencorev1beta1.ControllerRegistration, error) {
-	if c.getErr != nil {
-		return nil, c.getErr
-	}
-	return c.getResult, nil
-}
-
-var _ = Describe("ControllerRegistrationControl", func() {
-	const (
-		finalizerName = "core.gardener.cloud/controllerregistration"
-	)
-
-	var (
-		ctrl                   *gomock.Controller
-		clientMap              clientmap.ClientMap
-		k8sGardenRuntimeClient *mockclient.MockClient
-
-		gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
-
-		d *defaultControllerRegistrationControl
-
-		ctx                        = context.TODO()
-		controllerRegistrationName = "controllerRegistration"
-		obj                        *gardencorev1beta1.ControllerRegistration
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
-		k8sGardenClient := fakeclientset.NewClientSetBuilder().WithClient(k8sGardenRuntimeClient).Build()
-
-		clientMap = fake.NewClientMap().AddClient(keys.ForGarden(), k8sGardenClient)
-
-		gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-		controllerInstallationInformer := gardenCoreInformerFactory.Core().V1beta1().ControllerInstallations()
-		controllerInstallationLister := controllerInstallationInformer.Lister()
-
-		d = &defaultControllerRegistrationControl{clientMap, controllerInstallationLister}
-		obj = &gardencorev1beta1.ControllerRegistration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            controllerRegistrationName,
-				ResourceVersion: "42",
-			},
-		}
+		c = mockclient.NewMockClient(ctrl)
 	})
 
 	AfterEach(func() {
 		ctrl.Finish()
 	})
 
-	Describe("#Reconcile", func() {
+	Describe("controller", func() {
+		var (
+			queue                           *fakeQueue
+			controllerRegistrationSeedQueue *fakeQueue
+			controller                      *Controller
+		)
+
+		BeforeEach(func() {
+			queue = &fakeQueue{}
+			controllerRegistrationSeedQueue = &fakeQueue{}
+			controller = &Controller{
+				gardenClient:                    c,
+				controllerRegistrationQueue:     queue,
+				controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
+			}
+		})
+
+		Describe("#controllerRegistrationAdd", func() {
+			It("should do nothing because the object key computation fails", func() {
+				obj := "foo"
+
+				controller.controllerRegistrationAdd(ctx, obj)
+
+				Expect(queue.Len()).To(BeZero())
+			})
+
+			It("should add the object to the queue", func() {
+				obj := &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: controllerRegistrationName,
+					},
+				}
+
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
+
+				controller.controllerRegistrationAdd(ctx, obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+			})
+
+			It("should add the object to the queue and not enqueue any seeds due to list error", func() {
+				obj := &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: controllerRegistrationName,
+					},
+				}
+
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{})).Return(fakeErr)
+
+				controller.controllerRegistrationAdd(ctx, obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+			})
+
+			It("should add the object to the queue and enqueue all seeds", func() {
+				obj := &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: controllerRegistrationName,
+					},
+				}
+
+				var (
+					seed1    = "seed1"
+					seed2    = "seed2"
+					seedList = []metav1.PartialObjectMetadata{
+						{ObjectMeta: metav1.ObjectMeta{Name: seed1}},
+						{ObjectMeta: metav1.ObjectMeta{Name: seed2}},
+					}
+				)
+
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{})).DoAndReturn(func(_ context.Context, obj *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
+					(&metav1.PartialObjectMetadataList{Items: seedList}).DeepCopyInto(obj)
+					return nil
+				})
+
+				controller.controllerRegistrationAdd(ctx, obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+				Expect(controllerRegistrationSeedQueue.Len()).To(Equal(len(seedList)))
+				Expect(controllerRegistrationSeedQueue.items[0]).To(Equal(seed1))
+				Expect(controllerRegistrationSeedQueue.items[1]).To(Equal(seed2))
+			})
+		})
+
+		Describe("#controllerRegistrationUpdate", func() {
+			It("should do nothing because the object key computation fails", func() {
+				obj := "foo"
+
+				controller.controllerRegistrationUpdate(ctx, nil, obj)
+
+				Expect(queue.Len()).To(BeZero())
+			})
+
+			It("should add the object to the queue", func() {
+				obj := &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: controllerRegistrationName,
+					},
+				}
+
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
+
+				controller.controllerRegistrationUpdate(ctx, nil, obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+			})
+		})
+
+		Describe("#controllerRegistrationDelete", func() {
+			It("should do nothing because the object key computation fails", func() {
+				obj := "foo"
+
+				controller.controllerRegistrationDelete(obj)
+
+				Expect(queue.Len()).To(BeZero())
+			})
+
+			It("should add the object to the queue (tomb stone)", func() {
+				obj := cache.DeletedFinalStateUnknown{
+					Key: controllerRegistrationName,
+				}
+
+				controller.controllerRegistrationDelete(obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+			})
+
+			It("should add the object to the queue", func() {
+				obj := &gardencorev1beta1.ControllerRegistration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: controllerRegistrationName,
+					},
+				}
+
+				controller.controllerRegistrationDelete(obj)
+
+				Expect(queue.Len()).To(Equal(1))
+				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
+			})
+		})
+	})
+
+	Describe("controllerRegistrationReconciler", func() {
+		const finalizerName = "core.gardener.cloud/controllerregistration"
+
+		var (
+			reconciler             reconcile.Reconciler
+			controllerRegistration *gardencorev1beta1.ControllerRegistration
+		)
+
+		BeforeEach(func() {
+			reconciler = NewControllerRegistrationReconciler(log, c)
+			controllerRegistration = &gardencorev1beta1.ControllerRegistration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            controllerRegistrationName,
+					ResourceVersion: "42",
+				},
+			}
+		})
+
+		It("should return nil because object not found", func() {
+			c.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return err because object reading failed", func() {
+			c.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).Return(fakeErr)
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).To(MatchError(fakeErr))
+		})
+
 		Context("deletion timestamp not set", func() {
+			BeforeEach(func() {
+				c.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerRegistration) error {
+					*obj = *controllerRegistration
+					return nil
+				})
+			})
+
 			It("should ensure the finalizer (error)", func() {
-				err := apierrors.NewNotFound(schema.GroupResource{}, controllerRegistrationName)
+				errToReturn := apierrors.NewNotFound(schema.GroupResource{}, controllerRegistrationName)
 
-				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).
-					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-						Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
-						return err
-					})
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
+					return errToReturn
+				})
 
-				Expect(d.Reconcile(obj)).To(HaveOccurred())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).To(MatchError(err))
 			})
 
 			It("should ensure the finalizer (no error)", func() {
-				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).
-					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-						Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
-						return nil
-					})
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
+					return nil
+				})
 
-				Expect(d.Reconcile(obj)).NotTo(HaveOccurred())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
 		Context("deletion timestamp set", func() {
 			BeforeEach(func() {
 				now := metav1.Now()
-				obj.DeletionTimestamp = &now
-				obj.Finalizers = []string{FinalizerName}
+				controllerRegistration.DeletionTimestamp = &now
+				controllerRegistration.Finalizers = []string{FinalizerName}
+
+				c.EXPECT().Get(ctx, kutil.Key(controllerRegistrationName), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.ControllerRegistration) error {
+					*obj = *controllerRegistration
+					return nil
+				})
 			})
 
 			It("should do nothing because finalizer is not present", func() {
-				obj.Finalizers = nil
+				controllerRegistration.Finalizers = nil
 
-				Expect(d.Reconcile(obj)).NotTo(HaveOccurred())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should return an error because installation list failed", func() {
-				err := errors.New("err")
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).Return(fakeErr)
 
-				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, nil, err)
-
-				Expect(d.Reconcile(obj)).To(Equal(err))
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).To(MatchError(fakeErr))
 			})
 
 			It("should return an error because installation referencing controllerRegistration exists", func() {
-				controllerInstallationList := []*gardencorev1beta1.ControllerInstallation{
-					{
-						Spec: gardencorev1beta1.ControllerInstallationSpec{
-							RegistrationRef: corev1.ObjectReference{
-								Name: controllerRegistrationName,
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
+					(&gardencorev1beta1.ControllerInstallationList{Items: []gardencorev1beta1.ControllerInstallation{
+						{
+							Spec: gardencorev1beta1.ControllerInstallationSpec{
+								RegistrationRef: corev1.ObjectReference{
+									Name: controllerRegistrationName,
+								},
 							},
 						},
-					},
-				}
+					}}).DeepCopyInto(obj)
+					return nil
+				})
 
-				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, controllerInstallationList, nil)
-
-				err := d.Reconcile(obj)
-				Expect(err.Error()).To(ContainSubstring("cannot remove finalizer"))
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).To(MatchError(ContainSubstring("cannot remove finalizer")))
 			})
 
 			It("should remove the finalizer (error)", func() {
-				err := errors.New("some err")
-				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, nil, nil)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
+					(&gardencorev1beta1.ControllerInstallationList{}).DeepCopyInto(obj)
+					return nil
+				})
 
-				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).
-					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-						Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
-						return err
-					})
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
+					return fakeErr
+				})
 
-				Expect(d.Reconcile(obj)).To(HaveOccurred())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).To(MatchError(fakeErr))
 			})
 
 			It("should remove the finalizer (no error)", func() {
-				d.controllerInstallationLister = newFakeControllerInstallationLister(d.controllerInstallationLister, nil, nil)
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallationList{})).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ControllerInstallationList, _ ...client.ListOption) error {
+					(&gardencorev1beta1.ControllerInstallationList{}).DeepCopyInto(obj)
+					return nil
+				})
 
-				k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).
-					DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-						Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
-						return nil
-					})
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistration{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					Expect(patch.Data(o)).To(BeEquivalentTo(`{"metadata":{"finalizers":null,"resourceVersion":"42"}}`))
+					return nil
+				})
 
-				Expect(d.Reconcile(obj)).NotTo(HaveOccurred())
+				result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: controllerRegistrationName}})
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

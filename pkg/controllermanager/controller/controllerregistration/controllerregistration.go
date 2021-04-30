@@ -16,20 +16,22 @@ package controllerregistration
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // FinalizerName is the finalizer used by this controller.
@@ -37,132 +39,117 @@ const FinalizerName = "core.gardener.cloud/controllerregistration"
 
 // Controller controls ControllerRegistration.
 type Controller struct {
-	clientMap clientmap.ClientMap
+	gardenClient client.Client
 
-	controllerRegistrationControl     ControlInterface
-	controllerRegistrationSeedControl RegistrationSeedControlInterface
-	seedControl                       SeedControlInterface
-
-	backupBucketSynced           cache.InformerSynced
-	backupEntrySynced            cache.InformerSynced
-	controllerInstallationSynced cache.InformerSynced
-	controllerRegistrationSynced cache.InformerSynced
-	seedSynced                   cache.InformerSynced
-	shootSynced                  cache.InformerSynced
-
-	backupBucketLister           gardencorelisters.BackupBucketLister
-	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
-	seedLister                   gardencorelisters.SeedLister
+	controllerRegistrationReconciler     reconcile.Reconciler
+	controllerRegistrationSeedReconciler reconcile.Reconciler
+	seedReconciler                       reconcile.Reconciler
+	hasSyncedFuncs                       []cache.InformerSynced
 
 	controllerRegistrationQueue     workqueue.RateLimitingInterface
 	controllerRegistrationSeedQueue workqueue.RateLimitingInterface
 	seedQueue                       workqueue.RateLimitingInterface
-
-	workerCh               chan int
-	numberOfRunningWorkers int
+	workerCh                        chan int
+	numberOfRunningWorkers          int
 }
 
 // NewController instantiates a new ControllerRegistration controller.
-func NewController(
-	clientMap clientmap.ClientMap,
-	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
-) *Controller {
-	var (
-		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
-		k8sCoreInformer    = kubeInformerFactory.Core().V1()
-
-		backupBucketInformer = gardenCoreInformer.BackupBuckets()
-		backupBucketLister   = backupBucketInformer.Lister()
-
-		backupEntryInformer = gardenCoreInformer.BackupEntries()
-
-		controllerRegistrationInformer = gardenCoreInformer.ControllerRegistrations()
-		controllerRegistrationLister   = controllerRegistrationInformer.Lister()
-
-		controllerInstallationInformer = gardenCoreInformer.ControllerInstallations()
-		controllerInstallationLister   = controllerInstallationInformer.Lister()
-
-		seedInformer = gardenCoreInformer.Seeds()
-		seedLister   = seedInformer.Lister()
-
-		shootInformer = gardenCoreInformer.Shoots()
-
-		secretInformer = k8sCoreInformer.Secrets()
-		secretLister   = secretInformer.Lister()
-
-		controllerRegistrationQueue     = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration")
-		controllerRegistrationSeedQueue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration-seed")
-		seedQueue                       = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed")
-	)
-
-	controller := &Controller{
-		clientMap: clientMap,
-
-		controllerRegistrationControl:     NewDefaultControllerRegistrationControl(clientMap, controllerInstallationLister),
-		controllerRegistrationSeedControl: NewDefaultControllerRegistrationSeedControl(clientMap, secretLister, backupBucketLister, controllerInstallationLister, controllerRegistrationLister, seedLister),
-		seedControl:                       NewDefaultSeedControl(clientMap, controllerInstallationLister),
-
-		backupBucketLister:           backupBucketLister,
-		controllerRegistrationLister: controllerRegistrationLister,
-		seedLister:                   seedLister,
-
-		controllerRegistrationQueue:     controllerRegistrationQueue,
-		controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
-		seedQueue:                       seedQueue,
-
-		workerCh: make(chan int),
+func NewController(ctx context.Context, clientMap clientmap.ClientMap) (*Controller, error) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
 	}
 
-	backupBucketInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	backupBucketInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupBucket{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
+	}
+	backupEntryInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
+	}
+	controllerInstallationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
+	}
+	controllerRegistrationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerRegistration{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ControllerRegistration Informer: %w", err)
+	}
+	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
+	}
+	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+	}
+
+	controller := &Controller{
+		gardenClient: gardenClient.Client(),
+
+		controllerRegistrationReconciler:     NewControllerRegistrationReconciler(logger.Logger, gardenClient.Client()),
+		controllerRegistrationSeedReconciler: NewControllerRegistrationSeedReconciler(logger.Logger, gardenClient),
+		seedReconciler:                       NewSeedReconciler(logger.Logger, gardenClient.Client()),
+
+		controllerRegistrationQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration"),
+		controllerRegistrationSeedQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration-seed"),
+		seedQueue:                       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
+		workerCh:                        make(chan int),
+	}
+
+	backupBucketInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.backupBucketAdd,
 		UpdateFunc: controller.backupBucketUpdate,
 		DeleteFunc: controller.backupBucketDelete,
 	})
-	controller.backupBucketSynced = backupBucketInformer.Informer().HasSynced
 
-	backupEntryInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	backupEntryInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.backupEntryAdd,
 		UpdateFunc: controller.backupEntryUpdate,
 		DeleteFunc: controller.backupEntryDelete,
 	})
-	controller.backupEntrySynced = backupEntryInformer.Informer().HasSynced
 
-	controllerRegistrationInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.controllerRegistrationAdd,
-		UpdateFunc: controller.controllerRegistrationUpdate,
+	controllerRegistrationInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    func(obj interface{}) { controller.controllerRegistrationAdd(ctx, obj) },
+		UpdateFunc: func(oldObj, newObj interface{}) { controller.controllerRegistrationUpdate(ctx, oldObj, newObj) },
 		DeleteFunc: controller.controllerRegistrationDelete,
 	})
-	controller.controllerRegistrationSynced = controllerRegistrationInformer.Informer().HasSynced
 
-	controllerInstallationInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	controllerInstallationInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.controllerInstallationAdd,
 		UpdateFunc: controller.controllerInstallationUpdate,
 	})
-	controller.controllerInstallationSynced = controllerInstallationInformer.Informer().HasSynced
 
-	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	seedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { controller.seedAdd(obj, true) },
 		UpdateFunc: controller.seedUpdate,
 		DeleteFunc: controller.seedDelete,
 	})
-	controller.seedSynced = seedInformer.Informer().HasSynced
 
-	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.shootAdd,
 		UpdateFunc: controller.shootUpdate,
 		DeleteFunc: controller.shootDelete,
 	})
-	controller.shootSynced = shootInformer.Informer().HasSynced
 
-	return controller
+	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs,
+		backupBucketInformer.HasSynced,
+		backupEntryInformer.HasSynced,
+		controllerRegistrationInformer.HasSynced,
+		controllerInstallationInformer.HasSynced,
+		seedInformer.HasSynced,
+		shootInformer.HasSynced,
+	)
+
+	return controller, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.backupBucketSynced, c.backupEntrySynced, c.controllerRegistrationSynced, c.controllerInstallationSynced, c.seedSynced, c.shootSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -177,9 +164,9 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("ControllerRegistration controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.controllerRegistrationQueue, "ControllerRegistration", c.reconcileControllerRegistrationKey, &waitGroup, c.workerCh)
-		controllerutils.DeprecatedCreateWorker(ctx, c.controllerRegistrationSeedQueue, "ControllerRegistration-Seed", c.reconcileControllerRegistrationSeedKey, &waitGroup, c.workerCh)
-		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.controllerRegistrationQueue, "ControllerRegistration", c.controllerRegistrationReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.controllerRegistrationSeedQueue, "ControllerRegistration-Seed", c.controllerRegistrationSeedReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.seedReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

@@ -177,37 +177,50 @@ func ReadGardenSecrets(ctx context.Context, rd client.Reader, seedLister gardenc
 			}
 			return secrets.Items, nil
 		},
-		seedLister,
+		func(_ context.Context) ([]*gardencorev1beta1.Seed, error) {
+			return seedLister.List(labels.Everything())
+		},
 		namespace,
 	)
 }
 
-// ReadGardenSecretsFromLister reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
+// ReadGardenSecretsFromReader reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
-func ReadGardenSecretsFromLister(ctx context.Context, secretLister kubecorev1listers.SecretLister, seedLister gardencorelisters.SeedLister, namespace string) (map[string]*corev1.Secret, error) {
+func ReadGardenSecretsFromReader(ctx context.Context, rd client.Reader, namespace string) (map[string]*corev1.Secret, error) {
 	return readGardenSecretsFromCache(
 		ctx,
 		func(ctx context.Context, namespace string, selector labels.Selector) ([]corev1.Secret, error) {
-			secrets, err := secretLister.Secrets(namespace).List(selector)
-			if err != nil {
+			secretList := &corev1.SecretList{}
+			if err := rd.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
 				return nil, err
 			}
-			secretsCopy := make([]corev1.Secret, 0, len(secrets))
-			for _, secret := range secrets {
-				secretsCopy = append(secretsCopy, *secret.DeepCopy())
-			}
-			return secretsCopy, nil
+
+			return secretList.Items, nil
 		},
-		seedLister,
+		func(ctx context.Context) ([]*gardencorev1beta1.Seed, error) {
+			seedList := &gardencorev1beta1.SeedList{}
+			if err := rd.List(ctx, seedList); err != nil {
+				return nil, err
+			}
+
+			out := make([]*gardencorev1beta1.Seed, 0, len(seedList.Items))
+			for _, seed := range seedList.Items {
+				out = append(out, seed.DeepCopy())
+			}
+			return out, nil
+		},
 		namespace,
 	)
 }
 
-type listSecretsFunc func(ctx context.Context, namespace string, selector labels.Selector) ([]corev1.Secret, error)
+type (
+	listSecretsFunc func(ctx context.Context, namespace string, selector labels.Selector) ([]corev1.Secret, error)
+	listSeedsFunc   func(ctx context.Context) ([]*gardencorev1beta1.Seed, error)
+)
 
 var gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
 
-func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFunc, seedLister gardencorelisters.SeedLister, namespace string) (map[string]*corev1.Secret, error) {
+func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFunc, seedLister listSeedsFunc, namespace string) (map[string]*corev1.Secret, error) {
 	var (
 		logInfo                             []string
 		secretsMap                          = make(map[string]*corev1.Secret)
@@ -285,7 +298,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 	}
 
 	// Check if an internal domain secret is required
-	seeds, err := seedLister.List(labels.Everything())
+	seeds, err := seedLister(ctx)
 	if err != nil {
 		return nil, err
 	}

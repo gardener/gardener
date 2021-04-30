@@ -24,10 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -42,121 +39,84 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
-	corev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (c *Controller) reconcileControllerRegistrationSeedKey(key string) error {
-	_, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return err
+// NewControllerRegistrationSeedReconciler creates a new instance of a reconciler which determines which
+// ControllerRegistrations are required for a seed.
+func NewControllerRegistrationSeedReconciler(logger logrus.FieldLogger, gardenClient kubernetes.Interface) reconcile.Reconciler {
+	return &controllerRegistrationSeedReconciler{
+		logger:       logger,
+		gardenClient: gardenClient,
 	}
-
-	seed, err := c.seedLister.Get(name)
-	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[CONTROLLERREGISTRATION SEED RECONCILE] %s - skipping because Seed has been deleted", key)
-		return nil
-	}
-	if err != nil {
-		logger.Logger.Infof("[CONTROLLERREGISTRATION SEED RECONCILE] %s - unable to retrieve object from store: %v", key, err)
-		return err
-	}
-
-	return c.controllerRegistrationSeedControl.Reconcile(seed)
 }
 
-// RegistrationSeedControlInterface implements the control logic for updating Seeds. It is implemented as an interface to allow
-// for extensions that provide different semantics. Currently, there is only one implementation.
-type RegistrationSeedControlInterface interface {
-	Reconcile(*gardencorev1beta1.Seed) error
+type controllerRegistrationSeedReconciler struct {
+	logger       logrus.FieldLogger
+	gardenClient kubernetes.Interface
 }
 
-// NewDefaultControllerRegistrationSeedControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for Seeds. You should use an instance returned from NewDefaultControllerRegistrationSeedControl()
-// for any scenario other than testing.
-func NewDefaultControllerRegistrationSeedControl(
-	clientMap clientmap.ClientMap,
-	secretLister corev1listers.SecretLister,
-	backupBucketLister gardencorelisters.BackupBucketLister,
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister,
-	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister,
-	seedLister gardencorelisters.SeedLister,
-) RegistrationSeedControlInterface {
-	return &defaultControllerRegistrationSeedControl{clientMap, secretLister, backupBucketLister, controllerInstallationLister, controllerRegistrationLister, seedLister}
-}
-
-type defaultControllerRegistrationSeedControl struct {
-	clientMap                    clientmap.ClientMap
-	secretLister                 corev1listers.SecretLister
-	backupBucketLister           gardencorelisters.BackupBucketLister
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister
-	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
-	seedLister                   gardencorelisters.SeedLister
-}
-
-// Reconcile reconciles the ControllerInstallations for given Seed object. It computes the desired list of
-// ControllerInstallations, deploys them, and deletes all other potentially existing installation objects.
-func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1beta1.Seed) error {
-	var (
-		ctx    = context.TODO()
-		seed   = obj.DeepCopy()
-		logger = logger.NewFieldLogger(logger.Logger, "controllerregistration-seed", seed.Name)
-	)
-
-	logger.Infof("[CONTROLLERINSTALLATION SEED] Reconciling %s", seed.Name)
-
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
+func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	seed := &gardencorev1beta1.Seed{}
+	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			return reconcile.Result{}, nil
+		}
+		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+		return reconcile.Result{}, err
 	}
 
-	controllerRegistrationList, err := c.controllerRegistrationLister.List(labels.Everything())
-	if err != nil {
-		return err
+	logger := logger.NewFieldLogger(r.logger, "controllerregistration-seed", seed.Name)
+	logger.Info("[CONTROLLERINSTALLATION SEED] Reconciling")
+
+	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
+	if err := r.gardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
+		return reconcile.Result{}, err
 	}
+
 	// Live lookup to prevent working on a stale cache and trying to create multiple installations for the same
 	// registration/seed combination.
-	controllerInstallationList, err := gardenClient.GardenCore().CoreV1beta1().ControllerInstallations().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	backupBucketList, err := c.backupBucketLister.List(labels.Everything())
-	if err != nil {
-		return err
-	}
-	backupEntryList, err := gardenClient.GardenCore().CoreV1beta1().BackupEntries(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{core.BackupEntrySeedName: seed.Name}).String(),
-	})
-	if err != nil {
-		return err
+	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+	if err := r.gardenClient.APIReader().List(ctx, controllerInstallationList); err != nil {
+		return reconcile.Result{}, err
 	}
 
-	shootList, err := getShoots(ctx, gardenClient.GardenCore(), seed)
-	if err != nil {
-		return err
+	backupBucketList := &gardencorev1beta1.BackupBucketList{}
+	if err := r.gardenClient.Client().List(ctx, backupBucketList); err != nil {
+		return reconcile.Result{}, err
 	}
 
-	secrets, err := gardenpkg.ReadGardenSecretsFromLister(ctx, c.secretLister, c.seedLister, gardenerutils.ComputeGardenNamespace(seed.Name))
+	backupEntryList := &gardencorev1beta1.BackupEntryList{}
+	if err := r.gardenClient.APIReader().List(ctx, backupEntryList, client.MatchingFields{core.BackupEntrySeedName: seed.Name}); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	shootList, err := getShoots(ctx, r.gardenClient.APIReader(), seed)
 	if err != nil {
-		return err
+		return reconcile.Result{}, err
+	}
+
+	secrets, err := gardenpkg.ReadGardenSecretsFromReader(ctx, r.gardenClient.Client(), gardenerutils.ComputeGardenNamespace(seed.Name))
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
 	if len(secrets) < 1 {
-		return fmt.Errorf("garden secrets for seed %q have not been synchronized yet", seed.Name)
+		return reconcile.Result{}, fmt.Errorf("garden secrets for seed %q have not been synchronized yet", seed.Name)
 	}
 
 	internalDomain, err := gardenpkg.GetInternalDomain(secrets)
 	if err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 	defaultDomains, err := gardenpkg.GetDefaultDomains(secrets)
 	if err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
 	var (
@@ -164,7 +124,7 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 
 		wantedKindTypeCombinationForBackupBuckets, buckets = computeKindTypesForBackupBuckets(backupBucketList, seed.Name)
 		wantedKindTypeCombinationForBackupEntries          = computeKindTypesForBackupEntries(logger, backupEntryList, buckets, seed.Name)
-		wantedKindTypeCombinationForShoots                 = computeKindTypesForShoots(ctx, logger, gardenClient.Client(), shootList, seed, controllerRegistrationList, internalDomain, defaultDomains)
+		wantedKindTypeCombinationForShoots                 = computeKindTypesForShoots(ctx, logger, r.gardenClient.Client(), shootList, seed, controllerRegistrationList, internalDomain, defaultDomains)
 		wantedKindTypeCombinationForSeed                   = computeKindTypesForSeed(seed)
 
 		wantedKindTypeCombinations = sets.
@@ -177,32 +137,40 @@ func (c *defaultControllerRegistrationSeedControl) Reconcile(obj *gardencorev1be
 
 	wantedControllerRegistrationNames, err := computeWantedControllerRegistrationNames(wantedKindTypeCombinations, controllerInstallationList, controllerRegistrations, len(shootList), seed.ObjectMeta)
 	if err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
 	registrationNameToInstallationName, err := computeRegistrationNameToInstallationNameMap(controllerInstallationList, controllerRegistrations, seed.Name)
 	if err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
-	if err := deployNeededInstallations(ctx, logger, gardenClient.Client(), seed, wantedControllerRegistrationNames, controllerRegistrations, registrationNameToInstallationName); err != nil {
-		return err
+	if err := deployNeededInstallations(ctx, logger, r.gardenClient.Client(), seed, wantedControllerRegistrationNames, controllerRegistrations, registrationNameToInstallationName); err != nil {
+		return reconcile.Result{}, err
 	}
-	return deleteUnneededInstallations(ctx, logger, gardenClient.Client(), wantedControllerRegistrationNames, registrationNameToInstallationName)
+
+	if err := deleteUnneededInstallations(ctx, logger, r.gardenClient.Client(), wantedControllerRegistrationNames, registrationNameToInstallationName); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
 }
 
 // computeKindTypesForBackupBucket computes the list of wanted kind/type combinations for extension resources based on the
 // the list of existing BackupBucket resources.
 func computeKindTypesForBackupBuckets(
-	backupBucketList []*gardencorev1beta1.BackupBucket,
+	backupBucketList *gardencorev1beta1.BackupBucketList,
 	seedName string,
-) (sets.String, map[string]*gardencorev1beta1.BackupBucket) {
+) (
+	sets.String,
+	map[string]gardencorev1beta1.BackupBucket,
+) {
 	var (
 		wantedKindTypeCombinations = sets.NewString()
-		buckets                    = make(map[string]*gardencorev1beta1.BackupBucket)
+		buckets                    = make(map[string]gardencorev1beta1.BackupBucket)
 	)
 
-	for _, backupBucket := range backupBucketList {
+	for _, backupBucket := range backupBucketList.Items {
 		buckets[backupBucket.Name] = backupBucket
 
 		if backupBucket.Spec.SeedName == nil || *backupBucket.Spec.SeedName != seedName {
@@ -220,7 +188,7 @@ func computeKindTypesForBackupBuckets(
 func computeKindTypesForBackupEntries(
 	logger *logrus.Entry,
 	backupEntryList *gardencorev1beta1.BackupEntryList,
-	buckets map[string]*gardencorev1beta1.BackupBucket,
+	buckets map[string]gardencorev1beta1.BackupBucket,
 	seedName string,
 ) sets.String {
 	wantedKindTypeCombinations := sets.NewString()
@@ -250,7 +218,7 @@ func computeKindTypesForShoots(
 	client client.Client,
 	shootList []gardencorev1beta1.Shoot,
 	seed *gardencorev1beta1.Seed,
-	controllerRegistrationList []*gardencorev1beta1.ControllerRegistration,
+	controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList,
 	internalDomain *gardenpkg.Domain,
 	defaultDomains []*gardenpkg.Domain,
 ) sets.String {
@@ -320,10 +288,10 @@ type controllerRegistration struct {
 // *gardencorev1beta1.ControllerRegistration object. It also specifies whether the ControllerRegistration shall be
 // always deployed.
 func computeControllerRegistrationMaps(
-	controllerRegistrationList []*gardencorev1beta1.ControllerRegistration,
+	controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList,
 ) map[string]controllerRegistration {
 	var out = make(map[string]controllerRegistration)
-	for _, cr := range controllerRegistrationList {
+	for _, cr := range controllerRegistrationList.Items {
 		out[cr.Name] = controllerRegistration{
 			obj:                        cr.DeepCopy(),
 			deployAlways:               cr.Spec.Deployment != nil && cr.Spec.Deployment.Policy != nil && *cr.Spec.Deployment.Policy == gardencorev1beta1.ControllerDeploymentPolicyAlways,
@@ -343,7 +311,10 @@ func computeWantedControllerRegistrationNames(
 	controllerRegistrations map[string]controllerRegistration,
 	numberOfShoots int,
 	seedObjectMeta metav1.ObjectMeta,
-) (sets.String, error) {
+) (
+	sets.String,
+	error,
+) {
 	var (
 		kindTypeToControllerRegistrationNames = make(map[string][]string)
 		wantedControllerRegistrationNames     = sets.NewString()
@@ -398,7 +369,10 @@ func computeRegistrationNameToInstallationNameMap(
 	controllerInstallationList *gardencorev1beta1.ControllerInstallationList,
 	controllerRegistrations map[string]controllerRegistration,
 	seedName string,
-) (map[string]string, error) {
+) (
+	map[string]string,
+	error,
+) {
 	registrationNameToInstallationName := make(map[string]string)
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
@@ -584,26 +558,18 @@ func controllerRegistrationNamesWithMatchingSeedLabelSelector(
 	return matchingNames, nil
 }
 
-func getShoots(ctx context.Context, g gardencoreclientset.Interface, seed *gardencorev1beta1.Seed) ([]gardencorev1beta1.Shoot, error) {
-	var (
-		shootList  *gardencorev1beta1.ShootList
-		shootList2 *gardencorev1beta1.ShootList
-		err        error
-	)
-
-	if shootList, err = g.CoreV1beta1().Shoots(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{core.ShootSeedName: seed.Name}).String(),
-	}); err != nil {
+func getShoots(ctx context.Context, c client.Reader, seed *gardencorev1beta1.Seed) ([]gardencorev1beta1.Shoot, error) {
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := c.List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {
 		return nil, err
 	}
-
-	if shootList2, err = g.CoreV1beta1().Shoots(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
-		FieldSelector: fields.SelectorFromSet(fields.Set{core.ShootStatusSeedName: seed.Name}).String(),
-	}); err != nil {
-		return nil, err
-	}
-
 	shootListAsItems := gardencorev1beta1helper.ShootItems(*shootList)
+
+	shootList2 := &gardencorev1beta1.ShootList{}
+	if err := c.List(ctx, shootList2, client.MatchingFields{core.ShootStatusSeedName: seed.Name}); err != nil {
+		return nil, err
+	}
 	shootListAsItems2 := gardencorev1beta1helper.ShootItems(*shootList2)
+
 	return shootListAsItems.Union(&shootListAsItems2), nil
 }
