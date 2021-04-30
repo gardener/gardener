@@ -59,8 +59,7 @@ func (c *Controller) prepareShootForMigration(ctx context.Context, logger *logru
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventPrepareMigration, "Prepare Shoot cluster for migration")
 	shootNamespace := shootpkg.ComputeTechnicalID(project.Name, shoot)
-	shoot, err = c.updateShootStatusOperationStart(ctx, gardenClient.GardenCore(), shoot, shootNamespace, gardencorev1beta1.LastOperationTypeMigrate)
-	if err != nil {
+	if err = c.updateShootStatusOperationStart(ctx, gardenClient.Client(), shoot, shootNamespace, gardencorev1beta1.LastOperationTypeMigrate); err != nil {
 		return reconcile.Result{}, err
 	}
 

@@ -344,8 +344,7 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, gard
 	// Trigger regular shoot deletion flow.
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting Shoot cluster")
 	shootNamespace := shootpkg.ComputeTechnicalID(project.Name, shoot)
-	shoot, err = c.updateShootStatusOperationStart(ctx, gardenClient.GardenCore(), shoot, shootNamespace, operationType)
-	if err != nil {
+	if err = c.updateShootStatusOperationStart(ctx, gardenClient.Client(), shoot, shootNamespace, operationType); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -404,6 +403,7 @@ func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, g
 		alreadyReconciledDuringThisTimeWindow      = gutil.LastReconciliationDuringThisTimeWindow(shoot)
 		regularReconciliationIsDue                 = isUpToDate && isNowInEffectiveShootMaintenanceTimeWindow && !alreadyReconciledDuringThisTimeWindow
 		reconcileAllowed                           = !failedOrIgnored && ((!reconcileInMaintenanceOnly && !confineSpecUpdateRollout(shoot.Spec.Maintenance)) || !isUpToDate || (isNowInEffectiveShootMaintenanceTimeWindow && !alreadyReconciledDuringThisTimeWindow))
+		err                                        error
 	)
 
 	if !controllerutil.ContainsFinalizer(shoot, gardencorev1beta1.GardenerName) {
@@ -452,8 +452,7 @@ func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, g
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling Shoot cluster state")
 	shootNamespace := shootpkg.ComputeTechnicalID(project.Name, shoot)
-	shoot, err := c.updateShootStatusOperationStart(ctx, gardenClient.GardenCore(), shoot, shootNamespace, operationType)
-	if err != nil {
+	if err := c.updateShootStatusOperationStart(ctx, gardenClient.Client(), shoot, shootNamespace, operationType); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -545,7 +544,7 @@ func (c *Controller) updateShootStatusAndRequeueOnSyncError(ctx context.Context,
 	}, nil
 }
 
-func (c *Controller) updateShootStatusOperationStart(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot, shootNamespace string, operationType gardencorev1beta1.LastOperationType) (*gardencorev1beta1.Shoot, error) {
+func (c *Controller) updateShootStatusOperationStart(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot, shootNamespace string, operationType gardencorev1beta1.LastOperationType) error {
 	var (
 		now                   = metav1.NewTime(time.Now().UTC())
 		operationTypeSwitched bool
@@ -570,36 +569,34 @@ func (c *Controller) updateShootStatusOperationStart(ctx context.Context, g gard
 		operationTypeSwitched = shoot.Status.LastOperation != nil && shoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeDelete
 	}
 
-	return kutil.TryUpdateShootStatus(ctx, g, retry.DefaultRetry, shoot.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			if shoot.Status.RetryCycleStartTime == nil ||
-				shoot.Generation != shoot.Status.ObservedGeneration ||
-				shoot.Status.Gardener.Version != version.Get().GitVersion ||
-				operationTypeSwitched {
+	if shoot.Status.RetryCycleStartTime == nil ||
+		shoot.Generation != shoot.Status.ObservedGeneration ||
+		shoot.Status.Gardener.Version != version.Get().GitVersion ||
+		operationTypeSwitched {
 
-				shoot.Status.RetryCycleStartTime = &now
-			}
+		shoot.Status.RetryCycleStartTime = &now
+	}
 
-			if len(shoot.Status.TechnicalID) == 0 {
-				shoot.Status.TechnicalID = shootNamespace
-			}
+	if len(shoot.Status.TechnicalID) == 0 {
+		shoot.Status.TechnicalID = shootNamespace
+	}
 
-			if !equality.Semantic.DeepEqual(shoot.Status.SeedName, shoot.Spec.SeedName) && operationType != gardencorev1beta1.LastOperationTypeMigrate {
-				shoot.Status.SeedName = shoot.Spec.SeedName
-			}
+	if !equality.Semantic.DeepEqual(shoot.Status.SeedName, shoot.Spec.SeedName) && operationType != gardencorev1beta1.LastOperationTypeMigrate {
+		shoot.Status.SeedName = shoot.Spec.SeedName
+	}
 
-			shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
-			shoot.Status.Gardener = *c.identity
-			shoot.Status.ObservedGeneration = shoot.Generation
-			shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				Type:           operationType,
-				State:          gardencorev1beta1.LastOperationStateProcessing,
-				Progress:       0,
-				Description:    description,
-				LastUpdateTime: now,
-			}
-			return shoot, nil
-		})
+	shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
+	shoot.Status.Gardener = *c.identity
+	shoot.Status.ObservedGeneration = shoot.Generation
+	shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		Type:           operationType,
+		State:          gardencorev1beta1.LastOperationStateProcessing,
+		Progress:       0,
+		Description:    description,
+		LastUpdateTime: now,
+	}
+
+	return gardenClient.Status().Update(ctx, shoot)
 }
 
 func (c *Controller) updateShootStatusOperationSuccess(
