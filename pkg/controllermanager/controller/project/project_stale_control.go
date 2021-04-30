@@ -22,7 +22,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -30,8 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -169,17 +166,8 @@ func (r *projectStaleReconciler) projectInUseDueToBackupEntries(ctx context.Cont
 }
 
 func (r *projectStaleReconciler) projectInUseDueToSecrets(ctx context.Context, namespace string) (bool, error) {
-	var (
-		noControlPlaneSecretsReq = utils.MustNewRequirement(
-			v1beta1constants.GardenRole,
-			selection.NotIn,
-			v1beta1constants.ControlPlaneSecretRoles...,
-		)
-		uncontrolledSecretSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noControlPlaneSecretsReq)}
-	)
-
 	secretList := &corev1.SecretList{}
-	if err := r.gardenClient.List(ctx, secretList, client.InNamespace(namespace), uncontrolledSecretSelector); err != nil {
+	if err := r.gardenClient.List(ctx, secretList, client.InNamespace(namespace), gutil.UncontrolledSecretSelector); err != nil {
 		return false, err
 	}
 

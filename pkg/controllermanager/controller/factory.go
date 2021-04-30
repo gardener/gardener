@@ -42,13 +42,11 @@ import (
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
-	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1informers "k8s.io/client-go/informers/core/v1"
@@ -77,17 +75,6 @@ func NewGardenControllerFactory(clientMap clientmap.ClientMap, kubeInformerFacto
 	}
 }
 
-var (
-	noControlPlaneSecretsReq = utils.MustNewRequirement(
-		v1beta1constants.GardenRole,
-		selection.NotIn,
-		v1beta1constants.ControlPlaneSecretRoles...,
-	)
-
-	// uncontrolledSecretSelector is a selector for objects which are managed by operators/users and not created Gardener controllers.
-	uncontrolledSecretSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noControlPlaneSecretsReq)}
-)
-
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
@@ -106,14 +93,14 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	// create separate informer for configuration secrets
 	f.k8sInformers.InformerFor(&corev1.Secret{}, func(client kubernetes.Interface, sync time.Duration) cache.SharedIndexInformer {
 		secretInformer := kubecorev1informers.NewFilteredSecretInformer(client, metav1.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, func(opts *metav1.ListOptions) {
-			opts.LabelSelector = uncontrolledSecretSelector.String()
+			opts.LabelSelector = gutil.UncontrolledSecretSelector.String()
 		})
 		return secretInformer
 	})
 
 	// Delete legacy (and meanwhile unused) ConfigMap after https://github.com/gardener/gardener/pull/3756.
 	// TODO: This code can be removed in a future release.
-	if err := kutil.DeleteObject(ctx, k8sGardenClient.Client(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-controller-manager-internal-config", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
+	if err := kutil.DeleteObject(ctx, k8sGardenClient.Client(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gutil-controller-manager-internal-config", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
 		return err
 	}
 

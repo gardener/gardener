@@ -50,13 +50,8 @@ var _ = Describe("SeedReconciler", func() {
 		ctx  = context.TODO()
 		ctrl *gomock.Controller
 
-		gardenRoleReq            = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
-		noControlPlaneSecretsReq = utils.MustNewRequirement(
-			v1beta1constants.GardenRole,
-			selection.NotIn,
-			v1beta1constants.ControlPlaneSecretRoles...,
-		)
-		labelSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(gardenRoleReq).Add(noControlPlaneSecretsReq)}
+		gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
+		labelSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(gardenRoleReq).Add(gardenerutils.NoControlPlaneSecretsReq)}
 	)
 
 	BeforeEach(func() {
