@@ -16,6 +16,8 @@
 
 source $(dirname "${0}")/common/helpers
 
+kubeconfig="$KUBECONFIG"
+
 if [[ $(k8s_env) == "$NODELESS" ]]; then
   kubeconfig="$(dirname $0)/local-garden/kubeconfigs/gardener-apiserver.conf"
 else

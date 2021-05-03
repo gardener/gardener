@@ -16,6 +16,8 @@
 
 source $(dirname "${0}")/common/helpers
 
+kubeconfig="$KUBECONFIG"
+
 if [[ $(k8s_env) == "$NODELESS" ]]; then
   kubeconfig="$(dirname $0)/local-garden/kubeconfigs/gardener-scheduler.conf"
 else
@@ -24,7 +26,7 @@ else
   trap cleanup_kubeconfig EXIT
 fi
 
-KUBECONFIG="${KUBECONFIG:-$kubeconfig}" GO111MODULE=on \
+KUBECONFIG="$kubeconfig" GO111MODULE=on \
     go run \
       -mod=vendor \
       -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
