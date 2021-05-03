@@ -16,6 +16,7 @@ package bootstrap_test
 
 import (
 	"context"
+	"crypto/x509/pkix"
 	"time"
 
 	"github.com/golang/mock/gomock"
@@ -28,10 +29,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authentication/serviceaccount"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/testing"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -40,10 +43,12 @@ import (
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/bootstrap"
+	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/certificate"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Bootstrap", func() {
@@ -74,13 +79,14 @@ var _ = Describe("Bootstrap", func() {
 		var (
 			seedName = "test"
 
+			kubeClient            *fake.Clientset
 			bootstrapClientConfig *rest.Config
 
 			gardenClientConnection *config.GardenClientConnection
 
 			approvedCSR = certificatesv1.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "watched-csr",
+					Name: "approved-csr",
 				},
 				Status: certificatesv1.CertificateSigningRequestStatus{
 					Conditions: []certificatesv1.CertificateSigningRequestCondition{
@@ -94,12 +100,25 @@ var _ = Describe("Bootstrap", func() {
 
 			deniedCSR = certificatesv1.CertificateSigningRequest{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "watched-csr",
+					Name: "denied-csr",
 				},
 				Status: certificatesv1.CertificateSigningRequestStatus{
 					Conditions: []certificatesv1.CertificateSigningRequestCondition{
 						{
 							Type: certificatesv1.CertificateDenied,
+						},
+					},
+				},
+			}
+
+			failedCSR = certificatesv1.CertificateSigningRequest{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "failed-csr",
+				},
+				Status: certificatesv1.CertificateSigningRequestStatus{
+					Conditions: []certificatesv1.CertificateSigningRequestCondition{
+						{
+							Type: certificatesv1.CertificateFailed,
 						},
 					},
 				},
@@ -117,6 +136,29 @@ var _ = Describe("Bootstrap", func() {
 				Namespace: "garden",
 			}
 
+			kubeClient = fake.NewSimpleClientset()
+			kubeClient.Fake = testing.Fake{Resources: []*metav1.APIResourceList{
+				{
+					GroupVersion: "v1",
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "certificatesigningrequests",
+							Namespaced: true,
+							Group:      certificatesv1.GroupName,
+							Version:    certificatesv1.SchemeGroupVersion.Version,
+							Kind:       "CertificateSigningRequest",
+						},
+						{
+							Name:       "certificatesigningrequests",
+							Namespaced: true,
+							Group:      certificatesv1beta1.GroupName,
+							Version:    certificatesv1beta1.SchemeGroupVersion.Version,
+							Kind:       "CertificateSigningRequest",
+						},
+					},
+				},
+			}}
+
 			// gardenClientConnection with required bootstrap secret kubeconfig secret
 			// in a non-test environment we would use two different secrets
 			gardenClientConnection = &config.GardenClientConnection{
@@ -129,13 +171,20 @@ var _ = Describe("Bootstrap", func() {
 				Insecure: false,
 				CAFile:   "filepath",
 			}}
-
 		})
 
 		It("should not return an error", func() {
+			defer test.WithVar(&certificate.DigestedName, func(interface{}, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+				return approvedCSR.Name, nil
+			})()
+
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+				return true, &approvedCSR, nil
+			})
+
 			bootstrapClientSet := fakeclientset.NewClientSetBuilder().
 				WithRESTConfig(bootstrapClientConfig).
-				WithKubernetes(fake.NewSimpleClientset(&approvedCSR)).
+				WithKubernetes(kubeClient).
 				Build()
 
 			seedClient.EXPECT().Get(ctx, kutil.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
@@ -165,13 +214,39 @@ var _ = Describe("Bootstrap", func() {
 		})
 
 		It("should return an error - the CSR got denied", func() {
+			defer test.WithVar(&certificate.DigestedName, func(interface{}, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+				return deniedCSR.Name, nil
+			})()
+
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+				return true, &deniedCSR, nil
+			})
+
 			bootstrapClientSet := fakeclientset.NewClientSetBuilder().
 				WithRESTConfig(bootstrapClientConfig).
-				WithKubernetes(fake.NewSimpleClientset(&deniedCSR)).
+				WithKubernetes(kubeClient).
 				Build()
 
 			_, _, _, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClientSet, gardenClientConnection, seedName, "my-cluster")
-			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("request is denied")))
+		})
+
+		It("should return an error - the CSR failed", func() {
+			defer test.WithVar(&certificate.DigestedName, func(interface{}, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+				return failedCSR.Name, nil
+			})()
+
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+				return true, &failedCSR, nil
+			})
+
+			bootstrapClientSet := fakeclientset.NewClientSetBuilder().
+				WithRESTConfig(bootstrapClientConfig).
+				WithKubernetes(kubeClient).
+				Build()
+
+			_, _, _, err := RequestBootstrapKubeconfig(ctx, testLogger, seedClient, bootstrapClientSet, gardenClientConnection, seedName, "my-cluster")
+			Expect(err).To(MatchError(ContainSubstring("request failed")))
 		})
 	})
 

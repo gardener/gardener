@@ -26,25 +26,29 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	mock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Certificates", func() {
@@ -75,7 +79,7 @@ var _ = Describe("Certificates", func() {
 
 		approvedCSR = certificatesv1.CertificateSigningRequest{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "watched-csr",
+				Name: "approved-csr",
 			},
 			Status: certificatesv1.CertificateSigningRequestStatus{
 				Conditions: []certificatesv1.CertificateSigningRequestCondition{
@@ -89,12 +93,25 @@ var _ = Describe("Certificates", func() {
 
 		deniedCSR = certificatesv1.CertificateSigningRequest{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "watched-csr",
+				Name: "denied-csr",
 			},
 			Status: certificatesv1.CertificateSigningRequestStatus{
 				Conditions: []certificatesv1.CertificateSigningRequestCondition{
 					{
 						Type: certificatesv1.CertificateDenied,
+					},
+				},
+			},
+		}
+
+		failedCSR = certificatesv1.CertificateSigningRequest{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "failed-csr",
+			},
+			Status: certificatesv1.CertificateSigningRequestStatus{
+				Conditions: []certificatesv1.CertificateSigningRequestCondition{
+					{
+						Type: certificatesv1.CertificateFailed,
 					},
 				},
 			},
@@ -114,21 +131,48 @@ var _ = Describe("Certificates", func() {
 	})
 
 	Describe("#rotateCertificate", func() {
-		var certificateSubject = pkix.Name{
-			CommonName: x509CommonName,
-		}
+		var (
+			certificateSubject = pkix.Name{CommonName: x509CommonName}
+			kubeClient         *fake.Clientset
+		)
 
 		BeforeEach(func() {
 			mockGardenInterface = mock.NewMockInterface(ctrl)
 			mockGardenClient = mockclient.NewMockClient(ctrl)
 			mockGardenInterface.EXPECT().Client().Return(mockGardenClient).AnyTimes()
 
+			kubeClient = fake.NewSimpleClientset()
+			kubeClient.Fake = testing.Fake{Resources: []*metav1.APIResourceList{
+				{
+					GroupVersion: "v1",
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "certificatesigningrequests",
+							Namespaced: true,
+							Group:      certificatesv1.GroupName,
+							Version:    certificatesv1.SchemeGroupVersion.Version,
+							Kind:       "CertificateSigningRequest",
+						},
+						{
+							Name:       "certificatesigningrequests",
+							Namespaced: true,
+							Group:      certificatesv1beta1.GroupName,
+							Version:    certificatesv1beta1.SchemeGroupVersion.Version,
+							Kind:       "CertificateSigningRequest",
+						},
+					},
+				},
+			}}
 		})
 
 		It("should not return an error", func() {
-			// simple Kubernetes client that returns an approved CSR when requested (with watch support)
-			// no mock Kubernetes client available that could be easily used
-			kubeClient := fake.NewSimpleClientset(&approvedCSR)
+			defer test.WithVar(&DigestedName, func(interface{}, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+				return approvedCSR.Name, nil
+			})()
+
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+				return true, &approvedCSR, nil
+			})
 			mockGardenInterface.EXPECT().Kubernetes().Return(kubeClient)
 
 			// mock gardenClient.RESTConfig()
@@ -157,25 +201,57 @@ var _ = Describe("Certificates", func() {
 		})
 
 		It("should return an error - CSR is denied", func() {
-			kubeClient := fake.NewSimpleClientset(&deniedCSR)
+			defer test.WithVar(&DigestedName, func(interface{}, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+				return deniedCSR.Name, nil
+			})()
+
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+				return true, &deniedCSR, nil
+			})
+
 			mockGardenInterface.EXPECT().Kubernetes().Return(kubeClient)
 			fakeClientMap := fakeclientmap.NewClientMap().
 				AddClient(keys.ForGarden(), mockGardenInterface).
 				AddClient(keys.ForSeed(seed), mockSeedInterface)
 
 			err := rotateCertificate(ctx, log, fakeClientMap, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
-			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("request is denied")))
+		})
+
+		It("should return an error - CSR is failed", func() {
+			defer test.WithVar(&DigestedName, func(interface{}, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+				return failedCSR.Name, nil
+			})()
+
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+				return true, &failedCSR, nil
+			})
+
+			mockGardenInterface.EXPECT().Kubernetes().Return(kubeClient)
+			fakeClientMap := fakeclientmap.NewClientMap().
+				AddClient(keys.ForGarden(), mockGardenInterface).
+				AddClient(keys.ForSeed(seed), mockSeedInterface)
+
+			err := rotateCertificate(ctx, log, fakeClientMap, mockSeedClient, gardenClientConnection, &certificateSubject, []string{}, []net.IP{})
+			Expect(err).To(MatchError(ContainSubstring("request failed")))
 		})
 
 		It("should return an error - the CN of the x509 cert to be rotated is not set", func() {
-			kubeClient := fake.NewSimpleClientset(&deniedCSR)
+			defer test.WithVar(&DigestedName, func(interface{}, *pkix.Name, []certificatesv1.KeyUsage) (string, error) {
+				return deniedCSR.Name, nil
+			})()
+
+			kubeClient.AddReactor("*", "certificatesigningrequests", func(action testing.Action) (handled bool, ret runtime.Object, err error) {
+				return true, &deniedCSR, nil
+			})
+
 			mockGardenInterface.EXPECT().Kubernetes().Return(kubeClient)
 			fakeClientMap := fakeclientmap.NewClientMap().
 				AddClient(keys.ForGarden(), mockGardenInterface).
 				AddClient(keys.ForSeed(seed), mockSeedInterface)
 
 			err := rotateCertificate(ctx, log, fakeClientMap, mockSeedClient, gardenClientConnection, nil, x509DnsNames, x509IpAddresses)
-			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("The Common Name (CN) of the of the certificate Subject has to be set")))
 		})
 	})
 

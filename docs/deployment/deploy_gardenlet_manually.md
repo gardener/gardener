@@ -213,14 +213,6 @@ rules:
     verbs:
       - create
       - get
-      - list
-      - watch
-  - apiGroups:
-      - certificates.k8s.io
-    resources:
-      - certificatesigningrequests/seedclient
-    verbs:
-      - create
 ---
 # A kubelet/gardenlet authenticating using bootstrap tokens is authenticated as a user in the group system:bootstrappers
 # Allows the Gardenlet to create a CSR

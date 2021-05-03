@@ -22,14 +22,18 @@ import (
 	"net"
 	"time"
 
+	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	"github.com/sirupsen/logrus"
 	certificatesv1 "k8s.io/api/certificates/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/certificate/csr"
 	"k8s.io/client-go/util/keyutil"
-
-	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 )
 
 // RequestCertificate will create a certificate signing request for the Gardenlet
@@ -53,6 +57,10 @@ func RequestCertificate(ctx context.Context, logger logrus.FieldLogger, client k
 	}
 	return certData, privateKeyData, csrName, nil
 }
+
+// DigestedName is an alias for bootstraputil.DigestedName.
+// exposed for testing
+var DigestedName = bootstraputil.DigestedName
 
 // requestCertificate will create a certificate signing request for the Gardenlet
 // and send it to API server, then it will watch the object's
@@ -81,7 +89,7 @@ func requestCertificate(ctx context.Context, logger logrus.FieldLogger, client k
 		return nil, "", fmt.Errorf("private key does not implement crypto.Signer")
 	}
 
-	name, err := bootstraputil.DigestedName(signer.Public(), certificateSubject, usages)
+	name, err := DigestedName(signer.Public(), certificateSubject, usages)
 	if err != nil {
 		return nil, "", err
 	}
@@ -98,7 +106,7 @@ func requestCertificate(ctx context.Context, logger logrus.FieldLogger, client k
 
 	logger.Infof("Waiting for certificate signing request %q to be approved and contain the client certificate ...", reqName)
 
-	certData, err = csr.WaitForCertificate(childCtx, client, reqName, reqUID)
+	certData, err = waitForCertificate(childCtx, client, reqName, reqUID)
 	if err != nil {
 		return nil, "", err
 	}
@@ -106,4 +114,81 @@ func requestCertificate(ctx context.Context, logger logrus.FieldLogger, client k
 	logger.Infof("Certificate signing request got approved. Retrieved client certificate!")
 
 	return certData, reqName, nil
+}
+
+// waitForCertificate is heavily inspired from k8s.io/client-go/util/certificate/csr.WaitForCertificate. We don't call
+// this function directly because it performs LIST/WATCH requests while waiting for the certificate. However, gardenlet
+// is only allowed to GET CSR resources related to its seed.
+func waitForCertificate(ctx context.Context, client kubernetesclientset.Interface, reqName string, reqUID types.UID) ([]byte, error) {
+	var certData []byte
+
+	if err := retry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
+		// try v1 first
+		if csr, err := client.CertificatesV1().CertificateSigningRequests().Get(ctx, reqName, metav1.GetOptions{}); err == nil {
+			if csr.UID != reqUID {
+				return retry.SevereError(fmt.Errorf("csr %q changed UIDs", csr.Name))
+			}
+
+			approved := false
+			for _, c := range csr.Status.Conditions {
+				if c.Type == certificatesv1.CertificateDenied {
+					return retry.SevereError(fmt.Errorf("certificate signing request is denied, reason: %v, message: %v", c.Reason, c.Message))
+				}
+				if c.Type == certificatesv1.CertificateFailed {
+					return retry.SevereError(fmt.Errorf("certificate signing request failed, reason: %v, message: %v", c.Reason, c.Message))
+				}
+				if c.Type == certificatesv1.CertificateApproved {
+					approved = true
+				}
+			}
+
+			if !approved {
+				return retry.MinorError(fmt.Errorf("certificate signing request %s is not yet approved, waiting", csr.Name))
+			}
+
+			if len(csr.Status.Certificate) == 0 {
+				return retry.MinorError(fmt.Errorf("certificate signing request %s is approved, waiting to be issued", csr.Name))
+			}
+
+			certData = csr.Status.Certificate
+			return retry.Ok()
+		}
+
+		// fall back to v1beta1
+		if csr, err := client.CertificatesV1beta1().CertificateSigningRequests().Get(ctx, reqName, metav1.GetOptions{}); err == nil {
+			if csr.UID != reqUID {
+				return retry.SevereError(fmt.Errorf("csr %q changed UIDs", csr.Name))
+			}
+
+			approved := false
+			for _, c := range csr.Status.Conditions {
+				if c.Type == certificatesv1beta1.CertificateDenied {
+					return retry.SevereError(fmt.Errorf("certificate signing request is denied, reason: %v, message: %v", c.Reason, c.Message))
+				}
+				if c.Type == certificatesv1beta1.CertificateFailed {
+					return retry.SevereError(fmt.Errorf("certificate signing request failed, reason: %v, message: %v", c.Reason, c.Message))
+				}
+				if c.Type == certificatesv1beta1.CertificateApproved {
+					approved = true
+				}
+			}
+
+			if !approved {
+				return retry.MinorError(fmt.Errorf("certificate signing request %s is not yet approved, waiting", csr.Name))
+			}
+
+			if len(csr.Status.Certificate) == 0 {
+				return retry.MinorError(fmt.Errorf("certificate signing request %s is approved, waiting to be issued", csr.Name))
+			}
+
+			certData = csr.Status.Certificate
+			return retry.Ok()
+		}
+
+		return retry.SevereError(fmt.Errorf("neither certificates.k8s.io/v1 nor certificates.k8s.io/v1beta1 requests succeeded"))
+	}); err != nil {
+		return nil, err
+	}
+
+	return certData, nil
 }
