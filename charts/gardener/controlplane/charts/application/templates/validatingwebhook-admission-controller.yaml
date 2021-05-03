@@ -105,6 +105,26 @@ webhooks:
     - CREATE
     resources:
     - leases
+  - apiGroups:
+    - core.gardener.cloud
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    resources:
+    - backupbuckets
+    - backupentries
+    - shootstates
+  - apiGroups:
+    - core.gardener.cloud
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - seeds
   failurePolicy: Fail
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}

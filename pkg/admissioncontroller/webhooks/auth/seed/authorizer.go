@@ -61,6 +61,7 @@ var (
 	cloudProfileResource           = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource              = corev1.Resource("configmaps")
 	controllerInstallationResource = gardencorev1beta1.Resource("controllerinstallations")
+	controllerRegistrationResource = gardencorev1beta1.Resource("controllerregistrations")
 	eventCoreResource              = corev1.Resource("events")
 	eventResource                  = eventsv1.Resource("events")
 	leaseResource                  = coordinationv1.Resource("leases")
@@ -68,6 +69,8 @@ var (
 	namespaceResource              = corev1.Resource("namespaces")
 	projectResource                = gardencorev1beta1.Resource("projects")
 	secretBindingResource          = gardencorev1beta1.Resource("secretbindings")
+	seedResource                   = gardencorev1beta1.Resource("seeds")
+	shootResource                  = gardencorev1beta1.Resource("shoots")
 	shootStateResource             = gardencorev1alpha1.Resource("shootstates")
 )
 
@@ -106,6 +109,12 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"get", "list", "watch"},
 				[]string{"status"},
 			)
+		case controllerRegistrationResource:
+			return a.authorize(seedName, graph.VertexTypeControllerRegistration, attrs,
+				nil,
+				[]string{"get", "list", "watch"},
+				nil,
+			)
 		case eventCoreResource, eventResource:
 			return a.authorizeEvents(seedName, attrs)
 		case leaseResource:
@@ -122,6 +131,18 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
 			return a.authorizeRead(seedName, graph.VertexTypeSecretBinding, attrs)
+		case seedResource:
+			return a.authorize(seedName, graph.VertexTypeSeed, attrs,
+				nil,
+				[]string{"create", "update", "patch", "delete", "get", "list", "watch"},
+				[]string{"status"},
+			)
+		case shootResource:
+			return a.authorize(seedName, graph.VertexTypeShoot, attrs,
+				[]string{"update", "patch"},
+				[]string{"get", "list", "watch"},
+				[]string{"status"},
+			)
 		case shootStateResource:
 			return a.authorize(seedName, graph.VertexTypeShootState, attrs,
 				[]string{"get", "update", "patch"},
