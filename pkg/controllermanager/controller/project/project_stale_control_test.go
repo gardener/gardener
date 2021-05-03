@@ -470,13 +470,12 @@ var _ = Describe("ProjectStaleControl", func() {
 							return time.Date(1, 1, minimumLifetimeDays+1, 1, 0, 0, 0, time.UTC)
 						}
 
-						k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(projectName), project)
 						projectCopy := project.DeepCopy()
 						projectCopy.Annotations = map[string]string{
 							gutil.ConfirmationDeletion:         "true",
 							v1beta1constants.GardenerTimestamp: gutil.TimeNow().UTC().String(),
 						}
-						k8sGardenRuntimeClient.EXPECT().Update(ctx, projectCopy)
+						k8sGardenRuntimeClient.EXPECT().Patch(ctx, projectCopy, gomock.Any())
 						k8sGardenRuntimeClient.EXPECT().Delete(ctx, projectCopy)
 
 						_, result := reconciler.Reconcile(ctx, request)
