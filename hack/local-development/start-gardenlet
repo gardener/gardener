@@ -19,6 +19,8 @@ source $(dirname "${0}")/common/local-imagevector-overwrite
 
 REPO_ROOT=$(dirname $0)/../..
 
+kubeconfig="$KUBECONFIG"
+
 if [[ $(k8s_env) == "$NODELESS" ]]; then
   kubeconfig="$(dirname $0)/local-garden/kubeconfigs/gardenlet.conf"
 else
@@ -33,7 +35,7 @@ if [ ! -f "$file_imagevector_overwrite" ]; then
 else
   trap cleanup_imagevector_overwrite EXIT
 
-  KUBECONFIG="${KUBECONFIG:-$kubeconfig}" \
+  KUBECONFIG="$kubeconfig" \
   GARDEN_KUBECONFIG="${GARDEN_KUBECONFIG:-$kubeconfig}" \
   IMAGEVECTOR_OVERWRITE="$file_imagevector_overwrite" \
   GO111MODULE=on \
