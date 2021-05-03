@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"time"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -90,13 +92,17 @@ var (
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenControllerFactory) Run(ctx context.Context) error {
-	if err := f.clientMap.Start(ctx.Done()); err != nil {
-		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
-	}
-
 	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		panic(fmt.Errorf("failed to get garden client: %+v", err))
+	}
+
+	if err := addAllFieldIndexes(ctx, k8sGardenClient.Cache()); err != nil {
+		return err
+	}
+
+	if err := f.clientMap.Start(ctx.Done()); err != nil {
+		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
 	}
 
 	// create separate informer for configuration secrets
@@ -238,6 +244,25 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 
 	logger.Logger.Infof("I have received a stop signal and will no longer watch resources.")
 	logger.Logger.Infof("Bye Bye!")
+
+	return nil
+}
+
+// addAllFieldIndexes adds all field indexes used by gardener-controller-manager to the given FieldIndexer (i.e. cache).
+// field indexes have to be added before the cache is started (i.e. before the clientmap is started)
+func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.Project{}, gardencore.ProjectNamespace, func(obj client.Object) []string {
+		project, ok := obj.(*gardencorev1beta1.Project)
+		if !ok {
+			return []string{""}
+		}
+		if project.Spec.Namespace == nil {
+			return []string{""}
+		}
+		return []string{*project.Spec.Namespace}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to Project Informer: %w", err)
+	}
 
 	return nil
 }
