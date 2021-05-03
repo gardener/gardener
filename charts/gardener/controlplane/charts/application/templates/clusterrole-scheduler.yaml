@@ -39,6 +39,7 @@ rules:
   - core.gardener.cloud
   resources:
   - seeds
+  - cloudprofiles
   verbs:
   - get
   - list
