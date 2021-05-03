@@ -363,6 +363,14 @@ $ADMISSION_CONTROLLER_PORT_STRING
     resources:
     - leases
   - apiGroups:
+    - certificates.k8s.io
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    resources:
+    - certificatesigningrequests
+  - apiGroups:
     - core.gardener.cloud
     apiVersions:
     - "*"

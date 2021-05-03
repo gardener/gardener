@@ -106,6 +106,14 @@ webhooks:
     resources:
     - leases
   - apiGroups:
+    - certificates.k8s.io
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    resources:
+    - certificatesigningrequests
+  - apiGroups:
     - core.gardener.cloud
     apiVersions:
     - "*"

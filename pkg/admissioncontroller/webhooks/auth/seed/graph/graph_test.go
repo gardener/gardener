@@ -91,7 +91,7 @@ var _ = Describe("graph", func() {
 
 		lease1 *coordinationv1.Lease
 
-		seedNameInCSR = "aws"
+		seedNameInCSR = "myseed"
 		csr1          *certificatesv1beta1.CertificateSigningRequest
 	)
 
@@ -218,20 +218,20 @@ var _ = Describe("graph", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: "csr1"},
 			Spec: certificatesv1beta1.CertificateSigningRequestSpec{
 				Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
-MIIClDCCAXwCAQAwTzEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
-ZWRzMScwJQYDVQQDEx5nYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDphd3MwggEi
-MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDvXQdCxfhxtcPpcRuZgx6/7+O5
-NuE4WkovazMSbpgCx+JFLfdYRdkGMvaF24RIycZOgCR/SXjFy6pufWr48/Rloq1t
-efWvYIxzCVw8OYbKvnE7BoR7FyY7z+mn/A5MHcTHraKLoIzEbeCnQJ7B5Xe1ApiJ
-aqvyRjulXs7h0W6lyZnJdmAHe6dKvzcdf8XcsLL9ihQUhH5JxIuBorYzLjw3i5DZ
-praXAZUHAorFYQHIXESWA3TaOhXieFvX/jspOCRW0w2A+gBgBBrjq3/Yi9Ud738m
-NS3s5IGjRip5yplGHBW/SuFXZv6YBAHwXKzxlc4tvr/SI/ZVoZ278T5IBspFAgMB
-AAGgADANBgkqhkiG9w0BAQsFAAOCAQEAQhToLaidF7+IlmkXeZuT1S8ORTEdJccD
-3k7jagbwifhJItRpBLqUr5d4gLO5mfvfgvhEp8IqB9zaMLOTXXu2w8/qIZU2QpUC
-mgr+NYQqXrk/RRVcH6i7nCHbIjeHwm/BeA0hRmJtH1xqkwK/8RCUvq2YNnGIWcjh
-1akJDMTTwKjT2RCZjyDaltfoqIjV9o4a/GyM8jds4GryzEtXbSvEpzHPRwHdXCBq
-CQo7dCxWxLd19oyUkHxhnY9sEff25xrdcL/R21IOTYFx3OJoYliGCUA1KnZsEpw8
-scLaDjVwpKfl9g24hVxCoyVl8Kcuqax5OcXba3h4/dEgq/N2hbpsnQ==
+MIIClzCCAX8CAQAwUjEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
+ZWRzMSowKAYDVQQDEyFnYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpteXNlZWQw
+ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCzNgJWhogJrCSzAhKKmHkJ
+FuooKAbxpWRGDOe5DiB8jPdgCoRCkZYnF7D9x9cDzliljA9IeBad3P3E9oegtSV/
+sXFJYqb+lRuhJQ5oo2eBC6WRg+Oxglp+n7o7xt0bO7JHS977mqNrqsJ1d1FnJHTB
+MPHPxqoqkgIbdW4t219ckSA20aWzC3PU7I7+Z9OD+YfuuYgzkWG541XyBBKVSD2w
+Ix2yGu6zrslqZ1eVBZ4IoxpWrQNmLSMFQVnABThyEUi0U1eVtW0vPNwSnBf0mufX
+Z0PpqAIPVjr64Z4s3HHml2GSu64iOxaG5wwb9qIPcdyFaQCep/sFh7kq1KjNI1Ql
+AgMBAAGgADANBgkqhkiG9w0BAQsFAAOCAQEAb+meLvm7dgHpzhu0XQ39w41FgpTv
+S7p78ABFwzDNcP1NwfrEUft0T/rUwPiMlN9zve2rRicaZX5Z7Bol/newejsu8H5z
+OdotvtKjE7zBCMzwnXZwO/0pA0cuUFcAy50DPcr35gdGjGlzV9ogO+HPKPTieS3n
+TRVg+MWlcLqCjALr9Y4N39DOzf4/SJts8AZJJ+lyyxnY3XIPXx7SdADwNWC8BX0U
+OK8CwMwN3iiBQ4redVeMK7LU1unV899q/PWB+NXFcKVr+Grm/Kom5VxuhXSzcHEp
+yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 -----END CERTIFICATE REQUEST-----`),
 				Usages: []certificatesv1beta1.KeyUsage{
 					certificatesv1beta1.UsageKeyEncipherment,

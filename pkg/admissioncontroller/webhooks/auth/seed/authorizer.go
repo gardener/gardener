@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/go-logr/logr"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
@@ -56,23 +57,24 @@ var _ = auth.Authorizer(&authorizer{})
 var (
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
-	backupBucketResource           = gardencorev1beta1.Resource("backupbuckets")
-	backupEntryResource            = gardencorev1beta1.Resource("backupentries")
-	cloudProfileResource           = gardencorev1beta1.Resource("cloudprofiles")
-	configMapResource              = corev1.Resource("configmaps")
-	controllerDeploymentResource   = gardencorev1beta1.Resource("controllerdeployments")
-	controllerInstallationResource = gardencorev1beta1.Resource("controllerinstallations")
-	controllerRegistrationResource = gardencorev1beta1.Resource("controllerregistrations")
-	eventCoreResource              = corev1.Resource("events")
-	eventResource                  = eventsv1.Resource("events")
-	leaseResource                  = coordinationv1.Resource("leases")
-	managedSeedResource            = seedmanagementv1alpha1.Resource("managedseeds")
-	namespaceResource              = corev1.Resource("namespaces")
-	projectResource                = gardencorev1beta1.Resource("projects")
-	secretBindingResource          = gardencorev1beta1.Resource("secretbindings")
-	seedResource                   = gardencorev1beta1.Resource("seeds")
-	shootResource                  = gardencorev1beta1.Resource("shoots")
-	shootStateResource             = gardencorev1alpha1.Resource("shootstates")
+	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
+	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
+	certificateSigningRequestResource = certificatesv1beta1.Resource("certificatesigningrequests")
+	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
+	configMapResource                 = corev1.Resource("configmaps")
+	controllerDeploymentResource      = gardencorev1beta1.Resource("controllerdeployments")
+	controllerInstallationResource    = gardencorev1beta1.Resource("controllerinstallations")
+	controllerRegistrationResource    = gardencorev1beta1.Resource("controllerregistrations")
+	eventCoreResource                 = corev1.Resource("events")
+	eventResource                     = eventsv1.Resource("events")
+	leaseResource                     = coordinationv1.Resource("leases")
+	managedSeedResource               = seedmanagementv1alpha1.Resource("managedseeds")
+	namespaceResource                 = corev1.Resource("namespaces")
+	projectResource                   = gardencorev1beta1.Resource("projects")
+	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
+	seedResource                      = gardencorev1beta1.Resource("seeds")
+	shootResource                     = gardencorev1beta1.Resource("shoots")
+	shootStateResource                = gardencorev1alpha1.Resource("shootstates")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
@@ -100,6 +102,12 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"create", "get", "list", "watch"},
 				[]string{"status"},
 			)
+		case certificateSigningRequestResource:
+			return a.authorize(seedName, graph.VertexTypeCertificateSigningRequest, attrs,
+				[]string{"get"},
+				[]string{"create"},
+				nil,
+			)
 		case cloudProfileResource:
 			return a.authorizeRead(seedName, graph.VertexTypeCloudProfile, attrs)
 		case configMapResource:
@@ -119,7 +127,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				nil,
 			)
 		case eventCoreResource, eventResource:
-			return a.authorizeEvents(seedName, attrs)
+			return a.authorizeEvent(seedName, attrs)
 		case leaseResource:
 			return a.authorizeLease(seedName, attrs)
 		case managedSeedResource:
@@ -178,7 +186,7 @@ func (a *authorizer) authorizeConfigMap(seedName string, attrs auth.Attributes) 
 	return a.authorizeRead(seedName, graph.VertexTypeConfigMap, attrs)
 }
 
-func (a *authorizer) authorizeEvents(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+func (a *authorizer) authorizeEvent(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	if ok, reason := a.checkVerb(seedName, attrs, "create"); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
