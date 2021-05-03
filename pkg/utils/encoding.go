@@ -105,9 +105,18 @@ func EncodeCertificate(certificate []byte) []byte {
 func DecodeCertificate(bytes []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode(bytes)
 	if block == nil || block.Type != "CERTIFICATE" {
-		return nil, errors.New("could not decode the PEM-encoded certificate")
+		return nil, errors.New("PEM block type must be CERTIFICATE")
 	}
 	return x509.ParseCertificate(block.Bytes)
+}
+
+// DecodeCertificateRequest parses the given PEM-encoded CSR.
+func DecodeCertificateRequest(data []byte) (*x509.CertificateRequest, error) {
+	block, _ := pem.Decode(data)
+	if block == nil || block.Type != "CERTIFICATE REQUEST" {
+		return nil, errors.New("PEM block type must be CERTIFICATE REQUEST")
+	}
+	return x509.ParseCertificateRequest(block.Bytes)
 }
 
 // SHA1 takes a byte slice and returns the sha1-hashed byte slice.
