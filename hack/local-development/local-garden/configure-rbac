@@ -20,26 +20,19 @@ KUBECONFIGPATH=${1:-"$(dirname $0)/kubeconfigs/default-admin.conf"}
 
 gardenlet_admin_templates=""
 
-HELM2=$(helm version 2>&1 | grep 'SemVer:"v2' || true)
-if [ -n "$HELM2" ]; then
-  HT="-x"
-else
-  HT="-s"
-fi
-
 if is_seedauthorizer_enabled; then
   KUBECONFIG=$KUBECONFIGPATH kubectl delete clusterrole/gardener.cloud:system:seeds        --ignore-not-found
   KUBECONFIG=$KUBECONFIGPATH kubectl delete clusterrolebinding/gardener.cloud:system:seeds --ignore-not-found
 else
-  gardenlet_admin_templates="$HT templates/clusterrole-seeds.yaml $HT templates/clusterrolebinding-seeds.yaml"
+  gardenlet_admin_templates="-s templates/clusterrole-seeds.yaml -s templates/clusterrolebinding-seeds.yaml"
 fi
 
 helm template \
   "$(dirname "$0")/../../../charts/gardener/controlplane/charts/application" \
-  $HT templates/clusterrole-admission-controller.yaml \
-  $HT templates/clusterrole-apiserver.yaml \
-  $HT templates/clusterrole-controller-manager.yaml \
-  $HT templates/clusterrole-scheduler.yaml $gardenlet_admin_templates \
+  -s templates/clusterrole-admission-controller.yaml \
+  -s templates/clusterrole-apiserver.yaml \
+  -s templates/clusterrole-controller-manager.yaml \
+  -s templates/clusterrole-scheduler.yaml $gardenlet_admin_templates \
   --set global.admission.enabled=true \
   --set global.apiserver.enabled=true \
   --set global.controller.enabled=true \
