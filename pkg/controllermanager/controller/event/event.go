@@ -29,6 +29,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,7 +63,9 @@ func NewController(
 		return nil, err
 	}
 
-	eventInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Event{})
+	events := &metav1.PartialObjectMetadata{}
+	events.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Event"))
+	eventInformer, err := gardenClient.Cache().GetInformer(ctx, events)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get Event Informer: %w", err)
 	}

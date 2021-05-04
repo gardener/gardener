@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
@@ -68,7 +69,7 @@ type livecycleReconciler struct {
 
 func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	seed := &gardencorev1beta1.Seed{}
-	err := c.gardenClient.Client().Get(ctx, req.NamespacedName, seed)
+	err := c.gardenClient.Cache().Get(ctx, req.NamespacedName, seed)
 	if apierrors.IsNotFound(err) {
 		c.logger.Infof("[SEED LIFECYCLE] Stopping lifecycle operations for Seed %s since it has been deleted", req.Name)
 		return reconcileResult(nil)
@@ -139,17 +140,13 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	seedLogger.Debugf("Gardenlet didn't send a heartbeat for at least %s - setting the shoot conditions/constraints to 'unknown' for all shoots on this seed", c.config.Controllers.Seed.ShootMonitorPeriod.Duration)
 
 	shootList := &gardencorev1beta1.ShootList{}
-	if err := c.gardenClient.Client().List(ctx, shootList); err != nil {
+	if err := c.gardenClient.Cache().List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {
 		return reconcileResult(err)
 	}
 
 	var fns []flow.TaskFn
 
 	for _, shoot := range shootList.Items {
-		if shoot.Spec.SeedName == nil || *shoot.Spec.SeedName != seed.Name {
-			continue
-		}
-
 		fns = append(fns, func(ctx context.Context) error {
 			return setShootStatusToUnknown(ctx, c.gardenClient.GardenCore(), shoot)
 		})

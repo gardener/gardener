@@ -100,7 +100,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 
 	// Delete legacy (and meanwhile unused) ConfigMap after https://github.com/gardener/gardener/pull/3756.
 	// TODO: This code can be removed in a future release.
-	if err := kutil.DeleteObject(ctx, k8sGardenClient.Client(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gutil-controller-manager-internal-config", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
+	if err := kutil.DeleteObject(ctx, k8sGardenClient.Client(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-controller-manager-internal-config", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
 		return err
 	}
 
@@ -227,6 +227,19 @@ func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error 
 		return []string{*project.Spec.Namespace}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer to Project Informer: %w", err)
+	}
+
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.Shoot{}, gardencore.ShootSeedName, func(obj client.Object) []string {
+		shoot, ok := obj.(*gardencorev1beta1.Shoot)
+		if !ok {
+			return []string{""}
+		}
+		if shoot.Spec.SeedName == nil {
+			return []string{""}
+		}
+		return []string{*shoot.Spec.SeedName}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to Shoot Informer: %w", err)
 	}
 
 	return nil

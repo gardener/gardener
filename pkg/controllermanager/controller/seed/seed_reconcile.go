@@ -20,7 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
@@ -59,7 +58,7 @@ func (c *Controller) seedAdd(obj interface{}) {
 // NewDefaultControl returns a new instance of the default implementation that
 // implements the documented semantics for seeds.
 // You should use an instance returned from NewDefaultControl() for any scenario other than testing.
-func NewDefaultControl(logger logrus.FieldLogger, gardenClient kubernetes.Interface) *reconciler {
+func NewDefaultControl(logger logrus.FieldLogger, gardenClient client.Client) *reconciler {
 	return &reconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
@@ -68,12 +67,12 @@ func NewDefaultControl(logger logrus.FieldLogger, gardenClient kubernetes.Interf
 
 type reconciler struct {
 	logger       logrus.FieldLogger
-	gardenClient kubernetes.Interface
+	gardenClient client.Client
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	seed := &gardencorev1beta1.Seed{}
-	err := r.gardenClient.Client().Get(ctx, req.NamespacedName, seed)
+	err := r.gardenClient.Get(ctx, req.NamespacedName, seed)
 	if apierrors.IsNotFound(err) {
 		r.logger.Infof("[SEED] Stopping operations for Seed %s since it has been deleted", req.Name)
 		return reconcileResult(nil)
@@ -89,7 +88,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.gardenClient.Client(), namespace, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.gardenClient, namespace, func() error {
 		namespace.OwnerReferences = []metav1.OwnerReference{*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))}
 		return nil
 	}); err != nil {
@@ -113,12 +112,12 @@ var (
 	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gardenerutils.NoControlPlaneSecretsReq)
 )
 
-func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient kubernetes.Interface, existingSecrets []string, namespace string) error {
+func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient client.Client, existingSecrets []string, namespace string) error {
 	var fns []flow.TaskFn
 	exclude := sets.NewString(existingSecrets...)
 
 	secretList := &corev1.SecretList{}
-	if err := r.gardenClient.Client().List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
+	if err := r.gardenClient.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
 		return err
 	}
 
@@ -128,16 +127,16 @@ func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient kuber
 			continue
 		}
 		fns = append(fns, func(ctx context.Context) error {
-			return client.IgnoreNotFound(gardenClient.Client().Delete(ctx, &secret))
+			return client.IgnoreNotFound(gardenClient.Delete(ctx, &secret))
 		})
 	}
 
 	return flow.Parallel(fns...)(ctx)
 }
 
-func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient kubernetes.Interface, namespace *corev1.Namespace) ([]string, error) {
+func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient client.Client, namespace *corev1.Namespace) ([]string, error) {
 	secretList := &corev1.SecretList{}
-	if err := r.gardenClient.Client().List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
+	if err := r.gardenClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
 		return nil, err
 	}
 
@@ -157,7 +156,7 @@ func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient kuberne
 				},
 			}
 
-			if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), seedSecret, func() error {
+			if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient, seedSecret, func() error {
 				seedSecret.Annotations = secret.Annotations
 				seedSecret.Labels = secret.Labels
 				seedSecret.Data = secret.Data

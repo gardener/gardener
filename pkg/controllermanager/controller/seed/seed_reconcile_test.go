@@ -20,7 +20,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	"github.com/gardener/gardener/pkg/logger"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
@@ -64,12 +63,11 @@ var _ = Describe("SeedReconciler", func() {
 
 	Describe("#Reconcile", func() {
 		var (
-			k8sGardenClient *mockkubernetes.MockInterface
-			cl              *mockclient.MockClient
-			k               *mockclientgo.MockInterface
-			corev1If        *mockcorev1.MockCoreV1Interface
-			namespaceIf     *mockcorev1.MockNamespaceInterface
-			secretIf        *mockcorev1.MockSecretInterface
+			cl          *mockclient.MockClient
+			k           *mockclientgo.MockInterface
+			corev1If    *mockcorev1.MockCoreV1Interface
+			namespaceIf *mockcorev1.MockNamespaceInterface
+			secretIf    *mockcorev1.MockSecretInterface
 
 			control reconcile.Reconciler
 
@@ -79,7 +77,6 @@ var _ = Describe("SeedReconciler", func() {
 		)
 
 		BeforeEach(func() {
-			k8sGardenClient = mockkubernetes.NewMockInterface(ctrl)
 			cl = mockclient.NewMockClient(ctrl)
 			seed = &gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
@@ -106,9 +103,7 @@ var _ = Describe("SeedReconciler", func() {
 				Expect(coreInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 			}
 
-			control = NewDefaultControl(logger.NewNopLogger(), k8sGardenClient)
-
-			k8sGardenClient.EXPECT().Client().Return(cl).AnyTimes()
+			control = NewDefaultControl(logger.NewNopLogger(), cl)
 		})
 
 		Context("when seed exists", func() {

@@ -87,7 +87,7 @@ func NewSeedController(
 		gardenClient: gardenClient.Client(),
 		config:       config,
 
-		seedReconciler:       NewDefaultControl(logger.Logger, gardenClient),
+		seedReconciler:       NewDefaultControl(logger.Logger, gardenClient.Client()),
 		lifeCycleReconciler:  NewLifecycleDefaultControl(logger.Logger, gardenClient, config),
 		seedBackupReconciler: NewDefaultBackupBucketControl(logger.Logger, gardenClient),
 
