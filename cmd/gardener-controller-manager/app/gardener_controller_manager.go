@@ -43,8 +43,6 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/informers"
-	kubeinformers "k8s.io/client-go/informers"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
@@ -190,12 +188,11 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Gardener represents all the parameters required to start the
 // Gardener controller manager.
 type Gardener struct {
-	Config              *config.ControllerManagerConfiguration
-	ClientMap           clientmap.ClientMap
-	KubeInformerFactory informers.SharedInformerFactory
-	Logger              *logrus.Logger
-	Recorder            record.EventRecorder
-	LeaderElection      *leaderelection.LeaderElectionConfig
+	Config         *config.ControllerManagerConfiguration
+	ClientMap      clientmap.ClientMap
+	Logger         *logrus.Logger
+	Recorder       record.EventRecorder
+	LeaderElection *leaderelection.LeaderElectionConfig
 }
 
 // NewGardener is the main entry point of instantiating a new Gardener controller manager.
@@ -264,12 +261,11 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 	}
 
 	return &Gardener{
-		Config:              cfg,
-		Logger:              logger,
-		Recorder:            recorder,
-		ClientMap:           clientMap,
-		KubeInformerFactory: kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
-		LeaderElection:      leaderElectionConfig,
+		Config:         cfg,
+		Logger:         logger,
+		Recorder:       recorder,
+		ClientMap:      clientMap,
+		LeaderElection: leaderElectionConfig,
 	}, nil
 }
 
@@ -334,7 +330,6 @@ func (g *Gardener) Run(ctx context.Context) error {
 func (g *Gardener) startControllers(ctx context.Context) error {
 	return controller.NewGardenControllerFactory(
 		g.ClientMap,
-		g.KubeInformerFactory,
 		g.Config,
 		g.Recorder,
 	).Run(ctx)

@@ -16,9 +16,7 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"time"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -42,16 +40,11 @@ import (
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	kubeinformers "k8s.io/client-go/informers"
-	kubecorev1informers "k8s.io/client-go/informers/core/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -59,19 +52,17 @@ import (
 
 // GardenControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenControllerFactory struct {
-	cfg          *config.ControllerManagerConfiguration
-	clientMap    clientmap.ClientMap
-	k8sInformers kubeinformers.SharedInformerFactory
-	recorder     record.EventRecorder
+	cfg       *config.ControllerManagerConfiguration
+	clientMap clientmap.ClientMap
+	recorder  record.EventRecorder
 }
 
 // NewGardenControllerFactory creates a new factory for controllers for the Garden API group.
-func NewGardenControllerFactory(clientMap clientmap.ClientMap, kubeInformerFactory kubeinformers.SharedInformerFactory, cfg *config.ControllerManagerConfiguration, recorder record.EventRecorder) *GardenControllerFactory {
+func NewGardenControllerFactory(clientMap clientmap.ClientMap, cfg *config.ControllerManagerConfiguration, recorder record.EventRecorder) *GardenControllerFactory {
 	return &GardenControllerFactory{
-		cfg:          cfg,
-		clientMap:    clientMap,
-		k8sInformers: kubeInformerFactory,
-		recorder:     recorder,
+		cfg:       cfg,
+		clientMap: clientMap,
+		recorder:  recorder,
 	}
 }
 
@@ -90,24 +81,10 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
 	}
 
-	// create separate informer for configuration secrets
-	f.k8sInformers.InformerFor(&corev1.Secret{}, func(client kubernetes.Interface, sync time.Duration) cache.SharedIndexInformer {
-		secretInformer := kubecorev1informers.NewFilteredSecretInformer(client, metav1.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, func(opts *metav1.ListOptions) {
-			opts.LabelSelector = gutil.UncontrolledSecretSelector.String()
-		})
-		return secretInformer
-	})
-
 	// Delete legacy (and meanwhile unused) ConfigMap after https://github.com/gardener/gardener/pull/3756.
 	// TODO: This code can be removed in a future release.
 	if err := kutil.DeleteObject(ctx, k8sGardenClient.Client(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-controller-manager-internal-config", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
 		return err
-	}
-
-	secretInformer := f.k8sInformers.Core().V1().Secrets().Informer()
-	f.k8sInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), secretInformer.HasSynced) {
-		return errors.New("Timed out waiting for Kube caches to sync")
 	}
 
 	runtime.Must(garden.BootstrapCluster(ctx, k8sGardenClient))
@@ -166,7 +143,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 	metricsCollectors = append(metricsCollectors, seedController)
 
-	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, f.k8sInformers, f.cfg, f.recorder)
+	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
