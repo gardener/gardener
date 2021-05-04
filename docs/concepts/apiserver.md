@@ -9,7 +9,7 @@ After registration, it exposes the following resources:
 
 `CloudProfile`s are resources that describe a specific environment of an underlying infrastructure provider, e.g. AWS, Azure, etc.
 Each shoot has to reference a `CloudProfile` to declare the environment it should be created in.
-In a `CloudProfile` the gardener operator specifies certain constraints like available machine types, regions, which Kubernetes versions he wants to offer, etc.
+In a `CloudProfile` the gardener operator specifies certain constraints like available machine types, regions, which Kubernetes versions they want to offer, etc.
 End-users can read `CloudProfile`s to see these values, but only operators can change the content or create/delete them.
 When a shoot is created or updated then an admission plugin checks that only values are used that are allowed via the referenced `CloudProfile`.
 
@@ -22,14 +22,14 @@ Please see [this](../../example/30-cloudprofile.yaml) example manifest and consu
 
 `Seed`s are resources that represent seed clusters.
 Gardener does not care about how a seed cluster got created - the only requirement is that it is of at least Kubernetes v1.15 and passes the Kubernetes conformance tests.
-The Gardener operator has to either deploy the Gardenlet into the cluster he wants to use as seed (recommended, then the Gardenlet will create the `Seed` object itself after bootstrapping), or he provides the kubeconfig to the cluster inside a secret (that is referenced by the `Seed` resource) and creates the `Seed` resource himself.
+The Gardener operator has to either deploy the Gardenlet into the cluster they want to use as seed (recommended, then the Gardenlet will create the `Seed` object itself after bootstrapping), or they provide the kubeconfig to the cluster inside a secret (that is referenced by the `Seed` resource) and create the `Seed` resource themselves.
 
 Please see [this](../../example/45-secret-seed-backup.yaml), [this](../../example/50-seed.yaml)(, and optionally [this](../../example/40-secret-seed.yaml)) example manifests.
 
 ## `Quota`s
 
-In order to allow end-user not having their own dedicated infrastructure account to try out Gardener the operator can register an account owned by him that he allows to be used for trial clusters.
-Trial clusters can be put under quota such that they don't consume too many resources (resulting in costs), and so that one user cannot consume all resources on his own.
+In order to allow end-users not having their own dedicated infrastructure account to try out Gardener the operator can register an account owned by them that they allow to be used for trial clusters.
+Trial clusters can be put under quota such that they don't consume too many resources (resulting in costs), and so that one user cannot consume all resources on their own.
 These clusters are automatically terminated after a specified time, but end-users may extend the lifetime manually if needed.
 
 Please see [this](../../example/60-quota.yaml) example manifest.
@@ -39,18 +39,18 @@ Please see [this](../../example/60-quota.yaml) example manifest.
 The first thing before creating a shoot cluster is to create a `Project`.
 A project is used to group multiple shoot clusters together.
 End-users can invite colleagues to the project to enable collaboration, and they can either make them `admin` or `viewer`.
-After an end-user has created a project he will get a dedicated namespace in the garden cluster for all his shoots.
+After an end-user has created a project they will get a dedicated namespace in the garden cluster for all their shoots.
 
 Please see [this](../../example/05-project-dev.yaml) example manifest.
 
 ## `SecretBinding`s
 
-Now that the end-user has a namespace the next step is registering his infrastructure provider account.
+Now that the end-user has a namespace the next step is registering their infrastructure provider account.
 
 Please see [this](../../example/70-secret-provider.yaml) example manifest and consult the documentation of the extension controller for the respective infrastructure provider to get information about which keys are required in this secret.
 
 After the secret has been created the end-user has to create a special `SecretBinding` resource that binds this secret.
-Later when creating shoot clusters he will reference such a binding.
+Later when creating shoot clusters they will reference such a binding.
 
 Please see [this](../../example/80-secretbinding.yaml) example manifest.
 
