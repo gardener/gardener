@@ -56,11 +56,6 @@ var _ = Describe("managedresources", func() {
 					Namespace: namespace,
 				},
 				Spec: resourcesv1alpha1.ManagedResourceSpec{
-					SecretRefs: []corev1.LocalObjectReference{
-						{
-							Name: name,
-						},
-					},
 					KeepObjects: &keepObjects,
 				},
 			}
@@ -251,25 +246,15 @@ var _ = Describe("managedresources", func() {
 	})
 
 	Describe("#SetKeepObjects", func() {
-		It("should update the managed resource if the value of keepObjects is different", func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
-				DoAndReturn(clientGet(managedResource(false)))
-			c.EXPECT().Update(ctx, managedResource(true)).Return(nil)
-
-			err := SetKeepObjects(ctx, c, namespace, name, true)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should not update the managed resource if the value of keepObjects is the same", func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
-				DoAndReturn(clientGet(managedResource(true)))
+		It("should patch the managed resource", func() {
+			c.EXPECT().Patch(ctx, managedResource(true), gomock.Any())
 
 			err := SetKeepObjects(ctx, c, namespace, name, true)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should not fail if the managed resource is not found", func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
+			c.EXPECT().Patch(ctx, managedResource(true), gomock.Any()).
 				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
 
 			err := SetKeepObjects(ctx, c, namespace, name, true)
@@ -277,9 +262,8 @@ var _ = Describe("managedresources", func() {
 		})
 
 		It("should fail if the managed resource could not be updated", func() {
-			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
-				DoAndReturn(clientGet(managedResource(false)))
-			c.EXPECT().Update(ctx, managedResource(true)).Return(errors.New("error"))
+			c.EXPECT().Patch(ctx, managedResource(true), gomock.Any()).
+				Return(errors.New("error"))
 
 			err := SetKeepObjects(ctx, c, namespace, name, true)
 			Expect(err).To(HaveOccurred())
