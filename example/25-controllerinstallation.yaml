@@ -4,12 +4,16 @@
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerInstallation
 metadata:
-  name: os-coreos
+  name: os-gardenlinux
 spec:
+  deploymentRef:
+    apiVersion: core.gardener.cloud/v1beta1
+    kind: ControllerDeployment
+    name: os-gardenlinux
   registrationRef:
     apiVersion: core.gardener.cloud/v1beta1
     kind: ControllerRegistration
-    name: os-coreos
+    name: os-gardenlinux
   seedRef:
     apiVersion: core.gardener.cloud/v1beta1
     kind: Seed
