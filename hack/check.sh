@@ -32,13 +32,19 @@ echo "> Check"
 echo "Executing golangci-lint"
 golangci-lint run $GOLANGCI_LINT_CONFIG_FILE --timeout 10m $@
 
+if [ -d "./vendor" ]; then
+  VET_MOD_OPTS=-mod=vendor
+else
+  VET_MOD_OPTS=-mod=readonly
+fi
+
 echo "Executing go vet"
-go vet -mod=vendor $@
+go vet ${VET_MOD_OPTS} $@
 
 echo "Executing gofmt/goimports"
 folders=()
 for f in $@; do
-  folders+=( "$(echo $f | sed 's/\.\/\(.*\)\/\.\.\./\1/')" )
+  folders+=( "$(echo $f | sed 's/\.\.\.//')" )
 done
 unformatted_files="$(goimports -l ${folders[*]})"
 if [[ "$unformatted_files" ]]; then
