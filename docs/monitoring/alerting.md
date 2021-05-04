@@ -69,6 +69,7 @@ data:
   ca.crt: base64(ca)
   tls.crt: base64(certificate)
   tls.key: base64(key)
+  insecure_skip_verify: base64(false)
 
   # Email Alerts (internal alertmanager)
   auth_type: base64(smtp)
