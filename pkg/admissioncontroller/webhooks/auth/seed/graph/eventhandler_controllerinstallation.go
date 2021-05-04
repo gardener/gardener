@@ -44,8 +44,18 @@ func (g *graph) setupControllerInstallationWatch(informer cache.Informer) {
 				return
 			}
 
+			var oldDeploymentRef string
+			if oldControllerInstallation.Spec.DeploymentRef != nil {
+				oldDeploymentRef = oldControllerInstallation.Spec.DeploymentRef.Name
+			}
+			var newDeploymentRef string
+			if newControllerInstallation.Spec.DeploymentRef != nil {
+				newDeploymentRef = newControllerInstallation.Spec.DeploymentRef.Name
+			}
+
 			if oldControllerInstallation.Spec.SeedRef.Name != newControllerInstallation.Spec.SeedRef.Name ||
-				oldControllerInstallation.Spec.RegistrationRef.Name != newControllerInstallation.Spec.RegistrationRef.Name {
+				oldControllerInstallation.Spec.RegistrationRef.Name != newControllerInstallation.Spec.RegistrationRef.Name ||
+				oldDeploymentRef != newDeploymentRef {
 				g.handleControllerInstallationCreateOrUpdate(newControllerInstallation)
 			}
 		},
@@ -81,6 +91,11 @@ func (g *graph) handleControllerInstallationCreateOrUpdate(controllerInstallatio
 
 	g.addEdge(controllerRegistrationVertex, controllerInstallationVertex)
 	g.addEdge(controllerInstallationVertex, seedVertex)
+
+	if controllerInstallation.Spec.DeploymentRef != nil {
+		controllerDeploymentVertex := g.getOrCreateVertex(VertexTypeControllerDeployment, "", controllerInstallation.Spec.DeploymentRef.Name)
+		g.addEdge(controllerDeploymentVertex, controllerInstallationVertex)
+	}
 }
 
 func (g *graph) handleControllerInstallationDelete(controllerInstallation *gardencorev1beta1.ControllerInstallation) {

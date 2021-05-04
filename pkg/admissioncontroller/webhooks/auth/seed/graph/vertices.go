@@ -26,6 +26,8 @@ const (
 	VertexTypeCloudProfile
 	// VertexTypeConfigMap is a constant for a 'ConfigMap' vertex.
 	VertexTypeConfigMap
+	// VertexTypeControllerDeployment is a constant for a 'ControllerDeployment' vertex.
+	VertexTypeControllerDeployment
 	// VertexTypeControllerInstallation is a constant for a 'ControllerInstallation' vertex.
 	VertexTypeControllerInstallation
 	// VertexTypeControllerRegistration is a constant for a 'ControllerRegistration' vertex.
