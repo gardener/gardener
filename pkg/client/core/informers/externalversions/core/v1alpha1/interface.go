@@ -46,6 +46,8 @@ type Interface interface {
 	Seeds() SeedInformer
 	// Shoots returns a ShootInformer.
 	Shoots() ShootInformer
+	// ShootExtensionStatuses returns a ShootExtensionStatusInformer.
+	ShootExtensionStatuses() ShootExtensionStatusInformer
 	// ShootStates returns a ShootStateInformer.
 	ShootStates() ShootStateInformer
 }
@@ -114,6 +116,11 @@ func (v *version) Seeds() SeedInformer {
 // Shoots returns a ShootInformer.
 func (v *version) Shoots() ShootInformer {
 	return &shootInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ShootExtensionStatuses returns a ShootExtensionStatusInformer.
+func (v *version) ShootExtensionStatuses() ShootExtensionStatusInformer {
+	return &shootExtensionStatusInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ShootStates returns a ShootStateInformer.
