@@ -18,8 +18,6 @@ import (
 	"context"
 	"errors"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -37,6 +35,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("controllerRegistrationReconciler", func() {
@@ -823,9 +822,9 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					common.ControllerDeploymentSpecHash: "cd372fb85148700f",
-					common.RegistrationSpecHash:         "61ca93a1782c5fa3",
-					common.SeedSpecHash:                 "a5e0943b25bc6cab",
+					common.ControllerDeploymentHash: "4b15473a347963da",
+					common.RegistrationSpecHash:     "61ca93a1782c5fa3",
+					common.SeedSpecHash:             "a5e0943b25bc6cab",
 				}
 
 				installation3 := controllerInstallation3.DeepCopy()
@@ -864,9 +863,9 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					common.ControllerDeploymentSpecHash: "cd372fb85148700f",
-					common.RegistrationSpecHash:         "61ca93a1782c5fa3",
-					common.SeedSpecHash:                 "a5e0943b25bc6cab",
+					common.ControllerDeploymentHash: "4b15473a347963da",
+					common.RegistrationSpecHash:     "61ca93a1782c5fa3",
+					common.SeedSpecHash:             "a5e0943b25bc6cab",
 				}
 
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))

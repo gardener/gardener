@@ -59,7 +59,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ContainerRuntime":                      schema_pkg_apis_core_v1alpha1_ContainerRuntime(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeployment":                  schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeploymentList":              schema_pkg_apis_core_v1alpha1_ControllerDeploymentList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeploymentSpec":              schema_pkg_apis_core_v1alpha1_ControllerDeploymentSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallation":                schema_pkg_apis_core_v1alpha1_ControllerInstallation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallationList":            schema_pkg_apis_core_v1alpha1_ControllerInstallationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallationSpec":            schema_pkg_apis_core_v1alpha1_ControllerInstallationSpec(ref),
@@ -204,7 +203,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime":                       schema_pkg_apis_core_v1beta1_ContainerRuntime(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment":                   schema_pkg_apis_core_v1beta1_ControllerDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentList":               schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentSpec":               schema_pkg_apis_core_v1beta1_ControllerDeploymentSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallation":                 schema_pkg_apis_core_v1beta1_ControllerInstallation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationList":             schema_pkg_apis_core_v1beta1_ControllerInstallationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationSpec":             schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref),
@@ -1740,18 +1738,27 @@ func schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref common.ReferenceCall
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
-					"spec": {
+					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Spec contains the specification of this deployment.",
+							Description: "Type is the deployment type.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeploymentSpec"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
+				Required: []string{"type", "providerConfig"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeploymentSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -1803,37 +1810,6 @@ func schema_pkg_apis_core_v1alpha1_ControllerDeploymentList(ref common.Reference
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeployment", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_ControllerDeploymentSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ControllerDeploymentSpec is the specification of a ControllerDeployment.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Type is the deployment type.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"providerConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
-						},
-					},
-				},
-				Required: []string{"type"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -1945,12 +1921,6 @@ func schema_pkg_apis_core_v1alpha1_ControllerInstallationSpec(ref common.Referen
 				Description: "ControllerInstallationSpec is the specification of a ControllerInstallation.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"deploymentRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DeploymentRef is used to reference a ControllerDeployment resource.",
-							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
-						},
-					},
 					"registrationRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "RegistrationRef is used to reference a ControllerRegistration resource.",
@@ -1962,6 +1932,12 @@ func schema_pkg_apis_core_v1alpha1_ControllerInstallationSpec(ref common.Referen
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedRef is used to reference a Seed resource.",
 							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"deploymentRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DeploymentRef is used to reference a ControllerDeployment resource.",
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
@@ -2437,11 +2413,13 @@ func schema_pkg_apis_core_v1alpha1_DeploymentRef(ref common.ReferenceCallback) c
 					"name": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Name is the name of the `ControllerDeployment` that is being referred to.",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
+				Required: []string{"name"},
 			},
 		},
 	}
@@ -8558,18 +8536,27 @@ func schema_pkg_apis_core_v1beta1_ControllerDeployment(ref common.ReferenceCallb
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
-					"spec": {
+					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Spec contains the specification of this deployment.",
+							Description: "Type is the deployment type.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.",
 							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentSpec"),
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
 				},
+				Required: []string{"type", "providerConfig"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -8621,37 +8608,6 @@ func schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref common.ReferenceC
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_pkg_apis_core_v1beta1_ControllerDeploymentSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "ControllerDeploymentSpec is the specification of a ControllerDeployment.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Type is the deployment type.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"providerConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
-						},
-					},
-				},
-				Required: []string{"type"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
 	}
 }
 
@@ -8763,12 +8719,6 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref common.Referenc
 				Description: "ControllerInstallationSpec is the specification of a ControllerInstallation.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"deploymentRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DeploymentRef is used to reference a ControllerDeployment resource.",
-							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
-						},
-					},
 					"registrationRef": {
 						SchemaProps: spec.SchemaProps{
 							Description: "RegistrationRef is used to reference a ControllerRegistration resource.",
@@ -8780,6 +8730,12 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref common.Referenc
 						SchemaProps: spec.SchemaProps{
 							Description: "SeedRef is used to reference a Seed resource.",
 							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"deploymentRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DeploymentRef is used to reference a ControllerDeployment resource.",
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
@@ -9255,11 +9211,13 @@ func schema_pkg_apis_core_v1beta1_DeploymentRef(ref common.ReferenceCallback) co
 					"name": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Name is the name of the `ControllerDeployment` that is being referred to.",
+							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
+				Required: []string{"name"},
 			},
 		},
 	}

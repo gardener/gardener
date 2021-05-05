@@ -78,6 +78,7 @@ type DeploymentRef struct {
 // ControllerRegistrationDeployment contains information for how this controller is deployed.
 type ControllerRegistrationDeployment struct {
 	// Type is the deployment type.
+	// Deprecated: Declare type via `ControllerDeployment` instead.
 	Type *string
 	// ProviderConfig contains type-specific configuration.
 	// Deprecated: Use `DeploymentRefs` instead.

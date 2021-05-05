@@ -28,8 +28,10 @@ type ControllerDeployment struct {
 	metav1.TypeMeta
 	// Standard object metadata.
 	metav1.ObjectMeta
-	// Spec contains the specification of this deployment.
-	Spec ControllerDeploymentSpec
+	// Type is the deployment type.
+	Type string
+	// ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
+	ProviderConfig runtime.Object
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -41,12 +43,4 @@ type ControllerDeploymentList struct {
 	metav1.ListMeta
 	// Items is the list of ControllerDeployments.
 	Items []ControllerDeployment
-}
-
-// ControllerDeploymentSpec is the specification of a ControllerDeployment.
-type ControllerDeploymentSpec struct {
-	// Type is the deployment type.
-	Type string
-	// ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
-	ProviderConfig runtime.Object
 }

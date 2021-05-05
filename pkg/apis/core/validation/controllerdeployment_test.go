@@ -36,10 +36,8 @@ var _ = Describe("validation", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "deployment-abc",
 			},
-			Spec: core.ControllerDeploymentSpec{
-				Type:           "helm",
-				ProviderConfig: &runtime.Unknown{},
-			},
+			Type:           "helm",
+			ProviderConfig: &runtime.Unknown{},
 		}
 	})
 
@@ -84,12 +82,12 @@ var _ = Describe("validation", func() {
 		)
 
 		It("should forbid empty ControllerDeployment type", func() {
-			controllerDeployment.Spec.Type = ""
+			controllerDeployment.Type = ""
 			errorList := ValidateControllerDeployment(controllerDeployment)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.type"),
+				"Field": Equal("type"),
 			}))))
 		})
 	})

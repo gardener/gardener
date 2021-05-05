@@ -28,8 +28,10 @@ type ControllerDeployment struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	// Spec contains the specification of this deployment.
-	Spec ControllerDeploymentSpec `json:"spec,omitempty" protobuf:"bytes,2,opt,name=spec"`
+	// Type is the deployment type.
+	Type string `json:"type" protobuf:"bytes,2,opt,name=type"`
+	// ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
+	ProviderConfig runtime.RawExtension `json:"providerConfig" protobuf:"bytes,3,opt,name=providerConfig"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -42,12 +44,4 @@ type ControllerDeploymentList struct {
 	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	// Items is the list of ControllerDeployments.
 	Items []ControllerDeployment `json:"items" protobuf:"bytes,2,rep,name=items"`
-}
-
-// ControllerDeploymentSpec is the specification of a ControllerDeployment.
-type ControllerDeploymentSpec struct {
-	// Type is the deployment type.
-	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
-	// ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
-	ProviderConfig runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 }

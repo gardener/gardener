@@ -386,8 +386,11 @@ message ControllerDeployment {
   // Standard object metadata.
   optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
 
-  // Spec contains the specification of this deployment.
-  optional ControllerDeploymentSpec spec = 2;
+  // Type is the deployment type.
+  optional string type = 2;
+
+  // ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 3;
 }
 
 // ControllerDeploymentList is a collection of ControllerDeployments.
@@ -398,15 +401,6 @@ message ControllerDeploymentList {
 
   // Items is the list of ControllerDeployments.
   repeated ControllerDeployment items = 2;
-}
-
-// ControllerDeploymentSpec is the specification of a ControllerDeployment.
-message ControllerDeploymentSpec {
-  // Type is the deployment type.
-  optional string type = 1;
-
-  // ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 }
 
 // ControllerInstallation represents an installation request for an external controller.
@@ -433,15 +427,15 @@ message ControllerInstallationList {
 
 // ControllerInstallationSpec is the specification of a ControllerInstallation.
 message ControllerInstallationSpec {
-  // DeploymentRef is used to reference a ControllerDeployment resource.
-  // +optional
-  optional k8s.io.api.core.v1.ObjectReference deploymentRef = 1;
-
   // RegistrationRef is used to reference a ControllerRegistration resource.
-  optional k8s.io.api.core.v1.ObjectReference registrationRef = 2;
+  optional k8s.io.api.core.v1.ObjectReference registrationRef = 1;
 
   // SeedRef is used to reference a Seed resource.
-  optional k8s.io.api.core.v1.ObjectReference seedRef = 3;
+  optional k8s.io.api.core.v1.ObjectReference seedRef = 2;
+
+  // DeploymentRef is used to reference a ControllerDeployment resource.
+  // +optional
+  optional k8s.io.api.core.v1.ObjectReference deploymentRef = 3;
 }
 
 // ControllerInstallationStatus is the status of a ControllerInstallation.

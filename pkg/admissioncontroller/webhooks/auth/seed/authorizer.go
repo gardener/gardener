@@ -105,11 +105,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		case configMapResource:
 			return a.authorizeConfigMap(seedName, attrs)
 		case controllerDeploymentResource:
-			return a.authorize(seedName, graph.VertexTypeControllerDeployment, attrs,
-				[]string{"get"},
-				nil,
-				nil,
-			)
+			return a.authorizeRead(seedName, graph.VertexTypeControllerDeployment, attrs)
 		case controllerInstallationResource:
 			return a.authorize(seedName, graph.VertexTypeControllerInstallation, attrs,
 				[]string{"update", "patch"},

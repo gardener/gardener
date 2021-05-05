@@ -21,21 +21,18 @@ import (
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 func (c *Controller) controllerDeploymentAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 	c.controllerDeploymentQueue.Add(key)
@@ -46,26 +43,21 @@ func (c *Controller) controllerDeploymentUpdate(_, newObj interface{}) {
 }
 
 // NewReconciler creates a new instance of a reconciler which reconciles ControllerDeployments.
-func NewReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger) reconcile.Reconciler {
+func NewReconciler(l logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
 	return &controllerDeploymentReconciler{
-		logger:    l,
-		clientMap: clientMap,
+		logger:       l,
+		gardenClient: gardenClient,
 	}
 }
 
 type controllerDeploymentReconciler struct {
-	logger    logrus.FieldLogger
-	clientMap clientmap.ClientMap
+	logger       logrus.FieldLogger
+	gardenClient client.Client
 }
 
 func (c *controllerDeploymentReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
-	if err := gardenClient.Client().Get(ctx, kutil.Key(req.Name), controllerDeployment); err != nil {
+	if err := c.gardenClient.Get(ctx, kutil.Key(req.Name), controllerDeployment); err != nil {
 		if apierrors.IsNotFound(err) {
 			c.logger.Debugf("[CONTROLLERDEPLOYMENT RECONCILE] %s - skipping because ControllerDeployment has been deleted", req.Name)
 			return reconcile.Result{}, nil
@@ -79,16 +71,13 @@ func (c *controllerDeploymentReconciler) Reconcile(ctx context.Context, req reco
 		}
 
 		controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
-		if err := gardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
+		if err := c.gardenClient.List(ctx, controllerRegistrationList); err != nil {
 			return reconcile.Result{}, err
 		}
 
 		for _, controllerRegistration := range controllerRegistrationList.Items {
 			deployment := controllerRegistration.Spec.Deployment
 			if deployment == nil {
-				continue
-			}
-			if len(deployment.DeploymentRefs) < 1 {
 				continue
 			}
 			for _, deploymentRef := range deployment.DeploymentRefs {
@@ -98,8 +87,8 @@ func (c *controllerDeploymentReconciler) Reconcile(ctx context.Context, req reco
 			}
 		}
 
-		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), controllerDeployment, FinalizerName)
+		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, c.gardenClient, controllerDeployment, FinalizerName)
 	}
 
-	return reconcile.Result{}, controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), controllerDeployment, FinalizerName)
+	return reconcile.Result{}, controllerutils.PatchAddFinalizers(ctx, c.gardenClient, controllerDeployment, FinalizerName)
 }

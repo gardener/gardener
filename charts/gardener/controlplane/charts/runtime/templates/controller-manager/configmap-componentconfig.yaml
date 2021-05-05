@@ -35,6 +35,10 @@ data:
       cloudProfile:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.cloudProfile.concurrentSyncs is required" .Values.global.controller.config.controllers.cloudProfile.concurrentSyncs }}
       {{- end }}
+      {{- if .Values.global.controller.config.controllers.controllerDeployment }}
+      controllerDeployment:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.controllerDeployment.concurrentSyncs is required" .Values.global.controller.config.controllers.controllerDeployment.concurrentSyncs }}
+      {{- end }}
       {{- if .Values.global.controller.config.controllers.controllerRegistration }}
       controllerRegistration:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.controllerRegistration.concurrentSyncs is required" .Values.global.controller.config.controllers.controllerRegistration.concurrentSyncs }}

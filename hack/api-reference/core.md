@@ -499,20 +499,6 @@ Refer to the Kubernetes API documentation for the fields of the
 </tr>
 <tr>
 <td>
-<code>spec</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.ControllerDeploymentSpec">
-ControllerDeploymentSpec
-</a>
-</em>
-</td>
-<td>
-<p>Spec contains the specification of this deployment.</p>
-<br/>
-<br/>
-<table>
-<tr>
-<td>
 <code>type</code></br>
 <em>
 string
@@ -533,9 +519,6 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </td>
 <td>
 <p>ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.</p>
-</td>
-</tr>
-</table>
 </td>
 </tr>
 </tbody>
@@ -601,20 +584,6 @@ ControllerInstallationSpec
 <table>
 <tr>
 <td>
-<code>deploymentRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
-Kubernetes core/v1.ObjectReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>DeploymentRef is used to reference a ControllerDeployment resource.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>registrationRef</code></br>
 <em>
 <a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
@@ -637,6 +606,20 @@ Kubernetes core/v1.ObjectReference
 </td>
 <td>
 <p>SeedRef is used to reference a Seed resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>deploymentRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeploymentRef is used to reference a ControllerDeployment resource.</p>
 </td>
 </tr>
 </table>
@@ -2876,49 +2859,6 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <p>
 <p>ControllerDeploymentPolicy is a string alias.</p>
 </p>
-<h3 id="core.gardener.cloud/v1beta1.ControllerDeploymentSpec">ControllerDeploymentSpec
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment</a>)
-</p>
-<p>
-<p>ControllerDeploymentSpec is the specification of a ControllerDeployment.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>type</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Type is the deployment type.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
-k8s.io/apimachinery/pkg/runtime.RawExtension
-</a>
-</em>
-</td>
-<td>
-<p>ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerInstallationSpec">ControllerInstallationSpec
 </h3>
 <p>
@@ -2936,20 +2876,6 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>
-<code>deploymentRef</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
-Kubernetes core/v1.ObjectReference
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>DeploymentRef is used to reference a ControllerDeployment resource.</p>
-</td>
-</tr>
 <tr>
 <td>
 <code>registrationRef</code></br>
@@ -2974,6 +2900,20 @@ Kubernetes core/v1.ObjectReference
 </td>
 <td>
 <p>SeedRef is used to reference a Seed resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>deploymentRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeploymentRef is used to reference a ControllerDeployment resource.</p>
 </td>
 </tr>
 </tbody>

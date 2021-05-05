@@ -200,7 +200,7 @@ func (c *defaultControllerInstallationControl) reconcile(ctx context.Context, ga
 		if err := gardenClient.Client().Get(ctx, kutil.Key(deploymentRef.Name), controllerDeployment); err != nil {
 			return err
 		}
-		providerConfig = &controllerDeployment.Spec.ProviderConfig
+		providerConfig = &controllerDeployment.ProviderConfig
 	} else {
 		providerConfig = controllerRegistration.Spec.Deployment.ProviderConfig
 	}
@@ -371,19 +371,22 @@ func updateConditions(ctx context.Context, gardenClient kubernetes.Interface, co
 }
 
 func (c *defaultControllerInstallationControl) isResponsible(ctx context.Context, cl client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation) (bool, error) {
+	// First check if a ControllerDeployment is used for the affected installation.
+	if deploymentName := controllerInstallation.Spec.DeploymentRef; deploymentName != nil {
+		controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
+		if err := cl.Get(ctx, kutil.Key(deploymentName.Name), controllerDeployment); err != nil {
+			return false, err
+		}
+		return controllerDeployment.Type == installationTypeHelm, nil
+	}
+
+	// Continue with the ControllerRegistration which can directly contain a deployment specification.
 	controllerRegistration, err := c.controllerRegistrationLister.Get(controllerInstallation.Spec.RegistrationRef.Name)
 	if err != nil {
 		return false, err
 	}
 
 	if deployment := controllerRegistration.Spec.Deployment; deployment != nil {
-		if deploymentName := controllerInstallation.Spec.DeploymentRef; deploymentName != nil {
-			controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
-			if err := cl.Get(ctx, kutil.Key(deploymentName.Name), controllerDeployment); err != nil {
-				return false, err
-			}
-			return controllerDeployment.Spec.Type == installationTypeHelm, nil
-		}
 		if deployment.Type != nil {
 			return *deployment.Type == installationTypeHelm, nil
 		}

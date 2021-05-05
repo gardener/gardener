@@ -78,7 +78,7 @@ type ControllerResource struct {
 // DeploymentRef contains information about `ControllerDeployment` references.
 type DeploymentRef struct {
 	// Name is the name of the `ControllerDeployment` that is being referred to.
-	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 }
 
 // ControllerRegistrationDeployment contains information for how this controller is deployed.

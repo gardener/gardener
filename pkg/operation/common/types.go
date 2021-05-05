@@ -110,8 +110,8 @@ const (
 	// SeedSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	SeedSpecHash = "seed-spec-hash"
 
-	// ControllerDeploymentSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
-	ControllerDeploymentSpecHash = "deployment-spec-hash"
+	// ControllerDeploymentHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
+	ControllerDeploymentHash = "deployment-hash"
 	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	RegistrationSpecHash = "registration-spec-hash"
 

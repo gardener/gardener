@@ -16,6 +16,7 @@ package validation
 
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
+
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
@@ -25,7 +26,10 @@ func ValidateControllerDeployment(controllerDeployment *core.ControllerDeploymen
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&controllerDeployment.ObjectMeta, false, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidateControllerDeploymentSpec(&controllerDeployment.Spec, field.NewPath("spec"))...)
+
+	if len(controllerDeployment.Type) == 0 {
+		allErrs = append(allErrs, field.Required(field.NewPath("type"), "type is required"))
+	}
 
 	return allErrs
 }
@@ -33,15 +37,4 @@ func ValidateControllerDeployment(controllerDeployment *core.ControllerDeploymen
 // ValidateControllerDeploymentUpdate validates a ControllerDeployment object before an update.
 func ValidateControllerDeploymentUpdate(new, _ *core.ControllerDeployment) field.ErrorList {
 	return ValidateControllerDeployment(new)
-}
-
-// ValidateControllerDeploymentSpec validates the specification of a ControllerDeployment object.
-func ValidateControllerDeploymentSpec(spec *core.ControllerDeploymentSpec, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(spec.Type) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "type is required"))
-	}
-
-	return allErrs
 }

@@ -418,6 +418,7 @@ func deployNeededInstallations(
 			controllerDeployment   *gardencorev1beta1.ControllerDeployment
 			controllerRegistration = controllerRegistrations[registrationName].obj
 		)
+
 		if controllerRegistration.Spec.Deployment != nil && len(controllerRegistration.Spec.Deployment.DeploymentRefs) > 0 {
 			// Today, only one DeploymentRef element is allowed, which is why can simply pick the first one from the slice.
 			controllerDeployment = &gardencorev1beta1.ControllerDeployment{}
@@ -478,12 +479,12 @@ func deployNeededInstallation(
 		kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.RegistrationSpecHash, registrationSpecHash)
 
 		if controllerDeployment != nil {
-			deploymentSpecMap, err := convertObjToMap(controllerDeployment.Spec)
+			deploymentMap, err := convertObjToMap(controllerDeployment)
 			if err != nil {
 				return err
 			}
-			deploymentSpecHash := utils.HashForMap(deploymentSpecMap)[:16]
-			kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.ControllerDeploymentSpecHash, deploymentSpecHash)
+			deploymentSpecHash := utils.HashForMap(deploymentMap)[:16]
+			kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.ControllerDeploymentHash, deploymentSpecHash)
 		}
 		controllerInstallation.Spec = installationSpec
 		return nil

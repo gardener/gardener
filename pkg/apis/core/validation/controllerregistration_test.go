@@ -277,6 +277,17 @@ var _ = Describe("validation", func() {
 			}))))
 		})
 
+		It("should forbid to set an empty deploymentpkg/controllermanager/controller/controllerdeployment/controllerdeployment_control_test.go type", func() {
+			controllerRegistration.Spec.Deployment.Type = pointer.StringPtr("")
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.deployment.type"),
+			}))))
+		})
+
 		It("should forbid specifying a ProviderConfig and referring to a ControllerDeployment", func() {
 			controllerRegistration.Spec.Deployment.ProviderConfig = &runtime.RawExtension{}
 			controllerRegistration.Spec.Deployment.DeploymentRefs = []core.DeploymentRef{

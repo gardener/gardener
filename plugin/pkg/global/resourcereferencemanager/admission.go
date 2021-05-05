@@ -135,10 +135,10 @@ func (r *ReferenceManager) SetInternalCoreInformerFactory(f coreinformers.Shared
 	projectInformer := f.Core().InternalVersion().Projects()
 	r.projectLister = projectInformer.Lister()
 
-	contorllerDeploymentInformer := f.Core().InternalVersion().ControllerDeployments()
-	r.controllerDeploymentLister = contorllerDeploymentInformer.Lister()
+	controllerDeploymentInformer := f.Core().InternalVersion().ControllerDeployments()
+	r.controllerDeploymentLister = controllerDeploymentInformer.Lister()
 
-	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced, projectInformer.Informer().HasSynced, contorllerDeploymentInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced, projectInformer.Informer().HasSynced, controllerDeploymentInformer.Informer().HasSynced)
 }
 
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
