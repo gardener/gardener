@@ -20,15 +20,12 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/logger"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 
+	"github.com/sirupsen/logrus"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -63,11 +60,17 @@ func (c *Controller) backupBucketUpdate(oldObj, newObj interface{}) {
 	}
 }
 
-type backupBucketReconciler struct {
-	clientMap clientmap.ClientMap
+// NewDefaultBackupBucketControl returns a new default control to checks backup buckets of related seeds.
+func NewDefaultBackupBucketControl(logger logrus.FieldLogger, gardenClient kubernetes.Interface) *backupBucketReconciler {
+	return &backupBucketReconciler{
+		logger:       logger,
+		gardenClient: gardenClient,
+	}
+}
 
-	seedLister         gardencorelisters.SeedLister
-	backupBucketLister gardencorelisters.BackupBucketLister
+type backupBucketReconciler struct {
+	logger       logrus.FieldLogger
+	gardenClient kubernetes.Interface
 }
 
 type backupBucketInfo struct {
@@ -80,18 +83,18 @@ func (b *backupBucketInfo) String() string {
 }
 
 func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	seed, err := b.seedLister.Get(req.Name)
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := b.gardenClient.Client().Get(ctx, req.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Logger.Debugf("[BACKUPBUCKET SEED RECONCILE] %s - skipping because Seed has been deleted", req.NamespacedName)
+			b.logger.Debugf("[BACKUPBUCKET SEED RECONCILE] %s - skipping because Seed has been deleted", req.NamespacedName)
 			return reconcileResult(nil)
 		}
-		logger.Logger.Infof("[BACKUPBUCKET SEED RECONCILE] %s - unable to retrieve seed object from store: %v", req.NamespacedName, err)
+		b.logger.Infof("[BACKUPBUCKET SEED RECONCILE] %s - unable to retrieve seed object from store: %v", req.NamespacedName, err)
 		return reconcileResult(err)
 	}
 
-	bbs, err := b.backupBucketLister.List(labels.Everything())
-	if err != nil {
+	backupBucketList := &gardencorev1beta1.BackupBucketList{}
+	if err := b.gardenClient.Client().List(ctx, backupBucketList); err != nil {
 		return reconcileResult(err)
 	}
 
@@ -101,23 +104,18 @@ func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Re
 		bbCount                int
 		erroneousBackupBuckets []backupBucketInfo
 	)
-	for _, bb := range bbs {
+	for _, bb := range backupBucketList.Items {
 		if *bb.Spec.SeedName != seed.Name {
 			continue
 		}
 
 		bbCount++
-		if occurred, msg := gardencorev1beta1helper.BackupBucketIsErroneous(bb); occurred {
+		if occurred, msg := gardencorev1beta1helper.BackupBucketIsErroneous(&bb); occurred {
 			erroneousBackupBuckets = append(erroneousBackupBuckets, backupBucketInfo{
 				name:     bb.Name,
 				errorMsg: msg,
 			})
 		}
-	}
-
-	gardenClient, err := b.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcileResult(err)
 	}
 
 	switch {
@@ -127,17 +125,17 @@ func (b *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Re
 			errorMsg += fmt.Sprintf("\n* %s", bb.String())
 		}
 
-		if updateErr := patchSeedCondition(ctx, gardenClient.Client(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
+		if updateErr := patchSeedCondition(ctx, b.gardenClient.Client(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionFalse, "BackupBucketsError", errorMsg)); updateErr != nil {
 			return reconcileResult(updateErr)
 		}
 	case bbCount > 0:
-		if updateErr := patchSeedCondition(ctx, gardenClient.Client(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
+		if updateErr := patchSeedCondition(ctx, b.gardenClient.Client(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionTrue, "BackupBucketsAvailable", "Backup Buckets are available.")); updateErr != nil {
 			return reconcileResult(updateErr)
 		}
 	case bbCount == 0:
-		if updateErr := patchSeedCondition(ctx, gardenClient.Client(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
+		if updateErr := patchSeedCondition(ctx, b.gardenClient.Client(), seed, gardencorev1beta1helper.UpdatedCondition(conditionBackupBucketsReady,
 			gardencorev1beta1.ConditionUnknown, "BackupBucketsGone", "Backup Buckets are gone.")); updateErr != nil {
 			return reconcileResult(updateErr)
 		}
@@ -156,14 +154,4 @@ func patchSeedCondition(ctx context.Context, c client.StatusClient, seed *garden
 
 	seed.Status.Conditions = conditions
 	return c.Status().Patch(ctx, seed, patch)
-}
-
-// NewDefaultBackupBucketControl returns a new default control to checks backup buckets of related seeds.
-func NewDefaultBackupBucketControl(clientMap clientmap.ClientMap, bbLister gardencorelisters.BackupBucketLister, seedLister gardencorelisters.SeedLister) *backupBucketReconciler {
-	return &backupBucketReconciler{
-		clientMap: clientMap,
-
-		backupBucketLister: bbLister,
-		seedLister:         seedLister,
-	}
 }

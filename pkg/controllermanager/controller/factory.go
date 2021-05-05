@@ -16,14 +16,11 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"time"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
@@ -39,21 +36,15 @@ import (
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
+	"github.com/gardener/gardener/pkg/controllerutils/metrics"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	kubeinformers "k8s.io/client-go/informers"
-	kubecorev1informers "k8s.io/client-go/informers/core/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,34 +52,19 @@ import (
 
 // GardenControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenControllerFactory struct {
-	cfg                    *config.ControllerManagerConfiguration
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	k8sInformers           kubeinformers.SharedInformerFactory
-	recorder               record.EventRecorder
+	cfg       *config.ControllerManagerConfiguration
+	clientMap clientmap.ClientMap
+	recorder  record.EventRecorder
 }
 
 // NewGardenControllerFactory creates a new factory for controllers for the Garden API group.
-func NewGardenControllerFactory(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, cfg *config.ControllerManagerConfiguration, recorder record.EventRecorder) *GardenControllerFactory {
+func NewGardenControllerFactory(clientMap clientmap.ClientMap, cfg *config.ControllerManagerConfiguration, recorder record.EventRecorder) *GardenControllerFactory {
 	return &GardenControllerFactory{
-		cfg:                    cfg,
-		clientMap:              clientMap,
-		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		k8sInformers:           kubeInformerFactory,
-		recorder:               recorder,
+		cfg:       cfg,
+		clientMap: clientMap,
+		recorder:  recorder,
 	}
 }
-
-var (
-	noControlPlaneSecretsReq = utils.MustNewRequirement(
-		v1beta1constants.GardenRole,
-		selection.NotIn,
-		v1beta1constants.ControlPlaneSecretRoles...,
-	)
-
-	// uncontrolledSecretSelector is a selector for objects which are managed by operators/users and not created Gardener controllers.
-	uncontrolledSecretSelector = client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(noControlPlaneSecretsReq)}
-)
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenControllerFactory) Run(ctx context.Context) error {
@@ -105,56 +81,17 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
 	}
 
-	// create separate informer for configuration secrets
-	f.k8sInformers.InformerFor(&corev1.Secret{}, func(client kubernetes.Interface, sync time.Duration) cache.SharedIndexInformer {
-		secretInformer := kubecorev1informers.NewFilteredSecretInformer(client, metav1.NamespaceAll, 0, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, func(opts *metav1.ListOptions) {
-			opts.LabelSelector = uncontrolledSecretSelector.String()
-		})
-		return secretInformer
-	})
-
 	// Delete legacy (and meanwhile unused) ConfigMap after https://github.com/gardener/gardener/pull/3756.
 	// TODO: This code can be removed in a future release.
 	if err := kutil.DeleteObject(ctx, k8sGardenClient.Client(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-controller-manager-internal-config", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
 		return err
 	}
 
-	var (
-		// Garden core informers
-		backupBucketInformer           = f.k8sGardenCoreInformers.Core().V1beta1().BackupBuckets().Informer()
-		backupEntryInformer            = f.k8sGardenCoreInformers.Core().V1beta1().BackupEntries().Informer()
-		cloudProfileInformer           = f.k8sGardenCoreInformers.Core().V1beta1().CloudProfiles().Informer()
-		controllerRegistrationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerRegistrations().Informer()
-		controllerInstallationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerInstallations().Informer()
-		quotaInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Quotas().Informer()
-		plantInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Plants().Informer()
-		projectInformer                = f.k8sGardenCoreInformers.Core().V1beta1().Projects().Informer()
-		secretBindingInformer          = f.k8sGardenCoreInformers.Core().V1beta1().SecretBindings().Informer()
-		seedInformer                   = f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Informer()
-		shootInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Informer()
-		// Kubernetes core informers
-		configMapInformer   = f.k8sInformers.Core().V1().ConfigMaps().Informer()
-		csrInformer         = f.k8sInformers.Certificates().V1beta1().CertificateSigningRequests().Informer()
-		namespaceInformer   = f.k8sInformers.Core().V1().Namespaces().Informer()
-		secretInformer      = f.k8sInformers.Core().V1().Secrets().Informer()
-		roleBindingInformer = f.k8sInformers.Rbac().V1().RoleBindings().Informer()
-		leaseInformer       = f.k8sInformers.Coordination().V1().Leases().Informer()
-	)
-
-	f.k8sGardenCoreInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, plantInformer.HasSynced, cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, projectInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
-		return errors.New("Timed out waiting for Garden core caches to sync")
-	}
-
-	f.k8sInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), configMapInformer.HasSynced, csrInformer.HasSynced, namespaceInformer.HasSynced, secretInformer.HasSynced, roleBindingInformer.HasSynced, leaseInformer.HasSynced) {
-		return errors.New("Timed out waiting for Kube caches to sync")
-	}
-
-	runtime.Must(garden.BootstrapCluster(ctx, k8sGardenClient, v1beta1constants.GardenNamespace, f.k8sInformers.Core().V1().Secrets().Lister()))
+	runtime.Must(garden.BootstrapCluster(ctx, k8sGardenClient))
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
 
 	// Initialize the workqueue metrics collection.
+	var metricsCollectors []metrics.ControllerMetricsCollector
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	// Create controllers.
@@ -162,68 +99,61 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, cloudProfileController)
 
 	controllerRegistrationController, err := controllerregistrationcontroller.NewController(ctx, f.clientMap)
 	if err != nil {
 		return fmt.Errorf("failed initializing ControllerRegistration controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, controllerRegistrationController)
 
 	csrController, err := csrcontroller.NewCSRController(ctx, f.clientMap)
 	if err != nil {
 		return fmt.Errorf("failed initializing CSR controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, csrController)
 
 	plantController, err := plantcontroller.NewController(ctx, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Plant controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, plantController)
 
 	projectController, err := projectcontroller.NewProjectController(ctx, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, projectController)
 
 	quotaController, err := quotacontroller.NewQuotaController(ctx, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Quota controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, quotaController)
 
 	secretBindingController, err := secretbindingcontroller.NewSecretBindingController(ctx, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing SecretBinding controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, secretBindingController)
 
-	var (
-		seedController  = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
-		eventController = eventcontroller.NewController(f.clientMap, f.cfg.Controllers.Event)
-	)
+	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.cfg)
+	if err != nil {
+		return fmt.Errorf("failed initializing Seed controller: %w", err)
+	}
+	metricsCollectors = append(metricsCollectors, seedController)
 
-	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, f.k8sInformers, f.cfg, f.recorder)
+	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
+	metricsCollectors = append(metricsCollectors, shootController)
 
 	managedSeedSetController, err := managedseedsetcontroller.NewManagedSeedSetController(ctx, f.clientMap, f.cfg, f.recorder, logger.Logger)
 	if err != nil {
 		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
 	}
-
-	// Initialize the Controller metrics collection.
-	gardenmetrics.RegisterControllerMetrics(
-		controllermanager.ControllerWorkerSum,
-		controllermanager.ScrapeFailures,
-		cloudProfileController,
-		controllerRegistrationController,
-		csrController,
-		quotaController,
-		plantController,
-		projectController,
-		secretBindingController,
-		seedController,
-		shootController,
-		eventController,
-		managedSeedSetController,
-	)
+	metricsCollectors = append(metricsCollectors, managedSeedSetController)
 
 	go cloudProfileController.Run(ctx, f.cfg.Controllers.CloudProfile.ConcurrentSyncs)
 	go controllerRegistrationController.Run(ctx, f.cfg.Controllers.ControllerRegistration.ConcurrentSyncs)
@@ -234,8 +164,20 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs)
 	go seedController.Run(ctx, f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs, f.cfg.Controllers.ShootRetry.ConcurrentSyncs)
-	go eventController.Run(ctx)
 	go managedSeedSetController.Run(ctx, f.cfg.Controllers.ManagedSeedSet.ConcurrentSyncs)
+
+	if eventControllerConfig := f.cfg.Controllers.Event; eventControllerConfig != nil {
+		eventController, err := eventcontroller.NewController(ctx, f.clientMap, eventControllerConfig)
+		if err != nil {
+			return fmt.Errorf("failed initializing Event controller: %w", err)
+		}
+		metricsCollectors = append(metricsCollectors, eventController)
+
+		go eventController.Run(ctx)
+	}
+
+	// Initialize the Controller metrics collection.
+	gardenmetrics.RegisterControllerMetrics(controllermanager.ControllerWorkerSum, controllermanager.ScrapeFailures, metricsCollectors...)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
 
@@ -262,6 +204,19 @@ func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error 
 		return []string{*project.Spec.Namespace}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer to Project Informer: %w", err)
+	}
+
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.Shoot{}, gardencore.ShootSeedName, func(obj client.Object) []string {
+		shoot, ok := obj.(*gardencorev1beta1.Shoot)
+		if !ok {
+			return []string{""}
+		}
+		if shoot.Spec.SeedName == nil {
+			return []string{""}
+		}
+		return []string{*shoot.Spec.SeedName}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to Shoot Informer: %w", err)
 	}
 
 	return nil

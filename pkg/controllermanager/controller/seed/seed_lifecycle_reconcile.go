@@ -16,30 +16,26 @@ package seed
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/sirupsen/logrus"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	coordinationlister "k8s.io/client-go/listers/coordination/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (c *Controller) seedLifecycleAdd(obj interface{}) {
@@ -54,57 +50,44 @@ func (c *Controller) seedLifecycleAdd(obj interface{}) {
 // implements the documented semantics for checking the lifecycle for Seeds.
 // You should use an instance returned from NewLifecycleDefaultControl() for any scenario other than testing.
 func NewLifecycleDefaultControl(
-	clientMap clientmap.ClientMap,
-	leaseLister coordinationlister.LeaseLister,
-	seedLister gardencorelisters.SeedLister,
-	shootLister gardencorelisters.ShootLister,
+	logger logrus.FieldLogger,
+	gardenClient kubernetes.Interface,
 	config *config.ControllerManagerConfiguration,
 ) *livecycleReconciler {
 	return &livecycleReconciler{
-		clientMap:   clientMap,
-		leaseLister: leaseLister,
-		seedLister:  seedLister,
-		shootLister: shootLister,
-		config:      config,
+		logger:       logger,
+		gardenClient: gardenClient,
+		config:       config,
 	}
 }
 
 type livecycleReconciler struct {
-	clientMap   clientmap.ClientMap
-	leaseLister coordinationlister.LeaseLister
-	seedLister  gardencorelisters.SeedLister
-	shootLister gardencorelisters.ShootLister
-	config      *config.ControllerManagerConfiguration
+	logger       logrus.FieldLogger
+	gardenClient kubernetes.Interface
+	config       *config.ControllerManagerConfiguration
 }
 
 func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	seedObj, err := c.seedLister.Get(req.Name)
+	seed := &gardencorev1beta1.Seed{}
+	err := c.gardenClient.Cache().Get(ctx, req.NamespacedName, seed)
 	if apierrors.IsNotFound(err) {
-		logger.Logger.Infof("[SEED LIFECYCLE] Stopping lifecycle operations for Seed %s since it has been deleted", req.Name)
+		c.logger.Infof("[SEED LIFECYCLE] Stopping lifecycle operations for Seed %s since it has been deleted", req.Name)
 		return reconcileResult(nil)
 	}
 	if err != nil {
-		logger.Logger.Infof("[SEED LIFECYCLE] %s - unable to retrieve object from store: %v", req.Name, err)
+		c.logger.Infof("[SEED LIFECYCLE] %s - unable to retrieve object from store: %v", req.Name, err)
 		return reconcileResult(err)
 	}
 
-	var (
-		seed       = seedObj.DeepCopy()
-		seedLogger = logger.NewFieldLogger(logger.Logger, "seed", seed.Name)
-	)
+	seedLogger := logger.NewFieldLogger(c.logger, "seed", seed.Name)
 
 	// New seeds don't have conditions - gardenlet never reported anything yet. Wait for grace period.
 	if len(seed.Status.Conditions) == 0 {
 		return reconcileAfter(10 * time.Second)
 	}
 
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcileResult(fmt.Errorf("failed to get garden client: %w", err))
-	}
-
-	observedSeedLease, err := c.leaseLister.Leases(gardencorev1beta1.GardenerSeedLeaseNamespace).Get(seed.Name)
-	if client.IgnoreNotFound(err) != nil {
+	observedSeedLease := &coordinationv1.Lease{}
+	if err := c.gardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), observedSeedLease); client.IgnoreNotFound(err) != nil {
 		return reconcileResult(err)
 	}
 
@@ -115,7 +98,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 		// Get the latest Lease object in cases which the LeaseLister cache is outdated, to ensure that the lease is really expired
 		latestLeaseObject := &coordinationv1.Lease{}
-		if err := gardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), latestLeaseObject); err != nil {
+		if err := c.gardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), latestLeaseObject); err != nil {
 			return reconcileResult(err)
 		}
 
@@ -141,7 +124,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	bldr.WithMessage("Gardenlet stopped posting seed status.")
 	if newCondition, update := bldr.WithNowFunc(metav1.Now).Build(); update {
 		seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, newCondition)
-		if err := gardenClient.Client().Status().Update(ctx, seed); err != nil {
+		if err := c.gardenClient.Client().Status().Update(ctx, seed); err != nil {
 			return reconcileResult(err)
 		}
 	}
@@ -156,20 +139,16 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 	seedLogger.Debugf("Gardenlet didn't send a heartbeat for at least %s - setting the shoot conditions/constraints to 'unknown' for all shoots on this seed", c.config.Controllers.Seed.ShootMonitorPeriod.Duration)
 
-	shootList, err := c.shootLister.List(labels.Everything())
-	if err != nil {
+	shootList := &gardencorev1beta1.ShootList{}
+	if err := c.gardenClient.Cache().List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {
 		return reconcileResult(err)
 	}
 
 	var fns []flow.TaskFn
 
-	for _, shoot := range shootList {
-		if shoot.Spec.SeedName == nil || *shoot.Spec.SeedName != seed.Name {
-			continue
-		}
-
+	for _, shoot := range shootList.Items {
 		fns = append(fns, func(ctx context.Context) error {
-			return setShootStatusToUnknown(ctx, gardenClient.GardenCore(), shoot)
+			return setShootStatusToUnknown(ctx, c.gardenClient.GardenCore(), shoot)
 		})
 	}
 
@@ -180,7 +159,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	return reconcileAfter(1 * time.Minute)
 }
 
-func setShootStatusToUnknown(ctx context.Context, g gardencore.Interface, shoot *gardencorev1beta1.Shoot) error {
+func setShootStatusToUnknown(ctx context.Context, g gardencore.Interface, shoot gardencorev1beta1.Shoot) error {
 	var (
 		reason = "StatusUnknown"
 		msg    = "Gardenlet stopped sending heartbeats."

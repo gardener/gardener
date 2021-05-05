@@ -15,6 +15,9 @@
 package seed
 
 import (
+	"context"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -35,29 +38,29 @@ func filterGardenSecret(obj interface{}) bool {
 	return gardenRoleSelector.Matches(labels.Set(secret.Labels))
 }
 
-func (c *Controller) enqueueSeeds() {
-	seeds, err := c.seedLister.List(labels.Everything())
-	if err != nil {
+func (c *Controller) enqueueSeeds(ctx context.Context) {
+	seedList := &gardencorev1beta1.SeedList{}
+	if err := c.gardenClient.List(ctx, seedList); err != nil {
 		logger.Logger.Errorf("Could not enqueue seeds: %v", err)
 	}
-	for _, seed := range seeds {
-		c.seedQueue.Add(client.ObjectKeyFromObject(seed).String())
+	for _, seed := range seedList.Items {
+		c.seedQueue.Add(client.ObjectKeyFromObject(&seed).String())
 	}
 }
 
-func (c *Controller) gardenSecretAdd(_ interface{}) {
-	c.enqueueSeeds()
+func (c *Controller) gardenSecretAdd(ctx context.Context, _ interface{}) {
+	c.enqueueSeeds(ctx)
 }
 
-func (c *Controller) gardenSecretUpdate(oldObj, newObj interface{}) {
+func (c *Controller) gardenSecretUpdate(ctx context.Context, oldObj, newObj interface{}) {
 	oldSecret := oldObj.(*corev1.Secret)
 	newSecret := newObj.(*corev1.Secret)
 
 	if !apiequality.Semantic.DeepEqual(oldSecret, newSecret) {
-		c.enqueueSeeds()
+		c.enqueueSeeds(ctx)
 	}
 }
 
-func (c *Controller) gardenSecretDelete(_ interface{}) {
-	c.enqueueSeeds()
+func (c *Controller) gardenSecretDelete(ctx context.Context, _ interface{}) {
+	c.enqueueSeeds(ctx)
 }

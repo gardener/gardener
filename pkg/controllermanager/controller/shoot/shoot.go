@@ -25,18 +25,14 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -67,7 +63,6 @@ type Controller struct {
 func NewShootController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	config *config.ControllerManagerConfiguration,
 	recorder record.EventRecorder,
 ) (
@@ -88,12 +83,6 @@ func NewShootController(
 		return nil, fmt.Errorf("failed to get ConfigMap Informer: %w", err)
 	}
 
-	var (
-		corev1Informer = kubeInformerFactory.Core().V1()
-		secretInformer = corev1Informer.Secrets()
-		secretLister   = secretInformer.Lister()
-	)
-
 	shootController := &Controller{
 		config: config,
 
@@ -102,6 +91,7 @@ func NewShootController(
 		shootQuotaReconciler:       NewShootQuotaReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootQuota),
 		configMapReconciler:        NewConfigMapReconciler(logger.Logger, gardenClient.Client()),
 		shootRetryReconciler:       NewShootRetryReconciler(logger.Logger, gardenClient.Client(), config.Controllers.ShootRetry),
+		shootRefReconciler:         NewShootReferenceReconciler(logger.Logger, gardenClient, config.Controllers.ShootReference),
 
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
@@ -149,37 +139,6 @@ func NewShootController(
 		shootInformer.HasSynced,
 		configMapInformer.HasSynced,
 	}
-
-	runtimeSecretLister := func(ctx context.Context, secretList *corev1.SecretList, opts ...client.ListOption) error {
-		return gardenClient.Cache().List(ctx, secretList, opts...)
-	}
-	runtimeConfigMapLister := func(ctx context.Context, configMapList *corev1.ConfigMapList, opts ...client.ListOption) error {
-		return gardenClient.Cache().List(ctx, configMapList, opts...)
-	}
-
-	// If cache is not enabled, set up a dedicated informer which only considers objects which are not gardener managed.
-	// Large gardener environments hold many secrets and with a proper cache we can compensate the load the controller puts on the API server.
-	if !controllermanagerfeatures.FeatureGate.Enabled(features.CachedRuntimeClients) {
-		runtimeSecretLister = func(ctx context.Context, secretList *corev1.SecretList, opts ...client.ListOption) error {
-			listOpts := &client.ListOptions{}
-			for _, opt := range opts {
-				opt.ApplyToList(listOpts)
-			}
-
-			secrets, err := secretLister.Secrets(listOpts.Namespace).List(listOpts.LabelSelector)
-			if err != nil {
-				return err
-			}
-			for _, secret := range secrets {
-				secretList.Items = append(secretList.Items, *secret)
-			}
-
-			return nil
-		}
-		shootController.hasSyncedFuncs = append(shootController.hasSyncedFuncs, secretInformer.Informer().HasSynced)
-	}
-
-	shootController.shootRefReconciler = NewShootReferenceReconciler(logger.Logger, clientMap, runtimeSecretLister, runtimeConfigMapLister, config.Controllers.ShootReference)
 
 	return shootController, nil
 }

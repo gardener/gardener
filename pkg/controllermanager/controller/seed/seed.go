@@ -16,47 +16,40 @@ package seed
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
+
 	"github.com/prometheus/client_golang/prometheus"
-	kubeinformers "k8s.io/client-go/informers"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // Controller controls Seeds.
 type Controller struct {
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-
-	config *config.ControllerManagerConfiguration
+	gardenClient client.Client
+	config       *config.ControllerManagerConfiguration
 
 	seedReconciler       reconcile.Reconciler
 	lifeCycleReconciler  reconcile.Reconciler
 	seedBackupReconciler reconcile.Reconciler
+	hasSyncedFuncs       []cache.InformerSynced
 
-	recorder record.EventRecorder
-
-	backupBucketLister    gardencorelisters.BackupBucketLister
 	seedBackupBucketQueue workqueue.RateLimitingInterface
+	seedQueue             workqueue.RateLimitingInterface
+	seedLifecycleQueue    workqueue.RateLimitingInterface
 
-	seedLister         gardencorelisters.SeedLister
-	seedQueue          workqueue.RateLimitingInterface
-	seedLifecycleQueue workqueue.RateLimitingInterface
-
-	shootLister gardencorelisters.ShootLister
-
-	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
@@ -65,79 +58,74 @@ type Controller struct {
 // holding information about the acting Gardener, a <gardenInformerFactory>, and a <recorder> for
 // event recording. It creates a new Seed controller.
 func NewSeedController(
+	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	gardenInformerFactory gardencoreinformers.SharedInformerFactory,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	config *config.ControllerManagerConfiguration,
-	recorder record.EventRecorder,
-) *Controller {
-	var (
-		gardenCoreV1beta1Informer = gardenInformerFactory.Core().V1beta1()
-
-		backupBucketInformer = gardenCoreV1beta1Informer.BackupBuckets()
-		backupBucketLister   = backupBucketInformer.Lister()
-
-		seedInformer = gardenCoreV1beta1Informer.Seeds()
-		seedLister   = seedInformer.Lister()
-
-		shootInformer = gardenCoreV1beta1Informer.Shoots()
-		shootLister   = shootInformer.Lister()
-
-		leaseInformer = kubeInformerFactory.Coordination().V1().Leases()
-		leaseLister   = leaseInformer.Lister()
-
-		secretInformer = kubeInformerFactory.Core().V1().Secrets()
-		secretLister   = kubeInformerFactory.Core().V1().Secrets().Lister()
-	)
-
-	seedController := &Controller{
-		clientMap:              clientMap,
-		k8sGardenCoreInformers: gardenInformerFactory,
-		config:                 config,
-		seedReconciler:         NewDefaultControl(clientMap, secretLister, seedLister),
-		lifeCycleReconciler:    NewLifecycleDefaultControl(clientMap, leaseLister, seedLister, shootLister, config),
-		recorder:               recorder,
-		seedBackupReconciler:   NewDefaultBackupBucketControl(clientMap, backupBucketLister, seedLister),
-		backupBucketLister:     backupBucketLister,
-		seedBackupBucketQueue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
-		seedLister:             seedLister,
-		shootLister:            shootLister,
-		seedLifecycleQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
-		seedQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed"),
-		workerCh:               make(chan int),
+) (
+	*Controller,
+	error,
+) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
 	}
 
-	backupBucketInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	backupBucketInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupBucket{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
+	}
+	secretInformer, err := gardenClient.Cache().GetInformer(ctx, &corev1.Secret{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Secret Informer: %w", err)
+	}
+	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
+	}
+
+	seedController := &Controller{
+		gardenClient: gardenClient.Client(),
+		config:       config,
+
+		seedReconciler:       NewDefaultControl(logger.Logger, gardenClient.Client()),
+		lifeCycleReconciler:  NewLifecycleDefaultControl(logger.Logger, gardenClient, config),
+		seedBackupReconciler: NewDefaultBackupBucketControl(logger.Logger, gardenClient),
+
+		seedBackupBucketQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Backup Bucket"),
+		seedLifecycleQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed Lifecycle"),
+		seedQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Seed"),
+		workerCh:              make(chan int),
+	}
+
+	backupBucketInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    seedController.backupBucketAdd,
 		UpdateFunc: seedController.backupBucketUpdate,
 	})
 
-	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	seedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: seedController.seedLifecycleAdd,
 	})
 
-	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	seedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: seedController.seedAdd,
 	})
 
-	secretInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	secretInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: filterGardenSecret,
 		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    seedController.gardenSecretAdd,
-			UpdateFunc: seedController.gardenSecretUpdate,
-			DeleteFunc: seedController.gardenSecretDelete,
+			AddFunc:    func(obj interface{}) { seedController.gardenSecretAdd(ctx, obj) },
+			UpdateFunc: func(oldObj, newObj interface{}) { seedController.gardenSecretUpdate(ctx, oldObj, newObj) },
+			DeleteFunc: func(obj interface{}) { seedController.gardenSecretDelete(ctx, obj) },
 		},
 	})
 
 	seedController.hasSyncedFuncs = []cache.InformerSynced{
-		backupBucketInformer.Informer().HasSynced,
-		seedInformer.Informer().HasSynced,
-		shootInformer.Informer().HasSynced,
-		leaseInformer.Informer().HasSynced,
-		secretInformer.Informer().HasSynced,
+		backupBucketInformer.HasSynced,
+		seedInformer.HasSynced,
+		secretInformer.HasSynced,
 	}
 
-	return seedController
+	return seedController, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.

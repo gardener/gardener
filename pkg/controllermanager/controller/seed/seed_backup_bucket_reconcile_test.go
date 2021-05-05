@@ -20,11 +20,11 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
+	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -37,7 +37,10 @@ import (
 )
 
 var _ = Describe("BackupBucketReconciler", func() {
-	var ctrl *gomock.Controller
+	var (
+		ctx  = context.TODO()
+		ctrl *gomock.Controller
+	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
@@ -49,18 +52,19 @@ var _ = Describe("BackupBucketReconciler", func() {
 
 	Describe("#Reconcile", func() {
 		var (
-			cm *fakeclientmap.ClientMap
-			c  *mockclient.MockClient
-			sw *mockclient.MockStatusWriter
+			k8sGardenClient *mockkubernetes.MockInterface
+			c               *mockclient.MockClient
+			sw              *mockclient.MockStatusWriter
 
 			seed, seedPatch *gardencorev1beta1.Seed
-			bbs             []*gardencorev1beta1.BackupBucket
+			bbs             []gardencorev1beta1.BackupBucket
 
 			control             reconcile.Reconciler
 			coreInformerFactory coreinformers.SharedInformerFactory
 		)
 
 		BeforeEach(func() {
+			k8sGardenClient = mockkubernetes.NewMockInterface(ctrl)
 			c = mockclient.NewMockClient(ctrl)
 			sw = mockclient.NewMockStatusWriter(ctrl)
 			c.EXPECT().Status().Return(sw).AnyTimes()
@@ -70,10 +74,9 @@ var _ = Describe("BackupBucketReconciler", func() {
 				},
 			}
 
-			fakeGardenClientSet := fakeclientset.NewClientSetBuilder().WithClient(c).Build()
-			cm = fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(), fakeGardenClientSet).Build()
-
 			seedPatch = &gardencorev1beta1.Seed{}
+
+			k8sGardenClient.EXPECT().Client().Return(c).AnyTimes()
 		})
 
 		JustBeforeEach(func() {
@@ -87,27 +90,33 @@ var _ = Describe("BackupBucketReconciler", func() {
 
 			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
 			Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
-			for _, bb := range bbs {
-				backupBucket := bb
-				Expect(coreInformerFactory.Core().V1beta1().BackupBuckets().Informer().GetStore().Add(backupBucket)).To(Succeed())
-			}
 
-			control = NewDefaultBackupBucketControl(cm, coreInformerFactory.Core().V1beta1().BackupBuckets().Lister(), coreInformerFactory.Core().V1beta1().Seeds().Lister())
+			control = NewDefaultBackupBucketControl(logger.NewNopLogger(), k8sGardenClient)
+
+			c.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+				*obj = *seed
+				return nil
+			})
 		})
 
 		Context("when Seed has healthy backup buckets", func() {
 			BeforeEach(func() {
-				bbs = []*gardencorev1beta1.BackupBucket{
+				bbs = []gardencorev1beta1.BackupBucket{
 					createBackupBucket("1", seed.Name, nil),
 					createBackupBucket("2", "fooSeed", nil),
 					createBackupBucket("3", "barSeed", nil),
 					createBackupBucket("4", seed.Name, nil),
 				}
+
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
+					(&gardencorev1beta1.BackupBucketList{Items: bbs}).DeepCopyInto(list)
+					return nil
+				})
 			})
 
 			It("should set condition to `True` when none was given", func() {
-				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
-				Expect(err).To(Not(HaveOccurred()))
+				result, err := control.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(reconcile.Result{}))
 				Expect(seedPatch.Status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -134,8 +143,9 @@ var _ = Describe("BackupBucketReconciler", func() {
 						Type:    gardencorev1beta1.SeedBackupBucketsReady,
 					},
 				}
-				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
-				Expect(err).To(Not(HaveOccurred()))
+
+				result, err := control.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(reconcile.Result{}))
 				Expect(seedPatch.Status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -150,17 +160,22 @@ var _ = Describe("BackupBucketReconciler", func() {
 
 		Context("when Seed has unhealthy backup buckets", func() {
 			BeforeEach(func() {
-				bbs = []*gardencorev1beta1.BackupBucket{
+				bbs = []gardencorev1beta1.BackupBucket{
 					createBackupBucket("1", seed.Name, &gardencorev1beta1.LastError{Description: "foo error"}),
 					createBackupBucket("2", "fooSeed", nil),
 					createBackupBucket("3", seed.Name, &gardencorev1beta1.LastError{Description: "bar error"}),
 					createBackupBucket("4", "barSeed", nil),
 				}
+
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
+					(&gardencorev1beta1.BackupBucketList{Items: bbs}).DeepCopyInto(list)
+					return nil
+				})
 			})
 
 			It("should set condition to `False`", func() {
-				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
-				Expect(err).To(Not(HaveOccurred()))
+				result, err := control.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(reconcile.Result{}))
 				Expect(seedPatch.Status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -175,10 +190,14 @@ var _ = Describe("BackupBucketReconciler", func() {
 
 		Context("when a Seed's unhealthy backup bucket switches", func() {
 			BeforeEach(func() {
-				bbs = []*gardencorev1beta1.BackupBucket{
+				bbs = []gardencorev1beta1.BackupBucket{
 					createBackupBucket("1", seed.Name, &gardencorev1beta1.LastError{Description: "foo error"}),
 					createBackupBucket("2", seed.Name, nil),
 				}
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
+					(&gardencorev1beta1.BackupBucketList{Items: bbs}).DeepCopyInto(list)
+					return nil
+				})
 			})
 
 			It("should set condition to `False` and remove successful bucket from message", func() {
@@ -190,8 +209,8 @@ var _ = Describe("BackupBucketReconciler", func() {
 						Type:    gardencorev1beta1.SeedBackupBucketsReady,
 					},
 				}
-				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
-				Expect(err).To(Not(HaveOccurred()))
+				result, err := control.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(reconcile.Result{}))
 				Expect(seedPatch.Status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -204,10 +223,14 @@ var _ = Describe("BackupBucketReconciler", func() {
 
 		Context("when a Seed's backup buckets are gone", func() {
 			BeforeEach(func() {
-				bbs = []*gardencorev1beta1.BackupBucket{
+				bbs = []gardencorev1beta1.BackupBucket{
 					createBackupBucket("1", "fooSeed", &gardencorev1beta1.LastError{Description: "foo error"}),
 					createBackupBucket("2", "barSeed", nil),
 				}
+				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucketList{})).DoAndReturn(func(ctx context.Context, list *gardencorev1beta1.BackupBucketList, opts ...client.ListOption) error {
+					(&gardencorev1beta1.BackupBucketList{Items: bbs}).DeepCopyInto(list)
+					return nil
+				})
 			})
 
 			It("should set condition to `False` and remove successful bucket from message", func() {
@@ -219,8 +242,8 @@ var _ = Describe("BackupBucketReconciler", func() {
 						Type:    gardencorev1beta1.SeedBackupBucketsReady,
 					},
 				}
-				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
-				Expect(err).To(Not(HaveOccurred()))
+				result, err := control.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
+				Expect(err).NotTo(HaveOccurred())
 				Expect(result).To(Equal(reconcile.Result{}))
 				Expect(seedPatch.Status.Conditions).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
@@ -235,8 +258,8 @@ var _ = Describe("BackupBucketReconciler", func() {
 	})
 })
 
-func createBackupBucket(name, seedName string, lastErr *gardencorev1beta1.LastError) *gardencorev1beta1.BackupBucket {
-	return &gardencorev1beta1.BackupBucket{
+func createBackupBucket(name, seedName string, lastErr *gardencorev1beta1.LastError) gardencorev1beta1.BackupBucket {
+	return gardencorev1beta1.BackupBucket{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
