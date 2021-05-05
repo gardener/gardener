@@ -368,7 +368,6 @@ spec:
         livenessProbe:
           httpGet:
             scheme: HTTP
-            host: 127.0.0.1
             port: {{ .Values.konnectivityTunnel.healthPort }}
             path: /healthz
           initialDelaySeconds: 30
@@ -378,10 +377,8 @@ spec:
           containerPort: {{ .Values.konnectivityTunnel.agentPort }}
         - name: adminport
           containerPort: {{ .Values.konnectivityTunnel.adminPort }}
-          hostPort: {{ .Values.konnectivityTunnel.adminPort }}
         - name: healthport
           containerPort: {{ .Values.konnectivityTunnel.healthPort }}
-          hostPort: {{ .Values.konnectivityTunnel.healthPort }}
         volumeMounts:
         - name: konnectivity-server-certs
           mountPath: /certs/konnectivity-server
