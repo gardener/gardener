@@ -30,9 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -207,7 +205,11 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 // applying the given transform function to it. It will also update the `shoot` field in the
 // extensions.gardener.cloud/v1alpha1.Cluster` resource in the seed cluster with the updated shoot information.
 func (b *Botanist) UpdateShootAndCluster(ctx context.Context, shoot *gardencorev1beta1.Shoot, transform func() error) error {
-	if err := kutil.TryUpdate(ctx, retry.DefaultRetry, b.K8sGardenClient.DirectClient(), shoot, transform); err != nil {
+	shootPatch := client.StrategicMergeFrom(shoot.DeepCopy())
+	if err := transform(); err != nil {
+		return err
+	}
+	if err := b.K8sGardenClient.Client().Patch(ctx, shoot, shootPatch); err != nil {
 		return err
 	}
 

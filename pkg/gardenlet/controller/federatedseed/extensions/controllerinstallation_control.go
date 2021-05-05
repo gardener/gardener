@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -181,11 +180,11 @@ func (c *controllerInstallationControl) reconcileControllerInstallationRequired(
 		// if required wasn't set yet then but all kinds were calculated then the installation is no longer required
 		required = pointer.BoolPtr(false)
 		message = "no extension objects exist in the seed having the kind/type combinations the controller is responsible for"
-	} else if required != nil && *required {
+	} else if *required {
 		message = fmt.Sprintf("extension objects still exist in the seed: %+v", requiredKindTypes.UnsortedList())
 	}
 
-	if err := updateControllerInstallationRequiredCondition(ctx, c.k8sGardenClient.DirectClient(), controllerInstallation, *required, message); err != nil {
+	if err := updateControllerInstallationRequiredCondition(ctx, c.k8sGardenClient.Client(), controllerInstallation, *required, message); err != nil {
 		c.log.Error(err)
 		return reconcile.Result{}, err
 	}
@@ -193,7 +192,7 @@ func (c *controllerInstallationControl) reconcileControllerInstallationRequired(
 	return reconcile.Result{}, nil
 }
 
-func updateControllerInstallationRequiredCondition(ctx context.Context, c client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, required bool, message string) error {
+func updateControllerInstallationRequiredCondition(ctx context.Context, c client.StatusClient, controllerInstallation *gardencorev1beta1.ControllerInstallation, required bool, message string) error {
 	var (
 		conditionRequired = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationRequired)
 
@@ -206,11 +205,11 @@ func updateControllerInstallationRequiredCondition(ctx context.Context, c client
 		reason = "NoExtensionObjects"
 	}
 
-	return kutil.TryUpdateStatus(ctx, retry.DefaultBackoff, c, controllerInstallation, func() error {
-		controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(
-			controllerInstallation.Status.Conditions,
-			gardencorev1beta1helper.UpdatedCondition(conditionRequired, status, reason, message),
-		)
-		return nil
-	})
+	patch := client.StrategicMergeFrom(controllerInstallation.DeepCopy())
+	controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(
+		controllerInstallation.Status.Conditions,
+		gardencorev1beta1helper.UpdatedCondition(conditionRequired, status, reason, message),
+	)
+
+	return c.Status().Patch(ctx, controllerInstallation, patch)
 }

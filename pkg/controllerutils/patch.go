@@ -22,15 +22,34 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// PatchOrCreate patches or creates the given object in the Kubernetes cluster. The object's desired state is only
-// reconciled with the existing state inside the passed in callback MutateFn, however, the object is not read from the
-// API server.
+// MergePatchOrCreate patches (using a merge patch) or creates the given object in the Kubernetes cluster.
+// The object's desired state is only reconciled with the existing state inside the passed in callback MutateFn,
+// however, the object is not read from the API server.
 //
 // The MutateFn is called regardless of creating or patching an object.
 //
 // It returns the executed operation and an error.
-func PatchOrCreate(ctx context.Context, c client.Writer, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error) {
-	patch := client.StrategicMergeFrom(obj.DeepCopyObject().(client.Object))
+func MergePatchOrCreate(ctx context.Context, c client.Writer, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error) {
+	return patchOrCreate(ctx, c, obj, func(obj client.Object) client.Patch {
+		return client.MergeFrom(obj)
+	}, f)
+}
+
+// StrategicMergePatchOrCreate patches (using a strategic merge patch) or creates the given object in the Kubernetes cluster.
+// The object's desired state is only reconciled with the existing state inside the passed in callback MutateFn,
+// however, the object is not read from the API server.
+//
+// The MutateFn is called regardless of creating or patching an object.
+//
+// It returns the executed operation and an error.
+func StrategicMergePatchOrCreate(ctx context.Context, c client.Writer, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error) {
+	return patchOrCreate(ctx, c, obj, func(obj client.Object) client.Patch {
+		return client.StrategicMergeFrom(obj)
+	}, f)
+}
+
+func patchOrCreate(ctx context.Context, c client.Writer, obj client.Object, patchFunc func(client.Object) client.Patch, f controllerutil.MutateFn) (controllerutil.OperationResult, error) {
+	patch := patchFunc(obj.DeepCopyObject().(client.Object))
 
 	if err := f(); err != nil {
 		return controllerutil.OperationResultNone, err

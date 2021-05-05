@@ -32,7 +32,6 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	k8sretry "k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -223,7 +222,7 @@ func WaitUntilDeleted(ctx context.Context, client client.Client, namespace, name
 }
 
 // SetKeepObjects updates the keepObjects field of the managed resource with the given name in the given namespace.
-func SetKeepObjects(ctx context.Context, c client.Client, namespace, name string, keepObjects bool) error {
+func SetKeepObjects(ctx context.Context, c client.Writer, namespace, name string, keepObjects bool) error {
 	resource := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -231,10 +230,9 @@ func SetKeepObjects(ctx context.Context, c client.Client, namespace, name string
 		},
 	}
 
-	if err := kutil.TryUpdate(ctx, k8sretry.DefaultBackoff, c, resource, func() error {
-		resource.Spec.KeepObjects = &keepObjects
-		return nil
-	}); client.IgnoreNotFound(err) != nil {
+	patch := client.MergeFrom(resource.DeepCopy())
+	resource.Spec.KeepObjects = &keepObjects
+	if err := c.Patch(ctx, resource, patch); client.IgnoreNotFound(err) != nil {
 		return errors.Wrapf(err, "could not update managed resource '%s/%s'", namespace, name)
 	}
 
