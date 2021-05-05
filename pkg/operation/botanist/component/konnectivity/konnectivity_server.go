@@ -260,7 +260,6 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
 										Port:   intstr.IntOrString{Type: intstr.Int, IntVal: healthPort},
-										Host:   "127.0.0.1",
 										Scheme: corev1.URISchemeHTTP,
 									},
 								},
@@ -278,19 +277,15 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 							Ports: []corev1.ContainerPort{{
 								Name:          "server",
 								ContainerPort: ServerHTTPSPort,
-								HostPort:      ServerHTTPSPort,
 							}, {
 								Name:          "agent",
 								ContainerPort: ServerAgentPort,
-								HostPort:      ServerAgentPort,
 							}, {
 								Name:          "admin",
 								ContainerPort: adminPort,
-								HostPort:      adminPort,
 							}, {
 								Name:          "health",
 								ContainerPort: healthPort,
-								HostPort:      healthPort,
 							}},
 							VolumeMounts: []corev1.VolumeMount{
 								{

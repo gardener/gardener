@@ -366,7 +366,6 @@ var _ = Describe("NewServer", func() {
 													Path:   "/healthz",
 													Scheme: corev1.URISchemeHTTP,
 													Port:   intstr.FromInt(8134),
-													Host:   "127.0.0.1",
 												},
 											},
 										},
@@ -383,19 +382,15 @@ var _ = Describe("NewServer", func() {
 										Ports: []corev1.ContainerPort{{
 											Name:          "server",
 											ContainerPort: 9443,
-											HostPort:      9443,
 										}, {
 											Name:          "agent",
 											ContainerPort: 8132,
-											HostPort:      8132,
 										}, {
 											Name:          "admin",
 											ContainerPort: 8133,
-											HostPort:      8133,
 										}, {
 											Name:          "health",
 											ContainerPort: 8134,
-											HostPort:      8134,
 										}},
 										VolumeMounts: []corev1.VolumeMount{
 											{
