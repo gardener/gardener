@@ -6,7 +6,7 @@ repo_root_dir="$1"
 repo_name="${2:-github.com/gardener/gardener}"
 descriptor_out_file="${COMPONENT_DESCRIPTOR_PATH}"
 
-echo "enriching creating component descriptor from ${BASE_DEFINITION_PATH}"
+echo "Enriching component descriptor from ${BASE_DEFINITION_PATH}"
 
 if [[ -f "$repo_root_dir/charts/images.yaml" ]]; then
   # translates all images defined the images.yaml into component descriptor resources.
@@ -26,7 +26,7 @@ if [[ -d "$repo_root_dir/charts/" ]]; then
     fi
 
     outputFile=$(sed 's/{{-//' $image_tpl_path | sed 's/}}//' | sed 's/define//' | sed 's/-//' | sed 's/end//' | sed 's/"//' | sed 's/"//' |sed 's/image.//' |  sed -e 's/^[ \t]*//' | awk -v RS= '{for (i=1; i<=NF; i++) printf "%s%s", $i, (i==NF?"\n":" ")}')
-    echo "enriching creating component descriptor from ${image_tpl_path}"
+    echo "enriching component descriptor from ${image_tpl_path}"
 
     while read p; do
       line="$(echo -e "$p")"
