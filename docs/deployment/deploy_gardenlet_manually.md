@@ -230,6 +230,10 @@ subjects:
     apiGroup: rbac.authorization.k8s.io
 ```
 
+ℹ️ After bootstrapping, the gardenlet has full administrative access to the garden cluster.
+You might be interested to harden this and limit its permissions to only resources related to the seed cluster it is responsible for.
+Please take a look into [this document](gardenlet_api_access.md).
+
 ## Prepare the gardenlet Helm chart
 
 This section only describes the minimal configuration, 
