@@ -86,6 +86,7 @@ func CreateOrUpdateObject(ctx context.Context, c client.Client, gvk schema.Group
 	obj.SetNamespace(namespace)
 
 	// Create or update the object
+	// TODO(timebertt): replace RetryOnConflict+CreateOrUpdate with PatchOrCreate
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		_, err := controllerutil.CreateOrUpdate(ctx, c, obj, func() error {
 			// Set object content

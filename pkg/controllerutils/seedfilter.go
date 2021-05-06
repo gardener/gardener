@@ -99,7 +99,7 @@ func SeedLabelsMatch(seedLister gardencorelisters.SeedLister, seedName string, l
 
 // seedLabelsMatchWithClient fetches the given seed by its name from the client and then checks whether the given
 // label selector matches the seed labels.
-func seedLabelsMatchWithClient(ctx context.Context, c client.Client, seedName string, labelSelector *metav1.LabelSelector) bool {
+func seedLabelsMatchWithClient(ctx context.Context, c client.Reader, seedName string, labelSelector *metav1.LabelSelector) bool {
 	seed := &gardencorev1beta1.Seed{}
 	if err := c.Get(ctx, client.ObjectKey{Name: seedName}, seed); err != nil {
 		return false

@@ -324,6 +324,21 @@ func CheckManagedSeed(managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 	return nil
 }
 
+// ObjectHasAnnotationWithValue returns a health check function that checks if a given Object has an annotation with
+// a specified value.
+func ObjectHasAnnotationWithValue(key, value string) Func {
+	return func(o client.Object) error {
+		actual, ok := o.GetAnnotations()[key]
+		if !ok {
+			return fmt.Errorf("object does not have %q annotation", key)
+		}
+		if actual != value {
+			return fmt.Errorf("object's %q annotation is not %q but %q", key, value, actual)
+		}
+		return nil
+	}
+}
+
 // CheckExtensionObject checks if an extension Object is healthy or not.
 // An extension object is healthy if
 // * Its observed generation is up-to-date
@@ -351,7 +366,7 @@ func ExtensionOperationHasBeenUpdatedSince(lastUpdateTime metav1.Time) Func {
 
 		lastOperation := obj.GetExtensionStatus().GetLastOperation()
 		if lastOperation == nil || !lastOperation.LastUpdateTime.After(lastUpdateTime.Time) {
-			return fmt.Errorf("extension operation was not updated yet")
+			return fmt.Errorf("extension operation has not been updated yet")
 		}
 		return nil
 	}
