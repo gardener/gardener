@@ -59,7 +59,7 @@ func RequestCertificate(ctx context.Context, logger logrus.FieldLogger, client k
 }
 
 // DigestedName is an alias for bootstraputil.DigestedName.
-// exposed for testing
+// Exposed for testing.
 var DigestedName = bootstraputil.DigestedName
 
 // requestCertificate will create a certificate signing request for the Gardenlet
