@@ -15,6 +15,7 @@
 package seedidentity
 
 import (
+	"crypto/x509"
 	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -48,13 +49,23 @@ func FromUserInfoInterface(u user.Info) (string, bool) {
 	return seedName, true
 }
 
-// FromAuthenticationV1UserInfo converts a authenticationv1.UserInfo structure to the user.Info interface.
+// FromAuthenticationV1UserInfo converts an authenticationv1.UserInfo structure to the user.Info interface and calls
+// FromUserInfoInterface to return the seed name.
 func FromAuthenticationV1UserInfo(userInfo authenticationv1.UserInfo) (string, bool) {
 	return FromUserInfoInterface(&user.DefaultInfo{
 		Name:   userInfo.Username,
 		UID:    userInfo.UID,
 		Groups: userInfo.Groups,
 		Extra:  convertAuthenticationV1ExtraValueToUserInfoExtra(userInfo.Extra),
+	})
+}
+
+// FromCertificateSigningRequest converts a *x509.CertificateRequest structure to the user.Info interface and calls
+// FromUserInfoInterface to return the seed name.
+func FromCertificateSigningRequest(csr *x509.CertificateRequest) (string, bool) {
+	return FromUserInfoInterface(&user.DefaultInfo{
+		Name:   csr.Subject.CommonName,
+		Groups: csr.Subject.Organization,
 	})
 }
 

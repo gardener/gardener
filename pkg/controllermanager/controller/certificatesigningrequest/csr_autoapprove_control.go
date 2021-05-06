@@ -23,16 +23,12 @@ package certificatesigningrequest
 
 import (
 	"context"
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
-	"reflect"
-	"strings"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
-
+	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/sirupsen/logrus"
 	authorizationv1beta1 "k8s.io/api/authorization/v1beta1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
@@ -93,12 +89,12 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 		}
 	}
 
-	x509cr, err := parseCSR(csr)
+	x509cr, err := utils.DecodeCertificateRequest(csr.Spec.Request)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("unable to parse csr %q: %v", csr.Name, err)
 	}
 
-	if !isSeedClientCert(csr, x509cr) {
+	if !gutil.IsSeedClientCert(x509cr, csr.Spec.Usages) {
 		return reconcile.Result{}, nil
 	}
 
@@ -146,48 +142,4 @@ func authorize(ctx context.Context, c client.Client, csr *certificatesv1beta1.Ce
 		return false, err
 	}
 	return sar.Status.Allowed, nil
-}
-
-func parseCSR(csr *certificatesv1beta1.CertificateSigningRequest) (*x509.CertificateRequest, error) {
-	block, _ := pem.Decode(csr.Spec.Request)
-	if block == nil || block.Type != "CERTIFICATE REQUEST" {
-		return nil, fmt.Errorf("PEM block type must be CERTIFICATE REQUEST")
-	}
-	return x509.ParseCertificateRequest(block.Bytes)
-}
-
-func isSeedClientCert(csr *certificatesv1beta1.CertificateSigningRequest, x509cr *x509.CertificateRequest) bool {
-	if !reflect.DeepEqual([]string{v1beta1constants.SeedsGroup}, x509cr.Subject.Organization) {
-		return false
-	}
-	if (len(x509cr.DNSNames) > 0) || (len(x509cr.EmailAddresses) > 0) || (len(x509cr.IPAddresses) > 0) {
-		return false
-	}
-	if !hasExactUsages(csr, []certificatesv1beta1.KeyUsage{
-		certificatesv1beta1.UsageKeyEncipherment,
-		certificatesv1beta1.UsageDigitalSignature,
-		certificatesv1beta1.UsageClientAuth,
-	}) {
-		return false
-	}
-	return strings.HasPrefix(x509cr.Subject.CommonName, v1beta1constants.SeedUserNamePrefix)
-}
-
-func hasExactUsages(csr *certificatesv1beta1.CertificateSigningRequest, usages []certificatesv1beta1.KeyUsage) bool {
-	if len(usages) != len(csr.Spec.Usages) {
-		return false
-	}
-
-	usageMap := map[certificatesv1beta1.KeyUsage]struct{}{}
-	for _, u := range csr.Spec.Usages {
-		usageMap[u] = struct{}{}
-	}
-
-	for _, u := range usages {
-		if _, ok := usageMap[u]; !ok {
-			return false
-		}
-	}
-
-	return true
 }

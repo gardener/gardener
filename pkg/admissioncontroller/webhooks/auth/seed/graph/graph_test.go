@@ -30,6 +30,7 @@ import (
 	"github.com/onsi/gomega/matchers"
 	gomegatypes "github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,17 +46,18 @@ var _ = Describe("graph", func() {
 	var (
 		ctx = context.TODO()
 
-		fakeInformerSeed                   *controllertest.FakeInformer
-		fakeInformerShoot                  *controllertest.FakeInformer
-		fakeInformerProject                *controllertest.FakeInformer
-		fakeInformerBackupBucket           *controllertest.FakeInformer
-		fakeInformerBackupEntry            *controllertest.FakeInformer
-		fakeInformerSecretBinding          *controllertest.FakeInformer
-		fakeInformerControllerInstallation *controllertest.FakeInformer
-		fakeInformerManagedSeed            *controllertest.FakeInformer
-		fakeInformerShootState             *controllertest.FakeInformer
-		fakeInformerLease                  *controllertest.FakeInformer
-		fakeInformers                      *informertest.FakeInformers
+		fakeInformerSeed                      *controllertest.FakeInformer
+		fakeInformerShoot                     *controllertest.FakeInformer
+		fakeInformerProject                   *controllertest.FakeInformer
+		fakeInformerBackupBucket              *controllertest.FakeInformer
+		fakeInformerBackupEntry               *controllertest.FakeInformer
+		fakeInformerSecretBinding             *controllertest.FakeInformer
+		fakeInformerControllerInstallation    *controllertest.FakeInformer
+		fakeInformerManagedSeed               *controllertest.FakeInformer
+		fakeInformerShootState                *controllertest.FakeInformer
+		fakeInformerLease                     *controllertest.FakeInformer
+		fakeInformerCertificateSigningRequest *controllertest.FakeInformer
+		fakeInformers                         *informertest.FakeInformers
 
 		logger logr.Logger
 		graph  *graph
@@ -88,6 +90,9 @@ var _ = Describe("graph", func() {
 		shootState1 *metav1.PartialObjectMetadata
 
 		lease1 *coordinationv1.Lease
+
+		seedNameInCSR = "myseed"
+		csr1          *certificatesv1beta1.CertificateSigningRequest
 	)
 
 	BeforeEach(func() {
@@ -104,20 +109,22 @@ var _ = Describe("graph", func() {
 		fakeInformerManagedSeed = &controllertest.FakeInformer{}
 		fakeInformerShootState = &controllertest.FakeInformer{}
 		fakeInformerLease = &controllertest.FakeInformer{}
+		fakeInformerCertificateSigningRequest = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
 			InformersByGVK: map[schema.GroupVersionKind]toolscache.SharedIndexInformer{
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):                   fakeInformerSeed,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):                  fakeInformerShoot,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):                fakeInformerProject,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"):           fakeInformerBackupBucket,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):            fakeInformerBackupEntry,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"):          fakeInformerSecretBinding,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"): fakeInformerControllerInstallation,
-				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):       fakeInformerManagedSeed,
-				metav1.SchemeGroupVersion.WithKind("PartialObjectMetadata"):             fakeInformerShootState,
-				coordinationv1.SchemeGroupVersion.WithKind("Lease"):                     fakeInformerLease,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):                        fakeInformerSeed,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):                       fakeInformerShoot,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):                     fakeInformerProject,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"):                fakeInformerBackupBucket,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):                 fakeInformerBackupEntry,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"):               fakeInformerSecretBinding,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"):      fakeInformerControllerInstallation,
+				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):            fakeInformerManagedSeed,
+				metav1.SchemeGroupVersion.WithKind("PartialObjectMetadata"):                  fakeInformerShootState,
+				coordinationv1.SchemeGroupVersion.WithKind("Lease"):                          fakeInformerLease,
+				certificatesv1beta1.SchemeGroupVersion.WithKind("CertificateSigningRequest"): fakeInformerCertificateSigningRequest,
 			},
 		}
 
@@ -205,6 +212,33 @@ var _ = Describe("graph", func() {
 
 		lease1 = &coordinationv1.Lease{
 			ObjectMeta: metav1.ObjectMeta{Namespace: "gardener-system-seed-lease", Name: "lease1"},
+		}
+
+		csr1 = &certificatesv1beta1.CertificateSigningRequest{
+			ObjectMeta: metav1.ObjectMeta{Name: "csr1"},
+			Spec: certificatesv1beta1.CertificateSigningRequestSpec{
+				Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
+MIIClzCCAX8CAQAwUjEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
+ZWRzMSowKAYDVQQDEyFnYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpteXNlZWQw
+ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCzNgJWhogJrCSzAhKKmHkJ
+FuooKAbxpWRGDOe5DiB8jPdgCoRCkZYnF7D9x9cDzliljA9IeBad3P3E9oegtSV/
+sXFJYqb+lRuhJQ5oo2eBC6WRg+Oxglp+n7o7xt0bO7JHS977mqNrqsJ1d1FnJHTB
+MPHPxqoqkgIbdW4t219ckSA20aWzC3PU7I7+Z9OD+YfuuYgzkWG541XyBBKVSD2w
+Ix2yGu6zrslqZ1eVBZ4IoxpWrQNmLSMFQVnABThyEUi0U1eVtW0vPNwSnBf0mufX
+Z0PpqAIPVjr64Z4s3HHml2GSu64iOxaG5wwb9qIPcdyFaQCep/sFh7kq1KjNI1Ql
+AgMBAAGgADANBgkqhkiG9w0BAQsFAAOCAQEAb+meLvm7dgHpzhu0XQ39w41FgpTv
+S7p78ABFwzDNcP1NwfrEUft0T/rUwPiMlN9zve2rRicaZX5Z7Bol/newejsu8H5z
+OdotvtKjE7zBCMzwnXZwO/0pA0cuUFcAy50DPcr35gdGjGlzV9ogO+HPKPTieS3n
+TRVg+MWlcLqCjALr9Y4N39DOzf4/SJts8AZJJ+lyyxnY3XIPXx7SdADwNWC8BX0U
+OK8CwMwN3iiBQ4redVeMK7LU1unV899q/PWB+NXFcKVr+Grm/Kom5VxuhXSzcHEp
+yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
+-----END CERTIFICATE REQUEST-----`),
+				Usages: []certificatesv1beta1.KeyUsage{
+					certificatesv1beta1.UsageKeyEncipherment,
+					certificatesv1beta1.UsageDigitalSignature,
+					certificatesv1beta1.UsageClientAuth,
+				},
+			},
 		}
 	})
 
@@ -701,6 +735,27 @@ var _ = Describe("graph", func() {
 		Expect(graph.HasPathFrom(VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name)).To(BeFalse())
 	})
 
+	It("should behave as expected for certificatesv1beta1.CertificateSigningRequest", func() {
+		By("add")
+		fakeInformerCertificateSigningRequest.Add(csr1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeCertificateSigningRequest, "", csr1.Name, VertexTypeSeed, "", seedNameInCSR)).To(BeTrue())
+
+		By("delete")
+		fakeInformerCertificateSigningRequest.Delete(csr1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeCertificateSigningRequest, "", csr1.Name, VertexTypeSeed, "", seedNameInCSR)).To(BeFalse())
+
+		By("add unrelated")
+		csr1.Spec.Usages = nil
+		fakeInformerCertificateSigningRequest.Add(csr1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeCertificateSigningRequest, "", csr1.Name, VertexTypeSeed, "", seedNameInCSR)).To(BeFalse())
+	})
+
 	It("should behave as expected with more objects modified in parallel", func() {
 		var (
 			nodes, edges int
@@ -812,6 +867,15 @@ var _ = Describe("graph", func() {
 			defer lock.Unlock()
 			nodes, edges = nodes+2, edges+1
 			paths[VertexTypeLease] = append(paths[VertexTypeLease], pathExpectation{VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerCertificateSigningRequest.Add(csr1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+2, edges+1
+			paths[VertexTypeCertificateSigningRequest] = append(paths[VertexTypeCertificateSigningRequest], pathExpectation{VertexTypeCertificateSigningRequest, "", csr1.Name, VertexTypeSeed, "", seedNameInCSR, BeTrue()})
 		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(Equal(nodes))
@@ -937,6 +1001,15 @@ var _ = Describe("graph", func() {
 			nodes, edges = nodes-2, edges-1
 			paths[VertexTypeLease] = append(paths[VertexTypeLease], pathExpectation{VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name, BeFalse()})
 		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerCertificateSigningRequest.Delete(csr1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes-2, edges-1
+			paths[VertexTypeCertificateSigningRequest] = append(paths[VertexTypeCertificateSigningRequest], pathExpectation{VertexTypeCertificateSigningRequest, csr1.Namespace, csr1.Name, VertexTypeSeed, "", seedNameInCSR, BeFalse()})
+		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(Equal(nodes), "node count")
 		Expect(graph.graph.Edges().Len()).To(Equal(edges), "edge count")
@@ -1061,6 +1134,15 @@ var _ = Describe("graph", func() {
 			nodes, edges = nodes+2, edges+1
 			paths[VertexTypeLease] = append(paths[VertexTypeLease], pathExpectation{VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name, BeTrue()})
 		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerCertificateSigningRequest.Add(csr1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+2, edges+1
+			paths[VertexTypeCertificateSigningRequest] = append(paths[VertexTypeCertificateSigningRequest], pathExpectation{VertexTypeCertificateSigningRequest, "", csr1.Name, VertexTypeSeed, "", seedNameInCSR, BeTrue()})
+		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(Equal(nodes), "node count")
 		Expect(graph.graph.Edges().Len()).To(Equal(edges), "edge count")
@@ -1158,6 +1240,15 @@ var _ = Describe("graph", func() {
 			lock.Lock()
 			defer lock.Unlock()
 			paths[VertexTypeLease] = append(paths[VertexTypeLease], pathExpectation{VertexTypeLease, lease1.Namespace, lease1.Name, VertexTypeSeed, "", lease1.Name, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerCertificateSigningRequest.Delete(csr1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes-2, edges-1
+			paths[VertexTypeCertificateSigningRequest] = append(paths[VertexTypeCertificateSigningRequest], pathExpectation{VertexTypeCertificateSigningRequest, csr1.Namespace, csr1.Name, VertexTypeSeed, "", seedNameInCSR, BeFalse()})
 		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(BeZero())

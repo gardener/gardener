@@ -15,6 +15,9 @@
 package seedidentity_test
 
 import (
+	"crypto/x509"
+	"crypto/x509/pkix"
+
 	. "github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 
 	. "github.com/onsi/ginkgo"
@@ -54,5 +57,20 @@ var _ = Describe("identity", func() {
 		Entry("user name prefix but seed group not present", authenticationv1.UserInfo{Username: "gardener.cloud:system:seed:foo", Groups: []string{"bar"}}, "", false),
 		Entry("user name prefix and seed group", authenticationv1.UserInfo{Username: "gardener.cloud:system:seed:foo", Groups: []string{"gardener.cloud:system:seeds"}}, "foo", true),
 		Entry("user name prefix and seed group (ambiguous)", authenticationv1.UserInfo{Username: "gardener.cloud:system:seed:<ambiguous>", Groups: []string{"gardener.cloud:system:seeds"}}, "", true),
+	)
+
+	DescribeTable("#FromCertificateSigningRequest",
+		func(csr *x509.CertificateRequest, expectedSeedName string, expectedIsSeedValue bool) {
+			seedName, isSeed := FromCertificateSigningRequest(csr)
+
+			Expect(seedName).To(Equal(expectedSeedName))
+			Expect(isSeed).To(Equal(expectedIsSeedValue))
+		},
+
+		Entry("no user name prefix", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "foo"}}, "", false),
+		Entry("user name prefix but no groups", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:foo"}}, "", false),
+		Entry("user name prefix but seed group not present", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:foo", Organization: []string{"bar"}}}, "", false),
+		Entry("user name prefix and seed group", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:foo", Organization: []string{"gardener.cloud:system:seeds"}}}, "foo", true),
+		Entry("user name prefix and seed group (ambiguous)", &x509.CertificateRequest{Subject: pkix.Name{CommonName: "gardener.cloud:system:seed:<ambiguous>", Organization: []string{"gardener.cloud:system:seeds"}}}, "", true),
 	)
 })

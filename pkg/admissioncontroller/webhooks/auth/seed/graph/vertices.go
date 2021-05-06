@@ -22,6 +22,8 @@ const (
 	VertexTypeBackupBucket VertexType = iota
 	// VertexTypeBackupEntry is a constant for a 'BackupEntry' vertex.
 	VertexTypeBackupEntry
+	// VertexTypeCertificateSigningRequest is a constant for a 'CertificateSigningRequest' vertex.
+	VertexTypeCertificateSigningRequest
 	// VertexTypeCloudProfile is a constant for a 'CloudProfile' vertex.
 	VertexTypeCloudProfile
 	// VertexTypeConfigMap is a constant for a 'ConfigMap' vertex.
@@ -53,21 +55,22 @@ const (
 )
 
 var vertexTypes = map[VertexType]string{
-	VertexTypeBackupBucket:           "BackupBucket",
-	VertexTypeBackupEntry:            "BackupEntry",
-	VertexTypeCloudProfile:           "CloudProfile",
-	VertexTypeConfigMap:              "ConfigMap",
-	VertexTypeControllerInstallation: "ControllerInstallation",
-	VertexTypeControllerRegistration: "ControllerRegistration",
-	VertexTypeLease:                  "Lease",
-	VertexTypeManagedSeed:            "ManagedSeed",
-	VertexTypeNamespace:              "Namespace",
-	VertexTypeProject:                "Project",
-	VertexTypeSecret:                 "Secret",
-	VertexTypeSecretBinding:          "SecretBinding",
-	VertexTypeSeed:                   "Seed",
-	VertexTypeShoot:                  "Shoot",
-	VertexTypeShootState:             "ShootState",
+	VertexTypeBackupBucket:              "BackupBucket",
+	VertexTypeBackupEntry:               "BackupEntry",
+	VertexTypeCertificateSigningRequest: "CertificateSigningRequest",
+	VertexTypeCloudProfile:              "CloudProfile",
+	VertexTypeConfigMap:                 "ConfigMap",
+	VertexTypeControllerInstallation:    "ControllerInstallation",
+	VertexTypeControllerRegistration:    "ControllerRegistration",
+	VertexTypeLease:                     "Lease",
+	VertexTypeManagedSeed:               "ManagedSeed",
+	VertexTypeNamespace:                 "Namespace",
+	VertexTypeProject:                   "Project",
+	VertexTypeSecret:                    "Secret",
+	VertexTypeSecretBinding:             "SecretBinding",
+	VertexTypeSeed:                      "Seed",
+	VertexTypeShoot:                     "Shoot",
+	VertexTypeShootState:                "ShootState",
 }
 
 type vertex struct {

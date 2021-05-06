@@ -24,10 +24,12 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -46,11 +48,12 @@ const (
 var (
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
-	backupBucketResource = gardencorev1beta1.Resource("backupbuckets")
-	backupEntryResource  = gardencorev1beta1.Resource("backupentries")
-	leaseResource        = coordinationv1.Resource("leases")
-	seedResource         = gardencorev1beta1.Resource("seeds")
-	shootStateResource   = gardencorev1beta1.Resource("shootstates")
+	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
+	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
+	certificateSigningRequestResource = certificatesv1beta1.Resource("certificatesigningrequests")
+	leaseResource                     = coordinationv1.Resource("leases")
+	seedResource                      = gardencorev1beta1.Resource("seeds")
+	shootStateResource                = gardencorev1beta1.Resource("shootstates")
 )
 
 // New creates a new webhook handler restricting requests by gardenlets. It allows all requests.
@@ -98,6 +101,8 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		return h.admitBackupBucket(seedName, request)
 	case backupEntryResource:
 		return h.admitBackupEntry(ctx, seedName, request)
+	case certificateSigningRequestResource:
+		return h.admitCertificateSigningRequest(seedName, request)
 	case leaseResource:
 		return h.admitLease(seedName, request)
 	case seedResource:
@@ -142,6 +147,29 @@ func (h *handler) admitBackupEntry(ctx context.Context, seedName string, request
 	}
 
 	return h.admit(seedName, backupBucket.Spec.SeedName)
+}
+
+func (h *handler) admitCertificateSigningRequest(seedName string, request admission.Request) admission.Response {
+	if request.Operation != admissionv1.Create {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+	}
+
+	csr := &certificatesv1beta1.CertificateSigningRequest{}
+	if err := h.decoder.Decode(request, csr); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	x509cr, err := utils.DecodeCertificateRequest(csr.Spec.Request)
+	if err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	if !gutil.IsSeedClientCert(x509cr, csr.Spec.Usages) {
+		return admission.Errored(http.StatusForbidden, fmt.Errorf("can only create CSRs for seed clusters"))
+	}
+
+	seedNameInCSR, _ := seedidentity.FromCertificateSigningRequest(x509cr)
+	return h.admit(seedName, &seedNameInCSR)
 }
 
 func (h *handler) admitLease(seedName string, request admission.Request) admission.Response {
