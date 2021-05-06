@@ -60,6 +60,7 @@ var (
 	backupEntryResource            = gardencorev1beta1.Resource("backupentries")
 	cloudProfileResource           = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource              = corev1.Resource("configmaps")
+	controllerDeploymentResource   = gardencorev1beta1.Resource("controllerdeployments")
 	controllerInstallationResource = gardencorev1beta1.Resource("controllerinstallations")
 	controllerRegistrationResource = gardencorev1beta1.Resource("controllerregistrations")
 	eventCoreResource              = corev1.Resource("events")
@@ -103,6 +104,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(seedName, graph.VertexTypeCloudProfile, attrs)
 		case configMapResource:
 			return a.authorizeConfigMap(seedName, attrs)
+		case controllerDeploymentResource:
+			return a.authorizeRead(seedName, graph.VertexTypeControllerDeployment, attrs)
 		case controllerInstallationResource:
 			return a.authorize(seedName, graph.VertexTypeControllerInstallation, attrs,
 				[]string{"update", "patch"},

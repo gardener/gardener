@@ -414,7 +414,21 @@ func deployNeededInstallations(
 
 		logger.Infof("Deploying wanted ControllerInstallation for %q", registrationName)
 
-		if err := deployNeededInstallation(ctx, c, seed, controllerRegistrations[registrationName].obj, registrationNameToInstallationName[registrationName]); err != nil {
+		var (
+			controllerDeployment   *gardencorev1beta1.ControllerDeployment
+			controllerRegistration = controllerRegistrations[registrationName].obj
+		)
+
+		if controllerRegistration.Spec.Deployment != nil && len(controllerRegistration.Spec.Deployment.DeploymentRefs) > 0 {
+			// Today, only one DeploymentRef element is allowed, which is why can simply pick the first one from the slice.
+			controllerDeployment = &gardencorev1beta1.ControllerDeployment{}
+
+			if err := c.Get(ctx, kutil.Key(controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name), controllerDeployment); err != nil {
+				return fmt.Errorf("cannot deploy ControllerInstallation because the referenced ControllerDeployment cannot be retrieved: %v", err)
+			}
+		}
+
+		if err := deployNeededInstallation(ctx, c, seed, controllerDeployment, controllerRegistration, registrationNameToInstallationName[registrationName]); err != nil {
 			return err
 		}
 	}
@@ -426,6 +440,7 @@ func deployNeededInstallation(
 	ctx context.Context,
 	c client.Client,
 	seed *gardencorev1beta1.Seed,
+	controllerDeployment *gardencorev1beta1.ControllerDeployment,
 	controllerRegistration *gardencorev1beta1.ControllerRegistration,
 	controllerInstallationName string,
 ) error {
@@ -440,25 +455,43 @@ func deployNeededInstallation(
 		},
 	}
 
-	seedSpecMap, err := convertObjToMap(seed.Spec)
-	if err != nil {
-		return err
-	}
-	registrationSpecMap, err := convertObjToMap(controllerRegistration.Spec)
-	if err != nil {
-		return err
+	if controllerDeployment != nil {
+		installationSpec.DeploymentRef = &corev1.ObjectReference{
+			Name:            controllerDeployment.Name,
+			ResourceVersion: controllerDeployment.ResourceVersion,
+		}
 	}
 
-	var (
-		registrationSpecHash = utils.HashForMap(registrationSpecMap)[:16]
-		seedSpecHash         = utils.HashForMap(seedSpecMap)[:16]
-
-		controllerInstallation = &gardencorev1beta1.ControllerInstallation{}
-	)
-
+	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
 	mutate := func() error {
+		seedSpecMap, err := convertObjToMap(seed.Spec)
+		if err != nil {
+			return err
+		}
+		seedSpecHash := utils.HashForMap(seedSpecMap)[:16]
 		kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.SeedSpecHash, seedSpecHash)
+
+		registrationSpecMap, err := convertObjToMap(controllerRegistration.Spec)
+		if err != nil {
+			return err
+		}
+		registrationSpecHash := utils.HashForMap(registrationSpecMap)[:16]
 		kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.RegistrationSpecHash, registrationSpecHash)
+
+		if controllerDeployment != nil {
+			// Add all fields that are relevant for the hash calculation as `ControllerDeployment`s don't have a `spec` field.
+			hashFields := map[string]interface{}{
+				"type":           controllerDeployment.Type,
+				"providerConfig": controllerDeployment.ProviderConfig,
+			}
+
+			deploymentMap, err := convertObjToMap(hashFields)
+			if err != nil {
+				return err
+			}
+			deploymentSpecHash := utils.HashForMap(deploymentMap)[:16]
+			kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.ControllerDeploymentHash, deploymentSpecHash)
+		}
 		controllerInstallation.Spec = installationSpec
 		return nil
 	}
@@ -518,7 +551,7 @@ func convertObjToMap(in interface{}) (map[string]interface{}, error) {
 	return out, nil
 }
 
-func seedSelectorMatches(deployment *gardencorev1beta1.ControllerDeployment, seedLabels map[string]string) (bool, error) {
+func seedSelectorMatches(deployment *gardencorev1beta1.ControllerRegistrationDeployment, seedLabels map[string]string) (bool, error) {
 	selector := &metav1.LabelSelector{}
 	if deployment != nil && deployment.SeedSelector != nil {
 		selector = deployment.SeedSelector

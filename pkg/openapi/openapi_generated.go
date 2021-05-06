@@ -58,11 +58,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition":                             schema_pkg_apis_core_v1alpha1_Condition(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ContainerRuntime":                      schema_pkg_apis_core_v1alpha1_ContainerRuntime(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeployment":                  schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeploymentList":              schema_pkg_apis_core_v1alpha1_ControllerDeploymentList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallation":                schema_pkg_apis_core_v1alpha1_ControllerInstallation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallationList":            schema_pkg_apis_core_v1alpha1_ControllerInstallationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallationSpec":            schema_pkg_apis_core_v1alpha1_ControllerInstallationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallationStatus":          schema_pkg_apis_core_v1alpha1_ControllerInstallationStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistration":                schema_pkg_apis_core_v1alpha1_ControllerRegistration(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationDeployment":      schema_pkg_apis_core_v1alpha1_ControllerRegistrationDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationList":            schema_pkg_apis_core_v1alpha1_ControllerRegistrationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationSpec":            schema_pkg_apis_core_v1alpha1_ControllerRegistrationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResource":                    schema_pkg_apis_core_v1alpha1_ControllerResource(ref),
@@ -70,6 +72,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSIncludeExclude":                     schema_pkg_apis_core_v1alpha1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DNSProvider":                           schema_pkg_apis_core_v1alpha1_DNSProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DataVolume":                            schema_pkg_apis_core_v1alpha1_DataVolume(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DeploymentRef":                         schema_pkg_apis_core_v1alpha1_DeploymentRef(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Endpoint":                              schema_pkg_apis_core_v1alpha1_Endpoint(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ExpirableVersion":                      schema_pkg_apis_core_v1alpha1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Extension":                             schema_pkg_apis_core_v1alpha1_Extension(ref),
@@ -199,11 +202,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition":                              schema_pkg_apis_core_v1beta1_Condition(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ContainerRuntime":                       schema_pkg_apis_core_v1beta1_ContainerRuntime(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment":                   schema_pkg_apis_core_v1beta1_ControllerDeployment(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeploymentList":               schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallation":                 schema_pkg_apis_core_v1beta1_ControllerInstallation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationList":             schema_pkg_apis_core_v1beta1_ControllerInstallationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationSpec":             schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerInstallationStatus":           schema_pkg_apis_core_v1beta1_ControllerInstallationStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistration":                 schema_pkg_apis_core_v1beta1_ControllerRegistration(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationDeployment":       schema_pkg_apis_core_v1beta1_ControllerRegistrationDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationList":             schema_pkg_apis_core_v1beta1_ControllerRegistrationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationSpec":             schema_pkg_apis_core_v1beta1_ControllerRegistrationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResource":                     schema_pkg_apis_core_v1beta1_ControllerResource(ref),
@@ -211,6 +216,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSIncludeExclude":                      schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DNSProvider":                            schema_pkg_apis_core_v1beta1_DNSProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DataVolume":                             schema_pkg_apis_core_v1beta1_DataVolume(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef":                          schema_pkg_apis_core_v1beta1_DeploymentRef(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Endpoint":                               schema_pkg_apis_core_v1beta1_Endpoint(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ExpirableVersion":                       schema_pkg_apis_core_v1beta1_ExpirableVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Extension":                              schema_pkg_apis_core_v1beta1_Extension(ref),
@@ -1708,9 +1714,30 @@ func schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref common.ReferenceCall
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ControllerDeployment contains information for how this controller is deployed.",
+				Description: "ControllerDeployment contains information about how this controller is deployed.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Type is the deployment type.",
@@ -1721,29 +1748,68 @@ func schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref common.ReferenceCall
 					},
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ProviderConfig contains type-specific configuration.",
+							Description: "ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.",
+							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
-					"policy": {
+				},
+				Required: []string{"type", "providerConfig"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ControllerDeploymentList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControllerDeploymentList is a collection of ControllerDeployments.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Policy controls how the controller is deployed. It defaults to 'OnDemand'.",
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"seedSelector": {
+					"apiVersion": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be considered for a deployment. An empty list means that all seeds are selected.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of ControllerDeployments.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeployment"),
+									},
+								},
+							},
 						},
 					},
 				},
-				Required: []string{"type"},
+				Required: []string{"items"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeployment", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 
@@ -1857,15 +1923,21 @@ func schema_pkg_apis_core_v1alpha1_ControllerInstallationSpec(ref common.Referen
 				Properties: map[string]spec.Schema{
 					"registrationRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RegistrationRef is used to reference a ControllerRegistration resources.",
+							Description: "RegistrationRef is used to reference a ControllerRegistration resource.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 					"seedRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedRef is used to reference a Seed resources.",
+							Description: "SeedRef is used to reference a Seed resource.",
 							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"deploymentRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DeploymentRef is used to reference a ControllerDeployment resource.",
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
@@ -1962,6 +2034,61 @@ func schema_pkg_apis_core_v1alpha1_ControllerRegistration(ref common.ReferenceCa
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_ControllerRegistrationDeployment(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControllerRegistrationDeployment contains information for how this controller is deployed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the deployment type. Deprecated: Declare type via `ControllerDeployment` instead.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig contains type-specific configuration. Deprecated: Use `DeploymentRefs` instead.",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+					"policy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Policy controls how the controller is deployed. It defaults to 'OnDemand'.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"seedSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be considered for a deployment. An empty list means that all seeds are selected.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+						},
+					},
+					"deploymentRefs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.DeploymentRef"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DeploymentRef", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_ControllerRegistrationList(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2037,14 +2164,14 @@ func schema_pkg_apis_core_v1alpha1_ControllerRegistrationSpec(ref common.Referen
 					"deployment": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Deployment contains information for how this controller is deployed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeployment"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationDeployment"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeployment", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResource"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationDeployment", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResource"},
 	}
 }
 
@@ -2271,6 +2398,28 @@ func schema_pkg_apis_core_v1alpha1_DataVolume(ref common.ReferenceCallback) comm
 					},
 				},
 				Required: []string{"name", "size"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_DeploymentRef(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "DeploymentRef contains information about `ControllerDeployment` references.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the `ControllerDeployment` that is being referred to.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
 			},
 		},
 	}
@@ -8363,9 +8512,30 @@ func schema_pkg_apis_core_v1beta1_ControllerDeployment(ref common.ReferenceCallb
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ControllerDeployment contains information for how this controller is deployed.",
+				Description: "ControllerDeployment contains information about how this controller is deployed.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Type is the deployment type.",
@@ -8376,29 +8546,68 @@ func schema_pkg_apis_core_v1beta1_ControllerDeployment(ref common.ReferenceCallb
 					},
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ProviderConfig contains type-specific configuration.",
+							Description: "ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.",
+							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
-					"policy": {
+				},
+				Required: []string{"type", "providerConfig"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ControllerDeploymentList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControllerDeploymentList is a collection of ControllerDeployments.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Policy controls how the controller is deployed. It defaults to 'OnDemand'.",
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"seedSelector": {
+					"apiVersion": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be considered for a deployment. An empty list means that all seeds are selected.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of ControllerDeployments.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment"),
+									},
+								},
+							},
 						},
 					},
 				},
-				Required: []string{"type"},
+				Required: []string{"items"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 	}
 }
 
@@ -8512,15 +8721,21 @@ func schema_pkg_apis_core_v1beta1_ControllerInstallationSpec(ref common.Referenc
 				Properties: map[string]spec.Schema{
 					"registrationRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RegistrationRef is used to reference a ControllerRegistration resources.",
+							Description: "RegistrationRef is used to reference a ControllerRegistration resource.",
 							Default:     map[string]interface{}{},
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
 					"seedRef": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SeedRef is used to reference a Seed resources.",
+							Description: "SeedRef is used to reference a Seed resource.",
 							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+						},
+					},
+					"deploymentRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DeploymentRef is used to reference a ControllerDeployment resource.",
 							Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 						},
 					},
@@ -8617,6 +8832,61 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistration(ref common.ReferenceCal
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_ControllerRegistrationDeployment(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ControllerRegistrationDeployment contains information for how this controller is deployed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the deployment type. Deprecated: Declare type via `ControllerDeployment` instead.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig contains type-specific configuration. Deprecated: Use `DeploymentRefs` instead.",
+							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
+						},
+					},
+					"policy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Policy controls how the controller is deployed. It defaults to 'OnDemand'.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"seedSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be considered for a deployment. An empty list means that all seeds are selected.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"),
+						},
+					},
+					"deploymentRefs": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_ControllerRegistrationList(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -8692,14 +8962,14 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationSpec(ref common.Referenc
 					"deployment": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Deployment contains information for how this controller is deployed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationDeployment"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerDeployment", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResource"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerRegistrationDeployment", "github.com/gardener/gardener/pkg/apis/core/v1beta1.ControllerResource"},
 	}
 }
 
@@ -8926,6 +9196,28 @@ func schema_pkg_apis_core_v1beta1_DataVolume(ref common.ReferenceCallback) commo
 					},
 				},
 				Required: []string{"name", "size"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_DeploymentRef(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "DeploymentRef contains information about `ControllerDeployment` references.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the `ControllerDeployment` that is being referred to.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
 			},
 		},
 	}

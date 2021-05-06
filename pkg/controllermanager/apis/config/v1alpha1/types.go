@@ -55,6 +55,9 @@ type ControllerManagerControllerConfiguration struct {
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	// +optional
 	CloudProfile *CloudProfileControllerConfiguration `json:"cloudProfile,omitempty"`
+	// ControllerDeployment defines the configuration of the ControllerDeployment controller.
+	// +optional
+	ControllerDeployment *ControllerDeploymentControllerConfiguration `json:"controllerDeployment,omitempty"`
 	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
 	// +optional
 	ControllerRegistration *ControllerRegistrationControllerConfiguration `json:"controllerRegistration,omitempty"`
@@ -96,6 +99,14 @@ type ControllerManagerControllerConfiguration struct {
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
 // controller.
 type CloudProfileControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// ControllerDeploymentControllerConfiguration defines the configuration of the
+// ControllerDeployment controller.
+type ControllerDeploymentControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`

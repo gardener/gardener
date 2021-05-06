@@ -28,6 +28,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
@@ -39,6 +40,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
@@ -64,23 +66,26 @@ func Register(plugins *admission.Plugins) {
 // ReferenceManager contains listers and and admission handler.
 type ReferenceManager struct {
 	*admission.Handler
-	kubeClient          kubernetes.Interface
-	dynamicClient       dynamic.Interface
-	authorizer          authorizer.Authorizer
-	secretLister        kubecorev1listers.SecretLister
-	configMapLister     kubecorev1listers.ConfigMapLister
-	cloudProfileLister  corelisters.CloudProfileLister
-	seedLister          corelisters.SeedLister
-	shootLister         corelisters.ShootLister
-	secretBindingLister corelisters.SecretBindingLister
-	projectLister       corelisters.ProjectLister
-	quotaLister         corelisters.QuotaLister
-	readyFunc           admission.ReadyFunc
+	gardenCoreClient           internalversion.Interface
+	kubeClient                 kubernetes.Interface
+	dynamicClient              dynamic.Interface
+	authorizer                 authorizer.Authorizer
+	secretLister               kubecorev1listers.SecretLister
+	configMapLister            kubecorev1listers.ConfigMapLister
+	cloudProfileLister         corelisters.CloudProfileLister
+	seedLister                 corelisters.SeedLister
+	shootLister                corelisters.ShootLister
+	secretBindingLister        corelisters.SecretBindingLister
+	projectLister              corelisters.ProjectLister
+	quotaLister                corelisters.QuotaLister
+	controllerDeploymentLister corelisters.ControllerDeploymentLister
+	readyFunc                  admission.ReadyFunc
 }
 
 var (
 	_ = admissioninitializer.WantsInternalCoreInformerFactory(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeInformerFactory(&ReferenceManager{})
+	_ = admissioninitializer.WantsInternalCoreClientset(&ReferenceManager{})
 	_ = admissioninitializer.WantsKubeClientset(&ReferenceManager{})
 	_ = admissioninitializer.WantsDynamicClient(&ReferenceManager{})
 	_ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
@@ -130,7 +135,10 @@ func (r *ReferenceManager) SetInternalCoreInformerFactory(f coreinformers.Shared
 	projectInformer := f.Core().InternalVersion().Projects()
 	r.projectLister = projectInformer.Lister()
 
-	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
+	controllerDeploymentInformer := f.Core().InternalVersion().ControllerDeployments()
+	r.controllerDeploymentLister = controllerDeploymentInformer.Lister()
+
+	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced, projectInformer.Informer().HasSynced, controllerDeploymentInformer.Informer().HasSynced)
 }
 
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
@@ -144,7 +152,12 @@ func (r *ReferenceManager) SetKubeInformerFactory(f kubeinformers.SharedInformer
 	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced, configMapInformer.Informer().HasSynced)
 }
 
-// SetKubeClientset gets the clientset from the Kubernetes client.
+// SetInternalCoreClientset sets the Gardener client.
+func (r *ReferenceManager) SetInternalCoreClientset(c internalversion.Interface) {
+	r.gardenCoreClient = c
+}
+
+// SetKubeClientset sets the Kubernetes client.
 func (r *ReferenceManager) SetKubeClientset(c kubernetes.Interface) {
 	r.kubeClient = c
 }
@@ -443,12 +456,34 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				}
 			}
 		}
+	case core.Kind("ControllerRegistration"):
+		controllerRegistration, ok := a.GetObject().(*core.ControllerRegistration)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into ControllerRegistration object")
+		}
+		err = r.ensureControllerRegistrationReferences(ctx, controllerRegistration)
 	}
 
 	if err != nil {
 		return admission.NewForbidden(a, err)
 	}
 	return nil
+}
+
+func (r *ReferenceManager) ensureControllerRegistrationReferences(ctx context.Context, ctrlReg *core.ControllerRegistration) error {
+	deployment := ctrlReg.Spec.Deployment
+	if ctrlReg.Spec.Deployment == nil {
+		return nil
+	}
+
+	var refErrs error
+	for _, reg := range deployment.DeploymentRefs {
+		if err := r.lookupControllerDeployment(ctx, reg.Name); err != nil {
+			refErrs = multierror.Append(refErrs, err)
+		}
+	}
+
+	return refErrs
 }
 
 func (r *ReferenceManager) ensureProjectNamespace(project *core.Project) error {
@@ -617,11 +652,13 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 	return nil
 }
 
-func (r *ReferenceManager) lookupSecret(ctx context.Context, namespace, name string) error {
+type getFn func(context.Context, string, string) (runtime.Object, error)
+
+func lookupResource(ctx context.Context, namespace, name string, get getFn, fallbackGet getFn) error {
 	// First try to detect the secret in the cache.
 	var err error
 
-	_, err = r.secretLister.Secrets(namespace).Get(name)
+	_, err = get(ctx, namespace, name)
 	if err == nil {
 		return nil
 	}
@@ -633,7 +670,7 @@ func (r *ReferenceManager) lookupSecret(ctx context.Context, namespace, name str
 	// Give the cache time to observe the secret before rejecting a create.
 	// This helps when creating a secret and immediately creating a secretbinding referencing it.
 	time.Sleep(MissingSecretWait)
-	_, err = r.secretLister.Secrets(namespace).Get(name)
+	_, err = get(ctx, namespace, name)
 	switch {
 	case apierrors.IsNotFound(err):
 		// no-op
@@ -644,11 +681,35 @@ func (r *ReferenceManager) lookupSecret(ctx context.Context, namespace, name str
 	}
 
 	// Third try to detect the secret, now by doing a live lookup instead of relying on the cache.
-	if _, err := r.kubeClient.CoreV1().Secrets(namespace).Get(ctx, name, clientkubernetes.DefaultGetOptions()); err != nil {
+	if _, err := fallbackGet(ctx, namespace, name); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (r *ReferenceManager) lookupSecret(ctx context.Context, namespace, name string) error {
+	secretFromLister := func(_ context.Context, namespace, name string) (runtime.Object, error) {
+		return r.secretLister.Secrets(namespace).Get(name)
+	}
+
+	secretFromClient := func(ctx context.Context, namespace, name string) (runtime.Object, error) {
+		return r.kubeClient.CoreV1().Secrets(namespace).Get(ctx, name, clientkubernetes.DefaultGetOptions())
+	}
+
+	return lookupResource(ctx, namespace, name, secretFromLister, secretFromClient)
+}
+
+func (r *ReferenceManager) lookupControllerDeployment(ctx context.Context, name string) error {
+	deploymentFromLister := func(_ context.Context, _, name string) (runtime.Object, error) {
+		return r.controllerDeploymentLister.Get(name)
+	}
+
+	deploymentFromClient := func(ctx context.Context, _, name string) (runtime.Object, error) {
+		return r.gardenCoreClient.Core().ControllerDeployments().Get(ctx, name, clientkubernetes.DefaultGetOptions())
+	}
+
+	return lookupResource(ctx, "", name, deploymentFromLister, deploymentFromClient)
 }
 
 func (r *ReferenceManager) getAPIResource(groupVersion, kind string) (*metav1.APIResource, error) {

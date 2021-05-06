@@ -51,6 +51,10 @@ controllers:
     concurrentSyncs: 5
   # maxShootRetries: 3
     syncPeriod: 30m
+  controllerDeployment:
+    concurrentSyncs: 5
+  controllerRegistration:
+    concurrentSyncs: 5
 leaderElection:
   leaderElect: true
   leaseDuration: 15s

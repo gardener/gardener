@@ -16,6 +16,8 @@ Resource Types:
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.CloudProfile">CloudProfile</a>
 </li><li>
+<a href="#core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment</a>
+</li><li>
 <a href="#core.gardener.cloud/v1beta1.ControllerInstallation">ControllerInstallation</a>
 </li><li>
 <a href="#core.gardener.cloud/v1beta1.ControllerRegistration">ControllerRegistration</a>
@@ -450,6 +452,77 @@ string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment
+</h3>
+<p>
+<p>ControllerDeployment contains information about how this controller is deployed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+core.gardener.cloud/v1beta1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>ControllerDeployment</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+<p>Standard object metadata.</p>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type is the deployment type.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<p>ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerInstallation">ControllerInstallation
 </h3>
 <p>
@@ -519,7 +592,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>RegistrationRef is used to reference a ControllerRegistration resources.</p>
+<p>RegistrationRef is used to reference a ControllerRegistration resource.</p>
 </td>
 </tr>
 <tr>
@@ -532,7 +605,21 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>SeedRef is used to reference a Seed resources.</p>
+<p>SeedRef is used to reference a Seed resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>deploymentRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeploymentRef is used to reference a ControllerDeployment resource.</p>
 </td>
 </tr>
 </table>
@@ -631,8 +718,8 @@ ControllerRegistrationSpec
 <td>
 <code>deployment</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ControllerDeployment">
-ControllerDeployment
+<a href="#core.gardener.cloud/v1beta1.ControllerRegistrationDeployment">
+ControllerRegistrationDeployment
 </a>
 </em>
 </td>
@@ -2763,85 +2850,11 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </tr>
 </tbody>
 </table>
-<h3 id="core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment
-</h3>
-<p>
-(<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ControllerRegistrationSpec">ControllerRegistrationSpec</a>)
-</p>
-<p>
-<p>ControllerDeployment contains information for how this controller is deployed.</p>
-</p>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>
-<code>type</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<p>Type is the deployment type.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
-k8s.io/apimachinery/pkg/runtime.RawExtension
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig contains type-specific configuration.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>policy</code></br>
-<em>
-<a href="#core.gardener.cloud/v1beta1.ControllerDeploymentPolicy">
-ControllerDeploymentPolicy
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Policy controls how the controller is deployed. It defaults to &lsquo;OnDemand&rsquo;.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>seedSelector</code></br>
-<em>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#labelselector-v1-meta">
-Kubernetes meta/v1.LabelSelector
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
-considered for a deployment.
-An empty list means that all seeds are selected.</p>
-</td>
-</tr>
-</tbody>
-</table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerDeploymentPolicy">ControllerDeploymentPolicy
 (<code>string</code> alias)</p></h3>
 <p>
 (<em>Appears on:</em>
-<a href="#core.gardener.cloud/v1beta1.ControllerDeployment">ControllerDeployment</a>)
+<a href="#core.gardener.cloud/v1beta1.ControllerRegistrationDeployment">ControllerRegistrationDeployment</a>)
 </p>
 <p>
 <p>ControllerDeploymentPolicy is a string alias.</p>
@@ -2873,7 +2886,7 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>RegistrationRef is used to reference a ControllerRegistration resources.</p>
+<p>RegistrationRef is used to reference a ControllerRegistration resource.</p>
 </td>
 </tr>
 <tr>
@@ -2886,7 +2899,21 @@ Kubernetes core/v1.ObjectReference
 </em>
 </td>
 <td>
-<p>SeedRef is used to reference a Seed resources.</p>
+<p>SeedRef is used to reference a Seed resource.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>deploymentRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectreference-v1-core">
+Kubernetes core/v1.ObjectReference
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeploymentRef is used to reference a ControllerDeployment resource.</p>
 </td>
 </tr>
 </tbody>
@@ -2938,6 +2965,97 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.ControllerRegistrationDeployment">ControllerRegistrationDeployment
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ControllerRegistrationSpec">ControllerRegistrationSpec</a>)
+</p>
+<p>
+<p>ControllerRegistrationDeployment contains information for how this controller is deployed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Type is the deployment type.
+Deprecated: Declare type via <code>ControllerDeployment</code> instead.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>providerConfig</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
+k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ProviderConfig contains type-specific configuration.
+Deprecated: Use <code>DeploymentRefs</code> instead.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>policy</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ControllerDeploymentPolicy">
+ControllerDeploymentPolicy
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Policy controls how the controller is deployed. It defaults to &lsquo;OnDemand&rsquo;.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>seedSelector</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#labelselector-v1-meta">
+Kubernetes meta/v1.LabelSelector
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
+considered for a deployment.
+An empty list means that all seeds are selected.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>deploymentRefs</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.DeploymentRef">
+[]DeploymentRef
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DeploymentRefs holds references to <code>ControllerDeployments</code>. Only one element is support now.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.ControllerRegistrationSpec">ControllerRegistrationSpec
 </h3>
 <p>
@@ -2974,8 +3092,8 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <code>deployment</code></br>
 <em>
-<a href="#core.gardener.cloud/v1beta1.ControllerDeployment">
-ControllerDeployment
+<a href="#core.gardener.cloud/v1beta1.ControllerRegistrationDeployment">
+ControllerRegistrationDeployment
 </a>
 </em>
 </td>
@@ -3305,6 +3423,36 @@ bool
 <td>
 <em>(Optional)</em>
 <p>Encrypted determines if the volume should be encrypted.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.DeploymentRef">DeploymentRef
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ControllerRegistrationDeployment">ControllerRegistrationDeployment</a>)
+</p>
+<p>
+<p>DeploymentRef contains information about <code>ControllerDeployment</code> references.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the name of the <code>ControllerDeployment</code> that is being referred to.</p>
 </td>
 </tr>
 </tbody>

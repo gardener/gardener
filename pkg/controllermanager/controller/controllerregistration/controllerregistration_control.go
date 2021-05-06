@@ -23,7 +23,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -36,16 +35,7 @@ func (c *Controller) controllerRegistrationAdd(ctx context.Context, obj interfac
 		return
 	}
 	c.controllerRegistrationQueue.Add(key)
-
-	seedList := &metav1.PartialObjectMetadataList{}
-	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
-	if err := c.gardenClient.List(ctx, seedList); err != nil {
-		return
-	}
-
-	for _, seed := range seedList.Items {
-		c.controllerRegistrationSeedQueue.Add(seed.Name)
-	}
+	c.enqueueAllSeeds(ctx)
 }
 
 func (c *Controller) controllerRegistrationUpdate(ctx context.Context, _, newObj interface{}) {

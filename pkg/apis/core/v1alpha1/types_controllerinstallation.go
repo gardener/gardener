@@ -49,10 +49,13 @@ type ControllerInstallationList struct {
 
 // ControllerInstallationSpec is the specification of a ControllerInstallation.
 type ControllerInstallationSpec struct {
-	// RegistrationRef is used to reference a ControllerRegistration resources.
+	// RegistrationRef is used to reference a ControllerRegistration resource.
 	RegistrationRef corev1.ObjectReference `json:"registrationRef" protobuf:"bytes,1,opt,name=registrationRef"`
-	// SeedRef is used to reference a Seed resources.
+	// SeedRef is used to reference a Seed resource.
 	SeedRef corev1.ObjectReference `json:"seedRef" protobuf:"bytes,2,opt,name=seedRef"`
+	// DeploymentRef is used to reference a ControllerDeployment resource.
+	// +optional
+	DeploymentRef *corev1.ObjectReference `json:"deploymentRef,omitempty" protobuf:"bytes,3,opt,name=deploymentRef"`
 }
 
 // ControllerInstallationStatus is the status of a ControllerInstallation.

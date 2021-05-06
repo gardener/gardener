@@ -24,6 +24,8 @@ type BackupEntryExpansion interface{}
 
 type CloudProfileExpansion interface{}
 
+type ControllerDeploymentExpansion interface{}
+
 type ControllerInstallationExpansion interface{}
 
 type ControllerRegistrationExpansion interface{}

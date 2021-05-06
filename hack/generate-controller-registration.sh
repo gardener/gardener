@@ -76,10 +76,25 @@ mkdir -p "$(dirname "$DEST")"
 cat <<EOM > "$DEST"
 ---
 apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerDeployment
+metadata:
+  name: $NAME
+spec:
+  type: helm
+  providerConfig:
+    chart: $chart
+    values:
+      image:
+        tag: $VERSION
+---
+apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
 metadata:
   name: $NAME
 spec:
+  deployment:
+    deploymentRefs:
+    - name: $NAME
   resources:
 EOM
 
@@ -91,15 +106,5 @@ for kind_and_type in "${KINDS_AND_TYPES[@]}"; do
     type: $TYPE$MODE
 EOM
 done
-
-cat <<EOM >> "$DEST"
-  deployment:
-    type: helm
-    providerConfig:
-      chart: $chart
-      values:
-        image:
-          tag: $VERSION
-EOM
 
 echo "Successfully generated controller registration at $DEST"

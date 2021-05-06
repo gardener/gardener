@@ -29,6 +29,7 @@ type CoreV1beta1Interface interface {
 	BackupBucketsGetter
 	BackupEntriesGetter
 	CloudProfilesGetter
+	ControllerDeploymentsGetter
 	ControllerInstallationsGetter
 	ControllerRegistrationsGetter
 	PlantsGetter
@@ -54,6 +55,10 @@ func (c *CoreV1beta1Client) BackupEntries(namespace string) BackupEntryInterface
 
 func (c *CoreV1beta1Client) CloudProfiles() CloudProfileInterface {
 	return newCloudProfiles(c)
+}
+
+func (c *CoreV1beta1Client) ControllerDeployments() ControllerDeploymentInterface {
+	return newControllerDeployments(c)
 }
 
 func (c *CoreV1beta1Client) ControllerInstallations() ControllerInstallationInterface {

@@ -186,8 +186,9 @@ var _ = Describe("graph", func() {
 		controllerInstallation1 = &gardencorev1beta1.ControllerInstallation{
 			ObjectMeta: metav1.ObjectMeta{Name: "controllerinstallation1"},
 			Spec: gardencorev1beta1.ControllerInstallationSpec{
-				SeedRef:         corev1.ObjectReference{Name: seed1.Name},
+				DeploymentRef:   &corev1.ObjectReference{Name: "controllerdeployment1"},
 				RegistrationRef: corev1.ObjectReference{Name: "controllerregistration1"},
+				SeedRef:         corev1.ObjectReference{Name: seed1.Name},
 			},
 		}
 
@@ -576,38 +577,53 @@ var _ = Describe("graph", func() {
 	It("should behave as expected for gardencorev1beta1.ControllerInstallation", func() {
 		By("add")
 		fakeInformerControllerInstallation.Add(controllerInstallation1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(3))
-		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
 		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeControllerDeployment, "", controllerInstallation1.Spec.DeploymentRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeTrue())
 
 		By("update (irrelevant change)")
 		controllerInstallation1Copy := controllerInstallation1.DeepCopy()
 		controllerInstallation1.Spec.RegistrationRef.ResourceVersion = "123"
 		fakeInformerControllerInstallation.Update(controllerInstallation1Copy, controllerInstallation1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(3))
-		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
 		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeControllerDeployment, "", controllerInstallation1.Spec.DeploymentRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeTrue())
 
 		By("update (controller registration name)")
 		controllerInstallation1Copy = controllerInstallation1.DeepCopy()
 		controllerInstallation1.Spec.RegistrationRef.Name = "newreg"
 		fakeInformerControllerInstallation.Update(controllerInstallation1Copy, controllerInstallation1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(3))
-		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
 		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1Copy.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeControllerDeployment, "", controllerInstallation1.Spec.DeploymentRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeTrue())
+
+		By("update (controller deployment name)")
+		controllerInstallation1Copy = controllerInstallation1.DeepCopy()
+		controllerInstallation1.Spec.DeploymentRef.Name = "newdeploy"
+		fakeInformerControllerInstallation.Update(controllerInstallation1Copy, controllerInstallation1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
+		Expect(graph.HasPathFrom(VertexTypeControllerDeployment, "", controllerInstallation1Copy.Spec.DeploymentRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeControllerDeployment, "", controllerInstallation1.Spec.DeploymentRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeTrue())
 
 		By("update (seed name)")
 		controllerInstallation1Copy = controllerInstallation1.DeepCopy()
 		controllerInstallation1.Spec.SeedRef.Name = "newseed"
 		fakeInformerControllerInstallation.Update(controllerInstallation1Copy, controllerInstallation1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(3))
-		Expect(graph.graph.Edges().Len()).To(Equal(2))
-		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
 		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1Copy.Spec.SeedRef.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeControllerDeployment, "", controllerInstallation1.Spec.DeploymentRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeTrue())
 
 		By("delete")
@@ -615,6 +631,7 @@ var _ = Describe("graph", func() {
 		Expect(graph.graph.Nodes().Len()).To(BeZero())
 		Expect(graph.graph.Edges().Len()).To(BeZero())
 		Expect(graph.HasPathFrom(VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeControllerDeployment, "", controllerInstallation1.Spec.DeploymentRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name)).To(BeFalse())
 	})
 
@@ -764,7 +781,8 @@ var _ = Describe("graph", func() {
 			fakeInformerControllerInstallation.Add(controllerInstallation1)
 			lock.Lock()
 			defer lock.Unlock()
-			nodes, edges = nodes+2, edges+2
+			nodes, edges = nodes+3, edges+3
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerDeployment, "", controllerInstallation1.Spec.DeploymentRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeTrue()})
 			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeTrue()})
 			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name, BeTrue()})
 		}()
@@ -886,6 +904,7 @@ var _ = Describe("graph", func() {
 			lock.Lock()
 			defer lock.Unlock()
 			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerRegistration, "", controllerInstallation1Copy.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeFalse()})
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerDeployment, "", controllerInstallation1.Spec.DeploymentRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeTrue()})
 			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeTrue()})
 			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name, BeTrue()})
 		}()
@@ -1010,6 +1029,7 @@ var _ = Describe("graph", func() {
 			fakeInformerControllerInstallation.Update(controllerInstallation1Copy, controllerInstallation1)
 			lock.Lock()
 			defer lock.Unlock()
+			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerDeployment, "", controllerInstallation1.Spec.DeploymentRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeTrue()})
 			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerRegistration, "", controllerInstallation1.Spec.RegistrationRef.Name, VertexTypeControllerInstallation, "", controllerInstallation1.Name, BeTrue()})
 			paths[VertexTypeControllerInstallation] = append(paths[VertexTypeControllerInstallation], pathExpectation{VertexTypeControllerInstallation, "", controllerInstallation1.Name, VertexTypeSeed, "", controllerInstallation1.Spec.SeedRef.Name, BeTrue()})
 		}()

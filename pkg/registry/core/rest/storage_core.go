@@ -22,6 +22,7 @@ import (
 	backupbucketstore "github.com/gardener/gardener/pkg/registry/core/backupbucket/storage"
 	backupentrystore "github.com/gardener/gardener/pkg/registry/core/backupentry/storage"
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/core/cloudprofile/storage"
+	controllerdeploymentstore "github.com/gardener/gardener/pkg/registry/core/controllerdeployment/storage"
 	controllerinstallationstore "github.com/gardener/gardener/pkg/registry/core/controllerinstallation/storage"
 	controllerregistrationstore "github.com/gardener/gardener/pkg/registry/core/controllerregistration/storage"
 	plantstore "github.com/gardener/gardener/pkg/registry/core/plant/storage"
@@ -68,6 +69,9 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 
 	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
 	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
+
+	controllerDeploymentStorage := controllerdeploymentstore.NewStorage(restOptionsGetter)
+	storage["controllerdeployments"] = controllerDeploymentStorage.ControllerDeployment
 
 	controllerRegistrationStorage := controllerregistrationstore.NewStorage(restOptionsGetter)
 	storage["controllerregistrations"] = controllerRegistrationStorage.ControllerRegistration
@@ -120,6 +124,9 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 
 	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
 	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
+
+	controllerDeploymentStorage := controllerdeploymentstore.NewStorage(restOptionsGetter)
+	storage["controllerdeployments"] = controllerDeploymentStorage.ControllerDeployment
 
 	controllerRegistrationStorage := controllerregistrationstore.NewStorage(restOptionsGetter)
 	storage["controllerregistrations"] = controllerRegistrationStorage.ControllerRegistration

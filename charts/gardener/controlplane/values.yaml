@@ -40,6 +40,7 @@ global:
         kind: EncryptionConfiguration
         resources:
           - resources:
+            - controllerdeployments.core.gardener.cloud
             - controllerregistrations.core.gardener.cloud
             - shootstates.core.gardener.cloud
             providers:

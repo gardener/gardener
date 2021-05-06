@@ -9,17 +9,32 @@ The specification mainly describes which of Gardener's extension CRDs are manage
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
+kind: ControllerDeployment
+metadata:
+  name: os-gardenlinux
+spec:
+  type: helm
+  providerConfig:
+    chart: H4sIFAAAAAAA/yk... # <base64-gzip-chart>
+    values:
+      foo: bar
+---
+apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
 metadata:
-  name: os-coreos
+  name: os-gardenlinux
 spec:
+  deployment:
+    deploymentRefs:
+    - name: os-gardenlinux
   resources:
   - kind: OperatingSystemConfig
-    type: coreos
+    type: gardenlinux
     primary: true
 ```
 
-This information tells Gardener that there is an extension controller that can handle `OperatingSystemConfig` resources of type `coreos`.
+This information tells Gardener that there is an extension controller that can handle `OperatingSystemConfig` resources of type `gardenlinux`.
+A reference to the shown `ControllerDeployment` specifies how the deployment of the extension controller is accomplished.
 
 Also, it specifies that this controller is the primary one responsible for the lifecycle of the `OperatingSystemConfig` resource.
 Setting `primary` to `false` would allow to register additional, secondary controllers that may also watch/react on the `OperatingSystemConfig/coreos` resources, however, only the primary controller may change/update the main `status` of the extension object (that are used to "communicate" with the Gardenlet).
@@ -33,25 +48,23 @@ Also, please note that the `primary` field cannot be changed after creation of t
 
 ## Deploying Extension Controllers
 
-Submitting above `ControllerRegistration` will create a `ControllerInstallation` resource:
+Submitting above `ControllerDeployment` and `ControllerRegistration` will create a `ControllerInstallation` resource:
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerInstallation
 metadata:
-  name: os-coreos
+  name: os-gardenlinux
 spec:
+  deploymentRef:
+    name: networking-calico
   registrationRef:
-    apiVersion: core.gardener.cloud/v1beta1
-    kind: ControllerRegistration
-    name: os-coreos
+    name: os-gardenlinux
   seedRef:
-    apiVersion: core.gardener.cloud/v1beta1
-    kind: Seed
     name: aws-eu1
 ```
 
-This resource expresses that Gardener requires the `os-coreos` extension controller to run on the `aws-eu1` seed cluster.
+This resource expresses that Gardener requires the `os-gardenlinux` extension controller to run on the `aws-eu1` seed cluster.
 
 The Gardener Controller Manager does automatically determine which extension is required on which seed cluster and will only create `ControllerInstallation` objects for those.
 Also, it will automatically delete `ControllerInstallation`s referencing extension controllers that are no longer required on a seed (e.g., because all shoots on it have been deleted).
@@ -60,28 +73,25 @@ There are additional configuration options, please see [this section](#deploymen
 ## How do extension controllers get deployed to seeds?
 
 After Gardener has written the `ControllerInstallation` resource some component must satisfy this request and start deploying the extension controller to the seed.
-Depending on the complexity of the controllers lifecycle management, configuration, etc. there are two possible scenarios:
+Depending on the complexity of the controller's lifecycle management, configuration, etc. there are two possible scenarios:
 
 ### Scenario 1: Deployed by Gardener
 
 In many cases the extension controllers are easy to deploy and configure.
 It is sufficient to simply create a Helm chart (standardized way of packaging software in the Kubernetes context) and deploy it together with some static configuration values.
-Gardener supports this scenario and allows to provide arbitrary deployment information in the `ControllerRegistration` resource's `.spec` section:
+Gardener supports this scenario and allows to provide arbitrary deployment information in the `ControllerDeployment` resource's `.spec` section:
 
 ```yaml
 ...
 spec:
-  ...
-  deployment:
-    type: helm
-    providerConfig:
-      chart: H4sIFAAAAAAA/yk...
-      values:
-        foo: bar
+  providerConfig:
+    chart: H4sIFAAAAAAA/yk...
+    values:
+      foo: bar
 ```
 
 If `.spec.deployment.type=helm` then Gardener itself will take over the responsibility the deployment.
-It base64-decodes the provided Helm chart (`.spec.deployment.providerConfig.chart`) and deploys it with the provided static configuration (`.spec.deployment.providerConfig.values`).
+It base64-decodes the provided Helm chart (`.spec.providerConfig.chart`) and deploys it with the provided static configuration (`.spec.providerConfig.values`).
 The chart and the values can be updated at any time - Gardener will recognize and re-trigger the deployment process.
 
 In order to allow extensions to get information about the garden and the seed cluster Gardener does mix-in certain properties into the values (root level) of every deployed Helm chart:
@@ -105,7 +115,7 @@ The list might be extended in the future.
 
 Some extension controllers might be more complex and require additional domain-specific knowledge wrt. lifecycle or configuration.
 In this case, we encourage to follow the Kubernetes operator pattern and deploy a dedicated operator for this extension into the garden cluster.
-The `ControllerResource`'s `.spec.deployment.type` field would then not be `helm`, and no Helm chart or values need to be provided there.
+The `ControllerDeployments`'s `.spec.type` field would then not be `helm`, and no Helm chart or values need to be provided there.
 Instead, the operator itself knows how to deploy the extension into the seed.
 It must watch `ControllerInstallation` resources and act one those referencing a `ControllerRegistration` the operator is responsible for.
 

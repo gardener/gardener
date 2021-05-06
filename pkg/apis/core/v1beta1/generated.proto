@@ -381,24 +381,26 @@ message ContainerRuntime {
   optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
 }
 
-// ControllerDeployment contains information for how this controller is deployed.
+// ControllerDeployment contains information about how this controller is deployed.
 message ControllerDeployment {
+  // Standard object metadata.
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
   // Type is the deployment type.
-  optional string type = 1;
+  optional string type = 2;
 
-  // ProviderConfig contains type-specific configuration.
-  // +optional
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
+  // ProviderConfig contains type-specific configuration. It contains assets that deploy the controller.
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 3;
+}
 
-  // Policy controls how the controller is deployed. It defaults to 'OnDemand'.
+// ControllerDeploymentList is a collection of ControllerDeployments.
+message ControllerDeploymentList {
+  // Standard list object metadata.
   // +optional
-  optional string policy = 3;
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
 
-  // SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
-  // considered for a deployment.
-  // An empty list means that all seeds are selected.
-  // +optional
-  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 4;
+  // Items is the list of ControllerDeployments.
+  repeated ControllerDeployment items = 2;
 }
 
 // ControllerInstallation represents an installation request for an external controller.
@@ -425,11 +427,15 @@ message ControllerInstallationList {
 
 // ControllerInstallationSpec is the specification of a ControllerInstallation.
 message ControllerInstallationSpec {
-  // RegistrationRef is used to reference a ControllerRegistration resources.
+  // RegistrationRef is used to reference a ControllerRegistration resource.
   optional k8s.io.api.core.v1.ObjectReference registrationRef = 1;
 
-  // SeedRef is used to reference a Seed resources.
+  // SeedRef is used to reference a Seed resource.
   optional k8s.io.api.core.v1.ObjectReference seedRef = 2;
+
+  // DeploymentRef is used to reference a ControllerDeployment resource.
+  // +optional
+  optional k8s.io.api.core.v1.ObjectReference deploymentRef = 3;
 }
 
 // ControllerInstallationStatus is the status of a ControllerInstallation.
@@ -454,6 +460,33 @@ message ControllerRegistration {
   optional ControllerRegistrationSpec spec = 2;
 }
 
+// ControllerRegistrationDeployment contains information for how this controller is deployed.
+message ControllerRegistrationDeployment {
+  // Type is the deployment type.
+  // Deprecated: Declare type via `ControllerDeployment` instead.
+  // +optional
+  optional string type = 1;
+
+  // ProviderConfig contains type-specific configuration.
+  // Deprecated: Use `DeploymentRefs` instead.
+  // +optional
+  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
+
+  // Policy controls how the controller is deployed. It defaults to 'OnDemand'.
+  // +optional
+  optional string policy = 3;
+
+  // SeedSelector contains an optional label selector for seeds. Only if the labels match then this controller will be
+  // considered for a deployment.
+  // An empty list means that all seeds are selected.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector seedSelector = 4;
+
+  // DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.
+  // +optional
+  repeated DeploymentRef deploymentRefs = 5;
+}
+
 // ControllerRegistrationList is a collection of ControllerRegistrations.
 message ControllerRegistrationList {
   // Standard list object metadata.
@@ -473,7 +506,7 @@ message ControllerRegistrationSpec {
 
   // Deployment contains information for how this controller is deployed.
   // +optional
-  optional ControllerDeployment deployment = 2;
+  optional ControllerRegistrationDeployment deployment = 2;
 }
 
 // ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, ...) and the actual type for this
@@ -566,6 +599,12 @@ message DataVolume {
   // Encrypted determines if the volume should be encrypted.
   // +optional
   optional bool encrypted = 4;
+}
+
+// DeploymentRef contains information about `ControllerDeployment` references.
+message DeploymentRef {
+  // Name is the name of the `ControllerDeployment` that is being referred to.
+  optional string name = 1;
 }
 
 // Endpoint is an endpoint for monitoring, logging and other services around the plant.

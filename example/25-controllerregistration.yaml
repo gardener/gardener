@@ -4,21 +4,17 @@
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
 metadata:
-  name: os-coreos
+  name: os-gardenlinux
 spec:
   resources:
   - kind: OperatingSystemConfig
-    type: coreos
+    type: gardenlinux
   # primary: true|false
   # globallyEnabled: true|false # only valid if kind=Extension
   # reconcileTimeout: 30s # only valid if kind=Extension
   deployment:
-    type: helm
-    providerConfig:
-      chart: |
-        H4sIFAAAAAAA/yk...
-      values:
-        foo: bar
+    deploymentRefs:
+    - name: os-gardenlinux # reference to ControllerDeployment
   # policy: OnDemand|Always|AlwaysExceptNoShoots
   # seedSelector:
   #   matchLabels:

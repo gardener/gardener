@@ -40,6 +40,10 @@ func (c *FakeCoreV1alpha1) CloudProfiles() v1alpha1.CloudProfileInterface {
 	return &FakeCloudProfiles{c}
 }
 
+func (c *FakeCoreV1alpha1) ControllerDeployments() v1alpha1.ControllerDeploymentInterface {
+	return &FakeControllerDeployments{c}
+}
+
 func (c *FakeCoreV1alpha1) ControllerInstallations() v1alpha1.ControllerInstallationInterface {
 	return &FakeControllerInstallations{c}
 }

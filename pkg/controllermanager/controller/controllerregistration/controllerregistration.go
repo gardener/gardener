@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,6 +68,10 @@ func NewController(ctx context.Context, clientMap clientmap.ClientMap) (*Control
 	backupEntryInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
+	}
+	controllerDeploymentInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerDeployment{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ControllerDeployment Informer: %w", err)
 	}
 	controllerInstallationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
 	if err != nil {
@@ -116,6 +121,11 @@ func NewController(ctx context.Context, clientMap clientmap.ClientMap) (*Control
 		DeleteFunc: controller.controllerRegistrationDelete,
 	})
 
+	controllerDeploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    func(obj interface{}) { controller.controllerDeploymentAdd(ctx, obj) },
+		UpdateFunc: func(oldObj, newObj interface{}) { controller.controllerDeploymentUpdate(ctx, oldObj, newObj) },
+	})
+
 	controllerInstallationInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    controller.controllerInstallationAdd,
 		UpdateFunc: controller.controllerInstallationUpdate,
@@ -137,6 +147,7 @@ func NewController(ctx context.Context, clientMap clientmap.ClientMap) (*Control
 		backupBucketInformer.HasSynced,
 		backupEntryInformer.HasSynced,
 		controllerRegistrationInformer.HasSynced,
+		controllerDeploymentInformer.HasSynced,
 		controllerInstallationInformer.HasSynced,
 		seedInformer.HasSynced,
 		shootInformer.HasSynced,
@@ -200,4 +211,16 @@ func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
 		return
 	}
 	ch <- metric
+}
+
+func (c *Controller) enqueueAllSeeds(ctx context.Context) {
+	seedList := &metav1.PartialObjectMetadataList{}
+	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
+	if err := c.gardenClient.List(ctx, seedList); err != nil {
+		return
+	}
+
+	for _, seed := range seedList.Items {
+		c.controllerRegistrationSeedQueue.Add(seed.Name)
+	}
 }

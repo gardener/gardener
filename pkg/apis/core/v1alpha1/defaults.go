@@ -313,8 +313,8 @@ func SetDefaults_ControllerResource(obj *ControllerResource) {
 	}
 }
 
-// SetDefaults_ControllerDeployment sets default values for ControllerDeployment objects.
-func SetDefaults_ControllerDeployment(obj *ControllerDeployment) {
+// SetDefaults_ControllerRegistrationDeployment sets default values for ControllerDeployment objects.
+func SetDefaults_ControllerRegistrationDeployment(obj *ControllerRegistrationDeployment) {
 	p := ControllerDeploymentPolicyOnDemand
 	if obj.Policy == nil {
 		obj.Policy = &p

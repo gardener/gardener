@@ -52,7 +52,7 @@ type ControllerRegistrationSpec struct {
 	Resources []ControllerResource `json:"resources,omitempty" protobuf:"bytes,1,opt,name=resources"`
 	// Deployment contains information for how this controller is deployed.
 	// +optional
-	Deployment *ControllerDeployment `json:"deployment,omitempty" protobuf:"bytes,2,opt,name=deployment"`
+	Deployment *ControllerRegistrationDeployment `json:"deployment,omitempty" protobuf:"bytes,2,opt,name=deployment"`
 }
 
 // ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, ...) and the actual type for this
@@ -75,11 +75,20 @@ type ControllerResource struct {
 	Primary *bool `json:"primary,omitempty" protobuf:"varint,5,opt,name=primary"`
 }
 
-// ControllerDeployment contains information for how this controller is deployed.
-type ControllerDeployment struct {
+// DeploymentRef contains information about `ControllerDeployment` references.
+type DeploymentRef struct {
+	// Name is the name of the `ControllerDeployment` that is being referred to.
+	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
+}
+
+// ControllerRegistrationDeployment contains information for how this controller is deployed.
+type ControllerRegistrationDeployment struct {
 	// Type is the deployment type.
-	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
+	// Deprecated: Declare type via `ControllerDeployment` instead.
+	// +optional
+	Type *string `json:"type,omitempty" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig contains type-specific configuration.
+	// Deprecated: Use `DeploymentRefs` instead.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
@@ -90,6 +99,9 @@ type ControllerDeployment struct {
 	// An empty list means that all seeds are selected.
 	// +optional
 	SeedSelector *metav1.LabelSelector `json:"seedSelector,omitempty" protobuf:"bytes,4,opt,name=seedSelector"`
+	// DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.
+	// +optional
+	DeploymentRefs []DeploymentRef `json:"deploymentRefs,omitempty" protobuf:"bytes,5,opt,name=deploymentRefs"`
 }
 
 // ControllerDeploymentPolicy is a string alias.

@@ -88,17 +88,42 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 		}
 	}
 
-	if spec.Deployment != nil {
-		if policy := spec.Deployment.Policy; policy != nil && !availablePolicies.Has(string(*policy)) {
+	if deployment := spec.Deployment; deployment != nil {
+		if policy := deployment.Policy; policy != nil && !availablePolicies.Has(string(*policy)) {
 			allErrs = append(allErrs, field.NotSupported(deploymentPath.Child("policy"), *policy, availablePolicies.List()))
 		}
 
-		if spec.Deployment.SeedSelector != nil {
+		if deployment.SeedSelector != nil {
 			if controlsResourcesPrimarily {
 				allErrs = append(allErrs, field.Forbidden(deploymentPath.Child("seedSelector"), "specifying a seed selector is not allowed when controlling resources primarily"))
 			}
 
-			allErrs = append(allErrs, metav1validation.ValidateLabelSelector(spec.Deployment.SeedSelector, deploymentPath.Child("seedSelector"))...)
+			allErrs = append(allErrs, metav1validation.ValidateLabelSelector(deployment.SeedSelector, deploymentPath.Child("seedSelector"))...)
+		}
+
+		if deployment.Type != nil && len(*deployment.Type) == 0 {
+			allErrs = append(allErrs, field.Required(deploymentPath.Child("type"), "must provide a type"))
+		}
+
+		deploymentRefsCount := len(deployment.DeploymentRefs)
+		if deploymentRefsCount > 0 {
+			if deployment.ProviderConfig != nil {
+				allErrs = append(allErrs, field.Forbidden(deploymentPath.Child("providerConfig"), "specifying a providerConfig is not allowed while also specifying deploymentRefs"))
+			}
+			if deployment.Type != nil {
+				allErrs = append(allErrs, field.Forbidden(deploymentPath.Child("type"), "specifying a type is not allowed while also specifying deploymentRefs"))
+			}
+		}
+
+		if deploymentRefsCount > 1 {
+			allErrs = append(allErrs, field.Forbidden(deploymentPath.Child("deploymentRefs"), "only one deployment reference is allowed"))
+		}
+
+		for i, deploymentRef := range deployment.DeploymentRefs {
+			fld := deploymentPath.Child("deploymentRefs").Index(i)
+			if deploymentRef.Name == "" {
+				allErrs = append(allErrs, field.Required(fld.Child("name"), "must not be empty"))
+			}
 		}
 	}
 

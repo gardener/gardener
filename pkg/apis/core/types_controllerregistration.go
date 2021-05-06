@@ -49,7 +49,7 @@ type ControllerRegistrationSpec struct {
 	// (aws-route53, gcp, auditlog, ...).
 	Resources []ControllerResource
 	// Deployment contains information for how this controller is deployed.
-	Deployment *ControllerDeployment
+	Deployment *ControllerRegistrationDeployment
 }
 
 // ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, ...) and the actual type for this
@@ -69,11 +69,19 @@ type ControllerResource struct {
 	Primary *bool
 }
 
-// ControllerDeployment contains information for how this controller is deployed.
-type ControllerDeployment struct {
+// DeploymentRef contains information about `ControllerDeployment` references.
+type DeploymentRef struct {
+	// Name is the name of the `ControllerDeployment` that is being referred to.
+	Name string
+}
+
+// ControllerRegistrationDeployment contains information for how this controller is deployed.
+type ControllerRegistrationDeployment struct {
 	// Type is the deployment type.
-	Type string
+	// Deprecated: Declare type via `ControllerDeployment` instead.
+	Type *string
 	// ProviderConfig contains type-specific configuration.
+	// Deprecated: Use `DeploymentRefs` instead.
 	ProviderConfig *runtime.RawExtension
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	Policy *ControllerDeploymentPolicy
@@ -81,6 +89,8 @@ type ControllerDeployment struct {
 	// considered for a deployment.
 	// An empty list means that all seeds are selected.
 	SeedSelector *metav1.LabelSelector
+	// DeploymentRefs holds references to `ControllerDeployments`. Only one element is support now.
+	DeploymentRefs []DeploymentRef
 }
 
 // ControllerDeploymentPolicy is a string alias.

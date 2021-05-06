@@ -305,6 +305,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		// gardenlet does not have the required RBAC permissions for listing/watching the following resources, so let's prevent any
 		// attempts to cache them
 		WithUncached(
+			&gardencorev1beta1.ControllerDeployment{},
 			&gardencorev1beta1.Project{},
 			&gardencorev1alpha1.ShootState{},
 		)

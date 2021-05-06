@@ -82,6 +82,20 @@ func (mr *MockCoreV1beta1InterfaceMockRecorder) CloudProfiles() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloudProfiles", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).CloudProfiles))
 }
 
+// ControllerDeployments mocks base method.
+func (m *MockCoreV1beta1Interface) ControllerDeployments() v1beta10.ControllerDeploymentInterface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ControllerDeployments")
+	ret0, _ := ret[0].(v1beta10.ControllerDeploymentInterface)
+	return ret0
+}
+
+// ControllerDeployments indicates an expected call of ControllerDeployments.
+func (mr *MockCoreV1beta1InterfaceMockRecorder) ControllerDeployments() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ControllerDeployments", reflect.TypeOf((*MockCoreV1beta1Interface)(nil).ControllerDeployments))
+}
+
 // ControllerInstallations mocks base method.
 func (m *MockCoreV1beta1Interface) ControllerInstallations() v1beta10.ControllerInstallationInterface {
 	m.ctrl.T.Helper()

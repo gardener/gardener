@@ -201,18 +201,18 @@ var _ = Describe("Defaults", func() {
 		)
 
 		It("should default the policy field", func() {
-			deployment := ControllerDeployment{}
+			deployment := ControllerRegistrationDeployment{}
 
-			SetDefaults_ControllerDeployment(&deployment)
+			SetDefaults_ControllerRegistrationDeployment(&deployment)
 
 			Expect(deployment.Policy).To(PointTo(Equal(ondemand)))
 		})
 
 		It("should not default the policy field", func() {
-			deployment := ControllerDeployment{Policy: &always}
+			deployment := ControllerRegistrationDeployment{Policy: &always}
 			deploymentCopy := deployment.DeepCopy()
 
-			SetDefaults_ControllerDeployment(&deployment)
+			SetDefaults_ControllerRegistrationDeployment(&deployment)
 
 			Expect(deployment.Policy).To(Equal(deploymentCopy.Policy))
 		})
