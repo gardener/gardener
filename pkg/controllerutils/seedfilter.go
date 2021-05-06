@@ -17,8 +17,8 @@ package controllerutils
 import (
 	"context"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -175,7 +175,7 @@ func BackupEntryIsManagedByThisGardenlet(ctx context.Context, c client.Client, b
 // BastionFilterFunc returns a filtering func for the seeds and the given label selector.
 func BastionFilterFunc(ctx context.Context, c client.Client, seedName string, labelSelector *metav1.LabelSelector) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
-		bastion, ok := obj.(*gardencorev1alpha1.Bastion)
+		bastion, ok := obj.(*gardenoperationsv1alpha1.Bastion)
 		if !ok {
 			return false
 		}

@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"sync"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -82,7 +82,7 @@ var _ = Describe("graph", func() {
 
 		backupEntry1 *gardencorev1beta1.BackupEntry
 
-		bastion1 *gardencorev1alpha1.Bastion
+		bastion1 *gardenoperationsv1alpha1.Bastion
 
 		secretBinding1          *gardencorev1beta1.SecretBinding
 		secretBinding1SecretRef = corev1.SecretReference{Namespace: "foobar", Name: "bazfoo"}
@@ -124,7 +124,7 @@ var _ = Describe("graph", func() {
 				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):                     fakeInformerProject,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"):                fakeInformerBackupBucket,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):                 fakeInformerBackupEntry,
-				gardencorev1alpha1.SchemeGroupVersion.WithKind("Bastion"):                    fakeInformerBastion,
+				gardenoperationsv1alpha1.SchemeGroupVersion.WithKind("Bastion"):              fakeInformerBastion,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"):               fakeInformerSecretBinding,
 				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"):      fakeInformerControllerInstallation,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):            fakeInformerManagedSeed,
@@ -191,9 +191,9 @@ var _ = Describe("graph", func() {
 			},
 		}
 
-		bastion1 = &gardencorev1alpha1.Bastion{
+		bastion1 = &gardenoperationsv1alpha1.Bastion{
 			ObjectMeta: metav1.ObjectMeta{Name: "bastion1", Namespace: "bastion1namespace"},
-			Spec: gardencorev1alpha1.BastionSpec{
+			Spec: gardenoperationsv1alpha1.BastionSpec{
 				SeedName: &seed1.Name,
 			},
 		}
@@ -590,7 +590,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeBackupEntry, backupEntry1.Namespace, backupEntry1.Name, VertexTypeSeed, "", *backupEntry1.Spec.SeedName)).To(BeFalse())
 	})
 
-	It("should behave as expected for gardencorev1alpha1.Bastion", func() {
+	It("should behave as expected for gardenoperationsv1alpha1.Bastion", func() {
 		By("add")
 		fakeInformerBastion.Add(bastion1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))

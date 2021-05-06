@@ -18,8 +18,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/operations"
 
 	"golang.org/x/crypto/ssh"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -27,7 +27,7 @@ import (
 )
 
 // ValidateBastion validates a Bastion object.
-func ValidateBastion(bastion *core.Bastion) field.ErrorList {
+func ValidateBastion(bastion *operations.Bastion) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&bastion.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
@@ -37,11 +37,11 @@ func ValidateBastion(bastion *core.Bastion) field.ErrorList {
 }
 
 // ValidateBastionUpdate validates a Bastion object before an update.
-func ValidateBastionUpdate(newBastion, oldBastion *core.Bastion) field.ErrorList {
+func ValidateBastionUpdate(newBastion, oldBastion *operations.Bastion) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newBastion.ObjectMeta, &oldBastion.ObjectMeta, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBastion.Annotations[v1alpha1constants.GardenerCreatedBy], oldBastion.Annotations[v1alpha1constants.GardenerCreatedBy], field.NewPath("metadata.annotations"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBastion.Annotations[v1beta1constants.GardenCreatedBy], oldBastion.Annotations[v1beta1constants.GardenCreatedBy], field.NewPath("metadata.annotations"))...)
 
 	allErrs = append(allErrs, ValidateBastionSpecUpdate(&newBastion.Spec, &oldBastion.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateBastion(newBastion)...)
@@ -50,7 +50,7 @@ func ValidateBastionUpdate(newBastion, oldBastion *core.Bastion) field.ErrorList
 }
 
 // ValidateBastionSpec validates the specification of a Bastion object.
-func ValidateBastionSpec(spec *core.BastionSpec, fldPath *field.Path) field.ErrorList {
+func ValidateBastionSpec(spec *operations.BastionSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(spec.ShootRef.Name) == 0 {
@@ -79,7 +79,7 @@ func ValidateBastionSpec(spec *core.BastionSpec, fldPath *field.Path) field.Erro
 }
 
 // ValidateBastionSpecUpdate validates the specification of a Bastion object.
-func ValidateBastionSpecUpdate(newSpec, oldSpec *core.BastionSpec, fldPath *field.Path) field.ErrorList {
+func ValidateBastionSpecUpdate(newSpec, oldSpec *operations.BastionSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ShootRef.Name, oldSpec.ShootRef.Name, fldPath.Child("shootRef.name"))...)
@@ -89,7 +89,7 @@ func ValidateBastionSpecUpdate(newSpec, oldSpec *core.BastionSpec, fldPath *fiel
 }
 
 // ValidateBastionStatusUpdate validates the status field of a Bastion object.
-func ValidateBastionStatusUpdate(newBastion, oldBastion *core.Bastion) field.ErrorList {
+func ValidateBastionStatusUpdate(newBastion, oldBastion *operations.Bastion) field.ErrorList {
 	allErrs := field.ErrorList{}
 	now := time.Now()
 

@@ -21,13 +21,14 @@ import (
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
@@ -51,7 +52,7 @@ var (
 	// group and the resource (but it ignores the version).
 	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
 	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
-	bastionResource                   = gardencorev1alpha1.Resource("bastions")
+	bastionResource                   = gardenoperationsv1alpha1.Resource("bastions")
 	certificateSigningRequestResource = certificatesv1beta1.Resource("certificatesigningrequests")
 	leaseResource                     = coordinationv1.Resource("leases")
 	seedResource                      = gardencorev1beta1.Resource("seeds")
@@ -158,7 +159,7 @@ func (h *handler) admitBastion(seedName string, request admission.Request) admis
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
-	bastion := &gardencorev1alpha1.Bastion{}
+	bastion := &gardenoperationsv1alpha1.Bastion{}
 	if err := h.decoder.Decode(request, bastion); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}

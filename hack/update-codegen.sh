@@ -105,6 +105,29 @@ settings_groups() {
 }
 export -f settings_groups
 
+# operations.gardener.cloud APIs
+
+operations_groups() {
+  echo "Generating API groups for pkg/apis/operations"
+
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+    deepcopy,defaulter,client,lister,informer \
+    github.com/gardener/gardener/pkg/client/operations \
+    github.com/gardener/gardener/pkg/apis \
+    github.com/gardener/gardener/pkg/apis \
+    "operations:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+    conversion \
+    github.com/gardener/gardener/pkg/client/operations \
+    github.com/gardener/gardener/pkg/apis \
+    github.com/gardener/gardener/pkg/apis \
+    "operations:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+}
+export -f operations_groups
+
 # Componentconfig for controller-manager
 
 controllermanager_groups() {
@@ -262,6 +285,7 @@ openapi_definitions() {
     --input-dirs=github.com/gardener/gardener/pkg/apis/core/v1beta1 \
     --input-dirs=github.com/gardener/gardener/pkg/apis/settings/v1alpha1 \
     --input-dirs=github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1 \
+    --input-dirs=github.com/gardener/gardener/pkg/apis/operations/v1alpha1 \
     --input-dirs=k8s.io/api/core/v1 \
     --input-dirs=k8s.io/api/rbac/v1 \
     --input-dirs=k8s.io/api/autoscaling/v1 \
@@ -284,6 +308,7 @@ if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
     core_groups \
     extensions_groups \
     seedmanagement_groups \
+    operations_groups \
     settings_groups \
     controllermanager_groups \
     admissioncontroller_groups \
@@ -295,6 +320,7 @@ else
   core_groups
   extensions_groups
   seedmanagement_groups
+  operations_groups
   settings_groups
   controllermanager_groups
   admissioncontroller_groups

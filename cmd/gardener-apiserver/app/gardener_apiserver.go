@@ -24,6 +24,8 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardenoperations "github.com/gardener/gardener/pkg/apis/operations"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
 	"github.com/gardener/gardener/pkg/apiserver"
@@ -122,6 +124,7 @@ func NewOptions() *Options {
 				gardencorev1alpha1.SchemeGroupVersion,
 				seedmanagementv1alpha1.SchemeGroupVersion,
 				settingsv1alpha1.SchemeGroupVersion,
+				operationsv1alpha1.SchemeGroupVersion,
 			),
 		),
 		ServerRunOptions: genericoptions.NewServerRunOptions(),
@@ -366,6 +369,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 		gardencorev1alpha1.SchemeGroupVersion,
 		seedmanagementv1alpha1.SchemeGroupVersion,
 		settingsv1alpha1.SchemeGroupVersion,
+		operationsv1alpha1.SchemeGroupVersion,
 	)
 
 	mergedResourceConfig, err := resourceconfig.MergeAPIResourceConfigs(resourceConfig, nil, api.Scheme)
@@ -378,7 +382,7 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	resourceEncodingConfig.SetResourceEncoding(gardencore.Resource("shootstates"), gardencorev1alpha1.SchemeGroupVersion, gardencore.SchemeGroupVersion)
 	// TODO: `ShootExtensionStatus` is not yet promoted to `core.gardener.cloud/v1beta1` - this can be removed once `ShootExtensionStatus` got promoted.
 	resourceEncodingConfig.SetResourceEncoding(gardencore.Resource("shootextensionstatuses"), gardencorev1alpha1.SchemeGroupVersion, gardencore.SchemeGroupVersion)
-	resourceEncodingConfig.SetResourceEncoding(gardencore.Resource("bastions"), gardencorev1alpha1.SchemeGroupVersion, gardencore.SchemeGroupVersion)
+	resourceEncodingConfig.SetResourceEncoding(gardenoperations.Resource("bastions"), operationsv1alpha1.SchemeGroupVersion, gardenoperations.SchemeGroupVersion)
 
 	storageFactory := &storage.GardenerStorageFactory{
 		DefaultStorageFactory: serverstorage.NewDefaultStorageFactory(

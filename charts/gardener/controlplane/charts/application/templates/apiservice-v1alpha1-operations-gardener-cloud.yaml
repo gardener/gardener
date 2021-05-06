@@ -1,0 +1,24 @@
+{{- if .Values.global.apiserver.enabled }}
+apiVersion: {{ include "apiserviceversion" . }}
+kind: APIService
+metadata:
+  name: v1alpha1.operations.gardener.cloud
+  labels:
+    app: gardener
+    role: apiserver
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  insecureSkipTLSVerify: {{ .Values.global.apiserver.insecureSkipTLSVerify }}
+  {{- if not .Values.global.apiserver.insecureSkipTLSVerify }}
+  caBundle: {{ required ".Values.global.apiserver.caBundle is required" (b64enc .Values.global.apiserver.caBundle) }}
+  {{- end }}
+  group: operations.gardener.cloud
+  version: v1alpha1
+  groupPriorityMinimum: 10
+  versionPriority: 10
+  service:
+    name: gardener-apiserver
+    namespace: garden
+{{- end }}

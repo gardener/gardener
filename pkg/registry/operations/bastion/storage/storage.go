@@ -17,8 +17,8 @@ package storage
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	"github.com/gardener/gardener/pkg/registry/core/bastion"
+	"github.com/gardener/gardener/pkg/apis/operations"
+	"github.com/gardener/gardener/pkg/registry/operations/bastion"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -52,9 +52,9 @@ func NewStorage(optsGetter generic.RESTOptionsGetter) BastionStorage {
 // NewREST returns a RESTStorage object that will work against bastions.
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	store := &genericregistry.Store{
-		NewFunc:                  func() runtime.Object { return &core.Bastion{} },
-		NewListFunc:              func() runtime.Object { return &core.BastionList{} },
-		DefaultQualifiedResource: core.Resource("bastions"),
+		NewFunc:                  func() runtime.Object { return &operations.Bastion{} },
+		NewListFunc:              func() runtime.Object { return &operations.BastionList{} },
+		DefaultQualifiedResource: operations.Resource("bastions"),
 		EnableGarbageCollection:  true,
 
 		CreateStrategy: bastion.Strategy,
@@ -66,7 +66,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	options := &generic.StoreOptions{
 		RESTOptions: optsGetter,
 		AttrFunc:    bastion.GetAttrs,
-		TriggerFunc: map[string]storage.IndexerFunc{core.BastionSeedName: bastion.SeedNameTriggerFunc},
+		TriggerFunc: map[string]storage.IndexerFunc{operations.BastionSeedName: bastion.SeedNameTriggerFunc},
 	}
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
@@ -98,7 +98,7 @@ var (
 
 // New creates a new (empty) internal Bastion object.
 func (r *StatusREST) New() runtime.Object {
-	return &core.Bastion{}
+	return &operations.Bastion{}
 }
 
 // Get retrieves the object from the storage. It is required to support Patch.

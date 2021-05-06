@@ -20,9 +20,9 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/api"
-	"github.com/gardener/gardener/pkg/apis/core"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/validation"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/operations"
+	"github.com/gardener/gardener/pkg/apis/operations/validation"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -57,39 +57,39 @@ func (bastionStrategy) NamespaceScoped() bool {
 }
 
 func (s bastionStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
-	bastion := obj.(*core.Bastion)
+	bastion := obj.(*operations.Bastion)
 	bastion.Generation = 1
 
 	s.heartbeat(bastion)
 }
 
-func (s bastionStrategy) heartbeat(bastion *core.Bastion) {
+func (s bastionStrategy) heartbeat(bastion *operations.Bastion) {
 	now := metav1.NewTime(time.Now())
 	expires := metav1.NewTime(now.Add(s.timeToLive))
 
 	bastion.Status.LastHeartbeatTimestamp = &now
 	bastion.Status.ExpirationTimestamp = &expires
 
-	if bastion.Annotations[v1alpha1constants.GardenerOperation] == v1alpha1constants.GardenerOperationKeepalive {
-		delete(bastion.Annotations, v1alpha1constants.GardenerOperation)
+	if bastion.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationKeepalive {
+		delete(bastion.Annotations, v1beta1constants.GardenerOperation)
 	}
 }
 
 func (s bastionStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
-	newBastion := obj.(*core.Bastion)
-	oldBastion := old.(*core.Bastion)
+	newBastion := obj.(*operations.Bastion)
+	oldBastion := old.(*operations.Bastion)
 	newBastion.Status = oldBastion.Status
 
 	if mustIncreaseGeneration(oldBastion, newBastion) {
 		newBastion.Generation = oldBastion.Generation + 1
 	}
 
-	if newBastion.Annotations[v1alpha1constants.GardenerOperation] == v1alpha1constants.GardenerOperationKeepalive {
+	if newBastion.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationKeepalive {
 		s.heartbeat(newBastion)
 	}
 }
 
-func mustIncreaseGeneration(oldBastion, newBastion *core.Bastion) bool {
+func mustIncreaseGeneration(oldBastion, newBastion *operations.Bastion) bool {
 	// The Bastion specification changes.
 	if !apiequality.Semantic.DeepEqual(oldBastion.Spec, newBastion.Spec) {
 		return true
@@ -100,7 +100,7 @@ func mustIncreaseGeneration(oldBastion, newBastion *core.Bastion) bool {
 		return true
 	}
 
-	if kutil.HasMetaDataAnnotation(&newBastion.ObjectMeta, v1alpha1constants.GardenerOperation, v1alpha1constants.GardenerOperationReconcile) {
+	if kutil.HasMetaDataAnnotation(&newBastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile) {
 		return true
 	}
 
@@ -108,7 +108,7 @@ func mustIncreaseGeneration(oldBastion, newBastion *core.Bastion) bool {
 }
 
 func (bastionStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
-	bastion := obj.(*core.Bastion)
+	bastion := obj.(*operations.Bastion)
 	return validation.ValidateBastion(bastion)
 }
 
@@ -120,7 +120,7 @@ func (bastionStrategy) AllowCreateOnUpdate() bool {
 }
 
 func (bastionStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
-	oldBastion, newBastion := oldObj.(*core.Bastion), newObj.(*core.Bastion)
+	oldBastion, newBastion := oldObj.(*operations.Bastion), newObj.(*operations.Bastion)
 	return validation.ValidateBastionUpdate(newBastion, oldBastion)
 }
 
@@ -136,8 +136,8 @@ type bastionStatusStrategy struct {
 var StatusStrategy = bastionStatusStrategy{Strategy}
 
 func (s bastionStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
-	newBastion := obj.(*core.Bastion)
-	oldBastion := old.(*core.Bastion)
+	newBastion := obj.(*operations.Bastion)
+	oldBastion := old.(*operations.Bastion)
 	newBastion.Spec = oldBastion.Spec
 
 	// recalculate to prevent manipulation
@@ -146,24 +146,24 @@ func (s bastionStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old ru
 }
 
 func (bastionStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
-	return validation.ValidateBastionStatusUpdate(obj.(*core.Bastion), old.(*core.Bastion))
+	return validation.ValidateBastionStatusUpdate(obj.(*operations.Bastion), old.(*operations.Bastion))
 }
 
 // ToSelectableFields returns a field set that represents the object
 // TODO: fields are not labels, and the validation rules for them do not apply.
-func ToSelectableFields(bastion *core.Bastion) fields.Set {
+func ToSelectableFields(bastion *operations.Bastion) fields.Set {
 	// The purpose of allocation with a given number of elements is to reduce
 	// amount of allocations needed to create the fields.Set. If you add any
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
 	bastionSpecificFieldsSet := make(fields.Set, 3)
-	bastionSpecificFieldsSet[core.BastionSeedName] = getSeedName(bastion)
+	bastionSpecificFieldsSet[operations.BastionSeedName] = getSeedName(bastion)
 	return generic.AddObjectMetaFieldsSet(bastionSpecificFieldsSet, &bastion.ObjectMeta, true)
 }
 
 // GetAttrs returns labels and fields of a given object for filtering purposes.
 func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
-	bastion, ok := obj.(*core.Bastion)
+	bastion, ok := obj.(*operations.Bastion)
 	if !ok {
 		return nil, nil, fmt.Errorf("not a bastion")
 	}
@@ -176,13 +176,13 @@ func MatchBastion(label labels.Selector, field fields.Selector) storage.Selectio
 		Label:       label,
 		Field:       field,
 		GetAttrs:    GetAttrs,
-		IndexFields: []string{core.BastionSeedName},
+		IndexFields: []string{operations.BastionSeedName},
 	}
 }
 
 // SeedNameTriggerFunc returns spec.seedName of given Bastion.
 func SeedNameTriggerFunc(obj runtime.Object) string {
-	bastion, ok := obj.(*core.Bastion)
+	bastion, ok := obj.(*operations.Bastion)
 	if !ok {
 		return ""
 	}
@@ -190,7 +190,7 @@ func SeedNameTriggerFunc(obj runtime.Object) string {
 	return getSeedName(bastion)
 }
 
-func getSeedName(bastion *core.Bastion) string {
+func getSeedName(bastion *operations.Bastion) string {
 	if bastion.Spec.SeedName == nil {
 		return ""
 	}

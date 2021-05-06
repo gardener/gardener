@@ -18,8 +18,9 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/core"
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/operations"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/bastion/validator"
@@ -51,19 +52,19 @@ const (
 var _ = Describe("Bastion", func() {
 	Describe("#Admit", func() {
 		var (
-			bastion          *core.Bastion
+			bastion          *operations.Bastion
 			shoot            *core.Shoot
 			coreClient       *corefake.Clientset
 			admissionHandler *Bastion
 		)
 
 		BeforeEach(func() {
-			bastion = &core.Bastion{
+			bastion = &operations.Bastion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      bastionName,
 					Namespace: namespace,
 				},
-				Spec: core.BastionSpec{
+				Spec: operations.BastionSpec{
 					ShootRef: corev1.LocalObjectReference{
 						Name: shootName,
 					},
@@ -94,7 +95,7 @@ var _ = Describe("Bastion", func() {
 		})
 
 		It("should do nothing if the resource is not a Bastion", func() {
-			attrs := admission.NewAttributesRecord(nil, nil, core.Kind(bastionName).WithVersion("version"), bastion.Namespace, bastion.Name, core.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+			attrs := admission.NewAttributesRecord(nil, nil, operations.Kind(bastionName).WithVersion("version"), bastion.Namespace, bastion.Name, operations.Resource("foos").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			err := admissionHandler.Admit(context.TODO(), attrs, nil)
 			Expect(err).To(Succeed())
@@ -127,7 +128,7 @@ var _ = Describe("Bastion", func() {
 
 			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion), nil)
 			Expect(err).To(Succeed())
-			Expect(bastion.Annotations[v1alpha1constants.GardenerCreatedBy]).To(Equal(userName))
+			Expect(bastion.Annotations[v1beta1constants.GardenCreatedBy]).To(Equal(userName))
 		})
 
 		It("should always keep the creator annotation", func() {
@@ -136,12 +137,12 @@ var _ = Describe("Bastion", func() {
 			})
 
 			bastion.Annotations = map[string]string{
-				v1alpha1constants.GardenerCreatedBy: "not-" + userName,
+				v1beta1constants.GardenCreatedBy: "not-" + userName,
 			}
 
 			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion), nil)
 			Expect(err).To(Succeed())
-			Expect(bastion.Annotations[v1alpha1constants.GardenerCreatedBy]).To(Equal(userName))
+			Expect(bastion.Annotations[v1beta1constants.GardenCreatedBy]).To(Equal(userName))
 		})
 
 		It("should forbid the Bastion creation if a Shoot name is not specified", func() {
@@ -228,13 +229,13 @@ var _ = Describe("Bastion", func() {
 	})
 })
 
-func getBastionAttributes(bastion *core.Bastion) admission.Attributes {
+func getBastionAttributes(bastion *operations.Bastion) admission.Attributes {
 	return admission.NewAttributesRecord(bastion,
 		nil,
-		corev1alpha1.Kind("Bastion").WithVersion("v1alpha1"),
+		operationsv1alpha1.Kind("Bastion").WithVersion("v1alpha1"),
 		bastion.Namespace,
 		bastion.Name,
-		corev1alpha1.Resource("bastions").WithVersion("v1alpha1"),
+		operationsv1alpha1.Resource("bastions").WithVersion("v1alpha1"),
 		"",
 		admission.Create,
 		&metav1.CreateOptions{},

@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/gardener/gardener/pkg/apis/core"
-	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/operations"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
 
@@ -103,7 +103,7 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission
 	}
 
 	// Ignore all kinds other than Bastion
-	if a.GetKind().GroupKind() != core.Kind("Bastion") {
+	if a.GetKind().GroupKind() != operations.Kind("Bastion") {
 		return nil
 	}
 
@@ -113,12 +113,12 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission
 	}
 
 	// Convert object to Bastion
-	bastion, ok := a.GetObject().(*core.Bastion)
+	bastion, ok := a.GetObject().(*operations.Bastion)
 	if !ok {
 		return apierrors.NewBadRequest("could not convert object to Bastion")
 	}
 
-	gk := schema.GroupKind{Group: core.GroupName, Kind: "Bastion"}
+	gk := schema.GroupKind{Group: operations.GroupName, Kind: "Bastion"}
 
 	// ensure shoot name is specified
 	shootPath := field.NewPath("spec", "shootRef", "name")
@@ -149,7 +149,7 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission
 	bastion.Spec.ProviderType = &shoot.Spec.Provider.Type
 
 	if userInfo := a.GetUserInfo(); userInfo != nil {
-		metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1alpha1constants.GardenerCreatedBy, userInfo.GetName())
+		metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenCreatedBy, userInfo.GetName())
 	}
 
 	return nil

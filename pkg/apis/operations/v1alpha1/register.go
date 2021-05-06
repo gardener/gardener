@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-// GroupName is the name of the core API group.
-const GroupName = "core.gardener.cloud"
+// GroupName is the name of the operations API group.
+const GroupName = "operations.gardener.cloud"
 
 // SchemeGroupVersion is group version used to register these objects
 var SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
@@ -47,34 +47,8 @@ var (
 // Adds the list of known types to the given scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-		&BackupBucket{},
-		&BackupBucketList{},
-		&BackupEntry{},
-		&BackupEntryList{},
-		&CloudProfile{},
-		&CloudProfileList{},
-		&ControllerRegistration{},
-		&ControllerRegistrationList{},
-		&ControllerDeployment{},
-		&ControllerDeploymentList{},
-		&ControllerInstallation{},
-		&ControllerInstallationList{},
-		&Plant{},
-		&PlantList{},
-		&Project{},
-		&ProjectList{},
-		&Quota{},
-		&QuotaList{},
-		&SecretBinding{},
-		&SecretBindingList{},
-		&Seed{},
-		&SeedList{},
-		&ShootState{},
-		&ShootStateList{},
-		&Shoot{},
-		&ShootList{},
-		&ShootExtensionStatus{},
-		&ShootExtensionStatusList{},
+		&Bastion{},
+		&BastionList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

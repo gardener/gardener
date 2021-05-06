@@ -12,6 +12,7 @@ rules:
   - seedmanagement.gardener.cloud
   - dashboard.gardener.cloud
   - settings.gardener.cloud
+  - operations.gardener.cloud
   resources:
   - '*'
   verbs:
@@ -229,6 +230,19 @@ rules:
   - update
   - watch
 - apiGroups:
+  - operations.gardener.cloud
+  resources:
+  - bastions
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - rbac.authorization.k8s.io
   resources:
   - roles
@@ -307,6 +321,14 @@ rules:
   - settings.gardener.cloud
   resources:
   - openidconnectpresets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - operations.gardener.cloud
+  resources:
+  - bastions
   verbs:
   - get
   - list

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/operations"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metatable "k8s.io/apimachinery/pkg/api/meta/table"
@@ -72,7 +72,7 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 
 	table.Rows, err = metatable.MetaToTableRow(obj, func(obj runtime.Object, m metav1.Object, name, age string) ([]interface{}, error) {
 		var (
-			bastion = obj.(*core.Bastion)
+			bastion = obj.(*operations.Bastion)
 			cells   = []interface{}{}
 		)
 

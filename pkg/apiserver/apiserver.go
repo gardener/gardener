@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
+	operationsrest "github.com/gardener/gardener/pkg/registry/operations/rest"
 	seedmanagementrest "github.com/gardener/gardener/pkg/registry/seedmanagement/rest"
 	settingsrest "github.com/gardener/gardener/pkg/registry/settings/rest"
 
@@ -71,9 +72,10 @@ func (c completedConfig) New() (*GardenerServer, error) {
 		coreAPIGroupInfo           = (corerest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
+		operationsAPIGroupInfo     = (operationsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 	)
 
-	if err := s.GenericAPIServer.InstallAPIGroups(&coreAPIGroupInfo, &settingsAPIGroupInfo, &seedManagementAPIGroupInfo); err != nil {
+	if err := s.GenericAPIServer.InstallAPIGroups(&coreAPIGroupInfo, &settingsAPIGroupInfo, &seedManagementAPIGroupInfo, &operationsAPIGroupInfo); err != nil {
 		return nil, err
 	}
 

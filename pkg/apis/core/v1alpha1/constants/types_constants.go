@@ -88,10 +88,6 @@ const (
 	// GardenerPurpose is a constant for the key in a label describing the purpose of the respective object.
 	GardenerPurpose = "gardener.cloud/purpose"
 
-	// GardenerCreatedBy is the key for an annotation of a Bastion whose value contains the username
-	// of the user that created the resource.
-	GardenerCreatedBy = "gardener.cloud/created-by"
-
 	// GardenerOperation is a constant for an annotation on a resource that describes a desired operation.
 	GardenerOperation = "gardener.cloud/operation"
 	// GardenerOperationReconcile is a constant for the value of the operation annotation describing a reconcile
@@ -106,9 +102,6 @@ const (
 	// GardenerOperationWaitForState is a constant for the value of the operation annotation describing a wait
 	// operation.
 	GardenerOperationWaitForState = "wait-for-state"
-	// GardenerOperationKeepalive is a constant for the value of the operation annotation describing an
-	// operation that extends the lifetime of the object having the operation annotation.
-	GardenerOperationKeepalive = "keepalive"
 
 	// DeprecatedGardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
 	//

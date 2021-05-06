@@ -1,6 +1,6 @@
 # Bastion to facilitate SSH access to a Shoot's workers
 ---
-apiVersion: core.gardener.cloud/v1alpha1
+apiVersion: operations.gardener.cloud/v1alpha1
 kind: Bastion
 metadata:
   name: example-bastion

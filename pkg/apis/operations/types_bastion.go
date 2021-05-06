@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package operations
 
 import (
+	gardenercore "github.com/gardener/gardener/pkg/apis/core"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,68 +26,58 @@ import (
 
 // Bastion holds details about an SSH bastion for a shoot cluster.
 type Bastion struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta
 	// Standard object metadata.
-	metav1.ObjectMeta `json:"metadata" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ObjectMeta
 	// Specification of the Bastion.
-	Spec BastionSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
+	Spec BastionSpec
 	// Most recently observed status of the Bastion.
-	// +optional
-	Status BastionStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
+	Status BastionStatus
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // BastionList is a list of Bastion objects.
 type BastionList struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta
 	// Standard list object metadata.
-	// +optional
-	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+	metav1.ListMeta
 	// Items is the list of Bastion.
-	Items []Bastion `json:"items" protobuf:"bytes,2,rep,name=items"`
+	Items []Bastion
 }
 
 // BastionSpec is the specification of a Bastion.
 type BastionSpec struct {
 	// ShootRef defines the target shoot for a Bastion.
-	ShootRef corev1.LocalObjectReference `json:"shootRef" protobuf:"bytes,1,opt,name=shootRef"`
+	ShootRef corev1.LocalObjectReference
 	// SeedName is the name of the seed to which this Bastion is currently scheduled. This field is populated
 	// at the beginning of a create/reconcile operation.
-	// +optional
-	SeedName *string `json:"seedName,omitempty" protobuf:"bytes,2,opt,name=seedName"`
+	SeedName *string
 	// ProviderType is cloud provider used by the referenced Shoot.
-	// +optional
-	ProviderType *string `json:"providerType,omitempty" protobuf:"bytes,3,opt,name=providerType"`
+	ProviderType *string
 	// SSHPublicKey is the user's public key.
-	SSHPublicKey string `json:"sshPublicKey" protobuf:"bytes,4,opt,name=sshPublicKey"`
+	SSHPublicKey string
 	// Ingress controls from where the created bastion host should be reachable.
-	Ingress []BastionIngressPolicy `json:"ingress" protobuf:"bytes,5,opt,name=ingress"`
+	Ingress []BastionIngressPolicy
 }
 
 // BastionIngressPolicy represents an ingress policy for SSH bastion hosts.
 type BastionIngressPolicy struct {
 	// IPBlock defines an IP block that is allowed to access the bastion.
-	IPBlock networkingv1.IPBlock `json:"ipBlock" protobuf:"bytes,1,opt,name=ipBlock"`
+	IPBlock networkingv1.IPBlock
 }
 
 // BastionStatus holds the most recently observed status of the Bastion.
 type BastionStatus struct {
 	// Ingress holds the public IP and/or hostname of the bastion instance.
-	// +optional
-	Ingress *corev1.LoadBalancerIngress `json:"ingress,omitempty" protobuf:"bytes,1,opt,name=ingress"`
+	Ingress *corev1.LoadBalancerIngress
 	// Conditions represents the latest available observations of a Bastion's current state.
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	// +optional
-	Conditions []Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,2,rep,name=conditions"`
+	Conditions []gardenercore.Condition
 	// LastHeartbeatTimestamp is the time when the bastion was last marked as
 	// not to be deleted. When this is set, the ExpirationTimestamp is advanced
 	// as well.
-	// +optional
-	LastHeartbeatTimestamp *metav1.Time `json:"lastHeartbeatTimestamp,omitempty" protobuf:"bytes,3,opt,name=lastHeartbeatTimestamp"`
+	LastHeartbeatTimestamp *metav1.Time
 	// ExpirationTimestamp is the time after which a Bastion is supposed to be
 	// garbage collected.
-	// +optional
-	ExpirationTimestamp *metav1.Time `json:"expirationTimestamp,omitempty" protobuf:"bytes,4,opt,name=expirationTimestamp"`
+	ExpirationTimestamp *metav1.Time
 }

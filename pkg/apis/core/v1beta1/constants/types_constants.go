@@ -137,6 +137,9 @@ const (
 	// GardenerOperationWaitForState is a constant for the value of the operation annotation describing a wait
 	// operation.
 	GardenerOperationWaitForState = "wait-for-state"
+	// GardenerOperationKeepalive is a constant for the value of the operation annotation describing an
+	// operation that extends the lifetime of the object having the operation annotation.
+	GardenerOperationKeepalive = "keepalive"
 
 	// DeprecatedGardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
 	//
