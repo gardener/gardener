@@ -101,8 +101,8 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 			allErrs = append(allErrs, metav1validation.ValidateLabelSelector(deployment.SeedSelector, deploymentPath.Child("seedSelector"))...)
 		}
 
-		if deployment.Type != nil && *deployment.Type == "" {
-			allErrs = append(allErrs, field.Required(deploymentPath.Child("type"), "field must not be empty"))
+		if deployment.Type != nil && len(*deployment.Type) == 0 {
+			allErrs = append(allErrs, field.Required(deploymentPath.Child("type"), "must provide a type"))
 		}
 
 		deploymentRefsCount := len(deployment.DeploymentRefs)

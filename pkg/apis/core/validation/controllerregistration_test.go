@@ -277,7 +277,7 @@ var _ = Describe("validation", func() {
 			}))))
 		})
 
-		It("should forbid to set an empty deploymentpkg/controllermanager/controller/controllerdeployment/controllerdeployment_control_test.go type", func() {
+		It("should forbid to set an empty deployment type", func() {
 			controllerRegistration.Spec.Deployment.Type = pointer.StringPtr("")
 
 			errorList := ValidateControllerRegistration(controllerRegistration)

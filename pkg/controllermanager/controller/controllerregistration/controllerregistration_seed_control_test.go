@@ -18,6 +18,8 @@ import (
 	"context"
 	"errors"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -262,6 +264,8 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "fooDeployment",
 			},
+			Type:           "helm",
+			ProviderConfig: runtime.RawExtension{},
 		}
 
 		controllerRegistration1 = &gardencorev1beta1.ControllerRegistration{
@@ -822,7 +826,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					common.ControllerDeploymentHash: "4b15473a347963da",
+					common.ControllerDeploymentHash: "d37bba62f222c81b",
 					common.RegistrationSpecHash:     "61ca93a1782c5fa3",
 					common.SeedSpecHash:             "a5e0943b25bc6cab",
 				}
@@ -863,7 +867,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 
 				installation2 := controllerInstallation2.DeepCopy()
 				installation2.Labels = map[string]string{
-					common.ControllerDeploymentHash: "4b15473a347963da",
+					common.ControllerDeploymentHash: "d37bba62f222c81b",
 					common.RegistrationSpecHash:     "61ca93a1782c5fa3",
 					common.SeedSpecHash:             "a5e0943b25bc6cab",
 				}

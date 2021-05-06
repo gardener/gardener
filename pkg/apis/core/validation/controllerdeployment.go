@@ -28,7 +28,7 @@ func ValidateControllerDeployment(controllerDeployment *core.ControllerDeploymen
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&controllerDeployment.ObjectMeta, false, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 
 	if len(controllerDeployment.Type) == 0 {
-		allErrs = append(allErrs, field.Required(field.NewPath("type"), "type is required"))
+		allErrs = append(allErrs, field.Required(field.NewPath("type"), "must provide a type"))
 	}
 
 	return allErrs

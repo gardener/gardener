@@ -479,7 +479,13 @@ func deployNeededInstallation(
 		kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.RegistrationSpecHash, registrationSpecHash)
 
 		if controllerDeployment != nil {
-			deploymentMap, err := convertObjToMap(controllerDeployment)
+			// Add all fields that are relevant for the hash calculation as `ControllerDeployment`s don't have a `spec` field.
+			hashFields := map[string]interface{}{
+				"type":           controllerDeployment.Type,
+				"providerConfig": controllerDeployment.ProviderConfig,
+			}
+
+			deploymentMap, err := convertObjToMap(hashFields)
 			if err != nil {
 				return err
 			}
