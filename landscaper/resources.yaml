@@ -1,0 +1,9 @@
+---
+type: landscaper.gardener.cloud/blueprint
+name: gardenlet-blueprint
+relation: local
+input:
+  type: "dir"
+  path: "./pkg/gardenlet"
+  compress: true
+  mediaType: "application/vnd.gardener.landscaper.blueprint.v1+tar+gzip"
