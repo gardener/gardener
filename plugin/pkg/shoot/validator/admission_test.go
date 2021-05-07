@@ -332,6 +332,29 @@ var _ = Describe("validator", func() {
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).ToNot(HaveOccurred())
 			})
+
+			It("update should pass because validation of network disjointedness should not be executed", func() {
+				// set shoot pod cidr to overlap with vpn pod cidr
+				shoot.Spec.Networking.Pods = pointer.StringPtr(v1beta1constants.DefaultVpnRange)
+				oldShoot.Spec.SeedName = shoot.Spec.SeedName
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("update should fail because validation of network disjointedness is executed", func() {
+				// set shoot pod cidr to overlap with vpn pod cidr
+				shoot.Spec.Networking.Pods = pointer.StringPtr(v1beta1constants.DefaultVpnRange)
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+				Expect(err).To(BeForbiddenError())
+			})
 		})
 
 		Context("name/project length checks", func() {
