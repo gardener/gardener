@@ -148,7 +148,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				{
 					APIGroups: []string{corev1.GroupName},
 					Resources: []string{"persistentvolumeclaims"},
-					Verbs:     []string{"list"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
 		}
