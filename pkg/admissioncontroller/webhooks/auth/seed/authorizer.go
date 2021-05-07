@@ -77,7 +77,7 @@ var (
 	seedResource                      = gardencorev1beta1.Resource("seeds")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1alpha1.Resource("shootstates")
-	shootExtensionStatusResource   = gardencorev1alpha1.Resource("shootextensionstatuses")
+	shootExtensionStatusResource      = gardencorev1alpha1.Resource("shootextensionstatuses")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility

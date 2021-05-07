@@ -117,7 +117,7 @@ func (s *ShootExtensionStatusControl) CreateShootExtensionStatusSyncReconcileFun
 
 		if currentProviderStatus == nil {
 			if currentExtensionStatus == nil {
-				s.log.Infof("Skipping ShootExtensionStatus for the %q extension of Shoot %q. The resource is up-to-date.", kind, shoot.Name)
+				s.log.Debugf("Skipping ShootExtensionStatus for the %q extension of Shoot %q. The resource is up-to-date.", kind, shoot.Name)
 				return reconcile.Result{}, nil
 			} else {
 				// Usually, the provider status of an extension resource should not be removed without the extension having a deletion timestamp
@@ -185,7 +185,7 @@ func (s *ShootExtensionStatusControl) patchShootExtensionStatus(ctx context.Cont
 	}
 
 	message := fmt.Sprintf("The provider status of the %q extension of Shoot %q was successfully synced to the Garden cluster", kind, shootExtensionStatus.Name)
-	s.log.Info(message)
+	s.log.Debug(message)
 	return reconcile.Result{}, nil
 }
 

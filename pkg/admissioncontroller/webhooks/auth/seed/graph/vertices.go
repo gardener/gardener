@@ -76,7 +76,7 @@ var vertexTypes = map[VertexType]string{
 	VertexTypeSeed:                      "Seed",
 	VertexTypeShoot:                     "Shoot",
 	VertexTypeShootState:                "ShootState",
-	VertexTypeShootExtensionStatus:   "ShootExtensionStatus",
+	VertexTypeShootExtensionStatus:      "ShootExtensionStatus",
 }
 
 type vertex struct {

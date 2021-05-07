@@ -58,7 +58,7 @@ var _ = Describe("graph", func() {
 		fakeInformerControllerInstallation    *controllertest.FakeInformer
 		fakeInformerManagedSeed               *controllertest.FakeInformer
 		fakeInformerShootState                *controllertest.FakeInformer
-		fakeInformerShootExtensionStatus   *controllertest.FakeInformer
+		fakeInformerShootExtensionStatus      *controllertest.FakeInformer
 		fakeInformerLease                     *controllertest.FakeInformer
 		fakeInformerCertificateSigningRequest *controllertest.FakeInformer
 		fakeInformers                         *informertest.FakeInformers
@@ -134,7 +134,7 @@ var _ = Describe("graph", func() {
 				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"):      fakeInformerControllerInstallation,
 				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):            fakeInformerManagedSeed,
 				metav1.SchemeGroupVersion.WithKind("PartialObjectMetadata"):                  fakeInformerShootState,
-				gardencorev1alpha1.SchemeGroupVersion.WithKind("ShootExtensionStatus"):  fakeInformerShootExtensionStatus,
+				gardencorev1alpha1.SchemeGroupVersion.WithKind("ShootExtensionStatus"):       fakeInformerShootExtensionStatus,
 				coordinationv1.SchemeGroupVersion.WithKind("Lease"):                          fakeInformerLease,
 				certificatesv1beta1.SchemeGroupVersion.WithKind("CertificateSigningRequest"): fakeInformerCertificateSigningRequest,
 			},

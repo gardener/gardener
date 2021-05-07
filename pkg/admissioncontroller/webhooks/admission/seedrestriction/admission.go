@@ -50,13 +50,14 @@ const (
 var (
 	// Only take v1beta1 for the core.gardener.cloud API group because the Authorize function only checks the resource
 	// group and the resource (but it ignores the version).
-	backupBucketResource         = gardencorev1beta1.Resource("backupbuckets")
-	backupEntryResource          = gardencorev1beta1.Resource("backupentries")
+	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
+	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
 	bastionResource                   = gardenoperationsv1alpha1.Resource("bastions")
-	certificateSigningRequestResource = certificatesv1beta1.Resource("certificatesigningrequests")leaseResource                = coordinationv1.Resource("leases")
-	seedResource                 = gardencorev1beta1.Resource("seeds")
-	shootStateResource           = gardencorev1beta1.Resource("shootstates")
-	shootExtensionStatusResource = gardencorev1beta1.Resource("shootextensionstatuses")
+	certificateSigningRequestResource = certificatesv1beta1.Resource("certificatesigningrequests")
+	leaseResource                     = coordinationv1.Resource("leases")
+	seedResource                      = gardencorev1beta1.Resource("seeds")
+	shootStateResource                = gardencorev1beta1.Resource("shootstates")
+	shootExtensionStatusResource      = gardencorev1beta1.Resource("shootextensionstatuses")
 )
 
 // New creates a new webhook handler restricting requests by gardenlets. It allows all requests.
