@@ -124,6 +124,14 @@ webhooks:
     - backupentries
     - shootstates
   - apiGroups:
+    - operations.gardener.cloud
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    resources:
+    - bastions
+  - apiGroups:
     - core.gardener.cloud
     apiVersions:
     - "*"

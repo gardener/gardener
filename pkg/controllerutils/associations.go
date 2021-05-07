@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -108,6 +109,21 @@ func DetermineBackupEntryAssociations(ctx context.Context, c client.Client, seed
 			return "", nil
 		}
 		return *backupEntry.Spec.SeedName, nil
+	})
+}
+
+// DetermineBastionAssociations determine the Bastion resources which are associated
+// to seed with name <seedName>
+func DetermineBastionAssociations(ctx context.Context, c client.Client, seedName string) ([]string, error) {
+	return determineAssociations(ctx, c, seedName, &gardenoperationsv1alpha1.BastionList{}, func(o runtime.Object) (string, error) {
+		bastion, ok := o.(*gardenoperationsv1alpha1.Bastion)
+		if !ok {
+			return "", fmt.Errorf("got unexpected object when expecting Bastion")
+		}
+		if bastion.Spec.SeedName == nil {
+			return "", nil
+		}
+		return *bastion.Spec.SeedName, nil
 	})
 }
 

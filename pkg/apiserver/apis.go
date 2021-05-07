@@ -15,12 +15,13 @@
 package apiserver
 
 import (
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
+
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // AllGardenerAPIGroupVersions is the list of all GroupVersions that are served by gardener-apiserver.
@@ -29,4 +30,5 @@ var AllGardenerAPIGroupVersions = []schema.GroupVersion{
 	gardencorev1alpha1.SchemeGroupVersion,
 	settingsv1alpha1.SchemeGroupVersion,
 	seedmanagementv1alpha1.SchemeGroupVersion,
+	operationsv1alpha1.SchemeGroupVersion,
 }

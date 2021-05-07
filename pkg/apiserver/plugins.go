@@ -15,13 +15,7 @@
 package apiserver
 
 import (
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
-	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
-	mutatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
-	validatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/validating"
-
+	bastionvalidator "github.com/gardener/gardener/plugin/pkg/bastion/validator"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 	"github.com/gardener/gardener/plugin/pkg/global/customverbauthorizer"
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
@@ -39,6 +33,13 @@ import (
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	shootvpa "github.com/gardener/gardener/plugin/pkg/shoot/vpa"
 	shootstatedeletionvalidator "github.com/gardener/gardener/plugin/pkg/shootstate/validator"
+
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
+	"k8s.io/apiserver/pkg/admission/plugin/resourcequota"
+	mutatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/mutating"
+	validatingwebhook "k8s.io/apiserver/pkg/admission/plugin/webhook/validating"
 )
 
 var (
@@ -62,6 +63,7 @@ var (
 		customverbauthorizer.PluginName,            // CustomVerbAuthorizer
 		shootvpa.PluginName,                        // ShootVPAEnabledByDefault
 		managedseedvalidator.PluginName,            // ManagedSeed
+		bastionvalidator.PluginName,                // Bastion
 
 		// new admission plugins should generally be inserted above here
 		// webhook, and resourcequota plugins must go at the end
@@ -93,6 +95,7 @@ var (
 		shootstatedeletionvalidator.PluginName,     // ShootStateDeletionValidator
 		customverbauthorizer.PluginName,            // CustomVerbAuthorizer
 		managedseedvalidator.PluginName,            // ManagedSeed
+		bastionvalidator.PluginName,                // Bastion
 		mutatingwebhook.PluginName,                 // MutatingAdmissionWebhook
 		validatingwebhook.PluginName,               // ValidatingAdmissionWebhook
 		resourcequota.PluginName,                   // ResourceQuota
@@ -120,6 +123,7 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	shootstatedeletionvalidator.Register(plugins)
 	customverbauthorizer.Register(plugins)
 	managedseedvalidator.Register(plugins)
+	bastionvalidator.Register(plugins)
 	resourcequota.Register(plugins)
 	shootvpa.Register(plugins)
 }

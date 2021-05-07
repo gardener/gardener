@@ -388,7 +388,7 @@ contain code to provision the SSH key on the bastion instance.</p>
 </em>
 </td>
 <td>
-<p>Ingress controls from where the creation bastion host should be reachable.</p>
+<p>Ingress controls from where the created bastion host should be reachable.</p>
 </td>
 </tr>
 </table>
@@ -1744,7 +1744,7 @@ contain code to provision the SSH key on the bastion instance.</p>
 </em>
 </td>
 <td>
-<p>Ingress controls from where the creation bastion host should be reachable.</p>
+<p>Ingress controls from where the created bastion host should be reachable.</p>
 </td>
 </tr>
 </tbody>

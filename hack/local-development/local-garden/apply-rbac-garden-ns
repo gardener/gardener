@@ -20,6 +20,7 @@ rules:
   - core.gardener.cloud
   - dashboard.gardener.cloud
   - settings.gardener.cloud
+  - operations.gardener.cloud
   resources:
   - '*'
   verbs:

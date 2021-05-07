@@ -16,6 +16,7 @@ package api
 
 import (
 	coreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	operationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 
@@ -38,6 +39,7 @@ func init() {
 	coreinstall.Install(Scheme)
 	seedmanagementinstall.Install(Scheme)
 	settingsinstall.Install(Scheme)
+	operationsinstall.Install(Scheme)
 
 	utilruntime.Must(autoscalingv1.AddToScheme(Scheme))
 

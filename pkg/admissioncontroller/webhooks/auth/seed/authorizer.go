@@ -23,6 +23,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 
@@ -59,6 +60,7 @@ var (
 	// group and the resource (but it ignores the version).
 	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
 	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
+	bastionResource                   = gardenoperationsv1alpha1.Resource("bastions")
 	certificateSigningRequestResource = certificatesv1beta1.Resource("certificatesigningrequests")
 	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
 	configMapResource                 = corev1.Resource("configmaps")
@@ -98,6 +100,12 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case backupEntryResource:
 			return a.authorize(seedName, graph.VertexTypeBackupEntry, attrs,
+				[]string{"update", "patch"},
+				[]string{"create", "get", "list", "watch"},
+				[]string{"status"},
+			)
+		case bastionResource:
+			return a.authorize(seedName, graph.VertexTypeBastion, attrs,
 				[]string{"update", "patch"},
 				[]string{"create", "get", "list", "watch"},
 				[]string{"status"},
