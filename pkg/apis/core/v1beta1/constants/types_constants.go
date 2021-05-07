@@ -204,7 +204,7 @@ const (
 	// resource when cleaning a shoot during the deletion flow.
 	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
 	// ShootAlphaScalingClass is a constant for an annotation on the shoot stating the initial scaling class.
-	// It influences the size of the initial resource requests/limits for the kube-apiserver.
+	// It influences the size of the initial resource requests/limits for the kube-apiserver and kube-controller-manager.
 	// Possible values are [small, medium, large, xlarge, 2xlarge].
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
 	// what you do.

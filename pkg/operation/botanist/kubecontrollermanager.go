@@ -23,8 +23,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
@@ -43,6 +47,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeCon
 		b.Shoot.Info.Spec.Kubernetes.KubeControllerManager,
 		b.Shoot.Networks.Pods,
 		b.Shoot.Networks.Services,
+		getResourcesForKubeControllerManager(b.Shoot.Info.Annotations[v1beta1constants.ShootAlphaScalingClass]),
 	), nil
 }
 
@@ -96,4 +101,49 @@ func (b *Botanist) determineKubeControllerManagerReplicas(ctx context.Context) (
 	// shoot is being reconciled with .spec.hibernation.enabled!=.status.isHibernated, so deploy KCM. in case the
 	// shoot is being hibernated then it will be scaled down to zero later after all machines are gone
 	return 1, nil
+}
+
+// getResourcesForKubeControllerManager returns the cpu and memory requirements for API server based on nodeCount
+func getResourcesForKubeControllerManager(scalingClass string) *corev1.ResourceRequirements {
+	if !utils.ValueExists(scalingClass, v1beta1constants.ScalingClasses) {
+		return nil
+	}
+
+	var (
+		cpuRequest, cpuLimit       string
+		memoryRequest, memoryLimit string
+	)
+
+	switch {
+	case scalingClass == "small":
+		cpuRequest, cpuLimit = "100m", "400m"
+		memoryRequest, memoryLimit = "128Mi", "512Mi"
+
+	case scalingClass == "medium":
+		cpuRequest, cpuLimit = "200m", "600m"
+		memoryRequest, memoryLimit = "256Mi", "1Gi"
+
+	case scalingClass == "large":
+		cpuRequest, cpuLimit = "250m", "700m"
+		memoryRequest, memoryLimit = "512Mi", "1.5Gi"
+
+	case scalingClass == "xlarge":
+		cpuRequest, cpuLimit = "300m", "1000m"
+		memoryRequest, memoryLimit = "1Gi", "2.5Gi"
+
+	case scalingClass == "2xlarge":
+		cpuRequest, cpuLimit = "500m", "1500m"
+		memoryRequest, memoryLimit = "2Gi", "4Gi"
+	}
+
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(cpuRequest),
+			corev1.ResourceMemory: resource.MustParse(memoryRequest),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(cpuLimit),
+			corev1.ResourceMemory: resource.MustParse(memoryLimit),
+		},
+	}
 }

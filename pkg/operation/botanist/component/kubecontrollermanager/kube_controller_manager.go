@@ -98,31 +98,49 @@ func New(
 	config *gardencorev1beta1.KubeControllerManagerConfig,
 	podNetwork *net.IPNet,
 	serviceNetwork *net.IPNet,
+	initialResourceRequirements *corev1.ResourceRequirements,
 ) KubeControllerManager {
+	resources := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("400m"),
+			corev1.ResourceMemory: resource.MustParse("512Mi"),
+		},
+	}
+
+	if initialResourceRequirements != nil {
+		resources = *initialResourceRequirements
+	}
+
 	return &kubeControllerManager{
-		log:            logger,
-		seedClient:     seedClient,
-		namespace:      namespace,
-		version:        version,
-		image:          image,
-		config:         config,
-		podNetwork:     podNetwork,
-		serviceNetwork: serviceNetwork,
+		log:                         logger,
+		seedClient:                  seedClient,
+		namespace:                   namespace,
+		version:                     version,
+		image:                       image,
+		config:                      config,
+		podNetwork:                  podNetwork,
+		serviceNetwork:              serviceNetwork,
+		initialResourceRequirements: resources,
 	}
 }
 
 type kubeControllerManager struct {
-	log            logrus.FieldLogger
-	seedClient     client.Client
-	shootClient    client.Client
-	namespace      string
-	version        *semver.Version
-	image          string
-	replicas       int32
-	config         *gardencorev1beta1.KubeControllerManagerConfig
-	secrets        Secrets
-	podNetwork     *net.IPNet
-	serviceNetwork *net.IPNet
+	log                         logrus.FieldLogger
+	seedClient                  client.Client
+	shootClient                 client.Client
+	namespace                   string
+	version                     *semver.Version
+	image                       string
+	replicas                    int32
+	config                      *gardencorev1beta1.KubeControllerManagerConfig
+	secrets                     Secrets
+	podNetwork                  *net.IPNet
+	serviceNetwork              *net.IPNet
+	initialResourceRequirements corev1.ResourceRequirements
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
@@ -219,16 +237,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								Protocol:      corev1.ProtocolTCP,
 							},
 						},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
-								corev1.ResourceMemory: resource.MustParse("128Mi"),
-							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("400m"),
-								corev1.ResourceMemory: resource.MustParse("512Mi"),
-							},
-						},
+						Resources: k.initialResourceRequirements,
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      k.secrets.CA.Name,
