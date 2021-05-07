@@ -402,7 +402,7 @@ func validateProvider(c *validationContext) field.ErrorList {
 		path    = field.NewPath("spec", "provider")
 	)
 
-	if c.seed != nil {
+	if c.seed != nil && !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
 		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
 			path.Child("networks"),
 			c.shoot.Spec.Networking.Nodes,
