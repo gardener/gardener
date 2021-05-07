@@ -58,7 +58,7 @@ spec:
           successThreshold: 1
           timeoutSeconds: 3
         resources:
-          {{- toYaml .Values.prometheus.resources.prometheus | nindent 10 }}
+          {{- toYaml .Values.aggregatePrometheus.resources.prometheus | nindent 10 }}
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config

@@ -563,9 +563,9 @@ func RunReconcileSeedFlow(
 			if err != nil {
 				return err
 			}
-			if len(currentResources) != 0 && currentResources[resource] != nil {
+			if len(currentResources) != 0 && currentResources["prometheus"] != nil {
 				monitoringResources[resource] = map[string]interface{}{
-					resource: currentResources[resource],
+					"prometheus": currentResources["prometheus"],
 				}
 			}
 		}
