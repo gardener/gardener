@@ -29,6 +29,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
@@ -48,6 +49,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeCon
 		b.Shoot.Networks.Pods,
 		b.Shoot.Networks.Services,
 		getResourcesForKubeControllerManager(b.Shoot.Info.Annotations[v1beta1constants.ShootAlphaScalingClass]),
+		metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaScalingDisabled),
 	), nil
 }
 

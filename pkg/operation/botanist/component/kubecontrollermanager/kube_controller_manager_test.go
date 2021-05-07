@@ -117,6 +117,7 @@ var _ = Describe("KubeControllerManager", func() {
 					podCIDR,
 					serviceCIDR,
 					nil,
+					false,
 				)
 			})
 
@@ -223,30 +224,6 @@ var _ = Describe("KubeControllerManager", func() {
 
 		Context("Tests expecting success", func() {
 			var (
-				vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
-				vpa           = &autoscalingv1beta2.VerticalPodAutoscaler{
-					ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace},
-					Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
-						TargetRef: &autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "apps/v1",
-							Kind:       "Deployment",
-							Name:       v1beta1constants.DeploymentNameKubeControllerManager,
-						},
-						UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
-							UpdateMode: &vpaUpdateMode,
-						},
-						ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-							ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
-								ContainerName: "kube-controller-manager",
-								MinAllowed: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("100Mi"),
-								},
-							}},
-						},
-					},
-				}
-
 				serviceFor = func(version string) *corev1.Service {
 					return &corev1.Service{
 						ObjectMeta: metav1.ObjectMeta{
@@ -403,6 +380,35 @@ var _ = Describe("KubeControllerManager", func() {
 						},
 					}
 				}
+				vpaFor = func(autoScalingDisabled bool) *autoscalingv1beta2.VerticalPodAutoscaler {
+					vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
+					if autoScalingDisabled {
+						vpaUpdateMode = autoscalingv1beta2.UpdateModeOff
+					}
+
+					return &autoscalingv1beta2.VerticalPodAutoscaler{
+						ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace},
+						Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+							TargetRef: &autoscalingv1.CrossVersionObjectReference{
+								APIVersion: "apps/v1",
+								Kind:       "Deployment",
+								Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+							},
+							UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+								UpdateMode: &vpaUpdateMode,
+							},
+							ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+								ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
+									ContainerName: "kube-controller-manager",
+									MinAllowed: corev1.ResourceList{
+										corev1.ResourceCPU:    resource.MustParse("100m"),
+										corev1.ResourceMemory: resource.MustParse("100Mi"),
+									},
+								}},
+							},
+						},
+					}
+				}
 
 				emptyConfig                = &gardencorev1beta1.KubeControllerManagerConfig{}
 				configWithAutoscalerConfig = &gardencorev1beta1.KubeControllerManagerConfig{
@@ -434,7 +440,7 @@ var _ = Describe("KubeControllerManager", func() {
 			)
 
 			DescribeTable("success tests for various kubernetes versions",
-				func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, initialResourceRequirements *corev1.ResourceRequirements) {
+				func(version string, config *gardencorev1beta1.KubeControllerManagerConfig, initialResourceRequirements *corev1.ResourceRequirements, autoScalingDisabled bool) {
 					semverVersion, err := semver.NewVersion(version)
 					Expect(err).NotTo(HaveOccurred())
 
@@ -448,6 +454,7 @@ var _ = Describe("KubeControllerManager", func() {
 						podCIDR,
 						serviceCIDR,
 						initialResourceRequirements,
+						autoScalingDisabled,
 					)
 
 					kubeControllerManager.SetSecrets(Secrets{
@@ -470,51 +477,58 @@ var _ = Describe("KubeControllerManager", func() {
 						}),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-							Expect(obj).To(DeepEqual(vpa))
+							Expect(obj).To(DeepEqual(vpaFor(autoScalingDisabled)))
 						}),
-					)
-
-					gomock.InOrder(
 						c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
 						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: namespace}}),
 					)
 
 					Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 				},
-				Entry("kubernetes 1.19 w/o config", "1.19.0", emptyConfig, &initialResourceRequirements),
-				Entry("kubernetes 1.19 with non-default autoscaler config", "1.19.0", configWithAutoscalerConfig, nil),
-				Entry("kubernetes 1.19 with feature flags", "1.19.0", configWithFeatureFlags, nil),
-				Entry("kubernetes 1.19 with NodeCIDRMaskSize", "1.19.0", configWithNodeCIDRMaskSize, nil),
-				Entry("kubernetes 1.19 with PodEvictionTimeout", "1.19.0", configWithPodEvictionTimeout, nil),
-				Entry("kubernetes 1.19 with NodeMonitorGradePeriod", "1.19.0", configWithNodeMonitorGracePeriod, nil),
+				Entry("kubernetes 1.19 without config", "1.19.0", emptyConfig, nil, false),
+				Entry("kubernetes 1.19 with initial resource requirements", "1.19.0", emptyConfig, &initialResourceRequirements, false),
+				Entry("kubernetes 1.19 with disabled auto-scaling", "1.19.0", emptyConfig, nil, true),
+				Entry("kubernetes 1.19 with non-default autoscaler config", "1.19.0", configWithAutoscalerConfig, nil, false),
+				Entry("kubernetes 1.19 with feature flags", "1.19.0", configWithFeatureFlags, nil, false),
+				Entry("kubernetes 1.19 with NodeCIDRMaskSize", "1.19.0", configWithNodeCIDRMaskSize, nil, false),
+				Entry("kubernetes 1.19 with PodEvictionTimeout", "1.19.0", configWithPodEvictionTimeout, nil, false),
+				Entry("kubernetes 1.19 with NodeMonitorGradePeriod", "1.19.0", configWithNodeMonitorGracePeriod, nil, false),
 
-				Entry("kubernetes 1.18 w/o config", "1.18.0", emptyConfig, &initialResourceRequirements),
-				Entry("kubernetes 1.18 with non-default autoscaler config", "1.18.0", configWithAutoscalerConfig, nil),
-				Entry("kubernetes 1.18 with feature flags", "1.18.0", configWithFeatureFlags, nil),
-				Entry("kubernetes 1.18 with NodeCIDRMaskSize", "1.18.0", configWithNodeCIDRMaskSize, nil),
-				Entry("kubernetes 1.18 with PodEvictionTimeout", "1.18.0", configWithPodEvictionTimeout, nil),
-				Entry("kubernetes 1.19 with NodeMonitorGradePeriod", "1.18.0", configWithNodeMonitorGracePeriod, nil),
+				Entry("kubernetes 1.18 without config", "1.18.0", emptyConfig, nil, false),
+				Entry("kubernetes 1.18 with initial resource requirements", "1.18.0", emptyConfig, &initialResourceRequirements, false),
+				Entry("kubernetes 1.18 with disabled auto-scaling", "1.18.0", emptyConfig, nil, true),
+				Entry("kubernetes 1.18 with non-default autoscaler config", "1.18.0", configWithAutoscalerConfig, nil, false),
+				Entry("kubernetes 1.18 with feature flags", "1.18.0", configWithFeatureFlags, nil, false),
+				Entry("kubernetes 1.18 with NodeCIDRMaskSize", "1.18.0", configWithNodeCIDRMaskSize, nil, false),
+				Entry("kubernetes 1.18 with PodEvictionTimeout", "1.18.0", configWithPodEvictionTimeout, nil, false),
+				Entry("kubernetes 1.19 with NodeMonitorGradePeriod", "1.18.0", configWithNodeMonitorGracePeriod, nil, false),
 
-				Entry("kubernetes 1.17 w/o config", "1.17.0", emptyConfig, &initialResourceRequirements),
-				Entry("kubernetes 1.17 with non-default autoscaler config", "1.17.0", configWithAutoscalerConfig, nil),
-				Entry("kubernetes 1.17 with feature flags", "1.17.0", configWithFeatureFlags, nil),
-				Entry("kubernetes 1.17 with NodeCIDRMaskSize", "1.17.0", configWithNodeCIDRMaskSize, nil),
-				Entry("kubernetes 1.17 with PodEvictionTimeout", "1.17.0", configWithPodEvictionTimeout, nil),
-				Entry("kubernetes 1.19 with NodeMonitorGradePeriod", "1.17.0", configWithNodeMonitorGracePeriod, nil),
+				Entry("kubernetes 1.17 without config", "1.17.0", emptyConfig, nil, false),
+				Entry("kubernetes 1.17 with initial resource requirements", "1.17.0", emptyConfig, &initialResourceRequirements, false),
+				Entry("kubernetes 1.17 with disabled auto-scaling", "1.17.0", emptyConfig, nil, true),
+				Entry("kubernetes 1.17 with non-default autoscaler config", "1.17.0", configWithAutoscalerConfig, nil, false),
+				Entry("kubernetes 1.17 with feature flags", "1.17.0", configWithFeatureFlags, nil, false),
+				Entry("kubernetes 1.17 with NodeCIDRMaskSize", "1.17.0", configWithNodeCIDRMaskSize, nil, false),
+				Entry("kubernetes 1.17 with PodEvictionTimeout", "1.17.0", configWithPodEvictionTimeout, nil, false),
+				Entry("kubernetes 1.19 with NodeMonitorGradePeriod", "1.17.0", configWithNodeMonitorGracePeriod, nil, false),
 
-				Entry("kubernetes 1.16 w/o config", "1.16.0", emptyConfig, &initialResourceRequirements),
-				Entry("kubernetes 1.16 with non-default autoscaler config", "1.16.0", configWithAutoscalerConfig, nil),
-				Entry("kubernetes 1.16 with feature flags", "1.16.0", configWithFeatureFlags, nil),
-				Entry("kubernetes 1.16 with NodeCIDRMaskSize", "1.16.0", configWithNodeCIDRMaskSize, nil),
-				Entry("kubernetes 1.16 with PodEvictionTimeout", "1.16.0", configWithPodEvictionTimeout, nil),
-				Entry("kubernetes 1.19 with NodeMonitorGradePeriod", "1.16.0", configWithNodeMonitorGracePeriod, nil),
+				Entry("kubernetes 1.16 without config", "1.16.0", emptyConfig, nil, false),
+				Entry("kubernetes 1.16 with initial resource requirements", "1.16.0", emptyConfig, &initialResourceRequirements, false),
+				Entry("kubernetes 1.16 with disabled auto-scaling", "1.16.0", emptyConfig, nil, true),
+				Entry("kubernetes 1.16 with non-default autoscaler config", "1.16.0", configWithAutoscalerConfig, nil, false),
+				Entry("kubernetes 1.16 with feature flags", "1.16.0", configWithFeatureFlags, nil, false),
+				Entry("kubernetes 1.16 with NodeCIDRMaskSize", "1.16.0", configWithNodeCIDRMaskSize, nil, false),
+				Entry("kubernetes 1.16 with PodEvictionTimeout", "1.16.0", configWithPodEvictionTimeout, nil, false),
+				Entry("kubernetes 1.19 with NodeMonitorGradePeriod", "1.16.0", configWithNodeMonitorGracePeriod, nil, false),
 
-				Entry("kubernetes 1.15 w/o config", "1.15.0", emptyConfig, &initialResourceRequirements),
-				Entry("kubernetes 1.15 with non-default autoscaler config", "1.15.0", configWithAutoscalerConfig, nil),
-				Entry("kubernetes 1.15 with feature flags", "1.15.0", configWithFeatureFlags, nil),
-				Entry("kubernetes 1.15 with NodeCIDRMaskSize", "1.15.0", configWithNodeCIDRMaskSize, nil),
-				Entry("kubernetes 1.15 with PodEvictionTimeout", "1.15.0", configWithPodEvictionTimeout, nil),
-				Entry("kubernetes 1.19 with NodeMonitorGradePeriod", "1.15.0", configWithNodeMonitorGracePeriod, nil),
+				Entry("kubernetes 1.15 without config", "1.15.0", emptyConfig, nil, false),
+				Entry("kubernetes 1.15 with initial resource requirements", "1.15.0", emptyConfig, &initialResourceRequirements, false),
+				Entry("kubernetes 1.15 with disabled auto-scaling", "1.15.0", emptyConfig, nil, true),
+				Entry("kubernetes 1.15 with non-default autoscaler config", "1.15.0", configWithAutoscalerConfig, nil, false),
+				Entry("kubernetes 1.15 with feature flags", "1.15.0", configWithFeatureFlags, nil, false),
+				Entry("kubernetes 1.15 with NodeCIDRMaskSize", "1.15.0", configWithNodeCIDRMaskSize, nil, false),
+				Entry("kubernetes 1.15 with PodEvictionTimeout", "1.15.0", configWithPodEvictionTimeout, nil, false),
+				Entry("kubernetes 1.19 with NodeMonitorGradePeriod", "1.15.0", configWithNodeMonitorGracePeriod, nil, false),
 			)
 		})
 	})

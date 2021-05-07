@@ -99,6 +99,8 @@ func New(
 	podNetwork *net.IPNet,
 	serviceNetwork *net.IPNet,
 	initialResourceRequirements *corev1.ResourceRequirements,
+	autoScalingDisabled bool,
+
 ) KubeControllerManager {
 	resources := corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
@@ -125,6 +127,7 @@ func New(
 		podNetwork:                  podNetwork,
 		serviceNetwork:              serviceNetwork,
 		initialResourceRequirements: resources,
+		autoScalingDisabled:         autoScalingDisabled,
 	}
 }
 
@@ -141,6 +144,7 @@ type kubeControllerManager struct {
 	podNetwork                  *net.IPNet
 	serviceNetwork              *net.IPNet
 	initialResourceRequirements corev1.ResourceRequirements
+	autoScalingDisabled         bool
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
@@ -167,6 +171,10 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		probeURIScheme       = corev1.URISchemeHTTPS
 		command              = k.computeCommand(port)
 	)
+
+	if k.autoScalingDisabled {
+		vpaUpdateMode = autoscalingv1beta2.UpdateModeOff
+	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, service, func() error {
 		service.Labels = getLabels()
