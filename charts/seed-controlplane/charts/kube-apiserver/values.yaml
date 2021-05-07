@@ -142,6 +142,7 @@ scaleUpStabilization:
     memory:
       value: 200M
       percentage: 80
+scaleUpUpdateMode: "Auto"
 
 scaleDownStabilization:
   stabilizationDuration: "15m"
@@ -152,6 +153,7 @@ scaleDownStabilization:
     memory:
       value: 200M
       percentage: 80
+scaleDownUpdateMode: "Auto"
 
 limitsRequestsGapScaleParams:
   cpu:

@@ -48,13 +48,13 @@ spec:
     deploy: true
     scaleUp:
       updatePolicy:
-        updateMode: "Auto"
+        updateMode: {{ .Values.scaleUpUpdateMode | quote }}
 {{- if .Values.scaleUpStabilization }}
 {{ toYaml .Values.scaleUpStabilization | indent 6 }}
 {{- end }}
     scaleDown:
       updatePolicy:
-        updateMode: "Auto"
+        updateMode: {{ .Values.scaleDownUpdateMode | quote }}
 {{- if .Values.scaleDownStabilization }}
 {{ toYaml .Values.scaleDownStabilization | indent 6 }}
 {{- end }}

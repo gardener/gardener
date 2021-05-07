@@ -471,6 +471,30 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 	)
 
+	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil {
+		autoscaler := b.ManagedSeedAPIServer.Autoscaler
+		minReplicas = *autoscaler.MinReplicas
+		maxReplicas = autoscaler.MaxReplicas
+	}
+
+	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
+		minReplicas = 2
+	}
+
+	autoScalingDisabled := metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaScalingDisabled)
+	if autoScalingDisabled {
+		defaultValues["scaleUpUpdateMode"] = hvpav1alpha1.UpdateModeOff
+		defaultValues["scaleDownUpdateMode"] = hvpav1alpha1.UpdateModeOff
+
+		if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
+			minReplicas = 3
+		}
+		maxReplicas = minReplicas
+	}
+
+	defaultValues["minReplicas"] = minReplicas
+	defaultValues["maxReplicas"] = maxReplicas
+
 	if b.Shoot.KonnectivityTunnelEnabled {
 		if b.APIServerSNIEnabled() {
 			podAnnotations["checksum/secret-"+konnectivity.SecretNameServerTLSClient] = b.CheckSums[konnectivity.SecretNameServerTLSClient]
@@ -508,16 +532,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	} else if apierrors.IsNotFound(err) {
 		foundDeployment = false
-	}
-
-	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil {
-		autoscaler := b.ManagedSeedAPIServer.Autoscaler
-		minReplicas = *autoscaler.MinReplicas
-		maxReplicas = autoscaler.MaxReplicas
-	}
-
-	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
-		minReplicas = 2
 	}
 
 	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil && !hvpaEnabled {
@@ -563,8 +577,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 	}
 
-	if foundDeployment && hvpaEnabled {
-		// Deployment is already created AND is controlled by HVPA
+	if foundDeployment && hvpaEnabled && !autoScalingDisabled {
+		// Deployment is already created AND is controlled by HVPA AND auto-scaling is enabled.
 		// Keep the "resources" as it is.
 		for k := range deployment.Spec.Template.Spec.Containers {
 			v := &deployment.Spec.Template.Spec.Containers[k]
@@ -574,9 +588,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			}
 		}
 	}
-
-	defaultValues["minReplicas"] = minReplicas
-	defaultValues["maxReplicas"] = maxReplicas
 
 	var (
 		apiServerConfig              = b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
