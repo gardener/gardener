@@ -123,6 +123,7 @@ func New(
 	retainReplicas bool,
 	storageCapacity string,
 	defragmentationSchedule *string,
+	autoScalingDisabled bool,
 ) Etcd {
 	return &etcd{
 		client:                  client,
@@ -132,6 +133,7 @@ func New(
 		retainReplicas:          retainReplicas,
 		storageCapacity:         storageCapacity,
 		defragmentationSchedule: defragmentationSchedule,
+		autoScalingDisabled:     autoScalingDisabled,
 	}
 }
 
@@ -143,6 +145,7 @@ type etcd struct {
 	retainReplicas          bool
 	storageCapacity         string
 	defragmentationSchedule *string
+	autoScalingDisabled     bool
 
 	secrets      Secrets
 	backupConfig *BackupConfig
@@ -358,12 +361,18 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	if e.hvpaConfig != nil && e.hvpaConfig.Enabled {
 		var (
-			hpaLabels                   = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.role}
-			vpaLabels                   = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.role}
-			updateModeAuto              = hvpav1alpha1.UpdateModeAuto
-			updateModeMaintenanceWindow = hvpav1alpha1.UpdateModeMaintenanceWindow
-			containerPolicyOff          = autoscalingv1beta2.ContainerScalingModeOff
+			hpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-hpa-" + e.role}
+			vpaLabels          = map[string]string{v1beta1constants.LabelRole: "etcd-vpa-" + e.role}
+			containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
+
+			updateModeHVPAScaleUp   = hvpav1alpha1.UpdateModeAuto
+			updateModeHVPAScaleDown = hvpav1alpha1.UpdateModeMaintenanceWindow
 		)
+
+		if e.autoScalingDisabled {
+			updateModeHVPAScaleUp = hvpav1alpha1.UpdateModeOff
+			updateModeHVPAScaleDown = hvpav1alpha1.UpdateModeOff
+		}
 
 		if _, err := controllerutil.CreateOrUpdate(ctx, e.client, hvpa, func() error {
 			hvpa.Labels = utils.MergeStringMaps(e.getLabels(), map[string]string{
@@ -408,7 +417,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				Deploy:   true,
 				ScaleUp: hvpav1alpha1.ScaleType{
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: &updateModeAuto,
+						UpdateMode: &updateModeHVPAScaleUp,
 					},
 					StabilizationDuration: pointer.StringPtr("5m"),
 					MinChange: hvpav1alpha1.ScaleParams{
@@ -424,7 +433,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				},
 				ScaleDown: hvpav1alpha1.ScaleType{
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: &updateModeMaintenanceWindow,
+						UpdateMode: &updateModeHVPAScaleDown,
 					},
 					StabilizationDuration: pointer.StringPtr("15m"),
 					MinChange: hvpav1alpha1.ScaleParams{

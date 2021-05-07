@@ -122,6 +122,7 @@ var _ = Describe("Etcd", func() {
 						Enabled:               hvpaEnabled,
 						MaintenanceTimeWindow: maintenanceTimeWindow,
 					}),
+					expectedAutoScalingDisabled: BeFalse(),
 				}
 
 				oldNewEtcd := NewEtcd
@@ -150,6 +151,7 @@ var _ = Describe("Etcd", func() {
 						Enabled:               hvpaEnabled,
 						MaintenanceTimeWindow: maintenanceTimeWindow,
 					}),
+					expectedAutoScalingDisabled: BeFalse(),
 				}
 
 				oldNewEtcd := NewEtcd
@@ -184,6 +186,7 @@ var _ = Describe("Etcd", func() {
 						Enabled:               hvpaForShootedSeedEnabled,
 						MaintenanceTimeWindow: maintenanceTimeWindow,
 					}),
+					expectedAutoScalingDisabled: BeFalse(),
 				}
 
 				oldNewEtcd := NewEtcd
@@ -212,6 +215,7 @@ var _ = Describe("Etcd", func() {
 						Enabled:               hvpaForShootedSeedEnabled,
 						MaintenanceTimeWindow: maintenanceTimeWindow,
 					}),
+					expectedAutoScalingDisabled: BeFalse(),
 				}
 
 				oldNewEtcd := NewEtcd
@@ -222,6 +226,35 @@ var _ = Describe("Etcd", func() {
 				Expect(etcd).NotTo(BeNil())
 				Expect(err).NotTo(HaveOccurred())
 			})
+		})
+
+		It("should successfully create an etcd interface (normal class) with auto-scaling disabled", func() {
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, hvpaEnabled)()
+
+			metav1.SetMetaDataAnnotation(&botanist.Shoot.Info.ObjectMeta, "alpha.control-plane.scaling.shoot.gardener.cloud/disabled", "true")
+
+			validator := &newEtcdValidator{
+				expectedClient:                  Equal(c),
+				expectedNamespace:               Equal(namespace),
+				expectedRole:                    Equal(role),
+				expectedClass:                   Equal(class),
+				expectedRetainReplicas:          BeFalse(),
+				expectedStorageCapacity:         Equal("10Gi"),
+				expectedDefragmentationSchedule: Equal(pointer.StringPtr("34 12 */3 * *")),
+				expectedHVPAConfig: Equal(&etcd.HVPAConfig{
+					Enabled:               hvpaEnabled,
+					MaintenanceTimeWindow: maintenanceTimeWindow,
+				}),
+				expectedAutoScalingDisabled: BeTrue(),
+			}
+
+			oldNewEtcd := NewEtcd
+			defer func() { NewEtcd = oldNewEtcd }()
+			NewEtcd = validator.NewEtcd
+
+			etcd, err := botanist.DefaultEtcd(role, class)
+			Expect(etcd).NotTo(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return an error because the maintenance time window cannot be parsed", func() {
@@ -465,6 +498,7 @@ type newEtcdValidator struct {
 	expectedStorageCapacity         gomegatypes.GomegaMatcher
 	expectedDefragmentationSchedule gomegatypes.GomegaMatcher
 	expectedHVPAConfig              gomegatypes.GomegaMatcher
+	expectedAutoScalingDisabled     gomegatypes.GomegaMatcher
 }
 
 func (v *newEtcdValidator) NewEtcd(
@@ -475,6 +509,7 @@ func (v *newEtcdValidator) NewEtcd(
 	retainReplicas bool,
 	storageCapacity string,
 	defragmentationSchedule *string,
+	autoScalingDisabled bool,
 ) etcd.Etcd {
 	Expect(client).To(v.expectedClient)
 	Expect(namespace).To(v.expectedNamespace)
@@ -483,6 +518,7 @@ func (v *newEtcdValidator) NewEtcd(
 	Expect(retainReplicas).To(v.expectedRetainReplicas)
 	Expect(storageCapacity).To(v.expectedStorageCapacity)
 	Expect(defragmentationSchedule).To(v.expectedDefragmentationSchedule)
+	Expect(autoScalingDisabled).To(v.expectedAutoScalingDisabled)
 
 	return v
 }

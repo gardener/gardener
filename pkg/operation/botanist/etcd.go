@@ -35,6 +35,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -57,6 +58,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Etcd, error)
 		b.Shoot.HibernationEnabled,
 		b.Seed.GetValidVolumeSize("10Gi"),
 		&defragmentationSchedule,
+		metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaScalingDisabled),
 	)
 
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)

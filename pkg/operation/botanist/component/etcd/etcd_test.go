@@ -72,6 +72,7 @@ var _ = Describe("Etcd", func() {
 		storageCapacity         = "12Gi"
 		storageCapacityQuantity = resource.MustParse(storageCapacity)
 		defragmentationSchedule = "abcd"
+		autoScalingDisabled     = false
 
 		secretNameCA         = "ca-etcd"
 		secretNameServer     = "etcd-server-tls"
@@ -311,7 +312,7 @@ var _ = Describe("Etcd", func() {
 
 			return obj
 		}
-		hvpaFor = func(class Class, replicas int32) *hvpav1alpha1.Hvpa {
+		hvpaFor = func(class Class, replicas int32, autoScalingDisabled bool) *hvpav1alpha1.Hvpa {
 			obj := &hvpav1alpha1.Hvpa{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      hvpaName,
@@ -463,6 +464,11 @@ var _ = Describe("Etcd", func() {
 				}
 			}
 
+			if autoScalingDisabled {
+				obj.Spec.Vpa.ScaleUp.UpdatePolicy.UpdateMode = pointer.StringPtr(hvpav1alpha1.UpdateModeOff)
+				obj.Spec.Vpa.ScaleDown.UpdatePolicy.UpdateMode = pointer.StringPtr(hvpav1alpha1.UpdateModeOff)
+			}
+
 			return obj
 		}
 	)
@@ -470,7 +476,7 @@ var _ = Describe("Etcd", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
-		etcd = New(c, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+		etcd = New(c, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule, autoScalingDisabled)
 	})
 
 	AfterEach(func() {
@@ -624,7 +630,46 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(hvpaFor(class, 1)))
+						Expect(obj).To(DeepEqual(hvpaFor(class, 1, autoScalingDisabled)))
+					}),
+				)
+
+				Expect(etcd.Deploy(ctx)).To(Succeed())
+			})
+
+			It("should successfully deploy (normal etcd) and auto-scaling disabled", func() {
+				oldTimeNow := TimeNow
+				defer func() { TimeNow = oldTimeNow }()
+				TimeNow = func() time.Time { return now }
+
+				disableAutoScaling := true
+
+				etcd = New(c, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule, disableAutoScaling)
+				setSecretsAndHVPAConfig()
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+
+					c.EXPECT().Get(ctx, kutil.Key(testNamespace, networkPolicyName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(networkPolicy))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(etcdObjFor(
+							class,
+							1,
+							nil,
+							"",
+							"",
+							nil,
+							nil,
+						)))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
+						Expect(obj).To(DeepEqual(hvpaFor(class, 1, disableAutoScaling)))
 					}),
 				)
 
@@ -641,7 +686,7 @@ var _ = Describe("Etcd", func() {
 					retainReplicas         = true
 				)
 
-				etcd = New(c, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+				etcd = New(c, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule, false)
 				setSecretsAndHVPAConfig()
 
 				gomock.InOrder(
@@ -682,7 +727,7 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas)))
+						Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas, autoScalingDisabled)))
 					}),
 				)
 
@@ -736,7 +781,7 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(hvpaFor(class, 1)))
+						Expect(obj).To(DeepEqual(hvpaFor(class, 1, autoScalingDisabled)))
 					}),
 				)
 
@@ -817,7 +862,7 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(hvpaFor(class, 1)))
+						Expect(obj).To(DeepEqual(hvpaFor(class, 1, autoScalingDisabled)))
 					}),
 				)
 
@@ -830,7 +875,7 @@ var _ = Describe("Etcd", func() {
 				TimeNow = func() time.Time { return now }
 
 				class := ClassImportant
-				etcd = New(c, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+				etcd = New(c, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule, false)
 				setSecretsAndHVPAConfig()
 
 				gomock.InOrder(
@@ -855,7 +900,7 @@ var _ = Describe("Etcd", func() {
 					}),
 					c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-						Expect(obj).To(DeepEqual(hvpaFor(class, 1)))
+						Expect(obj).To(DeepEqual(hvpaFor(class, 1, autoScalingDisabled)))
 					}),
 				)
 
@@ -902,7 +947,7 @@ var _ = Describe("Etcd", func() {
 						}),
 						c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-							Expect(obj).To(DeepEqual(hvpaFor(class, 1)))
+							Expect(obj).To(DeepEqual(hvpaFor(class, 1, autoScalingDisabled)))
 						}),
 					)
 
@@ -956,7 +1001,7 @@ var _ = Describe("Etcd", func() {
 						}),
 						c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-							Expect(obj).To(DeepEqual(hvpaFor(class, 1)))
+							Expect(obj).To(DeepEqual(hvpaFor(class, 1, autoScalingDisabled)))
 						}),
 					)
 

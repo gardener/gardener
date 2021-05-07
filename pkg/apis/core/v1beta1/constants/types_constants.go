@@ -210,7 +210,7 @@ const (
 	// what you do.
 	ShootAlphaScalingClass = "alpha.control-plane.scaling.shoot.gardener.cloud/class"
 	// ShootAlphaScalingDisabled is a constant for an annotation on the shoot stating that the auto-scaling shall be
-	// disabled for the kube-apiserver and kube-controller-manager.
+	// disabled for the etcd, kube-apiserver, and kube-controller-manager.
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
 	// what you do.
 	ShootAlphaScalingDisabled = "alpha.control-plane.scaling.shoot.gardener.cloud/disabled"
