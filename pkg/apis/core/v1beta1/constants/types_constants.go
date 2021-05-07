@@ -203,12 +203,12 @@ const (
 	// ShootNoCleanup is a constant for a label on a resource indicating that the Gardener cleaner should not delete this
 	// resource when cleaning a shoot during the deletion flow.
 	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
-	// ShootAlphaScalingAPIServerClass is a constant for an annotation on the shoot stating the initial API server class.
-	// It influences the size of the initial resource requests/limits.
+	// ShootAlphaScalingClass is a constant for an annotation on the shoot stating the initial scaling class.
+	// It influences the size of the initial resource requests/limits for the kube-apiserver.
 	// Possible values are [small, medium, large, xlarge, 2xlarge].
 	// Note that this annotation is alpha and can be removed anytime without further notice. Only use it if you know
 	// what you do.
-	ShootAlphaScalingAPIServerClass = "alpha.kube-apiserver.scaling.shoot.gardener.cloud/class"
+	ShootAlphaScalingClass = "alpha.control-plane.scaling.shoot.gardener.cloud/class"
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.
@@ -433,9 +433,13 @@ const (
 	DefaultVpnRange = "192.168.123.0/24"
 )
 
-// ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
-var ControlPlaneSecretRoles = []string{
-	GardenRoleKubeconfig,
-	GardenRoleSSHKeyPair,
-	GardenRoleMonitoring,
-}
+var (
+	// ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
+	ControlPlaneSecretRoles = []string{
+		GardenRoleKubeconfig,
+		GardenRoleSSHKeyPair,
+		GardenRoleMonitoring,
+	}
+	// ScalingClasses is the list of valid values for the ShootAlphaScalingClass annotation.
+	ScalingClasses = []string{"small", "medium", "large", "xlarge", "2xlarge"}
+)

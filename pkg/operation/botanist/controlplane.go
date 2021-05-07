@@ -51,7 +51,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -367,14 +366,11 @@ const (
 // getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
 func getResourcesForAPIServer(nodeCount int32, scalingClass string) (string, string, string, string) {
 	var (
-		validScalingClasses = sets.NewString("small", "medium", "large", "xlarge", "2xlarge")
-		cpuRequest          string
-		memoryRequest       string
-		cpuLimit            string
-		memoryLimit         string
+		cpuRequest, cpuLimit       string
+		memoryRequest, memoryLimit string
 	)
 
-	if !validScalingClasses.Has(scalingClass) {
+	if !utils.ValueExists(scalingClass, v1beta1constants.ScalingClasses) {
 		switch {
 		case nodeCount <= 2:
 			scalingClass = "small"
@@ -391,35 +387,24 @@ func getResourcesForAPIServer(nodeCount int32, scalingClass string) (string, str
 
 	switch {
 	case scalingClass == "small":
-		cpuRequest = "800m"
-		memoryRequest = "800Mi"
+		cpuRequest, cpuLimit = "800m", "1000m"
+		memoryRequest, memoryLimit = "800Mi", "1200Mi"
 
-		cpuLimit = "1000m"
-		memoryLimit = "1200Mi"
 	case scalingClass == "medium":
-		cpuRequest = "1000m"
-		memoryRequest = "1100Mi"
+		cpuRequest, cpuLimit = "1000m", "1200m"
+		memoryRequest, memoryLimit = "1100Mi", "1900Mi"
 
-		cpuLimit = "1200m"
-		memoryLimit = "1900Mi"
 	case scalingClass == "large":
-		cpuRequest = "1200m"
-		memoryRequest = "1600Mi"
+		cpuRequest, cpuLimit = "1200m", "1500m"
+		memoryRequest, memoryLimit = "1600Mi", "3900Mi"
 
-		cpuLimit = "1500m"
-		memoryLimit = "3900Mi"
 	case scalingClass == "xlarge":
-		cpuRequest = "2500m"
-		memoryRequest = "5200Mi"
+		cpuRequest, cpuLimit = "2500m", "3000m"
+		memoryRequest, memoryLimit = "5200Mi", "5900Mi"
 
-		cpuLimit = "3000m"
-		memoryLimit = "5900Mi"
 	case scalingClass == "2xlarge":
-		cpuRequest = "3000m"
-		memoryRequest = "5200Mi"
-
-		cpuLimit = "4000m"
-		memoryLimit = "7800Mi"
+		cpuRequest, cpuLimit = "3000m", "4000m"
+		memoryRequest, memoryLimit = "5200Mi", "7800Mi"
 	}
 
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
@@ -562,9 +547,9 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 		var cpuRequest, memoryRequest, cpuLimit, memoryLimit string
 		if hvpaEnabled {
-			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMinNodeCount(), b.Shoot.Info.Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
+			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMinNodeCount(), b.Shoot.Info.Annotations[v1beta1constants.ShootAlphaScalingClass])
 		} else {
-			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMaxNodeCount(), b.Shoot.Info.Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
+			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMaxNodeCount(), b.Shoot.Info.Annotations[v1beta1constants.ShootAlphaScalingClass])
 		}
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
