@@ -165,7 +165,7 @@ var _ = Describe("Utils", func() {
 					Annotations: annotations,
 				},
 			}
-			workerWithAnnotation := worker.DeepCopyObject()
+			workerWithAnnotation := worker.DeepCopy()
 			expectedWorker := worker.DeepCopy()
 			delete(expectedWorker.Annotations, annotation)
 
