@@ -16,15 +16,14 @@ package controlplane
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -82,7 +81,7 @@ func New(
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
 ) Interface {
-	return &controlPlane{
+	c := &controlPlane{
 		client:              client,
 		logger:              logger,
 		values:              values,
@@ -90,6 +89,15 @@ func New(
 		waitSevereThreshold: waitSevereThreshold,
 		waitTimeout:         waitTimeout,
 	}
+
+	c.controlPlane = &extensionsv1alpha1.ControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      c.name(),
+			Namespace: c.values.Namespace,
+		},
+	}
+
+	return c
 }
 
 type controlPlane struct {
@@ -100,6 +108,7 @@ type controlPlane struct {
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 
+	controlPlane   *extensionsv1alpha1.ControlPlane
 	providerStatus *runtime.RawExtension
 }
 
@@ -117,25 +126,16 @@ func (c *controlPlane) Deploy(ctx context.Context) error {
 }
 
 func (c *controlPlane) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
-	var (
-		controlPlane = &extensionsv1alpha1.ControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      c.name(),
-				Namespace: c.values.Namespace,
-			},
-		}
-		providerConfig *runtime.RawExtension
-	)
-
+	var providerConfig *runtime.RawExtension
 	if cfg := c.values.ProviderConfig; cfg != nil {
 		providerConfig = &runtime.RawExtension{Raw: cfg.Raw}
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, c.client, controlPlane, func() error {
-		metav1.SetMetaDataAnnotation(&controlPlane.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&controlPlane.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+	_, err := controllerutils.MergePatchOrCreate(ctx, c.client, c.controlPlane, func() error {
+		metav1.SetMetaDataAnnotation(&c.controlPlane.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+		metav1.SetMetaDataAnnotation(&c.controlPlane.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
-		controlPlane.Spec = extensionsv1alpha1.ControlPlaneSpec{
+		c.controlPlane.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           c.values.Type,
 				ProviderConfig: providerConfig,
@@ -144,7 +144,7 @@ func (c *controlPlane) deploy(ctx context.Context, operation string) (extensions
 			Purpose: &c.values.Purpose,
 			SecretRef: corev1.SecretReference{
 				Name:      v1beta1constants.SecretNameCloudProvider,
-				Namespace: controlPlane.Namespace,
+				Namespace: c.controlPlane.Namespace,
 			},
 			InfrastructureProviderStatus: c.values.InfrastructureProviderStatus,
 		}
@@ -152,7 +152,7 @@ func (c *controlPlane) deploy(ctx context.Context, operation string) (extensions
 		return nil
 	})
 
-	return controlPlane, err
+	return c.controlPlane, err
 }
 
 // Restore uses the seed client and the ShootState to create the ControlPlane resources and restore their state.
@@ -162,53 +162,42 @@ func (c *controlPlane) Restore(ctx context.Context, shootState *gardencorev1alph
 		c.client,
 		shootState,
 		extensionsv1alpha1.ControlPlaneResource,
-		c.values.Namespace,
 		c.deploy,
 	)
 }
 
 // Migrate migrates the ControlPlane resources.
 func (c *controlPlane) Migrate(ctx context.Context) error {
-	return extensions.MigrateExtensionCRs(
+	return extensions.MigrateExtensionObjects(
 		ctx,
 		c.client,
 		&extensionsv1alpha1.ControlPlaneList{},
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
 		c.values.Namespace,
 	)
 }
 
 // Destroy deletes the ControlPlane resource.
 func (c *controlPlane) Destroy(ctx context.Context) error {
-	return extensions.DeleteExtensionCR(
+	return extensions.DeleteExtensionObject(
 		ctx,
 		c.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
-		c.values.Namespace,
-		c.name(),
+		c.controlPlane,
 	)
 }
 
 // Wait waits until the ControlPlane resource is ready.
 func (c *controlPlane) Wait(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRReady(
+	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		c.client,
 		c.logger,
-		func() client.Object { return &extensionsv1alpha1.ControlPlane{} },
+		c.controlPlane,
 		extensionsv1alpha1.ControlPlaneResource,
-		c.values.Namespace,
-		c.name(),
 		c.waitInterval,
 		c.waitSevereThreshold,
 		c.waitTimeout,
-		func(obj client.Object) error {
-			controlPlane, ok := obj.(*extensionsv1alpha1.ControlPlane)
-			if !ok {
-				return fmt.Errorf("expected extensionsv1alpha1.ControlPlane but got %T", controlPlane)
-			}
-
-			c.providerStatus = controlPlane.Status.ProviderStatus
+		func() error {
+			c.providerStatus = c.controlPlane.Status.ProviderStatus
 			return nil
 		},
 	)
@@ -216,12 +205,10 @@ func (c *controlPlane) Wait(ctx context.Context) error {
 
 // WaitMigrate waits until the ControlPlane resources are migrated successfully.
 func (c *controlPlane) WaitMigrate(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRMigrated(
+	return extensions.WaitUntilExtensionObjectMigrated(
 		ctx,
 		c.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
-		c.values.Namespace,
-		c.name(),
+		c.controlPlane,
 		c.waitInterval,
 		c.waitTimeout,
 	)
@@ -229,14 +216,12 @@ func (c *controlPlane) WaitMigrate(ctx context.Context) error {
 
 // WaitCleanup waits until the ControlPlane resource is deleted.
 func (c *controlPlane) WaitCleanup(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		c.client,
 		c.logger,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ControlPlane{} },
+		c.controlPlane,
 		extensionsv1alpha1.ControlPlaneResource,
-		c.values.Namespace,
-		c.name(),
 		c.waitInterval,
 		c.waitTimeout,
 	)
