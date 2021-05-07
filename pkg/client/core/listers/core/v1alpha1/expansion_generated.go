@@ -30,14 +30,6 @@ type BackupEntryListerExpansion interface{}
 // BackupEntryNamespaceLister.
 type BackupEntryNamespaceListerExpansion interface{}
 
-// BastionListerExpansion allows custom methods to be added to
-// BastionLister.
-type BastionListerExpansion interface{}
-
-// BastionNamespaceListerExpansion allows custom methods to be added to
-// BastionNamespaceLister.
-type BastionNamespaceListerExpansion interface{}
-
 // CloudProfileListerExpansion allows custom methods to be added to
 // CloudProfileLister.
 type CloudProfileListerExpansion interface{}

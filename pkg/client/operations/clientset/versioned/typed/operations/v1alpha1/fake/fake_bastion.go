@@ -21,7 +21,7 @@ package fake
 import (
 	"context"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,13 +32,13 @@ import (
 
 // FakeBastions implements BastionInterface
 type FakeBastions struct {
-	Fake *FakeCoreV1alpha1
+	Fake *FakeOperationsV1alpha1
 	ns   string
 }
 
-var bastionsResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "v1alpha1", Resource: "bastions"}
+var bastionsResource = schema.GroupVersionResource{Group: "operations.gardener.cloud", Version: "v1alpha1", Resource: "bastions"}
 
-var bastionsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "v1alpha1", Kind: "Bastion"}
+var bastionsKind = schema.GroupVersionKind{Group: "operations.gardener.cloud", Version: "v1alpha1", Kind: "Bastion"}
 
 // Get takes name of the bastion, and returns the corresponding bastion object, and an error if there is any.
 func (c *FakeBastions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.Bastion, err error) {

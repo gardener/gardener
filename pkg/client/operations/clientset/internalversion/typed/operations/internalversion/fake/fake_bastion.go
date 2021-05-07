@@ -21,7 +21,7 @@ package fake
 import (
 	"context"
 
-	core "github.com/gardener/gardener/pkg/apis/core"
+	operations "github.com/gardener/gardener/pkg/apis/operations"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -32,29 +32,29 @@ import (
 
 // FakeBastions implements BastionInterface
 type FakeBastions struct {
-	Fake *FakeCore
+	Fake *FakeOperations
 	ns   string
 }
 
-var bastionsResource = schema.GroupVersionResource{Group: "core.gardener.cloud", Version: "", Resource: "bastions"}
+var bastionsResource = schema.GroupVersionResource{Group: "operations.gardener.cloud", Version: "", Resource: "bastions"}
 
-var bastionsKind = schema.GroupVersionKind{Group: "core.gardener.cloud", Version: "", Kind: "Bastion"}
+var bastionsKind = schema.GroupVersionKind{Group: "operations.gardener.cloud", Version: "", Kind: "Bastion"}
 
 // Get takes name of the bastion, and returns the corresponding bastion object, and an error if there is any.
-func (c *FakeBastions) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.Bastion, err error) {
+func (c *FakeBastions) Get(ctx context.Context, name string, options v1.GetOptions) (result *operations.Bastion, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(bastionsResource, c.ns, name), &core.Bastion{})
+		Invokes(testing.NewGetAction(bastionsResource, c.ns, name), &operations.Bastion{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*core.Bastion), err
+	return obj.(*operations.Bastion), err
 }
 
 // List takes label and field selectors, and returns the list of Bastions that match those selectors.
-func (c *FakeBastions) List(ctx context.Context, opts v1.ListOptions) (result *core.BastionList, err error) {
+func (c *FakeBastions) List(ctx context.Context, opts v1.ListOptions) (result *operations.BastionList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(bastionsResource, bastionsKind, c.ns, opts), &core.BastionList{})
+		Invokes(testing.NewListAction(bastionsResource, bastionsKind, c.ns, opts), &operations.BastionList{})
 
 	if obj == nil {
 		return nil, err
@@ -64,8 +64,8 @@ func (c *FakeBastions) List(ctx context.Context, opts v1.ListOptions) (result *c
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &core.BastionList{ListMeta: obj.(*core.BastionList).ListMeta}
-	for _, item := range obj.(*core.BastionList).Items {
+	list := &operations.BastionList{ListMeta: obj.(*operations.BastionList).ListMeta}
+	for _, item := range obj.(*operations.BastionList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -81,43 +81,43 @@ func (c *FakeBastions) Watch(ctx context.Context, opts v1.ListOptions) (watch.In
 }
 
 // Create takes the representation of a bastion and creates it.  Returns the server's representation of the bastion, and an error, if there is any.
-func (c *FakeBastions) Create(ctx context.Context, bastion *core.Bastion, opts v1.CreateOptions) (result *core.Bastion, err error) {
+func (c *FakeBastions) Create(ctx context.Context, bastion *operations.Bastion, opts v1.CreateOptions) (result *operations.Bastion, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(bastionsResource, c.ns, bastion), &core.Bastion{})
+		Invokes(testing.NewCreateAction(bastionsResource, c.ns, bastion), &operations.Bastion{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*core.Bastion), err
+	return obj.(*operations.Bastion), err
 }
 
 // Update takes the representation of a bastion and updates it. Returns the server's representation of the bastion, and an error, if there is any.
-func (c *FakeBastions) Update(ctx context.Context, bastion *core.Bastion, opts v1.UpdateOptions) (result *core.Bastion, err error) {
+func (c *FakeBastions) Update(ctx context.Context, bastion *operations.Bastion, opts v1.UpdateOptions) (result *operations.Bastion, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(bastionsResource, c.ns, bastion), &core.Bastion{})
+		Invokes(testing.NewUpdateAction(bastionsResource, c.ns, bastion), &operations.Bastion{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*core.Bastion), err
+	return obj.(*operations.Bastion), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeBastions) UpdateStatus(ctx context.Context, bastion *core.Bastion, opts v1.UpdateOptions) (*core.Bastion, error) {
+func (c *FakeBastions) UpdateStatus(ctx context.Context, bastion *operations.Bastion, opts v1.UpdateOptions) (*operations.Bastion, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(bastionsResource, "status", c.ns, bastion), &core.Bastion{})
+		Invokes(testing.NewUpdateSubresourceAction(bastionsResource, "status", c.ns, bastion), &operations.Bastion{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*core.Bastion), err
+	return obj.(*operations.Bastion), err
 }
 
 // Delete takes name of the bastion and deletes it. Returns an error if one occurs.
 func (c *FakeBastions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(bastionsResource, c.ns, name), &core.Bastion{})
+		Invokes(testing.NewDeleteAction(bastionsResource, c.ns, name), &operations.Bastion{})
 
 	return err
 }
@@ -126,17 +126,17 @@ func (c *FakeBastions) Delete(ctx context.Context, name string, opts v1.DeleteOp
 func (c *FakeBastions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewDeleteCollectionAction(bastionsResource, c.ns, listOpts)
 
-	_, err := c.Fake.Invokes(action, &core.BastionList{})
+	_, err := c.Fake.Invokes(action, &operations.BastionList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched bastion.
-func (c *FakeBastions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *core.Bastion, err error) {
+func (c *FakeBastions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *operations.Bastion, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(bastionsResource, c.ns, name, pt, data, subresources...), &core.Bastion{})
+		Invokes(testing.NewPatchSubresourceAction(bastionsResource, c.ns, name, pt, data, subresources...), &operations.Bastion{})
 
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*core.Bastion), err
+	return obj.(*operations.Bastion), err
 }

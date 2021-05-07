@@ -48,11 +48,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupEntryList":                       schema_pkg_apis_core_v1alpha1_BackupEntryList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupEntrySpec":                       schema_pkg_apis_core_v1alpha1_BackupEntrySpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BackupEntryStatus":                     schema_pkg_apis_core_v1alpha1_BackupEntryStatus(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Bastion":                               schema_pkg_apis_core_v1alpha1_Bastion(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BastionIngressPolicy":                  schema_pkg_apis_core_v1alpha1_BastionIngressPolicy(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BastionList":                           schema_pkg_apis_core_v1alpha1_BastionList(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BastionSpec":                           schema_pkg_apis_core_v1alpha1_BastionSpec(ref),
-		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BastionStatus":                         schema_pkg_apis_core_v1alpha1_BastionStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI":                                   schema_pkg_apis_core_v1alpha1_CRI(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudInfo":                             schema_pkg_apis_core_v1alpha1_CloudInfo(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.CloudProfile":                          schema_pkg_apis_core_v1alpha1_CloudProfile(ref),
@@ -318,6 +313,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Worker":                                 schema_pkg_apis_core_v1beta1_Worker(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerKubernetes":                       schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.WorkerSystemComponents":                 schema_pkg_apis_core_v1beta1_WorkerSystemComponents(ref),
+		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.Bastion":                         schema_pkg_apis_operations_v1alpha1_Bastion(ref),
+		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionIngressPolicy":            schema_pkg_apis_operations_v1alpha1_BastionIngressPolicy(ref),
+		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionList":                     schema_pkg_apis_operations_v1alpha1_BastionList(ref),
+		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionSpec":                     schema_pkg_apis_operations_v1alpha1_BastionSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionStatus":                   schema_pkg_apis_operations_v1alpha1_BastionStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Gardenlet":                   schema_pkg_apis_seedmanagement_v1alpha1_Gardenlet(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.GardenletDeployment":         schema_pkg_apis_seedmanagement_v1alpha1_GardenletDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1.Image":                       schema_pkg_apis_seedmanagement_v1alpha1_Image(ref),
@@ -1254,243 +1254,6 @@ func schema_pkg_apis_core_v1alpha1_BackupEntryStatus(ref common.ReferenceCallbac
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_Bastion(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Bastion holds details about an SSH bastion for a shoot cluster.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard object metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
-						},
-					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Specification of the Bastion.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.BastionSpec"),
-						},
-					},
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Most recently observed status of the Bastion.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.BastionStatus"),
-						},
-					},
-				},
-				Required: []string{"metadata", "spec"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BastionSpec", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.BastionStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_BastionIngressPolicy(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BastionIngressPolicy represents an ingress policy for SSH bastion hosts.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"ipBlock": {
-						SchemaProps: spec.SchemaProps{
-							Description: "IPBlock defines an IP block that is allowed to access the bastion.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/api/networking/v1.IPBlock"),
-						},
-					},
-				},
-				Required: []string{"ipBlock"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/api/networking/v1.IPBlock"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_BastionList(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BastionList is a list of Bastion objects.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"kind": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"apiVersion": {
-						SchemaProps: spec.SchemaProps{
-							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"metadata": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Standard list object metadata.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
-						},
-					},
-					"items": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Items is the list of Bastion.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Bastion"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"items"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Bastion", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_BastionSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BastionSpec is the specification of a Bastion.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"shootRef": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ShootRef defines the target shoot for a Bastion.",
-							Default:     map[string]interface{}{},
-							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
-						},
-					},
-					"seedName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SeedName is the name of the seed to which this Bastion is currently scheduled. This field is populated at the beginning of a create/reconcile operation.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"providerType": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ProviderType is cloud provider used by the referenced Shoot.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"sshPublicKey": {
-						SchemaProps: spec.SchemaProps{
-							Description: "SSHPublicKey is the user's public key.",
-							Default:     "",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"ingress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Ingress controls from where the created bastion host should be reachable.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.BastionIngressPolicy"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"shootRef", "sshPublicKey", "ingress"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.BastionIngressPolicy", "k8s.io/api/core/v1.LocalObjectReference"},
-	}
-}
-
-func schema_pkg_apis_core_v1alpha1_BastionStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "BastionStatus holds the most recently observed status of the Bastion.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"ingress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Ingress holds the public IP and/or hostname of the bastion instance.",
-							Ref:         ref("k8s.io/api/core/v1.LoadBalancerIngress"),
-						},
-					},
-					"conditions": {
-						VendorExtensible: spec.VendorExtensible{
-							Extensions: spec.Extensions{
-								"x-kubernetes-patch-merge-key": "type",
-								"x-kubernetes-patch-strategy":  "merge",
-							},
-						},
-						SchemaProps: spec.SchemaProps{
-							Description: "Conditions represents the latest available observations of a Bastion's current state.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: map[string]interface{}{},
-										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"),
-									},
-								},
-							},
-						},
-					},
-					"lastHeartbeatTimestamp": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LastHeartbeatTimestamp is the time when the bastion was last marked as not to be deleted. When this is set, the ExpirationTimestamp is advanced as well.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"expirationTimestamp": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ExpirationTimestamp is the time after which a Bastion is supposed to be garbage collected.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "k8s.io/api/core/v1.LoadBalancerIngress", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -14129,6 +13892,243 @@ func schema_pkg_apis_core_v1beta1_WorkerSystemComponents(ref common.ReferenceCal
 				Required: []string{"allow"},
 			},
 		},
+	}
+}
+
+func schema_pkg_apis_operations_v1alpha1_Bastion(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Bastion holds details about an SSH bastion for a shoot cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specification of the Bastion.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Most recently observed status of the Bastion.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionStatus"),
+						},
+					},
+				},
+				Required: []string{"metadata", "spec"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionSpec", "github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_operations_v1alpha1_BastionIngressPolicy(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BastionIngressPolicy represents an ingress policy for SSH bastion hosts.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ipBlock": {
+						SchemaProps: spec.SchemaProps{
+							Description: "IPBlock defines an IP block that is allowed to access the bastion.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/api/networking/v1.IPBlock"),
+						},
+					},
+				},
+				Required: []string{"ipBlock"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/networking/v1.IPBlock"},
+	}
+}
+
+func schema_pkg_apis_operations_v1alpha1_BastionList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BastionList is a list of Bastion objects.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of Bastion.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/operations/v1alpha1.Bastion"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.Bastion", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_operations_v1alpha1_BastionSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BastionSpec is the specification of a Bastion.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"shootRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ShootRef defines the target shoot for a Bastion.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
+						},
+					},
+					"seedName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedName is the name of the seed to which this Bastion is currently scheduled. This field is populated at the beginning of a create/reconcile operation.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderType is cloud provider used by the referenced Shoot.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"sshPublicKey": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SSHPublicKey is the user's public key.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"ingress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Ingress controls from where the created bastion host should be reachable.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionIngressPolicy"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"shootRef", "sshPublicKey", "ingress"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/operations/v1alpha1.BastionIngressPolicy", "k8s.io/api/core/v1.LocalObjectReference"},
+	}
+}
+
+func schema_pkg_apis_operations_v1alpha1_BastionStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "BastionStatus holds the most recently observed status of the Bastion.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ingress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Ingress holds the public IP and/or hostname of the bastion instance.",
+							Ref:         ref("k8s.io/api/core/v1.LoadBalancerIngress"),
+						},
+					},
+					"conditions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-patch-merge-key": "type",
+								"x-kubernetes-patch-strategy":  "merge",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Conditions represents the latest available observations of a Bastion's current state.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"),
+									},
+								},
+							},
+						},
+					},
+					"lastHeartbeatTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastHeartbeatTimestamp is the time when the bastion was last marked as not to be deleted. When this is set, the ExpirationTimestamp is advanced as well.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"expirationTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExpirationTimestamp is the time after which a Bastion is supposed to be garbage collected.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "k8s.io/api/core/v1.LoadBalancerIngress", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

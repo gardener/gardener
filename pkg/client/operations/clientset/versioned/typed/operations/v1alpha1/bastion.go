@@ -22,8 +22,8 @@ import (
 	"context"
 	"time"
 
-	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	scheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	scheme "github.com/gardener/gardener/pkg/client/operations/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -57,7 +57,7 @@ type bastions struct {
 }
 
 // newBastions returns a Bastions
-func newBastions(c *CoreV1alpha1Client, namespace string) *bastions {
+func newBastions(c *OperationsV1alpha1Client, namespace string) *bastions {
 	return &bastions{
 		client: c.RESTClient(),
 		ns:     namespace,

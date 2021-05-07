@@ -22,8 +22,8 @@ import (
 	"context"
 	"time"
 
-	core "github.com/gardener/gardener/pkg/apis/core"
-	scheme "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/scheme"
+	operations "github.com/gardener/gardener/pkg/apis/operations"
+	scheme "github.com/gardener/gardener/pkg/client/operations/clientset/internalversion/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -38,15 +38,15 @@ type BastionsGetter interface {
 
 // BastionInterface has methods to work with Bastion resources.
 type BastionInterface interface {
-	Create(ctx context.Context, bastion *core.Bastion, opts v1.CreateOptions) (*core.Bastion, error)
-	Update(ctx context.Context, bastion *core.Bastion, opts v1.UpdateOptions) (*core.Bastion, error)
-	UpdateStatus(ctx context.Context, bastion *core.Bastion, opts v1.UpdateOptions) (*core.Bastion, error)
+	Create(ctx context.Context, bastion *operations.Bastion, opts v1.CreateOptions) (*operations.Bastion, error)
+	Update(ctx context.Context, bastion *operations.Bastion, opts v1.UpdateOptions) (*operations.Bastion, error)
+	UpdateStatus(ctx context.Context, bastion *operations.Bastion, opts v1.UpdateOptions) (*operations.Bastion, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*core.Bastion, error)
-	List(ctx context.Context, opts v1.ListOptions) (*core.BastionList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*operations.Bastion, error)
+	List(ctx context.Context, opts v1.ListOptions) (*operations.BastionList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *core.Bastion, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *operations.Bastion, err error)
 	BastionExpansion
 }
 
@@ -57,7 +57,7 @@ type bastions struct {
 }
 
 // newBastions returns a Bastions
-func newBastions(c *CoreClient, namespace string) *bastions {
+func newBastions(c *OperationsClient, namespace string) *bastions {
 	return &bastions{
 		client: c.RESTClient(),
 		ns:     namespace,
@@ -65,8 +65,8 @@ func newBastions(c *CoreClient, namespace string) *bastions {
 }
 
 // Get takes name of the bastion, and returns the corresponding bastion object, and an error if there is any.
-func (c *bastions) Get(ctx context.Context, name string, options v1.GetOptions) (result *core.Bastion, err error) {
-	result = &core.Bastion{}
+func (c *bastions) Get(ctx context.Context, name string, options v1.GetOptions) (result *operations.Bastion, err error) {
+	result = &operations.Bastion{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("bastions").
@@ -78,12 +78,12 @@ func (c *bastions) Get(ctx context.Context, name string, options v1.GetOptions) 
 }
 
 // List takes label and field selectors, and returns the list of Bastions that match those selectors.
-func (c *bastions) List(ctx context.Context, opts v1.ListOptions) (result *core.BastionList, err error) {
+func (c *bastions) List(ctx context.Context, opts v1.ListOptions) (result *operations.BastionList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
 	}
-	result = &core.BastionList{}
+	result = &operations.BastionList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("bastions").
@@ -110,8 +110,8 @@ func (c *bastions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interf
 }
 
 // Create takes the representation of a bastion and creates it.  Returns the server's representation of the bastion, and an error, if there is any.
-func (c *bastions) Create(ctx context.Context, bastion *core.Bastion, opts v1.CreateOptions) (result *core.Bastion, err error) {
-	result = &core.Bastion{}
+func (c *bastions) Create(ctx context.Context, bastion *operations.Bastion, opts v1.CreateOptions) (result *operations.Bastion, err error) {
+	result = &operations.Bastion{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("bastions").
@@ -123,8 +123,8 @@ func (c *bastions) Create(ctx context.Context, bastion *core.Bastion, opts v1.Cr
 }
 
 // Update takes the representation of a bastion and updates it. Returns the server's representation of the bastion, and an error, if there is any.
-func (c *bastions) Update(ctx context.Context, bastion *core.Bastion, opts v1.UpdateOptions) (result *core.Bastion, err error) {
-	result = &core.Bastion{}
+func (c *bastions) Update(ctx context.Context, bastion *operations.Bastion, opts v1.UpdateOptions) (result *operations.Bastion, err error) {
+	result = &operations.Bastion{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("bastions").
@@ -138,8 +138,8 @@ func (c *bastions) Update(ctx context.Context, bastion *core.Bastion, opts v1.Up
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *bastions) UpdateStatus(ctx context.Context, bastion *core.Bastion, opts v1.UpdateOptions) (result *core.Bastion, err error) {
-	result = &core.Bastion{}
+func (c *bastions) UpdateStatus(ctx context.Context, bastion *operations.Bastion, opts v1.UpdateOptions) (result *operations.Bastion, err error) {
+	result = &operations.Bastion{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("bastions").
@@ -180,8 +180,8 @@ func (c *bastions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, 
 }
 
 // Patch applies the patch and returns the patched bastion.
-func (c *bastions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *core.Bastion, err error) {
-	result = &core.Bastion{}
+func (c *bastions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *operations.Bastion, err error) {
+	result = &operations.Bastion{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("bastions").
