@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -37,7 +38,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -72,11 +72,15 @@ func newActuator(gardenClient, seedClient kubernetes.Interface, be *gardencorev1
 		logger:       logger.WithField("backupentry", be.Name),
 		gardenClient: gardenClient,
 		seedClient:   seedClient,
-		backupBucket: &gardencorev1beta1.BackupBucket{},
-		backupEntry:  be,
+		backupBucket: &gardencorev1beta1.BackupBucket{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: be.Spec.BucketName,
+			},
+		},
+		backupEntry: be,
 		component: extensionsbackupentry.New(
 			logger,
-			seedClient.DirectClient(),
+			seedClient.Client(),
 			&extensionsbackupentry.Values{
 				Name:       be.Name,
 				BucketName: be.Spec.BucketName,
@@ -228,27 +232,19 @@ func makeDescription(stats *flow.Stats) string {
 	return strings.Join(stats.Running.StringList(), ", ")
 }
 
+// waitUntilBackupBucketReconciled waits until the BackupBucket in the garden cluster is reconciled.
 func (a *actuator) waitUntilBackupBucketReconciled(ctx context.Context) error {
 	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
 		ctx,
-		a.gardenClient.DirectClient(),
+		a.gardenClient.Client(),
 		a.logger,
 		health.CheckBackupBucket,
-		func() client.Object { return &gardencorev1beta1.BackupBucket{} },
+		a.backupBucket,
 		extensionsv1alpha1.BackupBucketResource,
-		"",
-		a.backupEntry.Spec.BucketName,
 		defaultInterval,
 		defaultSevereThreshold,
 		defaultTimeout,
-		func(obj client.Object) error {
-			bb, ok := obj.(*gardencorev1beta1.BackupBucket)
-			if !ok {
-				return fmt.Errorf("expected gardencorev1beta1.BackupBucket but got %T", obj)
-			}
-			bb.DeepCopyInto(a.backupBucket)
-			return nil
-		},
+		nil,
 	); err != nil {
 		a.logger.Errorf("associated BackupBucket %s is not ready yet with err: %v", a.backupEntry.Spec.BucketName, err)
 		return err
@@ -279,7 +275,7 @@ func (a *actuator) deployBackupEntryExtensionSecret(ctx context.Context) error {
 
 	// create secret for extension BackupEntry in seed
 	extensionSecret := emptyExtensionSecret(a.backupEntry)
-	if _, err := controllerutil.CreateOrUpdate(ctx, a.seedClient.Client(), extensionSecret, func() error {
+	if _, err := controllerutils.MergePatchOrCreate(ctx, a.seedClient.Client(), extensionSecret, func() error {
 		extensionSecret.Data = coreSecret.DeepCopy().Data
 		return nil
 	}); err != nil {
@@ -306,13 +302,8 @@ func (a *actuator) deployBackupEntryExtension(ctx context.Context) error {
 	}
 
 	shootName := gutil.GetShootNameFromOwnerReferences(a.backupEntry)
-	shootState := &gardencorev1alpha1.ShootState{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      shootName,
-			Namespace: a.backupEntry.Namespace,
-		},
-	}
-	if err := a.gardenClient.Client().Get(ctx, kutil.Key(shootState.Namespace, shootState.Name), shootState); err != nil {
+	shootState := &gardencorev1alpha1.ShootState{}
+	if err := a.gardenClient.Client().Get(ctx, kutil.Key(a.backupEntry.Namespace, shootName), shootState); err != nil {
 		return err
 	}
 	return a.component.Restore(ctx, shootState)
