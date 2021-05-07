@@ -148,7 +148,7 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission
 	bastion.Spec.SeedName = shoot.Spec.SeedName
 	bastion.Spec.ProviderType = &shoot.Spec.Provider.Type
 
-	if userInfo := a.GetUserInfo(); userInfo != nil {
+	if userInfo := a.GetUserInfo(); a.GetOperation() == admission.Create && userInfo != nil {
 		metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenCreatedBy, userInfo.GetName())
 	}
 
