@@ -42,6 +42,13 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Server.HTTPS.Port = 2719
 	}
 
+	if obj.Controllers.Bastion == nil {
+		obj.Controllers.Bastion = &BastionControllerConfiguration{
+			ConcurrentSyncs: 5,
+			MaxLifetime:     24 * time.Hour,
+		}
+	}
+
 	if obj.Controllers.CloudProfile == nil {
 		obj.Controllers.CloudProfile = &CloudProfileControllerConfiguration{
 			ConcurrentSyncs: 5,

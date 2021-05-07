@@ -53,6 +53,7 @@ The following is a list of involved components, that either need to be newly int
   - New resource type `Bastion`, see [resource example](#resource-example) below
   - New Admission Webhooks for `Bastion` resource
   - `SeedAuthorizer`: The `SeedAuthorizer` and dependency graph needs to be extended to consider the `Bastion` resource https://github.com/gardener/gardener/tree/master/pkg/admissioncontroller/webhooks/auth/seed/graph
+  - Is configured with `timeToLive`, the time to add to the current time on each heartbeat
 - `gardenlet`
   - Deploys `Bastion` CRD under the `extensions.gardener.cloud` API Group to the Seed, see [resource example](#resource-example) below
   - Similar to `BackupBucket`s or `BackupEntry`, the `gardenlet` watches the `Bastion` resource in the garden cluster and creates a seed-local `Bastion` resource, on which the provider specific bastion controller acts upon
@@ -68,7 +69,7 @@ The following is a list of involved components, that either need to be newly int
 - Gardener Controller Manager (`GCM`)
   - `Bastion` heartbeat controller
     - Cleans up `Bastion` resource on missing heartbeat.
-    - Is configured with a `maxLifetime` and `timeToLife` for the `Bastion` resource
+    - Is configured with a `maxLifetime` for the `Bastion` resource
 - Gardener (RBAC)
   - The project `admin` role should be extended to allow CRUD operations on the `Bastion` resource. The `gardener.cloud:system:project-member-aggregation` `ClusterRole` needs to be updated accordingly (https://github.com/gardener/gardener/blob/master/charts/gardener/controlplane/charts/application/templates/rbac-user.yaml)
 

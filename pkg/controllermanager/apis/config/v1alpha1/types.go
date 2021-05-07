@@ -17,9 +17,8 @@ package v1alpha1
 import (
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/klog"
 )
@@ -52,6 +51,9 @@ type ControllerManagerConfiguration struct {
 
 // ControllerManagerControllerConfiguration defines the configuration of the controllers.
 type ControllerManagerControllerConfiguration struct {
+	// Bastion defines the configuration of the Bastion controller.
+	// +optional
+	Bastion *BastionControllerConfiguration `json:"bastion,omitempty"`
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	// +optional
 	CloudProfile *CloudProfileControllerConfiguration `json:"cloudProfile,omitempty"`
@@ -94,6 +96,17 @@ type ControllerManagerControllerConfiguration struct {
 	// ManagedSeedSet defines the configuration of the ManagedSeedSet controller.
 	// +optional
 	ManagedSeedSet *ManagedSeedSetControllerConfiguration `json:"managedSeedSet,omitempty"`
+}
+
+// BastionControllerConfiguration defines the configuration of the Bastion
+// controller.
+type BastionControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// MaxLifetime is the maximum time a Bastion resource can exist before it is
+	// forcefully deleted.
+	MaxLifetime time.Duration `json:"maxLifetime"`
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile

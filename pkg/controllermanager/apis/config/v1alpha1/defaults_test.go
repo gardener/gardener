@@ -17,14 +17,14 @@ package v1alpha1_test
 import (
 	"time"
 
+	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
-
-	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 )
 
 var _ = Describe("Defaults", func() {
@@ -42,6 +42,10 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Server.HTTP.Port).To(Equal(2718))
 			Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
 			Expect(obj.Server.HTTPS.Port).To(Equal(2719))
+
+			Expect(obj.Controllers.Bastion).NotTo(BeNil())
+			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(Equal(5))
+			Expect(obj.Controllers.Bastion.MaxLifetime).To(Equal(24 * time.Hour))
 
 			Expect(obj.Controllers.CloudProfile).NotTo(BeNil())
 			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).To(Equal(5))
