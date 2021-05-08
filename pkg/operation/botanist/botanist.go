@@ -93,7 +93,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.Extensions.Worker = b.DefaultWorker(b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.Extensions.Worker = b.DefaultWorker(b.K8sSeedClient.Client())
 
 	sniPhase, err := b.SNIPhase(ctx)
 	if err != nil {
