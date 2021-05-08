@@ -89,7 +89,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 	o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure(b.K8sSeedClient.Client())
 	o.Shoot.Components.Extensions.Network = b.DefaultNetwork(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig(b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig(b.K8sSeedClient.Client())
 	if err != nil {
 		return nil, err
 	}
