@@ -43,10 +43,13 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	}
 
 	if obj.Controllers.Bastion == nil {
-		obj.Controllers.Bastion = &BastionControllerConfiguration{
-			ConcurrentSyncs: 5,
-			MaxLifetime:     24 * time.Hour,
-		}
+		obj.Controllers.Bastion = &BastionControllerConfiguration{}
+	}
+	if obj.Controllers.Bastion.ConcurrentSyncs == 0 {
+		obj.Controllers.Bastion.ConcurrentSyncs = 5
+	}
+	if obj.Controllers.Bastion.MaxLifetime == nil {
+		obj.Controllers.Bastion.MaxLifetime = &metav1.Duration{Duration: 24 * time.Hour}
 	}
 
 	if obj.Controllers.CloudProfile == nil {

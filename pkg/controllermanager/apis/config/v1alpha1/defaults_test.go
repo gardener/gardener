@@ -45,7 +45,7 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Controllers.Bastion).NotTo(BeNil())
 			Expect(obj.Controllers.Bastion.ConcurrentSyncs).To(Equal(5))
-			Expect(obj.Controllers.Bastion.MaxLifetime).To(Equal(24 * time.Hour))
+			Expect(obj.Controllers.Bastion.MaxLifetime).To(PointTo(Equal(metav1.Duration{Duration: 24 * time.Hour})))
 
 			Expect(obj.Controllers.CloudProfile).NotTo(BeNil())
 			Expect(obj.Controllers.CloudProfile.ConcurrentSyncs).To(Equal(5))

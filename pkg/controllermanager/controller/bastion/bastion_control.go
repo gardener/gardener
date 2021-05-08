@@ -89,8 +89,10 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
+	now := time.Now()
+
 	// delete the bastion once it has expired
-	if bastion.Status.ExpirationTimestamp != nil && time.Now().After(bastion.Status.ExpirationTimestamp.Time) {
+	if bastion.Status.ExpirationTimestamp != nil && now.After(bastion.Status.ExpirationTimestamp.Time) {
 		logger.WithField("expired", bastion.Status.ExpirationTimestamp.Time).Info("Deleting expired bastion")
 		err := r.gardenClient.Delete(ctx, bastion)
 		return reconcile.Result{}, err
@@ -103,5 +105,16 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{}, nil
+	// requeue when the Bastion expires or reaches its lifetime, whichever is sooner
+	requeueAfter := time.Until(bastion.CreationTimestamp.Time.Add(r.maxLifetime))
+	if bastion.Status.ExpirationTimestamp != nil {
+		expiresIn := time.Until(bastion.Status.ExpirationTimestamp.Time)
+		if expiresIn < requeueAfter {
+			requeueAfter = expiresIn
+		}
+	}
+
+	return reconcile.Result{
+		RequeueAfter: requeueAfter,
+	}, nil
 }

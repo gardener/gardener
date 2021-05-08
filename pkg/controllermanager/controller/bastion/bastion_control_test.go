@@ -59,58 +59,106 @@ var _ = Describe("Controller", func() {
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: bastionName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).To(Succeed())
+			mockCtrl.Finish()
+		})
+
+		It("should requeue alive Bastions", func() {
+			created := time.Now().Add(-maxLifetime / 2)
+			requeueAfter := time.Until(created.Add(maxLifetime))
+
+			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
+				*obj = newBastion(bastionName, &created, nil)
+				return nil
+			})
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: bastionName}})
+			Expect(result.RequeueAfter).To(BeNumerically("~", requeueAfter, 1*time.Second))
+			Expect(err).To(Succeed())
+			mockCtrl.Finish()
+		})
+
+		It("should requeue soon-to-expire Bastions", func() {
+			now := time.Now()
+			remaining := 30 * time.Second
+			expires := now.Add(remaining)
+
+			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
+				*obj = newBastion(bastionName, &now, &expires)
+				return nil
+			})
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: bastionName}})
+			Expect(result.RequeueAfter).To(BeNumerically("~", remaining, 1*time.Second))
+			Expect(err).To(Succeed())
+			mockCtrl.Finish()
+		})
+
+		It("should requeue soon-to-reach-max-lifetime Bastions", func() {
+			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
+				now := time.Now()
+				created := now.Add(-maxLifetime).Add(10 * time.Minute) // reaches end-of-life in 10 minutes
+				expires := now.Add(30 * time.Minute)                   // expires in 30 minutes
+
+				*obj = newBastion(bastionName, &created, &expires)
+				return nil
+			})
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: bastionName}})
+			Expect(result.RequeueAfter).To(BeNumerically("~", 10*time.Minute, 1*time.Second))
+			Expect(err).To(Succeed())
+			mockCtrl.Finish()
 		})
 
 		It("should delete expired Bastions", func() {
 			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
 				created := time.Now().Add(-maxLifetime / 2)
-				expires := metav1.NewTime(time.Now().Add(-5 * time.Second))
-				*obj = operationsv1alpha1.Bastion{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              bastionName,
-						CreationTimestamp: metav1.NewTime(created),
-					},
-					Status: operationsv1alpha1.BastionStatus{
-						ExpirationTimestamp: &expires,
-					},
-				}
+				expires := time.Now().Add(-5 * time.Second)
 
+				*obj = newBastion(bastionName, &created, &expires)
 				return nil
 			})
 
-			deleted := false
-			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).Do(func(_ context.Context, _ *operationsv1alpha1.Bastion) {
-				deleted = true
-			})
+			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{}))
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: bastionName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).To(Succeed())
-			Expect(deleted).To(BeTrue())
+			mockCtrl.Finish()
 		})
 
 		It("should delete Bastions that have reached their TTL", func() {
 			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
 				created := time.Now().Add(-maxLifetime * 2)
-				*obj = operationsv1alpha1.Bastion{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              bastionName,
-						CreationTimestamp: metav1.NewTime(created),
-					},
-				}
 
+				*obj = newBastion(bastionName, &created, nil)
 				return nil
 			})
 
-			deleted := false
-			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).Do(func(_ context.Context, _ *operationsv1alpha1.Bastion) {
-				deleted = true
-			})
+			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{}))
 
 			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: bastionName}})
 			Expect(result).To(Equal(reconcile.Result{}))
 			Expect(err).To(Succeed())
-			Expect(deleted).To(BeTrue())
+			mockCtrl.Finish()
 		})
 	})
 })
+
+func newBastion(name string, createdAt *time.Time, expiresAt *time.Time) operationsv1alpha1.Bastion {
+	bastion := operationsv1alpha1.Bastion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+
+	if createdAt != nil {
+		bastion.ObjectMeta.CreationTimestamp = metav1.NewTime(*createdAt)
+	}
+
+	if expiresAt != nil {
+		expires := metav1.NewTime(*expiresAt)
+		bastion.Status.ExpirationTimestamp = &expires
+	}
+
+	return bastion
+}

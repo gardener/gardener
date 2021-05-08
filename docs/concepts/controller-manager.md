@@ -29,7 +29,7 @@ Gardener administrators and extension developers can define their own roles, see
 In addition, operators can configure the Project controller to maintain a default [ResourceQuota](https://kubernetes.io/docs/concepts/policy/resource-quotas/) for project namespaces.
 Quotas can especially limit the creation of user facing resources, e.g. `Shoots`, `SecretBindings`, `Secrets` and thus protect the Garden cluster from massive resource exhaustion but also enable operators to align quotas with respective enterprise policies.
 
-> :warning: **Gardener itself is not exempted from configured quotas**. For example, Gardener creates `Secrets` for every shoot cluster in the project namespace and at the same time increases the available quota count. Please mind this additional resource consumption. 
+> :warning: **Gardener itself is not exempted from configured quotas**. For example, Gardener creates `Secrets` for every shoot cluster in the project namespace and at the same time increases the available quota count. Please mind this additional resource consumption.
 
 The GCM configuration provides a template section `controllers.project.quotas` where such a ResourceQuota (see example below) can be deposited.
 
@@ -49,7 +49,7 @@ controllers:
 ```
 
 The Project controller takes the shown `config` and creates a `ResourceQuota` with the name `gardener` in the project namespace.
-If a `ResourceQuota` resource with the name `gardener` already exists, the controller will only update fields in `spec.hard` which are **unavailable** at that time. 
+If a `ResourceQuota` resource with the name `gardener` already exists, the controller will only update fields in `spec.hard` which are **unavailable** at that time.
 An optional `projectSelector` narrows down the amount of projects that are equipped with the given `config`.
 If multiple configs match for a project, then only the first match in the list is applied to the project namespace.
 
@@ -123,7 +123,7 @@ Further checks might be added in the future.
 
 ### Shoot Retry Controller
 
-The Shoot Retry Controller is responsible for retrying certain failed Shoots. Currently the controller retries only failed Shoots with error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`. 
+The Shoot Retry Controller is responsible for retrying certain failed Shoots. Currently the controller retries only failed Shoots with error code `ERR_INFRA_RATE_LIMITS_EXCEEDED`.
 
 ### Seed Controller
 
@@ -145,7 +145,6 @@ The "main" reconciler takes care about this replication:
 |:-------:|:---------:|:-----:|
 | Secret | garden | gardener.cloud/role |
 
-
 #### "Backup Bucket" Reconciler
 
 Every time a `BackupBucket` object is created or updated, the referenced `Seed` object is enqueued for reconciliation.
@@ -156,10 +155,27 @@ and the condition will turn `true`.
 
 #### "Lifecycle" Reconciler
 
-The "Lifecycle" reconciler processes `Seed` objects which are enqueued every 10 seconds in order to check if the responsible 
+The "Lifecycle" reconciler processes `Seed` objects which are enqueued every 10 seconds in order to check if the responsible
 Gardenlet is still responding and operable. Therefore, it checks renewals via `Lease` objects of the seed in the garden cluster
 which are renewed regularly by the Gardenlet.
 In case a `Lease` is not renewed for the configured amount in `config.controllers.seed.monitorPeriod.duration`, the reconciler
 assumes that the Gardenlet stopped operating and updates the `GardenletReady` condition to `Unknown`.
 Additionally, conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well
 because a striking Gardenlet won't be able to maintain these conditions any more.
+
+### "Bastion" Controller
+
+`Bastion` resources have a limited lifetime, which can be extended up to a certain amount by performing a heartbeat on
+them. The `Bastion` controller is responsible for deleting expired or rotten `Bastion`s.
+
+* "expired" means a `Bastion` has exceeded its `status.ExpirationTimestamp`.
+* "rotten" means a `Bastion` is older than the configured `maxLifetime`.
+
+The `maxLifetime` is an option on the `Bastion` controller and defaults to 24 hours.
+
+The deletion triggers the gardenlet to perform the necessary cleanups in the Seed cluster, so some time can pass between
+deletion and the `Bastion` actually disappearing. Clients like `gardenctl` are advised to not re-use `Bastion`s whose
+deletion timestamp has been set already.
+
+Refer to [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) for more information on the lifecycle of
+`Bastion` resources.

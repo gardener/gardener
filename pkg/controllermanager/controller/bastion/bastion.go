@@ -34,6 +34,7 @@ import (
 )
 
 const (
+	// ControllerName is the name of this controller.
 	ControllerName = "bastion-controller"
 )
 

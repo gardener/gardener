@@ -97,7 +97,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	// Create controllers.
-	bastionController, err := bastioncontroller.NewBastionController(ctx, f.clientMap, f.cfg.Controllers.Bastion.MaxLifetime)
+	bastionController, err := bastioncontroller.NewBastionController(ctx, f.clientMap, f.cfg.Controllers.Bastion.MaxLifetime.Duration)
 	if err != nil {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}

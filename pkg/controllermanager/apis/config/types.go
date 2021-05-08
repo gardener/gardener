@@ -15,8 +15,6 @@
 package config
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfig "k8s.io/component-base/config"
@@ -91,8 +89,8 @@ type BastionControllerConfiguration struct {
 	// events.
 	ConcurrentSyncs int
 	// MaxLifetime is the maximum time a Bastion resource can exist before it is
-	// forcefully deleted.
-	MaxLifetime time.Duration
+	// forcefully deleted (defaults to '24h').
+	MaxLifetime *metav1.Duration
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
