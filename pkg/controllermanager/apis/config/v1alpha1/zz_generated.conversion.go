@@ -21,7 +21,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	time "time"
 	unsafe "unsafe"
 
 	config "github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -284,7 +283,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_BastionControllerConfiguration_To_config_BastionControllerConfiguration(in *BastionControllerConfiguration, out *config.BastionControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.MaxLifetime = time.Duration(in.MaxLifetime)
+	out.MaxLifetime = (*v1.Duration)(unsafe.Pointer(in.MaxLifetime))
 	return nil
 }
 
@@ -295,7 +294,7 @@ func Convert_v1alpha1_BastionControllerConfiguration_To_config_BastionController
 
 func autoConvert_config_BastionControllerConfiguration_To_v1alpha1_BastionControllerConfiguration(in *config.BastionControllerConfiguration, out *BastionControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.MaxLifetime = time.Duration(in.MaxLifetime)
+	out.MaxLifetime = (*v1.Duration)(unsafe.Pointer(in.MaxLifetime))
 	return nil
 }
 
