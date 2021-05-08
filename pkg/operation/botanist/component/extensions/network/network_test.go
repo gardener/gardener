@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -42,7 +41,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/network"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -62,7 +60,7 @@ var _ = Describe("#Network", func() {
 
 		ctx              context.Context
 		c                client.Client
-		expected         *extensionsv1alpha1.Network
+		expected, empty  *extensionsv1alpha1.Network
 		values           *network.Values
 		log              logrus.FieldLogger
 		defaultDepWaiter component.DeployMigrateWaiter
@@ -78,6 +76,7 @@ var _ = Describe("#Network", func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		mockNow = mocktime.NewMockNow(ctrl)
+		now = time.Now()
 
 		ctx = context.TODO()
 		log = logger.NewNopLogger()
@@ -105,6 +104,12 @@ var _ = Describe("#Network", func() {
 			ServiceCIDR:    &serviceCIDR,
 		}
 
+		empty = &extensionsv1alpha1.Network{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      networkName,
+				Namespace: networkNs,
+			},
+		}
 		expected = &extensionsv1alpha1.Network{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      networkName,
@@ -163,17 +168,56 @@ var _ = Describe("#Network", func() {
 			Expect(defaultDepWaiter.Wait(ctx)).To(HaveOccurred(), "network indicates error")
 		})
 
-		It("should return no error when is ready", func() {
+		It("should return error if we haven't observed the latest timestamp annotation", func() {
+			defer test.WithVars(
+				&network.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			By("deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			By("patch object")
+			patch := client.MergeFrom(expected.DeepCopy())
 			expected.Status.LastError = nil
-			// remove operation annotation
-			expected.ObjectMeta.Annotations = map[string]string{}
-			// set last operation
+			// remove operation annotation, add old timestamp annotation
+			expected.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+			}
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
+			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching network succeeds")
 
-			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating network succeeds")
-			Expect(defaultDepWaiter.Wait(ctx)).ToNot(HaveOccurred(), "network is ready, should not return an error")
+			By("wait")
+			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "network indicates error")
+		})
+
+		It("should return no error when it's ready", func() {
+			defer test.WithVars(
+				&network.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			By("deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			By("patch object")
+			patch := client.MergeFrom(expected.DeepCopy())
+			expected.Status.LastError = nil
+			// remove operation annotation, add up-to-date timestamp annotation
+			expected.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+			}
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			}
+			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching network succeeds")
+
+			By("wait")
+			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "network is ready")
 		})
 	})
 
@@ -252,35 +296,29 @@ var _ = Describe("#Network", func() {
 				&network.TimeNow, mockNow.Do,
 				&extensions.TimeNow, mockNow.Do,
 			)()
-
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			expected.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationWaitForState
-
-			expectedWithState := expected.DeepCopy()
-			expectedWithState.Status = extensionsv1alpha1.NetworkStatus{
-				DefaultStatus: extensionsv1alpha1.DefaultStatus{State: &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}},
-			}
-
-			expectedWithRestore := expectedWithState.DeepCopy()
-			expectedWithRestore.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationRestore
-
 			mc := mockclient.NewMockClient(ctrl)
-			gomock.InOrder(
-				mc.EXPECT().Get(ctx, kutil.Key(networkNs, networkName), gomock.AssignableToTypeOf(&extensionsv1alpha1.Network{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, n *extensionsv1alpha1.Network) error {
-					return apierrors.NewNotFound(extensionsv1alpha1.Resource("Network"), expected.Name)
-				}),
+			mc.EXPECT().Status().Return(mc)
 
-				mc.EXPECT().Create(ctx, expected).Return(nil),
-				mc.EXPECT().Status().DoAndReturn(func() *mockclient.MockClient {
-					return mc
-				}),
-				mc.EXPECT().Update(ctx, expectedWithState).Return(nil),
-				test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType),
-			)
+			// deploy with wait-for-state annotation
+			obj := expected.DeepCopy()
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
+			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
+			obj.TypeMeta = metav1.TypeMeta{}
+			test.EXPECTPatch(ctx, mc, obj, empty, types.MergePatchType)
+
+			// restore state
+			expectedWithState := obj.DeepCopy()
+			expectedWithState.Status.State = &runtime.RawExtension{Raw: []byte(`{"dummy":"state"}`)}
+			test.EXPECTPatch(ctx, mc, expectedWithState, obj, types.MergePatchType)
+
+			// annotate with restore annotation
+			expectedWithRestore := expectedWithState.DeepCopy()
+			metav1.SetMetaDataAnnotation(&expectedWithRestore.ObjectMeta, "gardener.cloud/operation", "restore")
+			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 
 			defaultDepWaiter = network.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
-
 			Expect(defaultDepWaiter.Restore(ctx, shootState)).To(Succeed())
 		})
 	})
@@ -291,26 +329,30 @@ var _ = Describe("#Network", func() {
 				&network.TimeNow, mockNow.Do,
 				&extensions.TimeNow, mockNow.Do,
 			)()
-
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			expectedCopy := expected.DeepCopy()
-			expectedCopy.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationMigrate
-
 			mc := mockclient.NewMockClient(ctrl)
 
-			mc.EXPECT().Get(ctx, kutil.Key(networkNs, networkName), gomock.AssignableToTypeOf(&extensionsv1alpha1.Network{})).SetArg(2, *expected)
-			test.EXPECTPatch(ctx, mc, expectedCopy, expected, types.MergePatchType)
+			expectedCopy := empty.DeepCopy()
+			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
+			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().String())
+			test.EXPECTPatch(ctx, mc, expectedCopy, empty, types.MergePatchType)
 
 			defaultDepWaiter = network.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
 		})
 
 		It("should not return error if resource does not exist", func() {
+			defer test.WithVars(
+				&network.TimeNow, mockNow.Do,
+				&extensions.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, kutil.Key(networkNs, networkName), gomock.AssignableToTypeOf(&extensionsv1alpha1.Network{})).Return(
-				apierrors.NewNotFound(extensionsv1alpha1.Resource("Network"), expected.Name),
-			)
+
+			expectedCopy := empty.DeepCopy()
+			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
+			metav1.SetMetaDataAnnotation(&expectedCopy.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().String())
+			test.EXPECTPatch(ctx, mc, expectedCopy, empty, types.MergePatchType)
 
 			defaultDepWaiter = network.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
 			Expect(defaultDepWaiter.Migrate(ctx)).To(Succeed())
