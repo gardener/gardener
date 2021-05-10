@@ -62,8 +62,6 @@ type Controller struct {
 	seedLeaseQueue          workqueue.RateLimitingInterface
 	seedExtensionCheckQueue workqueue.RateLimitingInterface
 
-	shootLister gardencorelisters.ShootLister
-
 	workerCh               chan int
 	numberOfRunningWorkers int
 
@@ -92,7 +90,6 @@ func NewSeedController(
 
 		controllerInstallationLister = controllerInstallationInformer.Lister()
 		seedLister                   = seedInformer.Lister()
-		shootLister                  = gardenCoreV1beta1Informer.Shoots().Lister()
 	)
 
 	seedController := &Controller{
@@ -101,14 +98,13 @@ func NewSeedController(
 		config:                  config,
 		healthManager:           healthManager,
 		recorder:                recorder,
-		control:                 NewDefaultControl(clientMap, gardenCoreInformerFactory, imageVector, componentImageVectors, identity, recorder, config, seedLister, shootLister),
+		control:                 NewDefaultControl(clientMap, gardenCoreInformerFactory, imageVector, componentImageVectors, identity, recorder, config, seedLister),
 		extensionCheckControl:   NewDefaultExtensionCheckControl(clientMap, controllerInstallationLister, metav1.Now),
 		seedLeaseControl:        lease.NewLeaseController(time.Now, clientMap, LeaseResyncSeconds, gardencorev1beta1.GardenerSeedLeaseNamespace),
 		seedLister:              seedLister,
 		seedQueue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		seedLeaseQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),
 		seedExtensionCheckQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-extension-check"),
-		shootLister:             shootLister,
 		workerCh:                make(chan int),
 		leaseMap:                make(map[string]bool),
 	}

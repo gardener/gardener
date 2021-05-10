@@ -131,7 +131,6 @@ func NewDefaultControl(
 	recorder record.EventRecorder,
 	config *config.GardenletConfiguration,
 	seedLister gardencorelisters.SeedLister,
-	shootLister gardencorelisters.ShootLister,
 ) ControlInterface {
 	return &defaultControl{
 		clientMap,
@@ -142,7 +141,6 @@ func NewDefaultControl(
 		recorder,
 		config,
 		seedLister,
-		shootLister,
 	}
 }
 
@@ -155,7 +153,6 @@ type defaultControl struct {
 	recorder               record.EventRecorder
 	config                 *config.GardenletConfiguration
 	seedLister             gardencorelisters.SeedLister
-	shootLister            gardencorelisters.ShootLister
 }
 
 func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) error {
