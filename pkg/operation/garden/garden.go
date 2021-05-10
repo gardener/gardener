@@ -24,6 +24,7 @@ import (
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -372,7 +373,7 @@ func BootstrapCluster(ctx context.Context, k8sGardenClient kubernetes.Interface)
 
 func generateMonitoringSecret(ctx context.Context, k8sGardenClient kubernetes.Interface) (*corev1.Secret, error) {
 	basicAuthSecret := &secretutils.BasicAuthSecretConfig{
-		Name:   "monitoring-ingress-credentials",
+		Name:   common.MonitoringIngressCredentials,
 		Format: secretutils.BasicAuthFormatNormal,
 
 		Username:       "admin",
