@@ -106,7 +106,8 @@ type BastionControllerConfiguration struct {
 	ConcurrentSyncs int `json:"concurrentSyncs"`
 	// MaxLifetime is the maximum time a Bastion resource can exist before it is
 	// forcefully deleted (defaults to '24h').
-	MaxLifetime *metav1.Duration `json:"maxLifetime"`
+	// +optional
+	MaxLifetime *metav1.Duration `json:"maxLifetime,omitempty"`
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
