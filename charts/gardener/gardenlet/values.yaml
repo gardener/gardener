@@ -68,6 +68,8 @@ global:
           concurrentSyncs: 20
         backupEntry:
           concurrentSyncs: 20
+        bastion:
+          concurrentSyncs: 20
         # deletionGracePeriodHours: 24
         # deletionGracePeriodShootPurposes:
         # - production

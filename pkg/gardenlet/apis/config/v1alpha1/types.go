@@ -128,13 +128,13 @@ type ShootClientConnection struct {
 type GardenletControllerConfiguration struct {
 	// BackupBucket defines the configuration of the BackupBucket controller.
 	// +optional
-	BackupBucket *BackupBucketControllerConfiguration `json:"backupBucket"`
+	BackupBucket *BackupBucketControllerConfiguration `json:"backupBucket,omitempty"`
 	// BackupEntry defines the configuration of the BackupEntry controller.
 	// +optional
-	BackupEntry *BackupEntryControllerConfiguration `json:"backupEntry"`
+	BackupEntry *BackupEntryControllerConfiguration `json:"backupEntry,omitempty"`
 	// Bastion defines the configuration of the Bastion controller.
 	// +optional
-	Bastion *BastionControllerConfiguration `json:"bastion"`
+	Bastion *BastionControllerConfiguration `json:"bastion,omitempty"`
 	// ControllerInstallation defines the configuration of the ControllerInstallation controller.
 	// +optional
 	ControllerInstallation *ControllerInstallationControllerConfiguration `json:"controllerInstallation,omitempty"`

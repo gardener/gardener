@@ -72,8 +72,7 @@ func NewBastionController(ctx context.Context, clientMap clientmap.ClientMap, co
 	}
 
 	logger := logger.NewFieldLogger(logger.Logger, "controller", ControllerName)
-
-	return &Controller{
+	controller := &Controller{
 		gardenClient:    gardenClient.Client(),
 		config:          config,
 		reconciler:      newReconciler(clientMap, recorder, logger, config),
@@ -81,21 +80,23 @@ func NewBastionController(ctx context.Context, clientMap clientmap.ClientMap, co
 		bastionInformer: bastionInformer,
 		bastionQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Bastion"),
 		workerCh:        make(chan int),
-	}, nil
+	}
+
+	controller.bastionInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controllerutils.BastionFilterFunc(ctx, controller.gardenClient, confighelper.SeedNameFromSeedConfig(controller.config.SeedConfig), controller.config.SeedSelector),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    controller.bastionAdd,
+			UpdateFunc: controller.bastionUpdate,
+			DeleteFunc: controller.bastionDelete,
+		},
+	})
+
+	return controller, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
-
-	c.bastionInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.BastionFilterFunc(ctx, c.gardenClient, confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    c.bastionAdd,
-			UpdateFunc: c.bastionUpdate,
-			DeleteFunc: c.bastionDelete,
-		},
-	})
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.bastionInformer.HasSynced) {
 		logger.Logger.Fatal("Timed out waiting for Bastion Informer to sync")
@@ -157,8 +158,13 @@ func (c *Controller) bastionAdd(obj interface{}) {
 	c.bastionQueue.Add(key)
 }
 
-func (c *Controller) bastionUpdate(_, newObj interface{}) {
-	c.bastionAdd(newObj)
+func (c *Controller) bastionUpdate(oldObj, newObj interface{}) {
+	oldBastion := oldObj.(*operationsv1alpha1.Bastion)
+	newBastion := newObj.(*operationsv1alpha1.Bastion)
+
+	if oldBastion.Generation != newBastion.Generation {
+		c.bastionAdd(newObj)
+	}
 }
 
 func (c *Controller) bastionDelete(obj interface{}) {
