@@ -51,6 +51,9 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 	if obj.Controllers.BackupEntry == nil {
 		obj.Controllers.BackupEntry = &BackupEntryControllerConfiguration{}
 	}
+	if obj.Controllers.Bastion == nil {
+		obj.Controllers.Bastion = &BastionControllerConfiguration{}
+	}
 	if obj.Controllers.ControllerInstallation == nil {
 		obj.Controllers.ControllerInstallation = &ControllerInstallationControllerConfiguration{}
 	}
@@ -154,6 +157,14 @@ func SetDefaults_BackupEntryControllerConfiguration(obj *BackupEntryControllerCo
 	if obj.DeletionGracePeriodHours == nil || *obj.DeletionGracePeriodHours < 0 {
 		v := DefaultBackupEntryDeletionGracePeriodHours
 		obj.DeletionGracePeriodHours = &v
+	}
+}
+
+// SetDefaults_BastionControllerConfiguration sets defaults for the backup bucket controller.
+func SetDefaults_BastionControllerConfiguration(obj *BastionControllerConfiguration) {
+	if obj.ConcurrentSyncs == nil {
+		v := DefaultControllerConcurrentSyncs
+		obj.ConcurrentSyncs = &v
 	}
 }
 

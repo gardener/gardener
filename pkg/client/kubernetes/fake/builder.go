@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gardenoperationsclientset "github.com/gardener/gardener/pkg/client/operations/clientset/versioned"
 	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 
 	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -41,6 +42,7 @@ type ClientSetBuilder struct {
 	kubernetes            kubernetesclientset.Interface
 	gardenCore            gardencoreclientset.Interface
 	gardenSeedManagement  gardenseedmanagementclientset.Interface
+	gardenOperations      gardenoperationsclientset.Interface
 	apiextension          apiextensionclientset.Interface
 	apiregistration       apiregistrationclientset.Interface
 	restClient            rest.Interface
@@ -117,6 +119,12 @@ func (b *ClientSetBuilder) WithGardenCore(gardenCore gardencoreclientset.Interfa
 // WithGardenSeedManagement sets the gardenSeedManagement attribute of the builder.
 func (b *ClientSetBuilder) WithGardenSeedManagement(gardenSeedManagement gardenseedmanagementclientset.Interface) *ClientSetBuilder {
 	b.gardenSeedManagement = gardenSeedManagement
+	return b
+}
+
+// WithGardenOperations sets the gardenOperations attribute of the builder.
+func (b *ClientSetBuilder) WithGardenOperations(gardenOperations gardenoperationsclientset.Interface) *ClientSetBuilder {
+	b.gardenOperations = gardenOperations
 	return b
 }
 

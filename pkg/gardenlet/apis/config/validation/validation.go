@@ -34,6 +34,9 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		if cfg.Controllers.BackupEntry != nil {
 			allErrs = append(allErrs, ValidateBackupEntryControllerConfiguration(cfg.Controllers.BackupEntry, fldPath.Child("controllers", "backupEntry"))...)
 		}
+		if cfg.Controllers.Bastion != nil {
+			allErrs = append(allErrs, ValidateBastionControllerConfiguration(cfg.Controllers.Bastion, fldPath.Child("controllers", "bastion"))...)
+		}
 		if cfg.Controllers.Shoot != nil {
 			allErrs = append(allErrs, ValidateShootControllerConfiguration(cfg.Controllers.Shoot, fldPath.Child("controllers", "shoot"))...)
 		}
@@ -170,6 +173,17 @@ func ValidateBackupEntryControllerConfiguration(cfg *config.BackupEntryControlle
 		if !availableShootPurposes.Has(string(purpose)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("deletionGracePeriodShootPurposes").Index(i), purpose, availableShootPurposes.List()))
 		}
+	}
+
+	return allErrs
+}
+
+// ValidateBastionControllerConfiguration validates the bastion configuration.
+func ValidateBastionControllerConfiguration(cfg *config.BastionControllerConfiguration, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if cfg.ConcurrentSyncs != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(*cfg.ConcurrentSyncs), fldPath.Child("concurrentSyncs"))...)
 	}
 
 	return allErrs

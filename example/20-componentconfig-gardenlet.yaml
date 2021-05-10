@@ -11,6 +11,8 @@ shootClientConnection:
   qps: 25
   burst: 50
 controllers:
+  bastion:
+    concurrentSyncs: 20
   backupBucket:
     concurrentSyncs: 20
   backupEntry:

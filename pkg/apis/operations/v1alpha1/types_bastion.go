@@ -22,6 +22,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// BastionReady is a condition type for indicating whether the bastion has been
+	// successfully reconciled on the seed cluster and is available to be used.
+	BastionReady gardenercorev1alpha1.ConditionType = "BastionReady"
+)
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

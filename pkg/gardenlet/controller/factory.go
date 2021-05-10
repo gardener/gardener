@@ -28,12 +28,14 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	operationsinformers "github.com/gardener/gardener/pkg/client/operations/informers/externalversions"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
+	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	controllerinstallationcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
 	federatedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed"
 	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
@@ -67,6 +69,7 @@ type GardenletControllerFactory struct {
 	identity               *gardencorev1beta1.Gardener
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	k8sInformers           kubeinformers.SharedInformerFactory
 	recorder               record.EventRecorder
 	healthManager          healthz.Manager
 }
@@ -75,6 +78,7 @@ type GardenletControllerFactory struct {
 func NewGardenletControllerFactory(
 	clientMap clientmap.ClientMap,
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	cfg *config.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
@@ -87,6 +91,7 @@ func NewGardenletControllerFactory(
 		gardenClusterIdentity:  gardenClusterIdentity,
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
+		k8sInformers:           kubeInformerFactory,
 		recorder:               recorder,
 		healthManager:          healthManager,
 	}
@@ -153,6 +158,11 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing BackupEntry controller: %w", err)
 	}
 
+	bastionController, err := bastioncontroller.NewBastionController(ctx, f.clientMap, f.cfg, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing Bastion controller: %w", err)
+	}
+
 	federatedSeedController, err := federatedseedcontroller.NewFederatedSeedController(ctx, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing federated seed controller: %w", err)
@@ -169,6 +179,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		gardenlet.ScrapeFailures,
 		backupBucketController,
 		backupEntryController,
+		bastionController,
 		controllerInstallationController,
 		seedController,
 		shootController,
@@ -178,6 +189,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	go federatedSeedController.Run(ctx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go backupBucketController.Run(ctx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
 	go backupEntryController.Run(ctx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs)
+	go bastionController.Run(ctx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)
 	go controllerInstallationController.Run(ctx, *f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs, *f.cfg.Controllers.ControllerInstallationCare.ConcurrentSyncs)
 	go seedController.Run(ctx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs)

@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardenoperationsclientset "github.com/gardener/gardener/pkg/client/operations/clientset/versioned"
 	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -61,6 +62,7 @@ type clientSet struct {
 	kubernetes           kubernetes.Interface
 	gardenCore           gardencoreclientset.Interface
 	gardenSeedManagement gardenseedmanagementclientset.Interface
+	gardenOperations     gardenoperationsclientset.Interface
 	apiextension         apiextensionclientset.Interface
 	apiregistration      apiregistrationclientset.Interface
 
@@ -122,6 +124,11 @@ func (c *clientSet) GardenCore() gardencoreclientset.Interface {
 // GardenSeedManagement will return the gardenSeedManagement attribute of the Client object.
 func (c *clientSet) GardenSeedManagement() gardenseedmanagementclientset.Interface {
 	return c.gardenSeedManagement
+}
+
+// GardenOperations will return the gardenOperations attribute of the Client object.
+func (c *clientSet) GardenOperations() gardenoperationsclientset.Interface {
+	return c.gardenOperations
 }
 
 // APIExtension will return the apiextensions attribute of the Client object.
