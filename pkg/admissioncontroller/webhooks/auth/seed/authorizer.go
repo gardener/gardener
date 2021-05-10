@@ -26,6 +26,7 @@ import (
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/go-logr/logr"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
@@ -74,6 +75,7 @@ var (
 	namespaceResource                 = corev1.Resource("namespaces")
 	projectResource                   = gardencorev1beta1.Resource("projects")
 	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
+	secretResource                    = corev1.Resource("secrets")
 	seedResource                      = gardencorev1beta1.Resource("seeds")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1alpha1.Resource("shootstates")
@@ -151,6 +153,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorizeRead(seedName, graph.VertexTypeProject, attrs)
 		case secretBindingResource:
 			return a.authorizeRead(seedName, graph.VertexTypeSecretBinding, attrs)
+		case secretResource:
+			return a.authorizeSecret(seedName, attrs)
 		case seedResource:
 			return a.authorize(seedName, graph.VertexTypeSeed, attrs,
 				nil,
@@ -235,8 +239,26 @@ func (a *authorizer) authorizeNamespace(seedName string, attrs auth.Attributes) 
 	return a.authorizeRead(seedName, graph.VertexTypeNamespace, attrs)
 }
 
+func (a *authorizer) authorizeSecret(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	if attrs.GetNamespace() == gutil.ComputeGardenNamespace(seedName) &&
+		utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) {
+
+		return auth.DecisionAllow, "", nil
+	}
+
+	return a.authorize(seedName, graph.VertexTypeSecret, attrs,
+		[]string{"get", "patch", "update", "delete"},
+		[]string{"create"},
+		nil,
+	)
+}
+
 func (a *authorizer) authorizeRead(seedName string, fromType graph.VertexType, attrs auth.Attributes) (auth.Decision, string, error) {
-	return a.authorize(seedName, fromType, attrs, []string{"get"}, nil, nil)
+	return a.authorize(seedName, fromType, attrs,
+		[]string{"get"},
+		nil,
+		nil,
+	)
 }
 
 func (a *authorizer) authorize(
