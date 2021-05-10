@@ -98,9 +98,6 @@ func NewGardenletControllerFactory(
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	var (
-		// Garden core informers
-		backupBucketInformer           = f.k8sGardenCoreInformers.Core().V1beta1().BackupBuckets().Informer()
-		backupEntryInformer            = f.k8sGardenCoreInformers.Core().V1beta1().BackupEntries().Informer()
 		controllerRegistrationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerRegistrations().Informer()
 		controllerInstallationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerInstallations().Informer()
 		seedInformer                   = f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Informer()
@@ -119,7 +116,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	}
 
 	f.k8sGardenCoreInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), backupBucketInformer.HasSynced, backupEntryInformer.HasSynced, controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
 		return fmt.Errorf("timed out waiting for Garden core caches to sync")
 	}
 
