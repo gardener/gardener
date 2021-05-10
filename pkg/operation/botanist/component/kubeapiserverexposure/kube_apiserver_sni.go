@@ -91,6 +91,15 @@ type sni struct {
 	values    *SNIValues
 }
 
+type envoyFilterTemplateValues struct {
+	*SNIValues
+	Name                     string
+	Namespace                string
+	Host                     string
+	Port                     int
+	VPNSeedServerServiceName string
+}
+
 func (s *sni) Deploy(ctx context.Context) error {
 	var (
 		destinationRule = s.emptyDestinationRule()
@@ -98,23 +107,18 @@ func (s *sni) Deploy(ctx context.Context) error {
 		gateway         = s.emptyGateway()
 		virtualService  = s.emptyVirtualService()
 
-		hostName                  = fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain)
-		envoyFilterSpec           bytes.Buffer
-		envoyFilterTemplateValues = map[string]interface{}{
-			"name":                     envoyFilter.Name,
-			"namespace":                envoyFilter.Namespace,
-			"namespaceUID":             s.values.NamespaceUID,
-			"host":                     hostName,
-			"port":                     servicePort,
-			"workloadSelectorLabels":   s.values.IstioIngressGateway.Labels,
-			"apiServerClusterIP":       s.values.APIServerClusterIP,
-			"apiServerInternalDNSName": s.values.APIServerInternalDNSName,
-			"reversedVPNEnabled":       s.values.ReversedVPN.Enabled,
-			"vpnSeedServerServiceName": vpnseedserver.ServiceName,
-		}
+		hostName        = fmt.Sprintf("%s.%s.svc.%s", v1beta1constants.DeploymentNameKubeAPIServer, s.namespace, gardencorev1beta1.DefaultDomain)
+		envoyFilterSpec bytes.Buffer
 	)
 
-	if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues); err != nil {
+	if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues{
+		SNIValues:                s.values,
+		Name:                     envoyFilter.Name,
+		Namespace:                envoyFilter.Namespace,
+		Host:                     hostName,
+		Port:                     servicePort,
+		VPNSeedServerServiceName: vpnseedserver.ServiceName,
+	}); err != nil {
 		return err
 	}
 	if err := s.applier.ApplyManifest(ctx, kubernetes.NewManifestReader(envoyFilterSpec.Bytes()), kubernetes.DefaultMergeFuncs); err != nil {

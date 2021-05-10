@@ -2,19 +2,19 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: {{ .name }}
-  namespace: {{ .namespace }}
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
   ownerReferences:
   - apiVersion: v1
     kind: Namespace
-    name: {{ .name }}
-    uid: {{ .namespaceUID | quote }}
+    name: {{ .Name }}
+    uid: {{ .NamespaceUID | quote }}
     controller: false
     blockOwnerDeletion: false
 spec:
   workloadSelector:
     labels:
-{{- range $k, $v := .workloadSelectorLabels }}
+{{- range $k, $v := .IstioIngressGateway.Labels }}
       {{ $k }}: {{ $v }}
 {{- end }}
   configPatches:
@@ -31,14 +31,14 @@ spec:
         - name: envoy.filters.network.tcp_proxy
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-            stat_prefix: "outbound|{{ .port }}||{{ .host }}"
-            cluster: "outbound|{{ .port }}||{{ .host }}"
+            stat_prefix: "outbound|{{ .Port }}||{{ .Host }}"
+            cluster: "outbound|{{ .Port }}||{{ .Host }}"
         filter_chain_match:
-          destination_port: {{ .port }}
+          destination_port: {{ .Port }}
           prefix_ranges:
-          - address_prefix: {{ .apiServerClusterIP }}
+          - address_prefix: {{ .APIServerClusterIP }}
             prefix_len: 32
-{{- if .reversedVPNEnabled }}
+{{- if .ReversedVPN.Enabled }}
   - applyTo: NETWORK_FILTER
     match:
       context: GATEWAY
@@ -56,14 +56,14 @@ spec:
           "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
           route_config:
             virtual_hosts:
-            - name: {{ .name }}
+            - name: {{ .Name }}
               domains:
-              - {{ .apiServerInternalDNSName }}:8132
+              - {{ .APIServerInternalDNSName }}:8132
               routes:
               - match:
                   connect_matcher: {}
                 route:
-                  cluster: outbound|1194||{{ .vpnSeedServerServiceName }}.{{ .name }}.svc.cluster.local
+                  cluster: outbound|1194||{{ .VPNSeedServerServiceName }}.{{ .Name }}.svc.cluster.local
                   upgrade_configs:
                   - upgrade_type: CONNECT
                     connect_config: {}
