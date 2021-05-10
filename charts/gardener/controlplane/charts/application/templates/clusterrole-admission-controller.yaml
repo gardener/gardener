@@ -35,6 +35,14 @@ rules:
   - list
   - watch
 - apiGroups:
+  - operations.gardener.cloud
+  resources:
+  - bastions
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - ""
   resources:
   - configmaps
