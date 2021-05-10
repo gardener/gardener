@@ -198,7 +198,7 @@ metadata:
   namespace: kube-system
 `
 
-		deploymentYAMLWithoutVPAWithoutHostEnv = `apiVersion: apps/v1
+		deploymentYAMLWithoutHostEnv = `apiVersion: apps/v1
 kind: Deployment
 metadata:
   creationTimestamp: null
@@ -263,7 +263,7 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 100m
+            cpu: 500m
             memory: 1Gi
           requests:
             cpu: 50m
@@ -288,7 +288,7 @@ spec:
           secretName: metrics-server
 status: {}
 `
-		deploymentYAMLWithVPAWithHostEnv = `apiVersion: apps/v1
+		deploymentYAMLWithHostEnv = `apiVersion: apps/v1
 kind: Deployment
 metadata:
   creationTimestamp: null
@@ -356,8 +356,8 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 80m
-            memory: 400Mi
+            cpu: 500m
+            memory: 1Gi
           requests:
             cpu: 50m
             memory: 150Mi
@@ -406,7 +406,7 @@ status: {}
 				"clusterrole____system_metrics-server.yaml":                       []byte(clusterRoleYAML),
 				"clusterrolebinding____system_metrics-server.yaml":                []byte(clusterRoleBindingYAML),
 				"clusterrolebinding____metrics-server_system_auth-delegator.yaml": []byte(clusterRoleBindingAuthDelegatorYAML),
-				"deployment__kube-system__metrics-server.yaml":                    []byte(deploymentYAMLWithoutVPAWithoutHostEnv),
+				"deployment__kube-system__metrics-server.yaml":                    []byte(deploymentYAMLWithoutHostEnv),
 				"rolebinding__kube-system__metrics-server-auth-reader.yaml":       []byte(roleBindingYAML),
 				"secret__kube-system__metrics-server.yaml":                        []byte(secretYAML),
 				"service__kube-system__metrics-server.yaml":                       []byte(serviceYAML),
@@ -489,7 +489,7 @@ status: {}
 				metricsServer = New(c, namespace, image, true, &kubeAPIServerHost)
 				metricsServer.SetSecrets(secrets)
 
-				managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"] = []byte(deploymentYAMLWithVPAWithHostEnv)
+				managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"] = []byte(deploymentYAMLWithHostEnv)
 				managedResourceSecret.Data["verticalpodautoscaler__kube-system__metrics-server.yaml"] = []byte(vpaYAML)
 
 				gomock.InOrder(
