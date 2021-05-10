@@ -16,12 +16,16 @@ package bastion
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -87,6 +91,23 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// do not reconcile anymore once the object is marked for deletion
 	if bastion.DeletionTimestamp != nil {
 		return reconcile.Result{}, nil
+	}
+
+	// fetch associated Shoot
+	shoot := gardencorev1beta1.Shoot{}
+	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
+	if err := r.gardenClient.Get(ctx, kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name), &shoot); err != nil {
+		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %v", shootKey, err)
+	}
+
+	// the Shoot for this bastion has been migrated to another Seed, we have to garbage-collect
+	// the old bastion (bastions are not migrated, users are required to create new bastions);
+	// equality is the correct check here, as the admission plugin already prevents Bastions
+	// from existing without a spec.SeedName being set. So it cannot happen that we accidentally
+	// delete a Bastion without seed (i.e. an unreconciled, new Bastion).
+	if !equality.Semantic.DeepEqual(shoot.Status.SeedName, bastion.Spec.SeedName) {
+		logger.WithField("bastion-seed", *bastion.Spec.SeedName).Info("Deleting bastion because the referenced Shoot has been migrated to another Seed")
+		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 
 	now := time.Now()

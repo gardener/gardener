@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -26,6 +27,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -41,6 +43,8 @@ var _ = Describe("Controller", func() {
 		reconciler reconcile.Reconciler
 
 		bastionName = "bastion"
+		shootName   = "myshoot"
+		seedName    = "myseed"
 		ctx         = context.TODO()
 		log         = logger.NewNopLogger()
 		maxLifetime = 12 * time.Hour
@@ -66,8 +70,13 @@ var _ = Describe("Controller", func() {
 			created := time.Now().Add(-maxLifetime / 2)
 			requeueAfter := time.Until(created.Add(maxLifetime))
 
+			mockClient.EXPECT().Get(ctx, kutil.Key(shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+				*obj = newShoot(shootName, &seedName)
+				return nil
+			})
+
 			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
-				*obj = newBastion(bastionName, &created, nil)
+				*obj = newBastion(bastionName, shootName, &seedName, &created, nil)
 				return nil
 			})
 
@@ -82,8 +91,13 @@ var _ = Describe("Controller", func() {
 			remaining := 30 * time.Second
 			expires := now.Add(remaining)
 
+			mockClient.EXPECT().Get(ctx, kutil.Key(shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+				*obj = newShoot(shootName, &seedName)
+				return nil
+			})
+
 			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
-				*obj = newBastion(bastionName, &now, &expires)
+				*obj = newBastion(bastionName, shootName, &seedName, &now, &expires)
 				return nil
 			})
 
@@ -94,12 +108,17 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should requeue soon-to-reach-max-lifetime Bastions", func() {
+			mockClient.EXPECT().Get(ctx, kutil.Key(shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+				*obj = newShoot(shootName, &seedName)
+				return nil
+			})
+
 			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
 				now := time.Now()
 				created := now.Add(-maxLifetime).Add(10 * time.Minute) // reaches end-of-life in 10 minutes
 				expires := now.Add(30 * time.Minute)                   // expires in 30 minutes
 
-				*obj = newBastion(bastionName, &created, &expires)
+				*obj = newBastion(bastionName, shootName, &seedName, &created, &expires)
 				return nil
 			})
 
@@ -110,11 +129,16 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should delete expired Bastions", func() {
+			mockClient.EXPECT().Get(ctx, kutil.Key(shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+				*obj = newShoot(shootName, &seedName)
+				return nil
+			})
+
 			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
 				created := time.Now().Add(-maxLifetime / 2)
 				expires := time.Now().Add(-5 * time.Second)
 
-				*obj = newBastion(bastionName, &created, &expires)
+				*obj = newBastion(bastionName, shootName, &seedName, &created, &expires)
 				return nil
 			})
 
@@ -127,10 +151,61 @@ var _ = Describe("Controller", func() {
 		})
 
 		It("should delete Bastions that have reached their TTL", func() {
+			mockClient.EXPECT().Get(ctx, kutil.Key(shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+				*obj = newShoot(shootName, &seedName)
+				return nil
+			})
+
 			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
 				created := time.Now().Add(-maxLifetime * 2)
 
-				*obj = newBastion(bastionName, &created, nil)
+				*obj = newBastion(bastionName, shootName, &seedName, &created, nil)
+				return nil
+			})
+
+			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{}))
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: bastionName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).To(Succeed())
+			mockCtrl.Finish()
+		})
+
+		It("should delete Bastions with outdated seed information", func() {
+			newSeedName := "new-seed-after-migration"
+
+			mockClient.EXPECT().Get(ctx, kutil.Key(shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+				*obj = newShoot(shootName, &newSeedName)
+				return nil
+			})
+
+			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
+				created := time.Now().Add(-maxLifetime / 2)
+				expires := time.Now().Add(1 * time.Minute)
+
+				*obj = newBastion(bastionName, shootName, &seedName, &created, &expires)
+				return nil
+			})
+
+			mockClient.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{}))
+
+			result, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: bastionName}})
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).To(Succeed())
+			mockCtrl.Finish()
+		})
+
+		It("should delete Bastions with outdated seed information 2", func() {
+			mockClient.EXPECT().Get(ctx, kutil.Key(shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+				*obj = newShoot(shootName, nil) // shoot was removed from original seed and since then hasn't found a new seed
+				return nil
+			})
+
+			mockClient.EXPECT().Get(ctx, kutil.Key(bastionName), gomock.AssignableToTypeOf(&operationsv1alpha1.Bastion{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *operationsv1alpha1.Bastion) error {
+				created := time.Now().Add(-maxLifetime / 2)
+				expires := time.Now().Add(1 * time.Minute)
+
+				*obj = newBastion(bastionName, shootName, &seedName, &created, &expires)
 				return nil
 			})
 
@@ -144,10 +219,16 @@ var _ = Describe("Controller", func() {
 	})
 })
 
-func newBastion(name string, createdAt *time.Time, expiresAt *time.Time) operationsv1alpha1.Bastion {
+func newBastion(name string, shootName string, seedName *string, createdAt *time.Time, expiresAt *time.Time) operationsv1alpha1.Bastion {
 	bastion := operationsv1alpha1.Bastion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
+		},
+		Spec: operationsv1alpha1.BastionSpec{
+			ShootRef: corev1.LocalObjectReference{
+				Name: shootName,
+			},
+			SeedName: seedName,
 		},
 	}
 
@@ -161,4 +242,17 @@ func newBastion(name string, createdAt *time.Time, expiresAt *time.Time) operati
 	}
 
 	return bastion
+}
+
+func newShoot(name string, seedName *string) gardencorev1beta1.Shoot {
+	shoot := gardencorev1beta1.Shoot{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Status: gardencorev1beta1.ShootStatus{
+			SeedName: seedName,
+		},
+	}
+
+	return shoot
 }
