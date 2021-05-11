@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -63,7 +64,7 @@ type Controller struct {
 }
 
 // NewController instantiates a new ControllerInstallation controller.
-func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder, gardenClusterIdentity string) *Controller {
+func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace, gardenClusterIdentity string) *Controller {
 	var (
 		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
 
@@ -82,7 +83,7 @@ func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gard
 	)
 
 	controller := &Controller{
-		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenClusterIdentity),
+		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace, gardenClusterIdentity),
 		careControl:                   NewDefaultCareControl(clientMap, config),
 
 		config:   config,
