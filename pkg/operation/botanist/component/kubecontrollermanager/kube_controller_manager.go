@@ -94,6 +94,8 @@ type KubeControllerManager interface {
 type HVPAConfig struct {
 	// Enabled states whether an HVPA object shall be deployed.
 	Enabled bool
+	// The update mode to use for scale down.
+	ScaleDownUpdateMode *string
 }
 
 // New creates a new instance of DeployWaiter for the kube-controller-manager.
@@ -316,6 +318,11 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			vpaLabels      = map[string]string{v1beta1constants.LabelRole: "kube-controller-manager-vpa"}
 		)
 
+		scaleDownUpdateMode := k.hvpaConfig.ScaleDownUpdateMode
+		if scaleDownUpdateMode == nil {
+			scaleDownUpdateMode = pointer.StringPtr(hvpav1alpha1.UpdateModeAuto)
+		}
+
 		if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, hvpa, func() error {
 			hvpa.Labels = getLabels()
 			hvpa.Spec.Replicas = pointer.Int32Ptr(1)
@@ -342,7 +349,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 				},
 				ScaleDown: hvpav1alpha1.ScaleType{
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-						UpdateMode: &updateModeAuto,
+						UpdateMode: scaleDownUpdateMode,
 					},
 				},
 				Template: hvpav1alpha1.VpaTemplate{

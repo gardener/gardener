@@ -27,6 +27,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
@@ -41,6 +44,11 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeCon
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
+	scaleDownUpdateMode := hvpav1alpha1.UpdateModeAuto
+	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
+		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
+	}
+
 	return kubecontrollermanager.New(
 		b.Logger.WithField("component", "kube-controller-manager"),
 		b.K8sSeedClient.Client(),
@@ -51,7 +59,8 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeCon
 		b.Shoot.Networks.Pods,
 		b.Shoot.Networks.Services,
 		&kubecontrollermanager.HVPAConfig{
-			Enabled: hvpaEnabled,
+			Enabled:             hvpaEnabled,
+			ScaleDownUpdateMode: &scaleDownUpdateMode,
 		},
 	), nil
 }

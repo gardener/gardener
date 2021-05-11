@@ -61,15 +61,16 @@ var _ = Describe("KubeControllerManager", func() {
 		c                     *mockclient.MockClient
 		kubeControllerManager KubeControllerManager
 
-		_, podCIDR, _      = net.ParseCIDR("100.96.0.0/11")
-		_, serviceCIDR, _  = net.ParseCIDR("100.64.0.0/13")
-		fakeErr            = fmt.Errorf("fake error")
-		namespace          = "shoot--foo--bar"
-		version            = "1.17.2"
-		semverVersion, _   = semver.NewVersion(version)
-		image              = "k8s.gcr.io/kube-controller-manager:v1.17.2"
-		hvpaConfigDisabled = &HVPAConfig{Enabled: false}
-		hvpaConfigEnabled  = &HVPAConfig{Enabled: true}
+		_, podCIDR, _                 = net.ParseCIDR("100.96.0.0/11")
+		_, serviceCIDR, _             = net.ParseCIDR("100.64.0.0/13")
+		fakeErr                       = fmt.Errorf("fake error")
+		namespace                     = "shoot--foo--bar"
+		version                       = "1.17.2"
+		semverVersion, _              = semver.NewVersion(version)
+		image                         = "k8s.gcr.io/kube-controller-manager:v1.17.2"
+		hvpaConfigDisabled            = &HVPAConfig{Enabled: false}
+		hvpaConfigEnabled             = &HVPAConfig{Enabled: true}
+		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: pointer.StringPtr(hvpav1alpha1.UpdateModeOff)}
 
 		hpaConfig = gardencorev1beta1.HorizontalPodAutoscalerConfig{
 			CPUInitializationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
@@ -269,78 +270,85 @@ var _ = Describe("KubeControllerManager", func() {
 				}
 
 				hvpaUpdateModeAuto = hvpav1alpha1.UpdateModeAuto
-				hvpa               = &hvpav1alpha1.Hvpa{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      hvpaName,
-						Namespace: namespace,
-						Labels: map[string]string{
-							"app":  "kubernetes",
-							"role": "controller-manager",
-						},
-					},
-					Spec: hvpav1alpha1.HvpaSpec{
-						Replicas: pointer.Int32Ptr(1),
-						Hpa: hvpav1alpha1.HpaSpec{
-							Deploy: false,
-							Selector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"app":  "kubernetes",
-									"role": "controller-manager",
-								},
+				hvpaFor            = func(config *HVPAConfig) *hvpav1alpha1.Hvpa {
+					scaleDownUpdateMode := config.ScaleDownUpdateMode
+					if scaleDownUpdateMode == nil {
+						scaleDownUpdateMode = pointer.StringPtr(hvpav1alpha1.UpdateModeAuto)
+					}
+
+					return &hvpav1alpha1.Hvpa{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      hvpaName,
+							Namespace: namespace,
+							Labels: map[string]string{
+								"app":  "kubernetes",
+								"role": "controller-manager",
 							},
-							Template: hvpav1alpha1.HpaTemplate{
-								ObjectMeta: metav1.ObjectMeta{
-									Labels: map[string]string{
+						},
+						Spec: hvpav1alpha1.HvpaSpec{
+							Replicas: pointer.Int32Ptr(1),
+							Hpa: hvpav1alpha1.HpaSpec{
+								Deploy: false,
+								Selector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
 										"app":  "kubernetes",
 										"role": "controller-manager",
 									},
 								},
-								Spec: hvpav1alpha1.HpaTemplateSpec{
-									MinReplicas: pointer.Int32Ptr(int32(1)),
-									MaxReplicas: int32(1),
-								},
-							},
-						},
-						Vpa: hvpav1alpha1.VpaSpec{
-							Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
-								v1beta1constants.LabelRole: "kube-controller-manager-vpa",
-							}},
-							Deploy: true,
-							ScaleUp: hvpav1alpha1.ScaleType{
-								UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-									UpdateMode: &hvpaUpdateModeAuto,
-								},
-							},
-							ScaleDown: hvpav1alpha1.ScaleType{
-								UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-									UpdateMode: &hvpaUpdateModeAuto,
-								},
-							},
-							Template: hvpav1alpha1.VpaTemplate{
-								ObjectMeta: metav1.ObjectMeta{
-									Labels: map[string]string{
-										v1beta1constants.LabelRole: "kube-controller-manager-vpa",
+								Template: hvpav1alpha1.HpaTemplate{
+									ObjectMeta: metav1.ObjectMeta{
+										Labels: map[string]string{
+											"app":  "kubernetes",
+											"role": "controller-manager",
+										},
 									},
-								},
-								Spec: hvpav1alpha1.VpaTemplateSpec{
-									ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-										ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
-											ContainerName: "kube-controller-manager",
-											MinAllowed: corev1.ResourceList{
-												corev1.ResourceCPU:    resource.MustParse("100m"),
-												corev1.ResourceMemory: resource.MustParse("100Mi"),
-											},
-										}},
+									Spec: hvpav1alpha1.HpaTemplateSpec{
+										MinReplicas: pointer.Int32Ptr(int32(1)),
+										MaxReplicas: int32(1),
 									},
 								},
 							},
+							Vpa: hvpav1alpha1.VpaSpec{
+								Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
+									v1beta1constants.LabelRole: "kube-controller-manager-vpa",
+								}},
+								Deploy: true,
+								ScaleUp: hvpav1alpha1.ScaleType{
+									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+										UpdateMode: &hvpaUpdateModeAuto,
+									},
+								},
+								ScaleDown: hvpav1alpha1.ScaleType{
+									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+										UpdateMode: scaleDownUpdateMode,
+									},
+								},
+								Template: hvpav1alpha1.VpaTemplate{
+									ObjectMeta: metav1.ObjectMeta{
+										Labels: map[string]string{
+											v1beta1constants.LabelRole: "kube-controller-manager-vpa",
+										},
+									},
+									Spec: hvpav1alpha1.VpaTemplateSpec{
+										ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+											ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
+												ContainerName: "kube-controller-manager",
+												MinAllowed: corev1.ResourceList{
+													corev1.ResourceCPU:    resource.MustParse("100m"),
+													corev1.ResourceMemory: resource.MustParse("100Mi"),
+												},
+											}},
+										},
+									},
+								},
+							},
+							TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
+								APIVersion: appsv1.SchemeGroupVersion.String(),
+								Kind:       "Deployment",
+								Name:       "kube-controller-manager",
+							},
 						},
-						TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
-							APIVersion: appsv1.SchemeGroupVersion.String(),
-							Kind:       "Deployment",
-							Name:       "kube-controller-manager",
-						},
-					},
+					}
 				}
 
 				serviceFor = func(version string) *corev1.Service {
@@ -573,7 +581,7 @@ var _ = Describe("KubeControllerManager", func() {
 							c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: vpaName, Namespace: namespace}}),
 							c.EXPECT().Get(ctx, kutil.Key(namespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 							c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-								Expect(obj).To(DeepEqual(hvpa))
+								Expect(obj).To(DeepEqual(hvpaFor(hvpaConfig)))
 							}),
 						)
 					} else {
@@ -593,8 +601,10 @@ var _ = Describe("KubeControllerManager", func() {
 
 					Expect(kubeControllerManager.Deploy(ctx)).To(Succeed())
 				},
+
 				Entry("kubernetes 1.19 w/o config", "1.19.0", emptyConfig, hvpaConfigDisabled),
 				Entry("kubernetes 1.19 with HVPA", "1.19.0", emptyConfig, hvpaConfigEnabled),
+				Entry("kubernetes 1.19 with HVPA and custom scale-down update mode", "1.19.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
 				Entry("kubernetes 1.19 with non-default autoscaler config", "1.19.0", configWithAutoscalerConfig, hvpaConfigDisabled),
 				Entry("kubernetes 1.19 with feature flags", "1.19.0", configWithFeatureFlags, hvpaConfigDisabled),
 				Entry("kubernetes 1.19 with NodeCIDRMaskSize", "1.19.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
@@ -603,6 +613,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				Entry("kubernetes 1.18 w/o config", "1.18.0", emptyConfig, hvpaConfigDisabled),
 				Entry("kubernetes 1.18 with HVPA", "1.18.0", emptyConfig, hvpaConfigEnabled),
+				Entry("kubernetes 1.18 with HVPA and custom scale-down update mode", "1.18.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
 				Entry("kubernetes 1.18 with non-default autoscaler config", "1.18.0", configWithAutoscalerConfig, hvpaConfigDisabled),
 				Entry("kubernetes 1.18 with feature flags", "1.18.0", configWithFeatureFlags, hvpaConfigDisabled),
 				Entry("kubernetes 1.18 with NodeCIDRMaskSize", "1.18.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
@@ -611,6 +622,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				Entry("kubernetes 1.17 w/o config", "1.17.0", emptyConfig, hvpaConfigDisabled),
 				Entry("kubernetes 1.17 with HVPA", "1.17.0", emptyConfig, hvpaConfigEnabled),
+				Entry("kubernetes 1.17 with HVPA and custom scale-down update mode", "1.17.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
 				Entry("kubernetes 1.17 with non-default autoscaler config", "1.17.0", configWithAutoscalerConfig, hvpaConfigDisabled),
 				Entry("kubernetes 1.17 with feature flags", "1.17.0", configWithFeatureFlags, hvpaConfigDisabled),
 				Entry("kubernetes 1.17 with NodeCIDRMaskSize", "1.17.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
@@ -619,6 +631,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				Entry("kubernetes 1.16 w/o config", "1.16.0", emptyConfig, hvpaConfigDisabled),
 				Entry("kubernetes 1.16 with HVPA", "1.16.0", emptyConfig, hvpaConfigEnabled),
+				Entry("kubernetes 1.16 with HVPA and custom scale-down update mode", "1.16.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
 				Entry("kubernetes 1.16 with non-default autoscaler config", "1.16.0", configWithAutoscalerConfig, hvpaConfigDisabled),
 				Entry("kubernetes 1.16 with feature flags", "1.16.0", configWithFeatureFlags, hvpaConfigDisabled),
 				Entry("kubernetes 1.16 with NodeCIDRMaskSize", "1.16.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
@@ -627,6 +640,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				Entry("kubernetes 1.15 w/o config", "1.15.0", emptyConfig, hvpaConfigDisabled),
 				Entry("kubernetes 1.15 with HVPA", "1.15.0", emptyConfig, hvpaConfigEnabled),
+				Entry("kubernetes 1.15 with HVPA and custom scale-down update mode", "1.15.0", emptyConfig, hvpaConfigEnabledScaleDownOff),
 				Entry("kubernetes 1.15 with non-default autoscaler config", "1.15.0", configWithAutoscalerConfig, hvpaConfigDisabled),
 				Entry("kubernetes 1.15 with feature flags", "1.15.0", configWithFeatureFlags, hvpaConfigDisabled),
 				Entry("kubernetes 1.15 with NodeCIDRMaskSize", "1.15.0", configWithNodeCIDRMaskSize, hvpaConfigDisabled),
