@@ -247,6 +247,9 @@ func ComputeExpectedGardenletConfiguration(componentConfigUsesTlsServerConfig, h
 				ConcurrentSyncs:          &twenty,
 				DeletionGracePeriodHours: &zero,
 			},
+			Bastion: &gardenletconfigv1alpha1.BastionControllerConfiguration{
+				ConcurrentSyncs: &twenty,
+			},
 			Seed: &gardenletconfigv1alpha1.SeedControllerConfiguration{
 				ConcurrentSyncs: &five,
 				SyncPeriod: &metav1.Duration{

@@ -179,6 +179,7 @@ func (b *ClientSetBuilder) Build() *ClientSet {
 		kubernetes:            b.kubernetes,
 		gardenCore:            b.gardenCore,
 		gardenSeedManagement:  b.gardenSeedManagement,
+		gardenOperations:      b.gardenOperations,
 		apiextension:          b.apiextension,
 		apiregistration:       b.apiregistration,
 		restClient:            b.restClient,
