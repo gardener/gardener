@@ -180,8 +180,10 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 
 	var cleanupHandle framework.CleanupActionHandle
 	cleanupHandle = framework.AddCleanupAction(func() {
-		By("delete backupbucket")
-		Expect(client.IgnoreNotFound(c.Delete(ctx, backupBucket))).To(Succeed())
+		if backupBucket.Name != "" {
+			By("delete backupbucket")
+			Expect(client.IgnoreNotFound(c.Delete(ctx, backupBucket))).To(Succeed())
+		}
 
 		By("delete secret")
 		Expect(controllerutils.RemoveFinalizer(ctx, c, c, secret, backupbucketcontroller.FinalizerName)).To(Succeed())
@@ -265,8 +267,12 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyTimeIn, timeIn2)
 	})).To(Succeed())
 
-	By("wait until backupbucket is ready")
-	Expect(waitForBackupBucketToBeReady(ctx, c, logger, backupBucket)).To(Succeed())
+	By("verify backupbucket is not reconciled")
+	resourceVersion := backupBucket.ResourceVersion
+	Consistently(func() string {
+		Expect(c.Get(ctx, backupBucketObjectKey, backupBucket)).To(Succeed())
+		return backupBucket.ResourceVersion
+	}, 2, 0.1).Should(Equal(resourceVersion))
 
 	By("verify backupbucket (nothing should have changed)")
 	backupBucket = &extensionsv1alpha1.BackupBucket{}
@@ -394,10 +400,8 @@ func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, logger *
 		c,
 		logger,
 		health.And(healthFuncs...),
-		func() client.Object { return &extensionsv1alpha1.BackupBucket{} },
+		backupBucket,
 		extensionsv1alpha1.BackupBucketResource,
-		backupBucket.Namespace,
-		backupBucket.Name,
 		pollInterval,
 		pollSevereThreshold,
 		pollTimeout,
@@ -406,14 +410,12 @@ func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, logger *
 }
 
 func waitForBackupBucketToBeDeleted(ctx context.Context, c client.Client, logger *logrus.Entry, backupBucket *extensionsv1alpha1.BackupBucket) error {
-	return extensions.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		c,
 		logger,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupBucket{} },
+		backupBucket,
 		extensionsv1alpha1.BackupBucketResource,
-		backupBucket.Namespace,
-		backupBucket.Name,
 		pollInterval,
 		pollTimeout,
 	)
