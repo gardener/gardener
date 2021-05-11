@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -63,9 +64,16 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Etcd, error)
 	if b.ManagedSeed != nil {
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
+
+	scaleDownUpdateMode := hvpav1alpha1.UpdateModeMaintenanceWindow
+	if class == etcd.ClassImportant && b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
+		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
+	}
+
 	e.SetHVPAConfig(&etcd.HVPAConfig{
 		Enabled:               hvpaEnabled,
 		MaintenanceTimeWindow: *b.Shoot.Info.Spec.Maintenance.TimeWindow,
+		ScaleDownUpdateMode:   &scaleDownUpdateMode,
 	})
 
 	return e, nil
