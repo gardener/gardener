@@ -439,6 +439,11 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		memoryMetricForHpaEnabled = true
 	}
 
+	scaleDownUpdateMode := hvpav1alpha1.UpdateModeAuto
+	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
+		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
+	}
+
 	var (
 		podAnnotations = map[string]interface{}{
 			"checksum/secret-ca":                     b.CheckSums[v1beta1constants.SecretNameCACluster],
@@ -473,6 +478,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"hvpa": map[string]interface{}{
 				"enabled": hvpaEnabled,
 			},
+			"scaleDownUpdateMode": scaleDownUpdateMode,
 			"hpa": map[string]interface{}{
 				"memoryMetricForHpaEnabled": memoryMetricForHpaEnabled,
 			},
