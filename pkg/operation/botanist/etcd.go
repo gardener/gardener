@@ -33,9 +33,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -66,7 +67,8 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Etcd, error)
 	}
 
 	scaleDownUpdateMode := hvpav1alpha1.UpdateModeMaintenanceWindow
-	if class == etcd.ClassImportant && b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
+	if (class == etcd.ClassImportant && b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction) ||
+		(metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled)) {
 		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
 	}
 
