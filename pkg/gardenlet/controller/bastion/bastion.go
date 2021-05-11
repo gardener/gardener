@@ -43,7 +43,7 @@ const (
 	ControllerName = "bastion-controller"
 )
 
-// Controller controls BackupEntries.
+// Controller controls Bastions.
 type Controller struct {
 	gardenClient client.Client
 	config       *config.GardenletConfiguration
@@ -57,9 +57,9 @@ type Controller struct {
 	numberOfRunningWorkers int
 }
 
-// NewBastionController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
-// holding information about the acting Gardener, a <bastionInformer>, and a <recorder> for
-// event recording. It creates a new Gardener controller.
+// NewBastionController takes a context <ctx>, a map of Kubernetes clients for for both the
+// garden and seed clusters <clientMap>, the gardenlet configuration to extract the config
+// for itself <config> and an event record <recorder>. It creates a new Gardener controller.
 func NewBastionController(ctx context.Context, clientMap clientmap.ClientMap, config *config.GardenletConfiguration, recorder record.EventRecorder) (*Controller, error) {
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {

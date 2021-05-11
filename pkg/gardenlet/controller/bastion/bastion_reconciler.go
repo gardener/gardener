@@ -58,7 +58,7 @@ type reconciler struct {
 	config    *config.GardenletConfiguration
 }
 
-// newReconciler returns the new backupBucker reconciler.
+// newReconciler returns the new bastion reconciler.
 func newReconciler(clientMap clientmap.ClientMap, recorder record.EventRecorder, logger logrus.FieldLogger, config *config.GardenletConfiguration) reconcile.Reconciler {
 	return &reconciler{
 		clientMap: clientMap,
@@ -100,7 +100,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// get Shoot for the bastion
 	shoot := gardencorev1beta1.Shoot{}
 	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
-	if err := gardenClient.Client().Get(ctx, kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name), &shoot); err != nil {
+	if err := gardenClient.Client().Get(ctx, shootKey, &shoot); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %v", shootKey, err)
 	}
 
