@@ -253,11 +253,11 @@ images:
 # Istio
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
-  repository: docker.io/istio/proxyv2
+  repository: gcr.io/istio-release/proxyv2
   tag: "1.8.0"
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
-  repository: docker.io/istio/pilot
+  repository: gcr.io/istio-release/pilot
   tag: "1.8.0"
 
 # API Server SNI
