@@ -485,6 +485,17 @@ var _ = Describe("Seed", func() {
 				}
 			})
 
+			It("should allow without consulting graph because name is 'garden'", func() {
+				name = "garden"
+				attrs.Name = name
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
 			It("should allow because path to seed exists", func() {
 				graph.EXPECT().HasPathFrom(graphpkg.VertexTypeNamespace, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
 

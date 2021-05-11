@@ -144,11 +144,15 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		runtime.Must(err)
 	}
 
+	gardenNamespace := &corev1.Namespace{}
+	// Use api reader here since we don't want to cache all namespaces of the Garden cluster.
+	runtime.Must(k8sGardenClient.APIReader().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
+
 	// Initialize the workqueue metrics collection.
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	var (
-		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, f.gardenClusterIdentity)
+		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace, f.gardenClusterIdentity)
 		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.k8sInformers, f.healthManager, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
 		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
 	)
