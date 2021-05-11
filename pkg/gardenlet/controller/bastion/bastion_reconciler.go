@@ -235,7 +235,7 @@ func setReadyCondition(bastion *operationsv1alpha1.Bastion, status gardencorev1a
 }
 
 func patchReadyCondition(ctx context.Context, c client.Client, bastion *operationsv1alpha1.Bastion, status gardencorev1alpha1.ConditionStatus, reason string, message string) {
-	kutil.TryPatchStatus(ctx, retry.DefaultBackoff, c, bastion, func() error {
+	_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, c, bastion, func() error {
 		setReadyCondition(bastion, status, reason, message)
 
 		return nil
