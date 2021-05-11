@@ -96,8 +96,19 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// fetch associated Shoot
 	shoot := gardencorev1beta1.Shoot{}
 	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
-	if err := r.gardenClient.Get(ctx, kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name), &shoot); err != nil {
+	if err := r.gardenClient.Get(ctx, shootKey, &shoot); err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.WithField("shoot", shoot.Name).Info("Deleting bastion because target shoot is gone")
+			return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
+		}
+
 		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %v", shootKey, err)
+	}
+
+	// delete the bastion if the shoot is marked for deletion
+	if shoot.DeletionTimestamp != nil {
+		logger.WithField("shoot", shoot.Name).Info("Deleting bastion because target shoot is in deletion")
+		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 
 	// the Shoot for this bastion has been migrated to another Seed, we have to garbage-collect
