@@ -19,7 +19,7 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"io"
 )
 
 // FileCodecID is the id of a FileCodec for cloud-init scripts.
@@ -89,7 +89,7 @@ func (gzipFileCodec) Decode(data []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer func() { _ = r.Close() }()
-	return ioutil.ReadAll(r)
+	return io.ReadAll(r)
 }
 
 // ParseFileCodecID tries to parse a string into a FileCodecID.

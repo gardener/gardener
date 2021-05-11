@@ -17,7 +17,7 @@ package applications
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -100,7 +100,7 @@ func (t *GuestBookTest) WaitUntilGuestbookURLsRespondOK(ctx context.Context, gue
 				return retry.MinorError(fmt.Errorf("guestbook app url %q returned status %s", guestbookAppURL, response.Status))
 			}
 
-			responseBytes, err := ioutil.ReadAll(response.Body)
+			responseBytes, err := io.ReadAll(response.Body)
 			if err != nil {
 				return retry.SevereError(err)
 			}
@@ -196,7 +196,7 @@ func (t *GuestBookTest) Test(ctx context.Context) {
 	framework.ExpectNoError(err)
 	gomega.Expect(pullResponse.StatusCode).To(gomega.Equal(http.StatusOK))
 
-	responseBytes, err := ioutil.ReadAll(pullResponse.Body)
+	responseBytes, err := io.ReadAll(pullResponse.Body)
 	framework.ExpectNoError(err)
 
 	// test if foobar-<shoot-name> was pulled successfully

@@ -15,7 +15,7 @@
 package utils
 
 import (
-	"io/ioutil"
+	"io"
 	"strings"
 
 	"github.com/coreos/go-systemd/v22/unit"
@@ -38,7 +38,7 @@ type unitSerializer struct{}
 
 // Serialize serializes the given slice of systemd unit options to a string.
 func (us *unitSerializer) Serialize(opts []*unit.UnitOption) (string, error) {
-	bytes, err := ioutil.ReadAll(unit.Serialize(opts))
+	bytes, err := io.ReadAll(unit.Serialize(opts))
 	if err != nil {
 		return "", err
 	}

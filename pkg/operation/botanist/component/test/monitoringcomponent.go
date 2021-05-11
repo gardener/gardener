@@ -16,7 +16,6 @@ package test
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -59,7 +58,7 @@ func ExecutePromtool(c component.MonitoringComponent, filenameRulesTest string) 
 	for filename, rule := range alertingRules {
 		filepath := filepath.Join("testdata", filename)
 
-		Expect(ioutil.WriteFile(filepath, []byte(rule), 0644)).To(Succeed())
+		Expect(os.WriteFile(filepath, []byte(rule), 0644)).To(Succeed())
 
 		var errBuf bytes.Buffer
 		cmd := exec.Command("promtool", "test", "rules", filenameRulesTest)

@@ -16,7 +16,7 @@ package loader
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/install"
@@ -34,7 +34,7 @@ func init() {
 
 // LoadFromFile takes a filename and de-serializes the contents into SchedulerConfiguration object.
 func LoadFromFile(filename string) (*config.SchedulerConfiguration, error) {
-	bytes, err := ioutil.ReadFile(filename)
+	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}

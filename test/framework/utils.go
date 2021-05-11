@@ -16,7 +16,6 @@ package framework
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"regexp"
@@ -119,7 +118,7 @@ func FileExists(kc string) bool {
 
 // ReadObject loads the contents of file and decodes it as an object.
 func ReadObject(file string, into apimachineryRuntime.Object) error {
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}
@@ -130,7 +129,7 @@ func ReadObject(file string, into apimachineryRuntime.Object) error {
 
 // ParseFileAsProviderConfig parses a file as a ProviderConfig
 func ParseFileAsProviderConfig(filepath string) (*apimachineryRuntime.RawExtension, error) {
-	data, err := ioutil.ReadFile(filepath)
+	data, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +144,7 @@ func ParseFileAsProviderConfig(filepath string) (*apimachineryRuntime.RawExtensi
 
 // ParseFileAsWorkers parses a file as a Worker configuration
 func ParseFileAsWorkers(filepath string) ([]gardencorev1beta1.Worker, error) {
-	data, err := ioutil.ReadFile(filepath)
+	data, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, err
 	}

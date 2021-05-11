@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"time"
 
 	v2 "github.com/gardener/component-spec/bindings-go/apis/v2"
@@ -107,7 +106,7 @@ func NewGardenletLandscaper(imports *imports.Imports, landscaperOperation, compo
 		rolloutSleepDuration:   10 * time.Second,
 	}
 
-	componentDescriptorData, err := ioutil.ReadFile(componentDescriptorPath)
+	componentDescriptorData, err := os.ReadFile(componentDescriptorPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse the Gardenlet component descriptor: %w", err)
 	}

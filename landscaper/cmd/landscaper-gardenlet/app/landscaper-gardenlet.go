@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/gardener/gardener/landscaper/pkg/gardenlet/apis/imports"
@@ -115,7 +114,7 @@ func getLandscaperEnvironmentVariables() (string, string, string, error) {
 // loadImportsFromFile loads the content of file and decodes it as a
 // imports object.
 func loadImportsFromFile(file string) (*imports.Imports, error) {
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}

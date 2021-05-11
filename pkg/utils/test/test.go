@@ -17,7 +17,6 @@ package test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 
@@ -161,7 +160,7 @@ func WithFeatureGate(gate featuregate.FeatureGate, f featuregate.Feature, value 
 //  var fileName string
 //  defer WithTempFile("", "test", []byte("test file content"), &fileName)()
 func WithTempFile(dir, pattern string, content []byte, fileName *string) func() {
-	file, err := ioutil.TempFile(dir, pattern)
+	file, err := os.CreateTemp(dir, pattern)
 	if err != nil {
 		ginkgo.Fail(fmt.Sprintf("could not create temp file in directory %s: %v", dir, err))
 	}

@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -340,7 +340,7 @@ func DownloadKubeconfig(ctx context.Context, client kubernetes.Interface, namesp
 		return err
 	}
 	if downloadPath != "" {
-		err = ioutil.WriteFile(downloadPath, []byte(kubeconfig), 0755)
+		err = os.WriteFile(downloadPath, []byte(kubeconfig), 0755)
 		if err != nil {
 			return err
 		}

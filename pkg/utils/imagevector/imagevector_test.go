@@ -16,7 +16,6 @@ package imagevector_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -447,9 +446,9 @@ images:
 })
 
 func withTempFile(pattern string, data []byte) (*os.File, func()) {
-	tmpFile, err := ioutil.TempFile("", pattern)
+	tmpFile, err := os.CreateTemp("", pattern)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(ioutil.WriteFile(tmpFile.Name(), data, os.ModePerm)).To(Succeed())
+	Expect(os.WriteFile(tmpFile.Name(), data, os.ModePerm)).To(Succeed())
 
 	return tmpFile, func() {
 		if err := tmpFile.Close(); err != nil {

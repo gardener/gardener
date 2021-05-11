@@ -20,7 +20,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -112,7 +111,7 @@ func NewOptions() (*Options, error) {
 // loadConfigFromFile loads the content of file and decodes it as a
 // GardenletConfiguration object.
 func (o *Options) loadConfigFromFile(file string) (*config.GardenletConfiguration, error) {
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}

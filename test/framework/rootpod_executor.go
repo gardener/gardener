@@ -17,7 +17,7 @@ package framework
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -86,7 +86,7 @@ func (e *rootPodExecutor) Execute(ctx context.Context, command string) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
-	response, err := ioutil.ReadAll(reader)
+	response, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}

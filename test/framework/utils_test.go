@@ -15,7 +15,6 @@
 package framework_test
 
 import (
-	"io/ioutil"
 	"os"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -27,7 +26,7 @@ import (
 var _ = Describe("Utils tests", func() {
 
 	It("should not fail if a path exists", func() {
-		tmpdir, err := ioutil.TempDir("", "e2e-")
+		tmpdir, err := os.MkdirTemp("", "e2e-")
 		Expect(err).ToNot(HaveOccurred())
 		defer os.RemoveAll(tmpdir)
 		framework.FileExists(tmpdir)

@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -68,6 +67,7 @@ func ReadTestResources(scheme *runtime.Scheme, path string) ([]client.Object, er
 	decoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
 
 	var files []os.FileInfo
+	//var files []os.DirEntry
 	var err error
 	info, err := os.Stat(path)
 	if err != nil {
@@ -76,7 +76,7 @@ func ReadTestResources(scheme *runtime.Scheme, path string) ([]client.Object, er
 	if !info.IsDir() {
 		path, files = filepath.Dir(path), []os.FileInfo{info}
 	} else {
-		if files, err = ioutil.ReadDir(path); err != nil {
+		if files, err = os.ReadDir(path); err != nil {
 			return nil, err
 		}
 	}
@@ -116,7 +116,7 @@ func ReadTestResources(scheme *runtime.Scheme, path string) ([]client.Object, er
 
 // readDocuments reads documents from file
 func readDocuments(fp string) ([][]byte, error) {
-	b, err := ioutil.ReadFile(fp)
+	b, err := os.ReadFile(fp)
 	if err != nil {
 		return nil, err
 	}

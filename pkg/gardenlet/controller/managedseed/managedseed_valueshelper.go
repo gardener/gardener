@@ -15,7 +15,6 @@
 package managedseed
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -222,7 +221,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *configv1alpha1.G
 			return nil, err
 		}
 		if kubeconfigPath != nil && kubeconfigPath.(string) != "" {
-			kubeconfig, err := ioutil.ReadFile(kubeconfigPath.(string))
+			kubeconfig, err := os.ReadFile(kubeconfigPath.(string))
 			if err != nil {
 				return nil, err
 			}
@@ -239,7 +238,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *configv1alpha1.G
 		return nil, err
 	}
 	if kubeconfigPath != nil && kubeconfigPath.(string) != "" {
-		kubeconfig, err := ioutil.ReadFile(kubeconfigPath.(string))
+		kubeconfig, err := os.ReadFile(kubeconfigPath.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -255,7 +254,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *configv1alpha1.G
 		return nil, err
 	}
 	if certPath != nil && certPath.(string) != "" && !strings.Contains(certPath.(string), secrets.TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern) {
-		cert, err := ioutil.ReadFile(certPath.(string))
+		cert, err := os.ReadFile(certPath.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -271,7 +270,7 @@ func (vp *valuesHelper) getGardenletConfigurationValues(config *configv1alpha1.G
 		return nil, err
 	}
 	if keyPath != nil && keyPath.(string) != "" && !strings.Contains(keyPath.(string), secrets.TemporaryDirectoryForSelfGeneratedTLSCertificatesPattern) {
-		key, err := ioutil.ReadFile(keyPath.(string))
+		key, err := os.ReadFile(keyPath.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -321,7 +320,7 @@ func getParentGardenletDeployment(imageVector imagevector.ImageVector, shoot *ga
 func getParentImageVectorOverwrite() (*string, error) {
 	var imageVectorOverwrite *string
 	if overWritePath := os.Getenv(imagevector.OverrideEnv); len(overWritePath) > 0 {
-		data, err := ioutil.ReadFile(overWritePath)
+		data, err := os.ReadFile(overWritePath)
 		if err != nil {
 			return nil, err
 		}
@@ -333,7 +332,7 @@ func getParentImageVectorOverwrite() (*string, error) {
 func getParentComponentImageVectorOverwrites() (*string, error) {
 	var componentImageVectorOverwrites *string
 	if overWritePath := os.Getenv(imagevector.ComponentOverrideEnv); len(overWritePath) > 0 {
-		data, err := ioutil.ReadFile(overWritePath)
+		data, err := os.ReadFile(overWritePath)
 		if err != nil {
 			return nil, err
 		}

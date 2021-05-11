@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -79,7 +78,7 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read body
-	if body, err = ioutil.ReadAll(r.Body); err != nil {
+	if body, err = io.ReadAll(r.Body); err != nil {
 		h.logger.Error(err, "unable to read the body from the incoming request")
 		h.writeResponse(w, nil, Errored(http.StatusBadRequest, err))
 		return
