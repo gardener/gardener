@@ -21,6 +21,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -34,6 +36,11 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeCon
 		return nil, err
 	}
 
+	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+	if b.ManagedSeed != nil {
+		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+	}
+
 	return kubecontrollermanager.New(
 		b.Logger.WithField("component", "kube-controller-manager"),
 		b.K8sSeedClient.Client(),
@@ -43,6 +50,9 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeCon
 		b.Shoot.Info.Spec.Kubernetes.KubeControllerManager,
 		b.Shoot.Networks.Pods,
 		b.Shoot.Networks.Services,
+		&kubecontrollermanager.HVPAConfig{
+			Enabled: hvpaEnabled,
+		},
 	), nil
 }
 
