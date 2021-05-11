@@ -513,13 +513,26 @@ func NewestPodForDeployment(ctx context.Context, c client.Reader, deployment *ap
 		return nil, fmt.Errorf("object is not of type *appsv1.ReplicaSet but %T", replicaSet)
 	}
 
+	if newestReplicaSet.Spec.Selector == nil {
+		return nil, fmt.Errorf("no pod selector specified in replicaSet %s/%s", newestReplicaSet.Namespace, newestReplicaSet.Name)
+	}
+
+	if len(newestReplicaSet.Spec.Selector.MatchLabels)+len(newestReplicaSet.Spec.Selector.MatchExpressions) == 0 {
+		return nil, fmt.Errorf("no matchLabels or matchExpressions specified in replicaSet %s/%s", newestReplicaSet.Namespace, newestReplicaSet.Name)
+	}
+
+	podSelector, err := metav1.LabelSelectorAsSelector(newestReplicaSet.Spec.Selector)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert the pod selector from ReplicaSet %s/%s: %v", newestReplicaSet.Namespace, newestReplicaSet.Name, err)
+	}
+
+	listOpts = append(listOpts, client.MatchingLabelsSelector{Selector: podSelector})
+
 	pod, err := NewestObject(
 		ctx,
 		c,
 		&corev1.PodList{},
-		func(obj client.Object) bool {
-			return OwnedBy(obj, appsv1.SchemeGroupVersion.String(), "ReplicaSet", newestReplicaSet.Name, newestReplicaSet.UID)
-		},
+		nil,
 		listOpts...,
 	)
 	if err != nil {
