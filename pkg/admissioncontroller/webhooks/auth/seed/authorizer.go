@@ -195,7 +195,7 @@ func (a *authorizer) authorizeConfigMap(seedName string, attrs auth.Attributes) 
 }
 
 func (a *authorizer) authorizeEvent(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	if ok, reason := a.checkVerb(seedName, attrs, "create"); !ok {
+	if ok, reason := a.checkVerb(seedName, attrs, "create", "patch"); !ok {
 		return auth.DecisionNoOpinion, reason, nil
 	}
 
