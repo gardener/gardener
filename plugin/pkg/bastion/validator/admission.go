@@ -20,10 +20,12 @@ import (
 	"fmt"
 	"io"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -151,6 +153,10 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission
 	if userInfo := a.GetUserInfo(); a.GetOperation() == admission.Create && userInfo != nil {
 		metav1.SetMetaDataAnnotation(&bastion.ObjectMeta, v1beta1constants.GardenCreatedBy, userInfo.GetName())
 	}
+
+	// ensure bastions are cleaned up when shoots are deleted
+	ownerRef := *metav1.NewControllerRef(shoot, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
+	bastion.OwnerReferences = kubernetes.MergeOwnerReferences(bastion.OwnerReferences, ownerRef)
 
 	return nil
 }

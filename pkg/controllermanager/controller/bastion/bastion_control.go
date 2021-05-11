@@ -97,8 +97,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	shoot := gardencorev1beta1.Shoot{}
 	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
 	if err := r.gardenClient.Get(ctx, shootKey, &shoot); err != nil {
+		// Bastions get assigned an owner reference to the shoot, so this should never happen
+		// unless some external process tinkers with the owner refs; because this is unusual,
+		// it's a warning instead of an info message.
 		if apierrors.IsNotFound(err) {
-			logger.WithField("shoot", shoot.Name).Info("Deleting bastion because target shoot is gone")
+			logger.WithField("shoot", shoot.Name).Warn("Deleting bastion because target shoot is gone")
 			return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 		}
 
