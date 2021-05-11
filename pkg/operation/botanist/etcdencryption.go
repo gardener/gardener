@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/infodata"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -104,18 +103,6 @@ func (b *Botanist) ApplyEncryptionConfiguration(ctx context.Context) error {
 	}()
 
 	return nil
-}
-
-// RemoveOldETCDEncryptionSecretFromGardener removes the etcd encryption configuration secret from the Shoot's namespace in the garden cluster as it is no longer necessary.
-// This step can be removed in the future after all secrets have been cleaned up.
-func (b *Botanist) RemoveOldETCDEncryptionSecretFromGardener(ctx context.Context) error {
-	etcdSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      gutil.GardenEtcdEncryptionSecretName(b.Shoot.Info.Name),
-			Namespace: b.Shoot.Info.Namespace,
-		},
-	}
-	return client.IgnoreNotFound(b.K8sGardenClient.Client().Delete(ctx, etcdSecret))
 }
 
 func confChecksum(conf *apiserverconfigv1.EncryptionConfiguration) (string, error) {
