@@ -668,42 +668,15 @@ var _ = Describe("handler", func() {
 						request.Operation = operation
 					})
 
-					It("should return an error because decoding the object failed", func() {
-						request.Object.Raw = []byte(`{]`)
-
-						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-							AdmissionResponse: admissionv1.AdmissionResponse{
-								Allowed: false,
-								Result: &metav1.Status{
-									Code:    int32(http.StatusBadRequest),
-									Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
-								},
-							},
-						}))
-					})
-
 					It("should allow the request because seed name matches", func() {
-						objData, err := runtime.Encode(encoder, &gardencorev1beta1.Seed{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: seedName,
-							},
-						})
-						Expect(err).NotTo(HaveOccurred())
-						request.Object.Raw = objData
+						request.Name = seedName
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 
 					It("should allow the request because seed name is ambiguous", func() {
 						request.UserInfo = ambiguousUser
-
-						objData, err := runtime.Encode(encoder, &gardencorev1beta1.Seed{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "some-different-seed",
-							},
-						})
-						Expect(err).NotTo(HaveOccurred())
-						request.Object.Raw = objData
+						request.Name = "some-different-seed"
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
@@ -716,13 +689,7 @@ var _ = Describe("handler", func() {
 						)
 
 						BeforeEach(func() {
-							objData, err := runtime.Encode(encoder, &gardencorev1beta1.Seed{
-								ObjectMeta: metav1.ObjectMeta{
-									Name: differentSeedName,
-								},
-							})
-							Expect(err).NotTo(HaveOccurred())
-							request.Object.Raw = objData
+							request.Name = differentSeedName
 						})
 
 						It("should forbid the request because seed does not belong to a managedseed", func() {

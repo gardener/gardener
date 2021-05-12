@@ -207,12 +207,7 @@ func (h *handler) admitSeed(ctx context.Context, seedName string, request admiss
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
-	seed := &gardencorev1beta1.Seed{}
-	if err := h.decoder.Decode(request, seed); err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
-	}
-
-	response := h.admit(seedName, &seed.Name)
+	response := h.admit(seedName, &request.Name)
 	if response.Allowed {
 		return response
 	}
@@ -221,7 +216,7 @@ func (h *handler) admitSeed(ctx context.Context, seedName string, request admiss
 	// reconciliation. In this case, the another gardenlet (the "parent gardenlet") which is usually responsible for a
 	// different seed is doing the request.
 	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
-	if err := h.cacheReader.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+	if err := h.cacheReader.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, request.Name), managedSeed); err != nil {
 		if apierrors.IsNotFound(err) {
 			return response
 		}
