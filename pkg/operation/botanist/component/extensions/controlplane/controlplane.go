@@ -81,23 +81,26 @@ func New(
 	waitSevereThreshold time.Duration,
 	waitTimeout time.Duration,
 ) Interface {
-	c := &controlPlane{
+	name := values.Name
+	if values.Purpose == extensionsv1alpha1.Exposure {
+		name += "-exposure"
+	}
+
+	return &controlPlane{
 		client:              client,
 		logger:              logger,
 		values:              values,
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
 		waitTimeout:         waitTimeout,
-	}
 
-	c.controlPlane = &extensionsv1alpha1.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      c.name(),
-			Namespace: c.values.Namespace,
+		controlPlane: &extensionsv1alpha1.ControlPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: values.Namespace,
+			},
 		},
 	}
-
-	return c
 }
 
 type controlPlane struct {
@@ -110,13 +113,6 @@ type controlPlane struct {
 
 	controlPlane   *extensionsv1alpha1.ControlPlane
 	providerStatus *runtime.RawExtension
-}
-
-func (c *controlPlane) name() string {
-	if c.values.Purpose == extensionsv1alpha1.Exposure {
-		return c.values.Name + "-exposure"
-	}
-	return c.values.Name
 }
 
 // Deploy uses the seed client to create or update the ControlPlane resource.
