@@ -544,7 +544,8 @@ func MostRecentCompleteLogs(
 	podInterface corev1client.PodInterface,
 	pod *corev1.Pod,
 	containerName string,
-	tailLines *int64,
+	tailLines,
+	headBytes *int64,
 ) (
 	string,
 	error,
@@ -557,7 +558,7 @@ func MostRecentCompleteLogs(
 		}
 	}
 
-	logs, err := kubernetes.GetPodLogs(ctx, podInterface, pod.Name, &corev1.PodLogOptions{
+	lastLogLines, err := kubernetes.GetPodLogs(ctx, podInterface, pod.Name, &corev1.PodLogOptions{
 		Container: containerName,
 		TailLines: tailLines,
 		Previous:  previousLogs,
@@ -566,7 +567,20 @@ func MostRecentCompleteLogs(
 		return "", err
 	}
 
-	return string(logs), nil
+	if headBytes == nil || *headBytes <= 0 {
+		return string(lastLogLines), nil
+	}
+
+	firstLogLines, err := kubernetes.GetPodLogs(ctx, podInterface, pod.Name, &corev1.PodLogOptions{
+		Container:  containerName,
+		Previous:   previousLogs,
+		LimitBytes: headBytes,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s\n...\n%s", firstLogLines, lastLogLines), nil
 }
 
 // IgnoreAlreadyExists returns nil on AlreadyExists errors.
