@@ -266,4 +266,10 @@ var _ = Describe("Shoot", func() {
 		Entry("object has no OwnerReferences", nil, ""),
 		Entry("object is not owned by shoot", []metav1.OwnerReference{{Kind: "Foo", Name: "foo"}}, ""),
 	)
+
+	Describe("#ComputeShootProjectSecretName", func() {
+		It("should compute the expected name", func() {
+			Expect(ComputeShootProjectSecretName("foo", "bar")).To(Equal("foo.bar"))
+		})
+	})
 })
