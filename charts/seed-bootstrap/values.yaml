@@ -47,11 +47,11 @@ prometheus:
           percentage: 80
     limitsRequestsGapScaleParams:
       cpu:
-        value: "300m"
-        percentage: 40
+        value: 400m
+        percentage: 60
       memory:
-        value: "1000M"
-        percentage: 40
+        value: 2Gi
+        percentage: 80
 
 aggregatePrometheus:
   resources:
@@ -101,11 +101,11 @@ aggregatePrometheus:
           percentage: 80
     limitsRequestsGapScaleParams:
       cpu:
-        value: "300m"
-        percentage: 40
+        value: 400m
+        percentage: 60
       memory:
-        value: "1000M"
-        percentage: 40
+        value: 2Gi
+        percentage: 80
 
 grafana:
   hostName: p.seed-1.example.com
