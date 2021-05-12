@@ -21,7 +21,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinternallisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -29,24 +28,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// ProjectForNamespaceFromLister returns the Project responsible for a given <namespace>. It lists all Projects
-// via the given lister, iterates over them and tries to identify the Project by looking for the namespace name
-// in the project spec.
-func ProjectForNamespaceFromLister(projectLister gardencorelisters.ProjectLister, namespaceName string) (*gardencorev1beta1.Project, error) {
-	projectList, err := projectLister.List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, project := range projectList {
-		if project.Spec.Namespace != nil && *project.Spec.Namespace == namespaceName {
-			return project, nil
-		}
-	}
-
-	return nil, apierrors.NewNotFound(gardencorev1beta1.Resource("Project"), namespaceName)
-}
 
 // ProjectForNamespaceFromInternalLister returns the Project responsible for a given <namespace>. It lists all Projects
 // via the given lister, iterates over them and tries to identify the Project by looking for the namespace name

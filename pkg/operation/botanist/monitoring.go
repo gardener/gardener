@@ -52,8 +52,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	var (
-		credentials         = b.Secrets["monitoring-ingress-credentials"]
-		credentialsUsers    = b.Secrets["monitoring-ingress-credentials-users"]
+		credentials         = b.Secrets[common.MonitoringIngressCredentials]
+		credentialsUsers    = b.Secrets[common.MonitoringIngressCredentialsUsers]
 		basicAuth           = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
 		basicAuthUsers      = utils.CreateSHA1Secret(credentialsUsers.Data[secrets.DataKeyUserName], credentialsUsers.Data[secrets.DataKeyPassword])
 		alertingRules       = strings.Builder{}

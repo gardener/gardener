@@ -1132,6 +1132,7 @@ var _ = Describe("Seed", func() {
 				},
 
 				Entry("create", "create"),
+				Entry("patch", "patch"),
 			)
 
 			DescribeTable("should have no opinion because verb is not allowed",
@@ -1141,7 +1142,7 @@ var _ = Describe("Seed", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create]"))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create patch]"))
 
 				},
 
@@ -1149,7 +1150,6 @@ var _ = Describe("Seed", func() {
 				Entry("list", "list"),
 				Entry("watch", "watch"),
 				Entry("update", "update"),
-				Entry("patch", "patch"),
 				Entry("delete", "delete"),
 				Entry("deletecollection", "deletecollection"),
 			)
@@ -1195,6 +1195,7 @@ var _ = Describe("Seed", func() {
 				},
 
 				Entry("create", "create"),
+				Entry("patch", "patch"),
 			)
 
 			DescribeTable("should have no opinion because verb is not allowed",
@@ -1204,7 +1205,7 @@ var _ = Describe("Seed", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create]"))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create patch]"))
 
 				},
 
@@ -1212,7 +1213,6 @@ var _ = Describe("Seed", func() {
 				Entry("list", "list"),
 				Entry("watch", "watch"),
 				Entry("update", "update"),
-				Entry("patch", "patch"),
 				Entry("delete", "delete"),
 				Entry("deletecollection", "deletecollection"),
 			)

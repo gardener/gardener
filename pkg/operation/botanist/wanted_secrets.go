@@ -458,7 +458,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		// Secret definition for monitoring
 		&secrets.BasicAuthSecretConfig{
-			Name:   "monitoring-ingress-credentials",
+			Name:   common.MonitoringIngressCredentials,
 			Format: secrets.BasicAuthFormatNormal,
 
 			Username:       "admin",
@@ -467,7 +467,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		// Secret definition for monitoring for shoot owners
 		&secrets.BasicAuthSecretConfig{
-			Name:   "monitoring-ingress-credentials-users",
+			Name:   common.MonitoringIngressCredentialsUsers,
 			Format: secrets.BasicAuthFormatNormal,
 
 			Username:       "admin",

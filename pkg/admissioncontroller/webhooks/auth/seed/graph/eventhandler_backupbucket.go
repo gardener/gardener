@@ -46,7 +46,8 @@ func (g *graph) setupBackupBucketWatch(informer cache.Informer) {
 			}
 
 			if !apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.SeedName, newBackupBucket.Spec.SeedName) ||
-				!apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.SecretRef, newBackupBucket.Spec.SecretRef) {
+				!apiequality.Semantic.DeepEqual(oldBackupBucket.Spec.SecretRef, newBackupBucket.Spec.SecretRef) ||
+				!apiequality.Semantic.DeepEqual(oldBackupBucket.Status.GeneratedSecretRef, newBackupBucket.Status.GeneratedSecretRef) {
 				g.handleBackupBucketCreateOrUpdate(newBackupBucket)
 			}
 		},
@@ -85,6 +86,11 @@ func (g *graph) handleBackupBucketCreateOrUpdate(backupBucket *gardencorev1beta1
 	if backupBucket.Spec.SeedName != nil {
 		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *backupBucket.Spec.SeedName)
 		g.addEdge(backupBucketVertex, seedVertex)
+	}
+
+	if backupBucket.Status.GeneratedSecretRef != nil {
+		generatedSecretVertex := g.getOrCreateVertex(VertexTypeSecret, backupBucket.Status.GeneratedSecretRef.Namespace, backupBucket.Status.GeneratedSecretRef.Name)
+		g.addEdge(generatedSecretVertex, backupBucketVertex)
 	}
 }
 
