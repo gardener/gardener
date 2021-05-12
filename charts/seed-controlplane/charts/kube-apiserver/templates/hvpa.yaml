@@ -22,7 +22,7 @@ spec:
         updateMode: "Auto"
     scaleDown:
       updatePolicy:
-        updateMode: "Auto"
+        updateMode: {{ .Values.scaleDownUpdateMode | quote }}
     template:
       metadata:
         labels:
@@ -54,7 +54,7 @@ spec:
 {{- end }}
     scaleDown:
       updatePolicy:
-        updateMode: "Auto"
+        updateMode: {{ .Values.scaleDownUpdateMode | quote }}
 {{- if .Values.scaleDownStabilization }}
 {{ toYaml .Values.scaleDownStabilization | indent 6 }}
 {{- end }}

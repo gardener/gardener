@@ -21,10 +21,15 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
@@ -32,6 +37,16 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeCon
 	image, err := b.ImageVector.FindImage(charts.ImageNameKubeControllerManager, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
+	}
+
+	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+	if b.ManagedSeed != nil {
+		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+	}
+
+	scaleDownUpdateMode := hvpav1alpha1.UpdateModeAuto
+	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
+		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
 	}
 
 	return kubecontrollermanager.New(
@@ -43,6 +58,10 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeCon
 		b.Shoot.Info.Spec.Kubernetes.KubeControllerManager,
 		b.Shoot.Networks.Pods,
 		b.Shoot.Networks.Services,
+		&kubecontrollermanager.HVPAConfig{
+			Enabled:             hvpaEnabled,
+			ScaleDownUpdateMode: &scaleDownUpdateMode,
+		},
 	), nil
 }
 

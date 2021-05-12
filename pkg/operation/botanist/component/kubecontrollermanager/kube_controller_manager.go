@@ -20,8 +20,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -29,12 +27,16 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 
 	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -88,6 +90,14 @@ type KubeControllerManager interface {
 	SetShootClient(c client.Client)
 }
 
+// HVPAConfig contains information for configuring the HVPA object for the etcd.
+type HVPAConfig struct {
+	// Enabled states whether an HVPA object shall be deployed.
+	Enabled bool
+	// The update mode to use for scale down.
+	ScaleDownUpdateMode *string
+}
+
 // New creates a new instance of DeployWaiter for the kube-controller-manager.
 func New(
 	logger logrus.FieldLogger,
@@ -98,6 +108,7 @@ func New(
 	config *gardencorev1beta1.KubeControllerManagerConfig,
 	podNetwork *net.IPNet,
 	serviceNetwork *net.IPNet,
+	hvpaConfig *HVPAConfig,
 ) KubeControllerManager {
 	return &kubeControllerManager{
 		log:            logger,
@@ -108,6 +119,7 @@ func New(
 		config:         config,
 		podNetwork:     podNetwork,
 		serviceNetwork: serviceNetwork,
+		hvpaConfig:     hvpaConfig,
 	}
 }
 
@@ -123,6 +135,7 @@ type kubeControllerManager struct {
 	secrets        Secrets
 	podNetwork     *net.IPNet
 	serviceNetwork *net.IPNet
+	hvpaConfig     *HVPAConfig
 }
 
 func (k *kubeControllerManager) Deploy(ctx context.Context) error {
@@ -140,15 +153,29 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 	}
 
 	var (
-		vpa           = k.emptyVPA()
-		service       = k.emptyService()
-		deployment    = k.emptyDeployment()
-		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
+		vpa        = k.emptyVPA()
+		hvpa       = k.emptyHVPA()
+		service    = k.emptyService()
+		deployment = k.emptyDeployment()
 
-		port           int32 = 10257
-		probeURIScheme       = corev1.URISchemeHTTPS
-		command              = k.computeCommand(port)
+		port              int32 = 10257
+		probeURIScheme          = corev1.URISchemeHTTPS
+		command                 = k.computeCommand(port)
+		vpaResourcePolicy       = &autoscalingv1beta2.PodResourcePolicy{
+			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
+				ContainerName: containerName,
+				MinAllowed: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("100Mi"),
+				},
+			}},
+		}
 	)
+
+	resourceRequirements, err := k.computeResourceRequirements(ctx)
+	if err != nil {
+		return err
+	}
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, service, func() error {
 		service.Labels = getLabels()
@@ -219,16 +246,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 								Protocol:      corev1.ProtocolTCP,
 							},
 						},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("100m"),
-								corev1.ResourceMemory: resource.MustParse("128Mi"),
-							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("400m"),
-								corev1.ResourceMemory: resource.MustParse("512Mi"),
-							},
-						},
+						Resources: resourceRequirements,
 						VolumeMounts: []corev1.VolumeMount{
 							{
 								Name:      k.secrets.CA.Name,
@@ -290,27 +308,96 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, vpa, func() error {
-		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
-			APIVersion: appsv1.SchemeGroupVersion.String(),
-			Kind:       "Deployment",
-			Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+	if k.hvpaConfig != nil && k.hvpaConfig.Enabled {
+		if err := kutil.DeleteObject(ctx, k.seedClient, vpa); err != nil {
+			return err
 		}
-		vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
-			UpdateMode: &vpaUpdateMode,
+
+		var (
+			updateModeAuto = hvpav1alpha1.UpdateModeAuto
+			vpaLabels      = map[string]string{v1beta1constants.LabelRole: "kube-controller-manager-vpa"}
+		)
+
+		scaleDownUpdateMode := k.hvpaConfig.ScaleDownUpdateMode
+		if scaleDownUpdateMode == nil {
+			scaleDownUpdateMode = pointer.StringPtr(hvpav1alpha1.UpdateModeAuto)
 		}
-		vpa.Spec.ResourcePolicy = &autoscalingv1beta2.PodResourcePolicy{
-			ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{{
-				ContainerName: containerName,
-				MinAllowed: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("100m"),
-					corev1.ResourceMemory: resource.MustParse("100Mi"),
+
+		if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, hvpa, func() error {
+			hvpa.Labels = getLabels()
+			hvpa.Spec.Replicas = pointer.Int32Ptr(1)
+			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
+				Deploy:   false,
+				Selector: &metav1.LabelSelector{MatchLabels: getLabels()},
+				Template: hvpav1alpha1.HpaTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: getLabels(),
+					},
+					Spec: hvpav1alpha1.HpaTemplateSpec{
+						MinReplicas: pointer.Int32Ptr(int32(1)),
+						MaxReplicas: int32(1),
+					},
 				},
-			}},
+			}
+			hvpa.Spec.Vpa = hvpav1alpha1.VpaSpec{
+				Selector: &metav1.LabelSelector{MatchLabels: vpaLabels},
+				Deploy:   true,
+				ScaleUp: hvpav1alpha1.ScaleType{
+					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+						UpdateMode: &updateModeAuto,
+					},
+				},
+				ScaleDown: hvpav1alpha1.ScaleType{
+					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+						UpdateMode: scaleDownUpdateMode,
+					},
+				},
+				Template: hvpav1alpha1.VpaTemplate{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: vpaLabels,
+					},
+					Spec: hvpav1alpha1.VpaTemplateSpec{
+						ResourcePolicy: vpaResourcePolicy,
+					},
+				},
+			}
+			hvpa.Spec.WeightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
+				{
+					VpaWeight:         hvpav1alpha1.VpaOnly,
+					StartReplicaCount: 1,
+					LastReplicaCount:  1,
+				},
+			}
+			hvpa.Spec.TargetRef = &autoscalingv2beta1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+			}
+			return nil
+		}); err != nil {
+			return err
 		}
-		return nil
-	}); err != nil {
-		return err
+	} else {
+		if err := kutil.DeleteObject(ctx, k.seedClient, hvpa); err != nil {
+			return err
+		}
+
+		vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
+
+		if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, vpa, func() error {
+			vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       v1beta1constants.DeploymentNameKubeControllerManager,
+			}
+			vpa.Spec.UpdatePolicy = &autoscalingv1beta2.PodUpdatePolicy{
+				UpdateMode: &vpaUpdateMode,
+			}
+			vpa.Spec.ResourcePolicy = vpaResourcePolicy
+			return nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	// create managed resource that deploys resources to the Shoot API Server
@@ -326,6 +413,10 @@ func (k *kubeControllerManager) Destroy(_ context.Context) error { return nil }
 
 func (k *kubeControllerManager) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-controller-manager-vpa", Namespace: k.namespace}}
+}
+
+func (k *kubeControllerManager) emptyHVPA() *hvpav1alpha1.Hvpa {
+	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeControllerManager, Namespace: k.namespace}}
 }
 
 func (k *kubeControllerManager) emptyService() *corev1.Service {
@@ -463,6 +554,37 @@ func (k *kubeControllerManager) getHorizontalPodAutoscalerConfig() gardencorev1b
 		}
 	}
 	return horizontalPodAutoscalerConfig
+}
+
+func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context) (corev1.ResourceRequirements, error) {
+	defaultResources := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("100m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi"),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("400m"),
+			corev1.ResourceMemory: resource.MustParse("512Mi"),
+		},
+	}
+
+	if k.hvpaConfig == nil || !k.hvpaConfig.Enabled {
+		return defaultResources, nil
+	}
+
+	existingDeployment := k.emptyDeployment()
+	if err := k.seedClient.Get(ctx, client.ObjectKeyFromObject(existingDeployment), existingDeployment); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return corev1.ResourceRequirements{}, err
+		}
+		return defaultResources, nil // Deployment was not found, hence, use the default resources
+	}
+
+	if len(existingDeployment.Spec.Template.Spec.Containers) > 0 {
+		return existingDeployment.Spec.Template.Spec.Containers[0].Resources, nil
+	}
+
+	return defaultResources, nil
 }
 
 var (

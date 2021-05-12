@@ -431,12 +431,31 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		hvpaEnabled               = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 		mountHostCADirectories    = gardenletfeatures.FeatureGate.Enabled(features.MountHostCADirectories)
 		memoryMetricForHpaEnabled = false
+
+		scaleDownUpdateMode       = hvpav1alpha1.UpdateModeAuto
+		minReplicas         int32 = 1
+		maxReplicas         int32 = 4
 	)
+
+	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
+		minReplicas = 2
+	}
+
+	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
+		minReplicas = 4
+		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
+	}
 
 	if b.ManagedSeed != nil {
 		// Override for shooted seeds
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 		memoryMetricForHpaEnabled = true
+
+		if b.ManagedSeedAPIServer != nil {
+			autoscaler := b.ManagedSeedAPIServer.Autoscaler
+			minReplicas = *autoscaler.MinReplicas
+			maxReplicas = autoscaler.MaxReplicas
+		}
 	}
 
 	var (
@@ -454,6 +473,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"networkpolicy/konnectivity-enabled":     strconv.FormatBool(b.Shoot.KonnectivityTunnelEnabled),
 		}
 		defaultValues = map[string]interface{}{
+			"minReplicas":               minReplicas,
+			"maxReplicas":               maxReplicas,
 			"etcdServicePort":           etcd.PortEtcdClient,
 			"kubernetesVersion":         b.Shoot.Info.Spec.Kubernetes.Version,
 			"priorityClassName":         v1beta1constants.PriorityClassNameShootControlPlane,
@@ -473,12 +494,11 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"hvpa": map[string]interface{}{
 				"enabled": hvpaEnabled,
 			},
+			"scaleDownUpdateMode": scaleDownUpdateMode,
 			"hpa": map[string]interface{}{
 				"memoryMetricForHpaEnabled": memoryMetricForHpaEnabled,
 			},
 		}
-		minReplicas int32 = 1
-		maxReplicas int32 = 4
 
 		shootNetworks = map[string]interface{}{
 			"services": b.Shoot.Networks.Services.String(),
@@ -523,16 +543,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	} else if apierrors.IsNotFound(err) {
 		foundDeployment = false
-	}
-
-	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil {
-		autoscaler := b.ManagedSeedAPIServer.Autoscaler
-		minReplicas = *autoscaler.MinReplicas
-		maxReplicas = autoscaler.MaxReplicas
-	}
-
-	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
-		minReplicas = 2
 	}
 
 	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil && !hvpaEnabled {
@@ -589,9 +599,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			}
 		}
 	}
-
-	defaultValues["minReplicas"] = minReplicas
-	defaultValues["maxReplicas"] = maxReplicas
 
 	var (
 		apiServerConfig              = b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
