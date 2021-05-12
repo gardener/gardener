@@ -16,7 +16,6 @@ package seed
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -165,11 +164,10 @@ type defaultControl struct {
 
 func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) error {
 	var (
-		ctx         = context.TODO()
-		seed        = obj.DeepCopy()
-		seedJSON, _ = json.Marshal(seed)
-		seedLogger  = logger.NewFieldLogger(logger.Logger, "seed", seed.Name)
-		err         error
+		ctx        = context.TODO()
+		seed       = obj.DeepCopy()
+		seedLogger = logger.NewFieldLogger(logger.Logger, "seed", seed.Name)
+		err        error
 	)
 
 	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
@@ -310,7 +308,6 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	}
 
 	seedLogger.Infof("[SEED RECONCILE] %s", key)
-	seedLogger.Debugf(string(seedJSON))
 
 	// need retry logic, because controllerregistration controller is acting on it at the same time and cached object might not be up to date
 	seed, err = kutil.TryUpdateSeed(ctx, gardenClient.GardenCore(), retry.DefaultBackoff, seed.ObjectMeta, func(curSeed *gardencorev1beta1.Seed) (*gardencorev1beta1.Seed, error) {

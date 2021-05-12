@@ -16,7 +16,6 @@ package shoot
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -71,14 +70,10 @@ func (c *Controller) shootAdd(obj interface{}, resetRateLimiting bool) {
 
 func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 	var (
-		oldShoot        = oldObj.(*gardencorev1beta1.Shoot)
-		newShoot        = newObj.(*gardencorev1beta1.Shoot)
-		oldShootJSON, _ = json.Marshal(oldShoot)
-		newShootJSON, _ = json.Marshal(newShoot)
-		shootLogger     = logger.NewShootLogger(logger.Logger, newShoot.ObjectMeta.Name, newShoot.ObjectMeta.Namespace)
+		oldShoot    = oldObj.(*gardencorev1beta1.Shoot)
+		newShoot    = newObj.(*gardencorev1beta1.Shoot)
+		shootLogger = logger.NewShootLogger(logger.Logger, newShoot.ObjectMeta.Name, newShoot.ObjectMeta.Namespace)
 	)
-	shootLogger.Debugf(string(oldShootJSON))
-	shootLogger.Debugf(string(newShootJSON))
 
 	// If the generation did not change for an update event (i.e., no changes to the .spec section have
 	// been made), we do not want to add the Shoot to the queue. The period reconciliation is handled
