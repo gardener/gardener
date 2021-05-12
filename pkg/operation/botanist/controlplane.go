@@ -437,6 +437,15 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		maxReplicas         int32 = 4
 	)
 
+	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
+		minReplicas = 2
+	}
+
+	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
+		minReplicas = 4
+		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
+	}
+
 	if b.ManagedSeed != nil {
 		// Override for shooted seeds
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
@@ -447,15 +456,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			minReplicas = *autoscaler.MinReplicas
 			maxReplicas = autoscaler.MaxReplicas
 		}
-	}
-
-	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
-		minReplicas = 2
-	}
-
-	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
-		minReplicas = 4
-		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
 	}
 
 	var (
