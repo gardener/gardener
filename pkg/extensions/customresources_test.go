@@ -199,8 +199,7 @@ var _ = Describe("extensions", func() {
 			passedObj := expected.DeepCopy()
 			passedObj.SetAnnotations(map[string]string{"gardener.cloud/operation": "reconcile"})
 			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: metav1.Now().Rfc3339Copy(), // time.Now returns millisecond precision which is not marshalled
+				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
 
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
