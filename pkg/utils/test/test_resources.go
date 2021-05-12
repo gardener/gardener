@@ -66,19 +66,9 @@ func EnsureTestResources(ctx context.Context, c client.Client, path string) ([]c
 func ReadTestResources(scheme *runtime.Scheme, path string) ([]client.Object, error) {
 	decoder := serializer.NewCodecFactory(scheme).UniversalDeserializer()
 
-	var files []os.FileInfo
-	//var files []os.DirEntry
-	var err error
-	info, err := os.Stat(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
-	}
-	if !info.IsDir() {
-		path, files = filepath.Dir(path), []os.FileInfo{info}
-	} else {
-		if files, err = os.ReadDir(path); err != nil {
-			return nil, err
-		}
 	}
 
 	// file extensions that may contain Webhooks
@@ -86,6 +76,10 @@ func ReadTestResources(scheme *runtime.Scheme, path string) ([]client.Object, er
 
 	var objects []client.Object
 	for _, file := range files {
+
+		if file.IsDir() {
+			continue
+		}
 		// Only parse allowlisted file types
 		if !resourceExtensions.Has(filepath.Ext(file.Name())) {
 			continue
