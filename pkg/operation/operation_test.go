@@ -128,20 +128,9 @@ var _ = Describe("operation", func() {
 			}
 		})
 
-		It("should patch the ShootState's owner reference and add it to the Operation struct", func() {
-			gomock.InOrder(
-				gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-				test.EXPECTPatch(ctx, k8sGardenRuntimeClient, shootStatePatched, shootState, types.StrategicMergePatchType),
-			)
-
-			Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
-			Expect(o.ShootState).ToNot(BeNil())
-		})
-
 		It("should create ShootState with correct ownerReferences and add it to the Operation struct", func() {
 			gomock.InOrder(
 				gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-				test.EXPECTPatch(ctx, k8sGardenRuntimeClient, shootStatePatched, shootState, types.StrategicMergePatchType, apierrors.NewNotFound(schema.GroupResource{}, "")),
 				k8sGardenRuntimeClient.EXPECT().Create(ctx, shootStatePatched),
 			)
 
@@ -155,6 +144,17 @@ var _ = Describe("operation", func() {
 			Expect(*o.ShootState.OwnerReferences[0].BlockOwnerDeletion).To(BeFalse())
 			Expect(o.ShootState.OwnerReferences[0].Controller).ToNot(BeNil())
 			Expect(*o.ShootState.OwnerReferences[0].Controller).To(BeTrue())
+		})
+
+		It("should patch the ShootState's owner reference and add it to the Operation struct", func() {
+			gomock.InOrder(
+				gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+				k8sGardenRuntimeClient.EXPECT().Create(ctx, shootStatePatched).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
+				test.EXPECTPatch(ctx, k8sGardenRuntimeClient, shootStatePatched, shootState, types.StrategicMergePatchType),
+			)
+
+			Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
+			Expect(o.ShootState).ToNot(BeNil())
 		})
 	})
 
