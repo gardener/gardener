@@ -17,6 +17,7 @@ package gardener
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -162,6 +163,15 @@ const (
 	ShootProjectSecretSuffixMonitoring = "monitoring"
 )
 
+// GetShootProjectSecretSuffixes returns the list of shoot-related project secret suffixes.
+func GetShootProjectSecretSuffixes() []string {
+	return []string{
+		ShootProjectSecretSuffixKubeconfig,
+		ShootProjectSecretSuffixSSHKeypair,
+		ShootProjectSecretSuffixMonitoring,
+	}
+}
+
 func shootProjectSecretSuffix(suffix string) string {
 	return "." + suffix
 }
@@ -169,4 +179,16 @@ func shootProjectSecretSuffix(suffix string) string {
 // ComputeShootProjectSecretName computes the name of a shoot-related project secret.
 func ComputeShootProjectSecretName(shootName, suffix string) string {
 	return shootName + shootProjectSecretSuffix(suffix)
+}
+
+// IsShootProjectSecret checks if the given name matches the name of a shoot-related project secret. If no, it returns
+// an empty string and <false>. Otherwise, it returns the shoot name and <true>.
+func IsShootProjectSecret(secretName string) (string, bool) {
+	for _, v := range GetShootProjectSecretSuffixes() {
+		if suffix := shootProjectSecretSuffix(v); strings.HasSuffix(secretName, suffix) {
+			return strings.TrimSuffix(secretName, suffix), true
+		}
+	}
+
+	return "", false
 }
