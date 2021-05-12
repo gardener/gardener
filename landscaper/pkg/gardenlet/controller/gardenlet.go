@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	v2 "github.com/gardener/component-spec/bindings-go/apis/v2"

@@ -17,7 +17,6 @@
 package generator
 
 import (
-
 	"os"
 	"path"
 
