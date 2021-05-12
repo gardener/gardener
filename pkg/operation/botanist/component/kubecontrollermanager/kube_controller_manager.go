@@ -361,6 +361,13 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 					},
 				},
 			}
+			hvpa.Spec.WeightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
+				{
+					VpaWeight:         hvpav1alpha1.VpaOnly,
+					StartReplicaCount: 1,
+					LastReplicaCount:  1,
+				},
+			}
 			hvpa.Spec.TargetRef = &autoscalingv2beta1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",

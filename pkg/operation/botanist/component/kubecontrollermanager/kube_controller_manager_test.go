@@ -342,6 +342,13 @@ var _ = Describe("KubeControllerManager", func() {
 									},
 								},
 							},
+							WeightBasedScalingIntervals: []hvpav1alpha1.WeightBasedScalingInterval{
+								{
+									VpaWeight:         hvpav1alpha1.VpaOnly,
+									StartReplicaCount: 1,
+									LastReplicaCount:  1,
+								},
+							},
 							TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
 								APIVersion: appsv1.SchemeGroupVersion.String(),
 								Kind:       "Deployment",
