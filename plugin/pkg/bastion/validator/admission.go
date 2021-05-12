@@ -140,6 +140,12 @@ func (v *Bastion) Admit(ctx context.Context, a admission.Attributes, o admission
 		return apierrors.NewInternalError(fmt.Errorf("could not get shoot %s/%s: %v", bastion.Namespace, shootName, err))
 	}
 
+	// ensure shoot is alive
+	if shoot.DeletionTimestamp != nil {
+		fieldErr := field.Invalid(shootPath, shootName, "shoot is in deletion")
+		return apierrors.NewInvalid(gk, bastion.Name, field.ErrorList{fieldErr})
+	}
+
 	// ensure shoot is already assigned to a seed
 	if shoot.Spec.SeedName == nil || len(*shoot.Spec.SeedName) == 0 {
 		fieldErr := field.Invalid(shootPath, shootName, "shoot is not yet assigned to a seed")
