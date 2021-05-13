@@ -28,13 +28,11 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,6 +50,7 @@ const (
 	serviceName        = "metrics-server"
 	serviceAccountName = "metrics-server"
 	containerName      = "metrics-server"
+	sideCarName        = "metrics-server-nanny"
 
 	servicePort   int32 = 443
 	containerPort int32 = 8443
@@ -76,6 +75,7 @@ func New(
 	image string,
 	vpaEnabled bool,
 	kubeAPIServerHost *string,
+	sideCar string,
 ) Interface {
 	return &metricsServer{
 		client:            client,
@@ -83,6 +83,7 @@ func New(
 		image:             image,
 		vpaEnabled:        vpaEnabled,
 		kubeAPIServerHost: kubeAPIServerHost,
+		sideCar:           sideCar,
 	}
 }
 
@@ -92,8 +93,8 @@ type metricsServer struct {
 	image             string
 	vpaEnabled        bool
 	kubeAPIServerHost *string
-
-	secrets Secrets
+	sideCar           string
+	secrets           Secrets
 }
 
 func (m *metricsServer) Deploy(ctx context.Context) error {
@@ -147,6 +148,11 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 					APIGroups: []string{""},
 					Resources: []string{"pods", "nodes", "nodes/stats", "namespaces", "configmaps"},
 					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"deployments"},
+					Verbs:     []string{"get", "list", "update", "watch"},
 				},
 			},
 		}
@@ -262,6 +268,9 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 					managedresources.LabelKeyOrigin: managedresources.LabelValueGardener,
 					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
 				}),
+				Annotations: map[string]string{
+					resourcesv1alpha1.PreserveResources: true,
+				},
 			},
 			Spec: appsv1.DeploymentSpec{
 				RevisionHistoryLimit: pointer.Int32(1),
@@ -358,6 +367,48 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 								Name:      volumeMountNameServer,
 								MountPath: volumeMountPathServer,
 							}},
+						}, {
+							Name:            sideCarName,
+							Image:           m.sideCar,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Command: []string{
+								"/pod_nanny",
+								"--cpu=20m",
+								"--extra-cpu=1m",
+								"--memory=15Mi",
+								"--extra-memory=2Mi",
+								"--threshold=5",
+								"--deployment=metrics-server",
+								"--container=metrics-server",
+								"--poll-period=300000",
+								"--minClusterSize=10",
+								"--use-metrics=false",
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("40m"),
+									corev1.ResourceMemory: resource.MustParse("25Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("40m"),
+									corev1.ResourceMemory: resource.MustParse("25Mi"),
+								},
+							},
+							Env: []corev1.EnvVar{{
+								Name: "MY_POD_NAME",
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										FieldPath: "metadata.name",
+									},
+								},
+							}, {
+								Name: "MY_POD_NAMESPACE",
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										FieldPath: "metadata.namespace",
+									},
+								},
+							}},
 						}},
 						Volumes: []corev1.Volume{{
 							Name: volumeMountNameServer,
@@ -371,8 +422,6 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 				},
 			},
 		}
-
-		vpa *autoscalingv1beta2.VerticalPodAutoscaler
 	)
 
 	if m.kubeAPIServerHost != nil {
@@ -380,37 +429,6 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 			Name:  "KUBERNETES_SERVICE_HOST",
 			Value: *m.kubeAPIServerHost,
 		})
-	}
-
-	if m.vpaEnabled {
-		vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
-		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "metrics-server",
-				Namespace: metav1.NamespaceSystem,
-			},
-			Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
-				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       deployment.Name,
-				},
-				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
-				},
-				ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-					ContainerPolicies: []autoscalingv1beta2.ContainerResourcePolicy{
-						{
-							ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
-							MinAllowed: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("50m"),
-								corev1.ResourceMemory: resource.MustParse("150Mi"),
-							},
-						},
-					},
-				},
-			},
-		}
 	}
 
 	return registry.AddAllAndSerialize(
@@ -423,7 +441,6 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 		service,
 		apiService,
 		deployment,
-		vpa,
 	)
 }
 
