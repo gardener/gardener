@@ -34,13 +34,10 @@ or with regex:
     * Kubernetes Pods
 
 ### Expose logs for component to User Grafana
-Exposing logs for a new component to the User's Grafana happens with adding a new component section into: charts/seed-monitoring/charts/grafana/values.yaml
+Exposing logs for a new component to the User's Grafana happens with adding a new `extensions.observedPods` section into: charts/seed-monitoring/charts/grafana/values.yaml
 
-* dashboardName: The name of the dashboard. Use prefix `Logging` to make it recognizable for the users.
-* jobName: The job name of the component defined in the prometheus.
-* podPrefix: The prefix of the pod e.g. `kube-apiserver`
-* fileName: File which will be created in the container's disk with the dashboard configuration.
-
+* PodPrefix: The prefix of the pod e.g. `kube-apiserver`
+* IsExposedToUser: It is true when the component should be exposed to the end user
 
 ### Configuration
 #### Fluent-bit

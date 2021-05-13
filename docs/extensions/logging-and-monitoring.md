@@ -30,10 +30,11 @@ Such `ConfigMap`s may contain four fields in their `data`:
 
 * `scrape_config`: This field contains Prometheus scrape configuration for the component(s) and metrics that shall be scraped.
 * `alerting_rules`: This field contains Alertmanager rules for alerts that shall be raised.
-* `dashboard_operators`: This field contains a Grafana dashboard in JSON that is only relevant for Gardener operators.
-* `dashboard_users`: This field contains a Grafana dashboard in JSON that is only relevant for Gardener users (shoot owners).
+* `observedComponents`: This field contains observed components which will be monitored by `Controlplane Logs Dashboard` Grafana dashboard.
+* (deprecated)`dashboard_operators`: This field contains a Grafana dashboard in JSON that is only relevant for Gardener operators.
+* (deprecated)`dashboard_users`: This field contains a Grafana dashboard in JSON that is only relevant for Gardener users (shoot owners).
 
-**Example:** A `ControlPlane` controller deploying a `cloud-controller-manager` into the shoot namespace wants to integrate monitoring configuration for scraping metrics, alerting rules and dashboards.
+**Example:** A `ControlPlane` controller deploying a `cloud-controller-manager` into the shoot namespace wants to integrate monitoring configuration for scraping metrics, alerting rules, dashboards and logging configuration for exposing logs to the end users.
 
 ```yaml
 apiVersion: v1
@@ -88,11 +89,12 @@ data:
             description: All infrastructure specific operations cannot be completed (e.g. creating load balancers or persistent volumes).
             summary: Cloud controller manager is down.
 
-  dashboard_operators:
-    <some-json-describing-a-grafana-dashboard-for-operators>
-
-  dashboard_users:
-    <some-json-describing-a-grafana-dashboard-for-users>
+  observedComponents:
+    observedPods:
+    - podPrefix: cloud-controller-manager
+      isExposedToUser: true
+    - podPrefix: machine-controller-manager
+      isExposedToUser: true
 ```
 
 ## Logging
@@ -107,9 +109,6 @@ Gardener logging consists of components in three roles - log collectors and forw
 - Grafana is the UI component used to explore monitoring and log data together for easier troubleshooting and in context. Grafana instances are configured to use the coresponding Loki instances, sharing the same namespace, as data providers. There is one Grafana Deployment in the `garden` namespace and two Deployments per shoot namespace (one exposed to the end users and one for the operators). 
 
 Logs can be produced from various sources, such as containers or systemd, and in different formats. The fluent-bit design supports configurable [data pipeline](https://docs.fluentbit.io/manual/concepts/data-pipeline) to address that problem. Gardener provides such [configuration](../../charts/seed-bootstrap/charts/fluent-bit/templates/fluent-bit-configmap.yaml) for logs produced by all its core managed components as a `ConfigMap`. Extensions can contribute their own, specific configurations as `ConfigMap`s too. See for example the [logging configuration](https://github.com/gardener/gardener-extension-provider-aws/blob/master/charts/gardener-extension-provider-aws/templates/configmap-logging.yaml) for the Gardener AWS provider extension. The Gardener reconciliation loop watches such resources and updates the fluent-bit agents dynamically.
-
-### Extensions logging integration
-
 #### Fluent-bit log parsers and filters 
 To integrate with Gardener logging, extensions can and *should* specify how fluent-bit will handle the logs produced by the managed components that they contribute to Gardener. Normally, that would require to configure a *parser* for the specific logging format, if none of the available is applicable, and a *filter* defining how to apply it. For a complete reference for the configuration options, refer to fluent-bit's [documentation](https://docs.fluentbit.io/manual/).   
 
