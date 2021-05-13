@@ -17,7 +17,6 @@
 package generator
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -35,7 +34,7 @@ func MarshalAndWriteConfig(filepath string, config interface{}) error {
 	if err := os.MkdirAll(path.Dir(filepath), os.ModePerm); err != nil {
 		return errors.Wrapf(err, "unable to create path %s", path.Dir(filepath))
 	}
-	if err := ioutil.WriteFile(filepath, raw, os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath, raw, os.ModePerm); err != nil {
 		return errors.Wrapf(err, "unable to write config to %s", filepath)
 	}
 

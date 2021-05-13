@@ -18,7 +18,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"time"
 
@@ -183,7 +183,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 				break
 			}
 			framework.ExpectNoError(err)
-			output, err := ioutil.ReadAll(reader)
+			output, err := io.ReadAll(reader)
 			framework.ExpectNoError(err)
 			f.Logger.Infof("Got output from 'kubectl cp': %s", string(output))
 		}

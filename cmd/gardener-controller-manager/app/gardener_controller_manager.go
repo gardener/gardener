@@ -19,7 +19,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/gardener/gardener/cmd/utils"
@@ -85,7 +84,7 @@ func NewOptions() (*Options, error) {
 // loadConfigFromFile loads the contents of file and decodes it as a
 // ControllerManagerConfiguration object.
 func (o *Options) loadConfigFromFile(file string) (*config.ControllerManagerConfiguration, error) {
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}

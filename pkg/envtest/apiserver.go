@@ -21,7 +21,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -172,7 +171,7 @@ func (g *GardenerAPIServer) runAPIServerInProcess() error {
 	// Err is explicitly set.
 	if g.Err == nil {
 		// a nil writer causes klog to panic
-		g.Err = ioutil.Discard
+		g.Err = io.Discard
 	}
 	// --logtostderr defaults to true, which will cause klog to log to stderr even if we set a different output writer
 	g.Args = append(g.Args, "--logtostderr=false")
@@ -275,7 +274,7 @@ func (g *GardenerAPIServer) prepareKubeconfigFile() (string, error) {
 	}
 	kubeconfigFile := filepath.Join(g.CertDir, "kubeconfig.yaml")
 
-	return kubeconfigFile, ioutil.WriteFile(kubeconfigFile, kubeconfigBytes, 0600)
+	return kubeconfigFile, os.WriteFile(kubeconfigFile, kubeconfigBytes, 0600)
 }
 
 // waitUntilHealthy waits for the HealthCheckEndpoint to return 200.

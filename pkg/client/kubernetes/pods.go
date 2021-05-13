@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -101,7 +100,7 @@ func GetPodLogs(ctx context.Context, podInterface corev1client.PodInterface, nam
 	}
 	defer func() { utilruntime.HandleError(stream.Close()) }()
 
-	return ioutil.ReadAll(stream)
+	return io.ReadAll(stream)
 }
 
 // ForwardPodPort tries to forward the <remote> port of the pod with name <name> in namespace <namespace> to
@@ -144,7 +143,7 @@ func (c *clientSet) setupForwardPodPort(namespace, name string, local, remote in
 	var (
 		stopChan  = make(chan struct{}, 1)
 		readyChan = make(chan struct{}, 1)
-		out       = ioutil.Discard
+		out       = io.Discard
 		localPort int
 	)
 

@@ -17,7 +17,6 @@ package logger
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/gardener/gardener/pkg/utils"
@@ -62,7 +61,7 @@ func NewLogger(logLevel string) *logrus.Logger {
 // NewNopLogger instantiates a new logger that logs to ioutil.Discard.
 func NewNopLogger() *logrus.Logger {
 	logger := logrus.New()
-	logger.Out = ioutil.Discard
+	logger.Out = io.Discard
 	return logger
 }
 

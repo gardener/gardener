@@ -17,7 +17,6 @@ package tolerationrestriction
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction"
 	"github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction/apis/shoottolerationrestriction/install"
@@ -49,7 +48,7 @@ func LoadConfiguration(config io.Reader) (*shoottolerationrestriction.Configurat
 		return internalConfig, nil
 	}
 
-	data, err := ioutil.ReadAll(config)
+	data, err := io.ReadAll(config)
 	if err != nil {
 		return nil, err
 	}

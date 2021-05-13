@@ -29,7 +29,7 @@ package applications
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"time"
 
 	"github.com/gardener/gardener/test/framework"
@@ -89,7 +89,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 					res = multierror.Append(res, errors.Wrapf(err, "%s to %s", from.GetName(), to.GetName()))
 					continue
 				}
-				data, err := ioutil.ReadAll(reader)
+				data, err := io.ReadAll(reader)
 				if err != nil {
 					f.Logger.Error(err)
 					continue

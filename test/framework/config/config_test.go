@@ -16,7 +16,6 @@ package config_test
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 
 	"github.com/gardener/gardener/test/framework/config"
@@ -60,7 +59,7 @@ int: 5
 		fs.BoolVar(&data.Bool, "bool", false, "")
 		fs.IntVar(&data.Int, "int", 1, "")
 
-		tmpfile, err = ioutil.TempFile("", "configtest-*.yaml")
+		tmpfile, err = os.CreateTemp("", "configtest-*.yaml")
 		Expect(err).ToNot(HaveOccurred())
 		_, err = tmpfile.WriteString(configContent)
 		Expect(err).ToNot(HaveOccurred())

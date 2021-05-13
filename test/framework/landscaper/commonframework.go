@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	cdv2 "github.com/gardener/component-spec/bindings-go/apis/v2"
@@ -351,7 +351,7 @@ func (f *CommonFrameworkLandscaper) DeleteConfigMap(ctx context.Context, name st
 
 // CreateTargetWithKubeconfig creates the landscaper target from a given name and kubeconfig path on the local filesystem
 func (f *CommonFrameworkLandscaper) CreateTargetWithKubeconfig(ctx context.Context, name, kubeconfigPath string) error {
-	seedKubeconfigBytes, err := ioutil.ReadFile(kubeconfigPath)
+	seedKubeconfigBytes, err := os.ReadFile(kubeconfigPath)
 	ExpectNoError(err)
 
 	toJSON, err := yaml.ToJSON(seedKubeconfigBytes)
