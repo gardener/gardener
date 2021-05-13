@@ -47,10 +47,10 @@ var _ = Describe("utils", func() {
 						Password: basicAuthPass,
 					},
 
-					KubeConfigRequest: &KubeConfigRequest{
-						ClusterName:  clusterName,
-						APIServerURL: apiServerURL,
-					},
+					KubeConfigRequests: []KubeConfigRequest{{
+						ClusterName:   clusterName,
+						APIServerHost: apiServerURL,
+					}},
 				}
 
 				certificate = &Certificate{
@@ -85,6 +85,67 @@ var _ = Describe("utils", func() {
 					Expect(kubecfg.AuthInfos[0].AuthInfo.ClientCertificateData).ToNot(BeEmpty())
 					Expect(kubecfg.AuthInfos[0].AuthInfo.ClientKeyData).ToNot(BeEmpty())
 				})
+
+				It("should return a kubeconfig with two contexts and one user when two requests are passed", func() {
+					secret.BasicAuth = nil
+					secret.KubeConfigRequests = append(secret.KubeConfigRequests, KubeConfigRequest{
+						ClusterName:   "foo",
+						APIServerHost: "foo.bar",
+					})
+
+					kubeconfig, err := ExportGenerateKubeconfig(secret, certificate)
+					Expect(err).NotTo(HaveOccurred())
+
+					err = yaml.Unmarshal(kubeconfig, &kubecfg)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(kubecfg).To(Equal(clientcmdv1.Config{
+						Kind:       "Config",
+						APIVersion: "v1",
+						Clusters: []clientcmdv1.NamedCluster{
+							{
+								Name: clusterName,
+								Cluster: clientcmdv1.Cluster{
+									Server:                   "https://" + apiServerURL,
+									CertificateAuthorityData: []byte(caCert),
+								},
+							},
+							{
+								Name: "foo",
+								Cluster: clientcmdv1.Cluster{
+									Server:                   "https://foo.bar",
+									CertificateAuthorityData: []byte(caCert),
+								},
+							},
+						},
+						CurrentContext: clusterName,
+						Contexts: []clientcmdv1.NamedContext{
+							{
+								Name: clusterName,
+								Context: clientcmdv1.Context{
+									Cluster:  clusterName,
+									AuthInfo: clusterName,
+								},
+							},
+							{
+								Name: "foo",
+								Context: clientcmdv1.Context{
+									Cluster:  "foo",
+									AuthInfo: clusterName,
+								},
+							},
+						},
+						AuthInfos: []clientcmdv1.NamedAuthInfo{
+							{
+								Name: clusterName,
+								AuthInfo: clientcmdv1.AuthInfo{
+									ClientCertificateData: []byte(clientCert),
+									ClientKeyData:         []byte(clientKey),
+								},
+							},
+						},
+					}))
+				})
 			})
 
 			Context("with Basic Authentication credentials", func() {
@@ -106,6 +167,73 @@ var _ = Describe("utils", func() {
 					Expect(kubecfg.AuthInfos[1].AuthInfo.Username).To(Equal(basicAuthUser))
 					Expect(kubecfg.AuthInfos[1].AuthInfo.Password).To(Equal(basicAuthPass))
 				})
+			})
+
+			It("should return a kubeconfig with two context and two users when two requests are passed", func() {
+				secret.KubeConfigRequests = append(secret.KubeConfigRequests, KubeConfigRequest{
+					ClusterName:   "foo",
+					APIServerHost: "foo.bar",
+				})
+
+				kubeconfig, err := ExportGenerateKubeconfig(secret, certificate)
+				Expect(err).NotTo(HaveOccurred())
+
+				err = yaml.Unmarshal(kubeconfig, &kubecfg)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(kubecfg).To(Equal(clientcmdv1.Config{
+					Kind:       "Config",
+					APIVersion: "v1",
+					Clusters: []clientcmdv1.NamedCluster{
+						{
+							Name: clusterName,
+							Cluster: clientcmdv1.Cluster{
+								Server:                   "https://" + apiServerURL,
+								CertificateAuthorityData: []byte(caCert),
+							},
+						},
+						{
+							Name: "foo",
+							Cluster: clientcmdv1.Cluster{
+								Server:                   "https://foo.bar",
+								CertificateAuthorityData: []byte(caCert),
+							},
+						},
+					},
+					CurrentContext: clusterName,
+					Contexts: []clientcmdv1.NamedContext{
+						{
+							Name: clusterName,
+							Context: clientcmdv1.Context{
+								Cluster:  clusterName,
+								AuthInfo: clusterName,
+							},
+						},
+						{
+							Name: "foo",
+							Context: clientcmdv1.Context{
+								Cluster:  "foo",
+								AuthInfo: clusterName,
+							},
+						},
+					},
+					AuthInfos: []clientcmdv1.NamedAuthInfo{
+						{
+							Name: clusterName,
+							AuthInfo: clientcmdv1.AuthInfo{
+								ClientCertificateData: []byte(clientCert),
+								ClientKeyData:         []byte(clientKey),
+							},
+						},
+						{
+							Name: clusterName + "-basic-auth",
+							AuthInfo: clientcmdv1.AuthInfo{
+								Username: basicAuthUser,
+								Password: basicAuthPass,
+							},
+						},
+					},
+				}))
 			})
 		})
 	})

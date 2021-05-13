@@ -1,4 +1,4 @@
-//usr/bin/env go run $0 "$@"; exit
+// usr/bin/env go run $0 "$@"; exit
 
 package main
 
@@ -236,10 +236,10 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 				CertType:  secrets.ClientCert,
 				SigningCA: caCertificate,
 			},
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  "local-garden",
-				APIServerURL: "localhost:2443",
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   "local-garden",
+				APIServerHost: "localhost:2443",
+			}},
 		},
 		// Secret definition for kube-controller-manager kubeconfig
 		&secrets.ControlPlaneSecretConfig{
@@ -252,10 +252,10 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 				CertType:  secrets.ClientCert,
 				SigningCA: caCertificate,
 			},
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  "local-garden",
-				APIServerURL: "kube-apiserver:2443",
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   "local-garden",
+				APIServerHost: "kube-apiserver:2443",
+			}},
 		},
 		// Secret definition for service account (used for kube-apiserver and kube-controller-manager)
 		&secrets.RSASecretConfig{
@@ -271,10 +271,10 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 				CertType:   secrets.ClientCert,
 				SigningCA:  caCertificate,
 			},
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  "local-garden",
-				APIServerURL: "localhost:2443",
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   "local-garden",
+				APIServerHost: "localhost:2443",
+			}},
 		},
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
@@ -283,10 +283,10 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 				CertType:   secrets.ClientCert,
 				SigningCA:  caCertificate,
 			},
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  "local-garden",
-				APIServerURL: "localhost:2443",
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   "local-garden",
+				APIServerHost: "localhost:2443",
+			}},
 		},
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
@@ -295,10 +295,10 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 				CertType:   secrets.ClientCert,
 				SigningCA:  caCertificate,
 			},
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  "local-garden",
-				APIServerURL: "localhost:2443",
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   "local-garden",
+				APIServerHost: "localhost:2443",
+			}},
 		},
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
@@ -307,10 +307,10 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 				CertType:   secrets.ClientCert,
 				SigningCA:  caCertificate,
 			},
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  "local-garden",
-				APIServerURL: "localhost:2443",
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   "local-garden",
+				APIServerHost: "localhost:2443",
+			}},
 		},
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
@@ -320,14 +320,14 @@ func createClusterCertificatesAndKeys(caCertificate *secrets.Certificate) (map[s
 				CertType:     secrets.ClientCert,
 				SigningCA:    caCertificate,
 			},
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  "local-garden",
-				APIServerURL: "localhost:2443",
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   "local-garden",
+				APIServerHost: "localhost:2443",
+			}},
 		},
 	}
 
-	var credentials = make(map[string]certsAndKeys)
+	credentials := make(map[string]certsAndKeys)
 	for _, s := range secretList {
 		obj, err := s.Generate()
 		if err != nil {
