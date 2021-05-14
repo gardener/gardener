@@ -41,7 +41,7 @@ func init() {
 // cluster by adding the shoot, seed, and cloudprofile specification.
 func SyncClusterResourceToSeed(
 	ctx context.Context,
-	client client.Writer,
+	c client.Client,
 	clusterName string,
 	shoot *gardencorev1beta1.Shoot,
 	cloudProfile *gardencorev1beta1.CloudProfile,
@@ -90,7 +90,7 @@ func SyncClusterResourceToSeed(
 		shootObj.ManagedFields = nil
 	}
 
-	_, err := controllerutils.MergePatchOrCreate(ctx, client, cluster, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, cluster, func() error {
 		if cloudProfileObj != nil {
 			cluster.Spec.CloudProfile = runtime.RawExtension{Object: cloudProfileObj}
 		}
