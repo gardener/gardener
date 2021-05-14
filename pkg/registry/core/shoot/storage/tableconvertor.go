@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	metatable "k8s.io/apimachinery/pkg/api/meta/table"
@@ -39,16 +40,21 @@ func newTableConvertor() rest.TableConvertor {
 	return &convertor{
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
-			{Name: "Provider", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["provider"]},
 			{Name: "CloudProfile", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["cloudprofile"]},
-			{Name: "Seed", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["seed"]},
-			{Name: "Version", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["version"]},
+			{Name: "Provider", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["provider"]},
+			{Name: "Region", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["region"]},
+			{Name: "Seed", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["seed"], Priority: 1},
+			{Name: "K8S Version", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["k8sVersion"]},
 			{Name: "Hibernation", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["hibernation"]},
 			{Name: "Last Operation", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["lastoperation"]},
-			{Name: "APIServer", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["apiserver"]},
-			{Name: "Control", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["control"]},
-			{Name: "Nodes", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["nodes"]},
-			{Name: "System", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["system"]},
+			{Name: "Status", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["status"]},
+
+			{Name: "Purpose", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["purpose"], Priority: 1},
+			{Name: "Gardener Version", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["gardenerVersion"], Priority: 1},
+			{Name: "APIServer", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["apiserver"], Priority: 1},
+			{Name: "Control", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["control"], Priority: 1},
+			{Name: "Nodes", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["nodes"], Priority: 1},
+			{Name: "System", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["system"], Priority: 1},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -81,8 +87,9 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		)
 
 		cells = append(cells, shoot.Name)
-		cells = append(cells, shoot.Spec.Provider.Type)
 		cells = append(cells, shoot.Spec.CloudProfileName)
+		cells = append(cells, shoot.Spec.Provider.Type)
+		cells = append(cells, shoot.Spec.Region)
 		if seed := shoot.Spec.SeedName; seed != nil {
 			cells = append(cells, *seed)
 		} else {
@@ -106,6 +113,23 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 			cells = append(cells, fmt.Sprintf("%s %s (%d%%)", lastOp.Type, lastOp.State, lastOp.Progress))
 		} else {
 			cells = append(cells, "<pending>")
+		}
+		status, ok := shoot.Labels[v1beta1constants.ShootStatus]
+		if !ok {
+			cells = append(cells, "<pending>")
+		} else {
+			cells = append(cells, status)
+		}
+
+		if purpose := shoot.Spec.Purpose; purpose != nil {
+			cells = append(cells, string(*purpose))
+		} else {
+			cells = append(cells, "<none>")
+		}
+		if len(shoot.Status.Gardener.Version) != 0 {
+			cells = append(cells, shoot.Status.Gardener.Version)
+		} else {
+			cells = append(cells, "<unknown>")
 		}
 		if cond := helper.GetCondition(shoot.Status.Conditions, core.ShootAPIServerAvailable); cond != nil {
 			cells = append(cells, cond.Status)
