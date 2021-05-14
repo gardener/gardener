@@ -44,18 +44,18 @@ The high-level flow is as follows:
 
 ### Detailed bootstrap flow with a worker generated bootstrap-token
 
-With gardener v1.23 a file with the content "<<BOOTSTRAP_TOKEN>>" is added to the operatingsystem-config.
-It is passed to the worker controller.
+With gardener v1.23 a file with the content `<<BOOTSTRAP_TOKEN>>` is added to the `cloud-config-<worker-group>-downloader` `OperatingSystemConfig` (part of step 2 in the graphic below).
+Via the OS extension the new file (with its content in clear-text) gets passed to the corresponding `Worker` resource.
 
-The worker controller has to guarantee that:
-- a temporary bootstrap token is created.
-- the `"<<BOOTSTRAP_TOKEN>>"` in the user data is replaced by the generated token.
-One implementation of that is depicted in the picture where the MCM creates a temporary token and replaces the placeholder.
+The `Worker` controller has to guarantee that:
+- a bootstrap token is created.
+- the `<<BOOTSTRAP_TOKEN>>` in the user data is replaced by the generated token.
+One implementation of that is depicted in the picture where the machine-controller-manager creates a temporary token and replaces the placeholder.
 
 As part of the user-data the bootstrap-token is placed on the newly created VM under a defined path.
 The cloud-config-script will then refer to the file path of the added bootstrap token in the kubelet-bootstrap script.
 
-If either the worker controller does not replace the `<<BOOTSTRAP_TOKEN>>` or the os-provider-extension does not support the `transmit-unencoded` flag then the bootstrap flow will fall back to the old flow of using a shared bootstrap_token between workers of a Shoot.
+If either the `Worker` controller does not replace the `<<BOOTSTRAP_TOKEN>>` or the OS extension does not support the `transmitUnencoded` flag then the bootstrap flow will fall back to the old flow of using a shared bootstrap token between the worker nodes of a shoot cluster.
 
 ![Bootstrap flow with shortlived bootstrapTokens](./images/bootstrap_token.png)
 

@@ -94,8 +94,8 @@ const (
 	// PathCredentialsClientKey is a constant for a path containing the 'client private key' credentials part for the
 	// download.
 	PathCredentialsClientKey = PathCredentialsDirectory + "/client.key"
-	// PathBootstrapToken is the path on the shoot worker nodes at which the the bootstrap token for the kubelet
-	// bootstrap are stored
+	// PathBootstrapToken is the path of a file on the shoot worker nodes in which the the bootstrap token for the kubelet
+	// bootstrap is stored.
 	PathBootstrapToken = PathCredentialsDirectory + "/bootstrap-token"
 	// BootstrapTokenPlaceholder is the token that is expected to be replaced by the worker controller with the actual token
 	BootstrapTokenPlaceholder = "<<BOOTSTRAP_TOKEN>>"
