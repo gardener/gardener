@@ -27,14 +27,27 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	"github.com/Masterminds/semver"
 	errorspkg "github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 )
+
+var (
+	versionConstraintK8sLess119 *semver.Constraints
+)
+
+func init() {
+	var err error
+
+	versionConstraintK8sLess119, err = semver.NewConstraint("< 1.19")
+	utilruntime.Must(err)
+}
 
 // WaitUntilNginxIngressServiceIsReady waits until the external load balancer of the nginx ingress controller has been created.
 func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) error {
@@ -104,7 +117,12 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 
 		return retry.Ok()
 	}); err != nil {
-		var retryError *retry.Error
+		var (
+			retryError *retry.Error
+			headBytes  *int64
+			tailLines  = pointer.Int64Ptr(10)
+		)
+
 		if !errors.As(err, &retryError) {
 			return err
 		}
@@ -117,7 +135,11 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 			return err
 		}
 
-		logs, err2 := kutil.MostRecentCompleteLogs(ctx, b.K8sSeedClient.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, "kube-apiserver", pointer.Int64Ptr(10))
+		if versionConstraintK8sLess119.Check(semver.MustParse(b.ShootVersion())) {
+			headBytes = pointer.Int64Ptr(1024)
+		}
+
+		logs, err2 := kutil.MostRecentCompleteLogs(ctx, b.K8sSeedClient.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, "kube-apiserver", tailLines, headBytes)
 		if err2 != nil {
 			return errorspkg.Wrapf(err, "failure to read the logs: %s", err2.Error())
 		}

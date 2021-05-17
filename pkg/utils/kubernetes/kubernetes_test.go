@@ -1309,7 +1309,7 @@ var _ = Describe("kubernetes", func() {
 				body.EXPECT().Close(),
 			)
 
-			actual, err := MostRecentCompleteLogs(ctx, pods, pod, containerName, nil)
+			actual, err := MostRecentCompleteLogs(ctx, pods, pod, containerName, nil, nil)
 			Expect(err).To(MatchError(fakeErr))
 			Expect(actual).To(BeEmpty())
 		})
@@ -1317,20 +1317,34 @@ var _ = Describe("kubernetes", func() {
 		DescribeTable("#OwnedBy",
 			func(containerStatuses []corev1.ContainerStatus, containerName string, previous bool) {
 				var (
+					headBytes int64 = 1024
 					tailLines int64 = 1337
 					logs            = []byte("logs")
 				)
 
 				pod.Status.ContainerStatuses = containerStatuses
 
-				options := &corev1.PodLogOptions{
+				tailLineOptions := &corev1.PodLogOptions{
 					Container: containerName,
 					TailLines: &tailLines,
 					Previous:  previous,
 				}
 
+				bytesLimitOptions := &corev1.PodLogOptions{
+					Container:  containerName,
+					LimitBytes: &headBytes,
+					Previous:   previous,
+				}
+
 				gomock.InOrder(
-					pods.EXPECT().GetLogs(podName, options).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client)),
+					pods.EXPECT().GetLogs(podName, tailLineOptions).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client)),
+					body.EXPECT().Read(gomock.Any()).DoAndReturn(func(data []byte) (int, error) {
+						copy(data, logs)
+						return len(logs), io.EOF
+					}),
+					body.EXPECT().Close(),
+
+					pods.EXPECT().GetLogs(podName, bytesLimitOptions).Return(rest.NewRequestWithClient(&url.URL{}, "", rest.ClientContentConfig{}, client)),
 					body.EXPECT().Read(gomock.Any()).DoAndReturn(func(data []byte) (int, error) {
 						copy(data, logs)
 						return len(logs), io.EOF
@@ -1338,9 +1352,9 @@ var _ = Describe("kubernetes", func() {
 					body.EXPECT().Close(),
 				)
 
-				actual, err := MostRecentCompleteLogs(ctx, pods, pod, containerName, &tailLines)
+				actual, err := MostRecentCompleteLogs(ctx, pods, pod, containerName, &tailLines, &headBytes)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(actual).To(Equal(string(logs)))
+				Expect(actual).To(Equal(fmt.Sprintf("%s\n...\n%s", logs, logs)))
 			},
 
 			Entry("w/o container name, logs of current  container", []corev1.ContainerStatus{{State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{}}}}, "", false),
