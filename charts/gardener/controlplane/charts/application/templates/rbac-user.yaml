@@ -59,6 +59,12 @@ rules:
   - leases
   verbs:
   - '*'
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests
+  verbs:
+  - '*'
 
 # Aggregated cluster role specifying garden administrators.
 # IMPORTANT: You need to define a corresponding ClusterRoleBinding binding specific users
