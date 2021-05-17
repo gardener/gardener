@@ -498,6 +498,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"hpa": map[string]interface{}{
 				"memoryMetricForHpaEnabled": memoryMetricForHpaEnabled,
 			},
+			"enableAnonymousAuthentication": gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.Info.Spec.Kubernetes.KubeAPIServer),
 		}
 
 		shootNetworks = map[string]interface{}{

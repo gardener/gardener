@@ -488,6 +488,11 @@ type KubeAPIServerConfig struct {
 	// Requests contains configuration for request-specific settings for the kube-apiserver.
 	// +optional
 	Requests *KubeAPIServerRequests `json:"requests,omitempty" protobuf:"bytes,10,opt,name=requests"`
+	// EnableAnonymousAuthentication defines whether anonymous requests to the secure port
+	// of the API server should be allowed (flag `--anonymous-auth`).
+	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+	// +optional
+	EnableAnonymousAuthentication *bool `json:"enableAnonymousAuthentication,omitempty" protobuf:"varint,11,opt,name=enableAnonymousAuthentication"`
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.

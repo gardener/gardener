@@ -783,6 +783,12 @@ message KubeAPIServerConfig {
   // Requests contains configuration for request-specific settings for the kube-apiserver.
   // +optional
   optional KubeAPIServerRequests requests = 10;
+
+  // EnableAnonymousAuthentication defines whether anonymous requests to the secure port
+  // of the API server should be allowed (flag `--anonymous-auth`).
+  // See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+  // +optional
+  optional bool enableAnonymousAuthentication = 11;
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.

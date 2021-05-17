@@ -1837,4 +1837,16 @@ var _ = Describe("helper", func() {
 		Entry("difference because no secret", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "ConfigMap", Name: "foo"}}}, BeFalse()),
 		Entry("equality", []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, []gardencorev1beta1.NamedResourceReference{{ResourceRef: autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "foo"}}}, BeTrue()),
 	)
+
+	DescribeTable("#ShootWantsAnonymousAuthentication",
+		func(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig, wantsAnonymousAuth bool) {
+			actualWantsAnonymousAuth := ShootWantsAnonymousAuthentication(kubeAPIServerConfig)
+			Expect(actualWantsAnonymousAuth).To(Equal(wantsAnonymousAuth))
+		},
+
+		Entry("no kubeapiserver configuration", nil, false),
+		Entry("field not set", &gardencorev1beta1.KubeAPIServerConfig{}, false),
+		Entry("explicitly enabled", &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: &trueVar}, true),
+		Entry("explicitly disabled", &gardencorev1beta1.KubeAPIServerConfig{EnableAnonymousAuthentication: &falseVar}, false),
+	)
 })

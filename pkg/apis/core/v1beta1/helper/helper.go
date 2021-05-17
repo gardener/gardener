@@ -1341,3 +1341,14 @@ func ShootSecretResourceReferencesEqual(oldResources, newResources []gardencorev
 
 	return oldNames.Equal(newNames)
 }
+
+// ShootWantsAnonymousAuthentication returns true if anonymous authentication is set explicitly to 'true' and false otherwise.
+func ShootWantsAnonymousAuthentication(kubeAPIServerConfig *gardencorev1beta1.KubeAPIServerConfig) bool {
+	if kubeAPIServerConfig == nil {
+		return false
+	}
+	if kubeAPIServerConfig.EnableAnonymousAuthentication == nil {
+		return false
+	}
+	return *kubeAPIServerConfig.EnableAnonymousAuthentication
+}

@@ -388,6 +388,10 @@ type KubeAPIServerConfig struct {
 	WatchCacheSizes *WatchCacheSizes
 	// Requests contains configuration for request-specific settings for the kube-apiserver.
 	Requests *KubeAPIServerRequests
+	// EnableAnonymousAuthentication defines whether anonymous requests to the secure port
+	// of the API server should be allowed (flag `--anonymous-auth`).
+	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+	EnableAnonymousAuthentication *bool
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
