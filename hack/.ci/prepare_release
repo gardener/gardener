@@ -50,6 +50,10 @@ cd /usr/local/go/src
 echo "Executing make on go $GOLANG_VERSION"
 ./make.bash > /dev/null 2>&1
 
+# Make the newly "installed from source" go the default one
+export PATH="/usr/local/go/bin:$PATH"
+export GOROOT="/usr/local/go"
+
 export GOPATH="$(mktemp -d)"
 export GOBIN="$GOPATH/bin"
 export PATH="$GOBIN:$PATH"
@@ -73,4 +77,3 @@ if ! make generate; then
 fi
 cd "$cur_dir"
 cp -RT "$REPO_PATH/" "$repo_root_dir/"
-
