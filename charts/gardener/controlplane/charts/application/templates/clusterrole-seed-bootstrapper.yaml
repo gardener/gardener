@@ -11,3 +11,9 @@ rules:
   verbs:
   - create
   - get
+- apiGroups:
+  - certificates.k8s.io
+  resources:
+  - certificatesigningrequests/seedclient
+  verbs:
+  - create
