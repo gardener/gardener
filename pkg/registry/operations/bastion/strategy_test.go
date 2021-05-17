@@ -23,6 +23,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -30,11 +31,13 @@ import (
 
 var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
-		result := ToSelectableFields(newBastion("foo"))
+		result := ToSelectableFields(newBastion("shoot", "foo"))
 
-		Expect(result).To(HaveLen(3))
+		Expect(result).To(HaveLen(4))
 		Expect(result.Has(operations.BastionSeedName)).To(BeTrue())
 		Expect(result.Get(operations.BastionSeedName)).To(Equal("foo"))
+		Expect(result.Has(operations.BastionShootName)).To(BeTrue())
+		Expect(result.Get(operations.BastionShootName)).To(Equal("shoot"))
 	})
 })
 
@@ -45,7 +48,7 @@ var _ = Describe("GetAttrs", func() {
 	})
 
 	It("should return correct result", func() {
-		ls, fs, err := GetAttrs(newBastion("foo"))
+		ls, fs, err := GetAttrs(newBastion("shoot", "foo"))
 
 		Expect(ls).To(HaveLen(1))
 		Expect(ls.Get("foo")).To(Equal("bar"))
@@ -56,7 +59,7 @@ var _ = Describe("GetAttrs", func() {
 
 var _ = Describe("SeedNameTriggerFunc", func() {
 	It("should return spec.seedName", func() {
-		actual := SeedNameTriggerFunc(newBastion("foo"))
+		actual := SeedNameTriggerFunc(newBastion("shoot", "foo"))
 		Expect(actual).To(Equal("foo"))
 	})
 })
@@ -70,7 +73,7 @@ var _ = Describe("MatchBastion", func() {
 
 		Expect(result.Label).To(Equal(ls))
 		Expect(result.Field).To(Equal(fs))
-		Expect(result.IndexFields).To(ConsistOf(operations.BastionSeedName))
+		Expect(result.IndexFields).To(ConsistOf(operations.BastionSeedName, operations.BastionShootName))
 	})
 })
 
@@ -156,7 +159,7 @@ var _ = Describe("heartbeat", func() {
 	})
 })
 
-func newBastion(seedName string) *operations.Bastion {
+func newBastion(shootName string, seedName string) *operations.Bastion {
 	return &operations.Bastion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -164,6 +167,9 @@ func newBastion(seedName string) *operations.Bastion {
 			Labels:    map[string]string{"foo": "bar"},
 		},
 		Spec: operations.BastionSpec{
+			ShootRef: v1.LocalObjectReference{
+				Name: shootName,
+			},
 			SeedName: &seedName,
 		},
 	}

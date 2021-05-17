@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -30,6 +31,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -43,6 +45,7 @@ type Controller struct {
 	reconciler     reconcile.Reconciler
 	hasSyncedFuncs []cache.InformerSynced
 
+	gardenClient           client.Client
 	bastionQueue           workqueue.RateLimitingInterface
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -69,8 +72,14 @@ func NewBastionController(
 		return nil, fmt.Errorf("failed to get Bastion Informer: %w", err)
 	}
 
+	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+	}
+
 	logger := logger.Logger.WithField("controller", ControllerName)
 	bastionController := &Controller{
+		gardenClient: gardenClient.Client(),
 		bastionQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "bastion"),
 		reconciler:   NewBastionReconciler(logger, gardenClient.Client(), maxLifetime),
 		workerCh:     make(chan int),
@@ -83,7 +92,13 @@ func NewBastionController(
 		DeleteFunc: bastionController.bastionDelete,
 	})
 
-	bastionController.hasSyncedFuncs = append(bastionController.hasSyncedFuncs, bastionInformer.HasSynced)
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    bastionController.shootAdd,
+		UpdateFunc: bastionController.shootUpdate,
+		DeleteFunc: bastionController.shootDelete,
+	})
+
+	bastionController.hasSyncedFuncs = append(bastionController.hasSyncedFuncs, bastionInformer.HasSynced, shootInformer.HasSynced)
 
 	return bastionController, nil
 }

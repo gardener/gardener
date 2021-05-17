@@ -54,6 +54,44 @@ func (c *Controller) bastionDelete(obj interface{}) {
 	c.bastionQueue.Add(key)
 }
 
+func (c *Controller) shootAdd(obj interface{}) {
+	shoot, ok := obj.(*gardencorev1beta1.Shoot)
+	if !ok {
+		return
+	}
+
+	// only shoot deletions should trigger this, so we can cleanup Bastions
+	if shoot.DeletionTimestamp == nil {
+		return
+	}
+
+	// list all bastions that reference this shoot
+	bastionList := operationsv1alpha1.BastionList{}
+	listOptions := client.ListOptions{
+		Namespace: shoot.Namespace,
+		// FieldSelector: fields.SelectorFromSet(fields.Set{operations.BastionShootName: shoot.Name}),
+	}
+
+	if err := c.gardenClient.List(context.TODO(), &bastionList, &listOptions); err != nil {
+		logger.Logger.Errorf("Failed to list Bastions: %v", err)
+		return
+	}
+
+	for _, bastion := range bastionList.Items {
+		if bastion.Spec.ShootRef.Name == shoot.Name {
+			c.bastionAdd(bastion)
+		}
+	}
+}
+
+func (c *Controller) shootUpdate(_, newObj interface{}) {
+	c.shootAdd(newObj)
+}
+
+func (c *Controller) shootDelete(obj interface{}) {
+	c.shootAdd(obj)
+}
+
 // NewBastionReconciler creates a new instance of a reconciler which reconciles Bastions.
 func NewBastionReconciler(
 	logger logrus.FieldLogger,
@@ -97,9 +135,9 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	shoot := gardencorev1beta1.Shoot{}
 	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
 	if err := r.gardenClient.Get(ctx, shootKey, &shoot); err != nil {
-		// Bastions get assigned an owner reference to the shoot, so this should never happen
-		// unless some external process tinkers with the owner refs; because this is unusual,
-		// it's a warning instead of an info message.
+		// This should never happen, as the shoot deletion is stopped unless all Bastions
+		// are removed. This is required because once a Shoot is gone, the Cluster resource
+		// is gone as well and without that, cleanly destroying a Bastion is not possible.
 		if apierrors.IsNotFound(err) {
 			logger.WithField("shoot", shoot.Name).Warn("Deleting bastion because target shoot is gone")
 			return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
@@ -118,7 +156,9 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// the old bastion (bastions are not migrated, users are required to create new bastions);
 	// equality is the correct check here, as the admission plugin already prevents Bastions
 	// from existing without a spec.SeedName being set. So it cannot happen that we accidentally
-	// delete a Bastion without seed (i.e. an unreconciled, new Bastion).
+	// delete a Bastion without seed (i.e. an unreconciled, new Bastion);
+	// under normal operations, shoots cannot be migrated to another seed while there are still
+	// bastions for it, so this check here is just a safety measure.
 	if !equality.Semantic.DeepEqual(shoot.Status.SeedName, bastion.Spec.SeedName) {
 		logger.WithField("bastion-seed", *bastion.Spec.SeedName).Info("Deleting bastion because the referenced Shoot has been migrated to another Seed")
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))

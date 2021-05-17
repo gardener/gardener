@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -218,6 +219,14 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 			return reconcile.Result{}, fmt.Errorf("target Seed is not available to host the Control Plane of Shoot %s: %v", shoot.GetName(), err)
 		}
 
+		bastionCount, err := c.countShootBastions(ctx, shoot, gardenClient)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %v", err)
+		}
+		if bastionCount > 0 {
+			return reconcile.Result{}, fmt.Errorf("Shoot has still %d Bastions", bastionCount)
+		}
+
 		sourceSeed, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(*shoot.Status.SeedName)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -317,6 +326,14 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, gard
 		return c.finalizeShootDeletion(ctx, gardenClient, shoot, project.Name)
 	}
 
+	bastionCount, err := c.countShootBastions(ctx, shoot, gardenClient)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %v", err)
+	}
+	if bastionCount > 0 {
+		return reconcile.Result{}, fmt.Errorf("Shoot has still %d Bastions", bastionCount)
+	}
+
 	// If the .status.lastOperation already indicates that the deletion is successful then we finalize it immediately.
 	if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeDelete && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
 		logger.Info("`.status.lastOperation` indicates a successful deletion. Deletion accepted.")
@@ -382,6 +399,28 @@ func (c *Controller) isSeedReadyForMigration(seed *gardencorev1beta1.Seed) error
 	}
 
 	return health.CheckSeedForMigration(seed, c.identity)
+}
+
+func (c *Controller) countShootBastions(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenClient kubernetes.Interface) (int, error) {
+	// list all bastions that reference this shoot
+	bastionList := operationsv1alpha1.BastionList{}
+	listOptions := client.ListOptions{
+		Namespace: shoot.Namespace,
+		// FieldSelector: fields.SelectorFromSet(fields.Set{operations.BastionShootName: shoot.Name}),
+	}
+
+	if err := gardenClient.Client().List(context.TODO(), &bastionList, &listOptions); err != nil {
+		return 0, fmt.Errorf("failed to list related Bastions: %v", err)
+	}
+
+	count := 0
+	for _, bastion := range bastionList.Items {
+		if bastion.Spec.ShootRef.Name == shoot.Name {
+			count++
+		}
+	}
+
+	return count, nil
 }
 
 func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
