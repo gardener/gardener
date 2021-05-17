@@ -156,6 +156,9 @@ spec:
         {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
         - --shutdown-delay-duration=15s
         {{- end }}
+        {{- if .Values.externalHostname }}
+        - --external-hostname={{ .Values.externalHostname }}
+        {{- end }}
         - --token-auth-file=/srv/kubernetes/token/static_tokens.csv
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key

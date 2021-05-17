@@ -185,3 +185,5 @@ mountHostCADirectories:
 
 reversedVPN:
   enabled: false
+
+externalHostname: ""
