@@ -200,10 +200,7 @@ WantedBy=multi-user.target`),
 				},
 			},
 		},
-	}
-
-	files = append(files,
-		extensionsv1alpha1.File{
+		{
 			Path:        PathBootstrapToken,
 			Permissions: pointer.Int32Ptr(0644),
 			Content: extensionsv1alpha1.FileContent{
@@ -212,7 +209,8 @@ WantedBy=multi-user.target`),
 				},
 				TransmitUnencoded: pointer.BoolPtr(true),
 			},
-		})
+		},
+	}
 
 	return units, files, nil
 }
