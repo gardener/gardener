@@ -404,10 +404,7 @@ func (c *Controller) isSeedReadyForMigration(seed *gardencorev1beta1.Seed) error
 func (c *Controller) countShootBastions(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenClient kubernetes.Interface) (int, error) {
 	// list all bastions that reference this shoot
 	bastionList := operationsv1alpha1.BastionList{}
-	listOptions := client.ListOptions{
-		Namespace: shoot.Namespace,
-		// FieldSelector: fields.SelectorFromSet(fields.Set{operations.BastionShootName: shoot.Name}),
-	}
+	listOptions := client.ListOptions{Namespace: shoot.Namespace}
 
 	if err := gardenClient.Client().List(context.TODO(), &bastionList, &listOptions); err != nil {
 		return 0, fmt.Errorf("failed to list related Bastions: %v", err)

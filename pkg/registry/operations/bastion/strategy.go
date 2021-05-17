@@ -157,7 +157,6 @@ func ToSelectableFields(bastion *operations.Bastion) fields.Set {
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
 	bastionSpecificFieldsSet := make(fields.Set, 3)
-	bastionSpecificFieldsSet[operations.BastionShootName] = bastion.Spec.ShootRef.Name
 	bastionSpecificFieldsSet[operations.BastionSeedName] = getSeedName(bastion)
 	return generic.AddObjectMetaFieldsSet(bastionSpecificFieldsSet, &bastion.ObjectMeta, true)
 }
@@ -177,7 +176,7 @@ func MatchBastion(label labels.Selector, field fields.Selector) storage.Selectio
 		Label:       label,
 		Field:       field,
 		GetAttrs:    GetAttrs,
-		IndexFields: []string{operations.BastionSeedName, operations.BastionShootName},
+		IndexFields: []string{operations.BastionSeedName},
 	}
 }
 

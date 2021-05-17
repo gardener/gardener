@@ -17,10 +17,6 @@ package operations
 // Field path constants that are specific to the internal API
 // representation.
 const (
-	// BastionShootName is the field selector path for finding
-	// the Shoot cluster of a operations.gardener.cloud/v1alpha1 Bastion.
-	BastionShootName = "spec.shootRef.name"
-
 	// BastionSeedName is the field selector path for finding
 	// the Seed cluster of a operations.gardener.cloud/v1alpha1 Bastion.
 	BastionSeedName = "spec.seedName"

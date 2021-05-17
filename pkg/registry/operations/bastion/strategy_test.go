@@ -33,11 +33,9 @@ var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
 		result := ToSelectableFields(newBastion("shoot", "foo"))
 
-		Expect(result).To(HaveLen(4))
+		Expect(result).To(HaveLen(3))
 		Expect(result.Has(operations.BastionSeedName)).To(BeTrue())
 		Expect(result.Get(operations.BastionSeedName)).To(Equal("foo"))
-		Expect(result.Has(operations.BastionShootName)).To(BeTrue())
-		Expect(result.Get(operations.BastionShootName)).To(Equal("shoot"))
 	})
 })
 
@@ -73,7 +71,7 @@ var _ = Describe("MatchBastion", func() {
 
 		Expect(result.Label).To(Equal(ls))
 		Expect(result.Field).To(Equal(fs))
-		Expect(result.IndexFields).To(ConsistOf(operations.BastionSeedName, operations.BastionShootName))
+		Expect(result.IndexFields).To(ConsistOf(operations.BastionSeedName))
 	})
 })
 
