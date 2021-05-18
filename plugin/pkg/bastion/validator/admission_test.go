@@ -17,7 +17,7 @@ package validator_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
@@ -54,22 +54,22 @@ var _ = Describe("Bastion", func() {
 	Describe("#Admit", func() {
 		var (
 			bastion          *operations.Bastion
-			shoot            *core.Shoot
+			shoot            *gardencore.Shoot
 			coreClient       *corefake.Clientset
 			dummyOwnerRef    *metav1.OwnerReference
 			admissionHandler *Bastion
 		)
 
 		BeforeEach(func() {
-			shoot = &core.Shoot{
+			shoot = &gardencore.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      shootName,
 					Namespace: namespace,
 					UID:       "shoot-uid",
 				},
-				Spec: core.ShootSpec{
+				Spec: gardencore.ShootSpec{
 					SeedName: pointer.StringPtr(seedName),
-					Provider: core.Provider{
+					Provider: gardencore.Provider{
 						Type: provider,
 					},
 					Region: region,

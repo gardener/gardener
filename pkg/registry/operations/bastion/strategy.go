@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
-	"github.com/gardener/gardener/pkg/apis/operations/validation"
+	operationsvalidation "github.com/gardener/gardener/pkg/apis/operations/validation"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -109,7 +109,7 @@ func mustIncreaseGeneration(oldBastion, newBastion *operations.Bastion) bool {
 
 func (bastionStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	bastion := obj.(*operations.Bastion)
-	return validation.ValidateBastion(bastion)
+	return operationsvalidation.ValidateBastion(bastion)
 }
 
 func (bastionStrategy) Canonicalize(obj runtime.Object) {
@@ -121,7 +121,7 @@ func (bastionStrategy) AllowCreateOnUpdate() bool {
 
 func (bastionStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldBastion, newBastion := oldObj.(*operations.Bastion), newObj.(*operations.Bastion)
-	return validation.ValidateBastionUpdate(newBastion, oldBastion)
+	return operationsvalidation.ValidateBastionUpdate(newBastion, oldBastion)
 }
 
 func (bastionStrategy) AllowUnconditionalUpdate() bool {
@@ -146,7 +146,7 @@ func (s bastionStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old ru
 }
 
 func (bastionStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
-	return validation.ValidateBastionStatusUpdate(obj.(*operations.Bastion), old.(*operations.Bastion))
+	return operationsvalidation.ValidateBastionStatusUpdate(obj.(*operations.Bastion), old.(*operations.Bastion))
 }
 
 // ToSelectableFields returns a field set that represents the object

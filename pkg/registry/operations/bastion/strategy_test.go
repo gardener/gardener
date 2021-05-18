@@ -17,13 +17,13 @@ package bastion
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -41,7 +41,7 @@ var _ = Describe("ToSelectableFields", func() {
 
 var _ = Describe("GetAttrs", func() {
 	It("should return error when object is not Bastion", func() {
-		_, _, err := GetAttrs(&core.Seed{})
+		_, _, err := GetAttrs(&gardencore.Seed{})
 		Expect(err).To(HaveOccurred())
 	})
 
@@ -165,7 +165,7 @@ func newBastion(shootName string, seedName string) *operations.Bastion {
 			Labels:    map[string]string{"foo": "bar"},
 		},
 		Spec: operations.BastionSpec{
-			ShootRef: v1.LocalObjectReference{
+			ShootRef: corev1.LocalObjectReference{
 				Name: shootName,
 			},
 			SeedName: &seedName,
