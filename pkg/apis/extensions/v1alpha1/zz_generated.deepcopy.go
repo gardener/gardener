@@ -925,6 +925,11 @@ func (in *FileContent) DeepCopyInto(out *FileContent) {
 		*out = new(FileContentInline)
 		**out = **in
 	}
+	if in.TransmitUnencoded != nil {
+		in, out := &in.TransmitUnencoded, &out.TransmitUnencoded
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

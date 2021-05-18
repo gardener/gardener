@@ -94,6 +94,11 @@ const (
 	// PathCredentialsClientKey is a constant for a path containing the 'client private key' credentials part for the
 	// download.
 	PathCredentialsClientKey = PathCredentialsDirectory + "/client.key"
+	// PathBootstrapToken is the path of a file on the shoot worker nodes in which the the bootstrap token for the kubelet
+	// bootstrap is stored.
+	PathBootstrapToken = PathCredentialsDirectory + "/bootstrap-token"
+	// BootstrapTokenPlaceholder is the token that is expected to be replaced by the worker controller with the actual token
+	BootstrapTokenPlaceholder = "<<BOOTSTRAP_TOKEN>>"
 	// PathDownloadedCloudConfig is the path on the shoot worker nodes at which the downloaded cloud-config user-data
 	// will be stored.
 	PathDownloadedCloudConfig = PathDownloadsDirectory + "/cloud_config"
@@ -193,6 +198,16 @@ WantedBy=multi-user.target`),
 					Encoding: "b64",
 					Data:     utils.EncodeBase64(ccdScript.Bytes()),
 				},
+			},
+		},
+		{
+			Path:        PathBootstrapToken,
+			Permissions: pointer.Int32Ptr(0644),
+			Content: extensionsv1alpha1.FileContent{
+				Inline: &extensionsv1alpha1.FileContentInline{
+					Data: BootstrapTokenPlaceholder,
+				},
+				TransmitUnencoded: pointer.BoolPtr(true),
 			},
 		},
 	}

@@ -87,7 +87,16 @@ var _ = Describe("Downloader", func() {
 						},
 					},
 				},
-			))
+				extensionsv1alpha1.File{
+					Path:        "/var/lib/cloud-config-downloader/credentials/bootstrap-token",
+					Permissions: pointer.Int32Ptr(0644),
+					Content: extensionsv1alpha1.FileContent{
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Data: "<<BOOTSTRAP_TOKEN>>",
+						},
+						TransmitUnencoded: pointer.BoolPtr(true),
+					},
+				}))
 		})
 	})
 

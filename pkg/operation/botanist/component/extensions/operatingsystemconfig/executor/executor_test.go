@@ -198,6 +198,15 @@ fi
 md5sum ${PATH_CCD_SCRIPT} > ${PATH_CCD_SCRIPT_CHECKSUM}
 
 if [[ ! -f "/var/lib/kubelet/kubeconfig-real" ]] || [[ ! -f "/var/lib/kubelet/pki/kubelet-client-current.pem" ]]; then
+  BOOTSTRAP_TOKEN="` + bootstrapToken + `"
+  # If a bootstrap token file exists and the placeholder got replaced by the Worker extension then use it
+  if [[ -f "/var/lib/cloud-config-downloader/credentials/bootstrap-token" ]]; then
+    FILE_CONTENT="$(cat "/var/lib/cloud-config-downloader/credentials/bootstrap-token")"
+    if [[ $FILE_CONTENT != "<<BOOTSTRAP_TOKEN>>" ]] && [[ $FILE_CONTENT != "PDxCT09UU1RSQVBfVE9LRU4+Pg==" ]]; then
+      BOOTSTRAP_TOKEN="$FILE_CONTENT"
+    fi
+  fi
+
   cat <<EOF > "/var/lib/kubelet/kubeconfig-bootstrap"
 ---
 apiVersion: v1
@@ -217,11 +226,12 @@ users:
 - name: kubelet-bootstrap
   user:
     as-user-extra: {}
-    token: ` + bootstrapToken + `
+    token: "$BOOTSTRAP_TOKEN"
 EOF
 
 else
   rm -f "/var/lib/kubelet/kubeconfig-bootstrap"
+  rm -f "/var/lib/cloud-config-downloader/credentials/bootstrap-token"
 fi
 
 NODENAME=

@@ -22,6 +22,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 )
 
 var (
@@ -44,6 +45,11 @@ var DescribeTest = func(g generator.Generator, files embed.FS) func() {
 						Path:        "/foo",
 						Content:     []byte("bar"),
 						Permissions: &onlyOwnerPerm,
+					},
+					{
+						Path:              "/foo2",
+						Content:           []byte("bar"),
+						TransmitUnencoded: pointer.BoolPtr(true),
 					},
 				},
 
