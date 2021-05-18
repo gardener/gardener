@@ -1015,6 +1015,7 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 		gsac            = seedadmissioncontroller.New(sc.Client(), v1beta1constants.GardenNamespace, "", kubernetesVersion)
 		resourceManager = resourcemanager.New(sc.Client(), v1beta1constants.GardenNamespace, "", 0, resourcemanager.Values{})
 		etcdDruid       = etcd.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, "", kubernetesVersion, nil)
+		networkPolicies = networkpolicies.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{})
 	)
 	scheduler, err := gardenerkubescheduler.Bootstrap(sc.DirectClient(), v1beta1constants.GardenNamespace, nil, kubernetesVersion)
 	if err != nil {
@@ -1053,6 +1054,10 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 			Name: "Destroying kubescheduler",
 			Fn:   component.OpDestroyAndWait(scheduler).Destroy,
 		})
+		destroyNetworkPolicies = g.Add(flow.Task{
+			Name: "Destroy network policies",
+			Fn:   component.OpDestroyAndWait(networkPolicies).Destroy,
+		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying gardener-resource-manager",
 			Fn:   resourceManager.Destroy,
@@ -1061,6 +1066,7 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 				destroyEtcdDruid,
 				destroyClusterAutoscaler,
 				destroyKubeScheduler,
+				destroyNetworkPolicies,
 				noControllerInstallations,
 			),
 		})
