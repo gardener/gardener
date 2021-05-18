@@ -83,6 +83,10 @@ var _ = Describe("ValuesHelper", func() {
 					QPS:                100,
 					Burst:              130,
 				},
+				BootstrapKubeconfig: &corev1.SecretReference{
+					Name:      "gardenlet-kubeconfig-bootstrap",
+					Namespace: v1beta1constants.GardenNamespace,
+				},
 			},
 			SeedClientConnection: &config.SeedClientConnection{
 				ClientConnectionConfiguration: componentbaseconfig.ClientConnectionConfiguration{
