@@ -180,16 +180,6 @@ func MatchBastion(label labels.Selector, field fields.Selector) storage.Selectio
 	}
 }
 
-// ShootNameTriggerFunc returns spec.shootRef.name of given Bastion.
-func ShootNameTriggerFunc(obj runtime.Object) string {
-	bastion, ok := obj.(*operations.Bastion)
-	if !ok {
-		return ""
-	}
-
-	return bastion.Spec.ShootRef.Name
-}
-
 // SeedNameTriggerFunc returns spec.seedName of given Bastion.
 func SeedNameTriggerFunc(obj runtime.Object) string {
 	bastion, ok := obj.(*operations.Bastion)

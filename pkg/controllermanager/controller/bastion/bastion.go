@@ -93,9 +93,9 @@ func NewBastionController(
 	})
 
 	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    bastionController.shootAdd,
-		UpdateFunc: bastionController.shootUpdate,
-		DeleteFunc: bastionController.shootDelete,
+		AddFunc:    func(obj interface{}) { bastionController.shootAdd(ctx, obj) },
+		UpdateFunc: func(old, new interface{}) { bastionController.shootUpdate(ctx, old, new) },
+		DeleteFunc: func(obj interface{}) { bastionController.shootDelete(ctx, obj) },
 	})
 
 	bastionController.hasSyncedFuncs = append(bastionController.hasSyncedFuncs, bastionInformer.HasSynced, shootInformer.HasSynced)

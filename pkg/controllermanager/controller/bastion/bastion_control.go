@@ -54,7 +54,7 @@ func (c *Controller) bastionDelete(obj interface{}) {
 	c.bastionQueue.Add(key)
 }
 
-func (c *Controller) shootAdd(obj interface{}) {
+func (c *Controller) shootAdd(ctx context.Context, obj interface{}) {
 	shoot, ok := obj.(*gardencorev1beta1.Shoot)
 	if !ok {
 		return
@@ -67,9 +67,9 @@ func (c *Controller) shootAdd(obj interface{}) {
 
 	// list all bastions that reference this shoot
 	bastionList := operationsv1alpha1.BastionList{}
-	listOptions := client.ListOptions{Namespace: shoot.Namespace}
+	listOptions := client.ListOptions{Namespace: shoot.Namespace, Limit: int64(1)}
 
-	if err := c.gardenClient.List(context.TODO(), &bastionList, &listOptions); err != nil {
+	if err := c.gardenClient.List(ctx, &bastionList, &listOptions); err != nil {
 		logger.Logger.Errorf("Failed to list Bastions: %v", err)
 		return
 	}
@@ -81,12 +81,16 @@ func (c *Controller) shootAdd(obj interface{}) {
 	}
 }
 
-func (c *Controller) shootUpdate(_, newObj interface{}) {
-	c.shootAdd(newObj)
+func (c *Controller) shootUpdate(ctx context.Context, _, newObj interface{}) {
+	newShoot := newObj.(*gardencorev1beta1.Shoot)
+
+	if newShoot.Status.ObservedGeneration != newShoot.Generation {
+		c.shootAdd(ctx, newObj)
+	}
 }
 
-func (c *Controller) shootDelete(obj interface{}) {
-	c.shootAdd(obj)
+func (c *Controller) shootDelete(ctx context.Context, obj interface{}) {
+	c.shootAdd(ctx, obj)
 }
 
 // NewBastionReconciler creates a new instance of a reconciler which reconciles Bastions.
