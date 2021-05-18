@@ -75,10 +75,10 @@ func GetOrCreateShootKubeconfig(ctx context.Context, c client.Client, certificat
 	config := secrets.ControlPlaneSecretConfig{
 		CertificateSecretConfig: &certificateConfig,
 
-		KubeConfigRequest: &secrets.KubeConfigRequest{
-			ClusterName:  namespace,
-			APIServerURL: kubeAPIServerServiceDNS(namespace),
-		},
+		KubeConfigRequests: []secrets.KubeConfigRequest{{
+			ClusterName:   namespace,
+			APIServerHost: kubeAPIServerServiceDNS(namespace),
+		}},
 	}
 
 	controlPlane, err := config.GenerateControlPlane()

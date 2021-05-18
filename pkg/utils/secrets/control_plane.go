@@ -45,13 +45,13 @@ type ControlPlaneSecretConfig struct {
 	BasicAuth *BasicAuth
 	Token     *Token
 
-	KubeConfigRequest *KubeConfigRequest
+	KubeConfigRequests []KubeConfigRequest
 }
 
 // KubeConfigRequest is a struct which holds information about a Kubeconfig to be generated.
 type KubeConfigRequest struct {
-	ClusterName  string
-	APIServerURL string
+	ClusterName   string
+	APIServerHost string
 }
 
 // ControlPlane contains the certificate, and optionally the basic auth. information as well as a Kubeconfig.
@@ -111,7 +111,7 @@ func (s *ControlPlaneSecretConfig) GenerateFromInfoData(infoData infodata.InfoDa
 		Token:       s.Token,
 	}
 
-	if s.KubeConfigRequest != nil {
+	if len(s.KubeConfigRequests) > 0 {
 		kubeconfig, err := generateKubeconfig(s, certificate)
 		if err != nil {
 			return nil, err
@@ -150,7 +150,7 @@ func (s *ControlPlaneSecretConfig) GenerateControlPlane() (*ControlPlane, error)
 		Token:       s.Token,
 	}
 
-	if s.KubeConfigRequest != nil {
+	if len(s.KubeConfigRequests) > 0 {
 		kubeconfig, err := generateKubeconfig(s, certificate)
 		if err != nil {
 			return nil, err
@@ -192,8 +192,12 @@ func (c *ControlPlane) SecretData() map[string][]byte {
 // a client certificate. If <basicAuthUser> and <basicAuthPass> are non-empty string, a second user object
 // containing the Basic Authentication credentials is added to the Kubeconfig.
 func generateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certificate) ([]byte, error) {
+	if len(secret.KubeConfigRequests) == 0 {
+		return nil, fmt.Errorf("missing kubeconfig request for %q", secret.Name)
+	}
+
 	var (
-		name                 = secret.KubeConfigRequest.ClusterName
+		name                 = secret.KubeConfigRequests[0].ClusterName
 		authContextName      string
 		authInfos            = []configv1.NamedAuthInfo{}
 		tokenContextName     = fmt.Sprintf("%s-token", name)
@@ -239,21 +243,26 @@ func generateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certifica
 
 	config := &configv1.Config{
 		CurrentContext: name,
-		Clusters: []configv1.NamedCluster{{
-			Name: name,
+		Clusters:       []configv1.NamedCluster{},
+		Contexts:       []configv1.NamedContext{},
+		AuthInfos:      authInfos,
+	}
+
+	for _, req := range secret.KubeConfigRequests {
+		config.Clusters = append(config.Clusters, configv1.NamedCluster{
+			Name: req.ClusterName,
 			Cluster: configv1.Cluster{
 				CertificateAuthorityData: certificate.CA.CertificatePEM,
-				Server:                   fmt.Sprintf("https://%s", secret.KubeConfigRequest.APIServerURL),
+				Server:                   fmt.Sprintf("https://%s", req.APIServerHost),
 			},
-		}},
-		Contexts: []configv1.NamedContext{{
-			Name: name,
+		})
+		config.Contexts = append(config.Contexts, configv1.NamedContext{
+			Name: req.ClusterName,
 			Context: configv1.Context{
-				Cluster:  name,
+				Cluster:  req.ClusterName,
 				AuthInfo: authContextName,
 			},
-		}},
-		AuthInfos: authInfos,
+		})
 	}
 
 	return runtime.Encode(configlatest.Codec, config)

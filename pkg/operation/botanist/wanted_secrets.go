@@ -227,10 +227,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				CertType:  secrets.ClientCert,
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
+			}},
 		},
 
 		// Secret definition for kube-controller-manager server
@@ -262,10 +262,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
+			}},
 		},
 
 		// Secret definition for kube-scheduler server
@@ -297,10 +297,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
+			}},
 		},
 
 		// Secret definition for gardener-resource-manager
@@ -317,10 +317,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
+			}},
 		},
 
 		// Secret definition for kube-proxy
@@ -337,10 +337,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+			}},
 		},
 
 		// Secret definition for kube-state-metrics
@@ -357,10 +357,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
+			}},
 		},
 
 		// Secret definition for prometheus
@@ -377,10 +377,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
+			}},
 		},
 
 		// Secret definition for prometheus to kubelets communication
@@ -412,10 +412,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+			}},
 		},
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
@@ -430,10 +430,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(false),
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(false),
+			}},
 		},
 
 		// Secret definition for cloud-config-downloader
@@ -450,10 +450,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
-			KubeConfigRequest: &secrets.KubeConfigRequest{
-				ClusterName:  b.Shoot.SeedNamespace,
-				APIServerURL: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+			}},
 		},
 
 		// Secret definition for monitoring
@@ -589,10 +589,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		BasicAuth: basicAuthAPIServer,
 		Token:     kubecfgToken,
 
-		KubeConfigRequest: &secrets.KubeConfigRequest{
-			ClusterName:  b.Shoot.SeedNamespace,
-			APIServerURL: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false),
-		},
+		KubeConfigRequests: []secrets.KubeConfigRequest{{
+			ClusterName:   b.Shoot.SeedNamespace,
+			APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false),
+		}},
 	})
 
 	// Secret definitions for dependency-watchdog-internal and external probes
@@ -608,10 +608,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			CertType:  secrets.ClientCert,
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 		},
-		KubeConfigRequest: &secrets.KubeConfigRequest{
-			ClusterName:  b.Shoot.SeedNamespace,
-			APIServerURL: b.Shoot.ComputeInClusterAPIServerAddress(false),
-		},
+		KubeConfigRequests: []secrets.KubeConfigRequest{{
+			ClusterName:   b.Shoot.SeedNamespace,
+			APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(false),
+		}},
 	}, &secrets.ControlPlaneSecretConfig{
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
 			Name: common.DependencyWatchdogExternalProbeSecretName,
@@ -624,10 +624,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			CertType:  secrets.ClientCert,
 			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 		},
-		KubeConfigRequest: &secrets.KubeConfigRequest{
-			ClusterName:  b.Shoot.SeedNamespace,
-			APIServerURL: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-		},
+		KubeConfigRequests: []secrets.KubeConfigRequest{{
+			ClusterName:   b.Shoot.SeedNamespace,
+			APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+		}},
 	})
 
 	if b.Shoot.KonnectivityTunnelEnabled {
@@ -650,10 +650,10 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				BasicAuth: basicAuthAPIServer,
 				Token:     konnectivityServerToken,
 
-				KubeConfigRequest: &secrets.KubeConfigRequest{
-					ClusterName:  b.Shoot.SeedNamespace,
-					APIServerURL: fmt.Sprintf("%s.%s", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
-				},
+				KubeConfigRequests: []secrets.KubeConfigRequest{{
+					ClusterName:   b.Shoot.SeedNamespace,
+					APIServerHost: fmt.Sprintf("%s.%s", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
+				}},
 			},
 			&secrets.ControlPlaneSecretConfig{
 				CertificateSecretConfig: &secrets.CertificateSecretConfig{
