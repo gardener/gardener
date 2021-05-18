@@ -17,7 +17,8 @@ package validator_test
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -53,35 +54,44 @@ var _ = Describe("Bastion", func() {
 	Describe("#Admit", func() {
 		var (
 			bastion          *operations.Bastion
-			shoot            *core.Shoot
+			shoot            *gardencore.Shoot
 			coreClient       *corefake.Clientset
+			dummyOwnerRef    *metav1.OwnerReference
 			admissionHandler *Bastion
 		)
 
 		BeforeEach(func() {
+			shoot = &gardencore.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      shootName,
+					Namespace: namespace,
+					UID:       "shoot-uid",
+				},
+				Spec: gardencore.ShootSpec{
+					SeedName: pointer.StringPtr(seedName),
+					Provider: gardencore.Provider{
+						Type: provider,
+					},
+					Region: region,
+				},
+			}
+
+			dummyOwnerRef = &metav1.OwnerReference{
+				APIVersion: "v1",
+				Kind:       "ConfigMap",
+				Name:       "dummy-object",
+			}
+
 			bastion = &operations.Bastion{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      bastionName,
-					Namespace: namespace,
+					Name:            bastionName,
+					Namespace:       namespace,
+					OwnerReferences: []metav1.OwnerReference{*dummyOwnerRef},
 				},
 				Spec: operations.BastionSpec{
 					ShootRef: corev1.LocalObjectReference{
 						Name: shootName,
 					},
-				},
-			}
-
-			shoot = &core.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      shootName,
-					Namespace: namespace,
-				},
-				Spec: core.ShootSpec{
-					SeedName: pointer.StringPtr(seedName),
-					Provider: core.Provider{
-						Type: provider,
-					},
-					Region: region,
 				},
 			}
 
@@ -119,6 +129,20 @@ var _ = Describe("Bastion", func() {
 			Expect(err).To(Succeed())
 			Expect(bastion.Spec.SeedName).To(PointTo(Equal(seedName)))
 			Expect(bastion.Spec.ProviderType).To(PointTo(Equal(provider)))
+		})
+
+		It("should ensure an owner reference from the Bastion to the Shoot", func() {
+			coreClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+				return true, shoot, nil
+			})
+
+			shootOwnerRef := metav1.NewControllerRef(shoot, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
+
+			err := admissionHandler.Admit(context.TODO(), getBastionAttributes(bastion), nil)
+			Expect(err).To(Succeed())
+			Expect(bastion.Spec.SeedName).To(PointTo(Equal(seedName)))
+			Expect(bastion.Spec.ProviderType).To(PointTo(Equal(provider)))
+			Expect(bastion.OwnerReferences).To(ConsistOf(*dummyOwnerRef, *shootOwnerRef))
 		})
 
 		It("should mutate Bastion with creator information", func() {

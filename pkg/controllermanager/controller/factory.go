@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	bastioncontroller "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
 	cloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	controllerdeploymentcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerdeployment"
@@ -96,6 +97,12 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	// Create controllers.
+	bastionController, err := bastioncontroller.NewBastionController(ctx, f.clientMap, f.cfg.Controllers.Bastion.MaxLifetime.Duration)
+	if err != nil {
+		return fmt.Errorf("failed initializing Bastion controller: %w", err)
+	}
+	metricsCollectors = append(metricsCollectors, bastionController)
+
 	cloudProfileController, err := cloudprofilecontroller.NewCloudProfileController(ctx, f.clientMap, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
@@ -162,6 +169,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 	metricsCollectors = append(metricsCollectors, managedSeedSetController)
 
+	go bastionController.Run(ctx, f.cfg.Controllers.Bastion.ConcurrentSyncs)
 	go cloudProfileController.Run(ctx, f.cfg.Controllers.CloudProfile.ConcurrentSyncs)
 	go controllerDeploymentController.Run(ctx, f.cfg.Controllers.ControllerDeployment.ConcurrentSyncs)
 	go controllerRegistrationController.Run(ctx, f.cfg.Controllers.ControllerRegistration.ConcurrentSyncs)

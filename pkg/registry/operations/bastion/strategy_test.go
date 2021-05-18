@@ -17,12 +17,13 @@ package bastion
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/operations"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -30,7 +31,7 @@ import (
 
 var _ = Describe("ToSelectableFields", func() {
 	It("should return correct fields", func() {
-		result := ToSelectableFields(newBastion("foo"))
+		result := ToSelectableFields(newBastion("shoot", "foo"))
 
 		Expect(result).To(HaveLen(3))
 		Expect(result.Has(operations.BastionSeedName)).To(BeTrue())
@@ -40,12 +41,12 @@ var _ = Describe("ToSelectableFields", func() {
 
 var _ = Describe("GetAttrs", func() {
 	It("should return error when object is not Bastion", func() {
-		_, _, err := GetAttrs(&core.Seed{})
+		_, _, err := GetAttrs(&gardencore.Seed{})
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("should return correct result", func() {
-		ls, fs, err := GetAttrs(newBastion("foo"))
+		ls, fs, err := GetAttrs(newBastion("shoot", "foo"))
 
 		Expect(ls).To(HaveLen(1))
 		Expect(ls.Get("foo")).To(Equal("bar"))
@@ -56,7 +57,7 @@ var _ = Describe("GetAttrs", func() {
 
 var _ = Describe("SeedNameTriggerFunc", func() {
 	It("should return spec.seedName", func() {
-		actual := SeedNameTriggerFunc(newBastion("foo"))
+		actual := SeedNameTriggerFunc(newBastion("shoot", "foo"))
 		Expect(actual).To(Equal("foo"))
 	})
 })
@@ -156,7 +157,7 @@ var _ = Describe("heartbeat", func() {
 	})
 })
 
-func newBastion(seedName string) *operations.Bastion {
+func newBastion(shootName string, seedName string) *operations.Bastion {
 	return &operations.Bastion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -164,6 +165,9 @@ func newBastion(seedName string) *operations.Bastion {
 			Labels:    map[string]string{"foo": "bar"},
 		},
 		Spec: operations.BastionSpec{
+			ShootRef: corev1.LocalObjectReference{
+				Name: shootName,
+			},
 			SeedName: &seedName,
 		},
 	}

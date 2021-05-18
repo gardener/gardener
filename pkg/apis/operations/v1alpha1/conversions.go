@@ -15,6 +15,8 @@
 package v1alpha1
 
 import (
+	fmt "fmt"
+
 	"github.com/gardener/gardener/pkg/apis/operations"
 
 	"k8s.io/apimachinery/pkg/conversion"
@@ -22,6 +24,19 @@ import (
 )
 
 func addConversionFuncs(scheme *runtime.Scheme) error {
+	if err := scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Bastion"),
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name", "metadata.namespace", operations.BastionSeedName:
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	); err != nil {
+		return err
+	}
+
 	// Add non-generated conversion functions
 
 	if err := scheme.AddConversionFunc((*Bastion)(nil), (*operations.Bastion)(nil), func(a, b interface{}, scope conversion.Scope) error {

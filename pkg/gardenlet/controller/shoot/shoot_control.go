@@ -23,8 +23,9 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -218,6 +219,14 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 			return reconcile.Result{}, fmt.Errorf("target Seed is not available to host the Control Plane of Shoot %s: %v", shoot.GetName(), err)
 		}
 
+		hasBastions, err := c.shootHasBastions(ctx, shoot, gardenClient)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %v", err)
+		}
+		if hasBastions {
+			return reconcile.Result{}, errors.New("Shoot has still Bastions")
+		}
+
 		sourceSeed, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(*shoot.Status.SeedName)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -298,7 +307,7 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, gard
 	var (
 		err error
 
-		operationType              = gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
+		operationType              = v1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
 		respectSyncPeriodOverwrite = c.respectSyncPeriodOverwrite()
 		failed                     = gutil.IsShootFailed(shoot)
 		ignored                    = gutil.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
@@ -315,6 +324,14 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, gard
 	if len(shoot.Status.UID) == 0 {
 		logger.Info("`.status.uid` is empty, assuming Shoot cluster did never exist. Deletion accepted.")
 		return c.finalizeShootDeletion(ctx, gardenClient, shoot, project.Name)
+	}
+
+	hasBastions, err := c.shootHasBastions(ctx, shoot, gardenClient)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %v", err)
+	}
+	if hasBastions {
+		return reconcile.Result{}, errors.New("Shoot has still Bastions")
 	}
 
 	// If the .status.lastOperation already indicates that the deletion is successful then we finalize it immediately.
@@ -367,7 +384,7 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, gard
 
 func (c *Controller) finalizeShootDeletion(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, projectName string) (reconcile.Result, error) {
 	if cleanErr := c.deleteClusterResourceFromSeed(ctx, shoot, projectName); cleanErr != nil {
-		lastErr := gardencorev1beta1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", cleanErr))
+		lastErr := v1beta1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", cleanErr))
 		_, updateErr := c.updateShootStatusOperationError(ctx, gardenClient, nil, shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeDelete, *lastErr)
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastErr.Description)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), updateErr)
@@ -384,10 +401,22 @@ func (c *Controller) isSeedReadyForMigration(seed *gardencorev1beta1.Seed) error
 	return health.CheckSeedForMigration(seed, c.identity)
 }
 
+func (c *Controller) shootHasBastions(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenClient kubernetes.Interface) (bool, error) {
+	// list all bastions that reference this shoot
+	bastionList := operationsv1alpha1.BastionList{}
+	listOptions := client.ListOptions{Namespace: shoot.Namespace, Limit: 1}
+
+	if err := gardenClient.Client().List(ctx, &bastionList, &listOptions); err != nil {
+		return false, fmt.Errorf("failed to list related Bastions: %v", err)
+	}
+
+	return len(bastionList.Items) > 0, nil
+}
+
 func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
 	var (
 		key                                        = shootKey(shoot)
-		operationType                              = gardencorev1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
+		operationType                              = v1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
 		respectSyncPeriodOverwrite                 = c.respectSyncPeriodOverwrite()
 		failed                                     = gutil.IsShootFailed(shoot)
 		ignored                                    = gutil.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
@@ -580,7 +609,7 @@ func (c *Controller) updateShootStatusOperationStart(ctx context.Context, garden
 		shoot.Status.SeedName = shoot.Spec.SeedName
 	}
 
-	shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
+	shoot.Status.LastErrors = v1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
 	shoot.Status.Gardener = *c.identity
 	shoot.Status.ObservedGeneration = shoot.Generation
 	shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
@@ -611,7 +640,7 @@ func (c *Controller) updateShootStatusOperationSuccess(
 		description                string
 		setConditionsToProgressing bool
 		err                        error
-		isHibernated               = gardencorev1beta1helper.HibernationIsEnabled(shoot)
+		isHibernated               = v1beta1helper.HibernationIsEnabled(shoot)
 	)
 
 	switch operationType {
@@ -701,7 +730,7 @@ func (c *Controller) updateShootStatusOperationError(
 	var (
 		now          = metav1.NewTime(time.Now().UTC())
 		state        = gardencorev1beta1.LastOperationStateError
-		willNotRetry = gardencorev1beta1helper.HasNonRetryableErrorCode(lastErrors...) || utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration)
+		willNotRetry = v1beta1helper.HasNonRetryableErrorCode(lastErrors...) || utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration)
 	)
 
 	newShoot, err := kutil.TryUpdateShootStatus(ctx, gardenClient.GardenCore(), retry.DefaultRetry, shoot.ObjectMeta,
@@ -747,7 +776,7 @@ func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.Las
 	var incompleteDNSConfigError *shootpkg.IncompleteDNSConfigError
 
 	if errors.As(err, &incompleteDNSConfigError) {
-		return gardencorev1beta1helper.UpsertLastError(lastErrors, gardencorev1beta1.LastError{
+		return v1beta1helper.UpsertLastError(lastErrors, gardencorev1beta1.LastError{
 			TaskID:      pointer.StringPtr(taskID),
 			Description: err.Error(),
 			Codes:       []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorConfigurationProblem},
@@ -780,7 +809,7 @@ func (c *Controller) isHibernationActive(ctx context.Context, shootSeedNamespace
 		return false, fmt.Errorf("shoot is missing in cluster resource: %v", err)
 	}
 
-	return gardencorev1beta1helper.HibernationIsEnabled(shoot), nil
+	return v1beta1helper.HibernationIsEnabled(shoot), nil
 }
 
 func shootKey(shoot *gardencorev1beta1.Shoot) string {

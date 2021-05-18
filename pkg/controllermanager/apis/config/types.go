@@ -48,6 +48,8 @@ type ControllerManagerConfiguration struct {
 
 // ControllerManagerControllerConfiguration defines the configuration of the controllers.
 type ControllerManagerControllerConfiguration struct {
+	// Bastion defines the configuration of the Bastion controller.
+	Bastion *BastionControllerConfiguration
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	CloudProfile *CloudProfileControllerConfiguration
 	// ControllerDeployment defines the configuration of the ControllerDeployment controller.
@@ -78,6 +80,17 @@ type ControllerManagerControllerConfiguration struct {
 	ShootRetry *ShootRetryControllerConfiguration
 	// ManagedSeedSet defines the configuration of the ManagedSeedSet controller.
 	ManagedSeedSet *ManagedSeedSetControllerConfiguration
+}
+
+// BastionControllerConfiguration defines the configuration of the Bastion
+// controller.
+type BastionControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+	// MaxLifetime is the maximum time a Bastion resource can exist before it is
+	// forcefully deleted (defaults to '24h').
+	MaxLifetime *metav1.Duration
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile

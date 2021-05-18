@@ -12,12 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package operations
+package bastion
 
-// Field path constants that are specific to the internal API
-// representation.
-const (
-	// BastionSeedName is the field selector path for finding
-	// the Seed cluster of a operations.gardener.cloud/v1alpha1 Bastion.
-	BastionSeedName = "spec.seedName"
+import (
+	"testing"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
+
+func TestBastion(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "ControllerManager Bastion Controller Suite")
+}
