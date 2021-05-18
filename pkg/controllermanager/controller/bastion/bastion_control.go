@@ -160,7 +160,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// delete a Bastion without seed (i.e. an unreconciled, new Bastion);
 	// under normal operations, shoots cannot be migrated to another seed while there are still
 	// bastions for it, so this check here is just a safety measure.
-	if !equality.Semantic.DeepEqual(shoot.Status.SeedName, bastion.Spec.SeedName) {
+	if !equality.Semantic.DeepEqual(shoot.Spec.SeedName, bastion.Spec.SeedName) {
 		logger.WithField("bastion-seed", *bastion.Spec.SeedName).Info("Deleting bastion because the referenced Shoot has been migrated to another Seed")
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}

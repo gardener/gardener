@@ -293,6 +293,9 @@ func newShoot(namespace string, name string, seedName *string) gardencorev1beta1
 			Name:      name,
 			Namespace: namespace,
 		},
+		Spec: gardencorev1beta1.ShootSpec{
+			SeedName: seedName,
+		},
 		Status: gardencorev1beta1.ShootStatus{
 			SeedName: seedName,
 		},
