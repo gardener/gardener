@@ -59,6 +59,7 @@ spec:
         - --connectTimeout=10s
         - --serviceCluster=istio-ingressgateway
         - --proxyAdminPort=15000
+        - --concurrency=4
         - --statusPort=15021
         - --controlPlaneAuthPolicy=NONE
         - --discoveryAddress=istiod.{{ .Values.istiodNamespace }}.svc:15012
@@ -74,11 +75,11 @@ spec:
           timeoutSeconds: 1
         resources:
           requests:
-            cpu: 100m
-            memory: 256Mi
+            cpu: 1000m
+            memory: 2Gi
           limits:
-            cpu: 2000m
-            memory: 3072Mi
+            cpu: 4000m
+            memory: 8Gi
         env:
         - name: NODE_NAME
           valueFrom:
