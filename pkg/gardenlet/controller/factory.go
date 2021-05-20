@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	operationsinformers "github.com/gardener/gardener/pkg/client/operations/informers/externalversions"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -118,8 +117,6 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	f.k8sGardenCoreInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
 		return fmt.Errorf("timed out waiting for Garden core caches to sync")
-	}
-
 	// Register Seed object if desired
 	if f.cfg.SeedConfig != nil {
 		if err := f.registerSeed(ctx, k8sGardenClient); err != nil {
@@ -158,7 +155,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing BackupEntry controller: %w", err)
 	}
 
-	bastionController, err := bastioncontroller.NewBastionController(ctx, f.clientMap, f.cfg, f.recorder)
+	bastionController, err := bastioncontroller.NewBastionController(ctx, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}

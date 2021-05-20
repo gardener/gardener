@@ -31,10 +31,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -45,22 +42,19 @@ const (
 
 // Controller controls Bastions.
 type Controller struct {
-	gardenClient client.Client
-	config       *config.GardenletConfiguration
-	reconciler   reconcile.Reconciler
-	recorder     record.EventRecorder
+	reconciler reconcile.Reconciler
 
-	bastionInformer runtimecache.Informer
-	bastionQueue    workqueue.RateLimitingInterface
+	hasSyncedFuncs []cache.InformerSynced
+	bastionQueue   workqueue.RateLimitingInterface
 
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
 
 // NewBastionController takes a context <ctx>, a map of Kubernetes clients for for both the
-// garden and seed clusters <clientMap>, the gardenlet configuration to extract the config
-// for itself <config> and an event record <recorder>. It creates a new Gardener controller.
-func NewBastionController(ctx context.Context, clientMap clientmap.ClientMap, config *config.GardenletConfiguration, recorder record.EventRecorder) (*Controller, error) {
+// garden and seed clusters <clientMap> and the gardenlet configuration to extract the config
+// for itself <config>. It creates a new Gardener controller.
+func NewBastionController(ctx context.Context, clientMap clientmap.ClientMap, config *config.GardenletConfiguration) (*Controller, error) {
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get garden client: %w", err)
@@ -73,17 +67,16 @@ func NewBastionController(ctx context.Context, clientMap clientmap.ClientMap, co
 
 	logger := logger.NewFieldLogger(logger.Logger, "controller", ControllerName)
 	controller := &Controller{
-		gardenClient:    gardenClient.Client(),
-		config:          config,
-		reconciler:      newReconciler(clientMap, recorder, logger, config),
-		recorder:        recorder,
-		bastionInformer: bastionInformer,
-		bastionQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Bastion"),
-		workerCh:        make(chan int),
+		reconciler:   newReconciler(clientMap, logger, config),
+		bastionQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Bastion"),
+		workerCh:     make(chan int),
+		hasSyncedFuncs: []cache.InformerSynced{
+			bastionInformer.HasSynced,
+		},
 	}
 
-	controller.bastionInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.BastionFilterFunc(ctx, controller.gardenClient, confighelper.SeedNameFromSeedConfig(controller.config.SeedConfig), controller.config.SeedSelector),
+	bastionInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controllerutils.BastionFilterFunc(ctx, gardenClient.Client(), confighelper.SeedNameFromSeedConfig(config.SeedConfig), config.SeedSelector),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    controller.bastionAdd,
 			UpdateFunc: controller.bastionUpdate,
@@ -98,8 +91,8 @@ func NewBastionController(ctx context.Context, clientMap clientmap.ClientMap, co
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.bastionInformer.HasSynced) {
-		logger.Logger.Fatal("Timed out waiting for Bastion Informer to sync")
+	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
+		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
 

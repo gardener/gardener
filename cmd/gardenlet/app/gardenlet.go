@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	operationsinformers "github.com/gardener/gardener/pkg/client/operations/informers/externalversions"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"

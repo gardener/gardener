@@ -37,7 +37,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -53,16 +52,14 @@ const (
 // reconciler implements the reconcile.Reconcile interface for bastion reconciliation.
 type reconciler struct {
 	clientMap clientmap.ClientMap
-	recorder  record.EventRecorder
 	logger    logrus.FieldLogger
 	config    *config.GardenletConfiguration
 }
 
 // newReconciler returns the new bastion reconciler.
-func newReconciler(clientMap clientmap.ClientMap, recorder record.EventRecorder, logger logrus.FieldLogger, config *config.GardenletConfiguration) reconcile.Reconciler {
+func newReconciler(clientMap clientmap.ClientMap, logger logrus.FieldLogger, config *config.GardenletConfiguration) reconcile.Reconciler {
 	return &reconciler{
 		clientMap: clientMap,
-		recorder:  recorder,
 		logger:    logger,
 		config:    config,
 	}
@@ -164,7 +161,7 @@ func (r *reconciler) reconcileBastion(
 		patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "Reconciling", "Reconciling has not finished yet.")
 
 		return &ctrlerror.RequeueAfterError{
-			RequeueAfter: 1 * time.Second,
+			RequeueAfter: 5 * time.Second,
 			Cause:        errors.New("bastion extension is not ready"),
 		}
 	}

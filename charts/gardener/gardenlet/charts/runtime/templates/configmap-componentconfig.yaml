@@ -76,9 +76,9 @@ data:
         deletionGracePeriodShootPurposes:
 {{ toYaml .Values.global.gardenlet.config.controllers.backupEntry.deletionGracePeriodShootPurposes | indent 8 }}
         {{- end }}
-      {{- if .Values.global.gardenlet.config.controllers.controllerInstallation }}
       bastion:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.bastion.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.bastion.concurrentSyncs }}
+      {{- if .Values.global.gardenlet.config.controllers.controllerInstallation }}
       controllerInstallation:
         concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.controllerInstallation.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.controllerInstallation.concurrentSyncs }}
       {{- end }}
