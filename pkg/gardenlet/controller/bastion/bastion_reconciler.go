@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -47,6 +48,10 @@ const (
 	// finalizerName is the Kubernetes finalizerName that is used to control the cleanup of
 	// Bastion resources in the seed cluster.
 	finalizerName = gardencorev1alpha1.GardenerName
+
+	defaultTimeout         = 30 * time.Second
+	defaultSevereThreshold = 15 * time.Second
+	defaultInterval        = 5 * time.Second
 )
 
 // reconciler implements the reconcile.Reconcile interface for bastion reconciliation.
@@ -155,15 +160,23 @@ func (r *reconciler) reconcileBastion(
 		return fmt.Errorf("failed ensure bastion extension resource: %v", err)
 	}
 
-	// CreateOrUpdate left the extBastion variable updated, so we can conveniently
-	// check the bastion's status in the seed without having to fetch it again.
-	if extBastion.Status.LastOperation == nil || extBastion.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-		patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "Reconciling", "Reconciling has not finished yet.")
+	// wait for the extension controller to reconcile possible changes
+	if err := extensions.WaitUntilExtensionCRReady(
+		ctx,
+		seedClient,
+		logger,
+		func() client.Object { return &extensionsv1alpha1.Bastion{} },
+		extensionsv1alpha1.BastionResource,
+		shoot.Status.TechnicalID,
+		bastion.Name,
+		defaultInterval,
+		defaultSevereThreshold,
+		defaultTimeout,
+		nil,
+	); err != nil {
+		patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error())
 
-		return &ctrlerror.RequeueAfterError{
-			RequeueAfter: 5 * time.Second,
-			Cause:        errors.New("bastion extension is not ready"),
-		}
+		return fmt.Errorf("failed wait for bastion extension resource to be reconciled: %v", err)
 	}
 
 	// copy over the extension's status to the garden and update the condition
