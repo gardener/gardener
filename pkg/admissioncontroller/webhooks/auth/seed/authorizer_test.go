@@ -821,6 +821,85 @@ var _ = Describe("Seed", func() {
 			})
 		})
 
+		Context("when requested for ExposureClasses", func() {
+			var (
+				exposureClassName string
+				attrs             *auth.AttributesRecord
+			)
+
+			BeforeEach(func() {
+				exposureClassName = "fooExposureClass"
+				attrs = &auth.AttributesRecord{
+					User:            seedUser,
+					Name:            exposureClassName,
+					APIGroup:        gardencorev1alpha1.SchemeGroupVersion.Group,
+					Resource:        "exposureclasses",
+					ResourceRequest: true,
+					Verb:            "get",
+				}
+			})
+
+			It("should allow because path to seed exists", func() {
+				graph.EXPECT().HasPathFrom(graphpkg.VertexTypeExposureClass, "", exposureClassName, graphpkg.VertexTypeSeed, "", seedName).Return(true)
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			It("should have no opinion because path to seed does not exists", func() {
+				graph.EXPECT().HasPathFrom(graphpkg.VertexTypeExposureClass, "", exposureClassName, graphpkg.VertexTypeSeed, "", seedName).Return(false)
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("no relationship found"))
+			})
+
+			It("should have no opinion because no get verb", func() {
+				attrs.Verb = "list"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [get]"))
+			})
+
+			It("should have no opinion because request is for a subresource", func() {
+				attrs.Subresource = "status"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+			})
+
+			It("should have no opinion because no resource name is given", func() {
+				attrs.Name = ""
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionNoOpinion))
+				Expect(reason).To(ContainSubstring("No Object name found"))
+			})
+
+			It("should allow because seed name is ambiguous", func() {
+				attrs.User = ambiguousUser
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+		})
+
 		Context("when requested for Bastions", func() {
 			var (
 				name, namespace string

@@ -48,6 +48,7 @@ Today, the following rules are implemented:
 | `Seed`                      | `get`, `list`, `watch`, `create`, `update`, `patch`, `delete` | `Seed`                                                          | Allow `get`, `list`, `watch` requests for all `Seed`s. Allow only `create`, `update`, `patch`, `delete` requests for the `gardenlet`'s `Seed`s. [1] |
 | `Shoot`                     | `get`, `list`, `watch`, `update`, `patch`                     | `Shoot` -> `Seed`                                               | Allow `get`, `list`, `watch` requests for all `Shoot`s. Allow only `update`, `patch` requests for `Shoot`s assigned to the `gardenlet`'s `Seed`. |
 | `ShootState`                | `get`, `create`, `update`, `patch`                            | `ShootState` -> `Shoot` -> `Seed`                               | Allow only `get`, `create`, `update`, `patch` requests for `ShootState`s belonging by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
+| `ExposureClass` | `get` | `ExposureClass` -> `Shoot` -> `Seed` | Allow `get` requests for `ExposureClass`es referenced by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. Deny `get` requests to other `ExposureClass`es. |
 
 [1] If you use `ManagedSeed` resources then the gardenlet reconciling them ("parent gardenlet") may be allowed to submit certain requests for the `Seed` resources resulting out of such `ManagedSeed` reconciliations (even if the "parent gardenlet" is not responsible for them): 
 
