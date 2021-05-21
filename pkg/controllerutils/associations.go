@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
@@ -28,7 +29,7 @@ import (
 )
 
 // DetermineShootsAssociatedTo gets a <shootLister> to determine the Shoots resources which are associated
-// to given <obj> (either a CloudProfile a or a Seed object).
+// to given <obj> (either a CloudProfile, Seed, Secretbinding a or a ExposureClass object).
 func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader, obj interface{}) ([]string, error) {
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := gardenClient.List(ctx, shootList); err != nil {
@@ -53,6 +54,11 @@ func DetermineShootsAssociatedTo(ctx context.Context, gardenClient client.Reader
 		case *gardencorev1beta1.SecretBinding:
 			binding := obj.(*gardencorev1beta1.SecretBinding)
 			if shoot.Spec.SecretBindingName == binding.Name && shoot.Namespace == binding.Namespace {
+				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
+			}
+		case *gardencorev1alpha1.ExposureClass:
+			exposureClass := obj.(*gardencorev1alpha1.ExposureClass)
+			if shoot.Spec.ExposureClassName != nil && *shoot.Spec.ExposureClassName == exposureClass.Name {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
 		default:

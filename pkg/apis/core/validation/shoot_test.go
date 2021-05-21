@@ -350,6 +350,54 @@ var _ = Describe("Shoot Validation Tests", func() {
 			))
 		})
 
+		Context("exposure class", func() {
+			It("should pass as exposure class is not changed", func() {
+				shoot.Spec.ExposureClassName = pointer.StringPtr("exposure-class-1")
+				newShoot := prepareShootForUpdate(shoot)
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				// TODO(dkistner) The test condition can be removed once the exposureclass implementation has been completed.
+				// The errorList should then have len() == 0
+				Expect(errorList).To(HaveLen(1))
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.exposureClassName"),
+				}))))
+			})
+
+			It("should forbid to change the exposure class", func() {
+				shoot.Spec.ExposureClassName = pointer.StringPtr("exposure-class-1")
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.ExposureClassName = pointer.StringPtr("exposure-class-2")
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.exposureClassName"),
+					})),
+					// TODO(dkistner) This test condition can be removed once the exposureclass implementation has been completed.
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.exposureClassName"),
+					})),
+				))
+			})
+
+			// TODO(dkistner) This can be removed once the exposureclass implementation has been completed.
+			It("should forbid referencing an exposure class", func() {
+				shoot.Spec.ExposureClassName = pointer.StringPtr("some-exposure-class")
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.exposureClassName"),
+				}))))
+			})
+		})
+
 		DescribeTable("purpose validation",
 			func(purpose core.ShootPurpose, namespace string, matcher gomegatypes.GomegaMatcher) {
 				shootCopy := shoot.DeepCopy()

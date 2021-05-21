@@ -316,6 +316,35 @@ var _ = Describe("GardenletConfiguration", func() {
 				}))))
 			})
 		})
+
+		Context("exposureClassHandlers", func() {
+			BeforeEach(func() {
+				cfg.ExposureClassHandlers = []config.ExposureClassHandler{
+					{
+						Name: "test",
+						LoadBalancerService: config.LoadBalancerServiceConfig{
+							Annotations: map[string]string{"test": "foo"},
+						},
+					},
+				}
+			})
+
+			It("should pass valid exposureClassHandler", func() {
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should fail as exposureClassHandler name is empty", func() {
+				cfg.ExposureClassHandlers[0].Name = ""
+
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("exposureClassHandlers[0].name"),
+				}))))
+			})
+		})
 	})
 
 	Describe("#ValidateGardenletConfigurationUpdate", func() {

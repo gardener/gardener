@@ -137,6 +137,21 @@ global:
       #     namespace: istio-ingress
       #     labels:
       #       istio: ingressgateway
+      # exposureClassHandlers:
+      # - name: handler-1
+      #   loadBalancerService:
+      #     annotations:
+      #       test: handler-1
+      # - name: handler-2
+      #   loadBalancerService:
+      #     annotations:
+      #       test: handler-2
+      #   sni:
+      #     ingress:
+      #       serviceName: istio-ingress
+      #       namespace: istio-ingress-handler-2
+      #       labels:
+      #         istio: ingressgateway-handler-2
 
     # seedSelector: {}
     # seedConfig: {}

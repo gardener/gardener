@@ -96,6 +96,8 @@ type ShootSpec struct {
 	Resources []NamedResourceReference
 	// Tolerations contains the tolerations for taints on seed clusters.
 	Tolerations []Toleration
+	// ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.
+	ExposureClassName *string
 }
 
 func (s *Shoot) GetProviderType() string {

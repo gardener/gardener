@@ -79,6 +79,7 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 	defer g.lock.Unlock()
 
 	g.deleteAllIncomingEdges(VertexTypeCloudProfile, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllIncomingEdges(VertexTypeExposureClass, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeConfigMap, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeNamespace, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeShoot, shoot.Namespace, shoot.Name)
@@ -104,6 +105,11 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 	if shoot.Status.SeedName != nil {
 		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *shoot.Status.SeedName)
 		g.addEdge(shootVertex, seedVertex)
+	}
+
+	if shoot.Spec.ExposureClassName != nil {
+		exposureClassVertex := g.getOrCreateVertex(VertexTypeExposureClass, "", *shoot.Spec.ExposureClassName)
+		g.addEdge(exposureClassVertex, shootVertex)
 	}
 
 	if shoot.Spec.Kubernetes.KubeAPIServer != nil &&

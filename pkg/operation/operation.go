@@ -83,6 +83,9 @@ func NewBuilder() *Builder {
 		shootFunc: func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error) {
 			return nil, fmt.Errorf("shoot object is required but not set")
 		},
+		exposureClassFunc: func(string) (*config.ExposureClassHandler, error) {
+			return nil, nil
+		},
 		chartsRootPathFunc: func() string {
 			return charts.Path
 		},
@@ -185,6 +188,7 @@ func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Inter
 			WithCloudProfileObjectFromReader(gardenClient.APIReader()).
 			WithShootSecretFromReader(gardenClient.APIReader()).
 			WithProjectName(gardenObj.Project.Name).
+			WithExposureClassFromReader(gardenClient.APIReader()).
 			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
@@ -205,6 +209,7 @@ func (b *Builder) WithShootFromCluster(gardenClient, seedClient kubernetes.Inter
 			WithCloudProfileObjectFromCluster(seedClient, shootNamespace).
 			WithShootSecretFromReader(gardenClient.APIReader()).
 			WithProjectName(gardenObj.Project.Name).
+			WithExposureClassFromReader(gardenClient.APIReader()).
 			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
@@ -214,6 +219,20 @@ func (b *Builder) WithShootFromCluster(gardenClient, seedClient kubernetes.Inter
 		}
 		shoot.Info.Status = s.Status
 		return shoot, nil
+	}
+	return b
+}
+
+// WithExposureClassHandlerFromConfig sets the exposureClassFunc attribute at the Builder which will find the
+// the required exposure class handler in the passed Gardenlet config.
+func (b *Builder) WithExposureClassHandlerFromConfig(cfg *config.GardenletConfiguration) *Builder {
+	b.exposureClassFunc = func(handlerName string) (*config.ExposureClassHandler, error) {
+		for _, handler := range cfg.ExposureClassHandlers {
+			if handler.Name == handlerName {
+				return &handler, nil
+			}
+		}
+		return nil, fmt.Errorf("No exposure class handler with name %q found", handlerName)
 	}
 	return b
 }
@@ -288,6 +307,14 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 		return nil, err
 	}
 	operation.Shoot = shoot
+
+	if shoot.ExposureClass != nil {
+		exposureClassHandler, err := b.exposureClassFunc(shoot.ExposureClass.Handler)
+		if err != nil {
+			return nil, err
+		}
+		operation.ExposureClassHandler = exposureClassHandler
+	}
 
 	// Get the ManagedSeed object for this shoot, if it exists.
 	// Also read the managed seed API server settings from the managed-seed-api-server annotation.

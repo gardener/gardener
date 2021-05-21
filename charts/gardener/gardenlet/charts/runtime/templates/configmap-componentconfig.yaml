@@ -176,4 +176,10 @@ data:
     sni:
 {{ toYaml .Values.global.gardenlet.config.sni | trim | indent 6 }}
     {{- end }}
+
+    {{- if .Values.global.gardenlet.config.exposureClassHandlers }}
+    exposureClassHandlers:
+{{ toYaml .Values.global.gardenlet.config.exposureClassHandlers | indent 4 }}
+    {{- end }}
+
 {{- end }}

@@ -390,6 +390,8 @@ global:
         managedSeedSet:
           concurrentSyncs: 5
           syncPeriod: 30m
+        exposureClass:
+          concurrentSyncs: 5
       leaderElection:
         leaderElect: true
         leaseDuration: 15s

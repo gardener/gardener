@@ -56,6 +56,9 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ControllerRegistration).NotTo(BeNil())
 			Expect(obj.Controllers.ControllerRegistration.ConcurrentSyncs).To(Equal(5))
 
+			Expect(obj.Controllers.ExposureClass).NotTo(BeNil())
+			Expect(obj.Controllers.ExposureClass.ConcurrentSyncs).To(Equal(5))
+
 			Expect(obj.Controllers.Plant).NotTo(BeNil())
 			Expect(obj.Controllers.Plant.ConcurrentSyncs).To(Equal(5))
 			Expect(obj.Controllers.Plant.SyncPeriod).To(Equal(metav1.Duration{Duration: 30 * time.Second}))

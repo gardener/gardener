@@ -1685,6 +1685,18 @@ SeedSelector
 <p>Tolerations contains the tolerations for taints on seed clusters.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>exposureClassName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.</p>
+</td>
+</tr>
 </table>
 </td>
 </tr>
@@ -8648,6 +8660,18 @@ SeedSelector
 <p>Tolerations contains the tolerations for taints on seed clusters.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>exposureClassName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootStatus">ShootStatus
@@ -9110,6 +9134,18 @@ SeedSelector
 <td>
 <em>(Optional)</em>
 <p>Tolerations contains the tolerations for taints on seed clusters.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>exposureClassName</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExposureClassName is the optional name of an exposure class to apply a control plane endpoint exposure strategy.</p>
 </td>
 </tr>
 </table>

@@ -90,4 +90,13 @@ func SetObjectDefaults_GardenletConfiguration(in *GardenletConfiguration) {
 			SetDefaults_SNIIngress(in.SNI.Ingress)
 		}
 	}
+	for i := range in.ExposureClassHandlers {
+		a := &in.ExposureClassHandlers[i]
+		if a.SNI != nil {
+			SetDefaults_SNI(a.SNI)
+			if a.SNI.Ingress != nil {
+				SetDefaults_SNIIngress(a.SNI.Ingress)
+			}
+		}
+	}
 }

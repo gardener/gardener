@@ -77,6 +77,7 @@ var (
 	seedResource                      = gardencorev1beta1.Resource("seeds")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1alpha1.Resource("shootstates")
+	exposureClassResource             = gardencorev1alpha1.Resource("exposureclasses")
 )
 
 // TODO: Revisit all `DecisionNoOpinion` later. Today we cannot deny the request for backwards compatibility
@@ -168,6 +169,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"create"},
 				nil,
 			)
+		case exposureClassResource:
+			return a.authorizeRead(seedName, graph.VertexTypeExposureClass, attrs)
 		default:
 			a.logger.Info(
 				"unhandled resource request",
