@@ -170,7 +170,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		ensureShootClusterIdentity = g.Add(flow.Task{
 			Name: "Ensuring Shoot cluster identity",
-			Fn:   flow.TaskFn(botanist.EnsureClusterIdentity).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:   flow.TaskFn(botanist.EnsureShootClusterIdentity).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
 
 		// We need to ensure that the deployed cloud provider secret is up-to-date. In case it has changed then we
