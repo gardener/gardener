@@ -84,7 +84,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 	Describe("#DeployClusterAutoscaler", func() {
 		var (
-			clusterAutoscaler *mockclusterautoscaler.MockClusterAutoscaler
+			clusterAutoscaler *mockclusterautoscaler.MockInterface
 			worker            *mockworker.MockInterface
 
 			ctx                = context.TODO()
@@ -96,7 +96,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		)
 
 		BeforeEach(func() {
-			clusterAutoscaler = mockclusterautoscaler.NewMockClusterAutoscaler(ctrl)
+			clusterAutoscaler = mockclusterautoscaler.NewMockInterface(ctrl)
 			worker = mockworker.NewMockInterface(ctrl)
 
 			botanist.CheckSums = map[string]string{
