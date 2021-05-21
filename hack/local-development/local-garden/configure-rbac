@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
 #
 # Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
@@ -24,16 +24,15 @@ if is_seedauthorizer_enabled; then
   KUBECONFIG=$KUBECONFIGPATH kubectl delete clusterrole/gardener.cloud:system:seeds        --ignore-not-found
   KUBECONFIG=$KUBECONFIGPATH kubectl delete clusterrolebinding/gardener.cloud:system:seeds --ignore-not-found
 else
-  gardenlet_admin_templates="-x templates/clusterrole-seeds.yaml -x templates/clusterrolebinding-seeds.yaml"
+  gardenlet_admin_templates="-s templates/clusterrole-seeds.yaml -s templates/clusterrolebinding-seeds.yaml"
 fi
-
 
 helm template \
   "$(dirname "$0")/../../../charts/gardener/controlplane/charts/application" \
-  -x templates/clusterrole-admission-controller.yaml \
-  -x templates/clusterrole-apiserver.yaml \
-  -x templates/clusterrole-controller-manager.yaml \
-  -x templates/clusterrole-scheduler.yaml $gardenlet_admin_templates \
+  -s templates/clusterrole-admission-controller.yaml \
+  -s templates/clusterrole-apiserver.yaml \
+  -s templates/clusterrole-controller-manager.yaml \
+  -s templates/clusterrole-scheduler.yaml $gardenlet_admin_templates \
   --set global.admission.enabled=true \
   --set global.apiserver.enabled=true \
   --set global.controller.enabled=true \
