@@ -28,48 +28,99 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const managedResourceControlName = "cluster-identity"
+const (
+	managedResourceControlName = "cluster-identity"
+	// ShootManagedResourceName is the name of the ManagedResource containing the resource specifications.
+	ShootManagedResourceName = "shoot-core-" + managedResourceControlName
+)
 
-type clusterIdentity struct {
-	client    client.Client
-	namespace string
-	identity  string
+// Interface contains functions for managing cluster identities.
+type Interface interface {
+	component.DeployWaiter
+	SetIdentity(string)
 }
 
-// New creates new instance of Deployer for a cluster identity.
-func New(c client.Client, namespace, identity string) component.DeployWaiter {
+type clusterIdentity struct {
+	client                  client.Client
+	namespace               string
+	identity                string
+	managedResourceRegistry *managedresources.Registry
+	managedResourceName     string
+	managedResourceCreateFn func(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error
+	managedResourceDeleteFn func(ctx context.Context, client client.Client, namespace string, name string) error
+}
+
+func new(
+	c client.Client,
+	namespace string,
+	identity string,
+	managedResourceRegistry *managedresources.Registry,
+	managedResourceName string,
+	managedResourceCreateFn func(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error,
+	managedResourceDeleteFn func(ctx context.Context, client client.Client, namespace string, name string) error,
+) Interface {
 	return &clusterIdentity{
-		client:    c,
-		namespace: namespace,
-		identity:  identity,
+		client:                  c,
+		namespace:               namespace,
+		identity:                identity,
+		managedResourceRegistry: managedResourceRegistry,
+		managedResourceName:     managedResourceName,
+		managedResourceCreateFn: managedResourceCreateFn,
+		managedResourceDeleteFn: managedResourceDeleteFn,
 	}
 }
 
-func (c *clusterIdentity) Deploy(ctx context.Context) error {
-	var (
-		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
-
-		configMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      v1beta1constants.ClusterIdentity,
-				Namespace: metav1.NamespaceSystem,
-			},
-			Data: map[string]string{
-				v1beta1constants.ClusterIdentity: c.identity,
-			},
-		}
+// NewForSeed creates new instance of Deployer for the seed's cluster identity.
+func NewForSeed(c client.Client, namespace, identity string) Interface {
+	return new(
+		c,
+		namespace,
+		identity,
+		managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer),
+		managedResourceControlName,
+		managedresources.CreateForSeed,
+		managedresources.DeleteForSeed,
 	)
+}
 
-	resources, err := registry.AddAllAndSerialize(configMap)
+// NewForShoot creates new instance of Deployer for the shoot's cluster identity.
+func NewForShoot(c client.Client, namespace, identity string) Interface {
+	return new(
+		c,
+		namespace,
+		identity,
+		managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer),
+		ShootManagedResourceName,
+		managedresources.CreateForShoot,
+		managedresources.DeleteForShoot,
+	)
+}
+
+func (c *clusterIdentity) Deploy(ctx context.Context) error {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v1beta1constants.ClusterIdentity,
+			Namespace: metav1.NamespaceSystem,
+		},
+		Data: map[string]string{
+			v1beta1constants.ClusterIdentity: c.identity,
+		},
+	}
+
+	resources, err := c.managedResourceRegistry.AddAllAndSerialize(configMap)
 	if err != nil {
 		return err
 	}
 
-	return managedresources.CreateForSeed(ctx, c.client, c.namespace, managedResourceControlName, false, resources)
+	return c.managedResourceCreateFn(ctx, c.client, c.namespace, c.managedResourceName, false, resources)
 }
 
 func (c *clusterIdentity) Destroy(ctx context.Context) error {
-	return managedresources.DeleteForSeed(ctx, c.client, c.namespace, managedResourceControlName)
+	return c.managedResourceDeleteFn(ctx, c.client, c.namespace, c.managedResourceName)
+}
+
+func (c *clusterIdentity) SetIdentity(identity string) {
+	c.identity = identity
 }
 
 // TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
@@ -80,12 +131,12 @@ func (c *clusterIdentity) Wait(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilHealthy(timeoutCtx, c.client, c.namespace, managedResourceControlName)
+	return managedresources.WaitUntilHealthy(timeoutCtx, c.client, c.namespace, c.managedResourceName)
 }
 
 func (c *clusterIdentity) WaitCleanup(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
 	defer cancel()
 
-	return managedresources.WaitUntilDeleted(timeoutCtx, c.client, c.namespace, managedResourceControlName)
+	return managedresources.WaitUntilDeleted(timeoutCtx, c.client, c.namespace, c.managedResourceName)
 }
