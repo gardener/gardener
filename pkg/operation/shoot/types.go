@@ -107,7 +107,7 @@ type ControlPlane struct {
 	KubeControllerManager kubecontrollermanager.KubeControllerManager
 	ClusterAutoscaler     clusterautoscaler.Interface
 	ResourceManager       resourcemanager.ResourceManager
-	KonnectivityServer    konnectivity.KonnectivityServer
+	KonnectivityServer    konnectivity.Interface
 	VPNSeedServer         vpnseedserver.VPNSeedServer
 }
 
