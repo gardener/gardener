@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -42,4 +43,18 @@ func (b *Botanist) EnsureShootClusterIdentity(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// DefaultClusterIdentity returns a deployer for the shoot's cluster-identity.
+func (b *Botanist) DefaultClusterIdentity() clusteridentity.Interface {
+	return clusteridentity.NewForShoot(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, "")
+}
+
+// DeployClusterIdentity deploys the shoot's cluster-identity.
+func (b *Botanist) DeployClusterIdentity(ctx context.Context) error {
+	if v := b.Shoot.Info.Status.ClusterIdentity; v != nil {
+		b.Shoot.Components.SystemComponents.ClusterIdentity.SetIdentity(*v)
+	}
+
+	return b.Shoot.Components.SystemComponents.ClusterIdentity.Deploy(ctx)
 }

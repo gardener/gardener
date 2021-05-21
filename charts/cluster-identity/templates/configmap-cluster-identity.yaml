@@ -1,8 +1,0 @@
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: cluster-identity
-  namespace: kube-system
-data:
-  cluster-identity: "{{ required ".Values.clusterIdentity is required" .Values.clusterIdentity }}"
