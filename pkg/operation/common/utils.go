@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"regexp"
 	"strings"
 	"time"
 
@@ -104,12 +103,6 @@ func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string
 		}
 	}
 	return v
-}
-
-// ReplaceCloudProviderConfigKey replaces a key with the new value in the given cloud provider config.
-func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value string) string {
-	keyValueRegexp := regexp.MustCompile(fmt.Sprintf(`(\Q%s\E%s)([^\n]*)`, key, separator))
-	return keyValueRegexp.ReplaceAllString(cloudProviderConfig, fmt.Sprintf(`${1}%q`, strings.Replace(value, `$`, `$$`, -1)))
 }
 
 // DeleteHvpa delete all resources required for the HVPA in the given namespace.
