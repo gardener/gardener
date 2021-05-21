@@ -24,9 +24,11 @@ import (
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mockclusteridentity "github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -48,7 +50,11 @@ var _ = Describe("ClusterIdentity", func() {
 	)
 
 	var (
-		ctx context.Context
+		ctrl            *gomock.Controller
+		clusterIdentity *mockclusteridentity.MockInterface
+
+		ctx     = context.TODO()
+		fakeErr = fmt.Errorf("fake")
 
 		gardenInterface kubernetes.Interface
 		seedInterface   kubernetes.Interface
@@ -64,7 +70,8 @@ var _ = Describe("ClusterIdentity", func() {
 	)
 
 	BeforeEach(func() {
-		ctx = context.TODO()
+		ctrl = gomock.NewController(GinkgoT())
+		clusterIdentity = mockclusteridentity.NewMockInterface(ctrl)
 
 		s := runtime.NewScheme()
 		Expect(corev1.AddToScheme(s)).To(Succeed())
@@ -103,10 +110,19 @@ var _ = Describe("ClusterIdentity", func() {
 				Shoot: &shootpkg.Shoot{
 					Info:          shoot,
 					SeedNamespace: shootSeedNamespace,
+					Components: &shootpkg.Components{
+						SystemComponents: &shootpkg.SystemComponents{
+							ClusterIdentity: clusterIdentity,
+						},
+					},
 				},
 				GardenClusterIdentity: gardenClusterIdentity,
 			},
 		}
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
 	})
 
 	DescribeTable("#EnsureShootClusterIdentity",
@@ -127,4 +143,21 @@ var _ = Describe("ClusterIdentity", func() {
 			shoot.Status.ClusterIdentity = pointer.StringPtr(expectedShootClusterIdentity)
 		}),
 	)
+
+	Describe("#DeployClusterIdentity()", func() {
+		BeforeEach(func() {
+			botanist.Shoot.Info.Status.ClusterIdentity = &expectedShootClusterIdentity
+			clusterIdentity.EXPECT().SetIdentity(expectedShootClusterIdentity)
+		})
+
+		It("should deploy successfully", func() {
+			clusterIdentity.EXPECT().Deploy(ctx)
+			Expect(botanist.DeployClusterIdentity(ctx)).To(Succeed())
+		})
+
+		It("should return the error during deployment", func() {
+			clusterIdentity.EXPECT().Deploy(ctx).Return(fakeErr)
+			Expect(botanist.DeployClusterIdentity(ctx)).To(MatchError(fakeErr))
+		})
+	})
 })
