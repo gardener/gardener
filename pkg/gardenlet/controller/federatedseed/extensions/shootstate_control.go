@@ -37,8 +37,8 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -240,7 +240,7 @@ func (s *ShootStateControl) getClusterFromRequest(ctx context.Context, req recon
 	var clusterName string
 	if req.Namespace == "" {
 		// Handling for cluster-scoped backupentry extension resources.
-		clusterName, _ = common.ExtractShootDetailsFromBackupEntryName(req.Name)
+		clusterName, _ = gutil.ExtractShootDetailsFromBackupEntryName(req.Name)
 	} else {
 		clusterName = req.Namespace
 	}
