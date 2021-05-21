@@ -603,7 +603,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	var (
 		apiServerConfig              = b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
 		admissionPlugins             = kubernetes.GetAdmissionPluginsForVersion(b.Shoot.Info.Spec.Kubernetes.Version)
-		serviceAccountTokenIssuerURL = fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
+		externalHostname             = b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
+		serviceAccountTokenIssuerURL = fmt.Sprintf("https://%s", externalHostname)
 		serviceAccountConfigVals     = map[string]interface{}{}
 	)
 
@@ -681,6 +682,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 				defaultValues["maxMutatingRequestsInflight"] = *v
 			}
 		}
+
+		defaultValues["externalHostname"] = externalHostname
 	}
 
 	serviceAccountConfigVals["issuer"] = serviceAccountTokenIssuerURL
