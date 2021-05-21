@@ -31,7 +31,7 @@ import (
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
@@ -101,7 +101,7 @@ func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, re
 		return reconcile.Result{}, err
 	}
 
-	secrets, err := gardenpkg.ReadGardenSecretsFromReader(ctx, r.gardenClient.Client(), gardenerutils.ComputeGardenNamespace(seed.Name))
+	secrets, err := gardenpkg.ReadGardenSecretsFromReader(ctx, r.gardenClient.Client(), gutil.ComputeGardenNamespace(seed.Name))
 	if err != nil {
 		return reconcile.Result{}, err
 	}

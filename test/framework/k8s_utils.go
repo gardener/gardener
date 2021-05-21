@@ -23,7 +23,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -441,7 +441,7 @@ func (f *CommonFramework) WaitUntilPodIsRunningWithLabels(ctx context.Context, l
 func DeployRootPod(ctx context.Context, c client.Client, namespace string, nodename *string) (*corev1.Pod, error) {
 	podPriority := int32(0)
 	allowedCharacters := "0123456789abcdefghijklmnopqrstuvwxyz"
-	id, err := gardenerutils.GenerateRandomStringFromCharset(3, allowedCharacters)
+	id, err := utils.GenerateRandomStringFromCharset(3, allowedCharacters)
 	if err != nil {
 		return nil, err
 	}

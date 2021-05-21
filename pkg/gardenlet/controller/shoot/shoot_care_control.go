@@ -37,7 +37,7 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -271,7 +271,7 @@ func (s *careReconciler) care(ctx context.Context, shootObj *gardencorev1beta1.S
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if s.gardenSecrets == nil {
-		secrets, err := garden.ReadGardenSecrets(careCtx, gardenClient.Client(), s.k8sGardenCoreInformers.Seeds().Lister(), gardenerutils.ComputeGardenNamespace(*shoot.Spec.SeedName))
+		secrets, err := garden.ReadGardenSecrets(careCtx, gardenClient.Client(), s.k8sGardenCoreInformers.Seeds().Lister(), gutil.ComputeGardenNamespace(*shoot.Spec.SeedName))
 		if err != nil {
 			return fmt.Errorf("error reading Garden secrets: %w", err)
 		}
