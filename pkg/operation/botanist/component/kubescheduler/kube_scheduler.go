@@ -71,8 +71,8 @@ leaderElection:
   leaderElect: true`
 )
 
-// KubeScheduler contains functions for a kube-scheduler deployer.
-type KubeScheduler interface {
+// Interface contains functions for a kube-scheduler deployer.
+type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
 	// SetSecrets sets the secrets.
@@ -87,7 +87,7 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.KubeSchedulerConfig,
-) KubeScheduler {
+) Interface {
 	return &kubeScheduler{
 		client:    client,
 		namespace: namespace,

@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package mock -destination=mocks.go github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler KubeScheduler
+//go:generate mockgen -package mock -destination=mocks.go github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler Interface
 
 package mock
