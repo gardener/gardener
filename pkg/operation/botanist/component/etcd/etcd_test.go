@@ -63,7 +63,7 @@ var _ = Describe("Etcd", func() {
 	var (
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
-		etcd Etcd
+		etcd Interface
 
 		ctx                     = context.TODO()
 		fakeErr                 = fmt.Errorf("fake err")

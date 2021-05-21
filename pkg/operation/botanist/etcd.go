@@ -45,7 +45,7 @@ import (
 var NewEtcd = etcd.New
 
 // DefaultEtcd returns a deployer for the etcd.
-func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Etcd, error) {
+func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, error) {
 	defragmentationSchedule, err := determineDefragmentationSchedule(b.Shoot.Info, b.ManagedSeed, class)
 	if err != nil {
 		return nil, err

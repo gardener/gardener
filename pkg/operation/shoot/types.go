@@ -98,8 +98,8 @@ type Components struct {
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
-	EtcdMain              etcd.Etcd
-	EtcdEvents            etcd.Etcd
+	EtcdMain              etcd.Interface
+	EtcdEvents            etcd.Interface
 	KubeAPIServerService  component.DeployWaiter
 	KubeAPIServerSNI      component.DeployWaiter
 	KubeAPIServerSNIPhase component.Phase
