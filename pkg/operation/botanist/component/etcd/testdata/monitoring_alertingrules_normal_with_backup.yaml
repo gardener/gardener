@@ -7,8 +7,9 @@ tests:
 - interval: 30s
   input_series:
   # KubeEtcdTestDown
+  # KubeEtcdBackupRestoreTestDown
   - series: 'up{job="kube-etcd3-test"}'
-    values: '0+0x30'
+    values: '0+0x30 1+0x40'
   # KubeEtcd3TestNoLeader
   - series: 'etcd_server_has_leader{job="kube-etcd3-test"}'
     values: '0+0x30'
@@ -32,6 +33,11 @@ tests:
   # KubeEtcdRestorationFailed
   - series: 'etcdbr_restoration_duration_seconds_count{job="kube-etcd3-backup-restore-test",succeeded="false"}'
     values: '0+0x7 1 2 2'
+  # KubeEtcdBackupRestoreTestDown
+  - series: 'up{job="kube-etcd3-backup-restore-test"}'
+    values: '0+0x60 1+0x10'
+  - series: 'etcdbr_snapshotter_failure{job="kube-etcd3-backup-restore-test"}'
+    values: '1+1x30 1+0x40'
   alert_rule_test:
   - eval_time: 15m
     alertname: KubeEtcdTestDown
@@ -131,3 +137,29 @@ tests:
       exp_annotations:
         description: Etcd data restoration was triggered, but has failed.
         summary: Etcd data restoration failure.
+  - eval_time: 16m
+    alertname: KubeEtcdBackupRestoreTestDown
+    exp_alerts:
+    - exp_labels:
+        job: kube-etcd3-backup-restore-test
+        service: etcd
+        severity: critical
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: Etcd backup restore test process down or snapshotter failed with error. Backups will not be triggered unless backup restore is brought back up. This is unsafe behaviour and may cause data loss.
+        summary: Etcd backup restore test process down or snapshotter failed with error
+  - eval_time: 30m
+    alertname: KubeEtcdBackupRestoreTestDown
+    exp_alerts:
+    - exp_labels:
+        service: etcd
+        severity: critical
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: Etcd backup restore test process down or snapshotter failed with error. Backups will not be triggered unless backup restore is brought back up. This is unsafe behaviour and may cause data loss.
+        summary: Etcd backup restore test process down or snapshotter failed with error
+  - eval_time: 35m
+    alertname: KubeEtcdBackupRestoreTestDown
+    exp_alerts:
