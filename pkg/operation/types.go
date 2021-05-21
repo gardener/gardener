@@ -47,7 +47,6 @@ type Builder struct {
 	secretsFunc               func() (map[string]*corev1.Secret, error)
 	seedFunc                  func(context.Context) (*seed.Seed, error)
 	shootFunc                 func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
-	chartsRootPathFunc        func() string
 }
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
@@ -69,7 +68,6 @@ type Operation struct {
 	K8sGardenClient           kubernetes.Interface
 	K8sSeedClient             kubernetes.Interface
 	K8sShootClient            kubernetes.Interface
-	ChartsRootPath            string
 	APIServerAddress          string
 	APIServerClusterIP        string
 	APIServerHealthCheckToken string

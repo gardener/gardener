@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -85,9 +84,6 @@ func NewBuilder() *Builder {
 		},
 		exposureClassFunc: func(string) (*config.ExposureClassHandler, error) {
 			return nil, nil
-		},
-		chartsRootPathFunc: func() string {
-			return charts.Path
 		},
 	}
 }
@@ -169,13 +165,6 @@ func (b *Builder) WithShoot(s *shoot.Shoot) *Builder {
 	b.shootFunc = func(_ context.Context, _ client.Client, _ *garden.Garden, _ *seed.Seed) (*shoot.Shoot, error) {
 		return s, nil
 	}
-	return b
-}
-
-// WithChartsRootPath sets the ChartsRootPath attribute at the Builder.
-// Mainly used for testing. Optional.
-func (b *Builder) WithChartsRootPath(chartsRootPath string) *Builder {
-	b.chartsRootPathFunc = func() string { return chartsRootPath }
 	return b
 }
 
@@ -339,8 +328,6 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 			operation.ManagedSeedAPIServer = shootedSeed.APIServer
 		}
 	}
-
-	operation.ChartsRootPath = b.chartsRootPathFunc()
 
 	return operation, nil
 }

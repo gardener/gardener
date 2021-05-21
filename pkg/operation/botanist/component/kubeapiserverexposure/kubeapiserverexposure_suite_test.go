@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controlplane_test
+package kubeapiserverexposure_test
 
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -28,7 +27,7 @@ import (
 
 func TestControlPlane(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControlPlane component Suite")
+	RunSpecs(t, "Botanist Component KubeAPIServerExposure Suite")
 }
 
 var _ retry.Ops = &fakeOps{}
@@ -52,8 +51,4 @@ func (o *fakeOps) Until(ctx context.Context, interval time.Duration, f retry.Fun
 // UntilTimeout implements Ops.
 func (o *fakeOps) UntilTimeout(ctx context.Context, interval, timeout time.Duration, f retry.Func) error {
 	return o.Until(ctx, 0, f)
-}
-
-func chartsRoot() string {
-	return filepath.Join("../", "../", "../", "../", "charts")
 }

@@ -85,9 +85,8 @@ var _ = Describe("dns", func() {
 						},
 					},
 				},
-				Garden:         &garden.Garden{},
-				Logger:         logrus.NewEntry(logger.NewNopLogger()),
-				ChartsRootPath: "../../../charts",
+				Garden: &garden.Garden{},
+				Logger: logrus.NewEntry(logger.NewNopLogger()),
 			},
 		}
 
@@ -95,7 +94,7 @@ var _ = Describe("dns", func() {
 		Expect(dnsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(s)).NotTo(HaveOccurred())
 
-		seedClient = fake.NewFakeClientWithScheme(s)
+		seedClient = fake.NewClientBuilder().WithScheme(s).Build()
 
 		renderer := cr.NewWithServerVersion(&version.Info{})
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, dnsv1alpha1.SchemeGroupVersion})

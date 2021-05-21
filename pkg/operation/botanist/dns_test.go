@@ -80,9 +80,8 @@ var _ = Describe("dns", func() {
 					},
 					SeedNamespace: seedNS,
 				},
-				Garden:         &garden.Garden{},
-				Logger:         logrus.NewEntry(logger.NewNopLogger()),
-				ChartsRootPath: "../../../charts",
+				Garden: &garden.Garden{},
+				Logger: logrus.NewEntry(logger.NewNopLogger()),
 			},
 		}
 
@@ -90,8 +89,8 @@ var _ = Describe("dns", func() {
 		Expect(dnsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(s)).NotTo(HaveOccurred())
 
-		gardenClient = fake.NewFakeClientWithScheme(scheme.Scheme)
-		seedClient = fake.NewFakeClientWithScheme(s)
+		gardenClient = fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
+		seedClient = fake.NewClientBuilder().WithScheme(s).Build()
 
 		renderer := cr.NewWithServerVersion(&version.Info{})
 		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(seedClient, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))

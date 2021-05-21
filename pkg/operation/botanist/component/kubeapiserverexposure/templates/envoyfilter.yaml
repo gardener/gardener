@@ -1,19 +1,22 @@
+---
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
-  name: {{ .Release.Namespace }}
-  namespace: {{ .Values.istioIngressGateway.namespace }}
+  name: {{ .Name }}
+  namespace: {{ .Namespace }}
   ownerReferences:
   - apiVersion: v1
     kind: Namespace
-    name: {{ .Release.Namespace }}
-    uid: {{ .Values.namespaceUID }}
+    name: {{ .Name }}
+    uid: {{ .NamespaceUID | quote }}
     controller: false
     blockOwnerDeletion: false
 spec:
   workloadSelector:
     labels:
-{{ .Values.istioIngressGateway.labels | toYaml | trim | indent 6 }}
+{{- range $k, $v := .IstioIngressGateway.Labels }}
+      {{ $k }}: {{ $v }}
+{{- end }}
   configPatches:
   - applyTo: FILTER_CHAIN
     match:
@@ -28,14 +31,14 @@ spec:
         - name: envoy.filters.network.tcp_proxy
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-            stat_prefix: "outbound|443||{{ .Values.name }}.{{ .Release.Namespace }}.svc.cluster.local"
-            cluster: "outbound|443||{{ .Values.name }}.{{ .Release.Namespace }}.svc.cluster.local"
+            stat_prefix: "outbound|{{ .Port }}||{{ .Host }}"
+            cluster: "outbound|{{ .Port }}||{{ .Host }}"
         filter_chain_match:
-          destination_port: 443
+          destination_port: {{ .Port }}
           prefix_ranges:
-          - address_prefix: {{ .Values.apiserverClusterIP }}
+          - address_prefix: {{ .APIServerClusterIP }}
             prefix_len: 32
-  {{- if .Values.reversedVPN.enabled }}
+{{- if .ReversedVPN.Enabled }}
   - applyTo: NETWORK_FILTER
     match:
       context: GATEWAY
@@ -53,15 +56,15 @@ spec:
           "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
           route_config:
             virtual_hosts:
-            - name: {{ .Release.Namespace }}
+            - name: {{ .Name }}
               domains:
-              - {{ .Values.internalDNSNameApiserver }}:8132
+              - {{ .APIServerInternalDNSName }}:8132
               routes:
               - match:
                   connect_matcher: {}
                 route:
-                  cluster: outbound|1194||vpn-seed-server.{{ .Release.Namespace }}.svc.cluster.local
+                  cluster: outbound|1194||{{ .VPNSeedServerServiceName }}.{{ .Name }}.svc.cluster.local
                   upgrade_configs:
                   - upgrade_type: CONNECT
                     connect_config: {}
-  {{- end }}
+{{- end }}

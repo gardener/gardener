@@ -35,8 +35,8 @@ import (
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/controlplane"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -771,18 +771,16 @@ func (b *Botanist) getKubeApiServerServiceAnnotations(sniPhase component.Phase) 
 }
 
 func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.DeployWaiter {
-	return controlplane.NewKubeAPIService(
-		&controlplane.KubeAPIServiceValues{
+	return kubeapiserverexposure.NewService(
+		b.Logger,
+		b.K8sSeedClient.Client(),
+		&kubeapiserverexposure.ServiceValues{
 			Annotations:               b.getKubeApiServerServiceAnnotations(sniPhase),
 			KonnectivityTunnelEnabled: b.Shoot.KonnectivityTunnelEnabled,
 			SNIPhase:                  sniPhase,
 		},
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
 		client.ObjectKey{Name: *b.Config.SNI.Ingress.ServiceName, Namespace: *b.Config.SNI.Ingress.Namespace},
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
-		b.Logger,
-		b.K8sSeedClient.DirectClient(),
 		nil,
 		b.setAPIServerServiceClusterIP,
 		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.DirectClient()) },
@@ -833,21 +831,20 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 
 // DefaultKubeAPIServerSNI returns a deployer for kube-apiserver SNI.
 func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
-	return component.OpDestroy(controlplane.NewKubeAPIServerSNI(
-		&controlplane.KubeAPIServerSNIValues{
-			Name: v1beta1constants.DeploymentNameKubeAPIServer,
-			IstioIngressGateway: controlplane.IstioIngressGateway{
+	return component.OpDestroy(kubeapiserverexposure.NewSNI(
+		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.Applier(),
+		b.Shoot.SeedNamespace,
+		&kubeapiserverexposure.SNIValues{
+			IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
-			InternalDNSNameApiserver: b.outOfClusterAPIServerFQDN(),
-			ReversedVPN: controlplane.ReversedVPN{
+			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
+			ReversedVPN: kubeapiserverexposure.ReversedVPN{
 				Enabled: b.Shoot.ReversedVPNEnabled,
 			},
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
 	))
 }
 
@@ -858,27 +855,26 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 
 	b.APIServerClusterIP = clusterIP
 
-	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = controlplane.NewKubeAPIServerSNI(
-		&controlplane.KubeAPIServerSNIValues{
-			ApiserverClusterIP: clusterIP,
+	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
+		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.Applier(),
+		b.Shoot.SeedNamespace,
+		&kubeapiserverexposure.SNIValues{
+			APIServerClusterIP: clusterIP,
 			NamespaceUID:       b.SeedNamespaceObject.UID,
 			Hosts: []string{
 				gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
 				gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 			},
-			Name: v1beta1constants.DeploymentNameKubeAPIServer,
-			IstioIngressGateway: controlplane.IstioIngressGateway{
+			IstioIngressGateway: kubeapiserverexposure.IstioIngressGateway{
 				Namespace: *b.Config.SNI.Ingress.Namespace,
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
-			InternalDNSNameApiserver: b.outOfClusterAPIServerFQDN(),
-			ReversedVPN: controlplane.ReversedVPN{
+			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
+			ReversedVPN: kubeapiserverexposure.ReversedVPN{
 				Enabled: b.Shoot.ReversedVPNEnabled,
 			},
 		},
-		b.Shoot.SeedNamespace,
-		b.K8sSeedClient.ChartApplier(),
-		b.ChartsRootPath,
 	)
 }
 
