@@ -79,13 +79,12 @@ apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerDeployment
 metadata:
   name: $NAME
-spec:
-  type: helm
-  providerConfig:
-    chart: $chart
-    values:
-      image:
-        tag: $VERSION
+type: helm
+providerConfig:
+  chart: $chart
+  values:
+    image:
+      tag: $VERSION
 ---
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
