@@ -129,7 +129,7 @@ type Extensions struct {
 type SystemComponents struct {
 	ClusterIdentity clusteridentity.Interface
 	Namespaces      component.DeployWaiter
-	MetricsServer   metricsserver.MetricsServer
+	MetricsServer   metricsserver.Interface
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.

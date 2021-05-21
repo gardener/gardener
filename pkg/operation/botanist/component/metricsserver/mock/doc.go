@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package mock -destination=mocks.go github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver MetricsServer
+//go:generate mockgen -package mock -destination=mocks.go github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver Interface
 
 package mock

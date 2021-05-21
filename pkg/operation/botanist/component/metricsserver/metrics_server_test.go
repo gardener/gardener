@@ -38,7 +38,7 @@ var _ = Describe("MetricsServer", func() {
 	var (
 		ctrl          *gomock.Controller
 		c             *mockclient.MockClient
-		metricsServer MetricsServer
+		metricsServer Interface
 
 		ctx               = context.TODO()
 		fakeErr           = fmt.Errorf("fake error")

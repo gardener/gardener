@@ -60,8 +60,8 @@ const (
 	volumeMountPathServer = "/srv/metrics-server/tls"
 )
 
-// MetricsServer contains functions for a metrics-server deployer.
-type MetricsServer interface {
+// Interface contains functions for a metrics-server deployer.
+type Interface interface {
 	component.DeployWaiter
 	// SetSecrets sets the secrets.
 	SetSecrets(Secrets)
@@ -76,7 +76,7 @@ func New(
 	image string,
 	vpaEnabled bool,
 	kubeAPIServerHost *string,
-) MetricsServer {
+) Interface {
 	return &metricsServer{
 		client:            client,
 		namespace:         namespace,
