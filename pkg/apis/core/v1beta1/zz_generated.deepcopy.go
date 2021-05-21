@@ -1444,6 +1444,11 @@ func (in *KubeAPIServerConfig) DeepCopyInto(out *KubeAPIServerConfig) {
 		*out = new(KubeAPIServerRequests)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.EnableAnonymousAuthentication != nil {
+		in, out := &in.EnableAnonymousAuthentication, &out.EnableAnonymousAuthentication
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

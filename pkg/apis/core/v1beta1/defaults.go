@@ -231,6 +231,10 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Maintenance == nil {
 		obj.Spec.Maintenance = &Maintenance{}
 	}
+
+	if obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = pointer.BoolPtr(false)
+	}
 }
 
 // SetDefaults_Maintenance sets default values for Maintenance objects.

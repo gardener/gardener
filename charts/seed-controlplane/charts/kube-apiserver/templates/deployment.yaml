@@ -102,7 +102,7 @@ spec:
         - --enable-admission-plugins={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
         - --admission-control-config-file={{ include "kube-apiserver.admissionPluginConfigFileDir" . }}/admission-configuration.yaml
         - --allow-privileged=true
-        - --anonymous-auth=false
+        - --anonymous-auth={{ .Values.enableAnonymousAuthentication }}
         - --audit-log-path=/var/lib/audit.log
         - --audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml
         - --audit-log-maxsize=100

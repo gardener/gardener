@@ -3180,6 +3180,13 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeAPIServerRequests"),
 						},
 					},
+					"enableAnonymousAuthentication": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnableAnonymousAuthentication defines whether anonymous requests to the secure port of the API server should be allowed (flag `--anonymous-auth`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -9840,6 +9847,13 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 						SchemaProps: spec.SchemaProps{
 							Description: "Requests contains configuration for request-specific settings for the kube-apiserver.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeAPIServerRequests"),
+						},
+					},
+					"enableAnonymousAuthentication": {
+						SchemaProps: spec.SchemaProps{
+							Description: "EnableAnonymousAuthentication defines whether anonymous requests to the secure port of the API server should be allowed (flag `--anonymous-auth`). See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},

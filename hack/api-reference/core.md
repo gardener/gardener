@@ -4140,6 +4140,20 @@ KubeAPIServerRequests
 <p>Requests contains configuration for request-specific settings for the kube-apiserver.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>enableAnonymousAuthentication</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>EnableAnonymousAuthentication defines whether anonymous requests to the secure port
+of the API server should be allowed (flag <code>--anonymous-auth</code>).
+See: <a href="https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/">https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/</a></p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeAPIServerRequests">KubeAPIServerRequests

@@ -187,3 +187,5 @@ reversedVPN:
   enabled: false
 
 externalHostname: ""
+
+enableAnonymousAuthentication: false
