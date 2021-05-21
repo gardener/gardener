@@ -59,7 +59,7 @@ var _ = Describe("KubeControllerManager", func() {
 		testLogger            = logrus.NewEntry(logger.NewNopLogger())
 		ctrl                  *gomock.Controller
 		c                     *mockclient.MockClient
-		kubeControllerManager KubeControllerManager
+		kubeControllerManager Interface
 
 		_, podCIDR, _                 = net.ParseCIDR("100.96.0.0/11")
 		_, serviceCIDR, _             = net.ParseCIDR("100.64.0.0/13")

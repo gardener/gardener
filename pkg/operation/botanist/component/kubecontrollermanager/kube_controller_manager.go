@@ -75,8 +75,8 @@ const (
 	managedResourceName = "shoot-core-kube-controller-manager"
 )
 
-// KubeControllerManager contains functions for a kube-controller-manager deployer.
-type KubeControllerManager interface {
+// Interface contains functions for a kube-controller-manager deployer.
+type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
 	// SetSecrets sets the secrets for the kube-controller-manager.
@@ -109,7 +109,7 @@ func New(
 	podNetwork *net.IPNet,
 	serviceNetwork *net.IPNet,
 	hvpaConfig *HVPAConfig,
-) KubeControllerManager {
+) Interface {
 	return &kubeControllerManager{
 		log:            logger,
 		seedClient:     seedClient,
