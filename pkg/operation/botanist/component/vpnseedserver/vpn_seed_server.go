@@ -69,8 +69,8 @@ const (
 	envoyProxyContainerName = "envoy-proxy"
 )
 
-// VPNSeedServer contains functions for a vpn-seed-server deployer.
-type VPNSeedServer interface {
+// Interface contains functions for a vpn-seed-server deployer.
+type Interface interface {
 	component.DeployWaiter
 
 	// SetSecrets sets the secrets.
@@ -98,7 +98,7 @@ func New(
 	podNetwork string,
 	nodeNetwork *string,
 	replicas int32,
-) VPNSeedServer {
+) Interface {
 	return &vpnSeedServer{
 		client:              client,
 		namespace:           namespace,

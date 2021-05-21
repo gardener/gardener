@@ -108,7 +108,7 @@ type ControlPlane struct {
 	ClusterAutoscaler     clusterautoscaler.Interface
 	ResourceManager       resourcemanager.Interface
 	KonnectivityServer    konnectivity.Interface
-	VPNSeedServer         vpnseedserver.VPNSeedServer
+	VPNSeedServer         vpnseedserver.Interface
 }
 
 // Extensions contains references to extension resources.

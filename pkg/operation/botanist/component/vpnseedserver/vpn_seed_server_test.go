@@ -47,7 +47,7 @@ var _ = Describe("VpnSeedServer", func() {
 	var (
 		ctrl          *gomock.Controller
 		c             *mockclient.MockClient
-		vpnSeedServer VPNSeedServer
+		vpnSeedServer Interface
 
 		ctx                     = context.TODO()
 		fakeErr                 = fmt.Errorf("fake error")
