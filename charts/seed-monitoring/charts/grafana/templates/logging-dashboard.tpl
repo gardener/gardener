@@ -352,8 +352,8 @@
           "allValue": "",
           "current": {
             "selected": true,
-            "text": "{{ (index $.pods 0).podPrefix }}",
-            "value": "{{ (index $.pods 0).podPrefix }}"
+            "text": "{{ (index . 0).PodPrefix }}",
+            "value": "{{ (index . 0).PodPrefix }}"
           },
           "hide": 0,
           "includeAll": false,
@@ -363,17 +363,17 @@
           "options": [
             {
               "selected": true
-            }{{ range $i, $c := $.pods }},
+            }{{ range $i, $c := . }},
             {
               "selected": false,
-              "text": "{{ $c.podPrefix }}",
-              "value": "{{ $c.podPrefix }}"
+              "text": "{{ $c.PodPrefix }}",
+              "value": "{{ $c.PodPrefix }}"
             }
               {{- end }}
           ],
           "query": "",
           "queryValue": "",
-          "skipUrlSync": true,
+          "skipUrlSync": false,
           "type": "custom"
         },
         {
@@ -457,7 +457,7 @@
           ],
           "query": "INFO,WARN,ERR,DBG,NOTICE,FATAL",
           "queryValue": "",
-          "skipUrlSync": true,
+          "skipUrlSync": false,
           "type": "custom"
         },
         {
@@ -511,7 +511,7 @@
       ]
     },
     "timezone": "browser",
-    "title": "{{ $.dashboardName }}",
+    "title": "Controlplane Logs Dashboard",
     "version": 1
   }
 {{- end -}}

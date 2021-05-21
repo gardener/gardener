@@ -18,33 +18,12 @@ vpaEnabled: false
 role: operators
 extensions:
   dashboards: ""
+  observedPods:
+  - PodPrefix: example-pod
+    IsExposedToUser: true
 
 konnectivityTunnel:
   enabled: false
 
 sni:
   enabled: false
-
-exposedComponents:
-- dashboardName: "Kube Apiserver"
-  fileName: "kube-apiserver-logging.json"
-  pods:
-  - podPrefix: "kube-apiserver"
-- dashboardName: "Kube Controller Manager"
-  fileName: "kube-controller-manager-logging.json"
-  pods:
-  - podPrefix: "kube-controller-manager"
-- dashboardName: "Kube Scheduler"
-  fileName: "kube-scheduler-logging.json"
-  pods:
-  - podPrefix: "kube-scheduler"
-- dashboardName: "Cluster Autoscaler"
-  fileName: "cluster-autoscaler-logging.json"
-  pods:
-  - podPrefix: "cluster-autoscaler"
-- dashboardName: "Vertical Pod Autoscaler"
-  fileName: "vpa-logging.json"
-  pods:
-  - podPrefix: "vpa-admission-controller"
-  - podPrefix: "vpa-recommender"
-  - podPrefix: "vpa-updater"
