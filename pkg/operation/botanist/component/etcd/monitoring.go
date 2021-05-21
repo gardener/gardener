@@ -115,6 +115,18 @@ const (
         within the last hour.
       summary: High number of failed etcd proposals
 
+  - alert: KubeEtcd3HighMemoryConsumption
+    expr: sum(container_memory_working_set_bytes{pod="etcd-main-0",container="etcd"}) / sum(vpa_spec_container_resource_policy_allowed{allowed="max",container="etcd", targetName="etcd-main", resource="memory"}) > .4
+    for: 15m
+    labels:
+      service: etcd
+      severity: warning
+      type: seed
+      visibility: operator
+    annotations:
+      description: Etcd is consuming over 50% of the max allowed value specified by VPA.
+      summary: Etcd is consuming too much memory
+
   # etcd DB size alerts
   - alert: KubeEtcd3DbSizeLimitApproaching
     expr: (` + monitoringMetricEtcdMvccDBTotalSizeInBytes + `{job="` + monitoringPrometheusJobEtcdNamePrefix + `-{{ .role }}"} > bool 7516193000) + (` + monitoringMetricEtcdMvccDBTotalSizeInBytes + `{job="` + monitoringPrometheusJobEtcdNamePrefix + `-{{ .role }}"} <= bool 8589935000) == 2 # between 7GB and 8GB
