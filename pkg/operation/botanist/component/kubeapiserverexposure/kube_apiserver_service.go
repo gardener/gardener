@@ -56,7 +56,7 @@ type serviceValues struct {
 	gardenerManaged          bool
 }
 
-// NewService creates a new instance of DeployWaiter for a specific DNS entry.
+// NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
 // <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps().
 func NewService(
 	logger logrus.FieldLogger,
