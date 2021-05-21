@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/Masterminds/semver"
@@ -160,7 +161,7 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 			tunnelName = konnectivity.AgentName
 		}
 
-		return b.CheckTunnelConnection(ctx, b.Logger, tunnelName)
+		return health.CheckTunnelConnection(ctx, b.K8sShootClient, b.Logger, tunnelName)
 	})
 }
 
