@@ -56,7 +56,7 @@ var _ = Describe("ResourceManager", func() {
 
 	Describe("#DeployGardenerResourceManager", func() {
 		var (
-			resourceManager  *mockresourcemanager.MockResourceManager
+			resourceManager  *mockresourcemanager.MockInterface
 			kubernetesClient *mockkubernetes.MockInterface
 			c                *mockclient.MockClient
 
@@ -68,7 +68,7 @@ var _ = Describe("ResourceManager", func() {
 		)
 
 		BeforeEach(func() {
-			resourceManager = mockresourcemanager.NewMockResourceManager(ctrl)
+			resourceManager = mockresourcemanager.NewMockInterface(ctrl)
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 			c = mockclient.NewMockClient(ctrl)
 

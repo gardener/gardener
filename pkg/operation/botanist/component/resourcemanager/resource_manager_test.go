@@ -47,7 +47,7 @@ var _ = Describe("ResourceManager", func() {
 	var (
 		ctrl            *gomock.Controller
 		c               *mockclient.MockClient
-		resourceManager resourcemanager.ResourceManager
+		resourceManager resourcemanager.Interface
 
 		ctx                   = context.TODO()
 		deployNamespace       = "fake-ns"
