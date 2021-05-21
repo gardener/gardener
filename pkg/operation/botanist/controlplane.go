@@ -283,11 +283,6 @@ func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
 	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
 }
 
-// ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
-func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
-}
-
 // PrepareKubeAPIServerForMigration deletes the kube-apiserver and deletes its hvpa
 func (b *Botanist) PrepareKubeAPIServerForMigration(ctx context.Context) error {
 	if err := b.K8sSeedClient.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
