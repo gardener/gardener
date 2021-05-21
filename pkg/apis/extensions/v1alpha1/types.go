@@ -81,6 +81,7 @@ type Object interface {
 var ExtensionKinds = sets.NewString(
 	BackupBucketResource,
 	BackupEntryResource,
+	BastionResource,
 	ContainerRuntimeResource,
 	ControlPlaneResource,
 	dnsv1alpha1.DNSProviderKind,
