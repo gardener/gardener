@@ -49,7 +49,7 @@ type IncludeExclude struct {
 	Exclude []string
 }
 
-// NewProvider creates a new instance of DeployWaiter for a specific DNS emptyProvider.
+// NewProvider creates a new instance of DeployWaiter for a specific DNS provider.
 // <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps()
 func NewProvider(
 	logger logrus.FieldLogger,
@@ -155,16 +155,16 @@ func (p *provider) Wait(ctx context.Context) error {
 		if msg := obj.Status.Message; msg != nil {
 			message = *msg
 		}
-		providerErr := fmt.Errorf("DNS emptyProvider %q is not ready (status=%s, message=%s)", p.values.Name, status, message)
+		providerErr := fmt.Errorf("DNS provider %q is not ready (status=%s, message=%s)", p.values.Name, status, message)
 
-		p.logger.Infof("Waiting for %q DNS emptyProvider to be ready... (status=%s, message=%s)", p.values.Name, status, message)
+		p.logger.Infof("Waiting for %q DNS provider to be ready... (status=%s, message=%s)", p.values.Name, status, message)
 		if status == dnsv1alpha1.STATE_ERROR || status == dnsv1alpha1.STATE_INVALID {
 			return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), providerErr)
 		}
 
 		return retry.MinorError(providerErr)
 	}); err != nil {
-		return fmt.Errorf("Failed to create DNS emptyProvider for %q DNS record: %q (status=%s, message=%s)", p.values.Name, err.Error(), status, message)
+		return fmt.Errorf("Failed to create DNS provider for %q DNS record: %q (status=%s, message=%s)", p.values.Name, err.Error(), status, message)
 	}
 
 	return nil
