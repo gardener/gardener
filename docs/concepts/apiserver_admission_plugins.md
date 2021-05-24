@@ -109,14 +109,6 @@ by setting `spec.kubernetes.verticalPodAutoscaler.enabled=true` for newly create
 Already existing Shoots and new Shoots that explicitly disable VPA (`spec.kubernetes.verticalPodAutoscaler.enabled=false`)
 will not be affected by this admission plugin.
 
-## `ShootStateDeletionValidator`
-
-_(enabled by default)_
-
-This admission controller reacts on `DELETE` operations for `ShootState`s.
-It prevents the deletion of the respective `ShootState` resource in case the corresponding `Shoot` resource does still exist in the system.
-This prevents losing the shoot's data required to recover it / migrate its control plane to a new seed cluster.
-
 ## `ShootTolerationRestriction`
 
 _(enabled by default)_
