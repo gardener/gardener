@@ -34,7 +34,7 @@ Usually, regular project members are not bound to this custom verb, allowing the
 
 _(enabled by default)_
 
-This admission controller reacts on `DELETE` operations for `Project`s and `Shoot`s.
+This admission controller reacts on `DELETE` operations for `Project`s and `Shoot`s and `ShootState`s.
 It validates that the respective resource is annotated with a deletion confirmation annotation, namely `confirmation.gardener.cloud/deletion=true`.
 Only if this annotation is present it allows the `DELETE` operation to pass.
 This prevents users from accidental/undesired deletions.
