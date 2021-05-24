@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
@@ -48,7 +47,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -502,8 +500,34 @@ func (o *Operation) InjectShootShootImages(values map[string]interface{}, names 
 	return chart.InjectImages(values, o.ImageVector, names, imagevector.RuntimeVersion(o.ShootVersion()), imagevector.TargetVersion(o.ShootVersion()))
 }
 
-// EnsureShootStateExists creates the ShootState resource for the corresponding shoot and sets its ownerReferences to the Shoot.
+// EnsureShootStateExists creates the ShootState resource for the corresponding shoot and updates the operations object
 func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
+	var (
+		err        error
+		shootState = &gardencorev1alpha1.ShootState{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      o.Shoot.Info.Name,
+				Namespace: o.Shoot.Info.Namespace,
+			},
+		}
+	)
+
+	if err = o.K8sGardenClient.Client().Create(ctx, shootState); err != nil {
+		if !apierrors.IsAlreadyExists(err) {
+			return err
+		}
+	}
+
+	if err = o.K8sGardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
+		return err
+	}
+	o.ShootState = shootState
+	gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
+	o.Shoot.ETCDEncryption, err = etcdencryption.GetEncryptionConfig(gardenerResourceList)
+	return err
+}
+
+func (o *Operation) DeleteShootState(ctx context.Context) error {
 	shootState := &gardencorev1alpha1.ShootState{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      o.Shoot.Info.Name,
@@ -511,21 +535,14 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 		},
 	}
 
-	ownerReference := metav1.NewControllerRef(o.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
-	ownerReference.BlockOwnerDeletion = pointer.BoolPtr(false)
-
-	_, err := controllerutils.CreateOrStrategicMergePatch(ctx, o.K8sGardenClient.Client(), shootState, func() error {
-		shootState.OwnerReferences = []metav1.OwnerReference{*ownerReference}
-		return nil
-	})
-	if err != nil {
+	if err := gutil.ConfirmDeletion(ctx, o.K8sGardenClient.Client(), shootState); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 
-	o.ShootState = shootState
-	gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
-	o.Shoot.ETCDEncryption, err = etcdencryption.GetEncryptionConfig(gardenerResourceList)
-	return err
+	return client.IgnoreNotFound(o.K8sGardenClient.Client().Delete(ctx, shootState))
 }
 
 // SaveGardenerResourcesInShootState saves the provided GardenerResourcesDataList in the ShootState's `gardener` field

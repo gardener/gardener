@@ -16,16 +16,22 @@ package operation_test
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	. "github.com/gardener/gardener/pkg/operation"
 	operationseed "github.com/gardener/gardener/pkg/operation/seed"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
@@ -39,6 +45,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("operation", func() {
@@ -83,21 +90,23 @@ var _ = Describe("operation", func() {
 		),
 	)
 
-	Describe("#EnsureShootStateExists", func() {
+	Context("ShootState", func() {
 		var (
-			shootState, shootStatePatched *gardencorev1alpha1.ShootState
-			shoot                         *gardencorev1beta1.Shoot
-			ctrl                          *gomock.Controller
-			gardenClient                  *mock.MockInterface
-			k8sGardenRuntimeClient        *mockclient.MockClient
-			o                             *Operation
+			shootState             *gardencorev1alpha1.ShootState
+			shoot                  *gardencorev1beta1.Shoot
+			ctrl                   *gomock.Controller
+			gardenClient           *mock.MockInterface
+			k8sGardenRuntimeClient *mockclient.MockClient
+			o                      *Operation
+			gr                     = schema.GroupResource{Resource: "ShootStates"}
+			fakeErr                = errors.New("fake")
 		)
 
 		BeforeEach(func() {
 			shoot = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "bar",
+					Name:      "fakeShootName",
+					Namespace: "fakeShootNS",
 				},
 			}
 			shootState = &gardencorev1alpha1.ShootState{
@@ -107,19 +116,9 @@ var _ = Describe("operation", func() {
 				},
 			}
 
-			shootStatePatched = shootState.DeepCopy()
-			shootStatePatched.OwnerReferences = []metav1.OwnerReference{{
-				APIVersion:         "core.gardener.cloud/v1beta1",
-				Kind:               "Shoot",
-				Name:               shoot.Name,
-				BlockOwnerDeletion: pointer.BoolPtr(false),
-				Controller:         pointer.BoolPtr(true),
-			}}
-
 			ctrl = gomock.NewController(GinkgoT())
 			gardenClient = mock.NewMockInterface(ctrl)
 			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
-
 			o = &Operation{
 				K8sGardenClient: gardenClient,
 				Shoot: &operationshoot.Shoot{
@@ -128,33 +127,96 @@ var _ = Describe("operation", func() {
 			}
 		})
 
-		It("should create ShootState with correct ownerReferences and add it to the Operation struct", func() {
-			gomock.InOrder(
-				gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-				k8sGardenRuntimeClient.EXPECT().Create(ctx, shootStatePatched),
-			)
+		Describe("#EnsureShootStateExists", func() {
 
-			Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
+			It("should create ShootState and add it to the Operation object", func() {
+				gomock.InOrder(
+					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+					k8sGardenRuntimeClient.EXPECT().Create(ctx, shootState).Return(nil),
+					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+					k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})),
+				)
 
-			Expect(o.ShootState).ToNot(BeNil())
-			Expect(len(o.ShootState.OwnerReferences)).To(Equal(1))
-			Expect(o.ShootState.OwnerReferences[0].Name).To(Equal("foo"))
-			Expect(o.ShootState.OwnerReferences[0].Kind).To(Equal("Shoot"))
-			Expect(o.ShootState.OwnerReferences[0].BlockOwnerDeletion).ToNot(BeNil())
-			Expect(*o.ShootState.OwnerReferences[0].BlockOwnerDeletion).To(BeFalse())
-			Expect(o.ShootState.OwnerReferences[0].Controller).ToNot(BeNil())
-			Expect(*o.ShootState.OwnerReferences[0].Controller).To(BeTrue())
+				Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
+
+				Expect(o.ShootState).To(Equal(shootState))
+			})
+
+			It("should succeed and update Operation object if ShootState already exists", func() {
+				expectedShootState := shootState.DeepCopy()
+				expectedShootState.SetAnnotations(map[string]string{"foo": "bar"})
+
+				gomock.InOrder(
+					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+					k8sGardenRuntimeClient.EXPECT().Create(ctx, shootState).Return(apierrors.NewAlreadyExists(gr, "foo")),
+					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+					k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key("fakeShootNS", "fakeShootName"), gomock.AssignableToTypeOf(&gardencorev1alpha1.ShootState{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1alpha1.ShootState) error {
+						expectedShootState.DeepCopyInto(obj)
+						return nil
+					}),
+				)
+
+				Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
+
+				Expect(o.ShootState).To(Equal(expectedShootState))
+			})
+
+			It("should fail if Create returns an error other than alreadyExists", func() {
+				gomock.InOrder(
+					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+					k8sGardenRuntimeClient.EXPECT().Create(ctx, shootState).Return(fakeErr),
+				)
+
+				Expect(o.EnsureShootStateExists(ctx)).To(Equal(fakeErr))
+			})
 		})
 
-		It("should patch the ShootState's owner reference and add it to the Operation struct", func() {
-			gomock.InOrder(
-				gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
-				k8sGardenRuntimeClient.EXPECT().Create(ctx, shootStatePatched).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
-				test.EXPECTPatch(ctx, k8sGardenRuntimeClient, shootStatePatched, shootState, types.StrategicMergePatchType),
-			)
+		Describe("#DeleteShootState", func() {
+			It("should add deletion confirmation and delete", func() {
+				var (
+					now     time.Time
+					mockNow = mocktime.NewMockNow(ctrl)
+				)
+				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+				defer test.WithVars(
+					&gardener.TimeNow, mockNow.Do,
+				)()
 
-			Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
-			Expect(o.ShootState).ToNot(BeNil())
+				shootState.Annotations = map[string]string{gardener.ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
+				gomock.InOrder(
+					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+					k8sGardenRuntimeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()),
+					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+					k8sGardenRuntimeClient.EXPECT().Delete(ctx, shootState).Return(nil),
+				)
+				Expect(o.DeleteShootState(ctx)).To(Succeed())
+			})
+
+			It("should succeed if ShootState is already deleted", func() {
+				gomock.InOrder(
+					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+					k8sGardenRuntimeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(apierrors.NewNotFound(gr, "foo")),
+				)
+				Expect(o.DeleteShootState(ctx)).To(Succeed())
+			})
+
+			It("should fail if patch returns an error other than NotFound", func() {
+				gomock.InOrder(
+					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+					k8sGardenRuntimeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeErr),
+				)
+				Expect(o.DeleteShootState(ctx)).To(Equal(fakeErr))
+			})
+
+			It("should fail if Delete returns an error other than NotFound", func() {
+				gomock.InOrder(
+					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+					k8sGardenRuntimeClient.EXPECT().Patch(gomock.Any(), gomock.Any(), gomock.Any()),
+					gardenClient.EXPECT().Client().Return(k8sGardenRuntimeClient),
+					k8sGardenRuntimeClient.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(fakeErr),
+				)
+				Expect(o.DeleteShootState(ctx)).To(Equal(fakeErr))
+			})
 		})
 	})
 
