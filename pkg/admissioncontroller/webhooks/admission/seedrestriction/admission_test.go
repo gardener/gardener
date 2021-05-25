@@ -1179,7 +1179,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 						}))
 					})
 
-					It("should forbid because the related backupbucket does belong to gardenlet's seed", func() {
+					It("should allow because the related backupbucket does belong to gardenlet's seed", func() {
 						mockCache.EXPECT().Get(ctx, kutil.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket) error {
 							(&gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: &seedName}}).DeepCopyInto(obj)
 							return nil
@@ -1188,7 +1188,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
 
-					It("should forbid because the user is ambiguous", func() {
+					It("should allow because the user is ambiguous", func() {
 						request.UserInfo = ambiguousUser
 
 						mockCache.EXPECT().Get(ctx, kutil.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket) error {
@@ -1251,7 +1251,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 							}))
 						})
 
-						It("should forbid because the related shoot does belong to gardenlet's seed", func() {
+						It("should allow because the related shoot does belong to gardenlet's seed", func() {
 							mockCache.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
 								(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
 								return nil
@@ -1260,7 +1260,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 						})
 
-						It("should forbid because the user is ambiguous", func() {
+						It("should allow because the user is ambiguous", func() {
 							request.UserInfo = ambiguousUser
 
 							mockCache.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
