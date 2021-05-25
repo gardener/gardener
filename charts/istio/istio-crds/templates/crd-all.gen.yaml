@@ -1287,6 +1287,10 @@ spec:
                                 description: Applies only to sidecars.
                                 format: string
                                 type: string
+                              destinationPort:
+                                description: The destination_port value used by a
+                                  filter chain's match condition.
+                                type: integer
                               filter:
                                 description: The name of a specific filter to apply
                                   the patch to.
@@ -2469,7 +2473,8 @@ spec:
                         format: int32
                         type: integer
                       perTryTimeout:
-                        description: Timeout per retry attempt for a given request.
+                        description: Timeout per attempt for a given request, including
+                          the initial call and any retries.
                         type: string
                       retryOn:
                         description: Specifies the conditions under which retry takes
@@ -2817,6 +2822,11 @@ spec:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
+  labels:
+    app: istio-pilot
+    chart: istio
+    heritage: Tiller
+    release: istio
   name: workloadgroups.networking.istio.io
 spec:
   additionalPrinterColumns:
@@ -2884,11 +2894,11 @@ spec:
                 - exec
               properties:
                 exec:
-                  description: health is determined by how the command that is executed
+                  description: Health is determined by how the command that is executed
                     exited.
                   properties:
                     command:
-                      description: command to run.
+                      description: Command to run.
                       items:
                         format: string
                         type: string
@@ -2906,7 +2916,7 @@ spec:
                       format: string
                       type: string
                     httpHeaders:
-                      description: headers the proxy will pass on to make the request.
+                      description: Headers the proxy will pass on to make the request.
                       items:
                         properties:
                           name:
@@ -2922,7 +2932,7 @@ spec:
                       format: string
                       type: string
                     port:
-                      description: port on which the endpoint lives.
+                      description: Port on which the endpoint lives.
                       type: integer
                     scheme:
                       format: string
@@ -2943,7 +2953,7 @@ spec:
                   format: int32
                   type: integer
                 tcpSocket:
-                  description: health is determined by if the proxy is able to connect.
+                  description: Health is determined by if the proxy is able to connect.
                   properties:
                     host:
                       format: string
@@ -3244,6 +3254,19 @@ metadata:
     release: istio
   name: peerauthentications.security.istio.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.mtls.mode
+    description: Defines the mTLS mode used for peer authentication.
+    name: Mode
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    description: 'CreationTimestamp is a timestamp representing the server time when
+      this object was created. It is not guaranteed to be set in happens-before order
+      across separate operations. Clients may not set this value. It is represented
+      in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for
+      lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata'
+    name: Age
+    type: date
   group: security.istio.io
   names:
     categories:
