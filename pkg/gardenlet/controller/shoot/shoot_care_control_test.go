@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/care"
@@ -78,7 +77,7 @@ var _ = Describe("Shoot Care Control", func() {
 			ctx context.Context
 
 			ctrl                      *gomock.Controller
-			gardenCoreCache           *mockcache.MockCache
+			gardenClient              *mockclient.MockClient
 			gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
 			careSyncPeriod            time.Duration
 
@@ -95,7 +94,7 @@ var _ = Describe("Shoot Care Control", func() {
 			ctx = context.Background()
 
 			ctrl = gomock.NewController(GinkgoT())
-			gardenCoreCache = mockcache.NewMockCache(ctrl)
+			gardenClient = mockclient.NewMockClient(ctrl)
 			careSyncPeriod = 1 * time.Minute
 
 			gardenSecrets = []corev1.Secret{
@@ -161,7 +160,7 @@ var _ = Describe("Shoot Care Control", func() {
 		})
 
 		JustBeforeEach(func() {
-			gardenCoreCache.EXPECT().List(
+			gardenClient.EXPECT().List(
 				gomock.Any(),
 				gomock.AssignableToTypeOf(&corev1.SecretList{}),
 				&client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(gardenRoleReq)},
@@ -184,7 +183,7 @@ var _ = Describe("Shoot Care Control", func() {
 				gardenCoreClient = fake.NewSimpleClientset(shoot)
 				gardenClientSet := fakeclientset.NewClientSetBuilder().
 					WithGardenCore(gardenCoreClient).
-					WithCache(gardenCoreCache).
+					WithClient(gardenClient).
 					Build()
 				clientMapBuilder.WithClientSetForKey(keys.ForGarden(), gardenClientSet)
 			})
@@ -197,6 +196,7 @@ var _ = Describe("Shoot Care Control", func() {
 				BeforeEach(func() {
 					clientMapBuilder.WithClientSetForKey(keys.ForSeedWithName(seedName), fakeclientset.NewClientSet())
 				})
+
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
@@ -251,9 +251,9 @@ var _ = Describe("Shoot Care Control", func() {
 
 		Context("when health check setup is successful", func() {
 			var (
-				seedClient, gardenClient *mockclient.MockClient
-				clientMap                clientmap.ClientMap
-				gardenCoreClient         *fake.Clientset
+				seedClient       *mockclient.MockClient
+				clientMap        clientmap.ClientMap
+				gardenCoreClient *fake.Clientset
 
 				managedSeed *seedmanagementv1alpha1.ManagedSeed
 
@@ -267,7 +267,6 @@ var _ = Describe("Shoot Care Control", func() {
 				gardenClientSet := fakeclientset.NewClientSetBuilder().
 					WithGardenCore(gardenCoreClient).
 					WithClient(gardenClient).
-					WithCache(gardenCoreCache).
 					Build()
 				seedClientSet := fakeclientset.NewClientSetBuilder().
 					WithClient(seedClient).
@@ -296,7 +295,6 @@ var _ = Describe("Shoot Care Control", func() {
 
 			BeforeEach(func() {
 				seedClient = mockclient.NewMockClient(ctrl)
-				gardenClient = mockclient.NewMockClient(ctrl)
 			})
 
 			AfterEach(func() {

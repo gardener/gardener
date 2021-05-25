@@ -23,7 +23,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -63,8 +62,6 @@ type Controller struct {
 	seedLeaseQueue          workqueue.RateLimitingInterface
 	seedExtensionCheckQueue workqueue.RateLimitingInterface
 
-	shootLister gardencorelisters.ShootLister
-
 	workerCh               chan int
 	numberOfRunningWorkers int
 
@@ -78,7 +75,6 @@ type Controller struct {
 func NewSeedController(
 	clientMap clientmap.ClientMap,
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	healthManager healthz.Manager,
 	imageVector imagevector.ImageVector,
 	componentImageVectors imagevector.ComponentImageVectors,
@@ -88,15 +84,12 @@ func NewSeedController(
 ) *Controller {
 	var (
 		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
-		corev1Informer            = kubeInformerFactory.Core().V1()
 
 		controllerInstallationInformer = gardenCoreV1beta1Informer.ControllerInstallations()
 		seedInformer                   = gardenCoreV1beta1Informer.Seeds()
 
 		controllerInstallationLister = controllerInstallationInformer.Lister()
-		secretLister                 = corev1Informer.Secrets().Lister()
 		seedLister                   = seedInformer.Lister()
-		shootLister                  = gardenCoreV1beta1Informer.Shoots().Lister()
 	)
 
 	seedController := &Controller{
@@ -105,14 +98,13 @@ func NewSeedController(
 		config:                  config,
 		healthManager:           healthManager,
 		recorder:                recorder,
-		control:                 NewDefaultControl(clientMap, gardenCoreInformerFactory, imageVector, componentImageVectors, identity, recorder, config, secretLister, seedLister, shootLister),
+		control:                 NewDefaultControl(clientMap, gardenCoreInformerFactory, imageVector, componentImageVectors, identity, recorder, config, seedLister),
 		extensionCheckControl:   NewDefaultExtensionCheckControl(clientMap, controllerInstallationLister, metav1.Now),
 		seedLeaseControl:        lease.NewLeaseController(time.Now, clientMap, LeaseResyncSeconds, gardencorev1beta1.GardenerSeedLeaseNamespace),
 		seedLister:              seedLister,
 		seedQueue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		seedLeaseQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),
 		seedExtensionCheckQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-extension-check"),
-		shootLister:             shootLister,
 		workerCh:                make(chan int),
 		leaseMap:                make(map[string]bool),
 	}

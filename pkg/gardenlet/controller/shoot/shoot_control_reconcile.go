@@ -221,12 +221,6 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.PersistEncryptionConfiguration),
 			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData, generateSecrets),
 		})
-		// TODO: This can be removed in a future version once all etcd encryption configuration secrets have been cleaned up.
-		_ = g.Add(flow.Task{
-			Name:         "Removing old etcd encryption configuration secret from garden cluster",
-			Fn:           flow.TaskFn(botanist.RemoveOldETCDEncryptionSecretFromGardener),
-			Dependencies: flow.NewTaskIDs(persistETCDEncryptionConfiguration),
-		})
 		createOrUpdateETCDEncryptionConfiguration = g.Add(flow.Task{
 			Name:         "Applying etcd encryption configuration",
 			Fn:           flow.TaskFn(botanist.ApplyEncryptionConfiguration),

@@ -41,7 +41,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
@@ -131,9 +130,7 @@ func NewDefaultControl(
 	identity *gardencorev1beta1.Gardener,
 	recorder record.EventRecorder,
 	config *config.GardenletConfiguration,
-	secretLister kubecorev1listers.SecretLister,
 	seedLister gardencorelisters.SeedLister,
-	shootLister gardencorelisters.ShootLister,
 ) ControlInterface {
 	return &defaultControl{
 		clientMap,
@@ -143,9 +140,7 @@ func NewDefaultControl(
 		identity,
 		recorder,
 		config,
-		secretLister,
 		seedLister,
-		shootLister,
 	}
 }
 
@@ -157,9 +152,7 @@ type defaultControl struct {
 	identity               *gardencorev1beta1.Gardener
 	recorder               record.EventRecorder
 	config                 *config.GardenletConfiguration
-	secretLister           kubecorev1listers.SecretLister
 	seedLister             gardencorelisters.SeedLister
-	shootLister            gardencorelisters.ShootLister
 }
 
 func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) error {

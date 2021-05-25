@@ -17,20 +17,21 @@ package gardener
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 // RespectShootSyncPeriodOverwrite checks whether to respect the sync period overwrite of a Shoot or not.
 func RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite bool, shoot *v1beta1.Shoot) bool {
-	return respectSyncPeriodOverwrite || shoot.Namespace == constants.GardenNamespace
+	return respectSyncPeriodOverwrite || shoot.Namespace == v1beta1constants.GardenNamespace
 }
 
 // ShouldIgnoreShoot determines whether a Shoot should be ignored or not.
@@ -39,7 +40,7 @@ func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *v1beta1.Shoot) bo
 		return false
 	}
 
-	value, ok := shoot.Annotations[constants.ShootIgnore]
+	value, ok := shoot.Annotations[v1beta1constants.ShootIgnore]
 	if !ok {
 		return false
 	}
@@ -98,7 +99,7 @@ func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod tim
 		return defaultMinSyncPeriod
 	}
 
-	syncPeriodOverwrite, ok := shoot.Annotations[constants.ShootSyncPeriod]
+	syncPeriodOverwrite, ok := shoot.Annotations[v1beta1constants.ShootSyncPeriod]
 	if !ok {
 		return defaultMinSyncPeriod
 	}
@@ -151,4 +152,43 @@ func GetShootNameFromOwnerReferences(objectMeta metav1.Object) string {
 		}
 	}
 	return ""
+}
+
+const (
+	// ShootProjectSecretSuffixKubeconfig is a constant for a shoot project secret with suffix 'kubeconfig'.
+	ShootProjectSecretSuffixKubeconfig = "kubeconfig"
+	// ShootProjectSecretSuffixSSHKeypair is a constant for a shoot project secret with suffix 'ssh-keypair'.
+	ShootProjectSecretSuffixSSHKeypair = v1beta1constants.SecretNameSSHKeyPair
+	// ShootProjectSecretSuffixMonitoring is a constant for a shoot project secret with suffix 'monitoring'.
+	ShootProjectSecretSuffixMonitoring = "monitoring"
+)
+
+// GetShootProjectSecretSuffixes returns the list of shoot-related project secret suffixes.
+func GetShootProjectSecretSuffixes() []string {
+	return []string{
+		ShootProjectSecretSuffixKubeconfig,
+		ShootProjectSecretSuffixSSHKeypair,
+		ShootProjectSecretSuffixMonitoring,
+	}
+}
+
+func shootProjectSecretSuffix(suffix string) string {
+	return "." + suffix
+}
+
+// ComputeShootProjectSecretName computes the name of a shoot-related project secret.
+func ComputeShootProjectSecretName(shootName, suffix string) string {
+	return shootName + shootProjectSecretSuffix(suffix)
+}
+
+// IsShootProjectSecret checks if the given name matches the name of a shoot-related project secret. If no, it returns
+// an empty string and <false>. Otherwise, it returns the shoot name and <true>.
+func IsShootProjectSecret(secretName string) (string, bool) {
+	for _, v := range GetShootProjectSecretSuffixes() {
+		if suffix := shootProjectSecretSuffix(v); strings.HasSuffix(secretName, suffix) {
+			return strings.TrimSuffix(secretName, suffix), true
+		}
+	}
+
+	return "", false
 }

@@ -266,4 +266,30 @@ var _ = Describe("Shoot", func() {
 		Entry("object has no OwnerReferences", nil, ""),
 		Entry("object is not owned by shoot", []metav1.OwnerReference{{Kind: "Foo", Name: "foo"}}, ""),
 	)
+
+	Describe("#GetShootProjectSecretSuffixes", func() {
+		It("should return the expected list", func() {
+			Expect(GetShootProjectSecretSuffixes()).To(ConsistOf("kubeconfig", "ssh-keypair", "monitoring"))
+		})
+	})
+
+	Describe("#ComputeShootProjectSecretName", func() {
+		It("should compute the expected name", func() {
+			Expect(ComputeShootProjectSecretName("foo", "bar")).To(Equal("foo.bar"))
+		})
+	})
+
+	DescribeTable("#IsShootProjectSecret",
+		func(name, expectedShootName string, expectedOK bool) {
+			shootName, ok := IsShootProjectSecret(name)
+			Expect(shootName).To(Equal(expectedShootName))
+			Expect(ok).To(Equal(expectedOK))
+		},
+		Entry("no suffix", "foo", "", false),
+		Entry("unrelated suffix", "foo.bar", "", false),
+		Entry("wrong suffix delimiter", "foo:kubeconfig", "", false),
+		Entry("kubeconfig suffix", "foo.kubeconfig", "foo", true),
+		Entry("ssh-keypair suffix", "bar.ssh-keypair", "bar", true),
+		Entry("monitoring suffix", "baz.monitoring", "baz", true),
+	)
 })

@@ -16,13 +16,13 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -295,16 +295,6 @@ func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *s
 	return nil
 }
 
-const (
-	secretSuffixKubeConfig = "kubeconfig"
-	secretSuffixSSHKeyPair = v1beta1constants.SecretNameSSHKeyPair
-	secretSuffixMonitoring = "monitoring"
-)
-
-func computeProjectSecretName(shootName, suffix string) string {
-	return fmt.Sprintf("%s.%s", shootName, suffix)
-}
-
 type projectSecret struct {
 	secretName  string
 	suffix      string
@@ -327,18 +317,18 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 	projectSecrets := []projectSecret{
 		{
 			secretName:  common.KubecfgSecretName,
-			suffix:      secretSuffixKubeConfig,
+			suffix:      gutil.ShootProjectSecretSuffixKubeconfig,
 			annotations: map[string]string{"url": "https://" + kubecfgURL},
 			labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleKubeconfig},
 		},
 		{
 			secretName: v1beta1constants.SecretNameSSHKeyPair,
-			suffix:     secretSuffixSSHKeyPair,
+			suffix:     gutil.ShootProjectSecretSuffixSSHKeypair,
 			labels:     map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
 		},
 		{
 			secretName:  "monitoring-ingress-credentials-users",
-			suffix:      secretSuffixMonitoring,
+			suffix:      gutil.ShootProjectSecretSuffixMonitoring,
 			annotations: map[string]string{"url": "https://" + b.ComputeGrafanaUsersHost()},
 			labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring},
 		},
@@ -350,12 +340,12 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 		fns = append(fns, func(ctx context.Context) error {
 			secretObj := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      computeProjectSecretName(b.Shoot.Info.Name, s.suffix),
+					Name:      gutil.ComputeShootProjectSecretName(b.Shoot.Info.Name, s.suffix),
 					Namespace: b.Shoot.Info.Namespace,
 				},
 			}
 
-			_, err := controllerutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), secretObj, func() error {
+			_, err := controllerutils.StrategicMergeCreateOrPatch(ctx, b.K8sGardenClient.Client(), secretObj, func() error {
 				secretObj.OwnerReferences = []metav1.OwnerReference{
 					*metav1.NewControllerRef(b.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
 				}

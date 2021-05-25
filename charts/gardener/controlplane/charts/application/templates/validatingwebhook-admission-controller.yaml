@@ -98,6 +98,14 @@ webhooks:
   timeoutSeconds: 10
   rules:
   - apiGroups:
+    - ""
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    resources:
+    - secrets
+  - apiGroups:
     - coordination.k8s.io
     apiVersions:
     - "*"

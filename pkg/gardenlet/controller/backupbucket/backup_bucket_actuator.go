@@ -349,5 +349,5 @@ func generateBackupBucketSecretName(backupBucketName string) string {
 }
 
 func generateGeneratedBackupBucketSecretName(backupBucketName string) string {
-	return fmt.Sprintf("generated-bucket-%s", backupBucketName)
+	return v1beta1constants.SecretPrefixGeneratedBackupBucket + backupBucketName
 }

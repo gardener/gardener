@@ -60,8 +60,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/client-go/informers"
-	kubeinformers "k8s.io/client-go/informers"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
@@ -223,7 +221,6 @@ type Gardenlet struct {
 	GardenClusterIdentity  string
 	ClientMap              clientmap.ClientMap
 	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	KubeInformerFactory    informers.SharedInformerFactory
 	Logger                 *logrus.Logger
 	Recorder               record.EventRecorder
 	LeaderElection         *leaderelection.LeaderElectionConfig
@@ -399,7 +396,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		Recorder:               recorder,
 		ClientMap:              clientMap,
 		K8sGardenCoreInformers: gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
-		KubeInformerFactory:    kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
 		LeaderElection:         leaderElectionConfig,
 		CertificateManager:     certificateManager,
 	}, nil
@@ -492,7 +488,6 @@ func (g *Gardenlet) startControllers(ctx context.Context) error {
 	return controller.NewGardenletControllerFactory(
 		g.ClientMap,
 		g.K8sGardenCoreInformers,
-		g.KubeInformerFactory,
 		g.Config,
 		g.Identity,
 		g.GardenClusterIdentity,
