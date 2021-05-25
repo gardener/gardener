@@ -7,6 +7,8 @@ The document describes an out-of-tree extension architecture that keeps the Gard
 
 ## Basic concepts
 
+![Gardener Communication Overview](./images/communication_overview.png)
+
 Gardener keeps running in the "garden cluster" and implements the core logic of shoot cluster reconciliation/deletion.
 Extensions are Kubernetes controllers themselves (like Gardener) and run in the seed clusters.
 As usual, we try to use Kubernetes wherever applicable.
