@@ -35,7 +35,7 @@ The `dns-controller-manager` runs update requests for DNS record on the configur
 ### Goals
 
 - The rate limit is set and applied separatedly for each `DNSProvider`
-- All update requests caused by `DNSEntries` created or updated from the `shoot-dns-service` should only be forwarded to the backend DNS service, if the update requests are within rate limit of the `DNSProvider` the `DNSEntry` is assigned to.
+- All update requests caused by `DNSEntries` created or updated from the `shoot-dns-service` should only be processed by the backend DNS service, if the update requests are within rate limit of the `DNSProvider` the `DNSEntry` is assigned to.
 - Deletion of `DNSEntries` is not rate limited to avoid freezing on shoot cluster deletion.
 - Updates of `DNSEntries` created by Gardener (e.g. `internal`, `external`, and `ingress`) should not be blocked by the rate limits.
 - If creation/updates of `DNSEntries` of the `shoot-dns-service` are pending because of a rate limit, this should also made be visible in the shoot cluster (either by events or status update)
