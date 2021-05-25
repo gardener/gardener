@@ -313,7 +313,7 @@ global:
       #   operationMode: log
         enableDebugHandlers: false
     seedRestriction:
-      enabled: true
+      enabled: false
 
   # Gardener controller manager configuration values
   controller:
