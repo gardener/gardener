@@ -17,19 +17,18 @@ package v1alpha1
 import (
 	"fmt"
 
+	"github.com/gardener/gardener/landscaper/pkg/gardenlet/apis/imports"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/conversion"
-
-	"github.com/gardener/gardener/landscaper/pkg/gardenlet/apis/imports"
 )
 
 func Convert_v1alpha1_Imports_To_imports_Imports(in *Imports, out *imports.Imports, s conversion.Scope) error {
 	if in.ComponentConfiguration.Object == nil {
-		cfg, err := helper.DecodeGardenletConfigurationFromBytes(in.ComponentConfiguration.Raw, false)
+		cfg, err := encoding.DecodeGardenletConfigurationFromBytes(in.ComponentConfiguration.Raw, false)
 		if err != nil {
 			return err
 		}
@@ -47,7 +46,7 @@ func Convert_imports_Imports_To_v1alpha1_Imports(in *imports.Imports, out *Impor
 		if !ok {
 			return fmt.Errorf("unknown gardenlet config object type")
 		}
-		raw, err := helper.EncodeGardenletConfigurationToBytes(cfg)
+		raw, err := encoding.EncodeGardenletConfigurationToBytes(cfg)
 		if err != nil {
 			return err
 		}

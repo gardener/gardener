@@ -20,19 +20,19 @@ import (
 	"fmt"
 	"time"
 
-	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	. "github.com/gardener/gardener/test/framework"
+	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
+
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var gardenletConfigFromFlags = &GardenletConfig{}
@@ -235,7 +235,7 @@ func (f *GardenletFramework) createGardenletLandscaperConfig(ctx context.Context
 	f.ComponentConfiguration = config
 
 	// Encode gardenlet config to bytes
-	re, err := helper.EncodeGardenletConfigurationToBytes(config)
+	re, err := encoding.EncodeGardenletConfigurationToBytes(config)
 	if err != nil {
 		return err
 	}
