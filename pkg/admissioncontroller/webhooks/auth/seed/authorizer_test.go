@@ -670,6 +670,7 @@ var _ = Describe("Seed", func() {
 				Entry("list", "list"),
 				Entry("watch", "watch"),
 				Entry("create", "create"),
+				Entry("delete", "delete"),
 			)
 
 			It("should have no opinion because no allowed verb", func() {
@@ -678,7 +679,7 @@ var _ = Describe("Seed", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get list watch update patch delete]"))
+				Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create delete get list watch update patch]"))
 			})
 
 			It("should have no opinion because no allowed subresource", func() {
@@ -712,8 +713,6 @@ var _ = Describe("Seed", func() {
 				Entry("patch w/ subresource", "patch", "status"),
 				Entry("update w/o subresource", "update", ""),
 				Entry("update w/ subresource", "update", "status"),
-				Entry("delete w/o subresource", "delete", ""),
-				Entry("delete w/ subresource", "delete", "status"),
 			)
 
 			It("should allow because seed name is ambiguous", func() {
@@ -727,7 +726,7 @@ var _ = Describe("Seed", func() {
 			})
 		})
 
-		Context("when requested for BackupEntrys", func() {
+		Context("when requested for BackupEntries", func() {
 			var (
 				name, namespace string
 				attrs           *auth.AttributesRecord

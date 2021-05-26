@@ -44,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -90,6 +91,7 @@ var _ = Describe("handler", func() {
 
 		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{}))
 		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}))
+		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
 		mockCache.EXPECT().GetInformer(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}))
 
 		handler, err = New(ctx, logger, mockCache)
@@ -257,7 +259,6 @@ var _ = Describe("handler", func() {
 				},
 
 				Entry("update", admissionv1.Update),
-				Entry("delete", admissionv1.Delete),
 				Entry("connect", admissionv1.Connect),
 			)
 
@@ -331,9 +332,69 @@ var _ = Describe("handler", func() {
 					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 				})
 			})
+
+			Context("when operation is delete", func() {
+				BeforeEach(func() {
+					request.Operation = admissionv1.Delete
+				})
+
+				It("should return an error because reading the Seed failed", func() {
+					mockCache.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
+
+					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+						AdmissionResponse: admissionv1.AdmissionResponse{
+							Allowed: false,
+							Result: &metav1.Status{
+								Code:    int32(http.StatusInternalServerError),
+								Message: fakeErr.Error(),
+							},
+						},
+					}))
+				})
+
+				It("should forbid the request because the seed UID and the bucket name does not match", func() {
+					mockCache.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+						(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{UID: "1234"}}).DeepCopyInto(obj)
+						return nil
+					})
+
+					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+						AdmissionResponse: admissionv1.AdmissionResponse{
+							Allowed: false,
+							Result: &metav1.Status{
+								Code:    int32(http.StatusForbidden),
+								Message: "cannot delete unrelated BackupBucket",
+							},
+						},
+					}))
+				})
+
+				It("should allow the request because the seed UID and the bucket name does match", func() {
+					uid := "some-seed-uid"
+					request.Name = uid
+
+					mockCache.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+						(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{UID: types.UID(uid)}}).DeepCopyInto(obj)
+						return nil
+					})
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+
+				It("should allow the request because seed name is ambiguous", func() {
+					request.UserInfo = ambiguousUser
+
+					mockCache.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+						(&gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{UID: "1234"}}).DeepCopyInto(obj)
+						return nil
+					})
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+			})
 		})
 
-		Context("when requested for BackupEntrys", func() {
+		Context("when requested for BackupEntries", func() {
 			var name, namespace, bucketName string
 
 			BeforeEach(func() {
