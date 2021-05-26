@@ -25,6 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
@@ -53,7 +54,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -117,7 +117,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 
 	// Register Seed object if desired
 	if f.cfg.SeedConfig != nil {
-		if err := f.registerSeed(ctx, k8sGardenClient.Client()); err != nil {
+		if err := f.registerSeed(ctx, k8sGardenClient); err != nil {
 			return fmt.Errorf("failed to register the seed: %+v", err)
 		}
 	}
@@ -196,7 +196,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 }
 
 // registerSeed create or update the seed resource if gardenlet is configured to takes care about it.
-func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenClient client.Client) error {
+func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenClient kubernetes.Interface) error {
 	var (
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -213,7 +213,7 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 		return fmt.Errorf("could not convert gardenlet configuration: %+v", err)
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient, seed, func() error {
+	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), seed, func() error {
 		seed.Labels = utils.MergeStringMaps(map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		}, f.cfg.SeedConfig.Labels)
@@ -226,7 +226,7 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 
 	// wait seed namespace to be created by GCM
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 2*time.Minute, func(context.Context) (done bool, err error) {
-		if err := gardenClient.Get(ctx, kutil.Key(seedNamespaceName), seedNamespace); err != nil {
+		if err := gardenClient.APIReader().Get(ctx, kutil.Key(seedNamespaceName), seedNamespace); err != nil {
 			if apierrors.IsNotFound(err) {
 				logger.Logger.Infof("Waiting until namespace %q is created.", seedNamespaceName)
 				return retryutils.MinorError(fmt.Errorf("namespace %q still not created", seedNamespaceName))
