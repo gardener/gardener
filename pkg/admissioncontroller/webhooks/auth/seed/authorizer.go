@@ -240,8 +240,9 @@ func (a *authorizer) authorizeNamespace(seedName string, attrs auth.Attributes) 
 }
 
 func (a *authorizer) authorizeSecret(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	if attrs.GetNamespace() == gutil.ComputeGardenNamespace(seedName) &&
-		utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) {
+	if seedName == "" ||
+		(attrs.GetNamespace() == gutil.ComputeGardenNamespace(seedName) &&
+			utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"})) {
 
 		return auth.DecisionAllow, "", nil
 	}

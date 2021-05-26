@@ -1833,6 +1833,23 @@ var _ = Describe("Seed", func() {
 				Entry("watch", "watch"),
 			)
 
+			DescribeTable("should allow without consulting the graph because verb is get, list, or watch in the seed's namespace when user is ambiguous",
+				func(verb string) {
+					attrs.User = ambiguousUser
+					attrs.Namespace = "seed-" + seedName
+					attrs.Verb = verb
+
+					decision, reason, err := authorizer.Authorize(ctx, attrs)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(decision).To(Equal(auth.DecisionAllow))
+					Expect(reason).To(BeEmpty())
+				},
+
+				Entry("get", "get"),
+				Entry("list", "list"),
+				Entry("watch", "watch"),
+			)
+
 			DescribeTable("should allow without consulting the graph because verb is create",
 				func(verb string) {
 					attrs.Verb = verb
