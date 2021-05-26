@@ -101,6 +101,24 @@ On replicating a `DNSEntry` from the shoot cluster nothing must be changed, as a
 ### Gardener
 
 The rate limit for the default external `DNSProvider` is configured for the default domains of the garden.
+As there are already other annotations in the [default domain secret](https://github.com/gardener/gardener/blob/7616e05b6dedd94b4c6e48c26ac026da4d177191/example/10-secret-default-domain.yaml#L13), an annotation `dns.gardener.cloud/rate-limit` should contain values for both requestsPerDay and burst parameters.
+
+Example:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: default-domain
+  namespace: garden
+  annotations:
+    dns.gardener.cloud/provider: aws-route53
+    dns.gardener.cloud/domain: example.com
+    dns.gardener.cloud/rate-limit: "requestsPerDay=120,burst=20"
+  # dns.gardener.cloud/include-zones: "first-zone-id,second-zone-id"
+  # dns.gardener.cloud/exclude-zones: "first-zone-id,second-zone-id"
+```
+
 It must also be possible to set a rate-limit for an additional `DNSProvider` specified in the shoot manifest optionally.
 
 On creating a new shoot (with enabled DNS), the external `DNSProvider` is created with the rate limit for the default domain or as specified in the shoot manifest for the primary `DNSProvider`.
