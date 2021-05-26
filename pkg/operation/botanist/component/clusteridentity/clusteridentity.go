@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,77 +16,127 @@ package clusteridentity
 
 import (
 	"context"
-	"fmt"
+	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/extensions"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 
-	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type shootClusterIdentity struct {
-	clusterIdentity       *string
-	gardenClusterIdentity string
-	seedNamespace         string
-	namespace             string
-	name                  string
-	uid                   string
-	gardenClient          client.Client
-	seedClient            client.Client
-	logger                *logrus.Entry
+const (
+	managedResourceControlName = "cluster-identity"
+	// ShootManagedResourceName is the name of the ManagedResource containing the resource specifications.
+	ShootManagedResourceName = "shoot-core-" + managedResourceControlName
+)
+
+// Interface contains functions for managing cluster identities.
+type Interface interface {
+	component.DeployWaiter
+	SetIdentity(string)
 }
 
-// New creates new instance of Deployer for Shoot cluster identity
-func New(
-	clusterIdentity *string,
-	gardenClusterIdentity string,
-	name, namespace, seedNamespace, uid string,
-	gardenClient, seedClient client.Client,
-	logger *logrus.Entry,
-) component.Deployer {
-	return &shootClusterIdentity{
-		clusterIdentity:       clusterIdentity,
-		gardenClusterIdentity: gardenClusterIdentity,
-		name:                  name,
-		namespace:             namespace,
-		uid:                   uid,
-		seedNamespace:         seedNamespace,
-		gardenClient:          gardenClient,
-		seedClient:            seedClient,
-		logger:                logger,
+type clusterIdentity struct {
+	client                  client.Client
+	namespace               string
+	identity                string
+	managedResourceRegistry *managedresources.Registry
+	managedResourceName     string
+	managedResourceCreateFn func(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error
+	managedResourceDeleteFn func(ctx context.Context, client client.Client, namespace string, name string) error
+}
+
+func new(
+	c client.Client,
+	namespace string,
+	identity string,
+	managedResourceRegistry *managedresources.Registry,
+	managedResourceName string,
+	managedResourceCreateFn func(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error,
+	managedResourceDeleteFn func(ctx context.Context, client client.Client, namespace string, name string) error,
+) Interface {
+	return &clusterIdentity{
+		client:                  c,
+		namespace:               namespace,
+		identity:                identity,
+		managedResourceRegistry: managedResourceRegistry,
+		managedResourceName:     managedResourceName,
+		managedResourceCreateFn: managedResourceCreateFn,
+		managedResourceDeleteFn: managedResourceDeleteFn,
 	}
 }
 
-func (c *shootClusterIdentity) Deploy(ctx context.Context) error {
-	if c.clusterIdentity == nil {
-		clusterIdentity := fmt.Sprintf("%s-%s-%s", c.seedNamespace, c.uid, c.gardenClusterIdentity)
-		shoot := &gardencorev1beta1.Shoot{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      c.name,
-				Namespace: c.namespace,
-			},
-		}
-
-		patch := []byte(fmt.Sprintf(`{"status": {"clusterIdentity": "%s"}}`, clusterIdentity))
-		if err := c.gardenClient.Status().Patch(ctx, shoot, client.RawPatch(types.StrategicMergePatchType, patch)); err != nil {
-			return err
-		}
-
-		if err := c.gardenClient.Get(ctx, kutil.Key(c.namespace, c.name), shoot); err != nil {
-			return err
-		}
-
-		return extensions.SyncClusterResourceToSeed(ctx, c.seedClient, c.seedNamespace, shoot, nil, nil)
-	}
-	return nil
+// NewForSeed creates new instance of Deployer for the seed's cluster identity.
+func NewForSeed(c client.Client, namespace, identity string) Interface {
+	return new(
+		c,
+		namespace,
+		identity,
+		managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer),
+		managedResourceControlName,
+		managedresources.CreateForSeed,
+		managedresources.DeleteForSeed,
+	)
 }
 
-// Destroy returns nil
-func (c *shootClusterIdentity) Destroy(ctx context.Context) error {
-	return nil
+// NewForShoot creates new instance of Deployer for the shoot's cluster identity.
+func NewForShoot(c client.Client, namespace, identity string) Interface {
+	return new(
+		c,
+		namespace,
+		identity,
+		managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer),
+		ShootManagedResourceName,
+		managedresources.CreateForShoot,
+		managedresources.DeleteForShoot,
+	)
+}
+
+func (c *clusterIdentity) Deploy(ctx context.Context) error {
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v1beta1constants.ClusterIdentity,
+			Namespace: metav1.NamespaceSystem,
+		},
+		Data: map[string]string{
+			v1beta1constants.ClusterIdentity: c.identity,
+		},
+	}
+
+	resources, err := c.managedResourceRegistry.AddAllAndSerialize(configMap)
+	if err != nil {
+		return err
+	}
+
+	return c.managedResourceCreateFn(ctx, c.client, c.namespace, c.managedResourceName, false, resources)
+}
+
+func (c *clusterIdentity) Destroy(ctx context.Context) error {
+	return c.managedResourceDeleteFn(ctx, c.client, c.namespace, c.managedResourceName)
+}
+
+func (c *clusterIdentity) SetIdentity(identity string) {
+	c.identity = identity
+}
+
+// TimeoutWaitForManagedResource is the timeout used while waiting for the ManagedResources to become healthy
+// or deleted.
+var TimeoutWaitForManagedResource = 2 * time.Minute
+
+func (c *clusterIdentity) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilHealthy(timeoutCtx, c.client, c.namespace, c.managedResourceName)
+}
+
+func (c *clusterIdentity) WaitCleanup(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForManagedResource)
+	defer cancel()
+
+	return managedresources.WaitUntilDeleted(timeoutCtx, c.client, c.namespace, c.managedResourceName)
 }

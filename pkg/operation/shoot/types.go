@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
@@ -89,7 +90,6 @@ type Shoot struct {
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
 	BackupEntry      component.DeployMigrateWaiter
-	ClusterIdentity  component.Deployer
 	ControlPlane     *ControlPlane
 	Extensions       *Extensions
 	NetworkPolicies  component.Deployer
@@ -127,8 +127,9 @@ type Extensions struct {
 
 // SystemComponents contains references to system components.
 type SystemComponents struct {
-	Namespaces    component.DeployWaiter
-	MetricsServer metricsserver.MetricsServer
+	ClusterIdentity clusteridentity.Interface
+	Namespaces      component.DeployWaiter
+	MetricsServer   metricsserver.MetricsServer
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.

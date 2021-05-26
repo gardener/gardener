@@ -33,6 +33,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
@@ -826,7 +827,6 @@ func RunReconcileSeedFlow(
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": monitoringBasicAuth,
 		},
-		"cluster-identity": map[string]interface{}{"clusterIdentity": &seed.Info.Status.ClusterIdentity},
 	})
 
 	if err := chartApplier.Apply(ctx, filepath.Join(charts.Path, chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
@@ -969,6 +969,11 @@ func runCreateSeedFlow(
 			Fn:   component.OpWaiter(resourceManager).Deploy,
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Deploying cluster-identity",
+			Fn:           clusteridentity.NewForSeed(sc.Client(), v1beta1constants.GardenNamespace, *seed.Info.Status.ClusterIdentity).Deploy,
+			Dependencies: flow.NewTaskIDs(deployResourceManager),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Deploying cluster-autoscaler",
 			Fn:           clusterautoscaler.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace).Deploy,
 			Dependencies: flow.NewTaskIDs(deployResourceManager),
@@ -1016,6 +1021,7 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 		resourceManager = resourcemanager.New(sc.Client(), v1beta1constants.GardenNamespace, "", 0, resourcemanager.Values{})
 		etcdDruid       = etcd.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, "", kubernetesVersion, nil)
 		networkPolicies = networkpolicies.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{})
+		clusterIdentity = clusteridentity.NewForSeed(sc.Client(), v1beta1constants.GardenNamespace, "")
 	)
 	scheduler, err := gardenerkubescheduler.Bootstrap(sc.DirectClient(), v1beta1constants.GardenNamespace, nil, kubernetesVersion)
 	if err != nil {
@@ -1037,6 +1043,10 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 			Name:         "Ensuring no ControllerInstallations are left",
 			Fn:           ensureNoControllerInstallations(gc, seed.Info.Name),
 			Dependencies: flow.NewTaskIDs(destroyDNSProvider),
+		})
+		destroyClusterIdentity = g.Add(flow.Task{
+			Name: "Destroying cluster-identity",
+			Fn:   component.OpDestroyAndWait(clusterIdentity).Destroy,
 		})
 		destroyClusterAutoscaler = g.Add(flow.Task{
 			Name: "Destroying cluster-autoscaler",
@@ -1064,6 +1074,7 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 			Dependencies: flow.NewTaskIDs(
 				destroySeedAdmissionController,
 				destroyEtcdDruid,
+				destroyClusterIdentity,
 				destroyClusterAutoscaler,
 				destroyKubeScheduler,
 				destroyNetworkPolicies,
