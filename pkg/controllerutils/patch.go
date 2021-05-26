@@ -122,7 +122,7 @@ func getAndCreateOrPatch(ctx context.Context, c client.Client, obj client.Object
 	return controllerutil.OperationResultUpdated, nil
 }
 
-// MergeCreateOrPatch creates or patches (using a merge patch) the given object in the Kubernetes cluster.
+// CreateOrMergePatch creates or patches (using a merge patch) the given object in the Kubernetes cluster.
 // The object's desired state is only reconciled with the existing state inside the passed in callback MutateFn,
 // however, the object is not read from the client. This means the object should already be filled with the
 // last-known state if operating on more complex structures (e.g. if the patch is supposed to remove an optional field
@@ -131,11 +131,11 @@ func getAndCreateOrPatch(ctx context.Context, c client.Client, obj client.Object
 // The MutateFn is called regardless of creating or patching an object.
 //
 // It returns the executed operation and an error.
-func MergeCreateOrPatch(ctx context.Context, c client.Writer, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error) {
+func CreateOrMergePatch(ctx context.Context, c client.Writer, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error) {
 	return createOrPatch(ctx, c, obj, func(obj client.Object) client.Patch { return client.MergeFrom(obj) }, f)
 }
 
-// StrategicMergeCreateOrPatch creates or patches (using a strategic merge patch) the given object in the Kubernetes cluster.
+// CreateOrStrategicMergePatch creates or patches (using a strategic merge patch) the given object in the Kubernetes cluster.
 // The object's desired state is only reconciled with the existing state inside the passed in callback MutateFn,
 // however, the object is not read from the client. This means the object should already be filled with the
 // last-known state if operating on more complex structures (e.g. if the patch is supposed to remove an optional field
@@ -144,7 +144,7 @@ func MergeCreateOrPatch(ctx context.Context, c client.Writer, obj client.Object,
 // The MutateFn is called regardless of creating or patching an object.
 //
 // It returns the executed operation and an error.
-func StrategicMergeCreateOrPatch(ctx context.Context, c client.Writer, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error) {
+func CreateOrStrategicMergePatch(ctx context.Context, c client.Writer, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error) {
 	return createOrPatch(ctx, c, obj, func(obj client.Object) client.Patch { return client.StrategicMergeFrom(obj) }, f)
 }
 

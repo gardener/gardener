@@ -24,7 +24,7 @@ import (
 )
 
 // GetSecretByReference returns the secret referenced by the given secret reference.
-func GetSecretByReference(ctx context.Context, c client.Client, ref *corev1.SecretReference) (*corev1.Secret, error) {
+func GetSecretByReference(ctx context.Context, c client.Reader, ref *corev1.SecretReference) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	if err := c.Get(ctx, Key(ref.Namespace, ref.Name), secret); err != nil {
 		return nil, err
