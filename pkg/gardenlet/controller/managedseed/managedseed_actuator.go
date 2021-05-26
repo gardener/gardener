@@ -24,8 +24,8 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	v1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -114,24 +114,10 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 		return status, false, fmt.Errorf("could not get shoot client for shoot %s: %w", kutil.ObjectName(shoot), err)
 	}
 
-	// Decode gardenlet configuration
-	var gardenletConfig *configv1alpha1.GardenletConfiguration
-	if ms.Spec.Gardenlet != nil {
-		gardenletConfig, err = helper.DecodeGardenletConfiguration(&ms.Spec.Gardenlet.Config, false)
-		if err != nil {
-			return status, false, fmt.Errorf("could not decode gardenlet configuration: %w", err)
-		}
-	}
-
-	// Determine seed template
-	var seedTemplate *gardencorev1beta1.SeedTemplate
-	switch {
-	case ms.Spec.SeedTemplate != nil:
-		seedTemplate = ms.Spec.SeedTemplate
-	case ms.Spec.Gardenlet != nil:
-		seedTemplate = &gardenletConfig.SeedConfig.SeedTemplate
-	default:
-		return status, false, fmt.Errorf("could not determine seed template")
+	// Extract seed template and gardenlet config
+	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms)
+	if err != nil {
+		return status, false, err
 	}
 
 	// Check seed spec
@@ -197,24 +183,10 @@ func (a *actuator) Delete(ctx context.Context, ms *seedmanagementv1alpha1.Manage
 		return status, false, false, fmt.Errorf("could not get shoot client for shoot %s: %w", kutil.ObjectName(shoot), err)
 	}
 
-	// Decode gardenlet configuration
-	var gardenletConfig *configv1alpha1.GardenletConfiguration
-	if ms.Spec.Gardenlet != nil {
-		gardenletConfig, err = helper.DecodeGardenletConfiguration(&ms.Spec.Gardenlet.Config, false)
-		if err != nil {
-			return status, false, false, fmt.Errorf("could not decode gardenlet configuration: %w", err)
-		}
-	}
-
-	// Determine seed template
-	var seedTemplate *gardencorev1beta1.SeedTemplate
-	switch {
-	case ms.Spec.SeedTemplate != nil:
-		seedTemplate = ms.Spec.SeedTemplate
-	case ms.Spec.Gardenlet != nil:
-		seedTemplate = &gardenletConfig.SeedConfig.SeedTemplate
-	default:
-		return status, false, false, fmt.Errorf("could not determine seed template")
+	// Extract seed template and gardenlet config
+	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms)
+	if err != nil {
+		return status, false, false, err
 	}
 
 	// Delete seed if it still exists and is not already deleting
