@@ -48,7 +48,8 @@ func (g *graph) setupSeedWatch(informer cache.Informer) {
 			}
 
 			if !apiequality.Semantic.DeepEqual(oldSeed.Spec.SecretRef, newSeed.Spec.SecretRef) ||
-				!gardencorev1beta1helper.SeedBackupSecretRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) {
+				!gardencorev1beta1helper.SeedBackupSecretRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) ||
+				!seedDNSProviderSecretRefEqual(oldSeed.Spec.DNS.Provider, newSeed.Spec.DNS.Provider) {
 				g.handleSeedCreateOrUpdate(newSeed)
 			}
 		},
@@ -90,6 +91,11 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 		secretVertex := g.getOrCreateVertex(VertexTypeSecret, seed.Spec.Backup.SecretRef.Namespace, seed.Spec.Backup.SecretRef.Name)
 		g.addEdge(secretVertex, seedVertex)
 	}
+
+	if seed.Spec.DNS.Provider != nil {
+		secretVertex := g.getOrCreateVertex(VertexTypeSecret, seed.Spec.DNS.Provider.SecretRef.Namespace, seed.Spec.DNS.Provider.SecretRef.Name)
+		g.addEdge(secretVertex, seedVertex)
+	}
 }
 
 func (g *graph) handleSeedDelete(seed *gardencorev1beta1.Seed) {
@@ -101,4 +107,16 @@ func (g *graph) handleSeedDelete(seed *gardencorev1beta1.Seed) {
 	defer g.lock.Unlock()
 
 	g.deleteVertex(VertexTypeSeed, "", seed.Name)
+}
+
+func seedDNSProviderSecretRefEqual(oldDNS, newDNS *gardencorev1beta1.SeedDNSProvider) bool {
+	if oldDNS == nil && newDNS == nil {
+		return true
+	}
+
+	if oldDNS != nil && newDNS != nil {
+		return apiequality.Semantic.DeepEqual(oldDNS.SecretRef, newDNS.SecretRef)
+	}
+
+	return false
 }
