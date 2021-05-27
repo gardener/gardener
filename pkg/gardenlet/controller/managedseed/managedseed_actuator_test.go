@@ -452,11 +452,6 @@ var _ = Describe("Actuator", func() {
 		}
 
 		expectCreateSeed = func() {
-			gc.EXPECT().Get(ctx, kutil.Key(name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *gardencorev1beta1.Seed) error {
-					return apierrors.NewNotFound(gardencorev1beta1.Resource("seed"), name)
-				},
-			)
 			gc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
 				func(_ context.Context, s *gardencorev1beta1.Seed) error {
 					Expect(s).To(Equal(seed))

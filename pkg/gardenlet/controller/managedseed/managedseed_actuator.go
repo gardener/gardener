@@ -329,7 +329,7 @@ func (a *actuator) createOrUpdateSeed(ctx context.Context, managedSeed *seedmana
 			Name: managedSeed.Name,
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, a.gardenClient.Client(), seed, func() error {
+	_, err := controllerutils.CreateOrStrategicMergePatch(ctx, a.gardenClient.Client(), seed, func() error {
 		seed.OwnerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 		}
@@ -568,7 +568,7 @@ func (a *actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.
 
 func (a *actuator) getShootKubeconfigSecret(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
 	shootKubeconfigSecret := &corev1.Secret{}
-	if err := a.gardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, fmt.Sprintf("%s.kubeconfig", shoot.Name)), shootKubeconfigSecret); err != nil {
+	if err := a.gardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, gutil.ComputeShootProjectSecretName(shoot.Name, gutil.ShootProjectSecretSuffixKubeconfig)), shootKubeconfigSecret); err != nil {
 		return nil, err
 	}
 	return shootKubeconfigSecret, nil
