@@ -261,7 +261,8 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 						Namespace: seed.Spec.SecretRef.Namespace,
 					},
 				}
-				if err := gardenClient.APIReader().Get(ctx, client.ObjectKeyFromObject(secret), secret); err == nil {
+				err = gardenClient.Client().Get(ctx, client.ObjectKeyFromObject(secret), secret)
+				if err == nil {
 					if err2 := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err2 != nil {
 						return fmt.Errorf("failed to remove finalizer from Seed secret '%s/%s': %w", secret.Namespace, secret.Name, err2)
 					}
@@ -322,7 +323,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	// Add the Gardener finalizer to the referenced Seed secret to protect it from deletion as long as the Seed resource
 	// does exist.
 	if seed.Spec.SecretRef != nil {
-		secret, err := kutil.GetSecretByReference(ctx, gardenClient.APIReader(), seed.Spec.SecretRef)
+		secret, err := kutil.GetSecretByReference(ctx, gardenClient.Client(), seed.Spec.SecretRef)
 		if err != nil {
 			seedLogger.Error(err.Error())
 			return err
