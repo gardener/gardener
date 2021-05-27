@@ -1090,9 +1090,9 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 	return nil
 }
 
-func copySecretToSeed(ctx context.Context, gardenReader client.Reader, seedClient client.Client, sourceSecret types.NamespacedName, targetSecret *corev1.Secret) error {
+func copySecretToSeed(ctx context.Context, gardenClient, seedClient client.Client, sourceSecret types.NamespacedName, targetSecret *corev1.Secret) error {
 	gardenSecret := &corev1.Secret{}
-	if err := gardenReader.Get(ctx, sourceSecret, gardenSecret); err != nil {
+	if err := gardenClient.Get(ctx, sourceSecret, gardenSecret); err != nil {
 		return err
 	}
 
@@ -1119,7 +1119,7 @@ func ensureNoControllerInstallations(gc kubernetes.Interface, seedName string) f
 
 func updateDNSProviderSecret(ctx context.Context, sc kubernetes.Interface, gc kubernetes.Interface, seed *Seed) error {
 	if dnsConfig := seed.Info.Spec.DNS; dnsConfig.Provider != nil {
-		return copySecretToSeed(ctx, gc.APIReader(), sc.Client(), kutil.Key(dnsConfig.Provider.SecretRef.Namespace, dnsConfig.Provider.SecretRef.Name), emptyDNSProviderSecret())
+		return copySecretToSeed(ctx, gc.Client(), sc.Client(), kutil.Key(dnsConfig.Provider.SecretRef.Namespace, dnsConfig.Provider.SecretRef.Name), emptyDNSProviderSecret())
 	}
 	return nil
 }
