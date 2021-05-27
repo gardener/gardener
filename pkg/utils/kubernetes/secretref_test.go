@@ -99,39 +99,6 @@ var _ = Describe("secretref", func() {
 		})
 	})
 
-	Describe("#CreateOrUpdateSecretByReference", func() {
-		It("should create the secret if it doesn't exist", func() {
-			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(corev1.Resource("secret"), name))
-			c.EXPECT().Create(ctx, secret).Return(nil)
-
-			err := kutil.CreateOrUpdateSecretByReference(ctx, c, secretRef, secret.Type, secret.Data, secret.OwnerReferences)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should update the secret if it exists", func() {
-			newSecret := secret.DeepCopy()
-			newSecret.Data = map[string][]byte{
-				"bar": []byte("baz"),
-			}
-
-			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
-				*s = *secret
-				return nil
-			})
-			c.EXPECT().Update(ctx, newSecret).Return(nil)
-
-			err := kutil.CreateOrUpdateSecretByReference(ctx, c, secretRef, newSecret.Type, newSecret.Data, newSecret.OwnerReferences)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should fail if getting the secret failed", func() {
-			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fmt.Errorf("error"))
-
-			err := kutil.CreateOrUpdateSecretByReference(ctx, c, secretRef, secret.Type, secret.Data, secret.OwnerReferences)
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
 	Describe("#DeleteSecretByReference", func() {
 		BeforeEach(func() {
 			secret = &corev1.Secret{

@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -257,6 +258,40 @@ func (h *handler) admitSecret(ctx context.Context, seedName string, request admi
 		}
 
 		return h.admit(seedName, shoot.Spec.SeedName)
+	}
+
+	// Check if the secret is related to a ManagedSeed assigned to the seed the gardenlet is responsible for.
+	managedSeedList := &seedmanagementv1alpha1.ManagedSeedList{}
+	if err := h.cacheReader.List(ctx, managedSeedList); err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	for _, managedSeed := range managedSeedList.Items {
+		shoot := &gardencorev1beta1.Shoot{}
+		if err := h.cacheReader.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		if !h.admit(seedName, shoot.Spec.SeedName).Allowed {
+			continue
+		}
+
+		seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(&managedSeed)
+		if err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		if seedTemplate.Spec.SecretRef != nil &&
+			seedTemplate.Spec.SecretRef.Namespace == request.Namespace &&
+			seedTemplate.Spec.SecretRef.Name == request.Name {
+			return admission.Allowed("")
+		}
+
+		if seedTemplate.Spec.Backup != nil &&
+			seedTemplate.Spec.Backup.SecretRef.Namespace == request.Namespace &&
+			seedTemplate.Spec.Backup.SecretRef.Name == request.Name {
+			return admission.Allowed("")
+		}
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))

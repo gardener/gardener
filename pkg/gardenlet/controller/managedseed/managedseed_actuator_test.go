@@ -373,7 +373,7 @@ var _ = Describe("Actuator", func() {
 				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret) error {
 					return apierrors.NewNotFound(corev1.Resource("secret"), backupSecretName)
 				},
-			).Times(2)
+			)
 			gc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, s *corev1.Secret) error {
 					Expect(s).To(Equal(backupSecret))
@@ -386,11 +386,6 @@ var _ = Describe("Actuator", func() {
 				func(_ context.Context, _ client.ObjectKey, s *corev1.Secret) error {
 					*s = *kubeconfigSecret
 					return nil
-				},
-			)
-			gc.EXPECT().Get(ctx, kutil.Key(namespace, seedSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret) error {
-					return apierrors.NewNotFound(corev1.Resource("secret"), seedSecretName)
 				},
 			)
 			gc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(

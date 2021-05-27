@@ -20,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // GetSecretByReference returns the secret referenced by the given secret reference.
@@ -30,26 +29,6 @@ func GetSecretByReference(ctx context.Context, c client.Reader, ref *corev1.Secr
 		return nil, err
 	}
 	return secret, nil
-}
-
-// CreateOrUpdateSecretByReference creates or updates the secret referenced by the given secret reference
-// with the given type, data, and owner references.
-func CreateOrUpdateSecretByReference(ctx context.Context, c client.Client, ref *corev1.SecretReference, secretType corev1.SecretType, data map[string][]byte, ownerRefs []metav1.OwnerReference) error {
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ref.Name,
-			Namespace: ref.Namespace,
-		},
-	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, c, secret, func() error {
-		secret.ObjectMeta.OwnerReferences = ownerRefs
-		secret.Type = secretType
-		secret.Data = data
-		return nil
-	}); err != nil {
-		return err
-	}
-	return nil
 }
 
 // DeleteSecretByReference deletes the secret referenced by the given secret reference.

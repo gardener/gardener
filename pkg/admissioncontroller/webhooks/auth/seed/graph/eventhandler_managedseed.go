@@ -17,8 +17,11 @@ package graph
 import (
 	"time"
 
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 )
@@ -44,7 +47,18 @@ func (g *graph) setupManagedSeedWatch(informer cache.Informer) {
 				return
 			}
 
-			if oldManagedSeed.Spec.Shoot.Name != newManagedSeed.Spec.Shoot.Name {
+			oldSeedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(oldManagedSeed)
+			if err != nil {
+				return
+			}
+			newSeedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(newManagedSeed)
+			if err != nil {
+				return
+			}
+
+			if oldManagedSeed.Spec.Shoot.Name != newManagedSeed.Spec.Shoot.Name ||
+				!gardencorev1beta1helper.SeedBackupSecretRefEqual(oldSeedTemplate.Spec.Backup, newSeedTemplate.Spec.Backup) ||
+				!apiequality.Semantic.DeepEqual(oldSeedTemplate.Spec.SecretRef, newSeedTemplate.Spec.SecretRef) {
 				g.handleManagedSeedCreateOrUpdate(newManagedSeed)
 			}
 		},
@@ -78,6 +92,23 @@ func (g *graph) handleManagedSeedCreateOrUpdate(managedSeed *seedmanagementv1alp
 	)
 
 	g.addEdge(managedSeedVertex, shootVertex)
+
+	seedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(managedSeed)
+	if err != nil {
+		return
+	}
+
+	if seedTemplate != nil {
+		if seedTemplate.Spec.Backup != nil {
+			secretVertex := g.getOrCreateVertex(VertexTypeSecret, seedTemplate.Spec.Backup.SecretRef.Namespace, seedTemplate.Spec.Backup.SecretRef.Name)
+			g.addEdge(secretVertex, managedSeedVertex)
+		}
+
+		if seedTemplate.Spec.SecretRef != nil {
+			secretVertex := g.getOrCreateVertex(VertexTypeSecret, seedTemplate.Spec.SecretRef.Namespace, seedTemplate.Spec.SecretRef.Name)
+			g.addEdge(secretVertex, managedSeedVertex)
+		}
+	}
 }
 
 func (g *graph) handleManagedSeedDelete(managedSeed *seedmanagementv1alpha1.ManagedSeed) {

@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/logger"
@@ -447,10 +448,17 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 
 		// Create or update backup secret if it doesn't exist or is owned by the managed seed
 		if apierrors.IsNotFound(err) || metav1.IsControlledBy(backupSecret, managedSeed) {
-			ownerRefs := []metav1.OwnerReference{
-				*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+			secret := &corev1.Secret{
+				ObjectMeta: kutil.ObjectMeta(spec.Backup.SecretRef.Namespace, spec.Backup.SecretRef.Name),
 			}
-			if err := kutil.CreateOrUpdateSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef, corev1.SecretTypeOpaque, shootSecret.Data, ownerRefs); err != nil {
+			if _, err := controllerutils.CreateOrStrategicMergePatch(ctx, a.gardenClient.Client(), secret, func() error {
+				secret.OwnerReferences = []metav1.OwnerReference{
+					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+				}
+				secret.Type = corev1.SecretTypeOpaque
+				secret.Data = shootSecret.Data
+				return nil
+			}); err != nil {
 				return err
 			}
 		}
@@ -469,10 +477,17 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 		data[kubernetes.KubeConfig] = shootKubeconfigSecret.Data[kubernetes.KubeConfig]
 
 		// Create or update seed secret
-		ownerRefs := []metav1.OwnerReference{
-			*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+		secret := &corev1.Secret{
+			ObjectMeta: kutil.ObjectMeta(spec.SecretRef.Namespace, spec.SecretRef.Name),
 		}
-		if err := kutil.CreateOrUpdateSecretByReference(ctx, a.gardenClient.Client(), spec.SecretRef, corev1.SecretTypeOpaque, data, ownerRefs); err != nil {
+		if _, err := controllerutils.CreateOrStrategicMergePatch(ctx, a.gardenClient.Client(), secret, func() error {
+			secret.OwnerReferences = []metav1.OwnerReference{
+				*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+			}
+			secret.Type = corev1.SecretTypeOpaque
+			secret.Data = data
+			return nil
+		}); err != nil {
 			return err
 		}
 	}
