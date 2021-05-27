@@ -24,8 +24,8 @@ test:
       os-coreos:
           repo: "https://github.com/gardener/gardener-extension-os-coreos.git"
           version: "latest"
-      os-suse-jeos:
-          repo: "https://github.com/gardener/gardener-extension-os-suse-jeos.git"
+      os-suse-chost:
+          repo: "https://github.com/gardener/gardener-extension-os-suse-chost.git"
           version: "latest"
       os-ubuntu:
           repo: "https://github.com/gardener/gardener-extension-os-ubuntu.git"
