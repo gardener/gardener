@@ -189,13 +189,13 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 	}
 
 	// fetch related objects required for shoot operation
-	project, _, err := gutil.ProjectAndNamespaceFromReader(ctx, gardenClient.APIReader(), shoot.Namespace)
+	project, _, err := gutil.ProjectAndNamespaceFromReader(ctx, gardenClient.Client(), shoot.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := gardenClient.APIReader().Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
+	if err := gardenClient.Client().Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -279,9 +279,9 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		NewBuilder().
 		WithShootObject(shoot).
 		WithCloudProfileObject(cloudProfile).
-		WithShootSecretFromReader(gardenClient.APIReader()).
+		WithShootSecretFromReader(gardenClient.Client()).
 		WithProjectName(project.Name).
-		WithExposureClassFromReader(gardenClient.APIReader()).
+		WithExposureClassFromReader(gardenClient.Client()).
 		WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).

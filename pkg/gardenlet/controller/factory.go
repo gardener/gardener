@@ -132,8 +132,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	}
 
 	gardenNamespace := &corev1.Namespace{}
-	// Use api reader here since we don't want to cache all namespaces of the Garden cluster.
-	runtime.Must(k8sGardenClient.APIReader().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
+	runtime.Must(k8sGardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
 
 	// Initialize the workqueue metrics collection.
 	gardenmetrics.RegisterWorkqueMetrics()
@@ -226,7 +225,7 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 
 	// wait seed namespace to be created by GCM
 	return retryutils.UntilTimeout(ctx, 5*time.Second, 2*time.Minute, func(context.Context) (done bool, err error) {
-		if err := gardenClient.APIReader().Get(ctx, kutil.Key(seedNamespaceName), seedNamespace); err != nil {
+		if err := gardenClient.Client().Get(ctx, kutil.Key(seedNamespaceName), seedNamespace); err != nil {
 			if apierrors.IsNotFound(err) {
 				logger.Logger.Infof("Waiting until namespace %q is created.", seedNamespaceName)
 				return retryutils.MinorError(fmt.Errorf("namespace %q still not created", seedNamespaceName))

@@ -44,7 +44,7 @@ import (
 // NamespacePrefix is the prefix of namespaces representing projects.
 const NamespacePrefix = "garden-"
 
-func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, gardenAPIReader client.Reader) (reconcile.Result, error) {
+func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, gardenReader client.Reader) (reconcile.Result, error) {
 	var (
 		generation = project.Generation
 		err        error
@@ -56,7 +56,7 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 
 	// Ensure that we really get the latest version of the project to prevent working with an outdated version that has
 	// an unset .spec.namespace field (which would result in trying to create another namespace again).
-	if err := gardenAPIReader.Get(ctx, kutil.Key(project.Name), project); err != nil {
+	if err := gardenReader.Get(ctx, kutil.Key(project.Name), project); err != nil {
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}

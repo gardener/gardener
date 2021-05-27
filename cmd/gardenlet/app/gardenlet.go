@@ -56,7 +56,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	certificatesv1 "k8s.io/api/certificates/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -301,9 +305,19 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		// gardenlet does not have the required RBAC permissions for listing/watching the following resources, so let's prevent any
 		// attempts to cache them
 		WithUncached(
+			&gardencorev1alpha1.ExposureClass{},
+			&gardencorev1alpha1.ShootState{},
+			&gardencorev1beta1.CloudProfile{},
 			&gardencorev1beta1.ControllerDeployment{},
 			&gardencorev1beta1.Project{},
-			&gardencorev1alpha1.ShootState{},
+			&gardencorev1beta1.SecretBinding{},
+			&certificatesv1.CertificateSigningRequest{},
+			&certificatesv1beta1.CertificateSigningRequest{},
+			&coordinationv1.Lease{},
+			&corev1.Namespace{},
+			&corev1.ConfigMap{},
+			&corev1.Event{},
+			&eventsv1.Event{},
 		)
 
 	if seedConfig := cfg.SeedConfig; seedConfig != nil {
@@ -334,7 +348,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	// Delete bootstrap auth data if certificate was newly acquired
 	if len(csrName) > 0 && len(seedName) > 0 {
 		logger.Infof("Deleting bootstrap authentication data used to request a certificate")
-		if err := bootstrap.DeleteBootstrapAuth(ctx, k8sGardenClient.APIReader(), k8sGardenClient.Client(), csrName, seedName); err != nil {
+		if err := bootstrap.DeleteBootstrapAuth(ctx, k8sGardenClient.Client(), k8sGardenClient.Client(), csrName, seedName); err != nil {
 			return nil, err
 		}
 	}
@@ -373,7 +387,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}
 
 	gardenClusterIdentity := &corev1.ConfigMap{}
-	if err := k8sGardenClient.APIReader().Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), gardenClusterIdentity); err != nil {
+	if err := k8sGardenClient.Client().Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), gardenClusterIdentity); err != nil {
 		return nil, fmt.Errorf("unable to get Gardener`s cluster-identity ConfigMap: %v", err)
 	}
 

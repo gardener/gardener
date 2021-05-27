@@ -174,7 +174,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	}
 
 	// Check if seed namespace is already available.
-	if err := gardenClient.APIReader().Get(ctx, client.ObjectKeyFromObject(seedNamespace), seedNamespace); err != nil {
+	if err := gardenClient.Client().Get(ctx, client.ObjectKeyFromObject(seedNamespace), seedNamespace); err != nil {
 		return fmt.Errorf("failed to get seed namespace in garden cluster: %w", err)
 	}
 
