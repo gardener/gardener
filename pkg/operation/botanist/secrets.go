@@ -345,7 +345,7 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 				},
 			}
 
-			_, err := controllerutils.StrategicMergeCreateOrPatch(ctx, b.K8sGardenClient.Client(), secretObj, func() error {
+			_, err := controllerutils.CreateOrStrategicMergePatch(ctx, b.K8sGardenClient.Client(), secretObj, func() error {
 				secretObj.OwnerReferences = []metav1.OwnerReference{
 					*metav1.NewControllerRef(b.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
 				}

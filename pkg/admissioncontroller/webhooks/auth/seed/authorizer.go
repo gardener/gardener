@@ -97,8 +97,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 		switch requestResource {
 		case backupBucketResource:
 			return a.authorize(seedName, graph.VertexTypeBackupBucket, attrs,
-				[]string{"update", "patch", "delete"},
-				[]string{"create", "get", "list", "watch"},
+				[]string{"update", "patch"},
+				[]string{"create", "delete", "get", "list", "watch"},
 				[]string{"status"},
 			)
 		case backupEntryResource:
@@ -240,8 +240,9 @@ func (a *authorizer) authorizeNamespace(seedName string, attrs auth.Attributes) 
 }
 
 func (a *authorizer) authorizeSecret(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	if attrs.GetNamespace() == gutil.ComputeGardenNamespace(seedName) &&
-		utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) {
+	if seedName == "" ||
+		(attrs.GetNamespace() == gutil.ComputeGardenNamespace(seedName) &&
+			utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"})) {
 
 		return auth.DecisionAllow, "", nil
 	}

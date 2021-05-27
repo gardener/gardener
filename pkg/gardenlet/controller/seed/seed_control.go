@@ -45,7 +45,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func (c *Controller) seedAdd(obj interface{}) {
@@ -175,7 +174,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardencorev1beta1.Seed, key string) 
 	}
 
 	// Check if seed namespace is already available.
-	if err := gardenClient.APIReader().Get(ctx, client.ObjectKeyFromObject(seedNamespace), seedNamespace); err != nil {
+	if err := gardenClient.Client().Get(ctx, client.ObjectKeyFromObject(seedNamespace), seedNamespace); err != nil {
 		return fmt.Errorf("failed to get seed namespace in garden cluster: %w", err)
 	}
 
@@ -421,7 +420,7 @@ func deployBackupBucketInGarden(ctx context.Context, k8sGardenClient client.Clie
 
 	ownerRef := metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))
 
-	_, err := controllerutil.CreateOrUpdate(ctx, k8sGardenClient, backupBucket, func() error {
+	_, err := controllerutils.CreateOrStrategicMergePatch(ctx, k8sGardenClient, backupBucket, func() error {
 		backupBucket.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 		backupBucket.Spec = gardencorev1beta1.BackupBucketSpec{
 			Provider: gardencorev1beta1.BackupBucketProvider{

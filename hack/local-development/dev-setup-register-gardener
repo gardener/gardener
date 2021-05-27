@@ -407,9 +407,17 @@ $ADMISSION_CONTROLLER_PORT_STRING
     operations:
     - CREATE
     resources:
-    - backupbuckets
     - backupentries
     - shootstates
+  - apiGroups:
+    - core.gardener.cloud
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    - DELETE
+    resources:
+    - backupbuckets
   - apiGroups:
     - operations.gardener.cloud
     apiVersions:

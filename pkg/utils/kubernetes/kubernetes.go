@@ -196,7 +196,7 @@ func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Int
 		const eventsLimit = 2
 
 		// use API reader here, we don't want to cache all events
-		eventsErrorMessage, err2 := FetchEventMessages(ctx, kubeClient.Client().Scheme(), kubeClient.APIReader(), service, corev1.EventTypeWarning, eventsLimit)
+		eventsErrorMessage, err2 := FetchEventMessages(ctx, kubeClient.Client().Scheme(), kubeClient.Client(), service, corev1.EventTypeWarning, eventsLimit)
 		if err2 != nil {
 			logger.Errorf("error %q occured while fetching events for error %q", err2, err)
 			return "", fmt.Errorf("'%w' occurred but could not fetch events for more information", err)

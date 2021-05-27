@@ -809,7 +809,6 @@ var _ = Describe("kubernetes", func() {
 	Describe("#WaitUntilLoadBalancerIsReady", func() {
 		var (
 			k8sShootClient kubernetes.Interface
-			reader         *mockclient.MockReader
 			key            = client.ObjectKey{Namespace: metav1.NamespaceSystem, Name: "load-balancer"}
 			logger         = logrus.NewEntry(logger.NewNopLogger())
 			scheme         *runtime.Scheme
@@ -818,11 +817,9 @@ var _ = Describe("kubernetes", func() {
 		BeforeEach(func() {
 			scheme = runtime.NewScheme()
 			Expect(corev1.AddToScheme(scheme)).To(Succeed())
-			reader = mockclient.NewMockReader(ctrl)
 			c.EXPECT().Scheme().Return(scheme).AnyTimes()
 			k8sShootClient = fakeclientset.NewClientSetBuilder().
 				WithClient(c).
-				WithAPIReader(reader).
 				Build()
 		})
 
@@ -887,7 +884,7 @@ var _ = Describe("kubernetes", func() {
 						*obj = *svc
 						return nil
 					}),
-				reader.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
+				c.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.EventList{}), gomock.Any()).DoAndReturn(
 					func(_ context.Context, list *corev1.EventList, _ ...client.ListOption) error {
 						list.Items = append(list.Items, event)
 						return nil

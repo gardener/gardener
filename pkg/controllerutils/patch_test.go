@@ -254,7 +254,7 @@ var _ = Describe("Patch", func() {
 			})
 		}
 
-		Describe("#MergeCreateOrPatch", func() { testSuite(MergeCreateOrPatch, types.MergePatchType) })
-		Describe("#StrategicMergePatchOrCreate", func() { testSuite(StrategicMergeCreateOrPatch, types.StrategicMergePatchType) })
+		Describe("#CreateOrMergePatch", func() { testSuite(CreateOrMergePatch, types.MergePatchType) })
+		Describe("#CreateOrStrategicMergePatch", func() { testSuite(CreateOrStrategicMergePatch, types.StrategicMergePatchType) })
 	})
 })

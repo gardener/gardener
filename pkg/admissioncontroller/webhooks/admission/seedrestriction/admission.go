@@ -72,6 +72,9 @@ func New(ctx context.Context, logger logr.Logger, cache cache.Cache) (*handler, 
 	if _, err := cache.GetInformer(ctx, &seedmanagementv1alpha1.ManagedSeed{}); err != nil {
 		return nil, err
 	}
+	if _, err := cache.GetInformer(ctx, &gardencorev1beta1.Seed{}); err != nil {
+		return nil, err
+	}
 	if _, err := cache.GetInformer(ctx, &gardencorev1beta1.Shoot{}); err != nil {
 		return nil, err
 	}
@@ -104,7 +107,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	requestResource := schema.GroupResource{Group: request.Resource.Group, Resource: request.Resource.Resource}
 	switch requestResource {
 	case backupBucketResource:
-		return h.admitBackupBucket(seedName, request)
+		return h.admitBackupBucket(ctx, seedName, request)
 	case backupEntryResource:
 		return h.admitBackupEntry(ctx, seedName, request)
 	case bastionResource:
@@ -124,17 +127,35 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 	return acadmission.Allowed("")
 }
 
-func (h *handler) admitBackupBucket(seedName string, request admission.Request) admission.Response {
-	if request.Operation != admissionv1.Create {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
+func (h *handler) admitBackupBucket(ctx context.Context, seedName string, request admission.Request) admission.Response {
+	switch request.Operation {
+	case admissionv1.Create:
+		// If a gardenlet tries to create a BackupBucket then the request may only be allowed if the used `.spec.seedName`
+		// is equal to the gardenlet's seed.
+		backupBucket := &gardencorev1beta1.BackupBucket{}
+		if err := h.decoder.Decode(request, backupBucket); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		return h.admit(seedName, backupBucket.Spec.SeedName)
+
+	case admissionv1.Delete:
+		// Allow request if seed name is not known (ambiguous case).
+		if seedName == "" {
+			return admission.Allowed("")
+		}
+		// If a gardenlet tries to delete a BackupBucket then it may only be allowed if the name is equal to the UID of
+		// the gardenlet's seed.
+		seed := &gardencorev1beta1.Seed{}
+		if err := h.cacheReader.Get(ctx, kutil.Key(seedName), seed); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+		if string(seed.UID) != request.Name {
+			return admission.Errored(http.StatusForbidden, fmt.Errorf("cannot delete unrelated BackupBucket"))
+		}
+		return admission.Allowed("")
 	}
 
-	backupBucket := &gardencorev1beta1.BackupBucket{}
-	if err := h.decoder.Decode(request, backupBucket); err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
-	}
-
-	return h.admit(seedName, backupBucket.Spec.SeedName)
+	return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 }
 
 func (h *handler) admitBackupEntry(ctx context.Context, seedName string, request admission.Request) admission.Response {

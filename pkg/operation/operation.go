@@ -174,10 +174,10 @@ func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Inter
 		return shoot.
 			NewBuilder().
 			WithShootObject(s).
-			WithCloudProfileObjectFromReader(gardenClient.APIReader()).
-			WithShootSecretFromReader(gardenClient.APIReader()).
+			WithCloudProfileObjectFromReader(gardenClient.Client()).
+			WithShootSecretFromReader(gardenClient.Client()).
 			WithProjectName(gardenObj.Project.Name).
-			WithExposureClassFromReader(gardenClient.APIReader()).
+			WithExposureClassFromReader(gardenClient.Client()).
 			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
@@ -196,9 +196,9 @@ func (b *Builder) WithShootFromCluster(gardenClient, seedClient kubernetes.Inter
 			NewBuilder().
 			WithShootObjectFromCluster(seedClient, shootNamespace).
 			WithCloudProfileObjectFromCluster(seedClient, shootNamespace).
-			WithShootSecretFromReader(gardenClient.APIReader()).
+			WithShootSecretFromReader(gardenClient.Client()).
 			WithProjectName(gardenObj.Project.Name).
-			WithExposureClassFromReader(gardenClient.APIReader()).
+			WithExposureClassFromReader(gardenClient.Client()).
 			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
@@ -514,7 +514,7 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	ownerReference := metav1.NewControllerRef(o.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
 	ownerReference.BlockOwnerDeletion = pointer.BoolPtr(false)
 
-	_, err := controllerutils.StrategicMergeCreateOrPatch(ctx, o.K8sGardenClient.Client(), shootState, func() error {
+	_, err := controllerutils.CreateOrStrategicMergePatch(ctx, o.K8sGardenClient.Client(), shootState, func() error {
 		shootState.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 		return nil
 	})
