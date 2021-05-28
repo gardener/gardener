@@ -505,17 +505,17 @@ var _ = Describe("Actuator", func() {
 			)
 
 			// Create bootstrap token secret
-			gc.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "bootstrap-token-9f86d0"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+			gc.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "bootstrap-token-a82f8a"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret) error {
-					return apierrors.NewNotFound(corev1.Resource("secret"), "bootstrap-token-9f86d0")
+					return apierrors.NewNotFound(corev1.Resource("secret"), "bootstrap-token-a82f8a")
 				},
 			).Times(3)
 			gc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
 				func(_ context.Context, s *corev1.Secret) error {
-					Expect(s.Name).To(Equal("bootstrap-token-9f86d0"))
+					Expect(s.Name).To(Equal("bootstrap-token-a82f8a"))
 					Expect(s.Namespace).To(Equal(metav1.NamespaceSystem))
 					Expect(s.Type).To(Equal(corev1.SecretTypeBootstrapToken))
-					Expect(s.Data).To(HaveKeyWithValue("token-id", []byte("9f86d0")))
+					Expect(s.Data).To(HaveKeyWithValue("token-id", []byte("a82f8a")))
 					Expect(s.Data).To(HaveKey("token-secret"))
 					Expect(s.Data).To(HaveKeyWithValue("usage-bootstrap-signing", []byte("true")))
 					Expect(s.Data).To(HaveKeyWithValue("usage-bootstrap-authentication", []byte("true")))

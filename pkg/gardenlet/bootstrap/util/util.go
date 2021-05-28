@@ -21,11 +21,13 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -271,4 +273,57 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 
 	// Get bootstrap kubeconfig from service account secret
 	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, string(saSecret.Data[corev1.ServiceAccountTokenKey]))
+}
+
+// TokenID returns the token id based on the given metadata.
+func TokenID(meta metav1.ObjectMeta) string {
+	value := meta.Name
+	if meta.Namespace != "" {
+		value += meta.Namespace + "--" + meta.Name
+	}
+
+	return utils.ComputeSHA256Hex([]byte(value))[:6]
+}
+
+const (
+	// KindSeed is a constant for the "seed" kind.
+	KindSeed = "seed"
+	// KindManagedSeed is a constant for the "managed seed" kind.
+	KindManagedSeed = "managed seed"
+
+	descriptionMetadataDelimiter = "/"
+	descriptionSuffix            = "."
+)
+
+func metadataForNamespaceName(namespace, name string) string {
+	if namespace != "" {
+		return namespace + descriptionMetadataDelimiter + name
+	}
+	return name
+}
+
+func descriptionForKind(kind string) string {
+	return fmt.Sprintf("A bootstrap token for the Gardenlet for %s ", kind)
+}
+
+// Description returns a description for a bootstrap token with the given kind/namespace/name information.
+func Description(kind, namespace, name string) string {
+	return descriptionForKind(kind) + metadataForNamespaceName(namespace, name) + descriptionSuffix
+}
+
+// MetadataFromDescription returns the namespace and name for a given description with a specific kind.
+func MetadataFromDescription(description, kind string) (namespace, name string) {
+	var (
+		metadata = strings.TrimPrefix(strings.TrimSuffix(description, descriptionSuffix), descriptionForKind(kind))
+		split    = strings.Split(metadata, descriptionMetadataDelimiter)
+	)
+
+	if len(split) > 1 {
+		namespace = split[0]
+		name = split[1]
+		return
+	}
+
+	name = split[0]
+	return
 }

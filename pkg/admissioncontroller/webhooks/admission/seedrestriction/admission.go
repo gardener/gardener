@@ -27,6 +27,7 @@ import (
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
+	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -37,7 +38,9 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -258,6 +261,49 @@ func (h *handler) admitSecret(ctx context.Context, seedName string, request admi
 		}
 
 		return h.admit(seedName, shoot.Spec.SeedName)
+	}
+
+	// Check if the secret is a bootstrap token for a ManagedSeed.
+	if strings.HasPrefix(request.Name, bootstraptokenapi.BootstrapTokenSecretPrefix) && request.Namespace == metav1.NamespaceSystem {
+		secret := &corev1.Secret{}
+		if err := h.decoder.Decode(request, secret); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		if secret.Type != corev1.SecretTypeBootstrapToken {
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected secret type: %q", secret.Type))
+		}
+
+		managedSeedNamespace, managedSeedName := bootstraputil.MetadataFromDescription(
+			string(secret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]),
+			bootstraputil.KindManagedSeed,
+		)
+
+		managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+		if err := h.cacheReader.Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), managedSeed); err != nil {
+			if apierrors.IsNotFound(err) {
+				return admission.Errored(http.StatusForbidden, err)
+			}
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		shoot := &gardencorev1beta1.Shoot{}
+		if err := h.cacheReader.Get(ctx, kutil.Key(managedSeed.Namespace, managedSeed.Spec.Shoot.Name), shoot); err != nil {
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
+
+		if response := h.admit(seedName, shoot.Spec.SeedName); !response.Allowed {
+			return response
+		}
+
+		if err := h.cacheReader.Get(ctx, kutil.Key(managedSeedName), &gardencorev1beta1.Seed{}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return admission.Errored(http.StatusInternalServerError, err)
+			}
+			return admission.Allowed("")
+		}
+
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("managed seed %s/%s is already bootstrapped", managedSeed.Namespace, managedSeed.Name))
 	}
 
 	// Check if the secret is related to a ManagedSeed assigned to the seed the gardenlet is responsible for.

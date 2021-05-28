@@ -32,7 +32,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
-	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -93,7 +92,7 @@ func (g *Landscaper) Reconcile(ctx context.Context) error {
 
 	var bootstrapKubeconfig []byte
 	if !isAlreadyBootstrapped {
-		bootstrapKubeconfig, err = g.getKubeconfigWithBootstrapToken(ctx, seedConfig.ObjectMeta.Name)
+		bootstrapKubeconfig, err = g.getKubeconfigWithBootstrapToken(ctx, seedConfig.ObjectMeta)
 		if err != nil {
 			return fmt.Errorf("failed to compute the bootstrap kubeconfig: %w", err)
 		}
@@ -197,12 +196,13 @@ func (g *Landscaper) waitForRolloutToBeComplete(ctx context.Context) error {
 	})
 }
 
-func (g *Landscaper) getKubeconfigWithBootstrapToken(ctx context.Context, seedName string) ([]byte, error) {
+func (g *Landscaper) getKubeconfigWithBootstrapToken(ctx context.Context, seedObjectMeta metav1.ObjectMeta) ([]byte, error) {
 	var (
-		tokenID  = utils.ComputeSHA256Hex([]byte(seedName))[:6]
-		validity = 24 * time.Hour
+		tokenID     = bootstraputil.TokenID(seedObjectMeta)
+		description = bootstraputil.Description(bootstraputil.KindSeed, "", seedObjectMeta.Name)
+		validity    = 24 * time.Hour
 	)
-	return bootstraputil.ComputeGardenletKubeconfigWithBootstrapToken(ctx, g.gardenClient.Client(), g.gardenClient.RESTConfig(), tokenID, fmt.Sprintf("A bootstrap token for the Gardenlet for seed %q.", seedName), validity)
+	return bootstraputil.ComputeGardenletKubeconfigWithBootstrapToken(ctx, g.gardenClient.Client(), g.gardenClient.RESTConfig(), tokenID, description, validity)
 }
 
 // isSeedBootstrapped checks is the Seed reconciled by this Gardenlet is exists and is healthy

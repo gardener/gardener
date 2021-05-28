@@ -47,6 +47,7 @@ type Interface interface {
 type graph struct {
 	lock     sync.RWMutex
 	logger   logr.Logger
+	client   client.Client
 	graph    *simple.DirectedGraph
 	vertices typeVertexMapping
 }
@@ -54,9 +55,10 @@ type graph struct {
 var _ Interface = &graph{}
 
 // New creates a new graph interface for tracking resource dependencies.
-func New(logger logr.Logger) *graph {
+func New(logger logr.Logger, client client.Client) *graph {
 	return &graph{
 		logger:   logger,
+		client:   client,
 		graph:    simple.NewDirectedGraph(),
 		vertices: make(typeVertexMapping),
 	}
@@ -68,7 +70,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 
 	for _, resource := range []struct {
 		obj     client.Object
-		setupFn func(informer cache.Informer)
+		setupFn func(context.Context, cache.Informer)
 	}{
 		{&gardencorev1beta1.BackupBucket{}, g.setupBackupBucketWatch},
 		{&gardencorev1beta1.BackupEntry{}, g.setupBackupEntryWatch},
@@ -87,7 +89,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		if err != nil {
 			return err
 		}
-		resource.setupFn(informer)
+		resource.setupFn(ctx, informer)
 	}
 
 	return nil

@@ -15,6 +15,7 @@
 package graph
 
 import (
+	"context"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 )
 
-func (g *graph) setupShootStateWatch(informer cache.Informer) {
+func (g *graph) setupShootStateWatch(_ context.Context, informer cache.Informer) {
 	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			partialObjectMeta, ok := obj.(*metav1.PartialObjectMetadata)

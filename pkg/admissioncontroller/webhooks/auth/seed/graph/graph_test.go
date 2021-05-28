@@ -39,6 +39,8 @@ import (
 	toolscache "k8s.io/client-go/tools/cache"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/cache/informertest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllertest"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -47,6 +49,7 @@ var _ = Describe("graph", func() {
 	var (
 		ctx = context.TODO()
 
+		fakeClient                            client.Client
 		fakeInformerSeed                      *controllertest.FakeInformer
 		fakeInformerShoot                     *controllertest.FakeInformer
 		fakeInformerProject                   *controllertest.FakeInformer
@@ -94,9 +97,12 @@ var _ = Describe("graph", func() {
 
 		controllerInstallation1 *gardencorev1beta1.ControllerInstallation
 
-		managedSeed1                *seedmanagementv1alpha1.ManagedSeed
-		managedSeed1BackupSecretRef = corev1.SecretReference{Namespace: "ms1secret1", Name: "ms1secret1"}
-		managedSeed1SecretRef       = corev1.SecretReference{Namespace: "ms1secret2", Name: "ms1secret2"}
+		managedSeed1                       *seedmanagementv1alpha1.ManagedSeed
+		managedSeedBootstrapMode           = seedmanagementv1alpha1.BootstrapToken
+		managedSeedBootstrapTokenNamespace = "kube-system"
+		managedSeedBootstrapTokenName      = "bootstrap-token-2d9418"
+		managedSeed1BackupSecretRef        = corev1.SecretReference{Namespace: "ms1secret1", Name: "ms1secret1"}
+		managedSeed1SecretRef              = corev1.SecretReference{Namespace: "ms1secret2", Name: "ms1secret2"}
 
 		shootState1 *metav1.PartialObjectMetadata
 
@@ -110,6 +116,7 @@ var _ = Describe("graph", func() {
 		scheme := kubernetes.GardenScheme
 		Expect(metav1.AddMetaToScheme(scheme)).To(Succeed())
 
+		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		fakeInformerSeed = &controllertest.FakeInformer{}
 		fakeInformerShoot = &controllertest.FakeInformer{}
 		fakeInformerProject = &controllertest.FakeInformer{}
@@ -142,7 +149,7 @@ var _ = Describe("graph", func() {
 		}
 
 		logger = logzap.New(logzap.WriteTo(GinkgoWriter))
-		graph = New(logger)
+		graph = New(logger, fakeClient)
 		Expect(graph.Setup(ctx, fakeInformers)).To(Succeed())
 
 		seed1 = &gardencorev1beta1.Seed{
@@ -244,6 +251,7 @@ var _ = Describe("graph", func() {
 						SecretRef: &managedSeed1SecretRef,
 					},
 				},
+				Gardenlet: &seedmanagementv1alpha1.Gardenlet{Bootstrap: &managedSeedBootstrapMode},
 			},
 		}
 
@@ -808,45 +816,50 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 	It("should behave as expected for seedmanagementv1alpha1.ManagedSeed", func() {
 		By("add")
 		fakeInformerManagedSeed.Add(managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(4))
-		Expect(graph.graph.Edges().Len()).To(Equal(3))
+		Expect(graph.graph.Nodes().Len()).To(Equal(5))
+		Expect(graph.graph.Edges().Len()).To(Equal(4))
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1SecretRef.Namespace, managedSeed1SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 
 		By("update (irrelevant change)")
 		managedSeed1Copy := managedSeed1.DeepCopy()
-		managedSeed1.Spec.Gardenlet = &seedmanagementv1alpha1.Gardenlet{}
+		managedSeed1.Spec.SeedTemplate.Labels = map[string]string{"new": "labels"}
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(4))
-		Expect(graph.graph.Edges().Len()).To(Equal(3))
+		Expect(graph.graph.Nodes().Len()).To(Equal(5))
+		Expect(graph.graph.Edges().Len()).To(Equal(4))
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1SecretRef.Namespace, managedSeed1SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 
 		By("update (shoot name)")
 		managedSeed1Copy = managedSeed1.DeepCopy()
 		managedSeed1.Spec.Shoot.Name = "newshoot"
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(4))
-		Expect(graph.graph.Edges().Len()).To(Equal(3))
+		Expect(graph.graph.Nodes().Len()).To(Equal(5))
+		Expect(graph.graph.Edges().Len()).To(Equal(4))
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1Copy.Spec.Shoot.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1SecretRef.Namespace, managedSeed1SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 
-		By("update (secret ref)")
+		By("update (backup secret ref)")
 		managedSeed1Copy = managedSeed1.DeepCopy()
 		managedSeed1.Spec.SeedTemplate.Spec.SecretRef = &corev1.SecretReference{Namespace: "new", Name: "newaswell"}
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
-		Expect(graph.graph.Nodes().Len()).To(Equal(4))
-		Expect(graph.graph.Edges().Len()).To(Equal(3))
+		Expect(graph.graph.Nodes().Len()).To(Equal(5))
+		Expect(graph.graph.Edges().Len()).To(Equal(4))
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1SecretRef.Namespace, managedSeed1SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 
-		By("update (secret ref)")
+		By("update (secret ref), seed exists")
+		Expect(fakeClient.Create(ctx, &gardencorev1beta1.Seed{ObjectMeta: metav1.ObjectMeta{Name: managedSeed1.Name}})).To(Succeed())
 		managedSeed1Copy = managedSeed1.DeepCopy()
 		managedSeed1.Spec.SeedTemplate.Spec.Backup.SecretRef = corev1.SecretReference{Namespace: "new2", Name: "newaswell2"}
 		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
@@ -856,6 +869,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.Backup.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.Backup.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
 
 		By("delete")
 		fakeInformerManagedSeed.Delete(managedSeed1)
@@ -864,6 +878,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1SecretRef.Namespace, managedSeed1SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
 	})
 
 	It("should behave as expected for gardencorev1beta1.ShootState", func() {
@@ -1027,10 +1042,11 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			fakeInformerManagedSeed.Add(managedSeed1)
 			lock.Lock()
 			defer lock.Unlock()
-			nodes, edges = nodes+4, edges+3
+			nodes, edges = nodes+5, edges+4
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeed1SecretRef.Namespace, managedSeed1SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 		}()
 		wg.Add(1)
 		go func() {
@@ -1181,6 +1197,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeed1SecretRef.Namespace, managedSeed1SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 		}()
 		wg.Add(1)
 		go func() {
@@ -1324,13 +1341,14 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		go func() {
 			defer wg.Done()
 			managedSeed1Copy := managedSeed1.DeepCopy()
-			managedSeed1.Spec.Gardenlet = &seedmanagementv1alpha1.Gardenlet{}
+			managedSeed1.Spec.SeedTemplate.Labels = map[string]string{"new": "labels"}
 			fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
 			lock.Lock()
 			defer lock.Unlock()
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeed1SecretRef.Namespace, managedSeed1SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeTrue()})
 		}()
 		wg.Add(1)
 		go func() {
@@ -1455,6 +1473,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name, BeFalse()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeFalse()})
 			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeed1SecretRef.Namespace, managedSeed1SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeFalse()})
+			paths[VertexTypeManagedSeed] = append(paths[VertexTypeManagedSeed], pathExpectation{VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, BeFalse()})
 		}()
 		wg.Add(1)
 		go func() {

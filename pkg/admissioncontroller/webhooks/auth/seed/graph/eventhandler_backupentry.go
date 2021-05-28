@@ -15,6 +15,7 @@
 package graph
 
 import (
+	"context"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -24,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 )
 
-func (g *graph) setupBackupEntryWatch(informer cache.Informer) {
+func (g *graph) setupBackupEntryWatch(_ context.Context, informer cache.Informer) {
 	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)

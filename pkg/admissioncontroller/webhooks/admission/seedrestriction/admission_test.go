@@ -1340,6 +1340,225 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 					Describe("monitoring suffix", func() { testSuite(".monitoring") })
 				})
 
+				Context("bootstrap token secret for managed seed", func() {
+					var (
+						secret      *corev1.Secret
+						managedSeed *seedmanagementv1alpha1.ManagedSeed
+						shoot       *gardencorev1beta1.Shoot
+
+						managedSeedNamespace = "ms1ns"
+						managedSeedName      = "ms1name"
+						shootName            = "ms1shoot"
+					)
+
+					BeforeEach(func() {
+						secret = &corev1.Secret{
+							Type: corev1.SecretTypeBootstrapToken,
+							Data: map[string][]byte{
+								"description": []byte("A bootstrap token for the Gardenlet for managed seed " + managedSeedNamespace + "/" + managedSeedName + "."),
+							},
+						}
+						managedSeed = &seedmanagementv1alpha1.ManagedSeed{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      managedSeedName,
+								Namespace: managedSeedNamespace,
+							},
+							Spec: seedmanagementv1alpha1.ManagedSeedSpec{
+								Shoot: &seedmanagementv1alpha1.Shoot{
+									Name: shootName,
+								},
+							},
+						}
+						shoot = &gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								SeedName: &seedName,
+							},
+						}
+
+						request.Name = "bootstrap-token-123456"
+						request.Namespace = "kube-system"
+
+						objData, err := runtime.Encode(encoder, secret)
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+					})
+
+					It("should return an error if decoding the secret fails", func() {
+						request.Object.Raw = []byte(`{]`)
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
+								},
+							},
+						}))
+					})
+
+					It("should return an error if the secret type is unexpected", func() {
+						secret.Type = corev1.SecretTypeOpaque
+						objData, err := runtime.Encode(encoder, secret)
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: fmt.Sprintf("unexpected secret type: %q", secret.Type),
+								},
+							},
+						}))
+					})
+
+					It("should forbid if the managedseed does not exist", func() {
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: " \"\" not found",
+								},
+							},
+						}))
+					})
+
+					It("should return an error if reading the managedseed fails", func() {
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusInternalServerError),
+									Message: fakeErr.Error(),
+								},
+							},
+						}))
+					})
+
+					It("should return an error if reading the shoot fails", func() {
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+							managedSeed.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).Return(fakeErr)
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusInternalServerError),
+									Message: fakeErr.Error(),
+								},
+							},
+						}))
+					})
+
+					It("should return an error if the shoot does not belong to the gardenlet's seed", func() {
+						shoot.Spec.SeedName = pointer.StringPtr("some-other-seed")
+
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+							managedSeed.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to seed %q", seedName),
+								},
+							},
+						}))
+					})
+
+					It("should return an error if reading the seed fails", func() {
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+							managedSeed.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(fakeErr)
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusInternalServerError),
+									Message: fakeErr.Error(),
+								},
+							},
+						}))
+					})
+
+					It("should forbid if the seed does exist already", func() {
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+							managedSeed.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: "managed seed " + managedSeedNamespace + "/" + managedSeedName + " is already bootstrapped",
+								},
+							},
+						}))
+					})
+
+					It("should allow if the seed does not yet exist", func() {
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+							managedSeed.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should allow if the seed does not yet exist (ambiguous case)", func() {
+						request.UserInfo = ambiguousUser
+						shoot.Spec.SeedName = pointer.StringPtr("some-other-seed")
+
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+							managedSeed.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+				})
+
 				Context("managed seed secret", func() {
 					var (
 						managedSeed1Namespace string

@@ -349,7 +349,7 @@ func (a *actuator) deployGardenlet(
 		shootClient,
 		managedSeed.Spec.Gardenlet.Deployment,
 		gardenletConfig,
-		managedSeed.Name,
+		managedSeed.ObjectMeta,
 		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
 		utils.IsTrue(managedSeed.Spec.Gardenlet.MergeWithParent),
 		shoot,
@@ -375,7 +375,7 @@ func (a *actuator) deleteGardenlet(
 		shootClient,
 		managedSeed.Spec.Gardenlet.Deployment,
 		gardenletConfig,
-		managedSeed.Name,
+		managedSeed.ObjectMeta,
 		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
 		utils.IsTrue(managedSeed.Spec.Gardenlet.MergeWithParent),
 		shoot,
@@ -586,7 +586,7 @@ func (a *actuator) prepareGardenletChartValues(
 	shootClient kubernetes.Interface,
 	deployment *seedmanagementv1alpha1.GardenletDeployment,
 	gardenletConfig *configv1alpha1.GardenletConfiguration,
-	name string,
+	objectMeta metav1.ObjectMeta,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	mergeWithParent bool,
 	shoot *gardencorev1beta1.Shoot,
@@ -617,7 +617,7 @@ func (a *actuator) prepareGardenletChartValues(
 	if bootstrap == seedmanagementv1alpha1.BootstrapNone {
 		a.removeBootstrapConfigFromGardenClientConnection(gardenletConfig.GardenClientConnection)
 	} else {
-		bootstrapKubeconfig, err = a.prepareGardenClientConnectionWithBootstrap(ctx, shootClient, gardenletConfig.GardenClientConnection, name, bootstrap)
+		bootstrapKubeconfig, err = a.prepareGardenClientConnectionWithBootstrap(ctx, shootClient, gardenletConfig.GardenClientConnection, objectMeta, bootstrap)
 		if err != nil {
 			return nil, err
 		}
@@ -629,7 +629,7 @@ func (a *actuator) prepareGardenletChartValues(
 	}
 
 	// Set the seed name
-	gardenletConfig.SeedConfig.SeedTemplate.Name = name
+	gardenletConfig.SeedConfig.SeedTemplate.Name = objectMeta.Name
 
 	// Ensure seed selector is not set
 	gardenletConfig.SeedSelector = nil
@@ -676,7 +676,7 @@ func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDepl
 	return deployment
 }
 
-func (a *actuator) prepareGardenClientConnectionWithBootstrap(ctx context.Context, shootClient kubernetes.Interface, gcc *configv1alpha1.GardenClientConnection, name string, bootstrap seedmanagementv1alpha1.Bootstrap) (string, error) {
+func (a *actuator) prepareGardenClientConnectionWithBootstrap(ctx context.Context, shootClient kubernetes.Interface, gcc *configv1alpha1.GardenClientConnection, objectMeta metav1.ObjectMeta, bootstrap seedmanagementv1alpha1.Bootstrap) (string, error) {
 	// Ensure kubeconfig secret is set
 	if gcc.KubeconfigSecret == nil {
 		gcc.KubeconfigSecret = &corev1.SecretReference{
@@ -705,7 +705,7 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(ctx context.Contex
 		}
 	}
 
-	return a.createBootstrapKubeconfig(ctx, name, bootstrap, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
+	return a.createBootstrapKubeconfig(ctx, objectMeta, bootstrap, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
 }
 
 // isAlreadyBootstrapped checks if the gardenlet already has a valid Garden cluster certificate through TLS bootstrapping
@@ -728,7 +728,7 @@ func (a *actuator) removeBootstrapConfigFromGardenClientConnection(gcc *configv1
 // createBootstrapKubeconfig creates a kubeconfig for the Garden cluster
 // containing either the token of a service account or a bootstrap token
 // returns the kubeconfig as a string
-func (a *actuator) createBootstrapKubeconfig(ctx context.Context, name string, bootstrap seedmanagementv1alpha1.Bootstrap, address *string, caCert []byte) (string, error) {
+func (a *actuator) createBootstrapKubeconfig(ctx context.Context, objectMeta metav1.ObjectMeta, bootstrap seedmanagementv1alpha1.Bootstrap, address *string, caCert []byte) (string, error) {
 	var (
 		err                 error
 		bootstrapKubeconfig []byte
@@ -739,7 +739,7 @@ func (a *actuator) createBootstrapKubeconfig(ctx context.Context, name string, b
 	switch bootstrap {
 	case seedmanagementv1alpha1.BootstrapServiceAccount:
 		// Create a kubeconfig containing the token of a temporary service account as client credentials
-		serviceAccountName := "gardenlet-bootstrap-" + name
+		serviceAccountName := "gardenlet-bootstrap-" + objectMeta.Name
 		bootstrapKubeconfig, err = bootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, a.gardenClient.Client(), &gardenClientRestConfig, serviceAccountName)
 		if err != nil {
 			return "", err
@@ -747,8 +747,8 @@ func (a *actuator) createBootstrapKubeconfig(ctx context.Context, name string, b
 
 	case seedmanagementv1alpha1.BootstrapToken:
 		var (
-			tokenID          = utils.ComputeSHA256Hex([]byte(name))[:6]
-			tokenDescription = fmt.Sprintf("A bootstrap token for the Gardenlet for managed seed %q.", name)
+			tokenID          = bootstraputil.TokenID(objectMeta)
+			tokenDescription = bootstraputil.Description(bootstraputil.KindManagedSeed, objectMeta.Namespace, objectMeta.Name)
 			tokenValidity    = 24 * time.Hour
 		)
 

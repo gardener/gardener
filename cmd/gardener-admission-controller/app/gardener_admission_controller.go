@@ -155,7 +155,7 @@ func (o *options) run(ctx context.Context) error {
 	}
 
 	log.Info("setting up graph for seed authorization handler")
-	graph := seedauthorizergraph.New(log)
+	graph := seedauthorizergraph.New(log, mgr.GetClient())
 	if err := graph.Setup(ctx, mgr.GetCache()); err != nil {
 		return err
 	}

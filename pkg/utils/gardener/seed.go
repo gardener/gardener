@@ -25,17 +25,18 @@ import (
 )
 
 const (
-	seedNamespaceNamePrefix = "seed-"
+	// SeedNamespaceNamePrefix is the prefix used for seed namespaces.
+	SeedNamespaceNamePrefix = "seed-"
 )
 
 // ComputeGardenNamespace returns the name of the namespace belonging to the given seed in the Garden cluster.
 func ComputeGardenNamespace(seedName string) string {
-	return seedNamespaceNamePrefix + seedName
+	return SeedNamespaceNamePrefix + seedName
 }
 
 // ComputeSeedName computes the name of the seed out of the seed namespace in the Garden cluster.
 func ComputeSeedName(seedNamespaceName string) string {
-	seedName := strings.TrimPrefix(seedNamespaceName, seedNamespaceNamePrefix)
+	seedName := strings.TrimPrefix(seedNamespaceName, SeedNamespaceNamePrefix)
 	if seedName == seedNamespaceName {
 		return ""
 	}

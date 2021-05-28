@@ -15,18 +15,23 @@
 package graph
 
 import (
+	"context"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (g *graph) setupSeedWatch(informer cache.Informer) {
+func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) {
 	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			seed, ok := obj.(*gardencorev1beta1.Seed)
@@ -34,6 +39,17 @@ func (g *graph) setupSeedWatch(informer cache.Informer) {
 				return
 			}
 			g.handleSeedCreateOrUpdate(seed)
+
+			// Check if seed belongs to a ManagedSeed and enqueue it if necessary
+			managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      seed.Name,
+					Namespace: v1beta1constants.GardenNamespace,
+				},
+			}
+			if err := g.client.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err == nil {
+				g.handleManagedSeedCreateOrUpdate(ctx, managedSeed)
+			}
 		},
 
 		UpdateFunc: func(oldObj, newObj interface{}) {

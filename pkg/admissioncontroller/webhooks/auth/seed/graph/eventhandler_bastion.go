@@ -15,6 +15,7 @@
 package graph
 
 import (
+	"context"
 	"time"
 
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -24,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 )
 
-func (g *graph) setupBastionWatch(informer cache.Informer) {
+func (g *graph) setupBastionWatch(_ context.Context, informer cache.Informer) {
 	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			bastion, ok := obj.(*gardenoperationsv1alpha1.Bastion)
