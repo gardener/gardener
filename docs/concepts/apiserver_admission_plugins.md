@@ -34,7 +34,7 @@ Usually, regular project members are not bound to this custom verb, allowing the
 
 _(enabled by default)_
 
-This admission controller reacts on `DELETE` operations for `Project`s and `Shoot`s.
+This admission controller reacts on `DELETE` operations for `Project`s and `Shoot`s and `ShootState`s.
 It validates that the respective resource is annotated with a deletion confirmation annotation, namely `confirmation.gardener.cloud/deletion=true`.
 Only if this annotation is present it allows the `DELETE` operation to pass.
 This prevents users from accidental/undesired deletions.
@@ -108,14 +108,6 @@ If enabled, it will enable the managed `VerticalPodAutoscaler` components (see [
 by setting `spec.kubernetes.verticalPodAutoscaler.enabled=true` for newly created Shoots.
 Already existing Shoots and new Shoots that explicitly disable VPA (`spec.kubernetes.verticalPodAutoscaler.enabled=false`)
 will not be affected by this admission plugin.
-
-## `ShootStateDeletionValidator`
-
-_(enabled by default)_
-
-This admission controller reacts on `DELETE` operations for `ShootState`s.
-It prevents the deletion of the respective `ShootState` resource in case the corresponding `Shoot` resource does still exist in the system.
-This prevents losing the shoot's data required to recover it / migrate its control plane to a new seed cluster.
 
 ## `ShootTolerationRestriction`
 

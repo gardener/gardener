@@ -32,8 +32,6 @@ import (
 	shoottolerationrestriction "github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	shootvpa "github.com/gardener/gardener/plugin/pkg/shoot/vpa"
-	shootstatedeletionvalidator "github.com/gardener/gardener/plugin/pkg/shootstate/validator"
-
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
@@ -59,7 +57,6 @@ var (
 		deletionconfirmation.PluginName,            // DeletionConfirmation
 		openidconnectpreset.PluginName,             // OpenIDConnectPreset
 		clusteropenidconnectpreset.PluginName,      // ClusterOpenIDConnectPreset
-		shootstatedeletionvalidator.PluginName,     // ShootStateDeletionValidator
 		customverbauthorizer.PluginName,            // CustomVerbAuthorizer
 		shootvpa.PluginName,                        // ShootVPAEnabledByDefault
 		managedseedvalidator.PluginName,            // ManagedSeed
@@ -92,7 +89,6 @@ var (
 		deletionconfirmation.PluginName,            // DeletionConfirmation
 		openidconnectpreset.PluginName,             // OpenIDConnectPreset
 		clusteropenidconnectpreset.PluginName,      // ClusterOpenIDConnectPreset
-		shootstatedeletionvalidator.PluginName,     // ShootStateDeletionValidator
 		customverbauthorizer.PluginName,            // CustomVerbAuthorizer
 		managedseedvalidator.PluginName,            // ManagedSeed
 		bastionvalidator.PluginName,                // Bastion
@@ -120,7 +116,6 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	plantvalidator.Register(plugins)
 	openidconnectpreset.Register(plugins)
 	clusteropenidconnectpreset.Register(plugins)
-	shootstatedeletionvalidator.Register(plugins)
 	customverbauthorizer.Register(plugins)
 	managedseedvalidator.Register(plugins)
 	bastionvalidator.Register(plugins)

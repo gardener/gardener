@@ -561,6 +561,11 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           botanist.WaitUntilSeedNamespaceDeleted,
 			Dependencies: flow.NewTaskIDs(deleteNamespace),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deleting Shoot State",
+			Fn:           botanist.DeleteShootState,
+			Dependencies: flow.NewTaskIDs(deleteNamespace),
+		})
 		f = g.Compile()
 	)
 

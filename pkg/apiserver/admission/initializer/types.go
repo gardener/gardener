@@ -16,6 +16,7 @@ package initializer
 
 import (
 	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	externalcoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
@@ -45,6 +46,12 @@ type WantsInternalCoreClientset interface {
 // WantsExternalCoreInformerFactory defines a function which sets external Core InformerFactory for admission plugins that need it.
 type WantsExternalCoreInformerFactory interface {
 	SetExternalCoreInformerFactory(externalcoreinformers.SharedInformerFactory)
+	admission.InitializationValidator
+}
+
+// WantsExternalCoreClientset defines a function which sets external Core Clientset for admission plugins that need it.
+type WantsExternalCoreClientset interface {
+	SetExternalCoreClientset(externalcoreclientset.Interface)
 	admission.InitializationValidator
 }
 
@@ -101,6 +108,7 @@ type pluginInitializer struct {
 	coreClient    coreclientset.Interface
 
 	externalCoreInformers externalcoreinformers.SharedInformerFactory
+	externalCoreClient    externalcoreclientset.Interface
 
 	seedManagementInformers seedmanagementinformers.SharedInformerFactory
 	seedManagementClient    seedmanagementclientset.Interface
