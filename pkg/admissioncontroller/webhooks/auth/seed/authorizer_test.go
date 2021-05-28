@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
@@ -36,6 +37,7 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -1848,6 +1850,29 @@ var _ = Describe("Seed", func() {
 				Entry("list", "list"),
 				Entry("watch", "watch"),
 			)
+
+			It("should allow to delete the gardenlet's bootstrap tokens without consulting the graph", func() {
+				attrs.Verb = "delete"
+				attrs.Namespace = "kube-system"
+				attrs.Name = "bootstrap-token-" + bootstraputil.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace})
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			It("should allow to delete any bootstrap tokens without consulting the graph when user is ambiguous", func() {
+				attrs.User = ambiguousUser
+				attrs.Verb = "delete"
+				attrs.Namespace = "kube-system"
+				attrs.Name = "bootstrap-token-anythingcanbehere"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
 
 			DescribeTable("should allow without consulting the graph because verb is create",
 				func(verb string) {

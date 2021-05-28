@@ -26,6 +26,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
@@ -37,6 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 )
 
 // AuthorizerName is the name of this authorizer.
@@ -246,6 +248,17 @@ func (a *authorizer) authorizeSecret(seedName string, attrs auth.Attributes) (au
 	if utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) &&
 		((seedName != "" && attrs.GetNamespace() == gutil.ComputeGardenNamespace(seedName)) ||
 			(seedName == "" && strings.HasPrefix(attrs.GetNamespace(), gutil.SeedNamespaceNamePrefix))) {
+
+		return auth.DecisionAllow, "", nil
+	}
+
+	// Allow gardenlet to delete its bootstrap token (in this case, there is no `Seed` resource in the system yet, so
+	// we can't rely on the graph). Ambiguous gardenlets can delete all bootstrap tokens.
+	if (attrs.GetVerb() == "delete" &&
+		attrs.GetNamespace() == metav1.NamespaceSystem &&
+		strings.HasPrefix(attrs.GetName(), bootstraptokenapi.BootstrapTokenSecretPrefix)) &&
+		(seedName == "" ||
+			(attrs.GetName() == bootstraptokenapi.BootstrapTokenSecretPrefix+bootstraputil.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace}))) {
 
 		return auth.DecisionAllow, "", nil
 	}
