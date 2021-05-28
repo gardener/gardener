@@ -1965,6 +1965,27 @@ var _ = Describe("Seed", func() {
 				}
 			})
 
+			It("should allow to delete the gardenlet's bootstrap cluster role binding without consulting the graph", func() {
+				attrs.Verb = "delete"
+				attrs.Name = "gardener.cloud:system:seed-bootstrapper:garden:" + seedName
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			It("should allow to delete any bootstrap cluster role binding without consulting the graph when user is ambiguous", func() {
+				attrs.User = ambiguousUser
+				attrs.Verb = "delete"
+				attrs.Name = "gardener.cloud:system:seed-bootstrapper:garden:anythingcanbehere"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
 			It("should allow because path to seed exists", func() {
 				graph.EXPECT().HasPathFrom(graphpkg.VertexTypeClusterRoleBinding, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
 
@@ -2059,6 +2080,29 @@ var _ = Describe("Seed", func() {
 					ResourceRequest: true,
 					Verb:            "get",
 				}
+			})
+
+			It("should allow to delete the gardenlet's bootstrap service account without consulting the graph", func() {
+				attrs.Verb = "delete"
+				attrs.Namespace = "garden"
+				attrs.Name = "gardenlet-bootstrap-" + seedName
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
+			})
+
+			It("should allow to delete any bootstrap service account without consulting the graph when user is ambiguous", func() {
+				attrs.User = ambiguousUser
+				attrs.Verb = "delete"
+				attrs.Namespace = "garden"
+				attrs.Name = "gardenlet-bootstrap-anythingcanbehere"
+
+				decision, reason, err := authorizer.Authorize(ctx, attrs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(decision).To(Equal(auth.DecisionAllow))
+				Expect(reason).To(BeEmpty())
 			})
 
 			It("should allow because path to seed exists", func() {

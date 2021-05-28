@@ -201,6 +201,20 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 }
 
 func (a *authorizer) authorizeClusterRoleBinding(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	// Allow gardenlet to delete its cluster role binding after bootstrapping (in this case, there is no `Seed` resource
+	// in the system yet, so we can't rely on the graph). Ambiguous gardenlets can delete all relevant cluster role
+	// bindings.
+	if attrs.GetVerb() == "delete" &&
+		strings.HasPrefix(attrs.GetName(), bootstraputil.ClusterRoleBindingNamePrefix) {
+
+		managedSeedNamespace, managedSeedName := bootstraputil.MetadataFromClusterRoleBindingName(attrs.GetName())
+		if seedName == "" ||
+			(managedSeedNamespace == v1beta1constants.GardenNamespace && managedSeedName == seedName) {
+
+			return auth.DecisionAllow, "", nil
+		}
+	}
+
 	return a.authorize(seedName, graph.VertexTypeClusterRoleBinding, attrs,
 		[]string{"get", "patch", "update"},
 		[]string{"create"},
@@ -286,6 +300,17 @@ func (a *authorizer) authorizeSecret(seedName string, attrs auth.Attributes) (au
 }
 
 func (a *authorizer) authorizeServiceAccount(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	// Allow gardenlet to delete its service account after bootstrapping (in this case, there is no `Seed` resource in
+	// the system yet, so we can't rely on the graph). Ambiguous gardenlets can delete all relevant service accounts.
+	if attrs.GetVerb() == "delete" &&
+		attrs.GetNamespace() == v1beta1constants.GardenNamespace &&
+		strings.HasPrefix(attrs.GetName(), bootstraputil.ServiceAccountNamePrefix) &&
+		(seedName == "" ||
+			strings.TrimPrefix(attrs.GetName(), bootstraputil.ServiceAccountNamePrefix) == seedName) {
+
+		return auth.DecisionAllow, "", nil
+	}
+
 	return a.authorize(seedName, graph.VertexTypeServiceAccount, attrs,
 		[]string{"get", "patch", "update"},
 		[]string{"create"},
