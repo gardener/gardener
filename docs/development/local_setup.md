@@ -154,11 +154,8 @@ cd gardener
 
 #### Start a local kubernetes cluster
 
-For the development of Gardener you need some kind of Kubernetes cluster, which can be used as a "garden" cluster.
-I.e. you need a Kubernetes API server on which you can register a `APIService` Gardener's own Extension API Server.  
-
-If you develop and run Gardener's components locally, you don't need a fully fledged Kubernetes Cluster,
-i.e. you don't need to run Pods on it. Therefore, you can use the "nodeless Garden cluster setup" residing in `hack/local-garden`. This is the easiest way to get your
+For the development of Gardener you need a Kubernetes API server on which you can register Gardener's own Extension API Server as `APIService`. This cluster doesn't need any worker nodes to run pods, though, therefore, you can use the "nodeless Garden cluster setup" residing in `hack/local-garden`.This will start all minimally required components of a Kubernetes cluster (`etcd`, `kube-apiserver`, `kube-controller-manager`)
+and an `etcd` Instance for the `gardener-apiserver` as Docker containers. This is the easiest way to get your
 Gardener development setup up and running.
 
 **Using the nodeless cluster setup**
@@ -177,9 +174,6 @@ clusterrolebinding.rbac.authorization.k8s.io/front-proxy-client created
 [...]
 ```
 
-This will start all minimally required components of a Kubernetes cluster (`etcd`, `kube-apiserver`, `kube-controller-manager`)
-and an `etcd` Instance for the `gardener-apiserver` as Docker containers.
-
 ℹ️ [Optional] If you want to develop the `SeedAuthorization` feature then you have to run `make ACTIVATE_SEEDAUTHORIZER=true local-garden-up`. However, please note that this forces you to start the `gardener-admission-controller` via `make start-admission-controller`.
 
 To tear down the local Garden cluster and remove the Docker containers, simply run:
@@ -187,13 +181,62 @@ To tear down the local Garden cluster and remove the Docker containers, simply r
 make local-garden-down
 ```
 
+<details>
+  <summary>Alternative: Using a local kubernetes cluster</summary>
+
+  Instead of starting a kubernetes API server and etcd as docker containers, you can also opt for running a local kubernetes cluster, provided by e.g. [minikube](https://minikube.sigs.k8s.io/docs/start/), [kind](https://kind.sigs.k8s.io/docs/user/quick-start/) or docker desktop.
+  > Note: Gardener requires self-contained kubeconfig files because of a [security issue](https://banzaicloud.com/blog/kubeconfig-security/). You can configure your minikube to create self-contained kubeconfig files via:
+  > ```bash
+  > minikube config set embed-certs true
+  > ``` 
+  > or when starting the local cluster
+> ```bash
+> minikube start --embed-certs
+> ```
+</details>
+
+<details>
+  <summary>Alternative: Using a remote kubernetes cluster</summary>
+
+For some testing scenarios, you may want to use a remote cluster instead of a local one as your Garden cluster.
+To do this, you can use the "remote Garden cluster setup" residing in `hack/remote-garden`. This will start an `etcd` instance for the `gardener-apiserver` as a Docker container, and open tunnels for accessing local gardener components from the remote cluster.
+
+To avoid mistakes, the remote cluster must have a `garden` namespace labeled with `gardener.cloud/purpose=remote-garden`.
+You must create the `garden` namespace and label it manually before running `make remote-garden-up` as described below.
+
+Use the provided `Makefile` rules to bootstrap your remote Garden:
+
+```bash
+export KUBECONFIG=<path to kubeconfig>
+make remote-garden-up
+[...]
+# Start gardener etcd used to store gardener resources (e.g., seeds, shoots)
+Starting gardener-dev-remote gardener-etcd cluster!
+[...]
+# Open tunnels for accessing local gardener components from the remote cluster
+[...]
+```
+
+To close the tunnels and remove the locally-running Docker containers, run:
+
+```bash
+make remote-garden-down
+```
+
+> Note: The minimum K8S version of the remote cluster that can be used as Garden cluster is `1.19.x`.
+
+> ⚠️ Please be aware that in the remote garden setup all Gardener components run with administrative permissions, i.e., there is no fine-grained access control via RBAC (as opposed to productive installations of Gardener).
+
+
+</details>
+
 #### Prepare the Gardener
 
 Now, that you have started your local cluster, we can go ahead and register the Gardener API Server.
-Just point your `KUBECONFIG` environment variable to the local cluster you created in the previous step and run:
+Just point your `KUBECONFIG` environment variable to the cluster you created in the previous step and run:
 
 ```bash
-export KUBECONFIG=hack/local-development/local-garden/kubeconfigs/default-admin.conf
+export KUBECONFIG=hack/local-development/local-garden/kubeconfigs/default-admin.conf # this export is different when using the local cluster or remote cluster alternatives
 make dev-setup
 [...]
 namespace/garden created
