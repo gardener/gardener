@@ -105,6 +105,15 @@ webhooks:
     - CREATE
     resources:
     - secrets
+    - serviceaccounts
+  - apiGroups:
+    - rbac.authorization.k8s.io
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    resources:
+    - clusterrolebindings
   - apiGroups:
     - coordination.k8s.io
     apiVersions:

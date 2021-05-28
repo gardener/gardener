@@ -739,8 +739,13 @@ func (a *actuator) createBootstrapKubeconfig(ctx context.Context, objectMeta met
 	switch bootstrap {
 	case seedmanagementv1alpha1.BootstrapServiceAccount:
 		// Create a kubeconfig containing the token of a temporary service account as client credentials
-		serviceAccountName := "gardenlet-bootstrap-" + objectMeta.Name
-		bootstrapKubeconfig, err = bootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, a.gardenClient.Client(), &gardenClientRestConfig, serviceAccountName)
+		var (
+			serviceAccountName      = bootstraputil.ServiceAccountName(objectMeta.Name)
+			serviceAccountNamespace = objectMeta.Namespace
+		)
+
+		// Create a kubeconfig containing a valid service account token as client credentials
+		bootstrapKubeconfig, err = bootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, a.gardenClient.Client(), &gardenClientRestConfig, serviceAccountName, serviceAccountNamespace)
 		if err != nil {
 			return "", err
 		}

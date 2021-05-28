@@ -35,6 +35,7 @@ import (
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	auth "k8s.io/apiserver/pkg/authorization/authorizer"
@@ -67,6 +68,7 @@ var (
 	bastionResource                   = gardenoperationsv1alpha1.Resource("bastions")
 	certificateSigningRequestResource = certificatesv1beta1.Resource("certificatesigningrequests")
 	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
+	clusterRoleBindingResource        = rbacv1.Resource("clusterrolebindings")
 	configMapResource                 = corev1.Resource("configmaps")
 	controllerDeploymentResource      = gardencorev1beta1.Resource("controllerdeployments")
 	controllerInstallationResource    = gardencorev1beta1.Resource("controllerinstallations")
@@ -80,6 +82,7 @@ var (
 	secretBindingResource             = gardencorev1beta1.Resource("secretbindings")
 	secretResource                    = corev1.Resource("secrets")
 	seedResource                      = gardencorev1beta1.Resource("seeds")
+	serviceAccountResource            = corev1.Resource("serviceaccounts")
 	shootResource                     = gardencorev1beta1.Resource("shoots")
 	shootStateResource                = gardencorev1alpha1.Resource("shootstates")
 	exposureClassResource             = gardencorev1alpha1.Resource("exposureclasses")
@@ -124,6 +127,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case cloudProfileResource:
 			return a.authorizeRead(seedName, graph.VertexTypeCloudProfile, attrs)
+		case clusterRoleBindingResource:
+			return a.authorizeClusterRoleBinding(seedName, attrs)
 		case configMapResource:
 			return a.authorizeConfigMap(seedName, attrs)
 		case controllerDeploymentResource:
@@ -164,6 +169,8 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 				[]string{"create", "update", "patch", "delete", "get", "list", "watch"},
 				[]string{"status"},
 			)
+		case serviceAccountResource:
+			return a.authorizeServiceAccount(seedName, attrs)
 		case shootResource:
 			return a.authorize(seedName, graph.VertexTypeShoot, attrs,
 				[]string{"update", "patch"},
@@ -191,6 +198,14 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 	}
 
 	return auth.DecisionNoOpinion, "", nil
+}
+
+func (a *authorizer) authorizeClusterRoleBinding(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	return a.authorize(seedName, graph.VertexTypeClusterRoleBinding, attrs,
+		[]string{"get", "patch", "update"},
+		[]string{"create"},
+		nil,
+	)
 }
 
 func (a *authorizer) authorizeConfigMap(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
@@ -265,6 +280,14 @@ func (a *authorizer) authorizeSecret(seedName string, attrs auth.Attributes) (au
 
 	return a.authorize(seedName, graph.VertexTypeSecret, attrs,
 		[]string{"get", "patch", "update", "delete"},
+		[]string{"create"},
+		nil,
+	)
+}
+
+func (a *authorizer) authorizeServiceAccount(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
+	return a.authorize(seedName, graph.VertexTypeServiceAccount, attrs,
+		[]string{"get", "patch", "update"},
 		[]string{"create"},
 		nil,
 	)

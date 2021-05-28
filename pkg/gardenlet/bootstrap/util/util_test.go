@@ -248,12 +248,11 @@ var _ = Describe("Util", func() {
 					Host: "apiserver.dummy",
 				}
 				serviceAccountName       = "gardenlet"
+				serviceAccountNamespace  = "garden"
 				serviceAccountSecretName = "service-account-secret"
 			)
 
 			It("should fail because the service account token controller has not yet created a secret for the service account", func() {
-				c.EXPECT().Get(ctx, kutil.Key("garden", serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).Return(apierrors.NewNotFound(schema.GroupResource{}, serviceAccountSecretName))
-
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(_ context.Context, s *corev1.ServiceAccount) error {
 					s.Name = serviceAccountName
 					s.Namespace = "garden"
@@ -261,14 +260,12 @@ var _ = Describe("Util", func() {
 					return nil
 				})
 
-				_, err := ComputeGardenletKubeconfigWithServiceAccountToken(ctx, c, restConfig, serviceAccountName)
+				_, err := ComputeGardenletKubeconfigWithServiceAccountToken(ctx, c, restConfig, serviceAccountName, serviceAccountNamespace)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("service account token controller has not yet created a secret for the service account"))
 			})
 
 			It("should succeed", func() {
-				c.EXPECT().Get(ctx, kutil.Key("garden", serviceAccountName), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).Return(apierrors.NewNotFound(schema.GroupResource{}, serviceAccountSecretName))
-
 				// create service account
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(_ context.Context, s *corev1.ServiceAccount) error {
 					Expect(s.Name).To(Equal(serviceAccountName))
@@ -292,11 +289,9 @@ var _ = Describe("Util", func() {
 				// create cluster role binding
 				clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: fmt.Sprintf("gardener.cloud:system:seed-bootstrapper:%s", serviceAccountName),
+						Name: fmt.Sprintf("gardener.cloud:system:seed-bootstrapper:%s:%s", serviceAccountNamespace, serviceAccountName),
 					},
 				}
-				c.EXPECT().Get(ctx, kutil.Key(clusterRoleBinding.Name), gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})).Return(apierrors.NewNotFound(schema.GroupResource{}, clusterRoleBinding.Name))
-
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})).DoAndReturn(func(_ context.Context, s *rbacv1.ClusterRoleBinding) error {
 					expectedClusterRoleBinding := clusterRoleBinding
 					expectedClusterRoleBinding.RoleRef = rbacv1.RoleRef{
@@ -308,7 +303,7 @@ var _ = Describe("Util", func() {
 						{
 							Kind:      "ServiceAccount",
 							Name:      serviceAccountName,
-							Namespace: "garden",
+							Namespace: serviceAccountNamespace,
 						},
 					}
 
@@ -316,7 +311,7 @@ var _ = Describe("Util", func() {
 					return nil
 				})
 
-				kubeconfig, err := ComputeGardenletKubeconfigWithServiceAccountToken(ctx, c, restConfig, serviceAccountName)
+				kubeconfig, err := ComputeGardenletKubeconfigWithServiceAccountToken(ctx, c, restConfig, serviceAccountName, serviceAccountNamespace)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(kubeconfig).ToNot(BeNil())
 
@@ -324,14 +319,6 @@ var _ = Describe("Util", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(rest.Host).To(Equal(restConfig.Host))
 			})
-		})
-	})
-
-	Describe("BuildBootstrapperName", func() {
-		It("should return the correct name", func() {
-			name := "foo"
-			result := BuildBootstrapperName(name)
-			Expect(result).To(Equal(fmt.Sprintf("%s:%s", GardenerSeedBootstrapper, name)))
 		})
 	})
 
@@ -368,15 +355,48 @@ var _ = Describe("Util", func() {
 		})
 	})
 
-	Context("token id/description", func() {
+	Context("cluster role binding name/service account name/token id/description", func() {
 		var (
 			kind      = "foo"
 			namespace = "bar"
 			name      = "baz"
 
+			clusterRoleNameWithoutNamespace = "gardener.cloud:system:seed-bootstrapper:" + name
+			clusterRoleNameWithNamespace    = "gardener.cloud:system:seed-bootstrapper:" + namespace + ":" + name
+
 			descriptionWithoutNamespace = fmt.Sprintf("A bootstrap token for the Gardenlet for %s %s.", kind, name)
 			descriptionWithNamespace    = fmt.Sprintf("A bootstrap token for the Gardenlet for %s %s/%s.", kind, namespace, name)
 		)
+
+		Describe("#ClusterRoleBindingName", func() {
+			It("should return the correct name (w/o namespace)", func() {
+				Expect(ClusterRoleBindingName("", name)).To(Equal(fmt.Sprintf("gardener.cloud:system:seed-bootstrapper:%s", name)))
+			})
+
+			It("should return the correct name (w/ namespace)", func() {
+				Expect(ClusterRoleBindingName(namespace, name)).To(Equal(fmt.Sprintf("gardener.cloud:system:seed-bootstrapper:%s:%s", namespace, name)))
+			})
+		})
+
+		Describe("#MetadataFromClusterRoleBindingName", func() {
+			It("should return the expected namespace/name from a cluster role binding name (w/o namespace)", func() {
+				resultNamespace, resultName := MetadataFromClusterRoleBindingName(clusterRoleNameWithoutNamespace)
+				Expect(resultNamespace).To(BeEmpty())
+				Expect(resultName).To(Equal(name))
+			})
+
+			It("should return the expected namespace/name from a cluster role binding name (w/ namespace)", func() {
+				resultNamespace, resultName := MetadataFromClusterRoleBindingName(clusterRoleNameWithNamespace)
+				Expect(resultNamespace).To(Equal(namespace))
+				Expect(resultName).To(Equal(name))
+			})
+		})
+
+		Describe("#ServiceAccountName", func() {
+			It("should compute the expected name", func() {
+				Expect(ServiceAccountName(name)).To(Equal("gardenlet-bootstrap-" + name))
+			})
+		})
 
 		Describe("#TokenID", func() {
 			It("should compute the expected id (w/o namespace", func() {

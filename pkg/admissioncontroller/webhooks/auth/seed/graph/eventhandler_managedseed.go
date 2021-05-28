@@ -135,6 +135,18 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 			case seedmanagementv1alpha1.BootstrapToken:
 				secretVertex := g.getOrCreateVertex(VertexTypeSecret, metav1.NamespaceSystem, bootstraptokenapi.BootstrapTokenSecretPrefix+bootstraputil.TokenID(managedSeed.ObjectMeta))
 				g.addEdge(secretVertex, managedSeedVertex)
+
+			case seedmanagementv1alpha1.BootstrapServiceAccount:
+				var (
+					serviceAccountName     = bootstraputil.ServiceAccountName(managedSeed.Name)
+					clusterRoleBindingName = bootstraputil.ClusterRoleBindingName(managedSeed.Namespace, serviceAccountName)
+
+					serviceAccountVertex     = g.getOrCreateVertex(VertexTypeServiceAccount, managedSeed.Namespace, serviceAccountName)
+					clusterRoleBindingVertex = g.getOrCreateVertex(VertexTypeClusterRoleBinding, "", clusterRoleBindingName)
+				)
+
+				g.addEdge(serviceAccountVertex, managedSeedVertex)
+				g.addEdge(clusterRoleBindingVertex, managedSeedVertex)
 			}
 		}
 	}

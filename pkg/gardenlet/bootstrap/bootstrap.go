@@ -126,7 +126,7 @@ func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer clien
 			},
 			&rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: bootstraputil.BuildBootstrapperName(seedName),
+					Name: bootstraputil.ClusterRoleBindingName(v1beta1constants.GardenNamespace, seedName),
 				},
 			},
 		)
