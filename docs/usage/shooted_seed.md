@@ -4,7 +4,7 @@ Create managed seed (aka "shooted seed") cluster with the `shoot.gardener.cloud/
 
 **Note:** Starting with Gardener v1.18, the `shoot.gardener.cloud/use-as-seed` annotation is deprecated.
 It still works as described here, however behind the scenes a `ManagedSeed` resource is created and reconciled.
-It is strongly recommended to use such resources directly to register shoots as seeds, as described in [Register Shoot as Seed](managed_seed.md).
+It is strongly recommended to use such resources directly to register shoots as seeds, as described in [Register Shoot as Seed](managed_seed.md). For instructions how to migrate existing seeds managed via the `use-as-seed` annotation, see [Migrating from the `use-as-seed` Annotation to `ManagedSeeds`](managed_seed.md#migrating-from-the-use-as-seed-annotation-to-managedseeds).
 
 ## Procedure
 
