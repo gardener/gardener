@@ -178,6 +178,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"konnectivityTunnel": map[string]interface{}{
 				"enabled": b.Shoot.KonnectivityTunnelEnabled,
 			},
+			"nodeLocalDNS": map[string]interface{}{
+				"enabled": b.Shoot.NodeLocalDNSEnabled,
+			},
 			"ingress": map[string]interface{}{
 				"class":           getIngressClass(b.Seed.Info.Spec.Ingress),
 				"basicAuthSecret": basicAuth,
@@ -455,6 +458,9 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		},
 		"sni": map[string]interface{}{
 			"enabled": b.APIServerSNIEnabled(),
+		},
+		"nodeLocalDNS": map[string]interface{}{
+			"enabled": b.Shoot.NodeLocalDNSEnabled,
 		},
 	}, charts.ImageNameGrafana, charts.ImageNameBusybox)
 	if err != nil {

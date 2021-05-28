@@ -27,3 +27,6 @@ konnectivityTunnel:
 
 sni:
   enabled: false
+
+nodeLocalDNS:
+  enabled: false
