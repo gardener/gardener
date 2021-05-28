@@ -92,7 +92,10 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	g.deleteVertex(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
+	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
+	g.deleteAllIncomingEdges(VertexTypeServiceAccount, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
+	g.deleteAllIncomingEdges(VertexTypeClusterRoleBinding, VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
+	g.deleteAllOutgoingEdges(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name, VertexTypeShoot)
 
 	var (
 		managedSeedVertex = g.getOrCreateVertex(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)

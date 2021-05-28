@@ -53,6 +53,7 @@ rules:
   resources:
   - namespaces
   - secrets
+  - serviceaccounts
   verbs:
   - get
   - list

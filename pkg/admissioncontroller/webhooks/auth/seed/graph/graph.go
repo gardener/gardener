@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
 	gonumgraph "gonum.org/v1/gonum/graph"
@@ -82,6 +83,7 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		{&gardencorev1beta1.Project{}, g.setupProjectWatch},
 		{&gardencorev1beta1.SecretBinding{}, g.setupSecretBindingWatch},
 		{&gardencorev1beta1.Seed{}, g.setupSeedWatch},
+		{&corev1.ServiceAccount{}, g.setupServiceAccountWatch},
 		{&gardencorev1beta1.Shoot{}, g.setupShootWatch},
 		{shootStates, g.setupShootStateWatch},
 	} {

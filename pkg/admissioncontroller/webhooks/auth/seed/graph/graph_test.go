@@ -23,6 +23,7 @@ import (
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/go-logr/logr"
@@ -62,6 +63,7 @@ var _ = Describe("graph", func() {
 		fakeInformerShootState                *controllertest.FakeInformer
 		fakeInformerLease                     *controllertest.FakeInformer
 		fakeInformerCertificateSigningRequest *controllertest.FakeInformer
+		fakeInformerServiceAccount            *controllertest.FakeInformer
 		fakeInformers                         *informertest.FakeInformers
 
 		logger logr.Logger
@@ -110,6 +112,10 @@ var _ = Describe("graph", func() {
 
 		seedNameInCSR = "myseed"
 		csr1          *certificatesv1beta1.CertificateSigningRequest
+
+		serviceAccount1Secret1 = "sa1secret1"
+		serviceAccount1Secret2 = "sa1secret2"
+		serviceAccount1        *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
@@ -129,6 +135,7 @@ var _ = Describe("graph", func() {
 		fakeInformerShootState = &controllertest.FakeInformer{}
 		fakeInformerLease = &controllertest.FakeInformer{}
 		fakeInformerCertificateSigningRequest = &controllertest.FakeInformer{}
+		fakeInformerServiceAccount = &controllertest.FakeInformer{}
 
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
@@ -145,6 +152,7 @@ var _ = Describe("graph", func() {
 				metav1.SchemeGroupVersion.WithKind("PartialObjectMetadata"):                  fakeInformerShootState,
 				coordinationv1.SchemeGroupVersion.WithKind("Lease"):                          fakeInformerLease,
 				certificatesv1beta1.SchemeGroupVersion.WithKind("CertificateSigningRequest"): fakeInformerCertificateSigningRequest,
+				corev1.SchemeGroupVersion.WithKind("ServiceAccount"):                         fakeInformerServiceAccount,
 			},
 		}
 
@@ -287,6 +295,14 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 					certificatesv1beta1.UsageDigitalSignature,
 					certificatesv1beta1.UsageClientAuth,
 				},
+			},
+		}
+
+		serviceAccount1 = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "sa1ns", Name: bootstraputil.ServiceAccountNamePrefix + "sa1"},
+			Secrets: []corev1.ObjectReference{
+				{Name: serviceAccount1Secret1},
+				{Name: serviceAccount1Secret2},
 			},
 		}
 	})
@@ -937,6 +953,41 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeCertificateSigningRequest, "", csr1.Name, VertexTypeSeed, "", seedNameInCSR)).To(BeFalse())
 	})
 
+	It("should behave as expected for corev1.ServiceAccount", func() {
+		By("add")
+		fakeInformerServiceAccount.Add(serviceAccount1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret1, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret2, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name)).To(BeTrue())
+
+		By("update (irrelevant change)")
+		serviceAccount1Copy := serviceAccount1.DeepCopy()
+		serviceAccount1.Labels = map[string]string{"foo": "bar"}
+		fakeInformerServiceAccount.Update(serviceAccount1Copy, serviceAccount1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(3))
+		Expect(graph.graph.Edges().Len()).To(Equal(2))
+		Expect(graph.HasPathFrom(VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret1, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret2, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name)).To(BeTrue())
+
+		By("update (secrets)")
+		serviceAccount1Copy = serviceAccount1.DeepCopy()
+		serviceAccount1.Secrets = []corev1.ObjectReference{{Name: "newsasecret"}}
+		fakeInformerServiceAccount.Update(serviceAccount1Copy, serviceAccount1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(2))
+		Expect(graph.graph.Edges().Len()).To(Equal(1))
+		Expect(graph.HasPathFrom(VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret1, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret2, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1.Secrets[0].Name, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name)).To(BeTrue())
+
+		By("delete")
+		fakeInformerServiceAccount.Delete(serviceAccount1)
+		Expect(graph.graph.Nodes().Len()).To(BeZero())
+		Expect(graph.graph.Edges().Len()).To(BeZero())
+		Expect(graph.HasPathFrom(VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret1, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret2, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name)).To(BeFalse())
+	})
+
 	It("should behave as expected with more objects modified in parallel", func() {
 		var (
 			nodes, edges int
@@ -1074,6 +1125,16 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			defer lock.Unlock()
 			nodes, edges = nodes+2, edges+1
 			paths[VertexTypeCertificateSigningRequest] = append(paths[VertexTypeCertificateSigningRequest], pathExpectation{VertexTypeCertificateSigningRequest, "", csr1.Name, VertexTypeSeed, "", seedNameInCSR, BeTrue()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerServiceAccount.Add(serviceAccount1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes+3, edges+2
+			paths[VertexTypeServiceAccount] = append(paths[VertexTypeServiceAccount], pathExpectation{VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret1, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, BeTrue()})
+			paths[VertexTypeServiceAccount] = append(paths[VertexTypeServiceAccount], pathExpectation{VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret2, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, BeTrue()})
 		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(Equal(nodes))
@@ -1226,6 +1287,19 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			nodes, edges = nodes-2, edges-1
 			paths[VertexTypeCertificateSigningRequest] = append(paths[VertexTypeCertificateSigningRequest], pathExpectation{VertexTypeCertificateSigningRequest, csr1.Namespace, csr1.Name, VertexTypeSeed, "", seedNameInCSR, BeFalse()})
 		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			serviceAccount1Copy := serviceAccount1.DeepCopy()
+			serviceAccount1.Secrets = []corev1.ObjectReference{{Name: "newsasecret"}}
+			fakeInformerServiceAccount.Update(serviceAccount1Copy, serviceAccount1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes-1, edges-1
+			paths[VertexTypeServiceAccount] = append(paths[VertexTypeServiceAccount], pathExpectation{VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret1, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, BeFalse()})
+			paths[VertexTypeServiceAccount] = append(paths[VertexTypeServiceAccount], pathExpectation{VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret2, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, BeFalse()})
+			paths[VertexTypeServiceAccount] = append(paths[VertexTypeServiceAccount], pathExpectation{VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1.Secrets[0].Name, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, BeTrue()})
+		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(Equal(nodes), "node count")
 		Expect(graph.graph.Edges().Len()).To(Equal(edges), "edge count")
@@ -1377,6 +1451,18 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			nodes, edges = nodes+2, edges+1
 			paths[VertexTypeCertificateSigningRequest] = append(paths[VertexTypeCertificateSigningRequest], pathExpectation{VertexTypeCertificateSigningRequest, "", csr1.Name, VertexTypeSeed, "", seedNameInCSR, BeTrue()})
 		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			serviceAccount1Copy := serviceAccount1.DeepCopy()
+			serviceAccount1.Secrets = []corev1.ObjectReference{{Name: "newsasecret2"}}
+			fakeInformerServiceAccount.Update(serviceAccount1Copy, serviceAccount1)
+			lock.Lock()
+			defer lock.Unlock()
+			paths[VertexTypeServiceAccount] = append(paths[VertexTypeServiceAccount], pathExpectation{VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret1, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, BeFalse()})
+			paths[VertexTypeServiceAccount] = append(paths[VertexTypeServiceAccount], pathExpectation{VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret2, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, BeFalse()})
+			paths[VertexTypeServiceAccount] = append(paths[VertexTypeServiceAccount], pathExpectation{VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1.Secrets[0].Name, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, BeTrue()})
+		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(Equal(nodes), "node count")
 		Expect(graph.graph.Edges().Len()).To(Equal(edges), "edge count")
@@ -1499,6 +1585,16 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 			defer lock.Unlock()
 			nodes, edges = nodes-2, edges-1
 			paths[VertexTypeCertificateSigningRequest] = append(paths[VertexTypeCertificateSigningRequest], pathExpectation{VertexTypeCertificateSigningRequest, csr1.Namespace, csr1.Name, VertexTypeSeed, "", seedNameInCSR, BeFalse()})
+		}()
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fakeInformerServiceAccount.Delete(serviceAccount1)
+			lock.Lock()
+			defer lock.Unlock()
+			nodes, edges = nodes-3, edges-2
+			paths[VertexTypeServiceAccount] = append(paths[VertexTypeServiceAccount], pathExpectation{VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret1, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, BeFalse()})
+			paths[VertexTypeServiceAccount] = append(paths[VertexTypeServiceAccount], pathExpectation{VertexTypeSecret, serviceAccount1.Namespace, serviceAccount1Secret2, VertexTypeServiceAccount, serviceAccount1.Namespace, serviceAccount1.Name, BeFalse()})
 		}()
 		wg.Wait()
 		Expect(graph.graph.Nodes().Len()).To(BeZero())
