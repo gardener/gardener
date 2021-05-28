@@ -6,7 +6,7 @@ Project Gardener implements the automated management and operation of [Kubernete
 
 Recently, most of the vendor specific logic has been developed [in-tree](https://github.com/gardener/gardener). However, the project has grown to a size where it is very hard to extend, maintain, and test. With [GEP-1](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md) we have proposed how the architecture can be changed in a way to support external controllers that contain their very own vendor specifics. This way, we can keep Gardener core clean and independent.
 
-The `oscommon` offers a generic controller that operates on the `OperatingSystemConfig` resource in the `extensions.gardener.cloud/v1alpha1` API group. It manages those objects that are requesting for an specific operating system. 
+The `oscommon` offers a generic controller that operates on the `OperatingSystemConfig` resource in the `extensions.gardener.cloud/v1alpha1` API group. It manages those objects that are requesting for an specific operating system.
 
 
 ```yaml
@@ -63,7 +63,7 @@ the operating system requires more complex logic than provided by go templates.
 * A directory with test files
 * The [`helm`](https://github.com/helm/helm) Chart for operator registration and installation
 
-Please refer to the [`os-suse-jeos controller`](https://github.com/gardener/gardener-extension-os-suse-jeos) for a concrete example.
+Please refer to the [`os-suse-chost controller`](https://github.com/gardener/gardener-extension-os-suse-chost) for a concrete example.
 
 ## Feedback and Support
 

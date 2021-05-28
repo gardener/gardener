@@ -26,15 +26,15 @@ The motivation behind this proposal is to make all of this functionality accessi
 
 ### Goals
 
-* Gardener must allow to configue its managed clusters with the CRI interface instead of the legacy Dockershim. 
+* Gardener must allow to configue its managed clusters with the CRI interface instead of the legacy Dockershim.
 * Low-level runtimes like gVisor or Kata Containers are provided as gardener extensions which are (optionally) installed into a landscape by the Gardener operator. There must be no runtime-specific knowledge in the core Gardener code.
 * It shall be possible to configure multiple low-level runtimes in Shoot clusters, on the Worker Group level.
 
 ## Proposal
 
-Gardener today assumes that all supported operating systems have Docker pre-installed in the base image. Starting with Docker Engine 1.11, Docker itself was [refactored](https://www.docker.com/blog/docker-engine-1-11-runc/) and cleaned-up to be based on the [containerd](https://containerd.io/) library. The first phase would be to allow the change of the Kubelet configuration as described [here](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd) so that Kubernetes would use containerd instead of the default Dockershim. This will be implemented for CoreOS, Ubuntu, and SuSE-JeOS. 
+Gardener today assumes that all supported operating systems have Docker pre-installed in the base image. Starting with Docker Engine 1.11, Docker itself was [refactored](https://www.docker.com/blog/docker-engine-1-11-runc/) and cleaned-up to be based on the [containerd](https://containerd.io/) library. The first phase would be to allow the change of the Kubelet configuration as described [here](https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd) so that Kubernetes would use containerd instead of the default Dockershim. This will be implemented for CoreOS, Ubuntu, and SuSE-CHost.
 
-We will implement two Gardener extensions, providing gVisor and Kata Containers as options for Gardener landscapes. 
+We will implement two Gardener extensions, providing gVisor and Kata Containers as options for Gardener landscapes.
 The `WorkerGroup` specification will be extended to allow specifying the CRI name and a list of additional required Runtimes for nodes in that group. For example:
 ```yaml
 workers:
@@ -71,33 +71,33 @@ Each extension will need to address the following concern:
             1. --container-runtime=remote
             2. --container-runtime-endpoint=unix:///run/containerd/containerd.sock
         2. Make sure that default containerd configuration file exist in path /etc/containerd/config.toml.
-        
-    2. ContainerD and Docker configurations are different for each OS. To make sure the default configurations above works well in each worker machine, each OS extension would be responsible to configure them during the reconciliation of the 
+
+    2. ContainerD and Docker configurations are different for each OS. To make sure the default configurations above works well in each worker machine, each OS extension would be responsible to configure them during the reconciliation of the
        OperatingSystemConfig:
-        1. os-ubuntu - 
+        1. os-ubuntu -
             1. Create ContainerD unit Drop-In to execute ContainerD with the default configurations file in path /etc/containerd/config.toml.
             2. Create the container runtime metadata file with a OS path for binaries installations: /usr/bin.
-        2. os-coreos - 
+        2. os-coreos -
             1. Create ContainerD unit Drop-In to execute ContainerD with the default configurations file in path /etc/containerd/config.toml.
             2. Create Docker Drop-In unit to execute Docker with the correct socket path of ContainerD.
             3. Create the container runtime metadata file with a OS path for binaries installations: /var/bin.
-        3. os-suse-jeos - 
+        3. os-suse-chost -
            1. Create ContainerD service unit and execute ContainerD with the default configurations file in path /etc/containerd/config.toml.
            2. Download and install ctr-cli which is not shipped with the current SuSe image.
            3. Create the container runtime metadata file with a OS path for binaries installations /usr/sbin.
-        
+
     3. To rotate the ContainerD (CRI) logs we will activate the kubelet feature flag: CRIContainerLogRotation=true.
-    4. Docker monitor service will be replaced with equivalent ContainerD monitor service.  
+    4. Docker monitor service will be replaced with equivalent ContainerD monitor service.
 
 3. Validate workers additional runtime configurations:
    1. Disallow additional runtimes with shoots < 1.14
    2. kata-container validation: Machine type support nested virtualization.
-4. Add support for each additional container runtime in the cluster.   
+4. Add support for each additional container runtime in the cluster.
     1. In order to install each additional available runtime in the cluster we should:
         1. Install the runtime binaries in each Worker's pool nodes that specified the runtime support.
         2. Apply the relevant RuntimeClass to the cluster.
-        
-    2. The installation above should be done by a new kind of extension: ContainerRuntime resource. For each container runtime type (Kata-container/gvisor) a dedicate extension controller will be created. 
+
+    2. The installation above should be done by a new kind of extension: ContainerRuntime resource. For each container runtime type (Kata-container/gvisor) a dedicate extension controller will be created.
         1. A label for each container runtime support will be added to every node that belongs to the worker pool. This should be done similar
            to the way labels created today for each node, through kubelet execution parameters (_kubelet.flags: --node-labels). When creating the OperatingSystemConfig (original) for the worker each container runtime support should be mapped to a label on the node.
            For Example:
@@ -112,8 +112,8 @@ Each extension will need to address the following concern:
               namespace: shoot--foo--bar
             spec:
               type: kata-containers
-            ```   
-   
+            ```
+
             Gardener will wait that all ContainerRuntimes extensions will be reconciled by the appropriate extensions controllers.
         3. Each runtime extension controller will be responsible to reconcile it's RuntimeContainer resource type.
            rc-kata-containers extension controller will reconcile RuntimeContainer resource from type kata-container and rc-gvisor will reconcile RuntimeContainer resource from gvisor.
@@ -122,7 +122,7 @@ Each extension will need to address the following concern:
                 1. DaemonSet which will run a privileged pod on each node with the label: container.runtime.<type of the resource>:true The pod will be responsible for:
                     1. Copy the runtime container binaries (From extension package ) to the relevant path in the host OS.
                     2. Add the relevant container runtime plugin section to the containerd configuration file (/etc/containerd/config.toml).
-                    3. Restart containerd in the node. 
+                    3. Restart containerd in the node.
                 3. RuntimeClasses in the cluster to support the runtime class. for example:
                    ```yaml
                    apiVersion: node.k8s.io/v1beta1
