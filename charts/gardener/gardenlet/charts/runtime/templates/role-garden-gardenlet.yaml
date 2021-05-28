@@ -1,0 +1,40 @@
+{{- if .Values.global.gardenlet.enabled }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: Role
+metadata:
+  name: gardener.cloud:system:gardenlet
+  namespace: garden
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  resourceNames:
+  - fluent-bit
+  verbs:
+  - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  verbs:
+  - create
+{{- end }}

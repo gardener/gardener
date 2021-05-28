@@ -1,0 +1,60 @@
+{{- if .Values.global.gardenlet.enabled }}
+{{- if .Values.global.gardenlet.config.featureGates }}
+{{- if .Values.global.gardenlet.config.featureGates.ManagedIstio }}
+# Istio releated rules that are required only when ManagedIstio feature gate is enabled.
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:system:gardenlet:managed-istio
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - gateways
+  - virtualservices
+  - envoyfilters
+  - sidecars
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - security.istio.io
+  resources:
+  - peerauthentications
+  verbs:
+  - create
+- apiGroups:
+  - security.istio.io
+  resources:
+  - peerauthentications
+  resourceNames:
+  - default
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  resourceNames:
+  - istiod
+  verbs:
+  - get
+  - patch
+  - update
+{{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,343 @@
+{{- if .Values.global.gardenlet.enabled }}
+# ClusterRole defines the required permissions for the gardenlet in the seed.
+# For now, we provide escalation privileges required by gardener-resource-manager.
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:system:gardenlet
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - list
+  - watch
+  - delete
+  - deletecollection
+- apiGroups:
+  - ""
+  resources:
+  - pods/log
+  verbs:
+  - get
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - namespaces
+  - secrets
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  resourceNames:
+  - alertmanager-db-alertmanager-0
+  - loki-loki-0
+  - prometheus-db-prometheus-0
+  verbs:
+  - delete
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  - validatingwebhookconfigurations
+  verbs:
+  - create
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  resourceNames:
+  - vpa-webhook-config-seed
+  verbs:
+  - get
+  - delete
+  - update
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  resourceNames:
+  - hvpas.autoscaling.k8s.io
+  verbs:
+  - delete
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - statefulsets
+  - replicasets
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - hvpas
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - hvpas
+  resourceNames:
+  - etcd-events
+  - etcd-main
+  - kube-apiserver
+  - kube-controller-manager
+  - aggregate-prometheus
+  - prometheus
+  - loki
+  verbs:
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - autoscaling.k8s.io
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - dns.gardener.cloud
+  resources:
+  - dnsentries
+  - dnsowners
+  - dnsproviders
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - druid.gardener.cloud
+  resources:
+  - etcds
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - backupbuckets
+  - backupentries
+  - bastions
+  - clusters
+  - containerruntimes
+  - controlplanes
+  - extensions
+  - infrastructures
+  - networks
+  - operatingsystemconfigs
+  - workers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - resources.gardener.cloud
+  resources:
+  - managedresources
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - extensions
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - create
+  - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  - clusterroles
+  - rolebindings
+  - roles
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - roles
+  verbs:
+  - bind
+  - escalate
+- apiGroups:
+  - scheduling.k8s.io
+  resources:
+  - priorityclasses
+  verbs:
+  - create
+  - delete
+  - get
+  - patch
+  - update
+- nonResourceURLs:
+  - /healthz
+  - /version
+  verbs:
+  - get
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - gardenlet-leader-election
+  verbs:
+  - get
+  - watch
+  - update
+# Istio releated rules that are required even when ManagedIstio and APIServerSNI feature gates are not enabled due to clean up logic.
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - virtualservices
+  resourceNames:
+  - kube-apiserver
+  verbs:
+  - list
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - destinationrules
+  - gateways
+  - virtualservices
+  - envoyfilters
+  verbs:
+  - delete
+{{- end }}

@@ -410,7 +410,8 @@ var _ = Describe("Gardenlet Landscaper reconciliation testing", func() {
 					ctx,
 					fakeGardenletChartClient,
 					expectedLabels,
-					"gardenlet")
+					"gardenlet",
+					nil)
 
 				appliercommon.ValidateGardenletChartServiceAccount(ctx,
 					fakeGardenletChartClient,
@@ -424,7 +425,8 @@ var _ = Describe("Gardenlet Landscaper reconciliation testing", func() {
 					false,
 					landscaper.gardenletConfiguration.GardenClientConnection.BootstrapKubeconfig,
 					landscaper.gardenletConfiguration.GardenClientConnection.KubeconfigSecret,
-					landscaper.gardenletConfiguration.SeedConfig)
+					landscaper.gardenletConfiguration.SeedConfig,
+					nil)
 
 				appliercommon.VerifyGardenletComponentConfigConfigMap(ctx,
 					fakeGardenletChartClient,
