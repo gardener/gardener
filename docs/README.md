@@ -127,6 +127,7 @@
 
 ## Deployment
 
+* [Helm charts](deployment/helm_charts.md)
 * [Setup Gardener on a Kubernetes cluster](deployment/setup_gardener.md)
 * [Deploying Gardenlets](deployment/deploy_gardenlet.md)
     * [Automatic Deployment of Gardenlets](deployment/deploy_gardenlet_automatically.md)

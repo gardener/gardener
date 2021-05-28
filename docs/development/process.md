@@ -37,6 +37,16 @@ v1.33   | Week 39-40  | September 27, 2021     | October 10, 2021   | [@voelzmo]
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
 
+### Release of helm charts
+
+The helm charts are released in lockstep with gardener releases. Check [the discussion in #4123](https://github.com/gardener/gardener/issues/4123) for more information about this decision.
+
+Therefore, the helm chart versions for the [controlplane](../../charts/gardener/controlplane/Chart.yaml) and [gardenlet](../../charts/gardener/gardenlet/Chart.yaml) charts have to be bumped during the release process.
+
+Set the version to the same as the gardener version that is to be released, but remove the `v` in front of the version number for a valid semver version.
+
+Once the changes are commited/merged to master, the [Chart releaser action](../../.github/workflows/release-charts.yaml) will release the new version and publish it to the repository at https://gardener.github.io/gardener/.
+
 ### Release Validation
 
 The release phase for a new minor version lasts two weeks.
