@@ -1,10 +1,57 @@
-# Features, Hotfixes, and Releases
+# Releases, Features, Hotfixes
 
 This document describes how to contribute features or hotfixes, and how new Gardener releases are usually scheduled, validated, etc.
 
-- [Contributing new Features or Fixes](#contributing-new-features-or-fixes)
 - [Releases](#releases)
+- [Contributing new Features or Fixes](#contributing-new-features-or-fixes)
 - [Cherry Picks](#cherry-picks)
+
+## Releases
+
+The [@gardener-maintainers](https://github.com/orgs/gardener/teams/gardener-maintainers) are trying to provide a new release roughly every other week (depending on their capacity and the stability/robustness of the `master` branch).
+
+Hotfixes are usually maintained for the latest three minor releases, though, there are no fixed release dates.
+
+### Release Responsible Plan 2021
+
+Version | Week No     | Begin Validation Phase | Due Date           | Release Responsible |
+------- | ----------- | ---------------------- | -------------------| ------------------- |
+v1.17   | Week 07-08  | February 15, 2021      | February 28, 2021  | [@rfranzke](https://github.com/rfranzke)           |
+v1.18   | Week 09-10  | March 1, 2021          | March 14, 2021     | [@danielfoehrKn](https://github.com/danielfoehrKn) |
+v1.19   | Week 11-12  | March 15, 2021         | March 28, 2021     | [@timebertt](https://github.com/timebertt)         |
+v1.20   | Week 13-14  | March 29, 2021         | April 11, 2021     | [@vpnachev](https://github.com/vpnachev)           |
+v1.21   | Week 15-16  | April 12, 2021         | April 25, 2021     | [@timuthy](https://github.com/timuthy)             |
+v1.22   | Week 17-18  | April 26, 2021         | May 9, 2021        | [@BeckerMax](https://github.com/BeckerMax)         |
+v1.23   | Week 19-20  | May 10, 2021           | May 23, 2021       | [@ialidzhikov](https://github.com/ialidzhikov)     |
+v1.24   | Week 21-22  | May 24, 2021           | June 5, 2021       | [@stoyanr](https://github.com/stoyanr)             |
+v1.25   | Week 23-24  | June 7, 2021           | June 20, 2021      | [@rfranzke](https://github.com/rfranzke)           |
+v1.26   | Week 25-26  | June 21, 2021          | July 4, 2021       | [@danielfoehrKn](https://github.com/danielfoehrKn) |
+v1.27   | Week 27-28  | July 5, 2021           | July 18, 2021      | [@timebertt](https://github.com/timebertt)         |
+v1.28   | Week 29-30  | July 19, 2021          | August 1, 2021     | [@vpnachev](https://github.com/vpnachev)           |
+v1.29   | Week 31-32  | August 2, 2021         | August 15, 2021    | [@timuthy](https://github.com/timuthy)             |
+v1.30   | Week 33-34  | August 16, 2021        | August 29, 2021    | [@BeckerMax](https://github.com/BeckerMax)         |
+v1.31   | Week 35-26  | August 30, 2021        | September 12, 2021 | [@ialidzhikov](https://github.com/ialidzhikov)     |
+v1.32   | Week 37-38  | September 13, 2021     | September 26, 2021 | [@stoyanr](https://github.com/stoyanr)             |
+v1.33   | Week 39-40  | September 27, 2021     | October 10, 2021   | [@voelzmo](https://github.com/voelzmo)             |
+
+Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
+The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
+
+### Release Validation
+
+The release phase for a new minor version lasts two weeks.
+Typically, the first week is used for the validation of the release.
+This phase includes the following steps:
+
+1. `master` (or latest `release-*` branch) is deployed to a development landscape that already hosts some existing seed and shoot clusters.
+1. An extended test suite is triggered by the "release responsible" which
+   1. executes the Gardener integration tests for different Kubernetes versions, infrastructures, and `Shoot` settings.
+   1. executes the Kubernetes conformance tests.
+   1. executes further tests like Kubernetes/OS patch/minor version upgrades.
+1. Additionally, every four hours (or on demand) more tests (e.g., including the Kubernetes e2e test suite) are executed for different infrastructures.
+1. The "release responsible" is verifying new features or other notable changes (derived of the draft release notes) in this development system.
+
+Usually, the new release is triggered in the beginning of the second week if all tests are green, all checks were successful, and if all of the planned verifications were performed by the release responsible.
 
 ## Contributing new Features or Fixes
 
@@ -22,25 +69,6 @@ before filing your pull request.
 
 The guide applies for both changes to the `master` and to any `release-*` branch.
 All changes must be submitted via a pull request and be reviewed and approved by at least one code owner.
-
-## Releases
-
-There is no fixed schedule for new releases of the `gardener/gardener` component.
-The [@gardener-maintainers](https://github.com/orgs/gardener/teams/gardener-maintainers) are trying to provide a new release roughly every other week (depending on their capacity and the stability/robustness of the `master` branch).
-
-Hotfixes are usually only maintained for the latest minor release as well as the minor release before that.
-
-The validation process for new releases usually takes a couple of days and includes the following steps:
-
-1. `master` (or latest `release-*` branch) is deployed to a development landscape that already hosts some existing seed and shoot clusters.
-1. An extended test suite is triggered by the "release responsible" which
-   1. executes the Gardener integration tests for different Kubernetes versions, infrastructures, and `Shoot` settings.
-   1. executes the Kubernetes conformance tests.
-   1. executes further tests like Kubernetes/OS patch/minor version upgrades.
-1. Additionally, every four hours (or on demand) more tests (e.g., including the Kubernetes e2e test suite) are executed for different infrastructures.
-1. The "release responsible" is verifying new features or other notable changes (derived of the draft release notes) in this development system.
-
-If all tests are green, all checks were successful, and the release responsible has performed all of the planned verifications then the release is triggered.
 
 ## Cherry Picks
 
