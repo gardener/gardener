@@ -1835,7 +1835,7 @@ var _ = Describe("Seed", func() {
 			DescribeTable("should allow without consulting the graph because verb is get, list, or watch in the seed's namespace when user is ambiguous",
 				func(verb string) {
 					attrs.User = ambiguousUser
-					attrs.Namespace = "seed-" + seedName
+					attrs.Namespace = "seed-foobar"
 					attrs.Verb = verb
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)

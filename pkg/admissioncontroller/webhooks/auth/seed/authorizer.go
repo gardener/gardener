@@ -17,6 +17,7 @@ package seed
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	"github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
@@ -240,9 +241,11 @@ func (a *authorizer) authorizeNamespace(seedName string, attrs auth.Attributes) 
 }
 
 func (a *authorizer) authorizeSecret(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	if seedName == "" ||
-		(attrs.GetNamespace() == gutil.ComputeGardenNamespace(seedName) &&
-			utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"})) {
+	// Allow gardenlets to get/list/watch secrets in their seed-<name> namespaces. Allow ambiguous gardenlets to
+	// get/list/watch secrets secrets in all seed-* namespaces.
+	if utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) &&
+		((seedName != "" && attrs.GetNamespace() == gutil.ComputeGardenNamespace(seedName)) ||
+			(seedName == "" && strings.HasPrefix(attrs.GetNamespace(), gutil.SeedNamespaceNamePrefix))) {
 
 		return auth.DecisionAllow, "", nil
 	}
