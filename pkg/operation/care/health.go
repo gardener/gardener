@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	kuberneteshealth "github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -162,7 +163,7 @@ func (h *Health) retrieveExtensions(ctx context.Context) ([]runtime.Object, erro
 	// Get BackupEntries separately as they are not namespaced i.e., they cannot be narrowed down
 	// to a shoot namespace like other extension resources above.
 	be := &extensionsv1alpha1.BackupEntry{}
-	beName := common.GenerateBackupEntryName(h.shoot.Info.Status.TechnicalID, h.shoot.Info.Status.UID)
+	beName := gutil.GenerateBackupEntryName(h.shoot.Info.Status.TechnicalID, h.shoot.Info.Status.UID)
 	if err := h.seedClient.Client().Get(ctx, kutil.Key(beName), be); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}

@@ -98,17 +98,17 @@ type Components struct {
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
-	EtcdMain              etcd.Etcd
-	EtcdEvents            etcd.Etcd
+	EtcdMain              etcd.Interface
+	EtcdEvents            etcd.Interface
 	KubeAPIServerService  component.DeployWaiter
 	KubeAPIServerSNI      component.DeployWaiter
 	KubeAPIServerSNIPhase component.Phase
-	KubeScheduler         kubescheduler.KubeScheduler
-	KubeControllerManager kubecontrollermanager.KubeControllerManager
-	ClusterAutoscaler     clusterautoscaler.ClusterAutoscaler
-	ResourceManager       resourcemanager.ResourceManager
-	KonnectivityServer    konnectivity.KonnectivityServer
-	VPNSeedServer         vpnseedserver.VPNSeedServer
+	KubeScheduler         kubescheduler.Interface
+	KubeControllerManager kubecontrollermanager.Interface
+	ClusterAutoscaler     clusterautoscaler.Interface
+	ResourceManager       resourcemanager.Interface
+	KonnectivityServer    konnectivity.Interface
+	VPNSeedServer         vpnseedserver.Interface
 }
 
 // Extensions contains references to extension resources.
@@ -129,7 +129,7 @@ type Extensions struct {
 type SystemComponents struct {
 	ClusterIdentity clusteridentity.Interface
 	Namespaces      component.DeployWaiter
-	MetricsServer   metricsserver.MetricsServer
+	MetricsServer   metricsserver.Interface
 }
 
 // DNS contains references to internal and external DNSProvider and DNSEntry deployers.

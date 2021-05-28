@@ -28,7 +28,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
-	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -239,7 +239,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 // checkFunctionlessDNSProviders returns an error if a non-primary provider isn't configured correctly.
 func checkFunctionlessDNSProviders(dns *core.DNS) error {
 	for _, provider := range dns.Providers {
-		if !gardenerutils.IsTrue(provider.Primary) && (provider.Type == nil || provider.SecretName == nil) {
+		if !utils.IsTrue(provider.Primary) && (provider.Type == nil || provider.SecretName == nil) {
 			return apierrors.NewBadRequest("non-primary DNS providers in .spec.dns.providers must specify a `type` and `secretName`")
 		}
 	}
@@ -351,7 +351,7 @@ func assignDefaultDomainIfNeeded(shoot *core.Shoot, projectLister corelisters.Pr
 			}
 			shootDNSName := shoot.Name
 			if len(shoot.Name) == 0 && len(shoot.GenerateName) > 0 {
-				shootDNSName, err = gardenerutils.GenerateRandomStringFromCharset(len(shoot.GenerateName)+5, "0123456789abcdefghijklmnopqrstuvwxyz")
+				shootDNSName, err = utils.GenerateRandomStringFromCharset(len(shoot.GenerateName)+5, "0123456789abcdefghijklmnopqrstuvwxyz")
 				if err != nil {
 					return apierrors.NewInternalError(err)
 				}

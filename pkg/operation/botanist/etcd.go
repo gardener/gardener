@@ -29,9 +29,9 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -45,7 +45,7 @@ import (
 var NewEtcd = etcd.New
 
 // DefaultEtcd returns a deployer for the etcd.
-func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Etcd, error) {
+func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, error) {
 	defragmentationSchedule, err := determineDefragmentationSchedule(b.Shoot.Info, b.ManagedSeed, class)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.EtcdMain.SetBackupConfig(&etcd.BackupConfig{
 			Provider:             b.Seed.Info.Spec.Backup.Provider,
 			SecretRefName:        genericactuator.BackupSecretName,
-			Prefix:               common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
+			Prefix:               gutil.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
 			Container:            string(secret.Data[genericactuator.DataKeyBackupBucketName]),
 			FullSnapshotSchedule: snapshotSchedule,
 		})

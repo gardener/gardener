@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/onsi/ginkgo"
@@ -198,7 +198,7 @@ func (f *ManagedSeedFramework) buildManagedSeed() (*seedmanagementv1alpha1.Manag
 	)
 
 	// Build seed spec
-	seedSpec := BuildSeedSpecForTestrun(gardenerutils.ComputeGardenNamespace(f.Config.ManagedSeedName), &f.Config.BackupProvider)
+	seedSpec := BuildSeedSpecForTestrun(gutil.ComputeGardenNamespace(f.Config.ManagedSeedName), &f.Config.BackupProvider)
 
 	if !f.Config.DeployGardenlet {
 		// Initialize seed template

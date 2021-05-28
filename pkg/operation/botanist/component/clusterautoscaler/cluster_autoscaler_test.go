@@ -47,7 +47,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 	var (
 		ctrl              *gomock.Controller
 		c                 *mockclient.MockClient
-		clusterAutoscaler ClusterAutoscaler
+		clusterAutoscaler Interface
 
 		ctx                = context.TODO()
 		fakeErr            = fmt.Errorf("fake error")

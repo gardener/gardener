@@ -232,7 +232,7 @@ var _ = Describe("Etcd", func() {
 
 	Describe("#DeployEtcd", func() {
 		var (
-			etcdMain, etcdEvents *mocketcd.MockEtcd
+			etcdMain, etcdEvents *mocketcd.MockInterface
 
 			secretNameCA     = "ca-etcd"
 			secretNameServer = "etcd-server-cert"
@@ -244,7 +244,7 @@ var _ = Describe("Etcd", func() {
 		)
 
 		BeforeEach(func() {
-			etcdMain, etcdEvents = mocketcd.NewMockEtcd(ctrl), mocketcd.NewMockEtcd(ctrl)
+			etcdMain, etcdEvents = mocketcd.NewMockInterface(ctrl), mocketcd.NewMockInterface(ctrl)
 
 			botanist.K8sSeedClient = kubernetesClient
 			botanist.CheckSums = map[string]string{
@@ -448,7 +448,7 @@ var _ = Describe("Etcd", func() {
 })
 
 type newEtcdValidator struct {
-	etcd.Etcd
+	etcd.Interface
 
 	expectedClient                  gomegatypes.GomegaMatcher
 	expectedNamespace               gomegatypes.GomegaMatcher
@@ -468,7 +468,7 @@ func (v *newEtcdValidator) NewEtcd(
 	retainReplicas bool,
 	storageCapacity string,
 	defragmentationSchedule *string,
-) etcd.Etcd {
+) etcd.Interface {
 	Expect(client).To(v.expectedClient)
 	Expect(namespace).To(v.expectedNamespace)
 	Expect(role).To(v.expectedRole)

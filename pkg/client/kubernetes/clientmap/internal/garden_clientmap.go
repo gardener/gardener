@@ -26,7 +26,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 // gardenClientMap is a ClientMap for requesting and storing a client to the garden cluster. Most probably, this
@@ -78,7 +78,7 @@ func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.Cli
 			kubernetes.AggregatorCacheFunc(
 				kubernetes.NewRuntimeCache,
 				map[client.Object]cache.NewCacheFunc{
-					&corev1.Secret{}: cache.MultiNamespacedCacheBuilder([]string{gardenerutils.ComputeGardenNamespace(seedName)}),
+					&corev1.Secret{}: cache.MultiNamespacedCacheBuilder([]string{gutil.ComputeGardenNamespace(seedName)}),
 				},
 				kubernetes.GardenScheme,
 			),

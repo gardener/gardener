@@ -87,7 +87,7 @@ var _ = Describe("MetricsServer", func() {
 
 	Describe("#DeployMetricsServer", func() {
 		var (
-			metricsServer *mockmetricsserver.MockMetricsServer
+			metricsServer *mockmetricsserver.MockInterface
 
 			ctx     = context.TODO()
 			fakeErr = fmt.Errorf("fake err")
@@ -99,7 +99,7 @@ var _ = Describe("MetricsServer", func() {
 		)
 
 		BeforeEach(func() {
-			metricsServer = mockmetricsserver.NewMockMetricsServer(ctrl)
+			metricsServer = mockmetricsserver.NewMockInterface(ctrl)
 
 			botanist.CheckSums = map[string]string{
 				secretCAName:     secretCAChecksum,

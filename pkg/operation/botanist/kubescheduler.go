@@ -24,7 +24,7 @@ import (
 )
 
 // DefaultKubeScheduler returns a deployer for the kube-scheduler.
-func (b *Botanist) DefaultKubeScheduler() (kubescheduler.KubeScheduler, error) {
+func (b *Botanist) DefaultKubeScheduler() (kubescheduler.Interface, error) {
 	image, err := b.ImageVector.FindImage(charts.ImageNameKubeScheduler, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

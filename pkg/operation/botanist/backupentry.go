@@ -21,7 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	corebackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
 	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
-	"github.com/gardener/gardener/pkg/operation/common"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -38,7 +38,7 @@ func (b *Botanist) DefaultCoreBackupEntry(gardenClient client.Client) component.
 		gardenClient,
 		&corebackupentry.Values{
 			Namespace:      b.Shoot.Info.Namespace,
-			Name:           common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
+			Name:           gutil.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
 			ShootPurpose:   b.Shoot.Info.Spec.Purpose,
 			OwnerReference: ownerRef,
 			SeedName:       b.Shoot.Info.Spec.SeedName,
@@ -56,7 +56,7 @@ func (b *Botanist) DefaultExtensionsBackupEntry(seedClient client.Client) extens
 		b.Logger,
 		seedClient,
 		&extensionsbackupentry.Values{
-			Name: common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
+			Name: gutil.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
 		},
 		extensionsbackupentry.DefaultInterval,
 		extensionsbackupentry.DefaultSevereThreshold,

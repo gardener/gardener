@@ -47,7 +47,7 @@ func init() {
 }
 
 // DefaultVPNSeedServer returns a deployer for the vpn-seed-server.
-func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.VPNSeedServer, error) {
+func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 	imageAPIServerProxy, err := b.ImageVector.FindImage(charts.ImageNameApiserverProxy, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

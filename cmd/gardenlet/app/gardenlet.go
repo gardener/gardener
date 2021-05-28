@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/cmd/utils"
+	cmdutils "github.com/gardener/gardener/cmd/utils"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -48,7 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
-	gardenerutils "github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -356,7 +356,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	// Set up leader election if enabled and prepare event recorder.
 	var (
 		leaderElectionConfig *leaderelection.LeaderElectionConfig
-		recorder             = utils.CreateRecorder(k8sGardenClient.Kubernetes(), "gardenlet")
+		recorder             = cmdutils.CreateRecorder(k8sGardenClient.Kubernetes(), "gardenlet")
 	)
 	if cfg.LeaderElection.LeaderElect {
 		seedRestCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.SeedClientConnection.ClientConnectionConfiguration, nil)
@@ -369,12 +369,12 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 			return nil, fmt.Errorf("failed to create client for leader election: %w", err)
 		}
 
-		leaderElectionConfig, err = utils.MakeLeaderElectionConfig(
+		leaderElectionConfig, err = cmdutils.MakeLeaderElectionConfig(
 			cfg.LeaderElection.LeaderElectionConfiguration,
 			*cfg.LeaderElection.LockObjectNamespace,
 			*cfg.LeaderElection.LockObjectName,
 			k8sSeedClientLeaderElection,
-			utils.CreateRecorder(k8sSeedClientLeaderElection, "gardenlet"),
+			cmdutils.CreateRecorder(k8sSeedClientLeaderElection, "gardenlet"),
 		)
 		if err != nil {
 			return nil, err
@@ -562,7 +562,7 @@ func determineGardenletIdentity() (*gardencorev1beta1.Gardener, error) {
 	}
 
 	if gardenletID == "" {
-		gardenletID, err = gardenerutils.GenerateRandomString(64)
+		gardenletID, err = utils.GenerateRandomString(64)
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate gardenletID: %v", err)
 		}

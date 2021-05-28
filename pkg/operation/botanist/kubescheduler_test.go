@@ -79,7 +79,7 @@ var _ = Describe("KubeScheduler", func() {
 
 	Describe("#DeployKubeScheduler", func() {
 		var (
-			kubeScheduler *mockkubescheduler.MockKubeScheduler
+			kubeScheduler *mockkubescheduler.MockInterface
 
 			ctx              = context.TODO()
 			fakeErr          = fmt.Errorf("fake err")
@@ -90,7 +90,7 @@ var _ = Describe("KubeScheduler", func() {
 		)
 
 		BeforeEach(func() {
-			kubeScheduler = mockkubescheduler.NewMockKubeScheduler(ctrl)
+			kubeScheduler = mockkubescheduler.NewMockInterface(ctrl)
 
 			botanist.CheckSums = map[string]string{
 				secretName:       checksum,

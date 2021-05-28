@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"math/big"
 	"net"
-	"regexp"
 	"strings"
 	"time"
 
@@ -40,7 +39,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -105,26 +103,6 @@ func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string
 		}
 	}
 	return v
-}
-
-// GenerateBackupEntryName returns BackupEntry resource name created from provided <seedNamespace> and <shootUID>.
-func GenerateBackupEntryName(seedNamespace string, shootUID types.UID) string {
-	return fmt.Sprintf("%s--%s", seedNamespace, shootUID)
-}
-
-// ExtractShootDetailsFromBackupEntryName returns Shoot resource technicalID its UID from provided <backupEntryName>.
-func ExtractShootDetailsFromBackupEntryName(backupEntryName string) (shootTechnicalID, shootUID string) {
-	tokens := strings.Split(backupEntryName, "--")
-	shootUID = tokens[len(tokens)-1]
-	shootTechnicalID = strings.TrimSuffix(backupEntryName, shootUID)
-	shootTechnicalID = strings.TrimSuffix(shootTechnicalID, "--")
-	return shootTechnicalID, shootUID
-}
-
-// ReplaceCloudProviderConfigKey replaces a key with the new value in the given cloud provider config.
-func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value string) string {
-	keyValueRegexp := regexp.MustCompile(fmt.Sprintf(`(\Q%s\E%s)([^\n]*)`, key, separator))
-	return keyValueRegexp.ReplaceAllString(cloudProviderConfig, fmt.Sprintf(`${1}%q`, strings.Replace(value, `$`, `$$`, -1)))
 }
 
 // DeleteHvpa delete all resources required for the HVPA in the given namespace.

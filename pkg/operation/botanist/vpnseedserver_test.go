@@ -102,7 +102,7 @@ var _ = Describe("VPNSeedServer", func() {
 
 	Describe("#DeployVPNSeedServer", func() {
 		var (
-			vpnSeedServer *mockvpnseedserver.MockVPNSeedServer
+			vpnSeedServer *mockvpnseedserver.MockInterface
 
 			ctx     = context.TODO()
 			fakeErr = fmt.Errorf("fake err")
@@ -116,7 +116,7 @@ var _ = Describe("VPNSeedServer", func() {
 		)
 
 		BeforeEach(func() {
-			vpnSeedServer = mockvpnseedserver.NewMockVPNSeedServer(ctrl)
+			vpnSeedServer = mockvpnseedserver.NewMockInterface(ctrl)
 
 			botanist.CheckSums = map[string]string{
 				secretNameTLSAuth: secretChecksumTLSAuth,

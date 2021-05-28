@@ -41,10 +41,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
@@ -281,11 +279,6 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 // ScaleKubeAPIServerToOne scales kube-apiserver replicas to one
 func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
 	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
-}
-
-// ScaleGardenerResourceManagerToOne scales the gardener-resource-manager deployment
-func (b *Botanist) ScaleGardenerResourceManagerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager), 1)
 }
 
 // PrepareKubeAPIServerForMigration deletes the kube-apiserver and deletes its hvpa
@@ -917,12 +910,6 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 			nil,
 		)
 	}
-}
-
-// CheckTunnelConnection checks if the tunnel connection between the control plane and the shoot networks
-// is established.
-func (b *Botanist) CheckTunnelConnection(ctx context.Context, logger *logrus.Entry, tunnelName string) (bool, error) {
-	return health.CheckTunnelConnection(ctx, b.K8sShootClient, logger, tunnelName)
 }
 
 // RestartControlPlanePods restarts (deletes) pods of the shoot control plane.

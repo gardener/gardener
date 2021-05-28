@@ -22,7 +22,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -84,7 +84,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: gardenerutils.ComputeGardenNamespace(seed.Name),
+			Name: gutil.ComputeGardenNamespace(seed.Name),
 		},
 	}
 
@@ -109,7 +109,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 var (
 	gardenRoleReq      = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
-	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gardenerutils.NoControlPlaneSecretsReq)
+	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gutil.NoControlPlaneSecretsReq)
 )
 
 func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient client.Client, existingSecrets []string, namespace string) error {

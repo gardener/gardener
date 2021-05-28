@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package mock -destination=mocks.go github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver VPNSeedServer
+//go:generate mockgen -package mock -destination=mocks.go github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver Interface
 
 package mock

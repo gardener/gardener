@@ -212,12 +212,12 @@ var _ = Describe("KonnectivityServer", func() {
 
 	Describe("#DeployKonnectivityServer", func() {
 		var (
-			mockServer *mockkonnectivity.MockKonnectivityServer
+			mockServer *mockkonnectivity.MockInterface
 			fakeErr    = fmt.Errorf("fake err")
 		)
 
 		BeforeEach(func() {
-			mockServer = mockkonnectivity.NewMockKonnectivityServer(ctrl)
+			mockServer = mockkonnectivity.NewMockInterface(ctrl)
 
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{

@@ -33,7 +33,7 @@ import (
 )
 
 // DefaultKubeControllerManager returns a deployer for the kube-controller-manager.
-func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.KubeControllerManager, error) {
+func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interface, error) {
 	image, err := b.ImageVector.FindImage(charts.ImageNameKubeControllerManager, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err

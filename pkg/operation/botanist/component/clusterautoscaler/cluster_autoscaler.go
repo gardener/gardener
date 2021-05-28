@@ -61,8 +61,8 @@ const (
 	volumeMountPathKubeconfig       = "/var/lib/cluster-autoscaler"
 )
 
-// ClusterAutoscaler contains functions for a cluster-autoscaler deployer.
-type ClusterAutoscaler interface {
+// Interface contains functions for a cluster-autoscaler deployer.
+type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
 	// SetSecrets sets the secrets.
@@ -80,7 +80,7 @@ func New(
 	image string,
 	replicas int32,
 	config *gardencorev1beta1.ClusterAutoscaler,
-) ClusterAutoscaler {
+) Interface {
 	return &clusterAutoscaler{
 		client:    client,
 		namespace: namespace,

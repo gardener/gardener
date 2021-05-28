@@ -42,7 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
-	gardenerutils "github.com/gardener/gardener/pkg/utils/gardener"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
@@ -202,7 +202,7 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 				Name: f.cfg.SeedConfig.Name,
 			},
 		}
-		seedNamespaceName = gardenerutils.ComputeGardenNamespace(f.cfg.SeedConfig.Name)
+		seedNamespaceName = gutil.ComputeGardenNamespace(f.cfg.SeedConfig.Name)
 		seedNamespace     = &corev1.Namespace{}
 	)
 

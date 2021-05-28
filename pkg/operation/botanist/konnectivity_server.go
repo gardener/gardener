@@ -24,7 +24,7 @@ import (
 )
 
 // DefaultKonnectivityServer returns a deployer for the konnectivity-server.
-func (b *Botanist) DefaultKonnectivityServer() (konnectivity.KonnectivityServer, error) {
+func (b *Botanist) DefaultKonnectivityServer() (konnectivity.Interface, error) {
 	if !b.Shoot.KonnectivityTunnelEnabled || !b.APIServerSNIEnabled() {
 		ks, err := konnectivity.NewServer(&konnectivity.ServerOptions{
 			Client:    b.K8sSeedClient.Client(),

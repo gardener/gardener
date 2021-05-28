@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -27,7 +26,6 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -194,26 +192,6 @@ var _ = Describe("common", func() {
 			})
 		})
 	})
-
-	DescribeTable("#ReplaceCloudProviderConfigKey",
-		func(key, oldValue, newValue string) {
-			var (
-				separator = ": "
-
-				configWithoutQuotes = fmt.Sprintf("%s%s%s", key, separator, oldValue)
-				configWithQuotes    = fmt.Sprintf("%s%s\"%s\"", key, separator, strings.Replace(oldValue, `"`, `\"`, -1))
-				expected            = fmt.Sprintf("%s%s\"%s\"", key, separator, strings.Replace(newValue, `"`, `\"`, -1))
-			)
-
-			Expect(ReplaceCloudProviderConfigKey(configWithoutQuotes, separator, key, newValue)).To(Equal(expected))
-			Expect(ReplaceCloudProviderConfigKey(configWithQuotes, separator, key, newValue)).To(Equal(expected))
-		},
-
-		Entry("no special characters", "foo", "bar", "baz"),
-		Entry("no special characters", "foo", "bar", "baz"),
-		Entry("with special characters", "foo", `C*ko4P++$"x`, `"$++*ab*$c4k`),
-		Entry("with special characters", "foo", "P+*4", `P*$8uOkv6+4`),
-	)
 
 	Describe("#DeleteDeploymentsHavingDeprecatedRoleLabelKey", func() {
 		var (

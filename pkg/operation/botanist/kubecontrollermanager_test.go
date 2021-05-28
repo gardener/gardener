@@ -95,7 +95,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 	Describe("#DeployKubeControllerManager", func() {
 		var (
-			kubeControllerManager *mockkubecontrollermanager.MockKubeControllerManager
+			kubeControllerManager *mockkubecontrollermanager.MockInterface
 
 			secretName                  = "kube-controller-manager"
 			secretNameServer            = "kube-controller-manager-server"
@@ -114,7 +114,7 @@ var _ = Describe("KubeControllerManager", func() {
 		)
 
 		BeforeEach(func() {
-			kubeControllerManager = mockkubecontrollermanager.NewMockKubeControllerManager(ctrl)
+			kubeControllerManager = mockkubecontrollermanager.NewMockInterface(ctrl)
 
 			botanist.K8sSeedClient = kubernetesClient
 			botanist.CheckSums = map[string]string{

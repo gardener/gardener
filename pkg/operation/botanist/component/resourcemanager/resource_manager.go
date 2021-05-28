@@ -98,8 +98,8 @@ var (
 	}
 )
 
-// ResourceManager contains functions for a gardener-resource-manager deployer.
-type ResourceManager interface {
+// Interface contains functions for a gardener-resource-manager deployer.
+type Interface interface {
 	component.DeployWaiter
 	// SetSecrets sets the secrets.
 	SetSecrets(Secrets)
@@ -112,7 +112,7 @@ func New(
 	image string,
 	replicas int32,
 	values Values,
-) ResourceManager {
+) Interface {
 	return &resourceManager{
 		client:    client,
 		image:     image,

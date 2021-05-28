@@ -48,7 +48,7 @@ var _ = Describe("KubeScheduler", func() {
 	var (
 		ctrl          *gomock.Controller
 		c             *mockclient.MockClient
-		kubeScheduler KubeScheduler
+		kubeScheduler Interface
 
 		ctx                    = context.TODO()
 		fakeErr                = fmt.Errorf("fake error")

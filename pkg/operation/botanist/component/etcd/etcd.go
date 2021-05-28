@@ -98,8 +98,8 @@ func ServiceName(role string) string {
 	return fmt.Sprintf("etcd-%s-client", role)
 }
 
-// Etcd contains functions for a etcd deployer.
-type Etcd interface {
+// Interface contains functions for a etcd deployer.
+type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
 	// ServiceDNSNames returns the service DNS names for the etcd.
@@ -123,7 +123,7 @@ func New(
 	retainReplicas bool,
 	storageCapacity string,
 	defragmentationSchedule *string,
-) Etcd {
+) Interface {
 	return &etcd{
 		client:                  client,
 		namespace:               namespace,
