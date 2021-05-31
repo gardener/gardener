@@ -15,6 +15,8 @@
 package rest
 
 import (
+	"time"
+
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -41,8 +43,10 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 )
 
-// StorageProvider is an empty struct.
-type StorageProvider struct{}
+// StorageProvider contains configurations related to the core resources.
+type StorageProvider struct {
+	AdminKubeconfigMaxExpiration time.Duration
+}
 
 // NewRESTStorage creates a new API group info object and registers the v1alpha1 core storage.
 func (p StorageProvider) NewRESTStorage(restOptionsGetter generic.RESTOptionsGetter) genericapiserver.APIGroupInfo {
@@ -102,12 +106,16 @@ func (p StorageProvider) v1alpha1Storage(restOptionsGetter generic.RESTOptionsGe
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
 
-	shootStorage := shootstore.NewStorage(restOptionsGetter)
+	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
+	storage["shootstates"] = shootStateStorage.ShootState
+
+	shootStorage := shootstore.NewStorage(restOptionsGetter, shootStateStorage.ShootState.Store, p.AdminKubeconfigMaxExpiration)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
 
-	shootStateStorage := shootstatestore.NewStorage(restOptionsGetter)
-	storage["shootstates"] = shootStateStorage.ShootState
+	if shootStorage.AdminKubeconfig != nil {
+		storage["shoots/adminkubeconfig"] = shootStorage.AdminKubeconfig
+	}
 
 	shootExtensionStatusStorage := shootextensionstatusstore.NewStorage(restOptionsGetter)
 	storage["shootextensionstatuses"] = shootExtensionStatusStorage.ShootExtensionStatus
@@ -157,9 +165,13 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
 
-	shootStorage := shootstore.NewStorage(restOptionsGetter)
+	shootStorage := shootstore.NewStorage(restOptionsGetter, shootstatestore.NewStorage(restOptionsGetter).ShootState.Store, p.AdminKubeconfigMaxExpiration)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
+
+	if shootStorage.AdminKubeconfig != nil {
+		storage["shoots/adminkubeconfig"] = shootStorage.AdminKubeconfig
+	}
 
 	return storage
 }

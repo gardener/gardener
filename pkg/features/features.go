@@ -95,4 +95,9 @@ const (
 	// owner: @scheererj @docktofuture
 	// alpha: v1.22.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
+
+	// AdminKubeconfigRequest enables the AdminKubeconfigRequest endpoint on shoot resources.
+	// owner: @mvladev
+	// alpha: v1.23.0
+	AdminKubeconfigRequest featuregate.Feature = "AdminKubeconfigRequest"
 )

@@ -375,6 +375,9 @@ func (o *Options) ApplyTo(config *apiserver.Config) error {
 	} else if err := o.Recommended.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, utilfeature.DefaultFeatureGate, initializers...); err != nil {
 		return err
 	}
+	if err := o.ExtraOptions.ApplyTo(config); err != nil {
+		return err
+	}
 
 	resourceConfig := serverstorage.NewResourceConfig()
 	resourceConfig.EnableVersions(

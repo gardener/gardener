@@ -16,8 +16,10 @@ package storage
 
 import (
 	"context"
+	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/registry/core/shoot"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +28,7 @@ import (
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
 	"k8s.io/apiserver/pkg/storage"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 // REST implements a RESTStorage for shoots against etcd
@@ -35,18 +38,30 @@ type REST struct {
 
 // ShootStorage implements the storage for Shoots and all their subresources.
 type ShootStorage struct {
-	Shoot  *REST
-	Status *StatusREST
+	Shoot           *REST
+	Status          *StatusREST
+	AdminKubeconfig *AdminKubeconfigREST
 }
 
 // NewStorage creates a new ShootStorage object.
-func NewStorage(optsGetter generic.RESTOptionsGetter) ShootStorage {
+func NewStorage(optsGetter generic.RESTOptionsGetter, shootStateStore *genericregistry.Store, max time.Duration) ShootStorage {
 	shootRest, shootStatusRest := NewREST(optsGetter)
 
-	return ShootStorage{
+	s := ShootStorage{
 		Shoot:  shootRest,
 		Status: shootStatusRest,
 	}
+
+	if utilfeature.DefaultFeatureGate.Enabled(features.AdminKubeconfigRequest) {
+		s.AdminKubeconfig = &AdminKubeconfigREST{
+			shootStateStorage:    shootStateStore,
+			shootStorage:         shootRest,
+			now:                  time.Now,
+			maxExpirationSeconds: int64(max.Seconds()),
+		}
+	}
+
+	return s
 }
 
 // NewREST returns a RESTStorage object that will work against shoots.

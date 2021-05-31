@@ -16,6 +16,7 @@ package apiserver
 
 import (
 	"fmt"
+	"time"
 
 	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
 	operationsrest "github.com/gardener/gardener/pkg/registry/operations/rest"
@@ -27,7 +28,7 @@ import (
 )
 
 type ExtraConfig struct {
-	// Place you custom config here.
+	AdminKubeconfigMaxExpiration time.Duration
 }
 
 type Config struct {
@@ -67,9 +68,10 @@ func (c completedConfig) New() (*GardenerServer, error) {
 	}
 
 	var (
-		s = &GardenerServer{GenericAPIServer: genericServer}
-
-		coreAPIGroupInfo           = (corerest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
+		s                = &GardenerServer{GenericAPIServer: genericServer}
+		coreAPIGroupInfo = (corerest.StorageProvider{
+			AdminKubeconfigMaxExpiration: c.ExtraConfig.AdminKubeconfigMaxExpiration,
+		}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		seedManagementAPIGroupInfo = (seedmanagementrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		settingsAPIGroupInfo       = (settingsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
 		operationsAPIGroupInfo     = (operationsrest.StorageProvider{}).NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
@@ -84,7 +86,8 @@ func (c completedConfig) New() (*GardenerServer, error) {
 
 // ExtraOptions is used for providing additional options to the Gardener API Server
 type ExtraOptions struct {
-	ClusterIdentity string
+	ClusterIdentity              string
+	AdminKubeconfigMaxExpiration time.Duration
 }
 
 // Validate checks if the required flags are set
@@ -94,10 +97,23 @@ func (o *ExtraOptions) Validate() []error {
 		allErrors = append(allErrors, fmt.Errorf("--cluster-identity must be specified"))
 	}
 
+	if o.AdminKubeconfigMaxExpiration < time.Hour ||
+		o.AdminKubeconfigMaxExpiration > time.Duration(1<<32)*time.Second {
+		allErrors = append(allErrors, fmt.Errorf("--shoot-admin-kubeconfig-max-expiration must be between 1 hour and 2^32 seconds"))
+	}
+
 	return allErrors
 }
 
 // AddFlags adds flags related to cluster identity to the options
 func (o *ExtraOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.ClusterIdentity, "cluster-identity", o.ClusterIdentity, "This flag is used for specifying the identity of the Garden cluster")
+	fs.DurationVar(&o.AdminKubeconfigMaxExpiration, "shoot-admin-kubeconfig-max-expiration", time.Hour*24, "The maximum validity duration of a credential requested to a Shoot by an AdminKubeconfigRequest. If an otherwise valid AdminKubeconfigRequest with a validity duration larger than this value is requested, a credential will be issued with a validity duration of this value.")
+}
+
+// ApplyTo applies the extra options to the API Server config.
+func (o *ExtraOptions) ApplyTo(c *Config) error {
+	c.ExtraConfig.AdminKubeconfigMaxExpiration = o.AdminKubeconfigMaxExpiration
+
+	return nil
 }
