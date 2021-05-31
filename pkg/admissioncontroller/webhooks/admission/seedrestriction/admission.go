@@ -235,6 +235,18 @@ func (h *handler) admitClusterRoleBinding(ctx context.Context, seedName string, 
 	// Allow gardenlet to create cluster role bindings referencing service accounts which can be used to bootstrap other
 	// gardenlets deployed as part of the ManagedSeed reconciliation.
 	if strings.HasPrefix(request.Name, bootstraputil.ClusterRoleBindingNamePrefix) {
+		clusterRoleBinding := &rbacv1.ClusterRoleBinding{}
+		if err := h.decoder.Decode(request, clusterRoleBinding); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		if clusterRoleBinding.RoleRef.APIGroup != rbacv1.GroupName ||
+			clusterRoleBinding.RoleRef.Kind != "ClusterRole" ||
+			clusterRoleBinding.RoleRef.Name != bootstraputil.GardenerSeedBootstrapper {
+
+			return admission.Errored(http.StatusForbidden, fmt.Errorf("can only bindings referring to the bootstrapper role"))
+		}
+
 		managedSeedNamespace, managedSeedName := bootstraputil.MetadataFromClusterRoleBindingName(request.Name)
 		return h.allowIfManagedSeedIsNotYetBootstrapped(ctx, seedName, managedSeedNamespace, managedSeedName)
 	}
