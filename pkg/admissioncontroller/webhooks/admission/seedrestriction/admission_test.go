@@ -1356,7 +1356,9 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 						secret = &corev1.Secret{
 							Type: corev1.SecretTypeBootstrapToken,
 							Data: map[string][]byte{
-								"description": []byte("A bootstrap token for the Gardenlet for managed seed " + managedSeedNamespace + "/" + managedSeedName + "."),
+								"usage-bootstrap-authentication": []byte("true"),
+								"usage-bootstrap-signing":        []byte("true"),
+								"description":                    []byte("A bootstrap token for the Gardenlet for managed seed " + managedSeedNamespace + "/" + managedSeedName + "."),
 							},
 						}
 						managedSeed = &seedmanagementv1alpha1.ManagedSeed{
@@ -1410,6 +1412,57 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 								Result: &metav1.Status{
 									Code:    int32(http.StatusBadRequest),
 									Message: fmt.Sprintf("unexpected secret type: %q", secret.Type),
+								},
+							},
+						}))
+					})
+
+					It("should return an error if the usage-bootstrap-authentication field is unexpected", func() {
+						secret.Data["usage-bootstrap-authentication"] = []byte("false")
+						objData, err := runtime.Encode(encoder, secret)
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: "\"usage-bootstrap-authentication\" must be set to 'true'",
+								},
+							},
+						}))
+					})
+
+					It("should return an error if the usage-bootstrap-signing field is unexpected", func() {
+						secret.Data["usage-bootstrap-signing"] = []byte("false")
+						objData, err := runtime.Encode(encoder, secret)
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: "\"usage-bootstrap-signing\" must be set to 'true'",
+								},
+							},
+						}))
+					})
+
+					It("should return an error if the auth-extra-groups field is unexpected", func() {
+						secret.Data["auth-extra-groups"] = []byte("foo")
+						objData, err := runtime.Encode(encoder, secret)
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusBadRequest),
+									Message: "\"auth-extra-groups\" must not be set",
 								},
 							},
 						}))

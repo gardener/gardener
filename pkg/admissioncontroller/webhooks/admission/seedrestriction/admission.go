@@ -307,6 +307,15 @@ func (h *handler) admitSecret(ctx context.Context, seedName string, request admi
 		if secret.Type != corev1.SecretTypeBootstrapToken {
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected secret type: %q", secret.Type))
 		}
+		if string(secret.Data[bootstraptokenapi.BootstrapTokenUsageAuthentication]) != "true" {
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("%q must be set to 'true'", bootstraptokenapi.BootstrapTokenUsageAuthentication))
+		}
+		if string(secret.Data[bootstraptokenapi.BootstrapTokenUsageSigningKey]) != "true" {
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("%q must be set to 'true'", bootstraptokenapi.BootstrapTokenUsageSigningKey))
+		}
+		if _, ok := secret.Data[bootstraptokenapi.BootstrapTokenExtraGroupsKey]; ok {
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("%q must not be set", bootstraptokenapi.BootstrapTokenExtraGroupsKey))
+		}
 
 		managedSeedNamespace, managedSeedName := bootstraputil.MetadataFromDescription(
 			string(secret.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]),
