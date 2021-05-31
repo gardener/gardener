@@ -227,7 +227,6 @@ make remote-garden-down
 
 > ⚠️ Please be aware that in the remote garden setup all Gardener components run with administrative permissions, i.e., there is no fine-grained access control via RBAC (as opposed to productive installations of Gardener).
 
-
 </details>
 
 #### Prepare the Gardener
