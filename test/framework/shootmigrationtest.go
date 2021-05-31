@@ -119,6 +119,10 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 
 // GetNodeNames uses the shootClient to fetch all Node names from the Shoot
 func (t *ShootMigrationTest) GetNodeNames(ctx context.Context, shootClient kubernetes.Interface) (nodeNames []string, err error) {
+	if t.Shoot.Status.IsHibernated {
+		return make([]string, 0), nil // Initialize to empty slice in order pass 0 elements DeepEqual check
+	}
+
 	nodeList := corev1.NodeList{}
 	t.GardenerFramework.Logger.Infof("Getting node names...")
 	if err := shootClient.Client().List(ctx, &nodeList); err != nil {
@@ -166,6 +170,7 @@ func (t *ShootMigrationTest) PopulateBeforeMigrationComparisonElements(ctx conte
 		return
 	}
 	t.ComparisonElementsBeforeMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
+
 	return
 }
 
@@ -176,6 +181,7 @@ func (t *ShootMigrationTest) PopulateAfterMigrationComparisonElements(ctx contex
 		return
 	}
 	t.ComparisonElementsAfterMigration.NodeNames, err = t.GetNodeNames(ctx, t.ShootClient)
+
 	return
 }
 
