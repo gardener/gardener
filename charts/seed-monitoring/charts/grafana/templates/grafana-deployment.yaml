@@ -43,6 +43,8 @@ spec:
           value: "true"
         - name: GF_AUTH_DISABLE_LOGIN_FORM
           value: "false"
+        - name: GF_USERS_VIEWERS_CAN_EDIT
+          value: "true"
 {{- else }}
         - name: GF_AUTH_BASIC_ENABLED
           value: "false"

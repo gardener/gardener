@@ -37,6 +37,8 @@ spec:
           value: "false"
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
+        - name: GF_USERS_VIEWERS_CAN_EDIT
+          value: "true"
         - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
           value: "false"
         - name: GF_ALERTING_ENABLED

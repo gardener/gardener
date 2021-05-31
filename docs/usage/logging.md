@@ -11,9 +11,11 @@ Kubernetes uses the underlying container runtime logging, which does not persist
 * One Grafana Deployment in `garden` namespace and two Deployments per shoot namespace (one exposed to the end users and one for the operators). Grafana is the UI component used in the logging stack.
 
 ### How to access the logs
-The first step is to authenticate in front of the Grafana ingress. The secret with the credentials can be found in garden-<project> namespace under <shoot-name>.monitoring.
-Logs are accessible via Grafana UI. Its URL can be found in the `Logging and Monitoring` section of a cluster in the Gardener Dashboard. There are two methods to explore logs: 
-* The first one is to log in in the admin panel located in bottom left corner. The default username and password are `admin`, `admin`. After successful log in, you will be asked to change the default password. **These credentials are shared by all operators. If you change the password this will affect their access.** After that, a new `Explore` menu will be available at the left side of the screen. It is used for creating log queries using the predefined filters in Loki. For example: 
+The first step is to authenticate in front of the Grafana ingress. The secret with the credentials can be found in `garden-<project>` namespace under `<shoot-name>.monitoring`.
+Logs are accessible via Grafana UI. Its URL can be found in the `Logging and Monitoring` section of a cluster in the Gardener Dashboard.
+
+There are two methods to explore logs:
+* The first option is to use the `Explore` view (available at the left side of the screen). It is used for creating log queries using the predefined filters in Loki. For example: 
 `{pod_name='prometheus-0'}`
 or with regex:
 `{pod_name=~'prometheus.+'}`
