@@ -173,7 +173,7 @@ func (n *network) WaitCleanup(ctx context.Context) error {
 }
 
 func (n *network) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
-	_, err := controllerutils.MergePatchOrCreate(ctx, n.client, n.network, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, n.network, func() error {
 		metav1.SetMetaDataAnnotation(&n.network.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		metav1.SetMetaDataAnnotation(&n.network.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 

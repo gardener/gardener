@@ -127,7 +127,7 @@ func (c *controlPlane) deploy(ctx context.Context, operation string) (extensions
 		providerConfig = &runtime.RawExtension{Raw: cfg.Raw}
 	}
 
-	_, err := controllerutils.MergePatchOrCreate(ctx, c.client, c.controlPlane, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, c.controlPlane, func() error {
 		metav1.SetMetaDataAnnotation(&c.controlPlane.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		metav1.SetMetaDataAnnotation(&c.controlPlane.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 

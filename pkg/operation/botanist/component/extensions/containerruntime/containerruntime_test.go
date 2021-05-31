@@ -21,6 +21,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -370,11 +371,18 @@ var _ = Describe("#ContainerRuntime", func() {
 				},
 			}
 
-			// deploy with wait-for-state annotation
 			empty.SetName(expected[0].GetName())
+			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
+				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("containerruntimes"), expected[0].GetName()))
+
+			// deploy with wait-for-state annotation
 			expected[0].Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.GardenerOperationWaitForState
 			expected[0].Annotations[v1beta1constants.GardenerTimestamp] = now.UTC().String()
-			test.EXPECTPatch(ctx, mc, expected[0], empty, types.MergePatchType)
+			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(expected[0])).
+				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+					Expect(actual).To(DeepEqual(expected[0]))
+					return nil
+				})
 
 			// restore state
 			expectedWithState := expected[0].DeepCopy()

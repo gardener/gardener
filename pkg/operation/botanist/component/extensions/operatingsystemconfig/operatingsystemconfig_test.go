@@ -34,6 +34,8 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
@@ -354,14 +356,21 @@ var _ = Describe("OperatingSystemConfig", func() {
 						state = stateOriginal
 					}
 
-					// deploy with wait-for-state annotation
 					emptyWithName := empty.DeepCopy()
 					emptyWithName.SetName(expected[i].GetName())
+					mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(emptyWithName), gomock.AssignableToTypeOf(emptyWithName)).
+						Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("operatingsystemconfigs"), emptyWithName.GetName()))
+
+					// deploy with wait-for-state annotation
 					obj := expected[i].DeepCopy()
 					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
 					metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
 					obj.TypeMeta = metav1.TypeMeta{}
-					test.EXPECTPatch(ctx, mc, obj, emptyWithName, types.MergePatchType)
+					mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
+						DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+							Expect(actual).To(DeepEqual(obj))
+							return nil
+						})
 
 					// restore state
 					expectedWithState := obj.DeepCopy()

@@ -220,7 +220,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 	// the arrays as a whole.
 	// However, this is not a problem, as no other client should write to these arrays as the Worker spec is supposed
 	// to be owned by gardenlet exclusively.
-	_, err := controllerutils.MergePatchOrCreate(ctx, w.client, w.worker, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, w.client, w.worker, func() error {
 		metav1.SetMetaDataAnnotation(&w.worker.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		metav1.SetMetaDataAnnotation(&w.worker.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 

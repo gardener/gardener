@@ -275,7 +275,7 @@ func (a *actuator) deployBackupEntryExtensionSecret(ctx context.Context) error {
 
 	// create secret for extension BackupEntry in seed
 	extensionSecret := emptyExtensionSecret(a.backupEntry)
-	if _, err := controllerutils.MergePatchOrCreate(ctx, a.seedClient.Client(), extensionSecret, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.seedClient.Client(), extensionSecret, func() error {
 		extensionSecret.Data = coreSecret.DeepCopy().Data
 		return nil
 	}); err != nil {

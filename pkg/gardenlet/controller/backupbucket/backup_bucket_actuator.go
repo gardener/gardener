@@ -182,7 +182,7 @@ func (a *actuator) deployBackupBucketExtensionSecret(ctx context.Context) error 
 	}
 
 	extensionSecret := a.emptyExtensionSecret()
-	_, err = controllerutils.MergePatchOrCreate(ctx, a.seedClient.Client(), extensionSecret, func() error {
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, a.seedClient.Client(), extensionSecret, func() error {
 		extensionSecret.Data = coreSecret.DeepCopy().Data
 		return nil
 	})
@@ -194,7 +194,7 @@ func (a *actuator) deployBackupBucketExtension(ctx context.Context) error {
 	extensionSecret := a.emptyExtensionSecret()
 
 	// reconcile extension backup bucket resource in seed
-	_, err := controllerutils.MergePatchOrCreate(ctx, a.seedClient.Client(), a.extensionBackupBucket, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.seedClient.Client(), a.extensionBackupBucket, func() error {
 		metav1.SetMetaDataAnnotation(&a.extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&a.extensionBackupBucket.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 

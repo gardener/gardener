@@ -31,6 +31,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -414,12 +415,19 @@ var _ = Describe("ControlPlane", func() {
 			mc := mockclient.NewMockClient(ctrl)
 			mc.EXPECT().Status().Return(mc)
 
+			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
+				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("controlplanes"), name))
+
 			// deploy with wait-for-state annotation
 			obj := cp.DeepCopy()
 			obj.Spec = cpSpec
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
-			test.EXPECTPatch(ctx, mc, obj, empty, types.MergePatchType)
+			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
+				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+					Expect(actual).To(DeepEqual(obj))
+					return nil
+				})
 
 			// restore state
 			expectedWithState := obj.DeepCopy()
@@ -444,16 +452,23 @@ var _ = Describe("ControlPlane", func() {
 			mc := mockclient.NewMockClient(ctrl)
 			mc.EXPECT().Status().Return(mc)
 
+			empty.Name += "-exposure"
+			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
+				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("controlplanes"), name))
+
 			// deploy with wait-for-state annotation
 			values.Purpose = extensionsv1alpha1.Exposure
-			empty.Name += "-exposure"
 			cp.Name += "-exposure"
 			obj := cp.DeepCopy()
 			obj.Spec = cpSpec
 			obj.Spec.Purpose = &values.Purpose
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
-			test.EXPECTPatch(ctx, mc, obj, empty, types.MergePatchType)
+			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
+				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+					Expect(actual).To(DeepEqual(obj))
+					return nil
+				})
 
 			// restore state
 			shootState.Spec.Extensions[0].Name = &obj.Name
