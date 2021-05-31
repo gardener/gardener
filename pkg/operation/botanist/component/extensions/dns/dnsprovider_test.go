@@ -18,14 +18,19 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
@@ -50,24 +55,30 @@ var _ = Describe("#DNSProvider", func() {
 		ctrl             *gomock.Controller
 		ctx              context.Context
 		c                client.Client
+		scheme           *runtime.Scheme
+		fakeOps          *retryfake.Ops
 		expectedSecret   *corev1.Secret
-		expectedDNS      *dnsv1alpha1.DNSProvider
+		expected         *dnsv1alpha1.DNSProvider
 		vals             *ProviderValues
 		log              logrus.FieldLogger
 		defaultDepWaiter component.DeployWaiter
+		now              time.Time
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
+		now = time.Now()
+		TimeNow = func() time.Time { return now }
+
 		ctx = context.TODO()
 		log = logger.NewNopLogger()
 
-		s := runtime.NewScheme()
-		Expect(corev1.AddToScheme(s)).NotTo(HaveOccurred())
-		Expect(dnsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
+		scheme = runtime.NewScheme()
+		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		Expect(dnsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
 
-		c = fake.NewClientBuilder().WithScheme(s).Build()
+		c = fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		expectedSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -97,10 +108,13 @@ var _ = Describe("#DNSProvider", func() {
 			},
 		}
 
-		expectedDNS = &dnsv1alpha1.DNSProvider{
+		expected = &dnsv1alpha1.DNSProvider{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      dnsProviderName,
 				Namespace: deployNS,
+				Annotations: map[string]string{
+					"gardener.cloud/timestamp": now.UTC().String(),
+				},
 			},
 			Spec: dnsv1alpha1.DNSProviderSpec{
 				Type: "some-emptyProvider",
@@ -118,10 +132,12 @@ var _ = Describe("#DNSProvider", func() {
 			},
 		}
 
-		defaultDepWaiter = NewProvider(log, c, deployNS, vals, &fakeOps{})
+		fakeOps = &retryfake.Ops{MaxAttempts: 1}
+		defaultDepWaiter = NewProvider(log, c, deployNS, vals, fakeOps)
 	})
 
 	AfterEach(func() {
+		TimeNow = time.Now
 		ctrl.Finish()
 	})
 
@@ -132,41 +148,41 @@ var _ = Describe("#DNSProvider", func() {
 
 				Expect(defaultDepWaiter.Deploy(ctx)).ToNot(HaveOccurred())
 
-				actualProvider := &dnsv1alpha1.DNSProvider{}
-				err := c.Get(ctx, client.ObjectKey{Name: dnsProviderName, Namespace: deployNS}, actualProvider)
+				actual := &dnsv1alpha1.DNSProvider{}
+				err := c.Get(ctx, client.ObjectKey{Name: dnsProviderName, Namespace: deployNS}, actual)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(actualProvider).To(DeepDerivativeEqual(expectedDNS))
+				Expect(actual).To(DeepDerivativeEqual(expected))
 			},
 
 			Entry("with no modification", func() {}),
 			Entry("with no domains", func() {
 				vals.Domains = nil
-				expectedDNS.Spec.Domains = nil
+				expected.Spec.Domains = nil
 			}),
 			Entry("with no exclude domain", func() {
 				vals.Domains.Exclude = nil
-				expectedDNS.Spec.Domains.Exclude = nil
+				expected.Spec.Domains.Exclude = nil
 			}),
 			Entry("with no zones", func() {
 				vals.Zones = nil
-				expectedDNS.Spec.Zones = nil
+				expected.Spec.Zones = nil
 			}),
 			Entry("with custom labels", func() {
 				vals.Labels = map[string]string{"foo": "bar"}
-				expectedDNS.ObjectMeta.Labels = map[string]string{"foo": "bar"}
+				expected.ObjectMeta.Labels = map[string]string{"foo": "bar"}
 			}),
 			Entry("with custom annotations", func() {
 				vals.Annotations = map[string]string{"foo": "bar"}
-				expectedDNS.ObjectMeta.Annotations = map[string]string{"foo": "bar"}
+				expected.ObjectMeta.Annotations = map[string]string{"foo": "bar"}
 			}),
 			Entry("with no exclude zones", func() {
 				vals.Zones.Exclude = nil
-				expectedDNS.Spec.Zones.Exclude = nil
+				expected.Spec.Zones.Exclude = nil
 			}),
 			Entry("with internal prupose", func() {
 				vals.Purpose = "internal"
-				expectedDNS.Annotations = nil
+				expected.Annotations = nil
 			}),
 		)
 
@@ -195,7 +211,7 @@ var _ = Describe("#DNSProvider", func() {
 		})
 
 		It("should not return error when it's deleted successfully", func() {
-			Expect(c.Create(ctx, expectedDNS)).ToNot(HaveOccurred(), "adding pre-existing emptyEntry succeeds")
+			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing emptyEntry succeeds")
 
 			Expect(defaultDepWaiter.Destroy(ctx)).ToNot(HaveOccurred())
 		})
@@ -208,7 +224,7 @@ var _ = Describe("#DNSProvider", func() {
 					Namespace: deployNS,
 				}}).Times(1).Return(fmt.Errorf("some random error"))
 
-			Expect(NewProvider(log, mc, deployNS, vals, &fakeOps{}).Destroy(ctx)).To(HaveOccurred())
+			Expect(NewProvider(log, mc, deployNS, vals, fakeOps).Destroy(ctx)).To(HaveOccurred())
 		})
 	})
 
@@ -217,21 +233,69 @@ var _ = Describe("#DNSProvider", func() {
 			Expect(defaultDepWaiter.Wait(ctx)).To(HaveOccurred())
 		})
 
-		It("should return error when it's not ready", func() {
-			expectedDNS.Status.State = "dummy-not-ready"
-			expectedDNS.Status.Message = pointer.StringPtr("some-error-message")
+		It("should retry getting object if it does not exist in the cache yet", func() {
+			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().Scheme().Return(scheme).AnyTimes()
 
-			Expect(c.Create(ctx, expectedDNS)).ToNot(HaveOccurred(), "adding pre-existing emptyProvider succeeds")
+			expected.Status.State = "Ready"
+			gomock.InOrder(
+				mc.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
+					Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("dnsproviders"), expected.Name)),
+				mc.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
+					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *dnsv1alpha1.DNSProvider) error {
+						expected.DeepCopyInto(obj)
+						return nil
+					}),
+			)
+
+			fakeOps.MaxAttempts = 2
+			defaultDepWaiter = NewProvider(log, mc, deployNS, vals, fakeOps)
+			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
+		})
+
+		It("should return error when it's not ready", func() {
+			expected.Status.State = "dummy-not-ready"
+			expected.Status.Message = pointer.StringPtr("some-error-message")
+
+			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing emptyProvider succeeds")
 
 			Expect(defaultDepWaiter.Wait(ctx)).To(HaveOccurred())
 		})
 
-		It("should return no error when is ready", func() {
-			expectedDNS.Status.State = "Ready"
+		It("should return error if we haven't observed the latest timestamp annotation", func() {
+			By("deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
-			Expect(c.Create(ctx, expectedDNS)).ToNot(HaveOccurred(), "adding pre-existing emptyProvider succeeds")
+			By("patch object")
+			patch := client.MergeFrom(expected.DeepCopy())
+			expected.Status.State = "Ready"
+			// add old timestamp annotation
+			expected.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+			}
+			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching dnsprovider succeeds")
 
-			Expect(defaultDepWaiter.Wait(ctx)).ToNot(HaveOccurred())
+			By("wait")
+			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "dnsprovider indicates error")
+		})
+
+		It("should return no error when it's ready", func() {
+			By("deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			By("patch object")
+			patch := client.MergeFrom(expected.DeepCopy())
+			expected.Status.State = "Ready"
+			// add up-to-date timestamp annotation
+			expected.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+			}
+			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching dnsprovider succeeds")
+
+			By("wait")
+			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "dnsprovider is ready")
 		})
 
 		It("should set a default waiter", func() {

@@ -19,16 +19,19 @@ import (
 	"fmt"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // ProviderValues contains the values used to create a DNSProvider.
@@ -49,7 +52,7 @@ type IncludeExclude struct {
 	Exclude []string
 }
 
-// NewProvider creates a new instance of DeployWaiter for a specific DNS provider.
+// NewProvider creates a new instance of DeployWaiter for a specific DNSProvider.
 // <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps()
 func NewProvider(
 	logger logrus.FieldLogger,
@@ -68,6 +71,13 @@ func NewProvider(
 		namespace: namespace,
 		values:    values,
 		waiter:    waiter,
+
+		dnsProvider: &dnsv1alpha1.DNSProvider{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      values.Name,
+				Namespace: namespace,
+			},
+		},
 	}
 }
 
@@ -77,15 +87,19 @@ type provider struct {
 	namespace string
 	values    *ProviderValues
 	waiter    retry.Ops
+
+	dnsProvider *dnsv1alpha1.DNSProvider
 }
 
 func (p *provider) Deploy(ctx context.Context) error {
-	var (
-		secret      = p.emptySecret()
-		dnsProvider = p.emptyProvider()
-	)
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "extensions-dns-" + p.values.Name,
+			Namespace: p.namespace,
+		},
+	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, p.client, secret, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, secret, func() error {
 		secret.Labels = p.values.Labels
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Data = p.values.SecretData
@@ -94,24 +108,25 @@ func (p *provider) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, p.client, dnsProvider, func() error {
-		dnsProvider.Labels = p.values.Labels
-		dnsProvider.Annotations = p.values.Annotations
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, p.client, p.dnsProvider, func() error {
+		p.dnsProvider.Labels = p.values.Labels
+		p.dnsProvider.Annotations = p.values.Annotations
+		metav1.SetMetaDataAnnotation(&p.dnsProvider.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
-		dnsProvider.Spec = dnsv1alpha1.DNSProviderSpec{
+		p.dnsProvider.Spec = dnsv1alpha1.DNSProviderSpec{
 			Type:      p.values.Provider,
 			SecretRef: &corev1.SecretReference{Name: secret.Name},
 		}
 
 		if p.values.Domains != nil {
-			dnsProvider.Spec.Domains = &dnsv1alpha1.DNSSelection{
+			p.dnsProvider.Spec.Domains = &dnsv1alpha1.DNSSelection{
 				Include: p.values.Domains.Include,
 				Exclude: p.values.Domains.Exclude,
 			}
 		}
 
 		if p.values.Zones != nil {
-			dnsProvider.Spec.Zones = &dnsv1alpha1.DNSSelection{
+			p.dnsProvider.Spec.Zones = &dnsv1alpha1.DNSSelection{
 				Include: p.values.Zones.Include,
 				Exclude: p.values.Zones.Exclude,
 			}
@@ -123,7 +138,7 @@ func (p *provider) Deploy(ctx context.Context) error {
 }
 
 func (p *provider) Destroy(ctx context.Context) error {
-	return client.IgnoreNotFound(p.client.Delete(ctx, p.emptyProvider()))
+	return client.IgnoreNotFound(p.client.Delete(ctx, p.dnsProvider))
 }
 
 func (p *provider) Wait(ctx context.Context) error {
@@ -135,24 +150,39 @@ func (p *provider) Wait(ctx context.Context) error {
 		interval              = 5 * time.Second
 		severeThreshold       = 15 * time.Second
 		timeout               = 2 * time.Minute
+
+		annotationHealthFunc health.Func
 	)
 
-	if err := p.waiter.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
-		obj := &dnsv1alpha1.DNSProvider{}
-		if err := p.client.Get(
-			ctx,
-			client.ObjectKey{Name: p.values.Name, Namespace: p.namespace},
-			obj,
-		); err != nil {
+	// wait until we see the timestamp annotation, that we set earlier in Deploy, to prevent falsely returning from Wait
+	// in case of stale cache reads
+	if expectedTimestamp, ok := p.dnsProvider.Annotations[v1beta1constants.GardenerTimestamp]; ok {
+		annotationHealthFunc = health.ObjectHasAnnotationWithValue(v1beta1constants.GardenerTimestamp, expectedTimestamp)
+	}
+
+	// TODO: switch to extensions.WaitUntilObjectReadyWithHealthFunction?
+	if err := p.waiter.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
+		if err := p.client.Get(ctx, client.ObjectKeyFromObject(p.dnsProvider), p.dnsProvider); err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.MinorError(err)
+			}
 			return retry.SevereError(err)
 		}
 
-		if obj.Status.State == dnsv1alpha1.STATE_READY {
+		if annotationHealthFunc != nil {
+			if err := annotationHealthFunc(p.dnsProvider); err != nil {
+				return retry.MinorError(err)
+			}
+		}
+
+		// TODO: why are we not checking generation == observedGeneration here?
+
+		if p.dnsProvider.Status.State == dnsv1alpha1.STATE_READY {
 			return retry.Ok()
 		}
 
-		status = obj.Status.State
-		if msg := obj.Status.Message; msg != nil {
+		status = p.dnsProvider.Status.State
+		if msg := p.dnsProvider.Status.Message; msg != nil {
 			message = *msg
 		}
 		providerErr := fmt.Errorf("DNS provider %q is not ready (status=%s, message=%s)", p.values.Name, status, message)
@@ -164,20 +194,12 @@ func (p *provider) Wait(ctx context.Context) error {
 
 		return retry.MinorError(providerErr)
 	}); err != nil {
-		return fmt.Errorf("Failed to create DNS provider for %q DNS record: %q (status=%s, message=%s)", p.values.Name, err.Error(), status, message)
+		return fmt.Errorf("failed to reconcile DNS provider %q: %s (status=%s, message=%s)", p.values.Name, err.Error(), status, message)
 	}
 
 	return nil
 }
 
 func (p *provider) WaitCleanup(ctx context.Context) error {
-	return kutil.WaitUntilResourceDeleted(ctx, p.client, p.emptyProvider(), 5*time.Second)
-}
-
-func (p *provider) emptySecret() *corev1.Secret {
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "extensions-dns-" + p.values.Name, Namespace: p.namespace}}
-}
-
-func (p *provider) emptyProvider() *dnsv1alpha1.DNSProvider {
-	return &dnsv1alpha1.DNSProvider{ObjectMeta: metav1.ObjectMeta{Name: p.values.Name, Namespace: p.namespace}}
+	return kutil.WaitUntilResourceDeleted(ctx, p.client, p.dnsProvider, 5*time.Second)
 }

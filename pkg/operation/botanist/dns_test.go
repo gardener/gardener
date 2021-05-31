@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -191,7 +192,8 @@ var _ = Describe("dns", func() {
 				},
 			}
 			Expect(found).To(DeepDerivativeEqual(expected))
-			Expect(found.Annotations).To(BeNil())
+			delete(found.Annotations, v1beta1constants.GardenerTimestamp)
+			Expect(found.Annotations).To(BeEmpty())
 		})
 		It("should delete when calling Deploy and dns is disabled", func() {
 			b.Shoot.DisableDNS = true
