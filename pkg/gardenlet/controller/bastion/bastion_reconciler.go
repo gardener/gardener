@@ -25,6 +25,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -149,6 +150,9 @@ func (r *reconciler) reconcileBastion(
 
 	// create or update the bastion in the seed cluster
 	if _, err := controllerutil.CreateOrUpdate(ctx, seedClient, extBastion, func() error {
+		metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+		metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
+
 		extBastion.Spec.UserData = createUserData(bastion)
 		extBastion.Spec.Ingress = extensionsIngress
 		extBastion.Spec.Type = *bastion.Spec.ProviderType
@@ -167,8 +171,8 @@ func (r *reconciler) reconcileBastion(
 		logger,
 		func() client.Object { return &extensionsv1alpha1.Bastion{} },
 		extensionsv1alpha1.BastionResource,
-		shoot.Status.TechnicalID,
-		bastion.Name,
+		extBastion.Namespace,
+		extBastion.Name,
 		defaultInterval,
 		defaultSevereThreshold,
 		defaultTimeout,
