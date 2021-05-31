@@ -68,7 +68,6 @@ type GardenletControllerFactory struct {
 	identity               *gardencorev1beta1.Gardener
 	clientMap              clientmap.ClientMap
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	k8sInformers           kubeinformers.SharedInformerFactory
 	recorder               record.EventRecorder
 	healthManager          healthz.Manager
 }
@@ -77,7 +76,6 @@ type GardenletControllerFactory struct {
 func NewGardenletControllerFactory(
 	clientMap clientmap.ClientMap,
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
-	kubeInformerFactory kubeinformers.SharedInformerFactory,
 	cfg *config.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
@@ -90,7 +88,6 @@ func NewGardenletControllerFactory(
 		gardenClusterIdentity:  gardenClusterIdentity,
 		clientMap:              clientMap,
 		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		k8sInformers:           kubeInformerFactory,
 		recorder:               recorder,
 		healthManager:          healthManager,
 	}
@@ -117,6 +114,8 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	f.k8sGardenCoreInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
 		return fmt.Errorf("timed out waiting for Garden core caches to sync")
+	}
+
 	// Register Seed object if desired
 	if f.cfg.SeedConfig != nil {
 		if err := f.registerSeed(ctx, k8sGardenClient); err != nil {
