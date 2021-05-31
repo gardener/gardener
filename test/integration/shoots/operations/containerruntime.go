@@ -107,12 +107,12 @@ var _ = Describe("Shoot container runtime testing", func() {
 		containerdServiceCommand := fmt.Sprintf("systemctl is-active %s", "containerd")
 		executeCommand(ctx, rootPodExecutor, containerdServiceCommand, "active")
 
-		// check that confitoml is configured
-		checkConfigurationCommand := "cat /etc/systemd/system/containerd.service.d/11-exec_conficonf | grep 'usr/bin/containerd --config=/etc/containerd/confitoml' |  echo $?"
+		// check that config.toml is configured
+		checkConfigurationCommand := "cat /etc/systemd/system/containerd.service.d/11-exec_config.conf | grep 'usr/bin/containerd --config=/etc/containerd/config.toml' |  echo $?"
 		executeCommand(ctx, rootPodExecutor, checkConfigurationCommand, "0")
 
-		// check that confitoml exists
-		checkConfigCommand := "[ -f /etc/containerd/confitoml ] && echo 'found' || echo 'Not found'"
+		// check that config.toml exists
+		checkConfigCommand := "[ -f /etc/containerd/config.toml ] && echo 'found' || echo 'Not found'"
 		executeCommand(ctx, rootPodExecutor, checkConfigCommand, "found")
 	}, scaleWorkerTimeout)
 })
