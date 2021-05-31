@@ -182,7 +182,7 @@ make local-garden-down
 ```
 
 <details>
-  <summary>Alternative: Using a local kubernetes cluster</summary>
+  <summary><b>Alternative: Using a local kubernetes cluster</b></summary>
 
   Instead of starting a kubernetes API server and etcd as docker containers, you can also opt for running a local kubernetes cluster, provided by e.g. [minikube](https://minikube.sigs.k8s.io/docs/start/), [kind](https://kind.sigs.k8s.io/docs/user/quick-start/) or docker desktop.
   > Note: Gardener requires self-contained kubeconfig files because of a [security issue](https://banzaicloud.com/blog/kubeconfig-security/). You can configure your minikube to create self-contained kubeconfig files via:
@@ -190,13 +190,13 @@ make local-garden-down
   > minikube config set embed-certs true
   > ``` 
   > or when starting the local cluster
-> ```bash
-> minikube start --embed-certs
-> ```
+  > ```bash
+  > minikube start --embed-certs
+  > ```
 </details>
 
 <details>
-  <summary>Alternative: Using a remote kubernetes cluster</summary>
+  <summary><b>Alternative: Using a remote kubernetes cluster</b></summary>
 
 For some testing scenarios, you may want to use a remote cluster instead of a local one as your Garden cluster.
 To do this, you can use the "remote Garden cluster setup" residing in `hack/remote-garden`. This will start an `etcd` instance for the `gardener-apiserver` as a Docker container, and open tunnels for accessing local gardener components from the remote cluster.
@@ -235,7 +235,6 @@ Now, that you have started your local cluster, we can go ahead and register the 
 Just point your `KUBECONFIG` environment variable to the cluster you created in the previous step and run:
 
 ```bash
-export KUBECONFIG=hack/local-development/local-garden/kubeconfigs/default-admin.conf # this export is different when using the local cluster or remote cluster alternatives
 make dev-setup
 [...]
 namespace/garden created
