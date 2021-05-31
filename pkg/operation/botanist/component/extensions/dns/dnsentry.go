@@ -19,8 +19,11 @@ import (
 	"fmt"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
@@ -29,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // EntryValues contains the values used to create a DNSEntry
@@ -41,7 +43,7 @@ type EntryValues struct {
 	TTL     int64
 }
 
-// NewEntry creates a new instance of DeployWaiter for a specific DNS emptyEntry.
+// NewEntry creates a new instance of DeployWaiter for a specific DNSEntry.
 // <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps()
 func NewEntry(
 	logger logrus.FieldLogger,
@@ -60,6 +62,13 @@ func NewEntry(
 		namespace: namespace,
 		values:    values,
 		waiter:    waiter,
+
+		dnsEntry: &dnsv1alpha1.DNSEntry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      values.Name,
+				Namespace: namespace,
+			},
+		},
 	}
 }
 
@@ -69,24 +78,26 @@ type entry struct {
 	namespace string
 	values    *EntryValues
 	waiter    retry.Ops
+
+	dnsEntry *dnsv1alpha1.DNSEntry
 }
 
 func (e *entry) Deploy(ctx context.Context) error {
-	obj := e.emptyEntry()
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.dnsEntry, func() error {
+		metav1.SetMetaDataAnnotation(&e.dnsEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
-	_, err := controllerutil.CreateOrUpdate(ctx, e.client, obj, func() error {
-		obj.Spec = dnsv1alpha1.DNSEntrySpec{
+		e.dnsEntry.Spec = dnsv1alpha1.DNSEntrySpec{
 			DNSName: e.values.DNSName,
 			TTL:     pointer.Int64Ptr(120),
 			Targets: e.values.Targets,
 		}
 
 		if e.values.TTL > 0 {
-			obj.Spec.TTL = &e.values.TTL
+			e.dnsEntry.Spec.TTL = &e.values.TTL
 		}
 
 		if len(e.values.OwnerID) > 0 {
-			obj.Spec.OwnerId = &e.values.OwnerID
+			e.dnsEntry.Spec.OwnerId = &e.values.OwnerID
 		}
 
 		return nil
@@ -95,7 +106,7 @@ func (e *entry) Deploy(ctx context.Context) error {
 }
 
 func (e *entry) Destroy(ctx context.Context) error {
-	return client.IgnoreNotFound(e.client.Delete(ctx, e.emptyEntry()))
+	return client.IgnoreNotFound(e.client.Delete(ctx, e.dnsEntry))
 }
 
 func (e *entry) Wait(ctx context.Context) error {
@@ -107,25 +118,38 @@ func (e *entry) Wait(ctx context.Context) error {
 		interval              = 5 * time.Second
 		severeThreshold       = 15 * time.Second
 		timeout               = 2 * time.Minute
+
+		annotationHealthFunc health.Func
 	)
 
-	if err := e.waiter.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
+	// wait until we see the timestamp annotation, that we set earlier in Deploy, to prevent falsely returning from Wait
+	// in case of stale cache reads
+	if expectedTimestamp, ok := e.dnsEntry.Annotations[v1beta1constants.GardenerTimestamp]; ok {
+		annotationHealthFunc = health.ObjectHasAnnotationWithValue(v1beta1constants.GardenerTimestamp, expectedTimestamp)
+	}
+
+	if err := e.waiter.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
 		retryCountUntilSevere++
 
-		obj := &dnsv1alpha1.DNSEntry{}
-		if err2 := e.client.Get(ctx, client.ObjectKey{Name: e.values.Name, Namespace: e.namespace}, obj); err2 != nil {
-			if apierrors.IsNotFound(err2) {
-				return retry.MinorError(err2)
+		if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.dnsEntry), e.dnsEntry); err != nil {
+			if apierrors.IsNotFound(err) {
+				return retry.MinorError(err)
 			}
-			return retry.SevereError(err2)
+			return retry.SevereError(err)
 		}
 
-		if obj.Status.ObservedGeneration == obj.Generation && obj.Status.State == dnsv1alpha1.STATE_READY {
+		if annotationHealthFunc != nil {
+			if err := annotationHealthFunc(e.dnsEntry); err != nil {
+				return retry.MinorError(err)
+			}
+		}
+
+		if e.dnsEntry.Status.ObservedGeneration == e.dnsEntry.Generation && e.dnsEntry.Status.State == dnsv1alpha1.STATE_READY {
 			return retry.Ok()
 		}
 
-		status = obj.Status.State
-		if msg := obj.Status.Message; msg != nil {
+		status = e.dnsEntry.Status.State
+		if msg := e.dnsEntry.Status.Message; msg != nil {
 			message = *msg
 		}
 		entryErr := fmt.Errorf("DNS record %q is not ready (status=%s, message=%s)", e.values.Name, status, message)
@@ -137,16 +161,12 @@ func (e *entry) Wait(ctx context.Context) error {
 
 		return retry.MinorError(entryErr)
 	}); err != nil {
-		return fmt.Errorf("Failed to create %q DNS record: %q (status=%s, message=%s)", e.values.Name, err.Error(), status, message)
+		return fmt.Errorf("failed to reconcile DNS record %q: %s (status=%s, message=%s)", e.values.Name, err.Error(), status, message)
 	}
 
 	return nil
 }
 
 func (e *entry) WaitCleanup(ctx context.Context) error {
-	return kutil.WaitUntilResourceDeleted(ctx, e.client, e.emptyEntry(), 5*time.Second)
-}
-
-func (e *entry) emptyEntry() *dnsv1alpha1.DNSEntry {
-	return &dnsv1alpha1.DNSEntry{ObjectMeta: metav1.ObjectMeta{Name: e.values.Name, Namespace: e.namespace}}
+	return kutil.WaitUntilResourceDeleted(ctx, e.client, e.dnsEntry, 5*time.Second)
 }
