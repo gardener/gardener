@@ -24,6 +24,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
@@ -35,7 +36,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -100,6 +100,13 @@ func New(
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
 		waitTimeout:         waitTimeout,
+
+		worker: &extensionsv1alpha1.Worker{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      values.Name,
+				Namespace: values.Namespace,
+			},
+		},
 	}
 }
 
@@ -111,6 +118,7 @@ type worker struct {
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 
+	worker             *extensionsv1alpha1.Worker
 	machineDeployments []extensionsv1alpha1.MachineDeployment
 }
 
@@ -121,15 +129,7 @@ func (w *worker) Deploy(ctx context.Context) error {
 }
 
 func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
-	var (
-		worker = &extensionsv1alpha1.Worker{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      w.values.Name,
-				Namespace: w.values.Namespace,
-			},
-		}
-		pools []extensionsv1alpha1.WorkerPool
-	)
+	var pools []extensionsv1alpha1.WorkerPool
 
 	for _, workerPool := range w.values.Workers {
 		var volume *extensionsv1alpha1.Volume
@@ -216,18 +216,22 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		})
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, w.client, worker, func() error {
-		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+	// We operate on arrays (pools) with merge patch without optimistic locking here, meaning this will replace
+	// the arrays as a whole.
+	// However, this is not a problem, as no other client should write to these arrays as the Worker spec is supposed
+	// to be owned by gardenlet exclusively.
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, w.client, w.worker, func() error {
+		metav1.SetMetaDataAnnotation(&w.worker.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+		metav1.SetMetaDataAnnotation(&w.worker.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
-		worker.Spec = extensionsv1alpha1.WorkerSpec{
+		w.worker.Spec = extensionsv1alpha1.WorkerSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: w.values.Type,
 			},
 			Region: w.values.Region,
 			SecretRef: corev1.SecretReference{
 				Name:      v1beta1constants.SecretNameCloudProvider,
-				Namespace: worker.Namespace,
+				Namespace: w.worker.Namespace,
 			},
 			SSHPublicKey:                 w.values.SSHPublicKey,
 			InfrastructureProviderStatus: w.values.InfrastructureProviderStatus,
@@ -237,7 +241,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		return nil
 	})
 
-	return worker, err
+	return w.worker, err
 }
 
 // Restore uses the seed client and the ShootState to create the Worker resources and restore their state.
@@ -247,53 +251,41 @@ func (w *worker) Restore(ctx context.Context, shootState *gardencorev1alpha1.Sho
 		w.client,
 		shootState,
 		extensionsv1alpha1.WorkerResource,
-		w.values.Namespace,
 		w.deploy,
 	)
 }
 
 // Migrate migrates the Worker resource.
 func (w *worker) Migrate(ctx context.Context) error {
-	return extensions.MigrateExtensionCR(
+	return extensions.MigrateExtensionObject(
 		ctx,
 		w.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
-		w.values.Namespace,
-		w.values.Name,
+		w.worker,
 	)
 }
 
 // Destroy deletes the Worker resource.
 func (w *worker) Destroy(ctx context.Context) error {
-	return extensions.DeleteExtensionCR(
+	return extensions.DeleteExtensionObject(
 		ctx,
 		w.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
-		w.values.Namespace,
-		w.values.Name,
+		w.worker,
 	)
 }
 
 // Wait waits until the Worker resource is ready.
 func (w *worker) Wait(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRReady(
+	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		w.client,
 		w.logger,
-		func() client.Object { return &extensionsv1alpha1.Worker{} },
+		w.worker,
 		extensionsv1alpha1.WorkerResource,
-		w.values.Namespace,
-		w.values.Name,
 		w.waitInterval,
 		w.waitSevereThreshold,
 		w.waitTimeout,
-		func(obj client.Object) error {
-			worker, ok := obj.(*extensionsv1alpha1.Worker)
-			if !ok {
-				return fmt.Errorf("expected extensionsv1alpha1.Worker but got %T", worker)
-			}
-
-			w.machineDeployments = worker.Status.MachineDeployments
+		func() error {
+			w.machineDeployments = w.worker.Status.MachineDeployments
 			return nil
 		},
 	)
@@ -301,12 +293,10 @@ func (w *worker) Wait(ctx context.Context) error {
 
 // WaitMigrate waits until the Worker resources are migrated successfully.
 func (w *worker) WaitMigrate(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRMigrated(
+	return extensions.WaitUntilExtensionObjectMigrated(
 		ctx,
 		w.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
-		w.values.Namespace,
-		w.values.Name,
+		w.worker,
 		w.waitInterval,
 		w.waitTimeout,
 	)
@@ -314,20 +304,18 @@ func (w *worker) WaitMigrate(ctx context.Context) error {
 
 // WaitCleanup waits until the Worker resource is deleted.
 func (w *worker) WaitCleanup(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		w.client,
 		w.logger,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Worker{} },
+		w.worker,
 		extensionsv1alpha1.WorkerResource,
-		w.values.Namespace,
-		w.values.Name,
 		w.waitInterval,
 		w.waitTimeout,
 	)
 }
 
-// SetPublicSSHKey sets the public SSH key in the values.
+// SetSSHPublicKey sets the public SSH key in the values.
 func (w *worker) SetSSHPublicKey(key []byte) {
 	w.values.SSHPublicKey = key
 }
@@ -337,7 +325,7 @@ func (w *worker) SetInfrastructureProviderStatus(status *runtime.RawExtension) {
 	w.values.InfrastructureProviderStatus = status
 }
 
-// SetOperatingSystemConfigMaps sets the operating system config maps in the values.
+// SetWorkerNameToOperatingSystemConfigsMap sets the operating system config maps in the values.
 func (w *worker) SetWorkerNameToOperatingSystemConfigsMap(maps map[string]*operatingsystemconfig.OperatingSystemConfigs) {
 	w.values.WorkerNameToOperatingSystemConfigsMap = maps
 }

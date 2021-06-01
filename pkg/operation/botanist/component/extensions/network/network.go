@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
@@ -29,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -77,6 +77,13 @@ func New(
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
 		waitTimeout:         waitTimeout,
+
+		network: &extensionsv1alpha1.Network{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      values.Name,
+				Namespace: values.Namespace,
+			},
+		},
 	}
 }
 
@@ -87,11 +94,13 @@ type network struct {
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
+
+	network *extensionsv1alpha1.Network
 }
 
 // Deploy uses the seed client to create or update the Network custom resource in the Shoot namespace in the Seed
 func (n *network) Deploy(ctx context.Context) error {
-	_, err := n.internalDeploy(ctx, v1beta1constants.GardenerOperationReconcile)
+	_, err := n.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
 	return err
 }
 
@@ -102,30 +111,25 @@ func (n *network) Restore(ctx context.Context, shootState *v1alpha1.ShootState) 
 		n.client,
 		shootState,
 		extensionsv1alpha1.NetworkResource,
-		n.values.Namespace,
-		n.internalDeploy,
+		n.deploy,
 	)
 }
 
 // Migrate migrates the Network custom resource
 func (n *network) Migrate(ctx context.Context) error {
-	return extensions.MigrateExtensionCR(
+	return extensions.MigrateExtensionObject(
 		ctx,
 		n.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
-		n.values.Namespace,
-		n.values.Name,
+		n.network,
 	)
 }
 
 // WaitMigrate waits until the Network custom resource has been successfully migrated.
 func (n *network) WaitMigrate(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRMigrated(
+	return extensions.WaitUntilExtensionObjectMigrated(
 		ctx,
 		n.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
-		n.values.Namespace,
-		n.values.Name,
+		n.network,
 		n.waitInterval,
 		n.waitTimeout,
 	)
@@ -133,25 +137,21 @@ func (n *network) WaitMigrate(ctx context.Context) error {
 
 // Destroy deletes the Network CRD
 func (n *network) Destroy(ctx context.Context) error {
-	return extensions.DeleteExtensionCR(
+	return extensions.DeleteExtensionObject(
 		ctx,
 		n.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
-		n.values.Namespace,
-		n.values.Name,
+		n.network,
 	)
 }
 
 // Wait waits until the Network CRD is ready (deployed or restored)
 func (n *network) Wait(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRReady(
+	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		n.client,
 		n.logger,
-		func() client.Object { return &extensionsv1alpha1.Network{} },
+		n.network,
 		extensionsv1alpha1.NetworkResource,
-		n.values.Namespace,
-		n.values.Name,
 		n.waitInterval,
 		n.waitSevereThreshold,
 		n.waitTimeout,
@@ -161,34 +161,23 @@ func (n *network) Wait(ctx context.Context) error {
 
 // WaitCleanup waits until the Network CRD is deleted
 func (n *network) WaitCleanup(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		n.client,
 		n.logger,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Network{} },
+		n.network,
 		extensionsv1alpha1.NetworkResource,
-		n.values.Namespace,
-		n.values.Name,
 		n.waitInterval,
 		n.waitTimeout,
 	)
 }
 
-func (n *network) internalDeploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
-	var (
-		network = &extensionsv1alpha1.Network{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      n.values.Name,
-				Namespace: n.values.Namespace,
-			},
-		}
-	)
+func (n *network) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, n.network, func() error {
+		metav1.SetMetaDataAnnotation(&n.network.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+		metav1.SetMetaDataAnnotation(&n.network.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
-	_, err := controllerutil.CreateOrUpdate(ctx, n.client, network, func() error {
-		metav1.SetMetaDataAnnotation(&network.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&network.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-
-		network.Spec = extensionsv1alpha1.NetworkSpec{
+		n.network.Spec = extensionsv1alpha1.NetworkSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           n.values.Type,
 				ProviderConfig: n.values.ProviderConfig,
@@ -200,5 +189,5 @@ func (n *network) internalDeploy(ctx context.Context, operation string) (extensi
 		return nil
 	})
 
-	return network, err
+	return n.network, err
 }

@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -31,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -68,6 +68,8 @@ type containerRuntime struct {
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
+
+	containerRuntimes map[string]*extensionsv1alpha1.ContainerRuntime
 }
 
 // New creates a new instance of Interface.
@@ -86,18 +88,34 @@ func New(
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
 		waitTimeout:         waitTimeout,
+
+		containerRuntimes: make(map[string]*extensionsv1alpha1.ContainerRuntime),
 	}
 }
 
 // Deploy uses the seed client to create or update the ContainerRuntime resources.
 func (c *containerRuntime) Deploy(ctx context.Context) error {
-	fns := c.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
-		rd := resourceDeployer{c.values.Namespace, workerName, cr, c.client}
-		_, err := rd.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
+	fns := c.forEachContainerRuntime(func(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, coreCR gardencorev1beta1.ContainerRuntime, workerName string) error {
+		_, err := c.deploy(ctx, cr, coreCR, workerName, v1beta1constants.GardenerOperationReconcile)
 		return err
 	})
 
 	return flow.Parallel(fns...)(ctx)
+}
+
+func (c *containerRuntime) deploy(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, coreCR gardencorev1beta1.ContainerRuntime, workerName, operation string) (extensionsv1alpha1.Object, error) {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, cr, func() error {
+		metav1.SetMetaDataAnnotation(&cr.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+		metav1.SetMetaDataAnnotation(&cr.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+
+		cr.Spec.BinaryPath = extensionsv1alpha1.ContainerDRuntimeContainersBinFolder
+		cr.Spec.Type = coreCR.Type
+		cr.Spec.ProviderConfig = coreCR.ProviderConfig
+		cr.Spec.WorkerPool.Name = workerName
+		cr.Spec.WorkerPool.Selector.MatchLabels = map[string]string{v1beta1constants.LabelWorkerPool: workerName, v1beta1constants.LabelWorkerPoolDeprecated: workerName}
+		return nil
+	})
+	return cr, err
 }
 
 // Destroy deletes the ContainerRuntime resources.
@@ -107,15 +125,13 @@ func (c *containerRuntime) Destroy(ctx context.Context) error {
 
 // Wait waits until the ContainerRuntime resources are ready.
 func (c *containerRuntime) Wait(ctx context.Context) error {
-	fns := c.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
-		return extensions.WaitUntilExtensionCRReady(
+	fns := c.forEachContainerRuntime(func(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, _ gardencorev1beta1.ContainerRuntime, _ string) error {
+		return extensions.WaitUntilExtensionObjectReady(
 			ctx,
 			c.client,
 			c.logger,
-			func() client.Object { return &extensionsv1alpha1.ContainerRuntime{} },
+			cr,
 			extensionsv1alpha1.ContainerRuntimeResource,
-			c.values.Namespace,
-			getContainerRuntimeKey(cr.Type, workerName),
 			c.waitInterval,
 			c.waitSevereThreshold,
 			c.waitTimeout,
@@ -128,12 +144,11 @@ func (c *containerRuntime) Wait(ctx context.Context) error {
 
 // WaitCleanup waits until the ContainerRuntime resources are cleaned up.
 func (c *containerRuntime) WaitCleanup(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRsDeleted(
+	return extensions.WaitUntilExtensionObjectsDeleted(
 		ctx,
 		c.client,
 		c.logger,
 		&extensionsv1alpha1.ContainerRuntimeList{},
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ContainerRuntime{} },
 		extensionsv1alpha1.ContainerRuntimeResource,
 		c.values.Namespace,
 		c.waitInterval,
@@ -144,9 +159,10 @@ func (c *containerRuntime) WaitCleanup(ctx context.Context) error {
 
 // Restore uses the seed client and the ShootState to create the ContainerRuntime resources and restore their state.
 func (c *containerRuntime) Restore(ctx context.Context, shootState *gardencorev1alpha1.ShootState) error {
-	fns := c.forEachContainerRuntime(func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error {
-		rd := resourceDeployer{c.values.Namespace, workerName, cr, c.client}
-		return extensions.RestoreExtensionWithDeployFunction(ctx, c.client, shootState, extensionsv1alpha1.ContainerRuntimeResource, c.values.Namespace, rd.deploy)
+	fns := c.forEachContainerRuntime(func(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, coreCR gardencorev1beta1.ContainerRuntime, workerName string) error {
+		return extensions.RestoreExtensionWithDeployFunction(ctx, c.client, shootState, extensionsv1alpha1.ContainerRuntimeResource, func(ctx context.Context, operationAnnotation string) (extensionsv1alpha1.Object, error) {
+			return c.deploy(ctx, cr, coreCR, workerName, operationAnnotation)
+		})
 	})
 
 	return flow.Parallel(fns...)(ctx)
@@ -154,22 +170,20 @@ func (c *containerRuntime) Restore(ctx context.Context, shootState *gardencorev1
 
 // Migrate migrates the ContainerRuntime resources.
 func (c *containerRuntime) Migrate(ctx context.Context) error {
-	return extensions.MigrateExtensionCRs(
+	return extensions.MigrateExtensionObjects(
 		ctx,
 		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ContainerRuntime{} },
 		c.values.Namespace,
 	)
 }
 
 // WaitMigrate waits until the ContainerRuntime resources are migrated successfully.
 func (c *containerRuntime) WaitMigrate(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRsMigrated(
+	return extensions.WaitUntilExtensionObjectsMigrated(
 		ctx,
 		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ContainerRuntime{} },
 		c.values.Namespace,
 		c.waitInterval,
 		c.waitTimeout,
@@ -181,9 +195,8 @@ func (c *containerRuntime) DeleteStaleResources(ctx context.Context) error {
 	wantedContainerRuntimeTypes := sets.NewString()
 	for _, worker := range c.values.Workers {
 		if worker.CRI != nil {
-			for _, containerRuntime := range worker.CRI.ContainerRuntimes {
-				key := getContainerRuntimeKey(containerRuntime.Type, worker.Name)
-				wantedContainerRuntimeTypes.Insert(key)
+			for _, cr := range worker.CRI.ContainerRuntimes {
+				wantedContainerRuntimeTypes.Insert(getContainerRuntimeName(cr.Type, worker.Name))
 			}
 		}
 	}
@@ -191,33 +204,39 @@ func (c *containerRuntime) DeleteStaleResources(ctx context.Context) error {
 }
 
 func (c *containerRuntime) deleteContainerRuntimeResources(ctx context.Context, wantedContainerRuntimeTypes sets.String) error {
-	return extensions.DeleteExtensionCRs(
+	return extensions.DeleteExtensionObjects(
 		ctx,
 		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.ContainerRuntime{} },
 		c.values.Namespace,
 		func(obj extensionsv1alpha1.Object) bool {
-			cr, ok := obj.(*extensionsv1alpha1.ContainerRuntime)
-			if !ok {
-				return false
-			}
-			return !wantedContainerRuntimeTypes.Has(getContainerRuntimeKey(cr.Spec.Type, cr.Spec.WorkerPool.Name))
+			return !wantedContainerRuntimeTypes.Has(obj.GetName())
 		},
 	)
 }
 
-func (c *containerRuntime) forEachContainerRuntime(fn func(ctx context.Context, workerName string, cr gardencorev1beta1.ContainerRuntime) error) []flow.TaskFn {
+func (c *containerRuntime) forEachContainerRuntime(fn func(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, coreCR gardencorev1beta1.ContainerRuntime, workerName string) error) []flow.TaskFn {
 	var fns []flow.TaskFn
 	for _, worker := range c.values.Workers {
 		if worker.CRI == nil {
 			continue
 		}
-		for _, containerRuntime := range worker.CRI.ContainerRuntimes {
-			cr := containerRuntime
-			workerName := worker.Name
+		for _, cr := range worker.CRI.ContainerRuntimes {
+			var (
+				workerName = worker.Name
+				coreCR     = cr
+				crName     = getContainerRuntimeName(coreCR.Type, workerName)
+			)
+
+			extensionCR, ok := c.containerRuntimes[crName]
+			if !ok {
+				extensionCR = c.emptyContainerRuntimeExtension(crName)
+				// store object for later usage (we want to pass a filled object to WaitUntil*)
+				c.containerRuntimes[crName] = extensionCR
+			}
+
 			fns = append(fns, func(ctx context.Context) error {
-				return fn(ctx, workerName, cr)
+				return fn(ctx, extensionCR, coreCR, workerName)
 			})
 		}
 	}
@@ -225,34 +244,15 @@ func (c *containerRuntime) forEachContainerRuntime(fn func(ctx context.Context, 
 	return fns
 }
 
-func getContainerRuntimeKey(criType, workerName string) string {
-	return fmt.Sprintf("%s-%s", criType, workerName)
-}
-
-type resourceDeployer struct {
-	namespace        string
-	workerName       string
-	containerRuntime gardencorev1beta1.ContainerRuntime
-	client           client.Client
-}
-
-func (d *resourceDeployer) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
-	toApply := extensionsv1alpha1.ContainerRuntime{
+func (c *containerRuntime) emptyContainerRuntimeExtension(name string) *extensionsv1alpha1.ContainerRuntime {
+	return &extensionsv1alpha1.ContainerRuntime{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      getContainerRuntimeKey(d.containerRuntime.Type, d.workerName),
-			Namespace: d.namespace,
+			Name:      name,
+			Namespace: c.values.Namespace,
 		},
 	}
+}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, d.client, &toApply, func() error {
-		metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&toApply.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-		toApply.Spec.BinaryPath = extensionsv1alpha1.ContainerDRuntimeContainersBinFolder
-		toApply.Spec.Type = d.containerRuntime.Type
-		toApply.Spec.ProviderConfig = d.containerRuntime.ProviderConfig
-		toApply.Spec.WorkerPool.Name = d.workerName
-		toApply.Spec.WorkerPool.Selector.MatchLabels = map[string]string{v1beta1constants.LabelWorkerPool: d.workerName, v1beta1constants.LabelWorkerPoolDeprecated: d.workerName}
-		return nil
-	})
-	return &toApply, err
+func getContainerRuntimeName(criType, workerName string) string {
+	return fmt.Sprintf("%s-%s", criType, workerName)
 }

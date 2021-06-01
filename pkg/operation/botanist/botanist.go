@@ -68,10 +68,9 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// extension components
-	o.Shoot.Components.Extensions.BackupEntry = b.DefaultExtensionsBackupEntry(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.ControlPlane = b.DefaultControlPlane(b.K8sSeedClient.DirectClient(), extensionsv1alpha1.Normal)
-	o.Shoot.Components.Extensions.ControlPlaneExposure = b.DefaultControlPlane(b.K8sSeedClient.DirectClient(), extensionsv1alpha1.Exposure)
+	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.ControlPlane = b.DefaultControlPlane(b.K8sSeedClient.Client(), extensionsv1alpha1.Normal)
+	o.Shoot.Components.Extensions.ControlPlaneExposure = b.DefaultControlPlane(b.K8sSeedClient.Client(), extensionsv1alpha1.Exposure)
 	o.Shoot.Components.Extensions.DNS.ExternalProvider = b.DefaultExternalDNSProvider(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.DNS.ExternalOwner = b.DefaultExternalDNSOwner(b.K8sSeedClient.DirectClient())
 	o.Shoot.Components.Extensions.DNS.ExternalEntry = b.DefaultExternalDNSEntry(b.K8sSeedClient.DirectClient())
@@ -84,17 +83,17 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.Extensions.Extension, err = b.DefaultExtension(ctx, b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.Extensions.Extension, err = b.DefaultExtension(ctx, b.K8sSeedClient.Client())
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.Network = b.DefaultNetwork(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig(b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.Network = b.DefaultNetwork(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig(b.K8sSeedClient.Client())
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.Extensions.Worker = b.DefaultWorker(b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.Extensions.Worker = b.DefaultWorker(b.K8sSeedClient.Client())
 
 	sniPhase, err := b.SNIPhase(ctx)
 	if err != nil {

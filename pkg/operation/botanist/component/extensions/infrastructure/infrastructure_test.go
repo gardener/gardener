@@ -29,22 +29,22 @@ import (
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -62,7 +62,7 @@ var _ = Describe("#Interface", func() {
 		fakeErr = errors.New("fake")
 
 		ctrl    *gomock.Controller
-		c       *mockclient.MockClient
+		c       client.Client
 		mockNow *mocktime.MockNow
 		now     time.Time
 
@@ -72,11 +72,10 @@ var _ = Describe("#Interface", func() {
 		providerStatus *runtime.RawExtension
 		nodesCIDR      *string
 
-		infra        *extensionsv1alpha1.Infrastructure
-		infraSpec    extensionsv1alpha1.InfrastructureSpec
-		values       *infrastructure.Values
-		deployWaiter infrastructure.Interface
-		waiter       *retryfake.Ops
+		empty, expected *extensionsv1alpha1.Infrastructure
+		values          *infrastructure.Values
+		deployWaiter    infrastructure.Interface
+		waiter          *retryfake.Ops
 
 		cleanupFunc func()
 	)
@@ -86,8 +85,12 @@ var _ = Describe("#Interface", func() {
 		log = logger.NewNopLogger()
 
 		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
 		mockNow = mocktime.NewMockNow(ctrl)
+		now = time.Now()
+
+		s := runtime.NewScheme()
+		Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
+		c = fake.NewFakeClientWithScheme(s)
 
 		region = "europe"
 		sshPublicKey = []byte("secure")
@@ -102,22 +105,38 @@ var _ = Describe("#Interface", func() {
 			ProviderConfig: providerConfig,
 			Region:         region,
 		}
-		infra = &extensionsv1alpha1.Infrastructure{
+
+		empty = &extensionsv1alpha1.Infrastructure{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
 			},
 		}
-		infraSpec = extensionsv1alpha1.InfrastructureSpec{
-			DefaultSpec: extensionsv1alpha1.DefaultSpec{
-				Type:           providerType,
-				ProviderConfig: providerConfig,
+
+		expected = &extensionsv1alpha1.Infrastructure{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+				Kind:       extensionsv1alpha1.InfrastructureResource,
 			},
-			Region:       region,
-			SSHPublicKey: sshPublicKey,
-			SecretRef: corev1.SecretReference{
-				Name:      v1beta1constants.SecretNameCloudProvider,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
 				Namespace: namespace,
+				Annotations: map[string]string{
+					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+					v1beta1constants.GardenerTimestamp: now.UTC().String(),
+				},
+			},
+			Spec: extensionsv1alpha1.InfrastructureSpec{
+				DefaultSpec: extensionsv1alpha1.DefaultSpec{
+					Type:           providerType,
+					ProviderConfig: providerConfig,
+				},
+				Region:       region,
+				SSHPublicKey: sshPublicKey,
+				SecretRef: corev1.SecretReference{
+					Name:      v1beta1constants.SecretNameCloudProvider,
+					Namespace: namespace,
+				},
 			},
 		}
 
@@ -136,178 +155,140 @@ var _ = Describe("#Interface", func() {
 	})
 
 	Describe("#Deploy", func() {
-		DescribeTable("correct Infrastructure is created", func(mutator func()) {
+		BeforeEach(func() {
+			expected.ResourceVersion = "1"
+		})
+
+		It("correct Infrastructure is created (AnnotateOperation=false)", func() {
 			defer test.WithVars(
 				&infrastructure.TimeNow, mockNow.Do,
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			c.
-				EXPECT().
-				Get(ctx, kutil.Key(namespace, name), infra.DeepCopy()).
-				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
-
 			deployWaiter.SetSSHPublicKey(sshPublicKey)
-			infra.Spec = infraSpec
-			mutator()
-
-			c.
-				EXPECT().
-				Create(ctx, infra)
-
 			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
-		},
-			Entry("with no modification", func() {}),
-			Entry("without provider config", func() {
-				values.ProviderConfig = nil
-				infra.Spec.ProviderConfig = nil
-			}),
-			Entry("annotate operation", func() {
-				values.AnnotateOperation = true
-				infra.Annotations = map[string]string{
-					v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-					v1beta1constants.GardenerTimestamp: now.UTC().String(),
-				}
-			}),
-		)
+
+			actual := &extensionsv1alpha1.Infrastructure{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
+			expected.SetAnnotations(nil)
+			Expect(actual).To(DeepEqual(expected))
+		})
+
+		It("correct Infrastructure is created (AnnotateOperation=true)", func() {
+			defer test.WithVars(
+				&infrastructure.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			values.AnnotateOperation = true
+			deployWaiter.SetSSHPublicKey(sshPublicKey)
+			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
+
+			actual := &extensionsv1alpha1.Infrastructure{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
+			Expect(actual).To(DeepEqual(expected))
+		})
 	})
 
 	Describe("#Wait", func() {
 		It("should return error when it's not found", func() {
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
-				Return(apierrors.NewNotFound(schema.GroupResource{}, name)).
-				AnyTimes()
-
-			Expect(deployWaiter.Wait(ctx)).To(HaveOccurred())
-		})
-
-		It("should return unexpected errors", func() {
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
-				Return(fakeErr)
-
-			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring(fakeErr.Error())))
+			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
 		})
 
 		It("should return error when it's not ready", func() {
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
-					obj.Status.LastError = &gardencorev1beta1.LastError{
-						Description: fakeErr.Error(),
-					}
-					return nil
-				}).
-				AnyTimes()
+			expected.Status.LastError = &gardencorev1beta1.LastError{
+				Description: "Some error",
+			}
 
-			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring(fakeErr.Error())))
+			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
+			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring("error during reconciliation: Some error")))
+		})
+
+		It("should return error if we haven't observed the latest timestamp annotation", func() {
+			defer test.WithVars(
+				&infrastructure.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			By("deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			values.AnnotateOperation = true
+			deployWaiter.SetSSHPublicKey(sshPublicKey)
+			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
+
+			By("patch object")
+			patch := client.MergeFrom(expected.DeepCopy())
+			expected.Status.LastError = nil
+			// remove operation annotation, add old timestamp annotation
+			expected.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+			}
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			}
+			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching infrastructure succeeds")
+
+			By("wait")
+			Expect(deployWaiter.Wait(ctx)).NotTo(Succeed(), "infrastructure indicates error")
 		})
 
 		It("should return no error when is ready", func() {
+			defer test.WithVars(
+				&infrastructure.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
-					obj.Status.LastError = nil
-					obj.ObjectMeta.Annotations = map[string]string{}
-					obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
-						State: gardencorev1beta1.LastOperationStateSucceeded,
-					}
-					obj.Status.NodesCIDR = nodesCIDR
-					obj.Status.ProviderStatus = providerStatus
-					return nil
-				})
+			By("deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			values.AnnotateOperation = true
+			deployWaiter.SetSSHPublicKey(sshPublicKey)
+			Expect(deployWaiter.Deploy(ctx)).To(Succeed())
 
-			Expect(deployWaiter.Wait(ctx)).To(Succeed())
+			By("patch object")
+			patch := client.MergeFrom(expected.DeepCopy())
+			expected.Status.LastError = nil
+			// remove operation annotation, add up-to-date timestamp annotation
+			expected.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+			}
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			}
+			expected.Status.NodesCIDR = nodesCIDR
+			expected.Status.ProviderStatus = providerStatus
+			Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching infrastructure succeeds")
+
+			By("wait")
+			Expect(deployWaiter.Wait(ctx)).To(Succeed(), "infrastructure is ready")
+
+			By("verify status")
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
 			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
 		})
 
-		It("should poll until it's ready", func() {
-			waiter.MaxAttempts = 2
+		It("should return no error when is ready (AnnotateOperation == false)", func() {
+			expected.Status.LastError = nil
+			expected.ObjectMeta.Annotations = map[string]string{}
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			}
+			expected.Status.NodesCIDR = nodesCIDR
+			expected.Status.ProviderStatus = providerStatus
 
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
-					obj.Status.LastError = &gardencorev1beta1.LastError{
-						Description: fakeErr.Error(),
-					}
-					return nil
-				})
-
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
-					obj.Status.LastError = nil
-					obj.ObjectMeta.Annotations = map[string]string{}
-					obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
-						State: gardencorev1beta1.LastOperationStateSucceeded,
-					}
-					obj.Status.NodesCIDR = nodesCIDR
-					obj.Status.ProviderStatus = providerStatus
-					return nil
-				})
-
+			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
 			Expect(deployWaiter.Wait(ctx)).To(Succeed())
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
 			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))
-		})
-
-		It("should poll until it times out", func() {
-			waiter.MaxAttempts = 3
-
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
-					obj.Status.LastError = &gardencorev1beta1.LastError{
-						Description: fakeErr.Error(),
-					}
-					return nil
-				}).
-				AnyTimes()
-
-			Expect(deployWaiter.Wait(ctx)).To(MatchError(ContainSubstring(fakeErr.Error())))
 		})
 	})
 
 	Describe("#Destroy", func() {
 		It("should not return error when it's not found", func() {
-			c.
-				EXPECT().
-				Patch(gomock.Any(), gomock.AssignableToTypeOf(infra), gomock.Any()).
-				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
-
 			Expect(deployWaiter.Destroy(ctx)).To(Succeed())
 		})
 
 		It("should not return error when it's deleted successfully", func() {
-			defer test.WithVars(
-				&extensions.TimeNow, mockNow.Do,
-				&gutil.TimeNow, mockNow.Do,
-			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-
-			infraCopy := infra.DeepCopy()
-			infraCopy.Annotations = map[string]string{
-				gutil.ConfirmationDeletion:         "true",
-				v1beta1constants.GardenerTimestamp: now.UTC().String(),
-			}
-
-			c.
-				EXPECT().
-				Patch(ctx, infraCopy, gomock.Any())
-			c.
-				EXPECT().
-				Delete(ctx, infraCopy)
-
+			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
 			Expect(deployWaiter.Destroy(ctx)).To(Succeed())
 		})
 
@@ -316,100 +297,37 @@ var _ = Describe("#Interface", func() {
 				&extensions.TimeNow, mockNow.Do,
 				&gutil.TimeNow, mockNow.Do,
 			)()
-			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			infraCopy := infra.DeepCopy()
-			infraCopy.Annotations = map[string]string{
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+			mc := mockclient.NewMockClient(ctrl)
+
+			expected = empty.DeepCopy()
+			expected.SetAnnotations(map[string]string{
 				gutil.ConfirmationDeletion:         "true",
 				v1beta1constants.GardenerTimestamp: now.UTC().String(),
-			}
+			})
 
-			c.
-				EXPECT().
-				Patch(ctx, infraCopy, gomock.Any())
-			c.
-				EXPECT().
-				Delete(ctx, infraCopy).
-				Return(fakeErr)
+			// add deletion confirmation and timestamp annotation
+			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(nil)
+			mc.EXPECT().Delete(ctx, expected).Times(1).Return(fakeErr)
 
-			Expect(deployWaiter.Destroy(ctx)).To(MatchError(ContainSubstring(fakeErr.Error())))
+			deployWaiter = infrastructure.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			Expect(deployWaiter.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 	})
 
 	Describe("#WaitCleanup", func() {
 		It("should not return error when it's already removed", func() {
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
-				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
-
 			Expect(deployWaiter.WaitCleanup(ctx)).To(Succeed())
 		})
 
 		It("should return error when it's not deleted successfully", func() {
-			description := "some error"
+			expected.Status.LastError = &gardencorev1beta1.LastError{
+				Description: "Some error",
+			}
 
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
-					obj.Status.LastError = &gardencorev1beta1.LastError{
-						Description: description,
-					}
-					return nil
-				})
-
-			Expect(deployWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring(description)))
-		})
-
-		It("should poll until it's removed", func() {
-			waiter.MaxAttempts = 2
-			description := "some error"
-
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
-					obj.Status.LastError = &gardencorev1beta1.LastError{
-						Description: description,
-					}
-					return nil
-				})
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
-				Return(apierrors.NewNotFound(schema.GroupResource{}, name))
-
-			Expect(deployWaiter.WaitCleanup(ctx)).To(Succeed())
-		})
-
-		It("should poll until it times out", func() {
-			waiter.MaxAttempts = 3
-			description := "some error"
-
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), &extensionsv1alpha1.Infrastructure{}).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *extensionsv1alpha1.Infrastructure) error {
-					obj.Status.LastError = &gardencorev1beta1.LastError{
-						Description: description,
-					}
-					return nil
-				}).
-				AnyTimes()
-
-			Expect(deployWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring(description)))
-		})
-
-		It("should return unexpected errors", func() {
-			waiter.MaxAttempts = 2
-
-			c.
-				EXPECT().
-				Get(gomock.Any(), kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
-				Return(fakeErr)
-
-			Expect(deployWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring(fakeErr.Error())))
+			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
+			Expect(deployWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("Some error")))
 		})
 	})
 
@@ -436,23 +354,34 @@ var _ = Describe("#Interface", func() {
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
+			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().Status().Return(mc)
+
 			values.SSHPublicKey = sshPublicKey
 			values.AnnotateOperation = true
 
-			obj := infra.DeepCopy()
-			obj.Spec = infraSpec
+			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
+				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("infrastructures"), name))
+
+			// deploy with wait-for-state annotation
+			obj := expected.DeepCopy()
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
+			obj.TypeMeta = metav1.TypeMeta{}
+			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
+				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+					Expect(actual).To(DeepEqual(obj))
+					return nil
+				})
+
+			// restore state
 			expectedWithState := obj.DeepCopy()
 			expectedWithState.Status.State = state
-			expectedWithRestore := expectedWithState.DeepCopy()
-			expectedWithRestore.Annotations["gardener.cloud/operation"] = "restore"
+			test.EXPECTPatch(ctx, mc, expectedWithState, obj, types.MergePatchType)
 
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("Infrastructure"), name))
-			mc.EXPECT().Create(ctx, obj)
-			mc.EXPECT().Status().Return(mc)
-			mc.EXPECT().Update(ctx, expectedWithState)
+			// annotate with restore annotation
+			expectedWithRestore := expectedWithState.DeepCopy()
+			metav1.SetMetaDataAnnotation(&expectedWithRestore.ObjectMeta, "gardener.cloud/operation", "restore")
 			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 
 			Expect(infrastructure.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())
@@ -462,102 +391,65 @@ var _ = Describe("#Interface", func() {
 	Describe("#Migrate", func() {
 		It("should migrate the resources", func() {
 			defer test.WithVars(
+				&infrastructure.TimeNow, mockNow.Do,
 				&extensions.TimeNow, mockNow.Do,
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
-			obj := infra.DeepCopy()
-			obj.Annotations = map[string]string{
-				"gardener.cloud/operation": "migrate",
-				"gardener.cloud/timestamp": now.UTC().String(),
-			}
+			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
 
-			gomock.InOrder(
-				c.
-					EXPECT().
-					Get(ctx, kutil.Key(infra.Namespace, infra.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
-					DoAndReturn(func(_ context.Context, _ client.ObjectKey, o *extensionsv1alpha1.Infrastructure) error {
-						infra.DeepCopyInto(o)
-						return nil
-					}),
-				test.
-					EXPECTPatch(ctx, c, obj, infra, types.MergePatchType),
-			)
-
+			deployWaiter.SetSSHPublicKey(sshPublicKey)
 			Expect(deployWaiter.Migrate(ctx)).To(Succeed())
+
+			actual := &extensionsv1alpha1.Infrastructure{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(expected), actual)).To(Succeed())
+			expected.SetResourceVersion("2")
+			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationMigrate)
+			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().String())
+			Expect(actual).To(DeepEqual(expected))
 		})
 
 		It("should not return error if resource does not exist", func() {
-			c.
-				EXPECT().
-				Get(ctx, kutil.Key(infra.Namespace, infra.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
-				Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-
 			Expect(deployWaiter.Migrate(ctx)).To(Succeed())
 		})
 	})
 
 	Describe("#WaitMigrate", func() {
 		It("should not return error when resource is missing", func() {
-			c.
-				EXPECT().
-				Get(ctx, kutil.Key(infra.Namespace, infra.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
-				Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
-
 			Expect(deployWaiter.WaitMigrate(ctx)).To(Succeed())
 		})
 
 		It("should return error if resource is not yet migrated successfully", func() {
-			obj := infra.DeepCopy()
-			obj.Status.LastError = &gardencorev1beta1.LastError{
+			expected.Status.LastError = &gardencorev1beta1.LastError{
 				Description: "Some error",
 			}
-			obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
+
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateError,
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 			}
 
-			c.
-				EXPECT().
-				Get(ctx, kutil.Key(obj.Namespace, obj.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, o *extensionsv1alpha1.Infrastructure) error {
-					obj.DeepCopyInto(o)
-					return nil
-				})
-
-			Expect(deployWaiter.WaitMigrate(ctx)).To(HaveOccurred())
+			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
+			Expect(deployWaiter.WaitMigrate(ctx)).To(MatchError(ContainSubstring("is not Migrate=Succeeded")))
 		})
 
 		It("should not return error if resource gets migrated successfully", func() {
-			obj := infra.DeepCopy()
-			obj.Status.LastError = nil
-			obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
+			expected.Status.LastError = nil
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 				Type:  gardencorev1beta1.LastOperationTypeMigrate,
 			}
 
-			c.
-				EXPECT().
-				Get(ctx, kutil.Key(obj.Namespace, obj.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, o *extensionsv1alpha1.Infrastructure) error {
-					obj.DeepCopyInto(o)
-					return nil
-				})
-
+			Expect(c.Create(ctx, expected)).To(Succeed(), "creating infrastructure succeeds")
 			Expect(deployWaiter.WaitMigrate(ctx)).To(Succeed(), "infrastructure is ready, should not return an error")
 		})
 	})
 
 	Describe("#Get", func() {
 		It("should return an error when the retrieval fails", func() {
-			c.
-				EXPECT().
-				Get(ctx, kutil.Key(infra.Namespace, infra.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
-				Return(fakeErr)
-
 			res, err := deployWaiter.Get(ctx)
 			Expect(res).To(BeNil())
-			Expect(err).To(MatchError(fakeErr))
+			Expect(err).To(MatchError(ContainSubstring("not found")))
 		})
 
 		It("should retrieve the object and extract the status", func() {
@@ -569,21 +461,16 @@ var _ = Describe("#Interface", func() {
 				nodesCIDR      = pointer.StringPtr("1.2.3.4")
 			)
 
-			obj := infra.DeepCopy()
-			obj.Status.ProviderStatus = providerStatus
-			obj.Status.NodesCIDR = nodesCIDR
+			infra := empty.DeepCopy()
+			infra.Status.ProviderStatus = providerStatus
+			infra.Status.NodesCIDR = nodesCIDR
+			Expect(c.Create(ctx, infra)).To(Succeed())
 
-			c.
-				EXPECT().
-				Get(ctx, kutil.Key(obj.Namespace, obj.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).
-				DoAndReturn(func(_ context.Context, _ client.ObjectKey, o *extensionsv1alpha1.Infrastructure) error {
-					obj.DeepCopyInto(o)
-					return nil
-				})
-
-			res, err := deployWaiter.Get(ctx)
+			expected = infra.DeepCopy()
+			actual, err := deployWaiter.Get(ctx)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(res).To(Equal(obj))
+			actual.SetGroupVersionKind(schema.GroupVersionKind{})
+			Expect(actual).To(DeepEqual(expected))
 
 			Expect(deployWaiter.ProviderStatus()).To(Equal(providerStatus))
 			Expect(deployWaiter.NodesCIDR()).To(Equal(nodesCIDR))

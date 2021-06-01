@@ -20,7 +20,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	corebackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
-	extensionsbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/backupentry"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,21 +45,6 @@ func (b *Botanist) DefaultCoreBackupEntry(gardenClient client.Client) component.
 		},
 		corebackupentry.DefaultInterval,
 		corebackupentry.DefaultTimeout,
-	)
-}
-
-// DefaultExtensionsBackupEntry creates the default deployer for the extensions.gardener.cloud/v1alpha1.BackupEntry
-// custom resource.
-func (b *Botanist) DefaultExtensionsBackupEntry(seedClient client.Client) extensionsbackupentry.Interface {
-	return extensionsbackupentry.New(
-		b.Logger,
-		seedClient,
-		&extensionsbackupentry.Values{
-			Name: gutil.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
-		},
-		extensionsbackupentry.DefaultInterval,
-		extensionsbackupentry.DefaultSevereThreshold,
-		extensionsbackupentry.DefaultTimeout,
 	)
 }
 

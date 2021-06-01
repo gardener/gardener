@@ -54,66 +54,6 @@ var _ = Describe("Patch", func() {
 		ctrl.Finish()
 	})
 
-	Describe("*PatchOrCreate", func() {
-		testSuite := func(f func(ctx context.Context, c client.Writer, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error), patchType types.PatchType) {
-			It("should return an error because the mutate function returned an error", func() {
-				result, err := f(ctx, c, obj, func() error { return fakeErr })
-				Expect(result).To(Equal(controllerutil.OperationResultNone))
-				Expect(err).To(MatchError(fakeErr))
-			})
-
-			It("should return an error because the patch failed", func() {
-				test.EXPECTPatch(ctx, c, obj, obj, patchType, fakeErr)
-
-				result, err := f(ctx, c, obj, func() error { return nil })
-				Expect(result).To(Equal(controllerutil.OperationResultNone))
-				Expect(err).To(MatchError(fakeErr))
-			})
-
-			It("should return an error because the create failed", func() {
-				gomock.InOrder(
-					test.EXPECTPatch(ctx, c, obj, obj, patchType, apierrors.NewNotFound(schema.GroupResource{}, "")),
-					c.EXPECT().Create(ctx, obj).Return(fakeErr),
-				)
-
-				result, err := f(ctx, c, obj, func() error { return nil })
-				Expect(result).To(Equal(controllerutil.OperationResultNone))
-				Expect(err).To(MatchError(fakeErr))
-			})
-
-			It("should successfully create the object", func() {
-				gomock.InOrder(
-					test.EXPECTPatch(ctx, c, obj, obj, patchType, apierrors.NewNotFound(schema.GroupResource{}, "")),
-					c.EXPECT().Create(ctx, obj),
-				)
-
-				result, err := f(ctx, c, obj, func() error { return nil })
-				Expect(result).To(Equal(controllerutil.OperationResultCreated))
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should successfully patch the object", func() {
-				objCopy := obj.DeepCopy()
-				mutateFn := func(o *corev1.ServiceAccount) func() error {
-					return func() error {
-						o.Labels = map[string]string{"foo": "bar"}
-						return nil
-					}
-				}
-				_ = mutateFn(objCopy)()
-
-				test.EXPECTPatch(ctx, c, objCopy, obj, patchType)
-
-				result, err := f(ctx, c, obj, mutateFn(obj))
-				Expect(result).To(Equal(controllerutil.OperationResultUpdated))
-				Expect(err).NotTo(HaveOccurred())
-			})
-		}
-
-		Describe("#MergePatchOrCreate", func() { testSuite(MergePatchOrCreate, types.MergePatchType) })
-		Describe("#StrategicMergePatchOrCreate", func() { testSuite(StrategicMergePatchOrCreate, types.StrategicMergePatchType) })
-	})
-
 	Describe("GetAndCreateOr*Patch", func() {
 		testSuite := func(f func(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error), patchType types.PatchType) {
 			It("should return an error because reading the object fails", func() {

@@ -51,7 +51,7 @@ type reconciler struct {
 	config    *config.GardenletConfiguration
 }
 
-// newReconciler returns the new backupBucker reconciler.
+// newReconciler returns the new backupEntry reconciler.
 func newReconciler(clientMap clientmap.ClientMap, recorder record.EventRecorder, config *config.GardenletConfiguration) reconcile.Reconciler {
 	return &reconciler{
 		clientMap: clientMap,

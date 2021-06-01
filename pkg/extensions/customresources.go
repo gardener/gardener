@@ -18,9 +18,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
-	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -33,6 +33,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -45,29 +46,40 @@ import (
 // TimeNow returns the current time. Exposed for testing.
 var TimeNow = time.Now
 
-// WaitUntilExtensionCRReady waits until the given extension resource has become ready.
-func WaitUntilExtensionCRReady(
+// WaitUntilExtensionObjectReady waits until the given extension object has become ready.
+// Passed objects are expected to be filled with the latest state the controller/component
+// applied/observed/retrieved, but at least namespace and name.
+func WaitUntilExtensionObjectReady(
 	ctx context.Context,
 	c client.Client,
 	logger logrus.FieldLogger,
-	newObjFunc func() client.Object,
+	obj extensionsv1alpha1.Object,
 	kind string,
-	namespace string,
-	name string,
 	interval time.Duration,
 	severeThreshold time.Duration,
 	timeout time.Duration,
-	postReadyFunc func(client.Object) error,
+	postReadyFunc func() error,
 ) error {
+	var healthFuncs []health.Func
+
+	// If the extension object has been reconciled successfully before we triggered a new reconciliation and our cache
+	// is not updated fast enough with our reconciliation trigger (i.e. adding the reconcile annotation), we might
+	// falsy return early from waiting for the extension object to be ready (as the last state already was "ready").
+	// Use the timestamp annotation on the object as an ensurance, that once we see it in our cache, we are observing
+	// a version of the object that is fresh enough.
+	if expectedTimestamp, ok := obj.GetAnnotations()[v1beta1constants.GardenerTimestamp]; ok {
+		healthFuncs = append(healthFuncs, health.ObjectHasAnnotationWithValue(v1beta1constants.GardenerTimestamp, expectedTimestamp))
+	}
+
+	healthFuncs = append(healthFuncs, health.CheckExtensionObject)
+
 	return WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		c,
 		logger,
-		health.CheckExtensionObject,
-		newObjFunc,
+		health.And(healthFuncs...),
+		obj,
 		kind,
-		namespace,
-		name,
 		interval,
 		severeThreshold,
 		timeout,
@@ -75,32 +87,40 @@ func WaitUntilExtensionCRReady(
 	)
 }
 
-// WaitUntilObjectReadyWithHealthFunction waits until the given resource has become ready. It takes the health check
+// WaitUntilObjectReadyWithHealthFunction waits until the given object has become ready. It takes the health check
 // function that should be executed.
+// Passed objects are expected to be filled with the latest state the controller/component
+// observed/retrieved, but at least namespace and name.
 func WaitUntilObjectReadyWithHealthFunction(
 	ctx context.Context,
 	c client.Client,
 	logger logrus.FieldLogger,
 	healthFunc health.Func,
-	newObjFunc func() client.Object,
+	obj client.Object,
 	kind string,
-	namespace string,
-	name string,
 	interval time.Duration,
 	severeThreshold time.Duration,
 	timeout time.Duration,
-	postReadyFunc func(client.Object) error,
+	postReadyFunc func() error,
 ) error {
 	var (
 		errorWithCode         *gardencorev1beta1helper.ErrorWithCodes
 		lastObservedError     error
 		retryCountUntilSevere int
+
+		name      = obj.GetName()
+		namespace = obj.GetNamespace()
 	)
+
+	resetObj, err := createResetObjectFunc(obj, c.Scheme())
+	if err != nil {
+		return err
+	}
 
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
 		retryCountUntilSevere++
 
-		obj := newObjFunc()
+		resetObj()
 		if err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.MinorError(err)
@@ -118,7 +138,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 		}
 
 		if postReadyFunc != nil {
-			if err := postReadyFunc(obj); err != nil {
+			if err := postReadyFunc(); err != nil {
 				return retry.SevereError(err)
 			}
 		}
@@ -135,19 +155,15 @@ func WaitUntilObjectReadyWithHealthFunction(
 	return nil
 }
 
-// DeleteExtensionCR deletes an extension resource.
-func DeleteExtensionCR(
+// DeleteExtensionObject deletes a given extension object.
+// Passed objects are expected to be filled with the latest state the controller/component
+// observed/retrieved, but at least namespace and name.
+func DeleteExtensionObject(
 	ctx context.Context,
-	c client.Client,
-	newObjFunc func() extensionsv1alpha1.Object,
-	namespace string,
-	name string,
+	c client.Writer,
+	obj extensionsv1alpha1.Object,
 	deleteOpts ...client.DeleteOption,
 ) error {
-	obj := newObjFunc()
-	obj.SetNamespace(namespace)
-	obj.SetName(name)
-
 	if err := gutil.ConfirmDeletion(ctx, c, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -158,28 +174,24 @@ func DeleteExtensionCR(
 	return client.IgnoreNotFound(c.Delete(ctx, obj, deleteOpts...))
 }
 
-// DeleteExtensionCRs lists all extension resources and loops over them. It executes the given <predicateFunc> for each
-// of them, and if it evaluates to true then the resource will be deleted.
-func DeleteExtensionCRs(
+// DeleteExtensionObjects lists all extension objects and loops over them. It executes the given <predicateFunc> for
+// each of them, and if it evaluates to true then the object will be deleted.
+func DeleteExtensionObjects(
 	ctx context.Context,
 	c client.Client,
 	listObj client.ObjectList,
-	newObjFunc func() extensionsv1alpha1.Object,
 	namespace string,
 	predicateFunc func(obj extensionsv1alpha1.Object) bool,
 	deleteOpts ...client.DeleteOption,
 ) error {
-	fns, err := applyFuncToExtensionResources(ctx, c, listObj, namespace, predicateFunc, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
-		return DeleteExtensionCR(
+	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, predicateFunc, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
+		return DeleteExtensionObject(
 			ctx,
 			c,
-			newObjFunc,
-			obj.GetNamespace(),
-			obj.GetName(),
+			obj,
 			deleteOpts...,
 		)
 	})
-
 	if err != nil {
 		return err
 	}
@@ -187,21 +199,21 @@ func DeleteExtensionCRs(
 	return flow.Parallel(fns...)(ctx)
 }
 
-// WaitUntilExtensionCRsDeleted lists all extension resources and loops over them. It executes the given <predicateFunc>
-// for each of them, and if it evaluates to true then it waits for the resource to be deleted.
-func WaitUntilExtensionCRsDeleted(
+// WaitUntilExtensionObjectsDeleted lists all extension objects and loops over them. It executes the given
+// <predicateFunc> for each of them, and if it evaluates to true and the object is already marked for deletion,
+// then it waits for the object to be deleted.
+func WaitUntilExtensionObjectsDeleted(
 	ctx context.Context,
 	c client.Client,
 	logger logrus.FieldLogger,
 	listObj client.ObjectList,
-	newObjFunc func() extensionsv1alpha1.Object,
 	kind string,
 	namespace string,
 	interval time.Duration,
 	timeout time.Duration,
 	predicateFunc func(obj extensionsv1alpha1.Object) bool,
 ) error {
-	fns, err := applyFuncToExtensionResources(
+	fns, err := applyFuncToExtensionObjects(
 		ctx,
 		c,
 		listObj,
@@ -216,20 +228,17 @@ func WaitUntilExtensionCRsDeleted(
 			return true
 		},
 		func(ctx context.Context, obj extensionsv1alpha1.Object) error {
-			return WaitUntilExtensionCRDeleted(
+			return WaitUntilExtensionObjectDeleted(
 				ctx,
 				c,
 				logger,
-				newObjFunc,
+				obj,
 				kind,
-				obj.GetNamespace(),
-				obj.GetName(),
 				interval,
 				timeout,
 			)
 		},
 	)
-
 	if err != nil {
 		return err
 	}
@@ -237,22 +246,32 @@ func WaitUntilExtensionCRsDeleted(
 	return flow.Parallel(fns...)(ctx)
 }
 
-// WaitUntilExtensionCRDeleted waits until an extension resource is deleted from the system.
-func WaitUntilExtensionCRDeleted(
+// WaitUntilExtensionObjectDeleted waits until an extension oject is deleted from the system.
+// Passed objects are expected to be filled with the latest state the controller/component
+// observed/retrieved, but at least namespace and name.
+func WaitUntilExtensionObjectDeleted(
 	ctx context.Context,
 	c client.Client,
 	logger logrus.FieldLogger,
-	newObjFunc func() extensionsv1alpha1.Object,
+	obj extensionsv1alpha1.Object,
 	kind string,
-	namespace string,
-	name string,
 	interval time.Duration,
 	timeout time.Duration,
 ) error {
-	var lastObservedError error
+	var (
+		lastObservedError error
+
+		name      = obj.GetName()
+		namespace = obj.GetNamespace()
+	)
+
+	resetObj, err := createResetObjectFunc(obj, c.Scheme())
+	if err != nil {
+		return err
+	}
 
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
-		obj := newObjFunc()
+		resetObj()
 		if err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
@@ -260,12 +279,7 @@ func WaitUntilExtensionCRDeleted(
 			return retry.SevereError(err)
 		}
 
-		acc, err := extensions.Accessor(obj)
-		if err != nil {
-			return retry.SevereError(err)
-		}
-
-		if lastErr := acc.GetExtensionStatus().GetLastError(); lastErr != nil {
+		if lastErr := obj.GetExtensionStatus().GetLastError(); lastErr != nil {
 			logger.Errorf("%s did not get deleted yet, lastError is: %s", extensionKey(kind, namespace, name), lastErr.Description)
 			lastObservedError = gardencorev1beta1helper.NewErrorWithCodes(lastErr.Description, lastErr.Codes...)
 		}
@@ -286,14 +300,13 @@ func WaitUntilExtensionCRDeleted(
 	return nil
 }
 
-// RestoreExtensionWithDeployFunction deploys the extension resource with the passed in deployFunc and sets its operation annotation to wait-for-state.
-// It then restores the state of the extension resource from the ShootState, creates any required state resources and sets the operation annotation to restore.
+// RestoreExtensionWithDeployFunction deploys the extension object with the passed in deployFunc and sets its operation annotation to wait-for-state.
+// It then restores the state of the extension object from the ShootState, creates any required state object and sets the operation annotation to restore.
 func RestoreExtensionWithDeployFunction(
 	ctx context.Context,
 	c client.Client,
 	shootState *gardencorev1alpha1.ShootState,
-	resourceKind string,
-	namespace string,
+	kind string,
 	deployFunc func(ctx context.Context, operationAnnotation string) (extensionsv1alpha1.Object, error),
 ) error {
 	extensionObj, err := deployFunc(ctx, v1beta1constants.GardenerOperationWaitForState)
@@ -301,33 +314,33 @@ func RestoreExtensionWithDeployFunction(
 		return err
 	}
 
-	if err := RestoreExtensionObjectState(ctx, c, shootState, namespace, extensionObj, resourceKind); err != nil {
+	if err := RestoreExtensionObjectState(ctx, c, shootState, extensionObj, kind); err != nil {
 		return err
 	}
 
-	return AnnotateExtensionObjectWithOperation(ctx, c, extensionObj, v1beta1constants.GardenerOperationRestore)
+	return AnnotateObjectWithOperation(ctx, c, extensionObj, v1beta1constants.GardenerOperationRestore)
 }
 
-// RestoreExtensionObjectState restores the status.state field of the extension resources and deploys any required resources from the provided shoot state
+// RestoreExtensionObjectState restores the status.state field of the extension objects and deploys any required objects from the provided shoot state
 func RestoreExtensionObjectState(
 	ctx context.Context,
 	c client.Client,
 	shootState *gardencorev1alpha1.ShootState,
-	namespace string,
 	extensionObj extensionsv1alpha1.Object,
-	resourceKind string,
+	kind string,
 ) error {
 	var resourceRefs []autoscalingv1.CrossVersionObjectReference
 	if shootState.Spec.Extensions != nil {
 		resourceName := extensionObj.GetName()
 		purpose := extensionObj.GetExtensionSpec().GetExtensionPurpose()
 		list := gardencorev1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
-		if extensionResourceState := list.Get(resourceKind, &resourceName, purpose); extensionResourceState != nil {
+		if extensionResourceState := list.Get(kind, &resourceName, purpose); extensionResourceState != nil {
+			patch := client.MergeFrom(extensionObj.DeepCopyObject())
 			extensionStatus := extensionObj.GetExtensionStatus()
 			extensionStatus.SetState(extensionResourceState.State)
 			extensionStatus.SetResources(extensionResourceState.Resources)
 
-			if err := c.Status().Update(ctx, extensionObj); err != nil {
+			if err := c.Status().Patch(ctx, extensionObj, patch); err != nil {
 				return err
 			}
 
@@ -345,7 +358,7 @@ func RestoreExtensionObjectState(
 				if err != nil {
 					return err
 				}
-				if err := utils.CreateOrUpdateObjectByRef(ctx, c, &resourceRef, namespace, obj); err != nil {
+				if err := utils.CreateOrUpdateObjectByRef(ctx, c, &resourceRef, extensionObj.GetNamespace(), obj); err != nil {
 					return err
 				}
 			}
@@ -354,40 +367,27 @@ func RestoreExtensionObjectState(
 	return nil
 }
 
-// MigrateExtensionCR adds the migrate operation annotation to the extension CR.
-func MigrateExtensionCR(
+// MigrateExtensionObject adds the migrate operation annotation to the extension object.
+// Passed objects are expected to be filled with the latest state the controller/component
+// observed/retrieved, but at least namespace and name.
+func MigrateExtensionObject(
 	ctx context.Context,
-	c client.Client,
-	newObjFunc func() extensionsv1alpha1.Object,
-	namespace string,
-	name string,
+	c client.Writer,
+	obj extensionsv1alpha1.Object,
 ) error {
-	obj := newObjFunc()
-	obj.SetNamespace(namespace)
-	obj.SetName(name)
-
-	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
-		if client.IgnoreNotFound(err) == nil {
-			return nil
-		}
-		return err
-	}
-
-	return AnnotateExtensionObjectWithOperation(ctx, c, obj, v1beta1constants.GardenerOperationMigrate)
+	return client.IgnoreNotFound(AnnotateObjectWithOperation(ctx, c, obj, v1beta1constants.GardenerOperationMigrate))
 }
 
-// MigrateExtensionCRs lists all extension resources of a given kind and annotates them with the Migrate operation.
-func MigrateExtensionCRs(
+// MigrateExtensionObjects lists all extension objects of a given kind and annotates them with the Migrate operation.
+func MigrateExtensionObjects(
 	ctx context.Context,
 	c client.Client,
 	listObj client.ObjectList,
-	newObjFunc func() extensionsv1alpha1.Object,
 	namespace string,
 ) error {
-	fns, err := applyFuncToExtensionResources(ctx, c, listObj, namespace, nil, func(ctx context.Context, o extensionsv1alpha1.Object) error {
-		return MigrateExtensionCR(ctx, c, newObjFunc, o.GetNamespace(), o.GetName())
+	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, nil, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
+		return MigrateExtensionObject(ctx, c, obj)
 	})
-
 	if err != nil {
 		return err
 	}
@@ -395,21 +395,28 @@ func MigrateExtensionCRs(
 	return flow.Parallel(fns...)(ctx)
 }
 
-// WaitUntilExtensionCRMigrated waits until the migrate operation for the extension resource is successful.
-func WaitUntilExtensionCRMigrated(
+// WaitUntilExtensionObjectMigrated waits until the migrate operation for the extension object is successful.
+// Passed objects are expected to be filled with the latest state the controller/component
+// observed/retrieved, but at least namespace and name.
+func WaitUntilExtensionObjectMigrated(
 	ctx context.Context,
 	c client.Client,
-	newObjFunc func() extensionsv1alpha1.Object,
-	namespace string,
-	name string,
+	obj extensionsv1alpha1.Object,
 	interval time.Duration,
 	timeout time.Duration,
 ) error {
-	obj := newObjFunc()
-	obj.SetNamespace(namespace)
-	obj.SetName(name)
+	var (
+		name      = obj.GetName()
+		namespace = obj.GetNamespace()
+	)
+
+	resetObj, err := createResetObjectFunc(obj, c.Scheme())
+	if err != nil {
+		return err
+	}
 
 	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
+		resetObj()
 		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
 			if client.IgnoreNotFound(err) == nil {
 				return retry.Ok()
@@ -429,32 +436,28 @@ func WaitUntilExtensionCRMigrated(
 		if extensionSpec := obj.GetExtensionSpec(); extensionSpec != nil {
 			extensionType = extensionSpec.GetExtensionType()
 		}
-		return retry.MinorError(fmt.Errorf("lastOperation for extension CR %s with name %s and type %s is not Migrate=Succeeded", obj.GetObjectKind().GroupVersionKind().Kind, name, extensionType))
+		return retry.MinorError(fmt.Errorf("lastOperation for %s with name %s and type %s is not Migrate=Succeeded", obj.GetObjectKind().GroupVersionKind().Kind, name, extensionType))
 	})
 }
 
-// WaitUntilExtensionCRsMigrated lists all extension resources of a given kind and waits until they are migrated
-func WaitUntilExtensionCRsMigrated(
+// WaitUntilExtensionObjectsMigrated lists all extension objects of a given kind and waits until they are migrated.
+func WaitUntilExtensionObjectsMigrated(
 	ctx context.Context,
 	c client.Client,
 	listObj client.ObjectList,
-	newObjFunc func() extensionsv1alpha1.Object,
 	namespace string,
 	interval time.Duration,
 	timeout time.Duration,
 ) error {
-	fns, err := applyFuncToExtensionResources(ctx, c, listObj, namespace, nil, func(ctx context.Context, object extensionsv1alpha1.Object) error {
-		return WaitUntilExtensionCRMigrated(
+	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, nil, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
+		return WaitUntilExtensionObjectMigrated(
 			ctx,
 			c,
-			newObjFunc,
-			object.GetNamespace(),
-			object.GetName(),
+			obj,
 			interval,
 			timeout,
 		)
 	})
-
 	if err != nil {
 		return err
 	}
@@ -462,17 +465,17 @@ func WaitUntilExtensionCRsMigrated(
 	return flow.Parallel(fns...)(ctx)
 }
 
-// AnnotateExtensionObjectWithOperation annotates the extension resource with the provided operation annotation value.
-func AnnotateExtensionObjectWithOperation(ctx context.Context, w client.Writer, extensionObj extensionsv1alpha1.Object, operation string) error {
-	extensionObjCopy := extensionObj.DeepCopyObject()
-	kutil.SetMetaDataAnnotation(extensionObj, v1beta1constants.GardenerOperation, operation)
-	kutil.SetMetaDataAnnotation(extensionObj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-	return w.Patch(ctx, extensionObj, client.MergeFrom(extensionObjCopy))
+// AnnotateObjectWithOperation annotates the object with the provided operation annotation value.
+func AnnotateObjectWithOperation(ctx context.Context, w client.Writer, obj client.Object, operation string) error {
+	patch := client.MergeFrom(obj.DeepCopyObject())
+	kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerOperation, operation)
+	kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+	return w.Patch(ctx, obj, patch)
 }
 
-func applyFuncToExtensionResources(
+func applyFuncToExtensionObjects(
 	ctx context.Context,
-	c client.Client,
+	c client.Reader,
 	listObj client.ObjectList,
 	namespace string,
 	predicateFunc func(obj extensionsv1alpha1.Object) bool,
@@ -512,4 +515,29 @@ func extensionKey(kind, namespace, name string) string {
 
 func formatErrorMessage(message, description string) string {
 	return fmt.Sprintf("%s: %s", message, description)
+}
+
+// createResetObjectFunc creates a func that will reset the given object to a new empty object every time the func is called.
+// This is useful for resetting an in-memory object before re-getting it from the API server / cache
+// to avoid executing checks on stale/removed object data e.g. annotations/lastError
+// (json decoder does not unset fields in the in-memory object that are unset in the API server's response)
+func createResetObjectFunc(obj runtime.Object, scheme *runtime.Scheme) (func(), error) {
+	gvk, err := apiutil.GVKForObject(obj, scheme)
+	if err != nil {
+		return nil, err
+	}
+	emptyObj, err := scheme.New(gvk)
+	if err != nil {
+		return nil, err
+	}
+	return func() {
+		deepCopyIntoObject(obj, emptyObj)
+	}, nil
+}
+
+// deepCopyIntoObject deep copies src into dest.
+// This is a workaround for runtime.Object's lack of a DeepCopyInto method, similar to what the c-r cache does:
+// https://github.com/kubernetes-sigs/controller-runtime/blob/55a329c15d6b4f91a9ff072fed6f6f05ff3339e7/pkg/cache/internal/cache_reader.go#L85-L90
+func deepCopyIntoObject(dest, src runtime.Object) {
+	reflect.ValueOf(dest).Elem().Set(reflect.ValueOf(src.DeepCopyObject()).Elem())
 }

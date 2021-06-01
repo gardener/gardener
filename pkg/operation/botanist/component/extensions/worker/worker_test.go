@@ -21,6 +21,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
@@ -30,16 +31,15 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -105,13 +105,8 @@ var _ = Describe("Worker", func() {
 		worker2MachineImageVersion       = "worker2machineimagev1"
 		worker2UserData                  = []byte("bootstrap-me-now")
 
-		w = &extensionsv1alpha1.Worker{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-		}
-		wSpec extensionsv1alpha1.WorkerSpec
+		w, empty *extensionsv1alpha1.Worker
+		wSpec    extensionsv1alpha1.WorkerSpec
 
 		defaultDepWaiter worker.Interface
 		values           *worker.Values
@@ -120,6 +115,7 @@ var _ = Describe("Worker", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		mockNow = mocktime.NewMockNow(ctrl)
+		now = time.Now()
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
@@ -202,6 +198,18 @@ var _ = Describe("Worker", func() {
 				},
 			},
 		}
+
+		empty = &extensionsv1alpha1.Worker{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+		}
+		w = empty.DeepCopy()
+		w.SetAnnotations(map[string]string{
+			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+			v1beta1constants.GardenerTimestamp: now.UTC().String(),
+		})
 
 		wSpec = extensionsv1alpha1.WorkerSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -330,15 +338,56 @@ var _ = Describe("Worker", func() {
 			Expect(defaultDepWaiter.Wait(ctx)).To(HaveOccurred(), "worker indicates error")
 		})
 
-		It("should return no error when it's ready", func() {
-			obj := w.DeepCopy()
-			obj.Annotations = nil
-			obj.Status.LastOperation = &gardencorev1beta1.LastOperation{
+		It("should return error if we haven't observed the latest timestamp annotation", func() {
+			defer test.WithVars(
+				&worker.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			By("deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			By("patch object")
+			patch := client.MergeFrom(w.DeepCopy())
+			w.Status.LastError = nil
+			// remove operation annotation, add old timestamp annotation
+			w.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
+			}
+			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
 				State: gardencorev1beta1.LastOperationStateSucceeded,
 			}
-			Expect(c.Create(ctx, obj)).To(Succeed(), "creating worker succeeds")
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
 
-			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "worker is ready, should not return an error")
+			By("wait")
+			Expect(defaultDepWaiter.Wait(ctx)).NotTo(Succeed(), "worker indicates error")
+		})
+
+		It("should return no error when it's ready", func() {
+			defer test.WithVars(
+				&worker.TimeNow, mockNow.Do,
+			)()
+			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+			By("deploy")
+			// Deploy should fill internal state with the added timestamp annotation
+			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+			By("patch object")
+			patch := client.MergeFrom(w.DeepCopy())
+			w.Status.LastError = nil
+			// remove operation annotation, add up-to-date timestamp annotation
+			w.ObjectMeta.Annotations = map[string]string{
+				v1beta1constants.GardenerTimestamp: now.UTC().String(),
+			}
+			w.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State: gardencorev1beta1.LastOperationStateSucceeded,
+			}
+			Expect(c.Patch(ctx, w, patch)).To(Succeed(), "patching worker succeeds")
+
+			By("wait")
+			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "worker is ready")
 		})
 	})
 
@@ -413,20 +462,32 @@ var _ = Describe("Worker", func() {
 			)()
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
+			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().Status().Return(mc)
+
+			mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(empty), gomock.AssignableToTypeOf(empty)).
+				Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("workers"), name))
+
+			// deploy with wait-for-state annotation
 			obj := w.DeepCopy()
 			obj.Spec = wSpec
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/operation", "wait-for-state")
 			metav1.SetMetaDataAnnotation(&obj.ObjectMeta, "gardener.cloud/timestamp", now.UTC().String())
+			obj.TypeMeta = metav1.TypeMeta{}
+			mc.EXPECT().Create(ctx, test.HasObjectKeyOf(obj)).
+				DoAndReturn(func(ctx context.Context, actual client.Object, opts ...client.CreateOption) error {
+					Expect(actual).To(DeepEqual(obj))
+					return nil
+				})
+
+			// restore state
 			expectedWithState := obj.DeepCopy()
 			expectedWithState.Status.State = state
+			test.EXPECTPatch(ctx, mc, expectedWithState, obj, types.MergePatchType)
+
+			// annotate with restore annotation
 			expectedWithRestore := expectedWithState.DeepCopy()
 			expectedWithRestore.Annotations["gardener.cloud/operation"] = "restore"
-
-			mc := mockclient.NewMockClient(ctrl)
-			mc.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&extensionsv1alpha1.Worker{})).Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("Worker"), name))
-			mc.EXPECT().Create(ctx, obj)
-			mc.EXPECT().Status().Return(mc)
-			mc.EXPECT().Update(ctx, expectedWithState)
 			test.EXPECTPatch(ctx, mc, expectedWithRestore, expectedWithState, types.MergePatchType)
 
 			Expect(worker.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond).Restore(ctx, shootState)).To(Succeed())

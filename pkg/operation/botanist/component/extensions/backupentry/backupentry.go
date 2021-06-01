@@ -21,6 +21,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
@@ -29,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -88,6 +88,12 @@ func New(
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
 		waitTimeout:         waitTimeout,
+
+		backupEntry: &extensionsv1alpha1.BackupEntry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: values.Name,
+			},
+		},
 	}
 }
 
@@ -98,6 +104,8 @@ type backupEntry struct {
 	waitInterval        time.Duration
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
+
+	backupEntry *extensionsv1alpha1.BackupEntry
 }
 
 // Deploy uses the seed client to create or update the BackupEntry custom resource in the Seed.
@@ -107,17 +115,11 @@ func (b *backupEntry) Deploy(ctx context.Context) error {
 }
 
 func (b *backupEntry) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
-	backupEntry := &extensionsv1alpha1.BackupEntry{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: b.values.Name,
-		},
-	}
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.client, b.backupEntry, func() error {
+		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+		metav1.SetMetaDataAnnotation(&b.backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 
-	_, err := controllerutil.CreateOrUpdate(ctx, b.client, backupEntry, func() error {
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
-
-		backupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
+		b.backupEntry.Spec = extensionsv1alpha1.BackupEntrySpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           b.values.Type,
 				ProviderConfig: b.values.ProviderConfig,
@@ -131,7 +133,7 @@ func (b *backupEntry) deploy(ctx context.Context, operation string) (extensionsv
 		return nil
 	})
 
-	return backupEntry, err
+	return b.backupEntry, err
 }
 
 // Restore uses the seed client and the ShootState to create the BackupEntry custom resource in the Seed and restore its
@@ -142,30 +144,25 @@ func (b *backupEntry) Restore(ctx context.Context, shootState *gardencorev1alpha
 		b.client,
 		shootState,
 		extensionsv1alpha1.BackupEntryResource,
-		"",
 		b.deploy,
 	)
 }
 
 // Migrate migrates the BackupEntry custom resource
 func (b *backupEntry) Migrate(ctx context.Context) error {
-	return extensions.MigrateExtensionCR(
+	return extensions.MigrateExtensionObject(
 		ctx,
 		b.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
-		"",
-		b.values.Name,
+		b.backupEntry,
 	)
 }
 
 // WaitMigrate waits until the BackupEntry custom resource has been successfully migrated.
 func (b *backupEntry) WaitMigrate(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRMigrated(
+	return extensions.WaitUntilExtensionObjectMigrated(
 		ctx,
 		b.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
-		"",
-		b.values.Name,
+		b.backupEntry,
 		b.waitInterval,
 		b.waitTimeout,
 	)
@@ -173,25 +170,21 @@ func (b *backupEntry) WaitMigrate(ctx context.Context) error {
 
 // Destroy deletes the BackupEntry CRD
 func (b *backupEntry) Destroy(ctx context.Context) error {
-	return extensions.DeleteExtensionCR(
+	return extensions.DeleteExtensionObject(
 		ctx,
 		b.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
-		"",
-		b.values.Name,
+		b.backupEntry,
 	)
 }
 
 // Wait waits until the BackupEntry CRD is ready (deployed or restored)
 func (b *backupEntry) Wait(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRReady(
+	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		b.client,
 		b.logger,
-		func() client.Object { return &extensionsv1alpha1.BackupEntry{} },
+		b.backupEntry,
 		extensionsv1alpha1.BackupEntryResource,
-		"",
-		b.values.Name,
 		b.waitInterval,
 		b.waitSevereThreshold,
 		b.waitTimeout,
@@ -201,14 +194,12 @@ func (b *backupEntry) Wait(ctx context.Context) error {
 
 // WaitCleanup waits until the BackupEntry CRD is deleted
 func (b *backupEntry) WaitCleanup(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		b.client,
 		b.logger,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.BackupEntry{} },
+		b.backupEntry,
 		extensionsv1alpha1.BackupEntryResource,
-		"",
-		b.values.Name,
 		b.waitInterval,
 		b.waitTimeout,
 	)

@@ -16,22 +16,20 @@ package infrastructure
 
 import (
 	"context"
-	"fmt"
 	"time"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -97,6 +95,13 @@ func New(
 		waitInterval:        waitInterval,
 		waitSevereThreshold: waitSevereThreshold,
 		waitTimeout:         waitTimeout,
+
+		infrastructure: &extensionsv1alpha1.Infrastructure{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      values.Name,
+				Namespace: values.Namespace,
+			},
+		},
 	}
 }
 
@@ -108,6 +113,7 @@ type infrastructure struct {
 	waitSevereThreshold time.Duration
 	waitTimeout         time.Duration
 
+	infrastructure *extensionsv1alpha1.Infrastructure
 	providerStatus *runtime.RawExtension
 	nodesCIDR      *string
 }
@@ -119,29 +125,20 @@ func (i *infrastructure) Deploy(ctx context.Context) error {
 }
 
 func (i *infrastructure) deploy(ctx context.Context, operation string) (extensionsv1alpha1.Object, error) {
-	var (
-		infra = &extensionsv1alpha1.Infrastructure{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      i.values.Name,
-				Namespace: i.values.Namespace,
-			},
-		}
-		providerConfig *runtime.RawExtension
-	)
-
+	var providerConfig *runtime.RawExtension
 	if cfg := i.values.ProviderConfig; cfg != nil {
 		providerConfig = &runtime.RawExtension{
 			Raw: cfg.Raw,
 		}
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, i.client, infra, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, i.client, i.infrastructure, func() error {
 		if i.values.AnnotateOperation {
-			metav1.SetMetaDataAnnotation(&infra.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-			metav1.SetMetaDataAnnotation(&infra.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+			metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+			metav1.SetMetaDataAnnotation(&i.infrastructure.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 		}
 
-		infra.Spec = extensionsv1alpha1.InfrastructureSpec{
+		i.infrastructure.Spec = extensionsv1alpha1.InfrastructureSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type:           i.values.Type,
 				ProviderConfig: providerConfig,
@@ -150,13 +147,13 @@ func (i *infrastructure) deploy(ctx context.Context, operation string) (extensio
 			SSHPublicKey: i.values.SSHPublicKey,
 			SecretRef: corev1.SecretReference{
 				Name:      v1beta1constants.SecretNameCloudProvider,
-				Namespace: infra.Namespace,
+				Namespace: i.infrastructure.Namespace,
 			},
 		}
 		return nil
 	})
 
-	return infra, err
+	return i.infrastructure, err
 }
 
 // Restore uses the seed client and the ShootState to create the Infrastructure resources and restore their state.
@@ -166,66 +163,51 @@ func (i *infrastructure) Restore(ctx context.Context, shootState *gardencorev1al
 		i.client,
 		shootState,
 		extensionsv1alpha1.InfrastructureResource,
-		i.values.Namespace,
 		i.deploy,
 	)
 }
 
 // Migrate migrates the Infrastructure resources.
 func (i *infrastructure) Migrate(ctx context.Context) error {
-	return extensions.MigrateExtensionCR(
+	return extensions.MigrateExtensionObject(
 		ctx,
 		i.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
-		i.values.Namespace,
-		i.values.Name,
+		i.infrastructure,
 	)
 }
 
 // Destroy deletes the Infrastructure resource.
 func (i *infrastructure) Destroy(ctx context.Context) error {
-	return extensions.DeleteExtensionCR(
+	return extensions.DeleteExtensionObject(
 		ctx,
 		i.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
-		i.values.Namespace,
-		i.values.Name,
+		i.infrastructure,
 	)
 }
 
 // Wait waits until the Infrastructure resource is ready.
 func (i *infrastructure) Wait(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRReady(
+	return extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		i.client,
 		i.logger,
-		func() client.Object { return &extensionsv1alpha1.Infrastructure{} },
+		i.infrastructure,
 		extensionsv1alpha1.InfrastructureResource,
-		i.values.Namespace,
-		i.values.Name,
 		i.waitInterval,
 		i.waitSevereThreshold,
 		i.waitTimeout,
-		func(obj client.Object) error {
-			infrastructure, ok := obj.(*extensionsv1alpha1.Infrastructure)
-			if !ok {
-				return fmt.Errorf("expected extensionsv1alpha1.Infrastructure but got %T", infrastructure)
-			}
-
-			i.extractStatus(infrastructure.Status)
+		func() error {
+			i.extractStatus(i.infrastructure.Status)
 			return nil
-		},
-	)
+		})
 }
 
 // WaitMigrate waits until the Infrastructure resources are migrated successfully.
 func (i *infrastructure) WaitMigrate(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRMigrated(
+	return extensions.WaitUntilExtensionObjectMigrated(
 		ctx,
 		i.client,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
-		i.values.Namespace,
-		i.values.Name,
+		i.infrastructure,
 		i.waitInterval,
 		i.waitTimeout,
 	)
@@ -233,14 +215,12 @@ func (i *infrastructure) WaitMigrate(ctx context.Context) error {
 
 // WaitCleanup waits until the Infrastructure resource is deleted.
 func (i *infrastructure) WaitCleanup(ctx context.Context) error {
-	return extensions.WaitUntilExtensionCRDeleted(
+	return extensions.WaitUntilExtensionObjectDeleted(
 		ctx,
 		i.client,
 		i.logger,
-		func() extensionsv1alpha1.Object { return &extensionsv1alpha1.Infrastructure{} },
+		i.infrastructure,
 		extensionsv1alpha1.InfrastructureResource,
-		i.values.Namespace,
-		i.values.Name,
 		i.waitInterval,
 		i.waitTimeout,
 	)
@@ -248,13 +228,12 @@ func (i *infrastructure) WaitCleanup(ctx context.Context) error {
 
 // Get retrieves and returns the Infrastructure resources based on the configured values.
 func (i *infrastructure) Get(ctx context.Context) (*extensionsv1alpha1.Infrastructure, error) {
-	obj := &extensionsv1alpha1.Infrastructure{}
-	if err := i.client.Get(ctx, kutil.Key(i.values.Namespace, i.values.Name), obj); err != nil {
+	if err := i.client.Get(ctx, client.ObjectKeyFromObject(i.infrastructure), i.infrastructure); err != nil {
 		return nil, err
 	}
 
-	i.extractStatus(obj.Status)
-	return obj, nil
+	i.extractStatus(i.infrastructure.Status)
+	return i.infrastructure, nil
 }
 
 // SetSSHPublicKey sets the SSH public key in the values.
