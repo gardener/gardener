@@ -37,7 +37,7 @@ const BastionResource = "Bastion"
 // to provide SSH access to shoot nodes.
 type Bastion struct {
 	metav1.TypeMeta `json:",inline"`
-	// Standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// Spec is the specification of this Bastion.
 	Spec BastionSpec `json:"spec"`

@@ -331,7 +331,7 @@ Kubernetes meta/v1.ObjectMeta
 </em>
 </td>
 <td>
-<p>Standard object metadata.</p>
+<em>(Optional)</em>
 Refer to the Kubernetes API documentation for the fields of the
 <code>metadata</code> field.
 </td>
