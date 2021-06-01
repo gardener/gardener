@@ -132,7 +132,7 @@ spec:
     - "8080"
     - "-t"
     - "21d809ed61915c9177fbceeaa87e307e766be5f2"
-    image: inlets/inlets:2.6.3
+    image: ghcr.io/inlets/inlets:2.7.11
     imagePullPolicy: IfNotPresent
     name: inlets-server
     resources:
