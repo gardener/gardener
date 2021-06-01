@@ -126,7 +126,7 @@ func (r *reconciler) reconcile(ctx context.Context, cr *extensionsv1alpha1.Conta
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, operationType, "Successfully reconciled container runtime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, cr, operationType, "Successfully reconciled container runtime", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -147,7 +147,7 @@ func (r *reconciler) restore(ctx context.Context, cr *extensionsv1alpha1.Contain
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored container runtime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored container runtime", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -173,7 +173,7 @@ func (r *reconciler) delete(ctx context.Context, cr *extensionsv1alpha1.Containe
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted container runtime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted container runtime", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -195,7 +195,7 @@ func (r *reconciler) migrate(ctx context.Context, cr *extensionsv1alpha1.Contain
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated container runtime"); err != nil {
+	if err := r.statusUpdater.Success(ctx, cr, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated container runtime", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 

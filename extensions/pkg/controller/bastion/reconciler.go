@@ -111,7 +111,7 @@ func (r *reconciler) reconcile(ctx context.Context, bastion *extensionsv1alpha1.
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled bastion"); err != nil {
+	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled bastion", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -136,7 +136,7 @@ func (r *reconciler) delete(ctx context.Context, bastion *extensionsv1alpha1.Bas
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled bastion"); err != nil {
+	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled bastion", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 

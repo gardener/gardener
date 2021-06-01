@@ -135,7 +135,7 @@ func (r *reconciler) reconcile(ctx context.Context, be *extensionsv1alpha1.Backu
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, be, operationType, "Successfully reconciled backupentry"); err != nil {
+	if err := r.statusUpdater.Success(ctx, be, operationType, "Successfully reconciled backupentry", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -165,7 +165,7 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, be, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored backupentry"); err != nil {
+	if err := r.statusUpdater.Success(ctx, be, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored backupentry", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -208,7 +208,7 @@ func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEn
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, be, operationType, "Successfully deleted backupentry"); err != nil {
+	if err := r.statusUpdater.Success(ctx, be, operationType, "Successfully deleted backupentry", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -235,7 +235,7 @@ func (r *reconciler) migrate(ctx context.Context, be *extensionsv1alpha1.BackupE
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, be, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated backupentry"); err != nil {
+	if err := r.statusUpdater.Success(ctx, be, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated backupentry", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 

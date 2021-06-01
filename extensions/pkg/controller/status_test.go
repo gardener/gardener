@@ -30,6 +30,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -48,7 +49,7 @@ var _ = Describe("Status", func() {
 		c      *mockclient.MockClient
 
 		statusUpdater StatusUpdater
-		obj           extensionsv1alpha1.Object
+		obj           *extensionsv1alpha1.Infrastructure
 	)
 
 	BeforeEach(func() {
@@ -190,48 +191,43 @@ var _ = Describe("Status", func() {
 	})
 
 	Describe("#Success", func() {
-		It("should return an error if the Get() call fails", func() {
+		It("should return an error if the Patch() call fails", func() {
 			gomock.InOrder(
 				c.EXPECT().Status().Return(c),
-				c.EXPECT().Get(ctx, kutil.Key(obj.GetNamespace(), obj.GetName()), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).Return(fakeErr),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).Return(fakeErr),
 			)
 
-			Expect(statusUpdater.Success(ctx, obj, lastOpType, lastOpDesc)).To(MatchError(fakeErr))
+			Expect(statusUpdater.Success(ctx, obj, lastOpType, lastOpDesc, nil)).To(MatchError(fakeErr))
 		})
 
-		It("should return an error if the Update() call fails", func() {
+		It("should call mutate func and patch the last operation as expected", func() {
 			gomock.InOrder(
 				c.EXPECT().Status().Return(c),
-				c.EXPECT().Get(ctx, kutil.Key(obj.GetNamespace(), obj.GetName()), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).Return(fakeErr),
+				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{}), gomock.Any()).
+					Do(func(ctx context.Context, obj *extensionsv1alpha1.Infrastructure, _ client.Patch, opts ...client.UpdateOption) {
+						var (
+							lastOperation      = obj.GetExtensionStatus().GetLastOperation()
+							lastError          = obj.GetExtensionStatus().GetLastError()
+							observedGeneration = obj.GetExtensionStatus().GetObservedGeneration()
+						)
+
+						Expect(observedGeneration).To(Equal(generation))
+
+						Expect(lastOperation.Type).To(Equal(lastOpType))
+						Expect(lastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
+						Expect(lastOperation.Progress).To(Equal(int32(100)))
+						Expect(lastOperation.Description).To(Equal(lastOpDesc))
+
+						Expect(obj.Status.NodesCIDR).To(Equal(pointer.StringPtr("foo")))
+
+						Expect(lastError).To(BeNil())
+					}),
 			)
 
-			Expect(statusUpdater.Success(ctx, obj, lastOpType, lastOpDesc)).To(MatchError(fakeErr))
-		})
-
-		It("should update the last operation as expected", func() {
-			gomock.InOrder(
-				c.EXPECT().Status().Return(c),
-				c.EXPECT().Get(ctx, kutil.Key(obj.GetNamespace(), obj.GetName()), gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})),
-				c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.Infrastructure{})).Do(func(ctx context.Context, obj extensionsv1alpha1.Object, opts ...client.UpdateOption) {
-					var (
-						lastOperation      = obj.GetExtensionStatus().GetLastOperation()
-						lastError          = obj.GetExtensionStatus().GetLastError()
-						observedGeneration = obj.GetExtensionStatus().GetObservedGeneration()
-					)
-
-					Expect(observedGeneration).To(Equal(generation))
-
-					Expect(lastOperation.Type).To(Equal(lastOpType))
-					Expect(lastOperation.State).To(Equal(gardencorev1beta1.LastOperationStateSucceeded))
-					Expect(lastOperation.Progress).To(Equal(int32(100)))
-					Expect(lastOperation.Description).To(Equal(lastOpDesc))
-
-					Expect(lastError).To(BeNil())
-				}),
-			)
-
-			Expect(statusUpdater.Success(ctx, obj, lastOpType, lastOpDesc)).To(Succeed())
+			Expect(statusUpdater.Success(ctx, obj, lastOpType, lastOpDesc, func() error {
+				obj.Status.NodesCIDR = pointer.StringPtr("foo")
+				return nil
+			})).To(Succeed())
 		})
 	})
 })

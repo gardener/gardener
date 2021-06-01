@@ -122,7 +122,7 @@ func (r *reconciler) reconcile(ctx context.Context, network *extensionsv1alpha1.
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, network, operationType, "Successfully reconciled network"); err != nil {
+	if err := r.statusUpdater.Success(ctx, network, operationType, "Successfully reconciled network", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -143,7 +143,7 @@ func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Ne
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, network, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored network"); err != nil {
+	if err := r.statusUpdater.Success(ctx, network, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored network", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -170,7 +170,7 @@ func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Net
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, network, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted network"); err != nil {
+	if err := r.statusUpdater.Success(ctx, network, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted network", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -192,7 +192,7 @@ func (r *reconciler) migrate(ctx context.Context, network *extensionsv1alpha1.Ne
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, network, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated network"); err != nil {
+	if err := r.statusUpdater.Success(ctx, network, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated network", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 

@@ -133,7 +133,7 @@ func (r *reconciler) migrate(ctx context.Context, logger logr.Logger, worker *ex
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrate worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrate worker", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -163,7 +163,7 @@ func (r *reconciler) delete(ctx context.Context, logger logr.Logger, worker *ext
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted worker", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -185,7 +185,7 @@ func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, worker *
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, operationType, "Successfully reconciled worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, worker, operationType, "Successfully reconciled worker", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -202,7 +202,7 @@ func (r *reconciler) restore(ctx context.Context, logger logr.Logger, worker *ex
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeRestore, "Successfully reconciled worker"); err != nil {
+	if err := r.statusUpdater.Success(ctx, worker, gardencorev1beta1.LastOperationTypeRestore, "Successfully reconciled worker", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 

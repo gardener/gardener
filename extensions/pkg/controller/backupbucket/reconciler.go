@@ -112,7 +112,7 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully reconciled backupbucket"); err != nil {
+	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully reconciled backupbucket", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -136,7 +136,7 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully deleted backupbucket"); err != nil {
+	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully deleted backupbucket", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 

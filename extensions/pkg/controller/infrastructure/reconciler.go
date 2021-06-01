@@ -124,7 +124,7 @@ func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, infrastr
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, infrastructure, operationType, "Successfully reconciled infrastructure"); err != nil {
+	if err := r.statusUpdater.Success(ctx, infrastructure, operationType, "Successfully reconciled infrastructure", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -146,7 +146,7 @@ func (r *reconciler) delete(ctx context.Context, logger logr.Logger, infrastruct
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, infrastructure, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted infrastructure"); err != nil {
+	if err := r.statusUpdater.Success(ctx, infrastructure, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted infrastructure", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -164,7 +164,7 @@ func (r *reconciler) migrate(ctx context.Context, logger logr.Logger, infrastruc
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Infrastructure"); err != nil {
+	if err := r.statusUpdater.Success(ctx, infrastructure, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Infrastructure", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -198,7 +198,7 @@ func (r *reconciler) restore(ctx context.Context, logger logr.Logger, infrastruc
 		return reconcile.Result{}, err
 	}
 
-	err := r.statusUpdater.Success(ctx, infrastructure, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored infrastructure")
+	err := r.statusUpdater.Success(ctx, infrastructure, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored infrastructure", nil)
 	return reconcile.Result{}, err
 }
 

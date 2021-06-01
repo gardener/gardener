@@ -128,7 +128,7 @@ func (r *reconciler) reconcile(ctx context.Context, cp *extensionsv1alpha1.Contr
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cp, operationType, "Successfully reconciled controlplane"); err != nil {
+	if err := r.statusUpdater.Success(ctx, cp, operationType, "Successfully reconciled controlplane", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -154,7 +154,7 @@ func (r *reconciler) restore(ctx context.Context, cp *extensionsv1alpha1.Control
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cp, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored controlplane"); err != nil {
+	if err := r.statusUpdater.Success(ctx, cp, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored controlplane", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -180,7 +180,7 @@ func (r *reconciler) migrate(ctx context.Context, cp *extensionsv1alpha1.Control
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cp, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated controlplane"); err != nil {
+	if err := r.statusUpdater.Success(ctx, cp, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated controlplane", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -213,7 +213,7 @@ func (r *reconciler) delete(ctx context.Context, cp *extensionsv1alpha1.ControlP
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, cp, operationType, "Successfully deleted controlplane"); err != nil {
+	if err := r.statusUpdater.Success(ctx, cp, operationType, "Successfully deleted controlplane", nil); err != nil {
 		return reconcile.Result{}, err
 	}
 
