@@ -20,7 +20,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/conversion"
@@ -47,7 +47,7 @@ func addConversionFuncs(scheme *runtime.Scheme) error {
 
 func Convert_v1alpha1_Gardenlet_To_seedmanagement_Gardenlet(in *Gardenlet, out *seedmanagement.Gardenlet, s conversion.Scope) error {
 	if in.Config.Object == nil {
-		cfg, err := helper.DecodeGardenletConfigurationFromBytes(in.Config.Raw, false)
+		cfg, err := encoding.DecodeGardenletConfigurationFromBytes(in.Config.Raw, false)
 		if err != nil {
 			return err
 		}
@@ -65,7 +65,7 @@ func Convert_seedmanagement_Gardenlet_To_v1alpha1_Gardenlet(in *seedmanagement.G
 		if !ok {
 			return fmt.Errorf("unknown gardenlet config object type")
 		}
-		raw, err := helper.EncodeGardenletConfigurationToBytes(cfg)
+		raw, err := encoding.EncodeGardenletConfigurationToBytes(cfg)
 		if err != nil {
 			return err
 		}

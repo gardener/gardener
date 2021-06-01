@@ -21,11 +21,14 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -42,20 +45,12 @@ import (
 )
 
 const (
-	// GardenerSeedBootstrapper is a constant for the gardener seed bootstrapper name.
-	GardenerSeedBootstrapper = "gardener.cloud:system:seed-bootstrapper"
 	// DedicatedSeedKubeconfig is a constant for the target cluster name when the gardenlet is using a dedicated seed kubeconfig
 	DedicatedSeedKubeconfig = "configured in .SeedClientConnection.Kubeconfig"
 	// InCluster is a constant for the target cluster name  when the gardenlet is running in a Kubernetes cluster
 	// and is using the mounted service account token of that cluster
 	InCluster = "in cluster"
 )
-
-// BuildBootstrapperName concatenates the gardener seed bootstrapper group with the given name,
-// separated by a colon.
-func BuildBootstrapperName(name string) string {
-	return fmt.Sprintf("%s:%s", GardenerSeedBootstrapper, name)
-}
 
 // GetSeedName returns the seed name from the SeedConfig or the default Seed name
 func GetSeedName(seedConfig *config.SeedConfig) string {
@@ -224,15 +219,15 @@ func ComputeGardenletKubeconfigWithBootstrapToken(ctx context.Context, gardenCli
 // ComputeGardenletKubeconfigWithServiceAccountToken creates a kubeconfig containing the token of a service account
 // Creates the required service account in the Garden cluster and puts the associated token into a Kubeconfig
 // tailored to the Gardenlet
-func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gardenClient client.Client, gardenClientRestConfig *rest.Config, serviceAccountName string) ([]byte, error) {
+func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gardenClient client.Client, gardenClientRestConfig *rest.Config, serviceAccountName, serviceAccountNamespace string) ([]byte, error) {
 	// Create a temporary service account
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceAccountName,
-			Namespace: v1beta1constants.GardenNamespace,
+			Namespace: serviceAccountNamespace,
 		},
 	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient, sa, func() error { return nil }); err != nil {
+	if _, err := controllerutils.CreateOrStrategicMergePatch(ctx, gardenClient, sa, func() error { return nil }); err != nil {
 		return nil, err
 	}
 
@@ -241,17 +236,17 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 		return nil, fmt.Errorf("service account token controller has not yet created a secret for the service account")
 	}
 	saSecret := &corev1.Secret{}
-	if err := gardenClient.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, sa.Secrets[0].Name), saSecret); err != nil {
+	if err := gardenClient.Get(ctx, kutil.Key(sa.Namespace, sa.Secrets[0].Name), saSecret); err != nil {
 		return nil, err
 	}
 
 	// Create a ClusterRoleBinding
 	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: BuildBootstrapperName(serviceAccountName),
+			Name: ClusterRoleBindingName(sa.Namespace, sa.Name),
 		},
 	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient, clusterRoleBinding, func() error {
+	if _, err := controllerutils.CreateOrStrategicMergePatch(ctx, gardenClient, clusterRoleBinding, func() error {
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",
@@ -260,8 +255,8 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 		clusterRoleBinding.Subjects = []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccountName,
-				Namespace: v1beta1constants.GardenNamespace,
+				Name:      sa.Name,
+				Namespace: sa.Namespace,
 			},
 		}
 		return nil
@@ -271,4 +266,95 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 
 	// Get bootstrap kubeconfig from service account secret
 	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, string(saSecret.Data[corev1.ServiceAccountTokenKey]))
+}
+
+// TokenID returns the token id based on the given metadata.
+func TokenID(meta metav1.ObjectMeta) string {
+	value := meta.Name
+	if meta.Namespace != "" {
+		value += meta.Namespace + "--" + meta.Name
+	}
+
+	return utils.ComputeSHA256Hex([]byte(value))[:6]
+}
+
+// ClusterRoleBindingName concatenates the gardener seed bootstrapper group with the given name, separated by a colon.
+func ClusterRoleBindingName(namespace, name string) string {
+	suffix := name
+	if namespace != "" {
+		suffix = namespace + clusterRoleBindingNameDelimiter + name
+	}
+	return ClusterRoleBindingNamePrefix + suffix
+}
+
+// MetadataFromClusterRoleBindingName returns the namespace and name for a given cluster role binding name.
+func MetadataFromClusterRoleBindingName(clusterRoleBindingName string) (namespace, name string) {
+	var (
+		metadata = strings.TrimPrefix(clusterRoleBindingName, ClusterRoleBindingNamePrefix)
+		split    = strings.Split(metadata, clusterRoleBindingNameDelimiter)
+	)
+
+	if len(split) > 1 {
+		namespace = split[0]
+		name = split[1]
+		return
+	}
+
+	name = split[0]
+	return
+}
+
+// ServiceAccountName returns the name of a `ServiceAccount` for bootstrapping based on the given metadata.
+func ServiceAccountName(name string) string {
+	return ServiceAccountNamePrefix + name
+}
+
+const (
+	// KindSeed is a constant for the "seed" kind.
+	KindSeed = "seed"
+	// KindManagedSeed is a constant for the "managed seed" kind.
+	KindManagedSeed = "managed seed"
+	// ServiceAccountNamePrefix is the prefix used for service account names.
+	ServiceAccountNamePrefix = "gardenlet-bootstrap-"
+	// ClusterRoleBindingNamePrefix is the prefix used for cluster role binding names.
+	ClusterRoleBindingNamePrefix = GardenerSeedBootstrapper + ":"
+	// GardenerSeedBootstrapper is a constant for the gardener seed bootstrapper name.
+	GardenerSeedBootstrapper = "gardener.cloud:system:seed-bootstrapper"
+
+	clusterRoleBindingNameDelimiter = ":"
+	descriptionMetadataDelimiter    = "/"
+	descriptionSuffix               = "."
+)
+
+func metadataForNamespaceName(namespace, name string) string {
+	if namespace != "" {
+		return namespace + descriptionMetadataDelimiter + name
+	}
+	return name
+}
+
+func descriptionForKind(kind string) string {
+	return fmt.Sprintf("A bootstrap token for the Gardenlet for %s ", kind)
+}
+
+// Description returns a description for a bootstrap token with the given kind/namespace/name information.
+func Description(kind, namespace, name string) string {
+	return descriptionForKind(kind) + metadataForNamespaceName(namespace, name) + descriptionSuffix
+}
+
+// MetadataFromDescription returns the namespace and name for a given description with a specific kind.
+func MetadataFromDescription(description, kind string) (namespace, name string) {
+	var (
+		metadata = strings.TrimPrefix(strings.TrimSuffix(description, descriptionSuffix), descriptionForKind(kind))
+		split    = strings.Split(metadata, descriptionMetadataDelimiter)
+	)
+
+	if len(split) > 1 {
+		namespace = split[0]
+		name = split[1]
+		return
+	}
+
+	name = split[0]
+	return
 }

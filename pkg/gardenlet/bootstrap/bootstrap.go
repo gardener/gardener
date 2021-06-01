@@ -105,7 +105,7 @@ func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer clien
 		resourcesToDelete = append(resourcesToDelete,
 			&corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("bootstrap-token-%s", strings.TrimPrefix(username, "system:bootstrap:")),
+					Name:      bootstraptokenapi.BootstrapTokenSecretPrefix + strings.TrimPrefix(username, "system:bootstrap:"),
 					Namespace: metav1.NamespaceSystem,
 				},
 			},
@@ -126,7 +126,7 @@ func DeleteBootstrapAuth(ctx context.Context, reader client.Reader, writer clien
 			},
 			&rbacv1.ClusterRoleBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: bootstraputil.BuildBootstrapperName(seedName),
+					Name: bootstraputil.ClusterRoleBindingName(v1beta1constants.GardenNamespace, seedName),
 				},
 			},
 		)

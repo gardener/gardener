@@ -303,7 +303,7 @@ var _ = Describe("Bootstrap", func() {
 					serviceAccountUserName  = serviceaccount.MakeUsername(serviceAccountNamespace, serviceAccountName)
 					serviceAccount          = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: serviceAccountNamespace, Name: serviceAccountName}}
 
-					clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: bootstraputil.BuildBootstrapperName(seedName)}}
+					clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: bootstraputil.ClusterRoleBindingName(serviceAccountNamespace, seedName)}}
 				)
 
 				gomock.InOrder(
@@ -383,7 +383,7 @@ var _ = Describe("Bootstrap", func() {
 					serviceAccountUserName  = serviceaccount.MakeUsername(serviceAccountNamespace, serviceAccountName)
 					serviceAccount          = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: serviceAccountNamespace, Name: serviceAccountName}}
 
-					clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: bootstraputil.BuildBootstrapperName(seedName)}}
+					clusterRoleBinding = &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: bootstraputil.ClusterRoleBindingName(serviceAccountNamespace, seedName)}}
 				)
 
 				gomock.InOrder(

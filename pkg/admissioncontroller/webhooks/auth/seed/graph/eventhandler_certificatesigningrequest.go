@@ -15,6 +15,7 @@
 package graph
 
 import (
+	"context"
 	"time"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
@@ -26,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 )
 
-func (g *graph) setupCertificateSigningRequestWatch(informer cache.Informer) {
+func (g *graph) setupCertificateSigningRequestWatch(_ context.Context, informer cache.Informer) {
 	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			certificateSigningRequest, ok := obj.(*certificatesv1beta1.CertificateSigningRequest)

@@ -22,7 +22,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
@@ -36,7 +36,7 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 func SetDefaults_Imports(obj *Imports) {
 	// Decode gardenlet config to an external version
 	// Without defaults, since we don't want to set gardenlet config defaults in the resource at this point
-	gardenletConfig, err := helper.DecodeGardenletConfiguration(&obj.ComponentConfiguration, false)
+	gardenletConfig, err := encoding.DecodeGardenletConfiguration(&obj.ComponentConfiguration, false)
 	if err != nil {
 		return
 	}

@@ -12,25 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helper_test
+package encoding_test
 
 import (
-	"github.com/gardener/gardener/pkg/apis/seedmanagement"
-	. "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
+	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Helper", func() {
-	Describe("#GetBootstrap", func() {
-		It("should return the correct Bootstrap value", func() {
-			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapToken))).To(Equal(seedmanagement.BootstrapToken))
-			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapServiceAccount))).To(Equal(seedmanagement.BootstrapServiceAccount))
-			Expect(GetBootstrap(bootstrapPtr(seedmanagement.BootstrapNone))).To(Equal(seedmanagement.BootstrapNone))
-			Expect(GetBootstrap(nil)).To(Equal(seedmanagement.BootstrapNone))
-		})
-	})
-})
-
-func bootstrapPtr(v seedmanagement.Bootstrap) *seedmanagement.Bootstrap { return &v }
+func TestEncoding(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "SeedManagement API Encoding Suite")
+}

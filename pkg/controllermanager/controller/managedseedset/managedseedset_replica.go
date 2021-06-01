@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	seedmanagementhelper "github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/encoding"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1constants "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/constants"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
@@ -388,7 +388,7 @@ func newManagedSeed(set *seedmanagementv1alpha1.ManagedSeedSet, ordinal int) (*s
 		replacePlaceholdersInSeedSpec(&managedSeed.Spec.SeedTemplate.Spec, name)
 	case managedSeed.Spec.Gardenlet != nil:
 		// Decode gardenlet configuration
-		gardenletConfig, err := seedmanagementhelper.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, false)
+		gardenletConfig, err := encoding.DecodeGardenletConfiguration(&managedSeed.Spec.Gardenlet.Config, false)
 		if err != nil {
 			return nil, err
 		}

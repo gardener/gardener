@@ -24,12 +24,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/apis/seedmanagement/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	v1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	configv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/logger"
@@ -114,24 +115,10 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 		return status, false, fmt.Errorf("could not get shoot client for shoot %s: %w", kutil.ObjectName(shoot), err)
 	}
 
-	// Decode gardenlet configuration
-	var gardenletConfig *configv1alpha1.GardenletConfiguration
-	if ms.Spec.Gardenlet != nil {
-		gardenletConfig, err = helper.DecodeGardenletConfiguration(&ms.Spec.Gardenlet.Config, false)
-		if err != nil {
-			return status, false, fmt.Errorf("could not decode gardenlet configuration: %w", err)
-		}
-	}
-
-	// Determine seed template
-	var seedTemplate *gardencorev1beta1.SeedTemplate
-	switch {
-	case ms.Spec.SeedTemplate != nil:
-		seedTemplate = ms.Spec.SeedTemplate
-	case ms.Spec.Gardenlet != nil:
-		seedTemplate = &gardenletConfig.SeedConfig.SeedTemplate
-	default:
-		return status, false, fmt.Errorf("could not determine seed template")
+	// Extract seed template and gardenlet config
+	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms)
+	if err != nil {
+		return status, false, err
 	}
 
 	// Check seed spec
@@ -197,24 +184,10 @@ func (a *actuator) Delete(ctx context.Context, ms *seedmanagementv1alpha1.Manage
 		return status, false, false, fmt.Errorf("could not get shoot client for shoot %s: %w", kutil.ObjectName(shoot), err)
 	}
 
-	// Decode gardenlet configuration
-	var gardenletConfig *configv1alpha1.GardenletConfiguration
-	if ms.Spec.Gardenlet != nil {
-		gardenletConfig, err = helper.DecodeGardenletConfiguration(&ms.Spec.Gardenlet.Config, false)
-		if err != nil {
-			return status, false, false, fmt.Errorf("could not decode gardenlet configuration: %w", err)
-		}
-	}
-
-	// Determine seed template
-	var seedTemplate *gardencorev1beta1.SeedTemplate
-	switch {
-	case ms.Spec.SeedTemplate != nil:
-		seedTemplate = ms.Spec.SeedTemplate
-	case ms.Spec.Gardenlet != nil:
-		seedTemplate = &gardenletConfig.SeedConfig.SeedTemplate
-	default:
-		return status, false, false, fmt.Errorf("could not determine seed template")
+	// Extract seed template and gardenlet config
+	seedTemplate, gardenletConfig, err := helper.ExtractSeedTemplateAndGardenletConfig(ms)
+	if err != nil {
+		return status, false, false, err
 	}
 
 	// Delete seed if it still exists and is not already deleting
@@ -329,7 +302,7 @@ func (a *actuator) createOrUpdateSeed(ctx context.Context, managedSeed *seedmana
 			Name: managedSeed.Name,
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, a.gardenClient.Client(), seed, func() error {
+	_, err := controllerutils.CreateOrStrategicMergePatch(ctx, a.gardenClient.Client(), seed, func() error {
 		seed.OwnerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 		}
@@ -376,7 +349,7 @@ func (a *actuator) deployGardenlet(
 		shootClient,
 		managedSeed.Spec.Gardenlet.Deployment,
 		gardenletConfig,
-		managedSeed.Name,
+		managedSeed.ObjectMeta,
 		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
 		utils.IsTrue(managedSeed.Spec.Gardenlet.MergeWithParent),
 		shoot,
@@ -402,7 +375,7 @@ func (a *actuator) deleteGardenlet(
 		shootClient,
 		managedSeed.Spec.Gardenlet.Deployment,
 		gardenletConfig,
-		managedSeed.Name,
+		managedSeed.ObjectMeta,
 		v1alpha1helper.GetBootstrap(managedSeed.Spec.Gardenlet.Bootstrap),
 		utils.IsTrue(managedSeed.Spec.Gardenlet.MergeWithParent),
 		shoot,
@@ -475,10 +448,17 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 
 		// Create or update backup secret if it doesn't exist or is owned by the managed seed
 		if apierrors.IsNotFound(err) || metav1.IsControlledBy(backupSecret, managedSeed) {
-			ownerRefs := []metav1.OwnerReference{
-				*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+			secret := &corev1.Secret{
+				ObjectMeta: kutil.ObjectMeta(spec.Backup.SecretRef.Namespace, spec.Backup.SecretRef.Name),
 			}
-			if err := kutil.CreateOrUpdateSecretByReference(ctx, a.gardenClient.Client(), &spec.Backup.SecretRef, corev1.SecretTypeOpaque, shootSecret.Data, ownerRefs); err != nil {
+			if _, err := controllerutils.CreateOrStrategicMergePatch(ctx, a.gardenClient.Client(), secret, func() error {
+				secret.OwnerReferences = []metav1.OwnerReference{
+					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+				}
+				secret.Type = corev1.SecretTypeOpaque
+				secret.Data = shootSecret.Data
+				return nil
+			}); err != nil {
 				return err
 			}
 		}
@@ -497,10 +477,17 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 		data[kubernetes.KubeConfig] = shootKubeconfigSecret.Data[kubernetes.KubeConfig]
 
 		// Create or update seed secret
-		ownerRefs := []metav1.OwnerReference{
-			*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+		secret := &corev1.Secret{
+			ObjectMeta: kutil.ObjectMeta(spec.SecretRef.Namespace, spec.SecretRef.Name),
 		}
-		if err := kutil.CreateOrUpdateSecretByReference(ctx, a.gardenClient.Client(), spec.SecretRef, corev1.SecretTypeOpaque, data, ownerRefs); err != nil {
+		if _, err := controllerutils.CreateOrStrategicMergePatch(ctx, a.gardenClient.Client(), secret, func() error {
+			secret.OwnerReferences = []metav1.OwnerReference{
+				*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
+			}
+			secret.Type = corev1.SecretTypeOpaque
+			secret.Data = data
+			return nil
+		}); err != nil {
 			return err
 		}
 	}
@@ -568,7 +555,7 @@ func (a *actuator) getShootSecret(ctx context.Context, shoot *gardencorev1beta1.
 
 func (a *actuator) getShootKubeconfigSecret(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*corev1.Secret, error) {
 	shootKubeconfigSecret := &corev1.Secret{}
-	if err := a.gardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, fmt.Sprintf("%s.kubeconfig", shoot.Name)), shootKubeconfigSecret); err != nil {
+	if err := a.gardenClient.Client().Get(ctx, kutil.Key(shoot.Namespace, gutil.ComputeShootProjectSecretName(shoot.Name, gutil.ShootProjectSecretSuffixKubeconfig)), shootKubeconfigSecret); err != nil {
 		return nil, err
 	}
 	return shootKubeconfigSecret, nil
@@ -599,7 +586,7 @@ func (a *actuator) prepareGardenletChartValues(
 	shootClient kubernetes.Interface,
 	deployment *seedmanagementv1alpha1.GardenletDeployment,
 	gardenletConfig *configv1alpha1.GardenletConfiguration,
-	name string,
+	objectMeta metav1.ObjectMeta,
 	bootstrap seedmanagementv1alpha1.Bootstrap,
 	mergeWithParent bool,
 	shoot *gardencorev1beta1.Shoot,
@@ -630,7 +617,7 @@ func (a *actuator) prepareGardenletChartValues(
 	if bootstrap == seedmanagementv1alpha1.BootstrapNone {
 		a.removeBootstrapConfigFromGardenClientConnection(gardenletConfig.GardenClientConnection)
 	} else {
-		bootstrapKubeconfig, err = a.prepareGardenClientConnectionWithBootstrap(ctx, shootClient, gardenletConfig.GardenClientConnection, name, bootstrap)
+		bootstrapKubeconfig, err = a.prepareGardenClientConnectionWithBootstrap(ctx, shootClient, gardenletConfig.GardenClientConnection, objectMeta, bootstrap)
 		if err != nil {
 			return nil, err
 		}
@@ -642,7 +629,7 @@ func (a *actuator) prepareGardenletChartValues(
 	}
 
 	// Set the seed name
-	gardenletConfig.SeedConfig.SeedTemplate.Name = name
+	gardenletConfig.SeedConfig.SeedTemplate.Name = objectMeta.Name
 
 	// Ensure seed selector is not set
 	gardenletConfig.SeedSelector = nil
@@ -689,7 +676,7 @@ func ensureGardenletEnvironment(deployment *seedmanagementv1alpha1.GardenletDepl
 	return deployment
 }
 
-func (a *actuator) prepareGardenClientConnectionWithBootstrap(ctx context.Context, shootClient kubernetes.Interface, gcc *configv1alpha1.GardenClientConnection, name string, bootstrap seedmanagementv1alpha1.Bootstrap) (string, error) {
+func (a *actuator) prepareGardenClientConnectionWithBootstrap(ctx context.Context, shootClient kubernetes.Interface, gcc *configv1alpha1.GardenClientConnection, objectMeta metav1.ObjectMeta, bootstrap seedmanagementv1alpha1.Bootstrap) (string, error) {
 	// Ensure kubeconfig secret is set
 	if gcc.KubeconfigSecret == nil {
 		gcc.KubeconfigSecret = &corev1.SecretReference{
@@ -718,7 +705,7 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(ctx context.Contex
 		}
 	}
 
-	return a.createBootstrapKubeconfig(ctx, name, bootstrap, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
+	return a.createBootstrapKubeconfig(ctx, objectMeta, bootstrap, gcc.GardenClusterAddress, gcc.GardenClusterCACert)
 }
 
 // isAlreadyBootstrapped checks if the gardenlet already has a valid Garden cluster certificate through TLS bootstrapping
@@ -741,7 +728,7 @@ func (a *actuator) removeBootstrapConfigFromGardenClientConnection(gcc *configv1
 // createBootstrapKubeconfig creates a kubeconfig for the Garden cluster
 // containing either the token of a service account or a bootstrap token
 // returns the kubeconfig as a string
-func (a *actuator) createBootstrapKubeconfig(ctx context.Context, name string, bootstrap seedmanagementv1alpha1.Bootstrap, address *string, caCert []byte) (string, error) {
+func (a *actuator) createBootstrapKubeconfig(ctx context.Context, objectMeta metav1.ObjectMeta, bootstrap seedmanagementv1alpha1.Bootstrap, address *string, caCert []byte) (string, error) {
 	var (
 		err                 error
 		bootstrapKubeconfig []byte
@@ -752,16 +739,21 @@ func (a *actuator) createBootstrapKubeconfig(ctx context.Context, name string, b
 	switch bootstrap {
 	case seedmanagementv1alpha1.BootstrapServiceAccount:
 		// Create a kubeconfig containing the token of a temporary service account as client credentials
-		serviceAccountName := "gardenlet-bootstrap-" + name
-		bootstrapKubeconfig, err = bootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, a.gardenClient.Client(), &gardenClientRestConfig, serviceAccountName)
+		var (
+			serviceAccountName      = bootstraputil.ServiceAccountName(objectMeta.Name)
+			serviceAccountNamespace = objectMeta.Namespace
+		)
+
+		// Create a kubeconfig containing a valid service account token as client credentials
+		bootstrapKubeconfig, err = bootstraputil.ComputeGardenletKubeconfigWithServiceAccountToken(ctx, a.gardenClient.Client(), &gardenClientRestConfig, serviceAccountName, serviceAccountNamespace)
 		if err != nil {
 			return "", err
 		}
 
 	case seedmanagementv1alpha1.BootstrapToken:
 		var (
-			tokenID          = utils.ComputeSHA256Hex([]byte(name))[:6]
-			tokenDescription = fmt.Sprintf("A bootstrap token for the Gardenlet for managed seed %q.", name)
+			tokenID          = bootstraputil.TokenID(objectMeta)
+			tokenDescription = bootstraputil.Description(bootstraputil.KindManagedSeed, objectMeta.Namespace, objectMeta.Name)
 			tokenValidity    = 24 * time.Hour
 		)
 
