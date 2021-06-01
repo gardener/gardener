@@ -165,14 +165,12 @@ func (r *reconciler) reconcileBastion(
 	}
 
 	// wait for the extension controller to reconcile possible changes
-	if err := extensions.WaitUntilExtensionCRReady(
+	if err := extensions.WaitUntilExtensionObjectReady(
 		ctx,
 		seedClient,
 		logger,
-		func() client.Object { return &extensionsv1alpha1.Bastion{} },
+		extBastion,
 		extensionsv1alpha1.BastionResource,
-		extBastion.Namespace,
-		extBastion.Name,
 		defaultInterval,
 		defaultSevereThreshold,
 		defaultTimeout,

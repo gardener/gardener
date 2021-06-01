@@ -15,7 +15,7 @@
 package v1alpha1
 
 import (
-	fmt "fmt"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/operations"
 
