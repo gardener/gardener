@@ -45,7 +45,7 @@ type Ops interface {
 	// Until keeps retrying the given Func until it either errors severely or the context expires.
 	// Between each try, it waits for the given interval.
 	Until(ctx context.Context, interval time.Duration, f Func) error
-	// Until keeps retrying the given Func until it either errors severely or the context expires.
+	// UntilTimeout keeps retrying the given Func until it either errors severely or the context expires.
 	// Between each try, it waits for the given interval.
 	// It also passes down a modified context to the execution that times out after the given timeout.
 	UntilTimeout(ctx context.Context, interval, timeout time.Duration, f Func) error
