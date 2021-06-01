@@ -93,7 +93,7 @@
         Match kubernetes.*
         Url http://loki.garden.svc:3100/loki/api/v1/push
         LogLevel info
-        BatchWait 40
+        BatchWait 40s
         BatchSize 30720
         Labels {test="fluent-bit-go"}
         LineFormat json
@@ -108,8 +108,8 @@
         DynamicHostSuffix .svc:3100/loki/api/v1/push
         DynamicHostRegex ^shoot-
         MaxRetries 3
-        Timeout 10
-        MinBackoff 30
+        Timeout 10s
+        MinBackoff 30s
         Buffer true
         BufferType dque
         QueueDir  /fluent-bit/buffers/operator
@@ -119,7 +119,9 @@
         FallbackToTagWhenMetadataIsMissing true
         TagKey tag
         DropLogEntryWithoutK8sMetadata true
-        ControllerSyncTimeout 120
+        SendDeletedClustersLogsToDefaultClient true
+        CleanExpiredClientsPeriod 1h
+        ControllerSyncTimeout 120s
         NumberOfBatchIDs 5
         TenantID operator
     
@@ -128,7 +130,7 @@
         Match {{ .Values.exposedComponentsTagPrefix }}.kubernetes.*
         Url http://loki.garden.svc:3100/loki/api/v1/push
         LogLevel info
-        BatchWait 40
+        BatchWait 40s
         BatchSize 30720
         Labels {test="fluent-bit-go", lang="Golang"}
         LineFormat json
@@ -143,8 +145,8 @@
         DynamicHostSuffix .svc:3100/loki/api/v1/push
         DynamicHostRegex ^shoot-
         MaxRetries 3
-        Timeout 10
-        MinBackoff 30
+        Timeout 10s
+        MinBackoff 30s
         Buffer true
         BufferType dque
         QueueDir  /fluent-bit/buffers/user
@@ -154,7 +156,7 @@
         FallbackToTagWhenMetadataIsMissing true
         TagKey tag
         DropLogEntryWithoutK8sMetadata true
-        ControllerSyncTimeout 120
+        ControllerSyncTimeout 120s
         NumberOfBatchIDs 5
         TenantID user
 
@@ -163,7 +165,7 @@
         Match journald.*
         Url http://loki.garden.svc:3100/loki/api/v1/push
         LogLevel info
-        BatchWait 60
+        BatchWait 60s
         BatchSize 30720
         Labels {test="fluent-bit-go"}
         LineFormat json
@@ -172,8 +174,8 @@
         RemoveKeys kubernetes,stream,hostname,unit
         LabelMapPath /fluent-bit/etc/systemd_label_map.json
         MaxRetries 3
-        Timeout 10
-        MinBackoff 30
+        Timeout 10s
+        MinBackoff 30s
         Buffer true
         BufferType dque
         QueueDir  /fluent-bit/buffers
