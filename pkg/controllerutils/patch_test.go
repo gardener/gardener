@@ -138,8 +138,8 @@ var _ = Describe("Patch", func() {
 		Describe("#GetAndCreateOrStrategicMergePatch", func() { testSuite(GetAndCreateOrStrategicMergePatch, types.StrategicMergePatchType) })
 	})
 
-	Describe("*CreateOrPatch", func() {
-		testSuite := func(f func(ctx context.Context, c client.Writer, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error), patchType types.PatchType) {
+	Describe("CreateOrGetAnd*Patch", func() {
+		testSuite := func(f func(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error), patchType types.PatchType) {
 			It("should return an error because the mutate function returned an error", func() {
 				result, err := f(ctx, c, obj, func() error { return fakeErr })
 				Expect(result).To(Equal(controllerutil.OperationResultNone))
@@ -154,10 +154,18 @@ var _ = Describe("Patch", func() {
 				Expect(err).To(MatchError(fakeErr))
 			})
 
-			It("should return an error because the patch failed", func() {
+			It("should successfully create the object", func() {
+				c.EXPECT().Create(ctx, obj)
+
+				result, err := f(ctx, c, obj, func() error { return nil })
+				Expect(result).To(Equal(controllerutil.OperationResultCreated))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return an error because the get failed", func() {
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
-					test.EXPECTPatch(ctx, c, obj, obj, patchType, fakeErr),
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).Return(fakeErr),
 				)
 
 				result, err := f(ctx, c, obj, func() error { return nil })
@@ -165,12 +173,19 @@ var _ = Describe("Patch", func() {
 				Expect(err).To(MatchError(fakeErr))
 			})
 
-			It("should successfully create the object", func() {
-				c.EXPECT().Create(ctx, obj)
+			It("should return an error because the patch failed", func() {
+				gomock.InOrder(
+					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount) error {
+						obj.DeepCopyInto(objToReturn)
+						return nil
+					}),
+					test.EXPECTPatch(ctx, c, obj, obj, patchType, fakeErr),
+				)
 
 				result, err := f(ctx, c, obj, func() error { return nil })
-				Expect(result).To(Equal(controllerutil.OperationResultCreated))
-				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(controllerutil.OperationResultNone))
+				Expect(err).To(MatchError(fakeErr))
 			})
 
 			It("should successfully patch the object", func() {
@@ -185,6 +200,10 @@ var _ = Describe("Patch", func() {
 
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount) error {
+						obj.DeepCopyInto(objToReturn)
+						return nil
+					}),
 					test.EXPECTPatch(ctx, c, objCopy, obj, patchType),
 				)
 
@@ -194,7 +213,7 @@ var _ = Describe("Patch", func() {
 			})
 		}
 
-		Describe("#CreateOrMergePatch", func() { testSuite(CreateOrMergePatch, types.MergePatchType) })
-		Describe("#CreateOrStrategicMergePatch", func() { testSuite(CreateOrStrategicMergePatch, types.StrategicMergePatchType) })
+		Describe("#CreateOrGetAndMergePatch", func() { testSuite(CreateOrGetAndMergePatch, types.MergePatchType) })
+		Describe("#CreateOrGetAndStrategicMergePatch", func() { testSuite(CreateOrGetAndStrategicMergePatch, types.StrategicMergePatchType) })
 	})
 })

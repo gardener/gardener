@@ -302,7 +302,7 @@ func (a *actuator) createOrUpdateSeed(ctx context.Context, managedSeed *seedmana
 			Name: managedSeed.Name,
 		},
 	}
-	_, err := controllerutils.CreateOrStrategicMergePatch(ctx, a.gardenClient.Client(), seed, func() error {
+	_, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient.Client(), seed, func() error {
 		seed.OwnerReferences = []metav1.OwnerReference{
 			*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 		}
@@ -451,7 +451,7 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 			secret := &corev1.Secret{
 				ObjectMeta: kutil.ObjectMeta(spec.Backup.SecretRef.Namespace, spec.Backup.SecretRef.Name),
 			}
-			if _, err := controllerutils.CreateOrStrategicMergePatch(ctx, a.gardenClient.Client(), secret, func() error {
+			if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient.Client(), secret, func() error {
 				secret.OwnerReferences = []metav1.OwnerReference{
 					*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 				}
@@ -480,7 +480,7 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 		secret := &corev1.Secret{
 			ObjectMeta: kutil.ObjectMeta(spec.SecretRef.Namespace, spec.SecretRef.Name),
 		}
-		if _, err := controllerutils.CreateOrStrategicMergePatch(ctx, a.gardenClient.Client(), secret, func() error {
+		if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient.Client(), secret, func() error {
 			secret.OwnerReferences = []metav1.OwnerReference{
 				*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 			}
