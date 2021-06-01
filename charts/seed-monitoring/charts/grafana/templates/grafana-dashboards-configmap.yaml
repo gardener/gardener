@@ -13,6 +13,12 @@ data:
 {{ toString $bytes | indent 4}}
 {{- end }}
 {{- end }}
+{{- if .Values.nodeLocalDNS.enabled }}
+  {{ range $name, $bytes := .Files.Glob "dashboards/dns/**.json" }}
+  {{ base $name }}: |-
+{{ toString $bytes | indent 4}}
+{{- end }}
+{{- end }}
 {{ if eq .Values.role "users" }}
 {{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
 {{ if not (and (eq $name "dashboards/owners/shoot-vpa-dashboard.json") (eq $.Values.vpaEnabled false)) }}
@@ -21,7 +27,11 @@ data:
 {{ end }}
 {{ end }}
 {{ else }}
-{{ range $name, $bytes := .Files.Glob "dashboards/**.json" }}
+{{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
+  {{ base $name }}: |-
+{{ toString $bytes | indent 4}}
+{{ end }}
+{{ range $name, $bytes := .Files.Glob "dashboards/operators/**.json" }}
   {{ if eq $name "dashboards/operators/vpn-dashboard.json" }}
   {{ if not $.Values.konnectivityTunnel.enabled }}
   {{ base $name }}: |-
