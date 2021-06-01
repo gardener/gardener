@@ -254,6 +254,7 @@ global:
  #      truncateMaxEventSize: 102400
  #      version: audit.k8s.io/v1
  #  clusterIdentity: garden-cluster-identity
+
   # Gardener admission controller configuration values
   admission:
     enabled: true
@@ -421,6 +422,8 @@ global:
               ...
               -----END RSA PRIVATE KEY-----
       featureGates: {}
+
+  # Gardener scheduler configuration values
   scheduler:
     enabled: true
     replicaCount: 1
@@ -465,6 +468,8 @@ global:
 #         concurrentSyncs: 5
 #         candidateDeterminationStrategy: SameRegion # either {SameRegion,MinimalDistance}
       featureGates: {}
+
+  # System secrets
   internalDomain:
     provider: aws-route53 # depends on the DNS extension of your choice
     domain: example.com
@@ -491,3 +496,8 @@ global:
       enabled: false
       clusterIP: 1.2.3.4
       createNamespace: true
+
+  # RBAC related configuration
+  rbac:
+    seedAuthorizer:
+      enabled: false
