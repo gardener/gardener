@@ -18,7 +18,7 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -175,7 +175,7 @@ func BackupEntryIsManagedByThisGardenlet(ctx context.Context, c client.Client, b
 // BastionFilterFunc returns a filtering func for the seeds and the given label selector.
 func BastionFilterFunc(ctx context.Context, c client.Client, seedName string, labelSelector *metav1.LabelSelector) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
-		bastion, ok := obj.(*gardenoperationsv1alpha1.Bastion)
+		bastion, ok := obj.(*operationsv1alpha1.Bastion)
 		if !ok {
 			return false
 		}
@@ -187,6 +187,16 @@ func BastionFilterFunc(ctx context.Context, c client.Client, seedName string, la
 		}
 		return seedLabelsMatchWithClient(ctx, c, *bastion.Spec.SeedName, labelSelector)
 	}
+}
+
+// BastionIsManagedByThisGardenlet checks if the given Bastion is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration
+// or by checking whether the seed labels match the seed selector from the GardenletConfiguration.
+func BastionIsManagedByThisGardenlet(ctx context.Context, c client.Client, bastion *operationsv1alpha1.Bastion, gc *config.GardenletConfiguration) bool {
+	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
+	if len(seedName) > 0 {
+		return bastion.Spec.SeedName != nil && *bastion.Spec.SeedName == seedName
+	}
+	return seedLabelsMatchWithClient(ctx, c, *bastion.Spec.SeedName, gc.SeedSelector)
 }
 
 // ManagedSeedFilterFunc returns a filtering func for ManagedSeeds that checks if the ManagedSeed references a Shoot scheduled on a Seed, for which the gardenlet is responsible..

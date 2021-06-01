@@ -46,6 +46,9 @@ var _ = Describe("GardenletConfiguration", func() {
 					DeletionGracePeriodHours:         &deletionGracePeriodHours,
 					DeletionGracePeriodShootPurposes: []gardencore.ShootPurpose{gardencore.ShootPurposeDevelopment},
 				},
+				Bastion: &config.BastionControllerConfiguration{
+					ConcurrentSyncs: &concurrentSyncs,
+				},
 				Shoot: &config.ShootControllerConfiguration{
 					ConcurrentSyncs:      &concurrentSyncs,
 					ProgressReportPeriod: &metav1.Duration{Duration: time.Hour},
@@ -218,6 +221,22 @@ var _ = Describe("GardenletConfiguration", func() {
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeNotSupported),
 						"Field": Equal("controllers.backupEntry.deletionGracePeriodShootPurposes[0]"),
+					})),
+				))
+			})
+		})
+
+		Context("bastion controller", func() {
+			It("should forbid invalid configuration", func() {
+				invalidConcurrentSyncs := -1
+				cfg.Controllers.Bastion.ConcurrentSyncs = &invalidConcurrentSyncs
+
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("controllers.bastion.concurrentSyncs"),
 					})),
 				))
 			})

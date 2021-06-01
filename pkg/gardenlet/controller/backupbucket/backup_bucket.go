@@ -71,7 +71,7 @@ func NewBackupBucketController(ctx context.Context, clientMap clientmap.ClientMa
 		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
 	}
 
-	return &Controller{
+	controller := &Controller{
 		gardenClient:         gardenClient.Client(),
 		config:               config,
 		reconciler:           newReconciler(clientMap, recorder, config),
@@ -79,21 +79,23 @@ func NewBackupBucketController(ctx context.Context, clientMap clientmap.ClientMa
 		backupBucketInformer: backupBucketInformer,
 		backupBucketQueue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "BackupBucket"),
 		workerCh:             make(chan int),
-	}, nil
+	}
+
+	controller.backupBucketInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controllerutils.BackupBucketFilterFunc(ctx, controller.gardenClient, confighelper.SeedNameFromSeedConfig(controller.config.SeedConfig), controller.config.SeedSelector),
+		Handler: cache.ResourceEventHandlerFuncs{
+			AddFunc:    controller.backupBucketAdd,
+			UpdateFunc: controller.backupBucketUpdate,
+			DeleteFunc: controller.backupBucketDelete,
+		},
+	})
+
+	return controller, nil
 }
 
 // Run runs the Controller until the given stop channel is closed.
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
-
-	c.backupBucketInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.BackupBucketFilterFunc(ctx, c.gardenClient, confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    c.backupBucketAdd,
-			UpdateFunc: c.backupBucketUpdate,
-			DeleteFunc: c.backupBucketDelete,
-		},
-	})
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.backupBucketInformer.HasSynced) {
 		logger.Logger.Fatal("Timed out waiting for BackupBucket Informer to sync")

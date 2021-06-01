@@ -11,7 +11,8 @@ import (
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
 	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	versioned0 "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
+	versioned0 "github.com/gardener/gardener/pkg/client/operations/clientset/versioned"
+	versioned1 "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	gomock "github.com/golang/mock/gomock"
 	clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	version "k8s.io/apimachinery/pkg/version"
@@ -229,11 +230,25 @@ func (mr *MockInterfaceMockRecorder) GardenCore() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GardenCore", reflect.TypeOf((*MockInterface)(nil).GardenCore))
 }
 
+// GardenOperations mocks base method.
+func (m *MockInterface) GardenOperations() versioned0.Interface {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GardenOperations")
+	ret0, _ := ret[0].(versioned0.Interface)
+	return ret0
+}
+
+// GardenOperations indicates an expected call of GardenOperations.
+func (mr *MockInterfaceMockRecorder) GardenOperations() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GardenOperations", reflect.TypeOf((*MockInterface)(nil).GardenOperations))
+}
+
 // GardenSeedManagement mocks base method.
-func (m *MockInterface) GardenSeedManagement() versioned0.Interface {
+func (m *MockInterface) GardenSeedManagement() versioned1.Interface {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GardenSeedManagement")
-	ret0, _ := ret[0].(versioned0.Interface)
+	ret0, _ := ret[0].(versioned1.Interface)
 	return ret0
 }
 

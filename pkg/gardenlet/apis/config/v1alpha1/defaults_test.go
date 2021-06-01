@@ -17,6 +17,8 @@ package v1alpha1_test
 import (
 	"time"
 
+	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -24,8 +26,6 @@ import (
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/klog"
 	"k8s.io/utils/pointer"
-
-	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 )
 
 var _ = Describe("Defaults", func() {
@@ -44,6 +44,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ShootClientConnection).NotTo(BeNil())
 			Expect(obj.Controllers.BackupBucket).NotTo(BeNil())
 			Expect(obj.Controllers.BackupEntry).NotTo(BeNil())
+			Expect(obj.Controllers.Bastion).NotTo(BeNil())
 			Expect(obj.Controllers.ControllerInstallation).NotTo(BeNil())
 			Expect(obj.Controllers.ControllerInstallationCare).NotTo(BeNil())
 			Expect(obj.Controllers.ControllerInstallationRequired).NotTo(BeNil())
@@ -183,6 +184,20 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
 			Expect(obj.DeletionGracePeriodHours).To(PointTo(Equal(0)))
 			Expect(obj.DeletionGracePeriodShootPurposes).To(BeEmpty())
+		})
+	})
+
+	Describe("#SetDefaults_BastionControllerConfiguration", func() {
+		var obj *BastionControllerConfiguration
+
+		BeforeEach(func() {
+			obj = &BastionControllerConfiguration{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_BastionControllerConfiguration(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(20)))
 		})
 	})
 })

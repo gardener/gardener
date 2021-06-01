@@ -34,6 +34,7 @@ import (
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
+	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	controllerinstallationcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
 	federatedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed"
 	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
@@ -153,6 +154,11 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing BackupEntry controller: %w", err)
 	}
 
+	bastionController, err := bastioncontroller.NewBastionController(ctx, f.clientMap, f.cfg)
+	if err != nil {
+		return fmt.Errorf("failed initializing Bastion controller: %w", err)
+	}
+
 	federatedSeedController, err := federatedseedcontroller.NewFederatedSeedController(ctx, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing federated seed controller: %w", err)
@@ -169,6 +175,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		gardenlet.ScrapeFailures,
 		backupBucketController,
 		backupEntryController,
+		bastionController,
 		controllerInstallationController,
 		seedController,
 		shootController,
@@ -178,6 +185,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	go federatedSeedController.Run(ctx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go backupBucketController.Run(ctx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
 	go backupEntryController.Run(ctx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs)
+	go bastionController.Run(ctx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)
 	go controllerInstallationController.Run(ctx, *f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs, *f.cfg.Controllers.ControllerInstallationCare.ConcurrentSyncs)
 	go seedController.Run(ctx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs)

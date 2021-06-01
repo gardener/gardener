@@ -128,10 +128,13 @@ type ShootClientConnection struct {
 type GardenletControllerConfiguration struct {
 	// BackupBucket defines the configuration of the BackupBucket controller.
 	// +optional
-	BackupBucket *BackupBucketControllerConfiguration `json:"backupBucket"`
+	BackupBucket *BackupBucketControllerConfiguration `json:"backupBucket,omitempty"`
 	// BackupEntry defines the configuration of the BackupEntry controller.
 	// +optional
-	BackupEntry *BackupEntryControllerConfiguration `json:"backupEntry"`
+	BackupEntry *BackupEntryControllerConfiguration `json:"backupEntry,omitempty"`
+	// Bastion defines the configuration of the Bastion controller.
+	// +optional
+	Bastion *BastionControllerConfiguration `json:"bastion,omitempty"`
 	// ControllerInstallation defines the configuration of the ControllerInstallation controller.
 	// +optional
 	ControllerInstallation *ControllerInstallationControllerConfiguration `json:"controllerInstallation,omitempty"`
@@ -183,6 +186,14 @@ type BackupEntryControllerConfiguration struct {
 	// BackupEntries corresponding to Shoots with different purposes will be deleted immediately.
 	// +optional
 	DeletionGracePeriodShootPurposes []gardencorev1beta1.ShootPurpose `json:"deletionGracePeriodShootPurposes,omitempty"`
+}
+
+// BastionControllerConfiguration defines the configuration of the Bastion
+// controller.
+type BastionControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	// +optional
+	ConcurrentSyncs *int `json:"concurrentSyncs,omitempty"`
 }
 
 // ControllerInstallationControllerConfiguration defines the configuration of the
