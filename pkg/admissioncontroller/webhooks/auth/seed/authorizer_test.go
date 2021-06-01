@@ -424,6 +424,7 @@ var _ = Describe("Seed", func() {
 				Entry("get", "get"),
 				Entry("patch", "patch"),
 				Entry("update", "update"),
+				Entry("delete", "delete"),
 			)
 
 			DescribeTable("should have no opinion because no allowed verb",
@@ -433,12 +434,12 @@ var _ = Describe("Seed", func() {
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(decision).To(Equal(auth.DecisionNoOpinion))
-					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get update patch]"))
+					Expect(reason).To(ContainSubstring("only the following verbs are allowed for this resource type: [create get update patch delete]"))
 				},
 
 				Entry("list", "list"),
 				Entry("watch", "watch"),
-				Entry("delete", "delete"),
+				Entry("deletecollection", "deletecollection"),
 			)
 
 			It("should have no opinion because request is for a subresource", func() {
