@@ -185,6 +185,7 @@ make local-garden-down
   <summary><b>Alternative: Using a local kubernetes cluster</b></summary>
 
   Instead of starting a kubernetes API server and etcd as docker containers, you can also opt for running a local kubernetes cluster, provided by e.g. [minikube](https://minikube.sigs.k8s.io/docs/start/), [kind](https://kind.sigs.k8s.io/docs/user/quick-start/) or docker desktop.
+
   > Note: Gardener requires self-contained kubeconfig files because of a [security issue](https://banzaicloud.com/blog/kubeconfig-security/). You can configure your minikube to create self-contained kubeconfig files via:
   > ```bash
   > minikube config set embed-certs true
@@ -193,6 +194,7 @@ make local-garden-down
   > ```bash
   > minikube start --embed-certs
   > ```
+
 </details>
 
 <details>
