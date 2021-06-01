@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo"
@@ -126,7 +127,7 @@ var _ = Describe("#Service", func() {
 			},
 			serviceObjKey,
 			sniServiceObjKey,
-			&fakeOps{},
+			&retryfake.Ops{MaxAttempts: 1},
 			clusterIPFunc,
 			ingressIPFunc,
 		)
