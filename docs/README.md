@@ -76,7 +76,7 @@
 * [Setting up a local development environment](development/local_setup.md)
 * [Unit Testing and Dependency Management](development/testing_and_dependencies.md)
 * [Changing the API](development/changing-the-api.md)
-* [Features, Hotfixes, and Releases](development/process.md)
+* [Releases, Features, Hotfixes](development/process.md)
 * [Adding New Cloud Providers](development/new-cloud-provider.md)
 * [Extending the Monitoring Stack](development/monitoring-stack.md)
 * [How to create log parser for container into fluent-bit](development/log_parsers.md)
