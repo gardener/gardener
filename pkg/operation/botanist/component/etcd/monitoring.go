@@ -63,6 +63,7 @@ const (
 	monitoringMetricBackupRestoreValidationDurationSecondsBucket      = "etcdbr_validation_duration_seconds_bucket"
 	monitoringMetricBackupRestoreValidationDurationSecondsCount       = "etcdbr_validation_duration_seconds_count"
 	monitoringMetricBackupRestoreValidationDurationSecondsSum         = "etcdbr_validation_duration_seconds_sum"
+	monitoringMetricBackupRestoreSnapshotterFailure                   = "etcdbr_snapshotter_failure"
 
 	monitoringMetricProcessMaxFds              = "process_max_fds"
 	monitoringMetricProcessOpenFds             = "process_open_fds"
@@ -189,6 +190,19 @@ const (
     annotations:
       description: Etcd data restoration was triggered, but has failed.
       summary: Etcd data restoration failure.
+
+  # etcd backup failure alert
+  - alert: KubeEtcdBackupRestore{{ .Role }}Down
+    expr: (sum(up{job="` + monitoringPrometheusJobEtcdNamePrefix + `-{{ .role }}"}) - sum(up{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}"}) > 0) or (rate(` + monitoringMetricBackupRestoreSnapshotterFailure + `{job="` + monitoringPrometheusJobBackupRestoreNamePrefix + `-{{ .role }}"}[5m]) > 0)
+    for: 10m
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+      visibility: operator
+    annotations:
+      description: Etcd backup restore {{ .role }} process down or snapshotter failed with error. Backups will not be triggered unless backup restore is brought back up. This is unsafe behaviour and may cause data loss.
+      summary: Etcd backup restore {{ .role }} process down or snapshotter failed with error
   {{- end }}
 `
 )
@@ -234,6 +248,7 @@ var (
 		monitoringMetricBackupRestoreValidationDurationSecondsBucket,
 		monitoringMetricBackupRestoreValidationDurationSecondsCount,
 		monitoringMetricBackupRestoreValidationDurationSecondsSum,
+		monitoringMetricBackupRestoreSnapshotterFailure,
 		monitoringMetricProcessResidentMemoryBytes,
 		monitoringMetricProcessCPUSecondsTotal,
 	}
