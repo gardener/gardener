@@ -80,7 +80,7 @@ func (g *graph) handleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.B
 		backupBucketVertex = g.getOrCreateVertex(VertexTypeBackupBucket, "", backupEntry.Spec.BucketName)
 	)
 
-	g.addEdge(backupEntryVertex, backupBucketVertex)
+	g.addEdge(backupBucketVertex, backupEntryVertex)
 
 	if backupEntry.Spec.SeedName != nil {
 		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *backupEntry.Spec.SeedName)
