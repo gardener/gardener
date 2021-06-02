@@ -881,7 +881,6 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
-			nil,
 		)
 	}
 
@@ -907,7 +906,6 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
-			nil,
 		)
 	}
 }

@@ -16,22 +16,19 @@ package dns
 
 import (
 	"context"
-	"fmt"
 	"time"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // ProviderValues contains the values used to create a DNSProvider.
@@ -53,24 +50,17 @@ type IncludeExclude struct {
 }
 
 // NewProvider creates a new instance of DeployWaiter for a specific DNSProvider.
-// <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps()
 func NewProvider(
 	logger logrus.FieldLogger,
 	client client.Client,
 	namespace string,
 	values *ProviderValues,
-	waiter retry.Ops,
 ) component.DeployWaiter {
-	if waiter == nil {
-		waiter = retry.DefaultOps()
-	}
-
 	return &provider{
 		logger:    logger,
 		client:    client,
 		namespace: namespace,
 		values:    values,
-		waiter:    waiter,
 
 		dnsProvider: &dnsv1alpha1.DNSProvider{
 			ObjectMeta: metav1.ObjectMeta{
@@ -86,7 +76,6 @@ type provider struct {
 	client    client.Client
 	namespace string
 	values    *ProviderValues
-	waiter    retry.Ops
 
 	dnsProvider *dnsv1alpha1.DNSProvider
 }
@@ -142,62 +131,18 @@ func (p *provider) Destroy(ctx context.Context) error {
 }
 
 func (p *provider) Wait(ctx context.Context) error {
-	var (
-		status  string
-		message string
-
-		retryCountUntilSevere int
-		interval              = 5 * time.Second
-		severeThreshold       = 15 * time.Second
-		timeout               = 2 * time.Minute
-
-		annotationHealthFunc health.Func
+	return extensions.WaitUntilObjectReadyWithHealthFunction(
+		ctx,
+		p.client,
+		p.logger,
+		CheckDNSObject,
+		p.dnsProvider,
+		dnsv1alpha1.DNSProviderKind,
+		5*time.Second,
+		15*time.Second,
+		2*time.Minute,
+		nil,
 	)
-
-	// wait until we see the timestamp annotation, that we set earlier in Deploy, to prevent falsely returning from Wait
-	// in case of stale cache reads
-	if expectedTimestamp, ok := p.dnsProvider.Annotations[v1beta1constants.GardenerTimestamp]; ok {
-		annotationHealthFunc = health.ObjectHasAnnotationWithValue(v1beta1constants.GardenerTimestamp, expectedTimestamp)
-	}
-
-	// TODO: switch to extensions.WaitUntilObjectReadyWithHealthFunction?
-	if err := p.waiter.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
-		if err := p.client.Get(ctx, client.ObjectKeyFromObject(p.dnsProvider), p.dnsProvider); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.MinorError(err)
-			}
-			return retry.SevereError(err)
-		}
-
-		if annotationHealthFunc != nil {
-			if err := annotationHealthFunc(p.dnsProvider); err != nil {
-				return retry.MinorError(err)
-			}
-		}
-
-		// TODO: why are we not checking generation == observedGeneration here?
-
-		if p.dnsProvider.Status.State == dnsv1alpha1.STATE_READY {
-			return retry.Ok()
-		}
-
-		status = p.dnsProvider.Status.State
-		if msg := p.dnsProvider.Status.Message; msg != nil {
-			message = *msg
-		}
-		providerErr := fmt.Errorf("DNS provider %q is not ready (status=%s, message=%s)", p.values.Name, status, message)
-
-		p.logger.Infof("Waiting for %q DNS provider to be ready... (status=%s, message=%s)", p.values.Name, status, message)
-		if status == dnsv1alpha1.STATE_ERROR || status == dnsv1alpha1.STATE_INVALID {
-			return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), providerErr)
-		}
-
-		return retry.MinorError(providerErr)
-	}); err != nil {
-		return fmt.Errorf("failed to reconcile DNS provider %q: %s (status=%s, message=%s)", p.values.Name, err.Error(), status, message)
-	}
-
-	return nil
 }
 
 func (p *provider) WaitCleanup(ctx context.Context) error {

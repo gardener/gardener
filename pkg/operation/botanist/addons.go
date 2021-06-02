@@ -121,7 +121,6 @@ func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) compone
 			Name: common.ShootDNSIngressName,
 			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
-		nil,
 	))
 }
 
@@ -160,7 +159,6 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 				OwnerID: ownerID,
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
-			nil,
 		)
 	}
 }

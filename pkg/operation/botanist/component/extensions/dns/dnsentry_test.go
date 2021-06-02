@@ -17,13 +17,9 @@ package dns_test
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -36,10 +32,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -50,24 +51,30 @@ var _ = Describe("#DNSEntry", func() {
 	)
 
 	var (
-		ctrl             *gomock.Controller
-		ctx              context.Context
-		c                client.Client
-		scheme           *runtime.Scheme
-		fakeOps          *retryfake.Ops
+		ctrl      *gomock.Controller
+		ctx       context.Context
+		c         client.Client
+		scheme    *runtime.Scheme
+		fakeOps   *retryfake.Ops
+		now       time.Time
+		resetVars func()
+
 		expected         *dnsv1alpha1.DNSEntry
 		vals             *EntryValues
 		log              logrus.FieldLogger
 		defaultDepWaiter component.DeployWaiter
-		now              time.Time
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
 		now = time.Now()
-		TimeNow = func() time.Time { return now }
-
+		fakeOps = &retryfake.Ops{MaxAttempts: 1}
+		resetVars = test.WithVars(
+			&retry.Until, fakeOps.Until,
+			&retry.UntilTimeout, fakeOps.UntilTimeout,
+			&TimeNow, func() time.Time { return now },
+		)
 		ctx = context.TODO()
 		log = logger.NewNopLogger()
 
@@ -98,12 +105,11 @@ var _ = Describe("#DNSEntry", func() {
 			},
 		}
 
-		fakeOps = &retryfake.Ops{MaxAttempts: 1}
-		defaultDepWaiter = NewEntry(log, c, deployNS, vals, fakeOps)
+		defaultDepWaiter = NewEntry(log, c, deployNS, vals)
 	})
 
 	AfterEach(func() {
-		TimeNow = time.Now
+		resetVars()
 		ctrl.Finish()
 	})
 
@@ -150,7 +156,7 @@ var _ = Describe("#DNSEntry", func() {
 			)
 
 			fakeOps.MaxAttempts = 2
-			defaultDepWaiter = NewEntry(log, mc, deployNS, vals, fakeOps)
+			defaultDepWaiter = NewEntry(log, mc, deployNS, vals)
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
 		})
 
@@ -198,11 +204,6 @@ var _ = Describe("#DNSEntry", func() {
 			By("wait")
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed(), "dnsentry is ready")
 		})
-
-		It("should set a default waiter", func() {
-			wrt := NewEntry(log, c, deployNS, vals, nil)
-			Expect(reflect.ValueOf(wrt).Elem().FieldByName("waiter").IsNil()).ToNot(BeTrue())
-		})
 	})
 
 	Describe("#Destroy", func() {
@@ -224,7 +225,7 @@ var _ = Describe("#DNSEntry", func() {
 					Namespace: deployNS,
 				}}).Times(1).Return(fmt.Errorf("some random error"))
 
-			defaultDepWaiter = NewEntry(log, mc, deployNS, vals, fakeOps)
+			defaultDepWaiter = NewEntry(log, mc, deployNS, vals)
 
 			Expect(defaultDepWaiter.Destroy(ctx)).To(HaveOccurred())
 		})

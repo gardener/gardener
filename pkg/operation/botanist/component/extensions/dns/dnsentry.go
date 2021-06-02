@@ -16,22 +16,19 @@ package dns
 
 import (
 	"context"
-	"fmt"
 	"time"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-	"github.com/gardener/gardener/pkg/utils/retry"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/sirupsen/logrus"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // EntryValues contains the values used to create a DNSEntry
@@ -44,24 +41,17 @@ type EntryValues struct {
 }
 
 // NewEntry creates a new instance of DeployWaiter for a specific DNSEntry.
-// <waiter> is optional and it's defaulted to github.com/gardener/gardener/pkg/utils/retry.DefaultOps()
 func NewEntry(
 	logger logrus.FieldLogger,
 	client client.Client,
 	namespace string,
 	values *EntryValues,
-	waiter retry.Ops,
 ) component.DeployWaiter {
-	if waiter == nil {
-		waiter = retry.DefaultOps()
-	}
-
 	return &entry{
 		logger:    logger,
 		client:    client,
 		namespace: namespace,
 		values:    values,
-		waiter:    waiter,
 
 		dnsEntry: &dnsv1alpha1.DNSEntry{
 			ObjectMeta: metav1.ObjectMeta{
@@ -77,7 +67,6 @@ type entry struct {
 	client    client.Client
 	namespace string
 	values    *EntryValues
-	waiter    retry.Ops
 
 	dnsEntry *dnsv1alpha1.DNSEntry
 }
@@ -110,61 +99,18 @@ func (e *entry) Destroy(ctx context.Context) error {
 }
 
 func (e *entry) Wait(ctx context.Context) error {
-	var (
-		status  string
-		message string
-
-		retryCountUntilSevere int
-		interval              = 5 * time.Second
-		severeThreshold       = 15 * time.Second
-		timeout               = 2 * time.Minute
-
-		annotationHealthFunc health.Func
+	return extensions.WaitUntilObjectReadyWithHealthFunction(
+		ctx,
+		e.client,
+		e.logger,
+		CheckDNSObject,
+		e.dnsEntry,
+		dnsv1alpha1.DNSEntryKind,
+		5*time.Second,
+		15*time.Second,
+		2*time.Minute,
+		nil,
 	)
-
-	// wait until we see the timestamp annotation, that we set earlier in Deploy, to prevent falsely returning from Wait
-	// in case of stale cache reads
-	if expectedTimestamp, ok := e.dnsEntry.Annotations[v1beta1constants.GardenerTimestamp]; ok {
-		annotationHealthFunc = health.ObjectHasAnnotationWithValue(v1beta1constants.GardenerTimestamp, expectedTimestamp)
-	}
-
-	if err := e.waiter.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
-		retryCountUntilSevere++
-
-		if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.dnsEntry), e.dnsEntry); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.MinorError(err)
-			}
-			return retry.SevereError(err)
-		}
-
-		if annotationHealthFunc != nil {
-			if err := annotationHealthFunc(e.dnsEntry); err != nil {
-				return retry.MinorError(err)
-			}
-		}
-
-		if e.dnsEntry.Status.ObservedGeneration == e.dnsEntry.Generation && e.dnsEntry.Status.State == dnsv1alpha1.STATE_READY {
-			return retry.Ok()
-		}
-
-		status = e.dnsEntry.Status.State
-		if msg := e.dnsEntry.Status.Message; msg != nil {
-			message = *msg
-		}
-		entryErr := fmt.Errorf("DNS record %q is not ready (status=%s, message=%s)", e.values.Name, status, message)
-
-		e.logger.Infof("Waiting for %q DNS record to be ready... (status=%s, message=%s)", e.values.Name, status, message)
-		if status == dnsv1alpha1.STATE_ERROR || status == dnsv1alpha1.STATE_INVALID {
-			return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), entryErr)
-		}
-
-		return retry.MinorError(entryErr)
-	}); err != nil {
-		return fmt.Errorf("failed to reconcile DNS record %q: %s (status=%s, message=%s)", e.values.Name, err.Error(), status, message)
-	}
-
-	return nil
 }
 
 func (e *entry) WaitCleanup(ctx context.Context) error {
