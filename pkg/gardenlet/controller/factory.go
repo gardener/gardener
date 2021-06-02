@@ -46,10 +46,8 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
@@ -204,15 +202,11 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 
 // registerSeed create or update the seed resource if gardenlet is configured to takes care about it.
 func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenClient kubernetes.Interface) error {
-	var (
-		seed = &gardencorev1beta1.Seed{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: f.cfg.SeedConfig.Name,
-			},
-		}
-		seedNamespaceName = gutil.ComputeGardenNamespace(f.cfg.SeedConfig.Name)
-		seedNamespace     = &corev1.Namespace{}
-	)
+	seed := &gardencorev1beta1.Seed{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: f.cfg.SeedConfig.Name,
+		},
+	}
 
 	// Convert gardenlet config to an external version
 	cfg, err := confighelper.ConvertGardenletConfigurationExternal(f.cfg)
@@ -220,28 +214,26 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 		return fmt.Errorf("could not convert gardenlet configuration: %+v", err)
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), seed, func() error {
+	operationResult, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), seed, func() error {
 		seed.Labels = utils.MergeStringMaps(map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		}, f.cfg.SeedConfig.Labels)
 
 		seed.Spec = cfg.SeedConfig.Spec
 		return nil
-	}); err != nil {
+	})
+	if err != nil {
 		return fmt.Errorf("could not register seed %q: %+v", seed.Name, err)
 	}
 
-	// wait seed namespace to be created by GCM
-	return retryutils.UntilTimeout(ctx, 5*time.Second, 2*time.Minute, func(context.Context) (done bool, err error) {
-		if err := gardenClient.Client().Get(ctx, kutil.Key(seedNamespaceName), seedNamespace); err != nil {
-			if apierrors.IsNotFound(err) {
-				logger.Logger.Infof("Waiting until namespace %q is created.", seedNamespaceName)
-				return retryutils.MinorError(fmt.Errorf("namespace %q still not created", seedNamespaceName))
-			}
-			return retryutils.SevereError(err)
-		}
+	// If the Seed was freshly created then the `seed-<name>` Namespace does not yet exist. It will be created by the
+	// gardener-controller-manager (GCM). If the SeedAuthorizer is enabled then the gardenlet might fail/exit with an
+	// error if it GETs the Namespace too fast (before GCM created it), hence, let's wait to give GCM some time to
+	// create it.
+	if operationResult == controllerutil.OperationResultCreated {
+		time.Sleep(5 * time.Second)
+	}
 
-		logger.Logger.Infof("Namespace %q has been created.", seedNamespaceName)
-		return retryutils.Ok()
-	})
+	// Verify that seed namespace exists.
+	return gardenClient.Client().Get(ctx, kutil.Key(gutil.ComputeGardenNamespace(f.cfg.SeedConfig.Name)), &corev1.Namespace{})
 }
