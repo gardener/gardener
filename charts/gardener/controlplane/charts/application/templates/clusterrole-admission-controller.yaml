@@ -20,7 +20,6 @@ rules:
   - secretbindings
   - seeds
   - shoots
-  - shootstates
   - projects
   verbs:
   - get
