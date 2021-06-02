@@ -1,3 +1,4 @@
+{{- if not .Values.global.rbac.seedAuthorizer.enabled }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
@@ -11,3 +12,4 @@ subjects:
 - kind: Group
   name: gardener.cloud:system:seeds
   apiGroup: rbac.authorization.k8s.io
+{{- end }}
