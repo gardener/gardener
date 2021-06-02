@@ -121,16 +121,18 @@ func initShootAndClient(ctx context.Context, t *ShootMigrationTest) (err error) 
 		return err
 	}
 
-	kubecfgSecret := corev1.Secret{}
-	if err := t.GardenerFramework.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Name + ".kubeconfig", Namespace: shoot.Namespace}, &kubecfgSecret); err != nil {
-		t.GardenerFramework.Logger.Errorf("Unable to get kubeconfig from secret: %s", err.Error())
-		return err
-	}
-	t.GardenerFramework.Logger.Info("Shoot kubeconfig secret was fetched successfully")
+	if !shoot.Status.IsHibernated {
+		kubecfgSecret := corev1.Secret{}
+		if err := t.GardenerFramework.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Name + ".kubeconfig", Namespace: shoot.Namespace}, &kubecfgSecret); err != nil {
+			t.GardenerFramework.Logger.Errorf("Unable to get kubeconfig from secret: %s", err.Error())
+			return err
+		}
+		t.GardenerFramework.Logger.Info("Shoot kubeconfig secret was fetched successfully")
 
-	t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
-		Scheme: kubernetes.ShootScheme,
-	}))
+		t.ShootClient, err = kubernetes.NewClientFromSecret(ctx, t.GardenerFramework.GardenClient.Client(), kubecfgSecret.Namespace, kubecfgSecret.Name, kubernetes.WithClientOptions(client.Options{
+			Scheme: kubernetes.ShootScheme,
+		}))
+	}
 	t.Shoot = *shoot
 	return
 }
@@ -171,6 +173,10 @@ func beforeMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp *a
 		return err
 	}
 
+	if t.Shoot.Status.IsHibernated {
+		return nil
+	}
+
 	ginkgo.By("Creating test Secret and Service Account")
 	if err := t.ShootClient.Client().Create(ctx, testSecret); err != nil {
 		return err
@@ -203,6 +209,20 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 		return err
 	}
 
+	ginkgo.By("Comparing all Machines and Nodes after the migration...")
+	if err := t.CompareElementsAfterMigration(); err != nil {
+		return err
+	}
+
+	ginkgo.By("Checking for orphaned resources...")
+	if err := t.CheckForOrphanedNonNamespacedResources(ctx); err != nil {
+		return err
+	}
+
+	if t.Shoot.Status.IsHibernated {
+		return nil
+	}
+
 	ginkgo.By("Checking if the test Secret and Service Account are migrated and cleaning them up...")
 	if err := t.ShootClient.Client().Delete(ctx, testSecret); err != nil {
 		return err
@@ -213,22 +233,12 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 	}
 	t.GardenerFramework.Logger.Infof("ServiceAccount resource %s/%s was deleted!", testServiceAccount.Namespace, testServiceAccount.Name)
 
-	ginkgo.By("Comparing all Machines, Nodes and Pods after the migration...")
-	if err := t.CompareElementsAfterMigration(); err != nil {
-		return err
-	}
-
 	ginkgo.By("Testing the Guest Book Application and cleaning it up...")
 	guestBookApp.Test(ctx)
 	guestBookApp.Cleanup(ctx)
 
 	ginkgo.By("Checking timestamps of all resources...")
 	if err := t.CheckObjectsTimestamp(ctx, strings.Split(*mrExcludeList, ",")); err != nil {
-		return err
-	}
-
-	ginkgo.By("Checking for orphaned resources...")
-	if err := t.CheckForOrphanedNonNamespacedResources(ctx); err != nil {
 		return err
 	}
 
