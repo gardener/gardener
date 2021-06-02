@@ -86,6 +86,7 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 	g.deleteAllIncomingEdges(VertexTypeNamespace, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllIncomingEdges(VertexTypeSecretBinding, VertexTypeShoot, shoot.Namespace, shoot.Name)
+	g.deleteAllIncomingEdges(VertexTypeShootState, VertexTypeShoot, shoot.Namespace, shoot.Name)
 	g.deleteAllOutgoingEdges(VertexTypeShoot, shoot.Namespace, shoot.Name, VertexTypeSeed)
 
 	var (
@@ -146,6 +147,11 @@ func (g *graph) handleShootCreateOrUpdate(shoot *gardencorev1beta1.Shoot) {
 		secretVertex := g.getOrCreateVertex(VertexTypeSecret, shoot.Namespace, gutil.ComputeShootProjectSecretName(shoot.Name, suffix))
 		g.addEdge(secretVertex, shootVertex)
 	}
+
+	// Similarly, ShootStates are not directly referenced in the shoot spec, however, they will be created/updated/
+	// deleted as part of the gardenlet reconciliation and are bound to the lifetime of the shoot as well.
+	shootStateVertex := g.getOrCreateVertex(VertexTypeShootState, shoot.Namespace, shoot.Name)
+	g.addEdge(shootStateVertex, shootVertex)
 }
 
 func (g *graph) handleShootDelete(shoot *gardencorev1beta1.Shoot) {

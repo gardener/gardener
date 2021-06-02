@@ -179,7 +179,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case shootStateResource:
 			return a.authorize(seedName, graph.VertexTypeShootState, attrs,
-				[]string{"get", "update", "patch"},
+				[]string{"get", "update", "patch", "delete"},
 				[]string{"create"},
 				nil,
 			)
