@@ -29,6 +29,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/utils/test"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
@@ -51,7 +52,8 @@ var _ = Describe("extensions", func() {
 		mockNow *mocktime.MockNow
 		now     time.Time
 
-		c client.Client
+		c      client.Client
+		scheme *runtime.Scheme
 
 		defaultInterval  time.Duration
 		defaultTimeout   time.Duration
@@ -69,9 +71,9 @@ var _ = Describe("extensions", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		mockNow = mocktime.NewMockNow(ctrl)
 
-		s := runtime.NewScheme()
-		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
-		c = fake.NewFakeClientWithScheme(s)
+		scheme = runtime.NewScheme()
+		Expect(extensionsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
+		c = fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		defaultInterval = 1 * time.Millisecond
 		defaultTimeout = 1 * time.Millisecond
@@ -215,7 +217,7 @@ var _ = Describe("extensions", func() {
 	})
 
 	Describe("#WaitUntilObjectReadyWithHealthFunction", func() {
-		It("should return error if object does not exist error", func() {
+		It("should return error if object does not exist", func() {
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
 				func(obj client.Object) error {
@@ -226,6 +228,32 @@ var _ = Describe("extensions", func() {
 				nil,
 			)
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("should retry getting object if it does not exist in the cache yet", func() {
+			mc := mockclient.NewMockClient(ctrl)
+			mc.EXPECT().Scheme().Return(scheme).AnyTimes()
+
+			gomock.InOrder(
+				mc.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
+					Return(apierrors.NewNotFound(extensionsv1alpha1.Resource("workers"), expected.Name)),
+				mc.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(expected), gomock.AssignableToTypeOf(expected)).
+					DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *extensionsv1alpha1.Worker) error {
+						expected.DeepCopyInto(obj)
+						return nil
+					}),
+			)
+
+			err := WaitUntilObjectReadyWithHealthFunction(
+				ctx, mc, log,
+				func(obj client.Object) error {
+					return nil
+				},
+				expected, extensionsv1alpha1.WorkerResource,
+				defaultInterval, defaultThreshold, 5*defaultTimeout,
+				nil,
+			)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should return error if ready func returns error", func() {

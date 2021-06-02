@@ -12,16 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubeapiserverexposure_test
+package dns
 
-import (
-	"testing"
+import "time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-)
-
-func TestControlPlane(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component KubeAPIServerExposure Suite")
-}
+// TimeNow returns the current time. Exposed for testing.
+var TimeNow = time.Now

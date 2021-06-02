@@ -59,7 +59,7 @@ func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) erro
 		return err
 	}
 
-	b.SetNginxIngressAddress(loadBalancerIngress, b.K8sSeedClient.DirectClient())
+	b.SetNginxIngressAddress(loadBalancerIngress, b.K8sSeedClient.Client())
 	return nil
 }
 

@@ -68,18 +68,19 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// extension components
+	// TODO(timebertt): remove client param from Default* funcs
 	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime(b.K8sSeedClient.Client())
 	o.Shoot.Components.Extensions.ControlPlane = b.DefaultControlPlane(b.K8sSeedClient.Client(), extensionsv1alpha1.Normal)
 	o.Shoot.Components.Extensions.ControlPlaneExposure = b.DefaultControlPlane(b.K8sSeedClient.Client(), extensionsv1alpha1.Exposure)
-	o.Shoot.Components.Extensions.DNS.ExternalProvider = b.DefaultExternalDNSProvider(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.DNS.ExternalOwner = b.DefaultExternalDNSOwner(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.DNS.ExternalEntry = b.DefaultExternalDNSEntry(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.DNS.InternalProvider = b.DefaultInternalDNSProvider(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.DNS.InternalOwner = b.DefaultInternalDNSOwner(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.DNS.InternalEntry = b.DefaultInternalDNSEntry(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.DNS.NginxOwner = b.DefaultNginxIngressDNSOwner(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry(b.K8sSeedClient.DirectClient())
-	o.Shoot.Components.Extensions.DNS.AdditionalProviders, err = b.AdditionalDNSProviders(ctx, b.K8sGardenClient.Client(), b.K8sSeedClient.DirectClient())
+	o.Shoot.Components.Extensions.DNS.ExternalProvider = b.DefaultExternalDNSProvider(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.DNS.ExternalOwner = b.DefaultExternalDNSOwner(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.DNS.ExternalEntry = b.DefaultExternalDNSEntry(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.DNS.InternalProvider = b.DefaultInternalDNSProvider(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.DNS.InternalOwner = b.DefaultInternalDNSOwner(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.DNS.InternalEntry = b.DefaultInternalDNSEntry(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.DNS.NginxOwner = b.DefaultNginxIngressDNSOwner(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.DNS.AdditionalProviders, err = b.AdditionalDNSProviders(ctx, b.K8sGardenClient.Client(), b.K8sSeedClient.Client())
 	if err != nil {
 		return nil, err
 	}

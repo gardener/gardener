@@ -876,7 +876,7 @@ func runCreateSeedFlow(
 		}
 	}
 
-	dnsEntry := getManagedIngressDNSEntry(sc, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress, seedLogger)
+	dnsEntry := getManagedIngressDNSEntry(sc.Client(), seed.GetIngressFQDN("*"), ingressLoadBalancerAddress, seedLogger)
 
 	networks := []string{seed.Info.Spec.Networks.Pods, seed.Info.Spec.Networks.Services}
 	if v := seed.Info.Spec.Networks.Nodes; v != nil {
@@ -1013,9 +1013,9 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 		return err
 	}
 
-	//setup for flow graph
+	// setup for flow graph
 	var (
-		dnsEntry        = getManagedIngressDNSEntry(sc, seed.GetIngressFQDN("*"), "", seedLogger)
+		dnsEntry        = getManagedIngressDNSEntry(sc.Client(), seed.GetIngressFQDN("*"), "", seedLogger)
 		autoscaler      = clusterautoscaler.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace)
 		gsac            = seedadmissioncontroller.New(sc.Client(), v1beta1constants.GardenNamespace, "", kubernetesVersion)
 		resourceManager = resourcemanager.New(sc.Client(), v1beta1constants.GardenNamespace, "", 0, resourcemanager.Values{})
@@ -1188,7 +1188,7 @@ func managedIngress(seed *Seed) bool {
 	return seed.Info.Spec.Ingress != nil
 }
 
-func getManagedIngressDNSEntry(k8sSeedClient kubernetes.Interface, seedFQDN string, loadBalancerAddress string, seedLogger *logrus.Entry) component.DeployWaiter {
+func getManagedIngressDNSEntry(k8sSeedClient client.Client, seedFQDN string, loadBalancerAddress string, seedLogger *logrus.Entry) component.DeployWaiter {
 	values := &dns.EntryValues{
 		Name:    "ingress",
 		DNSName: seedFQDN,
@@ -1199,7 +1199,7 @@ func getManagedIngressDNSEntry(k8sSeedClient kubernetes.Interface, seedFQDN stri
 
 	return dns.NewEntry(
 		seedLogger,
-		k8sSeedClient.Client(),
+		k8sSeedClient,
 		v1beta1constants.GardenNamespace,
 		values,
 		nil,

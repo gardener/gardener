@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -25,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // OwnerValues contains the values used for DNSOwner creation
@@ -35,12 +35,18 @@ type OwnerValues struct {
 	Active  *bool
 }
 
-// NewOwner creates a new instance of DeployWaiter for a specific DNS emptyOwner.
+// NewOwner creates a new instance of DeployWaiter for a specific DNSOwner.
 func NewOwner(client client.Client, namespace string, values *OwnerValues) component.DeployWaiter {
 	return &owner{
 		client:    client,
 		namespace: namespace,
 		values:    values,
+
+		dnsOwner: &dnsv1alpha1.DNSOwner{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespace + "-" + values.Name,
+			},
+		},
 	}
 }
 
@@ -48,18 +54,18 @@ type owner struct {
 	client    client.Client
 	namespace string
 	values    *OwnerValues
+
+	dnsOwner *dnsv1alpha1.DNSOwner
 }
 
 func (o *owner) Deploy(ctx context.Context) error {
-	obj := o.emptyOwner()
-
 	active := o.values.Active
 	if active == nil {
 		active = pointer.BoolPtr(true)
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, o.client, obj, func() error {
-		obj.Spec = dnsv1alpha1.DNSOwnerSpec{
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, o.dnsOwner, func() error {
+		o.dnsOwner.Spec = dnsv1alpha1.DNSOwnerSpec{
 			OwnerId: o.values.OwnerID,
 			Active:  active,
 		}
@@ -69,15 +75,11 @@ func (o *owner) Deploy(ctx context.Context) error {
 }
 
 func (o *owner) Destroy(ctx context.Context) error {
-	return client.IgnoreNotFound(o.client.Delete(ctx, o.emptyOwner()))
+	return client.IgnoreNotFound(o.client.Delete(ctx, o.dnsOwner))
 }
 
 func (o *owner) Wait(_ context.Context) error { return nil }
 
 func (o *owner) WaitCleanup(ctx context.Context) error {
-	return kutil.WaitUntilResourceDeleted(ctx, o.client, o.emptyOwner(), 5*time.Second)
-}
-
-func (o *owner) emptyOwner() *dnsv1alpha1.DNSOwner {
-	return &dnsv1alpha1.DNSOwner{ObjectMeta: metav1.ObjectMeta{Name: o.namespace + "-" + o.values.Name}}
+	return kutil.WaitUntilResourceDeleted(ctx, o.client, o.dnsOwner, 5*time.Second)
 }

@@ -760,7 +760,7 @@ func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.Dep
 		client.ObjectKey{Name: *b.Config.SNI.Ingress.ServiceName, Namespace: *b.Config.SNI.Ingress.Namespace},
 		nil,
 		b.setAPIServerServiceClusterIP,
-		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.DirectClient()) },
+		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.Client()) },
 	)
 }
 
