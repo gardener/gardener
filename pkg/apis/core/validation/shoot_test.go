@@ -1889,6 +1889,82 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
+		Context("FeatureGates validation", func() {
+			It("should forbid invalid feature gates", func() {
+				featureGates := map[string]bool{
+					"AnyVolumeDataSource":      true,
+					"CustomResourceValidation": true,
+					"Foo":                      true,
+				}
+				shoot.Spec.Kubernetes.Version = "1.18.14"
+				shoot.Spec.Kubernetes.KubeAPIServer.FeatureGates = featureGates
+				shoot.Spec.Kubernetes.KubeControllerManager.FeatureGates = featureGates
+				shoot.Spec.Kubernetes.KubeScheduler = &core.KubeSchedulerConfig{
+					KubernetesConfig: core.KubernetesConfig{
+						FeatureGates: featureGates,
+					},
+				}
+				proxyMode := core.ProxyModeIPTables
+				shoot.Spec.Kubernetes.KubeProxy = &core.KubeProxyConfig{
+					KubernetesConfig: core.KubernetesConfig{
+						FeatureGates: featureGates,
+					},
+					Mode: &proxyMode,
+				}
+				shoot.Spec.Kubernetes.Kubelet = &core.KubeletConfig{
+					KubernetesConfig: core.KubernetesConfig{
+						FeatureGates: featureGates,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).ToNot(BeEmpty())
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.featureGates.CustomResourceValidation"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeAPIServer.featureGates.Foo"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubeControllerManager.featureGates.CustomResourceValidation"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeControllerManager.featureGates.Foo"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubeScheduler.featureGates.CustomResourceValidation"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeScheduler.featureGates.Foo"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubeProxy.featureGates.CustomResourceValidation"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubeProxy.featureGates.Foo"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("spec.kubernetes.kubelet.featureGates.CustomResourceValidation"),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("spec.kubernetes.kubelet.featureGates.Foo"),
+					})),
+				))
+			})
+		})
+
 		It("should require a kubernetes version", func() {
 			shoot.Spec.Kubernetes.Version = ""
 
@@ -2271,7 +2347,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
 				}
-				errList := ValidateWorker(worker, nil, false)
+				errList := ValidateWorker(worker, "", nil, false)
 
 				Expect(errList).To(matcher)
 			},
@@ -2331,7 +2407,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxSurge:       &maxSurge,
 					MaxUnavailable: &maxUnavailable,
 				}
-				errList := ValidateWorker(worker, nil, false)
+				errList := ValidateWorker(worker, "", nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -2369,7 +2445,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Labels:         labels,
 				}
-				errList := ValidateWorker(worker, nil, false)
+				errList := ValidateWorker(worker, "", nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -2404,7 +2480,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Annotations:    annotations,
 				}
-				errList := ValidateWorker(worker, nil, false)
+				errList := ValidateWorker(worker, "", nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -2438,7 +2514,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxUnavailable: &maxUnavailable,
 					Taints:         taints,
 				}
-				errList := ValidateWorker(worker, nil, false)
+				errList := ValidateWorker(worker, "", nil, false)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -2481,7 +2557,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				MaxUnavailable: &maxUnavailable,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, nil, false)
+			errList := ValidateWorker(worker, "", nil, false)
 			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("volume"),
@@ -2508,7 +2584,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, nil, false)
+			errList := ValidateWorker(worker, "", nil, false)
 			Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":     Equal(field.ErrorTypeInvalid),
 				"Field":    Equal("dataVolumes[1].size"),
@@ -2537,7 +2613,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, nil, false)
+			errList := ValidateWorker(worker, "", nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
@@ -2575,7 +2651,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DataVolumes:           dataVolumes,
 				KubeletDataVolumeName: &name,
 			}
-			errList := ValidateWorker(worker, nil, false)
+			errList := ValidateWorker(worker, "", nil, false)
 			Expect(errList).To(ConsistOf())
 		})
 
@@ -2602,7 +2678,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				DataVolumes:           dataVolumes,
 				KubeletDataVolumeName: &name3,
 			}
-			errList := ValidateWorker(worker, nil, false)
+			errList := ValidateWorker(worker, "", nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -2632,7 +2708,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Volume:         &vol,
 				DataVolumes:    dataVolumes,
 			}
-			errList := ValidateWorker(worker, nil, false)
+			errList := ValidateWorker(worker, "", nil, false)
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
@@ -2641,6 +2717,45 @@ var _ = Describe("Shoot Validation Tests", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeDuplicate),
 					"Field": Equal("dataVolumes[3].name"),
+				})),
+			))
+		})
+
+		It("should reject if kubelet feature gates are invalid", func() {
+			maxSurge := intstr.FromInt(1)
+			maxUnavailable := intstr.FromInt(0)
+			worker := core.Worker{
+				Name: "worker-name",
+				Machine: core.Machine{
+					Type: "large",
+					Image: &core.ShootMachineImage{
+						Name:    "image-name",
+						Version: "1.0.0",
+					},
+				},
+				MaxSurge:       &maxSurge,
+				MaxUnavailable: &maxUnavailable,
+				Kubernetes: &core.WorkerKubernetes{
+					Kubelet: &core.KubeletConfig{
+						KubernetesConfig: core.KubernetesConfig{
+							FeatureGates: map[string]bool{
+								"AnyVolumeDataSource":      true,
+								"CustomResourceValidation": true,
+								"Foo":                      true,
+							},
+						},
+					},
+				},
+			}
+			errList := ValidateWorker(worker, "1.18.14", nil, false)
+			Expect(errList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("kubernetes.kubelet.featureGates.CustomResourceValidation"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("kubernetes.kubelet.featureGates.Foo"),
 				})),
 			))
 		})
@@ -2894,7 +3009,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -2945,7 +3060,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PodPIDsLimit: &podPIDsLimit,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -2959,7 +3074,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PodPIDsLimit: &podPIDsLimit,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -2973,7 +3088,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PodPIDsLimit: &podPIDsLimit,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(BeEmpty())
 			})
@@ -2994,7 +3109,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3020,7 +3135,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3039,7 +3154,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					EvictionPressureTransitionPeriod: &evictionPressureTransitionPeriod,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3064,7 +3179,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							PID:              pid,
 						},
 					}
-					Expect(ValidateKubeletConfig(kubeletConfig, nil)).To(matcher)
+					Expect(ValidateKubeletConfig(kubeletConfig, "", nil)).To(matcher)
 				},
 
 				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, HaveLen(0)),
@@ -3088,7 +3203,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							PID:              pid,
 						},
 					}
-					Expect(ValidateKubeletConfig(kubeletConfig, nil)).To(matcher)
+					Expect(ValidateKubeletConfig(kubeletConfig, "", nil)).To(matcher)
 				},
 
 				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, HaveLen(0)),
@@ -3109,7 +3224,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					ImagePullProgressDeadline: &imagePullProgressDeadline,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3129,7 +3244,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					EvictionMaxPodGracePeriod: &evictionMaxPodGracePeriod,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3149,7 +3264,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxPods: &maxPods,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3275,6 +3390,29 @@ var _ = Describe("Shoot Validation Tests", func() {
 						"Field": Equal(field.NewPath("end").String()),
 					})),
 				)),
+		)
+	})
+
+	Describe("#ValidateFeatureGates", func() {
+		DescribeTable("validate feature gates",
+			func(featureGates map[string]bool, version string, matcher gomegatypes.GomegaMatcher) {
+				errList := ValidateFeatureGates(featureGates, version, nil)
+				Expect(errList).To(matcher)
+			},
+
+			Entry("empty list", nil, "1.18.14", BeEmpty()),
+			Entry("supported feature gate", map[string]bool{"AnyVolumeDataSource": true}, "1.18.14", BeEmpty()),
+			Entry("unsupported feature gate", map[string]bool{"CustomResourceValidation": true}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(field.ErrorTypeForbidden),
+				"Field":  Equal(field.NewPath("CustomResourceValidation").String()),
+				"Detail": Equal("not supported in Kubernetes version 1.18.14"),
+			})))),
+			Entry("unknown feature gate", map[string]bool{"Foo": true}, "1.18.14", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal(field.NewPath("Foo").String()),
+				"BadValue": Equal("Foo"),
+				"Detail":   Equal("unknown feature gate Foo"),
+			})))),
 		)
 	})
 })
