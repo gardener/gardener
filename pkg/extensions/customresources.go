@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -33,8 +32,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-
 	"github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -112,7 +109,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 		namespace = obj.GetNamespace()
 	)
 
-	resetObj, err := createResetObjectFunc(obj, c.Scheme())
+	resetObj, err := kutil.CreateResetObjectFunc(obj, c.Scheme())
 	if err != nil {
 		return err
 	}
@@ -265,7 +262,7 @@ func WaitUntilExtensionObjectDeleted(
 		namespace = obj.GetNamespace()
 	)
 
-	resetObj, err := createResetObjectFunc(obj, c.Scheme())
+	resetObj, err := kutil.CreateResetObjectFunc(obj, c.Scheme())
 	if err != nil {
 		return err
 	}
@@ -410,7 +407,7 @@ func WaitUntilExtensionObjectMigrated(
 		namespace = obj.GetNamespace()
 	)
 
-	resetObj, err := createResetObjectFunc(obj, c.Scheme())
+	resetObj, err := kutil.CreateResetObjectFunc(obj, c.Scheme())
 	if err != nil {
 		return err
 	}
@@ -515,29 +512,4 @@ func extensionKey(kind, namespace, name string) string {
 
 func formatErrorMessage(message, description string) string {
 	return fmt.Sprintf("%s: %s", message, description)
-}
-
-// createResetObjectFunc creates a func that will reset the given object to a new empty object every time the func is called.
-// This is useful for resetting an in-memory object before re-getting it from the API server / cache
-// to avoid executing checks on stale/removed object data e.g. annotations/lastError
-// (json decoder does not unset fields in the in-memory object that are unset in the API server's response)
-func createResetObjectFunc(obj runtime.Object, scheme *runtime.Scheme) (func(), error) {
-	gvk, err := apiutil.GVKForObject(obj, scheme)
-	if err != nil {
-		return nil, err
-	}
-	emptyObj, err := scheme.New(gvk)
-	if err != nil {
-		return nil, err
-	}
-	return func() {
-		deepCopyIntoObject(obj, emptyObj)
-	}, nil
-}
-
-// deepCopyIntoObject deep copies src into dest.
-// This is a workaround for runtime.Object's lack of a DeepCopyInto method, similar to what the c-r cache does:
-// https://github.com/kubernetes-sigs/controller-runtime/blob/55a329c15d6b4f91a9ff072fed6f6f05ff3339e7/pkg/cache/internal/cache_reader.go#L85-L90
-func deepCopyIntoObject(dest, src runtime.Object) {
-	reflect.ValueOf(dest).Elem().Set(reflect.ValueOf(src.DeepCopyObject()).Elem())
 }

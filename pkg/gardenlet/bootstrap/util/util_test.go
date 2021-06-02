@@ -86,6 +86,8 @@ var _ = Describe("Util", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			c = mockclient.NewMockClient(ctrl)
+
+			c.EXPECT().Scheme().Return(kubernetes.GardenScheme).AnyTimes()
 		})
 
 		AfterEach(func() {

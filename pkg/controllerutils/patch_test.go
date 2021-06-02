@@ -24,8 +24,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	corescheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -39,15 +41,21 @@ var _ = Describe("Patch", func() {
 		ctx     = context.TODO()
 		fakeErr = fmt.Errorf("fake err")
 
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-		obj  *corev1.ServiceAccount
+		ctrl   *gomock.Controller
+		c      *mockclient.MockClient
+		scheme *runtime.Scheme
+		obj    *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 		obj = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "bar"}}
+
+		scheme = runtime.NewScheme()
+		Expect(corescheme.AddToScheme(scheme)).NotTo(HaveOccurred())
+
+		c.EXPECT().Scheme().Return(scheme).AnyTimes()
 	})
 
 	AfterEach(func() {
