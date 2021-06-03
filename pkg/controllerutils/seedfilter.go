@@ -18,6 +18,7 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -226,5 +227,21 @@ func ManagedSeedFilterFunc(ctx context.Context, c client.Client, seedName string
 			return seedLabelsMatchWithClient(ctx, c, *shoot.Spec.SeedName, labelSelector)
 		}
 		return seedLabelsMatchWithClient(ctx, c, *shoot.Status.SeedName, labelSelector)
+	}
+}
+
+// SeedOfManagedSeedFilterFunc returns a filtering func for Seeds that checks if the Seed is owned by a ManagedSeed
+// that references a Shoot scheduled on a Seed, for which the gardenlet is responsible.
+func SeedOfManagedSeedFilterFunc(ctx context.Context, c client.Client, seedName string, labelSelector *metav1.LabelSelector) func(obj interface{}) bool {
+	return func(obj interface{}) bool {
+		seed, ok := obj.(*gardencorev1beta1.Seed)
+		if !ok {
+			return false
+		}
+		managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+		if err := c.Get(ctx, kutil.Key(gardencorev1beta1constants.GardenNamespace, seed.Name), managedSeed); err != nil {
+			return false
+		}
+		return ManagedSeedFilterFunc(ctx, c, seedName, labelSelector)(managedSeed)
 	}
 }

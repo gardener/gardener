@@ -107,16 +107,19 @@ func (r *reconciler) delete(ctx context.Context, set *seedmanagementv1alpha1.Man
 	}
 
 	var status *seedmanagementv1alpha1.ManagedSeedSetStatus
+	var removeFinalizer bool
 	defer func() {
-		// Update status, on failure return the update error unless there is another error
-		if updateErr := r.updateStatus(ctx, set, status); updateErr != nil && err == nil {
-			err = fmt.Errorf("could not update status: %w", updateErr)
+		// Only update status if the finalizer is not removed to prevent errors if the object is already gone
+		if !removeFinalizer {
+			// Update status, on failure return the update error unless there is another error
+			if updateErr := r.updateStatus(ctx, set, status); updateErr != nil && err == nil {
+				err = fmt.Errorf("could not update status: %w", updateErr)
+			}
 		}
 	}()
 
 	// Reconcile deletion
 	r.getLogger(set).Debug("Reconciling deletion")
-	var removeFinalizer bool
 	if status, removeFinalizer, err = r.actuator.Reconcile(ctx, set); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeedSet %s deletion: %w", kutil.ObjectName(set), err)
 	}

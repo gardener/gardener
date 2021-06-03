@@ -50,9 +50,10 @@ var _ = Describe("seedfilter", func() {
 
 		ctx context.Context
 
-		managedSeed *seedmanagementv1alpha1.ManagedSeed
-		shoot       *gardencorev1beta1.Shoot
-		seed        *gardencorev1beta1.Seed
+		managedSeed       *seedmanagementv1alpha1.ManagedSeed
+		shoot             *gardencorev1beta1.Shoot
+		seed              *gardencorev1beta1.Seed
+		seedOfManagedSeed *gardencorev1beta1.Seed
 	)
 
 	BeforeEach(func() {
@@ -86,10 +87,15 @@ var _ = Describe("seedfilter", func() {
 		}
 		seed = &gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
+				Name: seedName,
 				Labels: map[string]string{
 					"test-label": "test",
 				},
+			},
+		}
+		seedOfManagedSeed = &gardencorev1beta1.Seed{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
 			},
 		}
 	})
@@ -121,6 +127,23 @@ var _ = Describe("seedfilter", func() {
 				func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Seed) error {
 					*s = *seed
 					return nil
+				},
+			)
+		}
+
+		expectGetManagedSeed = func() {
+			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, ms *seedmanagementv1alpha1.ManagedSeed) error {
+					*ms = *managedSeed
+					return nil
+				},
+			)
+		}
+
+		expectGetManagedSeedNotFound = func() {
+			c.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
+				func(_ context.Context, _ client.ObjectKey, _ *seedmanagementv1alpha1.ManagedSeed) error {
+					return apierrors.NewNotFound(seedmanagementv1alpha1.Resource("ManagedSeed"), name)
 				},
 			)
 		}
@@ -196,6 +219,93 @@ var _ = Describe("seedfilter", func() {
 				},
 			})
 			Expect(f(managedSeed)).To(BeFalse())
+		})
+	})
+
+	Describe("#SeedOfManagedSeedFilterFunc", func() {
+		It("should return false if the specified object is not a seed", func() {
+			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, seedName, nil)
+			Expect(f(shoot)).To(BeFalse())
+		})
+
+		It("should return false if the seed is not owned by a managed seed", func() {
+			expectGetManagedSeedNotFound()
+			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, seedName, nil)
+			Expect(f(seedOfManagedSeed)).To(BeFalse())
+		})
+
+		It("should return false with a shoot that is not found", func() {
+			expectGetManagedSeed()
+			expectGetShootNotFound()
+			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, seedName, nil)
+			Expect(f(seedOfManagedSeed)).To(BeFalse())
+		})
+
+		It("should return false with a shoot that is not yet scheduled on a seed", func() {
+			expectGetManagedSeed()
+			shoot.Spec.SeedName = nil
+			expectGetShoot()
+			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, seedName, nil)
+			Expect(f(seedOfManagedSeed)).To(BeFalse())
+		})
+
+		It("should return true with a shoot that is scheduled on the specified seed", func() {
+			expectGetManagedSeed()
+			expectGetShoot()
+			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, seedName, nil)
+			Expect(f(seedOfManagedSeed)).To(BeTrue())
+		})
+
+		It("should return true with a shoot that is scheduled on the specified seed (status different from spec)", func() {
+			expectGetManagedSeed()
+			shoot.Spec.SeedName = pointer.StringPtr("foo")
+			expectGetShoot()
+			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, seedName, nil)
+			Expect(f(seedOfManagedSeed)).To(BeTrue())
+		})
+
+		It("should return false with a shoot that is scheduled on a different seed", func() {
+			expectGetManagedSeed()
+			expectGetShoot()
+			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, "foo", nil)
+			Expect(f(seedOfManagedSeed)).To(BeFalse())
+		})
+
+		It("should return true with a shoot that is scheduled on a seed selected by the specified label selector", func() {
+			expectGetManagedSeed()
+			expectGetShoot()
+			expectGetSeed()
+			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, "", &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"test-label": "test",
+				},
+			})
+			Expect(f(seedOfManagedSeed)).To(BeTrue())
+		})
+
+		It("should return true with a shoot that is scheduled on a seed selected by the specified label selector (status different from spec)", func() {
+			expectGetManagedSeed()
+			shoot.Spec.SeedName = pointer.StringPtr("foo")
+			expectGetShoot()
+			expectGetSeed()
+			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, "", &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"test-label": "test",
+				},
+			})
+			Expect(f(seedOfManagedSeed)).To(BeTrue())
+		})
+
+		It("should return false with a shoot that is scheduled on a seed not selected by the specified label selector", func() {
+			expectGetManagedSeed()
+			expectGetShoot()
+			expectGetSeed()
+			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, "", &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"foo": "bar",
+				},
+			})
+			Expect(f(seedOfManagedSeed)).To(BeFalse())
 		})
 	})
 

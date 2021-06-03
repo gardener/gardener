@@ -119,20 +119,23 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	})
 
 	// Add event handler for controlled seeds
-	c.seedInformer.AddEventHandler(&kutils.ControlledResourceEventHandler{
-		ControllerTypes: []kutils.ControllerType{
-			{
-				Type:      &seedmanagementv1alpha1.ManagedSeed{},
-				Namespace: pointer.StringPtr(gardencorev1beta1constants.GardenNamespace),
-				NameFunc:  func(obj client.Object) string { return obj.GetName() },
+	c.seedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: controllerutils.SeedOfManagedSeedFilterFunc(ctx, c.gardenClient.Client(), confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
+		Handler: &kutils.ControlledResourceEventHandler{
+			ControllerTypes: []kutils.ControllerType{
+				{
+					Type:      &seedmanagementv1alpha1.ManagedSeed{},
+					Namespace: pointer.StringPtr(gardencorev1beta1constants.GardenNamespace),
+					NameFunc:  func(obj client.Object) string { return obj.GetName() },
+				},
 			},
+			Ctx:                        ctx,
+			Reader:                     c.gardenClient.Cache(),
+			ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterSeed),
+			Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedAdd(obj) }),
+			Scheme:                     kubernetes.GardenScheme,
+			Logger:                     c.logger,
 		},
-		Ctx:                        ctx,
-		Reader:                     c.gardenClient.Cache(),
-		ControllerPredicateFactory: kutils.ControllerPredicateFactoryFunc(c.filterSeed),
-		Enqueuer:                   kutils.EnqueuerFunc(func(obj client.Object) { c.managedSeedAdd(obj) }),
-		Scheme:                     kubernetes.GardenScheme,
-		Logger:                     c.logger,
 	})
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.managedSeedInformer.HasSynced, c.seedInformer.HasSynced) {

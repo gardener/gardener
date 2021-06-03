@@ -162,14 +162,11 @@ var _ = Describe("Reconciler", func() {
 				Expect(result).To(Equal(reconcile.Result{RequeueAfter: syncPeriod}))
 			})
 
-			It("should reconcile the ManagedSeedSet deletion, remove the finalizer, and update the status", func() {
+			It("should reconcile the ManagedSeedSet deletion, remove the finalizer, and not update the status", func() {
 				expectGetManagedSeedSet()
 				actuator.EXPECT().Reconcile(ctx, set).Return(status, true, nil)
 				expectPatchManagedSeedSet(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
 					Expect(mss.Finalizers).To(BeEmpty())
-				})
-				expectPatchManagedSeedSetStatus(func(mss *seedmanagementv1alpha1.ManagedSeedSet) {
-					Expect(&mss.Status).To(Equal(status))
 				})
 
 				result, err := reconciler.Reconcile(ctx, request)
