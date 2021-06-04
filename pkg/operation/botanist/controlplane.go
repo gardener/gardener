@@ -580,7 +580,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 
 	var (
 		apiServerConfig              = b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
-		admissionPlugins             = kubernetes.GetAdmissionPluginsForVersion(b.Shoot.Info.Spec.Kubernetes.Version)
+		admissionPlugins             = kutil.GetAdmissionPluginsForVersion(b.Shoot.Info.Spec.Kubernetes.Version)
 		externalHostname             = b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
 		serviceAccountTokenIssuerURL = fmt.Sprintf("https://%s", externalHostname)
 		serviceAccountConfigVals     = map[string]interface{}{}
