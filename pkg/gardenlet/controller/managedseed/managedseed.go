@@ -110,7 +110,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
 	c.managedSeedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ManagedSeedFilterFunc(ctx, c.gardenClient.Client(), confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
+		FilterFunc: controllerutils.ManagedSeedFilterFunc(ctx, c.gardenClient.Cache(), confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    c.managedSeedAdd,
 			UpdateFunc: c.managedSeedUpdate,
@@ -120,7 +120,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	// Add event handler for controlled seeds
 	c.seedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.SeedOfManagedSeedFilterFunc(ctx, c.gardenClient.Client(), confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
+		FilterFunc: controllerutils.SeedOfManagedSeedFilterFunc(ctx, c.gardenClient.Cache(), confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
 		Handler: &kutils.ControlledResourceEventHandler{
 			ControllerTypes: []kutils.ControllerType{
 				{

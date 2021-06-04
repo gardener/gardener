@@ -46,7 +46,7 @@ const (
 var _ = Describe("seedfilter", func() {
 	var (
 		ctrl *gomock.Controller
-		c    *mockclient.MockClient
+		c    *mockclient.MockReader
 
 		ctx context.Context
 
@@ -58,7 +58,7 @@ var _ = Describe("seedfilter", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		c = mockclient.NewMockClient(ctrl)
+		c = mockclient.NewMockReader(ctrl)
 
 		ctx = context.TODO()
 
