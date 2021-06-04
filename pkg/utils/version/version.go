@@ -57,34 +57,3 @@ func CheckVersionMeetsConstraint(version, constraint string) (bool, error) {
 
 	return c.Check(v), nil
 }
-
-// Range represents a version range of type [MinVersion, MaxVersion).
-type Range struct {
-	MinVersion string
-	MaxVersion string
-}
-
-// Contains returns true if the range contains the given version, false otherwise.
-// The range contains the given version only if it's greater or equal than MinVersion (always true if MinVersion is empty),
-// and less than MaxVersion (always true if MaxVersion is empty).
-func (r *Range) Contains(version string) (bool, error) {
-	var err error
-
-	geMin := true
-	if r.MinVersion != "" {
-		geMin, err = CompareVersions(version, ">=", r.MinVersion)
-		if err != nil {
-			return false, fmt.Errorf("could not compare version %s to %s: %w", version, r.MinVersion, err)
-		}
-	}
-
-	ltMax := true
-	if r.MaxVersion != "" {
-		ltMax, err = CompareVersions(version, "<", r.MaxVersion)
-		if err != nil {
-			return false, fmt.Errorf("could not compare version %s to %s: %w", version, r.MaxVersion, err)
-		}
-	}
-
-	return geMin && ltMax, nil
-}
