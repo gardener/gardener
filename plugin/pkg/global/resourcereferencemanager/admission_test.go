@@ -1164,6 +1164,30 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("1.17.1"))
 			})
+
+			It("should accept removal of kubernetes version that is still in use by a shoot that is being deleted", func() {
+				t := metav1.Now()
+				shootTwoDeleted := shootTwo
+				shootTwoDeleted.DeletionTimestamp = &t
+
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwoDeleted)).To(Succeed())
+
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					Kubernetes: core.KubernetesSettings{
+						Versions: []core.ExpirableVersion{
+							{Version: "1.17.2"},
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 
 		Context("CloudProfile - Update Machine image versions", func() {
@@ -1350,6 +1374,54 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err.Error()).To(ContainSubstring("1.17.1"))
 				Expect(err.Error()).To(ContainSubstring(shootTwo.Spec.Provider.Workers[0].Machine.Image.Name))
 				Expect(err.Error()).To(ContainSubstring(shootTwo.Spec.Provider.Workers[1].Machine.Image.Name))
+			})
+
+			It("should accept removal of a machine image version that is in use by a shoot that is being deleted", func() {
+				t := metav1.Now()
+				shootTwoDeleted := shootTwo
+				shootTwoDeleted.DeletionTimestamp = &t
+
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootOne)).To(Succeed())
+				Expect(gardenCoreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shootTwoDeleted)).To(Succeed())
+
+				newVersions := []core.MachineImageVersion{
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.3",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.17.0",
+						},
+					},
+					{
+						ExpirableVersion: core.ExpirableVersion{
+							Version: "1.16.0",
+						},
+					},
+				}
+
+				// new cloud profile has version 1.17.1 removed.
+				cloudProfileNew := cloudProfile
+				cloudProfileNew.Spec = core.CloudProfileSpec{
+					MachineImages: []core.MachineImage{
+						{
+							Name:     "coreos",
+							Versions: newVersions,
+						},
+						{
+							Name:     "ubuntu",
+							Versions: newVersions,
+						},
+					},
+				}
+
+				attrs := admission.NewAttributesRecord(&cloudProfileNew, &cloudProfile, core.Kind("CloudProfile").WithVersion("version"), "", cloudProfile.Name, core.Resource("CloudProfile").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			// for existing Gardener installations
