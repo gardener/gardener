@@ -131,7 +131,7 @@ func (v *ValidateSeed) Validate(ctx context.Context, a admission.Attributes, o a
 	}
 
 	if admissionutils.IsSeedUsedByShoot(seedName, shoots) {
-		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed '%s' which is still used by shoot(s)", seedName))
+		return admission.NewForbidden(a, fmt.Errorf("cannot delete seed %s since it is still used by shoot(s)", seedName))
 	}
 
 	return nil

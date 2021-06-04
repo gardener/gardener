@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	"github.com/gardener/gardener/plugin/pkg/global/extensionvalidation"
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
+	managedseedshoot "github.com/gardener/gardener/plugin/pkg/managedseed/shoot"
 	managedseedvalidator "github.com/gardener/gardener/plugin/pkg/managedseed/validator"
 	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
 	seedvalidator "github.com/gardener/gardener/plugin/pkg/seed/validator"
@@ -32,6 +33,7 @@ import (
 	shoottolerationrestriction "github.com/gardener/gardener/plugin/pkg/shoot/tolerationrestriction"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	shootvpa "github.com/gardener/gardener/plugin/pkg/shoot/vpa"
+
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/admission/plugin/namespace/lifecycle"
@@ -60,6 +62,7 @@ var (
 		customverbauthorizer.PluginName,            // CustomVerbAuthorizer
 		shootvpa.PluginName,                        // ShootVPAEnabledByDefault
 		managedseedvalidator.PluginName,            // ManagedSeed
+		managedseedshoot.PluginName,                // ManagedSeedShoot
 		bastionvalidator.PluginName,                // Bastion
 
 		// new admission plugins should generally be inserted above here
@@ -91,6 +94,7 @@ var (
 		clusteropenidconnectpreset.PluginName,      // ClusterOpenIDConnectPreset
 		customverbauthorizer.PluginName,            // CustomVerbAuthorizer
 		managedseedvalidator.PluginName,            // ManagedSeed
+		managedseedshoot.PluginName,                // ManagedSeedShoot
 		bastionvalidator.PluginName,                // Bastion
 		mutatingwebhook.PluginName,                 // MutatingAdmissionWebhook
 		validatingwebhook.PluginName,               // ValidatingAdmissionWebhook
@@ -118,6 +122,7 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	clusteropenidconnectpreset.Register(plugins)
 	customverbauthorizer.Register(plugins)
 	managedseedvalidator.Register(plugins)
+	managedseedshoot.Register(plugins)
 	bastionvalidator.Register(plugins)
 	resourcequota.Register(plugins)
 	shootvpa.Register(plugins)
