@@ -24,8 +24,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	corescheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -39,15 +41,21 @@ var _ = Describe("Patch", func() {
 		ctx     = context.TODO()
 		fakeErr = fmt.Errorf("fake err")
 
-		ctrl *gomock.Controller
-		c    *mockclient.MockClient
-		obj  *corev1.ServiceAccount
+		ctrl   *gomock.Controller
+		c      *mockclient.MockClient
+		scheme *runtime.Scheme
+		obj    *corev1.ServiceAccount
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 		obj = &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "bar"}}
+
+		scheme = runtime.NewScheme()
+		Expect(corescheme.AddToScheme(scheme)).NotTo(HaveOccurred())
+
+		c.EXPECT().Scheme().Return(scheme).AnyTimes()
 	})
 
 	AfterEach(func() {
@@ -138,8 +146,8 @@ var _ = Describe("Patch", func() {
 		Describe("#GetAndCreateOrStrategicMergePatch", func() { testSuite(GetAndCreateOrStrategicMergePatch, types.StrategicMergePatchType) })
 	})
 
-	Describe("*CreateOrPatch", func() {
-		testSuite := func(f func(ctx context.Context, c client.Writer, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error), patchType types.PatchType) {
+	Describe("CreateOrGetAnd*Patch", func() {
+		testSuite := func(f func(ctx context.Context, c client.Client, obj client.Object, f controllerutil.MutateFn) (controllerutil.OperationResult, error), patchType types.PatchType) {
 			It("should return an error because the mutate function returned an error", func() {
 				result, err := f(ctx, c, obj, func() error { return fakeErr })
 				Expect(result).To(Equal(controllerutil.OperationResultNone))
@@ -154,10 +162,18 @@ var _ = Describe("Patch", func() {
 				Expect(err).To(MatchError(fakeErr))
 			})
 
-			It("should return an error because the patch failed", func() {
+			It("should successfully create the object", func() {
+				c.EXPECT().Create(ctx, obj)
+
+				result, err := f(ctx, c, obj, func() error { return nil })
+				Expect(result).To(Equal(controllerutil.OperationResultCreated))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return an error because the get failed", func() {
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
-					test.EXPECTPatch(ctx, c, obj, obj, patchType, fakeErr),
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).Return(fakeErr),
 				)
 
 				result, err := f(ctx, c, obj, func() error { return nil })
@@ -165,12 +181,19 @@ var _ = Describe("Patch", func() {
 				Expect(err).To(MatchError(fakeErr))
 			})
 
-			It("should successfully create the object", func() {
-				c.EXPECT().Create(ctx, obj)
+			It("should return an error because the patch failed", func() {
+				gomock.InOrder(
+					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount) error {
+						obj.DeepCopyInto(objToReturn)
+						return nil
+					}),
+					test.EXPECTPatch(ctx, c, obj, obj, patchType, fakeErr),
+				)
 
 				result, err := f(ctx, c, obj, func() error { return nil })
-				Expect(result).To(Equal(controllerutil.OperationResultCreated))
-				Expect(err).NotTo(HaveOccurred())
+				Expect(result).To(Equal(controllerutil.OperationResultNone))
+				Expect(err).To(MatchError(fakeErr))
 			})
 
 			It("should successfully patch the object", func() {
@@ -185,6 +208,12 @@ var _ = Describe("Patch", func() {
 
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
+					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount) error {
+						Expect(obj.GetLabels()).To(BeEmpty(), "object should be reset before getting it again")
+
+						obj.DeepCopyInto(objToReturn)
+						return nil
+					}),
 					test.EXPECTPatch(ctx, c, objCopy, obj, patchType),
 				)
 
@@ -194,7 +223,7 @@ var _ = Describe("Patch", func() {
 			})
 		}
 
-		Describe("#CreateOrMergePatch", func() { testSuite(CreateOrMergePatch, types.MergePatchType) })
-		Describe("#CreateOrStrategicMergePatch", func() { testSuite(CreateOrStrategicMergePatch, types.StrategicMergePatchType) })
+		Describe("#CreateOrGetAndMergePatch", func() { testSuite(CreateOrGetAndMergePatch, types.MergePatchType) })
+		Describe("#CreateOrGetAndStrategicMergePatch", func() { testSuite(CreateOrGetAndStrategicMergePatch, types.StrategicMergePatchType) })
 	})
 })

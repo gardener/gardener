@@ -227,7 +227,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 			Namespace: serviceAccountNamespace,
 		},
 	}
-	if _, err := controllerutils.CreateOrStrategicMergePatch(ctx, gardenClient, sa, func() error { return nil }); err != nil {
+	if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, gardenClient, sa, func() error { return nil }); err != nil {
 		return nil, err
 	}
 
@@ -246,7 +246,7 @@ func ComputeGardenletKubeconfigWithServiceAccountToken(ctx context.Context, gard
 			Name: ClusterRoleBindingName(sa.Namespace, sa.Name),
 		},
 	}
-	if _, err := controllerutils.CreateOrStrategicMergePatch(ctx, gardenClient, clusterRoleBinding, func() error {
+	if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, gardenClient, clusterRoleBinding, func() error {
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "ClusterRole",

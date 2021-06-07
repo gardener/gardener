@@ -583,6 +583,7 @@ var _ = Describe("Actuator", func() {
 		BeforeEach(func() {
 			clientMap.EXPECT().GetClient(ctx, keys.ForShoot(shoot)).Return(shootClient, nil).AnyTimes()
 			clientMap.EXPECT().GetClient(ctx, keys.ForSeedWithName(seedName)).Return(seedClient, nil).AnyTimes()
+			gc.EXPECT().Scheme().Return(kubernetes.GardenScheme).AnyTimes()
 		})
 
 		It("should wait if the Shoot is still reconciling", func() {
