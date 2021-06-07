@@ -19,6 +19,19 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang/mock/gomock"
+	"github.com/hashicorp/go-multierror"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -31,19 +44,6 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
-	"github.com/golang/mock/gomock"
-	"github.com/hashicorp/go-multierror"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("Extension", func() {
@@ -157,7 +157,7 @@ var _ = Describe("Extension", func() {
 				Expect(c.Create(ctx, expected[i])).To(Succeed(), "creating extensions succeeds")
 			}
 
-			Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("encountered error during reconciliation: "+errDescription)), "extensions indicates error")
+			Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("error during reconciliation: "+errDescription)), "extensions indicates error")
 		})
 
 		It("should return error if we haven't observed the latest timestamp annotation", func() {

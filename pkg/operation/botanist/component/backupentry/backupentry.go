@@ -16,22 +16,20 @@ package backupentry
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -77,6 +75,13 @@ func New(
 		values:       values,
 		waitInterval: waitInterval,
 		waitTimeout:  waitTimeout,
+
+		backupEntry: &gardencorev1beta1.BackupEntry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      values.Name,
+				Namespace: values.Namespace,
+			},
+		},
 	}
 }
 
@@ -86,69 +91,54 @@ type backupEntry struct {
 	client       client.Client
 	waitInterval time.Duration
 	waitTimeout  time.Duration
+
+	backupEntry *gardencorev1beta1.BackupEntry
 }
 
 // Deploy uses the garden client to create or update the BackupEntry resource in the project namespace in the Garden.
 func (b *backupEntry) Deploy(ctx context.Context) error {
 	var (
-		backupEntry = &gardencorev1beta1.BackupEntry{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      b.values.Name,
-				Namespace: b.values.Namespace,
-			},
-		}
 		bucketName = b.values.BucketName
 		seedName   = b.values.SeedName
 	)
 
-	if err := b.client.Get(ctx, kutil.Key(b.values.Namespace, b.values.Name), backupEntry); err == nil {
-		bucketName = backupEntry.Spec.BucketName
-		seedName = backupEntry.Spec.SeedName
+	if err := b.client.Get(ctx, client.ObjectKeyFromObject(b.backupEntry), b.backupEntry); err == nil {
+		bucketName = b.backupEntry.Spec.BucketName
+		seedName = b.backupEntry.Spec.SeedName
 	} else if client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
-	return b.createOrUpdate(ctx, backupEntry, seedName, bucketName, v1beta1constants.GardenerOperationReconcile)
+	return b.reconcile(ctx, b.backupEntry, seedName, bucketName, v1beta1constants.GardenerOperationReconcile)
 }
 
 // Wait waits until the BackupEntry resource is ready.
 func (b *backupEntry) Wait(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, b.waitInterval, b.waitTimeout, func(ctx context.Context) (done bool, err error) {
-		be := &gardencorev1beta1.BackupEntry{}
-		if err := b.client.Get(ctx, kutil.Key(b.values.Namespace, b.values.Name), be); err != nil {
-			return retry.SevereError(err)
-		}
-
-		if be.Status.LastOperation != nil {
-			if be.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-				b.logger.Info("Backup entry has been successfully reconciled.")
-				return retry.Ok()
-			}
-			if be.Status.LastOperation.State == gardencorev1beta1.LastOperationStateError {
-				b.logger.Info("Backup entry has been reconciled with error.")
-				return retry.SevereError(errors.New(be.Status.LastError.Description))
-			}
-		}
-
-		b.logger.Info("Waiting until the backup entry has been reconciled in the Garden cluster...")
-		return retry.MinorError(fmt.Errorf("backup entry %q has not yet been reconciled", be.Name))
-	})
+	if err := extensions.WaitUntilObjectReadyWithHealthFunction(
+		ctx,
+		b.client,
+		b.logger,
+		health.CheckBackupEntry,
+		b.backupEntry,
+		"BackupEntry",
+		b.waitInterval,
+		b.waitTimeout,
+		b.waitTimeout,
+		nil,
+	); err != nil {
+		b.logger.Error(err)
+		return err
+	}
+	return nil
 }
 
 // Migrate uses the garden client to deschedule the BackupEntry from its current seed.
 func (b *backupEntry) Migrate(ctx context.Context) error {
-	backupEntry := &gardencorev1beta1.BackupEntry{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      b.values.Name,
-			Namespace: b.values.Namespace,
-		},
-	}
-
-	if err := b.client.Get(ctx, kutil.Key(b.values.Namespace, b.values.Name), backupEntry); err != nil {
-		return client.IgnoreNotFound(err)
-	}
-	backupEntry.Spec.SeedName = b.values.SeedName
-	return b.client.Update(ctx, backupEntry)
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.client, b.backupEntry, func() error {
+		b.backupEntry.Spec.SeedName = b.values.SeedName
+		return nil
+	})
+	return err
 }
 
 // WaitMigrate waits until the BackupEntry is migrated
@@ -159,35 +149,24 @@ func (b *backupEntry) WaitMigrate(ctx context.Context) error {
 // Restore uses the garden client to update the BackupEntry and set the name of the new seed to which it shall be scheduled.
 // If the BackupEntry was deleted it will be recreated.
 func (b *backupEntry) Restore(ctx context.Context, _ *gardencorev1alpha1.ShootState) error {
-	var (
-		backupEntry = &gardencorev1beta1.BackupEntry{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      b.values.Name,
-				Namespace: b.values.Namespace,
-			},
-		}
-		bucketName = b.values.BucketName
-	)
+	bucketName := b.values.BucketName
 
-	if err := b.client.Get(ctx, kutil.Key(b.values.Namespace, b.values.Name), backupEntry); err == nil {
-		bucketName = backupEntry.Spec.BucketName
+	if err := b.client.Get(ctx, kutil.Key(b.values.Namespace, b.values.Name), b.backupEntry); err == nil {
+		bucketName = b.backupEntry.Spec.BucketName
 	} else if client.IgnoreNotFound(err) != nil {
 		return err
 	}
-	return b.createOrUpdate(ctx, backupEntry, b.values.SeedName, bucketName, v1beta1constants.GardenerOperationRestore)
+	return b.reconcile(ctx, b.backupEntry, b.values.SeedName, bucketName, v1beta1constants.GardenerOperationRestore)
 }
 
-func (b *backupEntry) createOrUpdate(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry, seedName *string, bucketName string, operation string) error {
-	_, err := controllerutil.CreateOrUpdate(ctx, b.client, backupEntry, func() error {
+func (b *backupEntry) reconcile(ctx context.Context, backupEntry *gardencorev1beta1.BackupEntry, seedName *string, bucketName string, operation string) error {
+	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, b.client, backupEntry, func() error {
 		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 		metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+
 		if b.values.ShootPurpose != nil {
 			metav1.SetMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.ShootPurpose, string(*b.values.ShootPurpose))
 		}
-
-		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
-		finalizers.Insert(gardencorev1beta1.GardenerName)
-		backupEntry.SetFinalizers(finalizers.UnsortedList())
 
 		if b.values.OwnerReference != nil {
 			backupEntry.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*b.values.OwnerReference}

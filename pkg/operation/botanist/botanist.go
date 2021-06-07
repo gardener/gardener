@@ -147,7 +147,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// other components
-	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry(b.K8sGardenClient.DirectClient())
+	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry(b.K8sGardenClient.Client())
 	o.Shoot.Components.NetworkPolicies, err = b.DefaultNetworkPolicies(sniPhase)
 	if err != nil {
 		return nil, err

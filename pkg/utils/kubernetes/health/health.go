@@ -372,19 +372,28 @@ func ExtensionOperationHasBeenUpdatedSince(lastUpdateTime metav1.Time) Func {
 	}
 }
 
-// CheckBackupBucket checks if an backup bucket Object is healthy or not.
-func CheckBackupBucket(bb client.Object) error {
-	obj, ok := bb.(*gardencorev1beta1.BackupBucket)
+// CheckBackupBucket checks if an backup bucket object is healthy or not.
+func CheckBackupBucket(obj client.Object) error {
+	bb, ok := obj.(*gardencorev1beta1.BackupBucket)
 	if !ok {
-		return fmt.Errorf("expected gardencorev1beta1.BackupBucket but got %T", bb)
+		return fmt.Errorf("expected *gardencorev1beta1.BackupBucket but got %T", obj)
 	}
-	return checkExtensionObject(obj.Generation, obj.Status.ObservedGeneration, obj.Annotations, obj.Status.LastError, obj.Status.LastOperation)
+	return checkExtensionObject(bb.Generation, bb.Status.ObservedGeneration, bb.Annotations, bb.Status.LastError, bb.Status.LastOperation)
+}
+
+// CheckBackupEntry checks if an backup entry object is healthy or not.
+func CheckBackupEntry(obj client.Object) error {
+	be, ok := obj.(*gardencorev1beta1.BackupEntry)
+	if !ok {
+		return fmt.Errorf("expected *gardencorev1beta1.BackupEntry but got %T", obj)
+	}
+	return checkExtensionObject(be.Generation, be.Status.ObservedGeneration, be.Annotations, be.Status.LastError, be.Status.LastOperation)
 }
 
 // checkExtensionObject checks if an extension Object is healthy or not.
 func checkExtensionObject(generation int64, observedGeneration int64, annotations map[string]string, lastError *gardencorev1beta1.LastError, lastOperation *gardencorev1beta1.LastOperation) error {
 	if lastError != nil {
-		return gardencorev1beta1helper.NewErrorWithCodes(fmt.Sprintf("extension encountered error during reconciliation: %s", lastError.Description), lastError.Codes...)
+		return gardencorev1beta1helper.NewErrorWithCodes(fmt.Sprintf("error during reconciliation: %s", lastError.Description), lastError.Codes...)
 	}
 
 	if observedGeneration != generation {
