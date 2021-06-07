@@ -16,18 +16,16 @@ package shoot_test
 
 import (
 	"context"
-	"errors"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	corefake "github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	seedmanagementfake "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	. "github.com/gardener/gardener/plugin/pkg/managedseed/shoot"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
@@ -46,7 +44,7 @@ var _ = Describe("Shoot", func() {
 		var (
 			managedSeed          *seedmanagementv1alpha1.ManagedSeed
 			shoot                *core.Shoot
-			coreClient           *corefake.Clientset
+			coreInformerFactory  coreinformers.SharedInformerFactory
 			seedManagementClient *seedmanagementfake.Clientset
 			admissionHandler     *Shoot
 		)
@@ -72,8 +70,8 @@ var _ = Describe("Shoot", func() {
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 
-			coreClient = &corefake.Clientset{}
-			admissionHandler.SetInternalCoreClientset(coreClient)
+			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 
 			seedManagementClient = &seedmanagementfake.Clientset{}
 			admissionHandler.SetSeedManagementClientset(seedManagementClient)
@@ -88,31 +86,15 @@ var _ = Describe("Shoot", func() {
 			})
 
 			It("should forbid the ManagedSeed deletion if a Shoot scheduled on its Seed exists", func() {
-				coreClient.AddReactor("list", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.ShootList{Items: []core.Shoot{*shoot}}, nil
-				})
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 				err := admissionHandler.Validate(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).To(BeForbiddenError())
 			})
 
 			It("should allow the ManagedSeed deletion if a Shoot scheduled on its Seed does not exists", func() {
-				coreClient.AddReactor("list", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.ShootList{Items: []core.Shoot{}}, nil
-				})
-
 				err := admissionHandler.Validate(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
 				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should fail with an error different from Forbidden if listing the Shoots fails with an error", func() {
-				coreClient.AddReactor("list", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, nil, apierrors.NewInternalError(errors.New("Internal Server Error"))
-				})
-
-				err := admissionHandler.Validate(context.TODO(), getManagedSeedAttributes(managedSeed), nil)
-				Expect(err).To(HaveOccurred())
-				Expect(err).ToNot(BeForbiddenError())
 			})
 		})
 
@@ -134,9 +116,7 @@ var _ = Describe("Shoot", func() {
 				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed, *anotherManagedSeed}}, nil
 				})
-				coreClient.AddReactor("list", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.ShootList{Items: []core.Shoot{*shoot}}, nil
-				})
+				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 
 				err := admissionHandler.Validate(context.TODO(), getAllManagedSeedAttributes(managedSeed.Namespace), nil)
 				Expect(err).To(BeForbiddenError())
@@ -145,9 +125,6 @@ var _ = Describe("Shoot", func() {
 			It("should allow multiple ManagedSeed deletion if no Shoots scheduled on any of their Seeds exist", func() {
 				seedManagementClient.AddReactor("list", "managedseeds", func(action testing.Action) (bool, runtime.Object, error) {
 					return true, &seedmanagementv1alpha1.ManagedSeedList{Items: []seedmanagementv1alpha1.ManagedSeed{*managedSeed, *anotherManagedSeed}}, nil
-				})
-				coreClient.AddReactor("list", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
-					return true, &core.ShootList{Items: []core.Shoot{}}, nil
 				})
 
 				err := admissionHandler.Validate(context.TODO(), getAllManagedSeedAttributes(managedSeed.Namespace), nil)
@@ -188,7 +165,7 @@ var _ = Describe("Shoot", func() {
 
 		It("should not fail if the required clients are set", func() {
 			admissionHandler, _ := New()
-			admissionHandler.SetInternalCoreClientset(&corefake.Clientset{})
+			admissionHandler.SetInternalCoreInformerFactory(coreinformers.NewSharedInformerFactory(nil, 0))
 			admissionHandler.SetSeedManagementClientset(&seedmanagementfake.Clientset{})
 
 			err := admissionHandler.ValidateInitialization()

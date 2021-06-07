@@ -23,10 +23,12 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
@@ -47,13 +49,13 @@ func Register(plugins *admission.Plugins) {
 // Shoot contains listers and and admission handler.
 type Shoot struct {
 	*admission.Handler
-	coreClient           coreclientset.Interface
+	shootLister          corelisters.ShootLister
 	seedManagementClient seedmanagementclientset.Interface
 	readyFunc            admission.ReadyFunc
 }
 
 var (
-	_ = admissioninitializer.WantsInternalCoreClientset(&Shoot{})
+	_ = admissioninitializer.WantsInternalCoreInformerFactory(&Shoot{})
 	_ = admissioninitializer.WantsSeedManagementClientset(&Shoot{})
 
 	readyFuncs = []admission.ReadyFunc{}
@@ -72,9 +74,12 @@ func (v *Shoot) AssignReadyFunc(f admission.ReadyFunc) {
 	v.SetReadyFunc(f)
 }
 
-// SetInternalCoreClientset sets the garden core clientset.
-func (v *Shoot) SetInternalCoreClientset(c coreclientset.Interface) {
-	v.coreClient = c
+// SetInternalCoreInformerFactory gets Lister from SharedInformerFactory.
+func (v *Shoot) SetInternalCoreInformerFactory(f coreinformers.SharedInformerFactory) {
+	shootInformer := f.Core().InternalVersion().Shoots()
+	v.shootLister = shootInformer.Lister()
+
+	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced)
 }
 
 // SetSeedManagementClientset sets the garden seedmanagement clientset.
@@ -84,8 +89,8 @@ func (v *Shoot) SetSeedManagementClientset(c seedmanagementclientset.Interface) 
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (v *Shoot) ValidateInitialization() error {
-	if v.coreClient == nil {
-		return errors.New("missing garden core client")
+	if v.shootLister == nil {
+		return errors.New("missing shoot lister")
 	}
 	if v.seedManagementClient == nil {
 		return errors.New("missing garden seedmanagement client")
@@ -147,12 +152,12 @@ func (v *Shoot) validateDeleteCollection(ctx context.Context, a admission.Attrib
 func (v *Shoot) validateDelete(ctx context.Context, a admission.Attributes) error {
 	seedName := a.GetName()
 
-	shoots, err := v.getShoots(ctx, labels.Everything())
+	shoots, err := v.getShoots(labels.Everything())
 	if err != nil {
 		return err
 	}
 
-	if admissionutils.IsSeedUsedByShoot(seedName, getShootPointersFromShoots(shoots)) {
+	if admissionutils.IsSeedUsedByShoot(seedName, shoots) {
 		return admission.NewForbidden(a, fmt.Errorf("cannot delete managed seed %s/%s since its seed %s is still used by shoot(s)", a.GetNamespace(), a.GetName(), a.GetName()))
 	}
 
@@ -181,18 +186,10 @@ func (v *Shoot) getManagedSeeds(ctx context.Context, selector labels.Selector) (
 	return managedSeedList.Items, nil
 }
 
-func (v *Shoot) getShoots(ctx context.Context, selector labels.Selector) ([]core.Shoot, error) {
-	shootList, err := v.coreClient.Core().Shoots("").List(ctx, metav1.ListOptions{LabelSelector: selector.String()})
+func (v *Shoot) getShoots(selector labels.Selector) ([]*core.Shoot, error) {
+	shoots, err := v.shootLister.List(selector)
 	if err != nil {
-		return nil, err
+		return nil, apierrors.NewInternalError(err)
 	}
-	return shootList.Items, nil
-}
-
-func getShootPointersFromShoots(shoots []core.Shoot) []*core.Shoot {
-	var shootPointers []*core.Shoot
-	for i := range shoots {
-		shootPointers = append(shootPointers, &shoots[i])
-	}
-	return shootPointers
+	return shoots, nil
 }
