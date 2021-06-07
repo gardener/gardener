@@ -433,7 +433,7 @@ func (r *ReferenceManager) Admit(ctx context.Context, a admission.Attributes, o 
 				wg.Add(len(shootList))
 
 				for _, s := range shootList {
-					if s.Spec.CloudProfileName != cloudProfile.Name {
+					if s.Spec.CloudProfileName != cloudProfile.Name || s.DeletionTimestamp != nil {
 						wg.Done()
 						continue
 					}
