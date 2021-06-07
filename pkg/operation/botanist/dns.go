@@ -102,11 +102,11 @@ func (b *Botanist) enableDNSProviderForShootDNSEntries() map[string]string {
 
 // DefaultExternalDNSProvider returns the external DNSProvider if external DNS is
 // enabled and if not DeployWaiter which removes the external DNSProvider.
-func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) component.DeployWaiter {
+func (b *Botanist) DefaultExternalDNSProvider() component.DeployWaiter {
 	if b.NeedsExternalDNS() {
 		return dns.NewProvider(
 			b.Logger,
-			seedClient,
+			b.K8sSeedClient.Client(),
 			b.Shoot.SeedNamespace,
 			&dns.ProviderValues{
 				Name:       DNSExternalName,
@@ -128,7 +128,7 @@ func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) componen
 
 	return component.OpDestroy(dns.NewProvider(
 		b.Logger,
-		seedClient,
+		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.ProviderValues{
 			Name:    DNSExternalName,
@@ -138,10 +138,10 @@ func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) componen
 }
 
 // DefaultExternalDNSEntry returns DeployWaiter which removes the external DNSEntry.
-func (b *Botanist) DefaultExternalDNSEntry(seedClient client.Client) component.DeployWaiter {
+func (b *Botanist) DefaultExternalDNSEntry() component.DeployWaiter {
 	return component.OpDestroy(dns.NewEntry(
 		b.Logger,
-		seedClient,
+		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.EntryValues{
 			Name: DNSExternalName,
@@ -151,9 +151,9 @@ func (b *Botanist) DefaultExternalDNSEntry(seedClient client.Client) component.D
 }
 
 // DefaultExternalDNSOwner returns DeployWaiter which removes the external DNSOwner.
-func (b *Botanist) DefaultExternalDNSOwner(seedClient client.Client) component.DeployWaiter {
+func (b *Botanist) DefaultExternalDNSOwner() component.DeployWaiter {
 	return component.OpDestroy(dns.NewOwner(
-		seedClient,
+		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.OwnerValues{
 			Name: DNSExternalName,
@@ -163,11 +163,11 @@ func (b *Botanist) DefaultExternalDNSOwner(seedClient client.Client) component.D
 
 // DefaultInternalDNSProvider returns the internal DNSProvider if internal DNS is
 // enabled and if not, DeployWaiter which removes the internal DNSProvider.
-func (b *Botanist) DefaultInternalDNSProvider(seedClient client.Client) component.DeployWaiter {
+func (b *Botanist) DefaultInternalDNSProvider() component.DeployWaiter {
 	if b.NeedsInternalDNS() {
 		return dns.NewProvider(
 			b.Logger,
-			seedClient,
+			b.K8sSeedClient.Client(),
 			b.Shoot.SeedNamespace,
 			&dns.ProviderValues{
 				Name:       DNSInternalName,
@@ -187,7 +187,7 @@ func (b *Botanist) DefaultInternalDNSProvider(seedClient client.Client) componen
 
 	return component.OpDestroy(dns.NewProvider(
 		b.Logger,
-		seedClient,
+		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.ProviderValues{
 			Name:    DNSInternalName,
@@ -197,10 +197,10 @@ func (b *Botanist) DefaultInternalDNSProvider(seedClient client.Client) componen
 }
 
 // DefaultInternalDNSEntry returns DeployWaiter which removes the internal DNSEntry.
-func (b *Botanist) DefaultInternalDNSEntry(seedClient client.Client) component.DeployWaiter {
+func (b *Botanist) DefaultInternalDNSEntry() component.DeployWaiter {
 	return component.OpDestroy(dns.NewEntry(
 		b.Logger,
-		seedClient,
+		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.EntryValues{
 			Name: DNSInternalName,
@@ -210,9 +210,9 @@ func (b *Botanist) DefaultInternalDNSEntry(seedClient client.Client) component.D
 }
 
 // DefaultInternalDNSOwner returns a DeployWaiter which removes the internal DNSOwner.
-func (b *Botanist) DefaultInternalDNSOwner(seedClient client.Client) component.DeployWaiter {
+func (b *Botanist) DefaultInternalDNSOwner() component.DeployWaiter {
 	return component.OpDestroy(dns.NewOwner(
-		seedClient,
+		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.OwnerValues{
 			Name: DNSInternalName,
@@ -223,7 +223,8 @@ func (b *Botanist) DefaultInternalDNSOwner(seedClient client.Client) component.D
 // AdditionalDNSProviders returns a map containing DNSProviders where the key is the provider name.
 // Providers and DNSEntries which are no longer needed / or in use, contain a DeployWaiter which removes
 // said DNSEntry / DNSProvider.
-func (b *Botanist) AdditionalDNSProviders(ctx context.Context, gardenClient, seedClient client.Client) (map[string]component.DeployWaiter, error) {
+func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]component.DeployWaiter, error) {
+	seedClient := b.K8sSeedClient.Client()
 	additionalProviders := map[string]component.DeployWaiter{}
 
 	if b.NeedsAdditionalDNSProviders() {
@@ -260,7 +261,7 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context, gardenClient, see
 			}
 
 			secret := &corev1.Secret{}
-			if err := gardenClient.Get(
+			if err := b.K8sGardenClient.Client().Get(
 				ctx,
 				kutil.Key(b.Shoot.Info.Namespace, *secretName),
 				secret,

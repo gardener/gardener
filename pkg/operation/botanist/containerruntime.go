@@ -17,16 +17,14 @@ package botanist
 import (
 	"context"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
 )
 
 // DefaultContainerRuntime creates the default deployer for the ContainerRuntime custom resource.
-func (b *Botanist) DefaultContainerRuntime(seedClient client.Client) containerruntime.Interface {
+func (b *Botanist) DefaultContainerRuntime() containerruntime.Interface {
 	return containerruntime.New(
 		b.Logger,
-		seedClient,
+		b.K8sSeedClient.Client(),
 		&containerruntime.Values{
 			Namespace: b.Shoot.SeedNamespace,
 			Workers:   b.Shoot.Info.Spec.Provider.Workers,

@@ -35,10 +35,10 @@ import (
 )
 
 // DefaultWorker creates the default deployer for the Worker custom resource.
-func (b *Botanist) DefaultWorker(seedClient client.Client) worker.Interface {
+func (b *Botanist) DefaultWorker() worker.Interface {
 	return worker.New(
 		b.Logger,
-		seedClient,
+		b.K8sSeedClient.Client(),
 		&worker.Values{
 			Namespace:         b.Shoot.SeedNamespace,
 			Name:              b.Shoot.Info.Name,

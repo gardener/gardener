@@ -68,33 +68,32 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// extension components
-	// TODO(timebertt): remove client param from Default* funcs
-	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.ControlPlane = b.DefaultControlPlane(b.K8sSeedClient.Client(), extensionsv1alpha1.Normal)
-	o.Shoot.Components.Extensions.ControlPlaneExposure = b.DefaultControlPlane(b.K8sSeedClient.Client(), extensionsv1alpha1.Exposure)
-	o.Shoot.Components.Extensions.DNS.ExternalProvider = b.DefaultExternalDNSProvider(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.DNS.ExternalOwner = b.DefaultExternalDNSOwner(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.DNS.ExternalEntry = b.DefaultExternalDNSEntry(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.DNS.InternalProvider = b.DefaultInternalDNSProvider(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.DNS.InternalOwner = b.DefaultInternalDNSOwner(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.DNS.InternalEntry = b.DefaultInternalDNSEntry(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.DNS.NginxOwner = b.DefaultNginxIngressDNSOwner(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.DNS.AdditionalProviders, err = b.AdditionalDNSProviders(ctx, b.K8sGardenClient.Client(), b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.ContainerRuntime = b.DefaultContainerRuntime()
+	o.Shoot.Components.Extensions.ControlPlane = b.DefaultControlPlane(extensionsv1alpha1.Normal)
+	o.Shoot.Components.Extensions.ControlPlaneExposure = b.DefaultControlPlane(extensionsv1alpha1.Exposure)
+	o.Shoot.Components.Extensions.DNS.ExternalProvider = b.DefaultExternalDNSProvider()
+	o.Shoot.Components.Extensions.DNS.ExternalOwner = b.DefaultExternalDNSOwner()
+	o.Shoot.Components.Extensions.DNS.ExternalEntry = b.DefaultExternalDNSEntry()
+	o.Shoot.Components.Extensions.DNS.InternalProvider = b.DefaultInternalDNSProvider()
+	o.Shoot.Components.Extensions.DNS.InternalOwner = b.DefaultInternalDNSOwner()
+	o.Shoot.Components.Extensions.DNS.InternalEntry = b.DefaultInternalDNSEntry()
+	o.Shoot.Components.Extensions.DNS.NginxOwner = b.DefaultNginxIngressDNSOwner()
+	o.Shoot.Components.Extensions.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry()
+	o.Shoot.Components.Extensions.DNS.AdditionalProviders, err = b.AdditionalDNSProviders(ctx)
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.Extensions.Extension, err = b.DefaultExtension(ctx, b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.Extension, err = b.DefaultExtension(ctx)
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.Network = b.DefaultNetwork(b.K8sSeedClient.Client())
-	o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.Infrastructure = b.DefaultInfrastructure()
+	o.Shoot.Components.Extensions.Network = b.DefaultNetwork()
+	o.Shoot.Components.Extensions.OperatingSystemConfig, err = b.DefaultOperatingSystemConfig()
 	if err != nil {
 		return nil, err
 	}
-	o.Shoot.Components.Extensions.Worker = b.DefaultWorker(b.K8sSeedClient.Client())
+	o.Shoot.Components.Extensions.Worker = b.DefaultWorker()
 
 	sniPhase, err := b.SNIPhase(ctx)
 	if err != nil {
@@ -147,7 +146,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// other components
-	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry(b.K8sGardenClient.Client())
+	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry()
 	o.Shoot.Components.NetworkPolicies, err = b.DefaultNetworkPolicies(sniPhase)
 	if err != nil {
 		return nil, err

@@ -43,7 +43,7 @@ import (
 )
 
 // DefaultOperatingSystemConfig creates the default deployer for the OperatingSystemConfig custom resource.
-func (b *Botanist) DefaultOperatingSystemConfig(seedClient client.Client) (operatingsystemconfig.Interface, error) {
+func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interface, error) {
 	images, err := imagevector.FindImages(b.ImageVector, []string{charts.ImageNameHyperkube, charts.ImageNamePauseContainer}, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (b *Botanist) DefaultOperatingSystemConfig(seedClient client.Client) (opera
 
 	return operatingsystemconfig.New(
 		b.Logger,
-		seedClient,
+		b.K8sSeedClient.Client(),
 		&operatingsystemconfig.Values{
 			Namespace:         b.Shoot.SeedNamespace,
 			KubernetesVersion: b.Shoot.KubernetesVersion,

@@ -112,10 +112,10 @@ func (b *Botanist) MigrateIngressDNSRecord(ctx context.Context) error {
 }
 
 // DefaultNginxIngressDNSEntry returns a Deployer which removes existing nginx ingress DNSEntry.
-func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) component.DeployWaiter {
+func (b *Botanist) DefaultNginxIngressDNSEntry() component.DeployWaiter {
 	return component.OpDestroy(dns.NewEntry(
 		b.Logger,
-		seedClient,
+		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.EntryValues{
 			Name: common.ShootDNSIngressName,
@@ -125,9 +125,9 @@ func (b *Botanist) DefaultNginxIngressDNSEntry(seedClient client.Client) compone
 }
 
 // DefaultNginxIngressDNSOwner returns DeployWaiter which removes the nginx ingress DNSOwner.
-func (b *Botanist) DefaultNginxIngressDNSOwner(seedClient client.Client) component.DeployWaiter {
+func (b *Botanist) DefaultNginxIngressDNSOwner() component.DeployWaiter {
 	return component.OpDestroy(dns.NewOwner(
-		seedClient,
+		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		&dns.OwnerValues{
 			Name: common.ShootDNSIngressName,
