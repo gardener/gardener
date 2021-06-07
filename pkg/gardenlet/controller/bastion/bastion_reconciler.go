@@ -38,6 +38,7 @@ import (
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -179,6 +180,15 @@ func (r *reconciler) reconcileBastion(
 		patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error())
 
 		return fmt.Errorf("failed wait for bastion extension resource to be reconciled: %v", err)
+	}
+
+	// fetch the current version of the bastion (WaitUntilExtensionObjectReady operates
+	// on an internal copy and does not modify extBastion)
+	key := types.NamespacedName{Name: extBastion.Name, Namespace: extBastion.Namespace}
+	if err := seedClient.Get(ctx, key, extBastion); err != nil {
+		patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error())
+
+		return fmt.Errorf("failed to retrieve bastion after it was reconciled: %v", err)
 	}
 
 	// copy over the extension's status to the garden and update the condition
