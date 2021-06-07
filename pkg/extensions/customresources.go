@@ -33,11 +33,11 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
@@ -352,7 +352,7 @@ func RestoreExtensionObjectState(
 				if err != nil {
 					return err
 				}
-				if err := utils.CreateOrPatchObjectByRef(ctx, c, &resourceRef, extensionObj.GetNamespace(), obj); err != nil {
+				if err := unstructuredutils.CreateOrPatchObjectByRef(ctx, c, &resourceRef, extensionObj.GetNamespace(), obj); err != nil {
 					return err
 				}
 			}

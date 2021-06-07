@@ -37,9 +37,9 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 )
 
 // ShootStateControl is used to update data about extensions and any resources required by them in the ShootState.
@@ -141,7 +141,7 @@ func (s *ShootStateControl) getResourcesToUpdate(ctx context.Context, shootState
 	var resourcesToAddUpdate gardencorev1alpha1helper.ResourceDataList
 
 	for _, newResource := range newResources {
-		obj, err := utils.GetObjectByRef(ctx, s.seedClient.Client(), &newResource.ResourceRef, namespace)
+		obj, err := unstructuredutils.GetObjectByRef(ctx, s.seedClient.Client(), &newResource.ResourceRef, namespace)
 		if err != nil {
 			return nil, err
 		}

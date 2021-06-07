@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package unstructured
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var systemMetadataFields = []string{"ownerReferences", "uid", "resourceVersion", "generation", "selfLink", "creationTimestamp", "deletionTimestamp", "deletionGracePeriodSeconds", "managedFields"}
@@ -136,7 +137,7 @@ func mergeObjectContents(dest, src map[string]interface{}) map[string]interface{
 	if srcMetadataOK {
 		destMetadata, destMetadataOK := dest["metadata"].(map[string]interface{})
 		if destMetadataOK {
-			dest["metadata"] = MergeMaps(destMetadata, srcMetadata)
+			dest["metadata"] = utils.MergeMaps(destMetadata, srcMetadata)
 		} else {
 			dest["metadata"] = srcMetadata
 		}
