@@ -20,6 +20,8 @@ import (
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 )
 
 // TimeNow returns the current time. Exposed for testing.
@@ -90,10 +92,17 @@ func CheckDNSObject(obj client.Object) error {
 	}
 
 	if state := dnsObj.GetState(); state != dnsv1alpha1.STATE_READY {
+		var err error
 		if msg := dnsObj.GetMessage(); msg != nil {
-			return fmt.Errorf("state %s: %s", state, *msg)
+			err = fmt.Errorf("state %s: %s", state, *msg)
+		} else {
+			err = fmt.Errorf("state %s", state)
 		}
-		return fmt.Errorf("state %s", state)
+
+		if state == dnsv1alpha1.STATE_ERROR || state == dnsv1alpha1.STATE_INVALID {
+			return gardencorev1beta1helper.DetermineError(err, "")
+		}
+		return err
 	}
 
 	return nil

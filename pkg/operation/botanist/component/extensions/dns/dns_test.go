@@ -15,12 +15,16 @@
 package dns_test
 
 import (
+	"errors"
+
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 )
 
@@ -59,6 +63,29 @@ var _ = Describe("#CheckDNSObject", func() {
 			acc.SetState(dnsv1alpha1.STATE_ERROR)
 			acc.SetMessage(&msg)
 			Expect(CheckDNSObject(obj)).To(MatchError(ContainSubstring(msg)))
+		})
+
+		It("should detect error code, if status is Error or Invalid", func() {
+			for _, state := range []string{
+				dnsv1alpha1.STATE_PENDING,
+				dnsv1alpha1.STATE_ERROR,
+				dnsv1alpha1.STATE_INVALID,
+				dnsv1alpha1.STATE_STALE,
+				dnsv1alpha1.STATE_DELETING,
+			} {
+				msg := "failed to call DNS API: Unauthorized"
+				acc.SetState(state)
+				acc.SetMessage(&msg)
+				err := CheckDNSObject(obj)
+
+				var errorWithCodes *helper.ErrorWithCodes
+				if state == dnsv1alpha1.STATE_ERROR || state == dnsv1alpha1.STATE_INVALID {
+					Expect(errors.As(err, &errorWithCodes)).To(BeTrue(), "state: "+state)
+					Expect(errorWithCodes.Codes()).To(ConsistOf(gardencorev1beta1.ErrorInfraUnauthorized), "state: "+state)
+				} else {
+					Expect(errors.As(err, &errorWithCodes)).To(BeFalse(), "state: "+state)
+				}
+			}
 		})
 
 		It("should not return error if object is ready", func() {
