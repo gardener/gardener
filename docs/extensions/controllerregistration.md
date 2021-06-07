@@ -12,12 +12,11 @@ apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerDeployment
 metadata:
   name: os-gardenlinux
-spec:
-  type: helm
-  providerConfig:
-    chart: H4sIFAAAAAAA/yk... # <base64-gzip-chart>
-    values:
-      foo: bar
+type: helm
+providerConfig:
+  chart: H4sIFAAAAAAA/yk... # <base64-gzip-chart>
+  values:
+    foo: bar
 ---
 apiVersion: core.gardener.cloud/v1beta1
 kind: ControllerRegistration
