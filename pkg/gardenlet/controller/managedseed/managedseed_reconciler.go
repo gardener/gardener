@@ -108,16 +108,19 @@ func (r *reconciler) delete(ctx context.Context, ms *seedmanagementv1alpha1.Mana
 	}
 
 	var status *seedmanagementv1alpha1.ManagedSeedStatus
+	var wait, removeFinalizer bool
 	defer func() {
-		// Update status, on failure return the update error unless there is another error
-		if updateErr := r.updateStatus(ctx, ms, status); updateErr != nil && err == nil {
-			err = fmt.Errorf("could not update status: %w", updateErr)
+		// Only update status if the finalizer is not removed to prevent errors if the object is already gone
+		if !removeFinalizer {
+			// Update status, on failure return the update error unless there is another error
+			if updateErr := r.updateStatus(ctx, ms, status); updateErr != nil && err == nil {
+				err = fmt.Errorf("could not update status: %w", updateErr)
+			}
 		}
 	}()
 
 	// Reconcile deletion
 	r.getLogger(ms).Debug("Reconciling deletion")
-	var wait, removeFinalizer bool
 	if status, wait, removeFinalizer, err = r.actuator.Delete(ctx, ms); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeed %s deletion: %w", kutil.ObjectName(ms), err)
 	}
@@ -130,6 +133,7 @@ func (r *reconciler) delete(ctx context.Context, ms *seedmanagementv1alpha1.Mana
 
 	// Remove gardener finalizer if requested by the actuator
 	if removeFinalizer {
+		r.getLogger(ms).Debug("Removing finalizer")
 		if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient.Client(), ms, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not remove gardener finalizer: %w", err)
 		}

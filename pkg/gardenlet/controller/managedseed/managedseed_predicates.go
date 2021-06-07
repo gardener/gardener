@@ -32,8 +32,6 @@ func (c *Controller) filterSeed(obj, _, controller client.Object, deleted bool) 
 		return false
 	}
 
-	// TODO Return true if the seed was deleted or updated and metadata / spec don't match its checksum
-
 	if ms.DeletionTimestamp != nil && deleted {
 		c.logger.Debugf("Managed seed %s is deleting and seed %s no longer exists", kutil.ObjectName(ms), kutil.ObjectName(seed))
 		return true
