@@ -30,7 +30,6 @@ import (
 	"gonum.org/v1/gonum/graph/simple"
 	"gonum.org/v1/gonum/graph/traverse"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
-	coordinationv1 "k8s.io/api/coordination/v1"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -73,7 +72,6 @@ func (g *graph) Setup(ctx context.Context, c cache.Cache) error {
 		{&gardenoperationsv1alpha1.Bastion{}, g.setupBastionWatch},
 		{&certificatesv1beta1.CertificateSigningRequest{}, g.setupCertificateSigningRequestWatch},
 		{&gardencorev1beta1.ControllerInstallation{}, g.setupControllerInstallationWatch},
-		{&coordinationv1.Lease{}, g.setupLeaseWatch},
 		{&seedmanagementv1alpha1.ManagedSeed{}, g.setupManagedSeedWatch},
 		{&gardencorev1beta1.Project{}, g.setupProjectWatch},
 		{&gardencorev1beta1.SecretBinding{}, g.setupSecretBindingWatch},

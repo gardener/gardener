@@ -680,12 +680,14 @@ var _ = Describe("handler", func() {
 
 				It("should allow the request because seed name matches", func() {
 					request.Name = seedName
+					request.Namespace = "gardener-system-seed-lease"
 
 					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 				})
 
 				It("should allow the request because seed name is ambiguous", func() {
 					request.Name = "some-different-seed"
+					request.Namespace = "gardener-system-seed-lease"
 					request.UserInfo = ambiguousUser
 
 					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
