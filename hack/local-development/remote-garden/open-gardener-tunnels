@@ -256,6 +256,7 @@ echo "Checking prerequisites..."
 checkPrereqs
 
 echo "Generating tunnel certificates..."
+mkdir -p "$CERTS_DIR"
 $(dirname "${0}")/generate-certs $CA_NAME $SERVER_NAME $CLIENT_NAME "$CERTS_DIR"
 
 echo "Applying quic LB service..."
