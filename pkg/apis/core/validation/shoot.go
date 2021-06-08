@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -678,10 +679,17 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 				}
 			}
 		}
+
+		allErrs = append(allErrs, ValidateFeatureGates(kubeAPIServer.FeatureGates, kubernetes.Version, fldPath.Child("kubeAPIServer", "featureGates"))...)
 	}
 
-	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.Version, kubernetes.KubeControllerManager, fldPath.Child("kubeControllerManager"))...)
-	allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, fldPath.Child("kubeProxy"))...)
+	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, kubernetes.Version, fldPath.Child("kubeControllerManager"))...)
+	allErrs = append(allErrs, validateKubeScheduler(kubernetes.KubeScheduler, kubernetes.Version, fldPath.Child("kubeScheduler"))...)
+	allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, kubernetes.Version, fldPath.Child("kubeProxy"))...)
+	if kubernetes.Kubelet != nil {
+		allErrs = append(allErrs, ValidateKubeletConfig(*kubernetes.Kubelet, kubernetes.Version, fldPath.Child("kubelet"))...)
+	}
+
 	if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
 		allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, fldPath.Child("clusterAutoscaler"))...)
 	}
@@ -780,7 +788,7 @@ func ValidateVerticalPodAutoscaler(autoScaler core.VerticalPodAutoscaler, fldPat
 	return allErrs
 }
 
-func validateKubeControllerManager(kubernetesVersion string, kcm *core.KubeControllerManagerConfig, fldPath *field.Path) field.ErrorList {
+func validateKubeControllerManager(kcm *core.KubeControllerManagerConfig, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kcm != nil {
@@ -799,30 +807,40 @@ func validateKubeControllerManager(kubernetesVersion string, kcm *core.KubeContr
 		}
 
 		if hpa := kcm.HorizontalPodAutoscalerConfig; hpa != nil {
-			fldPath = fldPath.Child("horizontalPodAutoscaler")
+			hpaPath := fldPath.Child("horizontalPodAutoscaler")
 
 			if hpa.SyncPeriod != nil && hpa.SyncPeriod.Duration < 1*time.Second {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("syncPeriod"), *hpa.SyncPeriod, "syncPeriod must not be less than a second"))
+				allErrs = append(allErrs, field.Invalid(hpaPath.Child("syncPeriod"), *hpa.SyncPeriod, "syncPeriod must not be less than a second"))
 			}
 			if hpa.Tolerance != nil && *hpa.Tolerance <= 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("tolerance"), *hpa.Tolerance, "tolerance of must be greater than 0"))
+				allErrs = append(allErrs, field.Invalid(hpaPath.Child("tolerance"), *hpa.Tolerance, "tolerance of must be greater than 0"))
 			}
 			if hpa.DownscaleStabilization != nil && hpa.DownscaleStabilization.Duration < 1*time.Second {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("downscaleStabilization"), *hpa.DownscaleStabilization, "downScale stabilization must not be less than a second"))
+				allErrs = append(allErrs, field.Invalid(hpaPath.Child("downscaleStabilization"), *hpa.DownscaleStabilization, "downScale stabilization must not be less than a second"))
 			}
 			if hpa.InitialReadinessDelay != nil && hpa.InitialReadinessDelay.Duration <= 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("initialReadinessDelay"), *hpa.InitialReadinessDelay, "initial readiness delay must be greater than 0"))
+				allErrs = append(allErrs, field.Invalid(hpaPath.Child("initialReadinessDelay"), *hpa.InitialReadinessDelay, "initial readiness delay must be greater than 0"))
 			}
 			if hpa.CPUInitializationPeriod != nil && hpa.CPUInitializationPeriod.Duration < 1*time.Second {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("cpuInitializationPeriod"), *hpa.CPUInitializationPeriod, "cpu initialization period must not be less than a second"))
+				allErrs = append(allErrs, field.Invalid(hpaPath.Child("cpuInitializationPeriod"), *hpa.CPUInitializationPeriod, "cpu initialization period must not be less than a second"))
 			}
 		}
+
+		allErrs = append(allErrs, ValidateFeatureGates(kcm.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
 
 	return allErrs
 }
 
-func validateKubeProxy(kp *core.KubeProxyConfig, fldPath *field.Path) field.ErrorList {
+func validateKubeScheduler(ks *core.KubeSchedulerConfig, version string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if ks != nil {
+		allErrs = append(allErrs, ValidateFeatureGates(ks.FeatureGates, version, fldPath.Child("featureGates"))...)
+	}
+	return allErrs
+}
+
+func validateKubeProxy(kp *core.KubeProxyConfig, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if kp != nil {
 		if kp.Mode == nil {
@@ -830,6 +848,7 @@ func validateKubeProxy(kp *core.KubeProxyConfig, fldPath *field.Path) field.Erro
 		} else if mode := *kp.Mode; !availableProxyMode.Has(string(mode)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, availableProxyMode.List()))
 		}
+		allErrs = append(allErrs, ValidateFeatureGates(kp.FeatureGates, version, fldPath.Child("featureGates"))...)
 	}
 	return allErrs
 }
@@ -899,7 +918,7 @@ func validateProvider(provider core.Provider, kubernetes core.Kubernetes, fldPat
 	}
 
 	for i, worker := range provider.Workers {
-		allErrs = append(allErrs, ValidateWorker(worker, fldPath.Child("workers").Index(i), inTemplate)...)
+		allErrs = append(allErrs, ValidateWorker(worker, kubernetes.Version, fldPath.Child("workers").Index(i), inTemplate)...)
 
 		if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil && worker.Kubernetes.Kubelet.MaxPods != nil && *worker.Kubernetes.Kubelet.MaxPods > maxPod {
 			maxPod = *worker.Kubernetes.Kubelet.MaxPods
@@ -928,7 +947,7 @@ const (
 )
 
 // ValidateWorker validates the worker object.
-func ValidateWorker(worker core.Worker, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func ValidateWorker(worker core.Worker, version string, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateDNS1123Label(worker.Name, fldPath.Child("name"))...)
@@ -971,7 +990,7 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path, inTemplate bool) fi
 		allErrs = append(allErrs, validateTaints(worker.Taints, fldPath.Child("taints"))...)
 	}
 	if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
-		allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, fldPath.Child("kubernetes", "kubelet"))...)
+		allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, version, fldPath.Child("kubernetes", "kubelet"))...)
 	}
 
 	if worker.CABundle != nil {
@@ -1038,7 +1057,7 @@ func ValidateWorker(worker core.Worker, fldPath *field.Path, inTemplate bool) fi
 const PodPIDsLimitMinimum int64 = 100
 
 // ValidateKubeletConfig validates the KubeletConfig object.
-func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, fldPath *field.Path) field.ErrorList {
+func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, version string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if kubeletConfig.MaxPods != nil {
@@ -1076,6 +1095,7 @@ func ValidateKubeletConfig(kubeletConfig core.KubeletConfig, fldPath *field.Path
 	if kubeletConfig.SystemReserved != nil {
 		allErrs = append(allErrs, validateKubeletConfigReserved(kubeletConfig.SystemReserved, fldPath.Child("systemReserved"))...)
 	}
+	allErrs = append(allErrs, ValidateFeatureGates(kubeletConfig.FeatureGates, version, fldPath.Child("featureGates"))...)
 	return allErrs
 }
 
@@ -1439,6 +1459,22 @@ func ValidateContainerRuntimes(containerRuntime []core.ContainerRuntime, fldPath
 			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i).Child("type"), fmt.Sprintf("must specify different type, %s already exist", cr.Type)))
 		}
 		crSet[cr.Type] = true
+	}
+
+	return allErrs
+}
+
+// ValidateFeatureGates validates the given Kubernetes feature gates against the given Kubernetes version.
+func ValidateFeatureGates(featureGates map[string]bool, version string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for featureGate := range featureGates {
+		supported, err := kutil.IsFeatureGateSupported(featureGate, version)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child(featureGate), featureGate, err.Error()))
+		} else if !supported {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child(featureGate), fmt.Sprintf("not supported in Kubernetes version %s", version)))
+		}
 	}
 
 	return allErrs
