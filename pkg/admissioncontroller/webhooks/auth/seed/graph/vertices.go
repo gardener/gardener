@@ -70,6 +70,7 @@ var vertexTypes = map[VertexType]string{
 	VertexTypeCloudProfile:              "CloudProfile",
 	VertexTypeClusterRoleBinding:        "ClusterRoleBinding",
 	VertexTypeConfigMap:                 "ConfigMap",
+	VertexTypeControllerDeployment:      "ControllerDeployment",
 	VertexTypeControllerInstallation:    "ControllerInstallation",
 	VertexTypeControllerRegistration:    "ControllerRegistration",
 	VertexTypeExposureClass:             "ExposureClass",
