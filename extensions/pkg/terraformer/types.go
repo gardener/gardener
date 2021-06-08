@@ -70,8 +70,9 @@ type terraformer struct {
 	logLevel                      string
 	terminationGracePeriodSeconds int64
 
-	deadlineCleaning time.Duration
-	deadlinePod      time.Duration
+	deadlineCleaning    time.Duration
+	deadlinePod         time.Duration
+	deadlinePodCreation time.Duration
 }
 
 // RawState represent the terraformer state's raw data
@@ -107,6 +108,7 @@ type Terraformer interface {
 	SetTerminationGracePeriodSeconds(int64) Terraformer
 	SetDeadlineCleaning(time.Duration) Terraformer
 	SetDeadlinePod(time.Duration) Terraformer
+	SetDeadlinePodCreation(time.Duration) Terraformer
 	SetOwnerRef(*metav1.OwnerReference) Terraformer
 	InitializeWith(ctx context.Context, initializer Initializer) Terraformer
 	Apply(ctx context.Context) error

@@ -121,8 +121,9 @@ func New(
 		logLevel:                      "info",
 		terminationGracePeriodSeconds: int64(3600),
 
-		deadlineCleaning: 20 * time.Minute,
-		deadlinePod:      20 * time.Minute,
+		deadlineCleaning:    20 * time.Minute,
+		deadlinePod:         20 * time.Minute,
+		deadlinePodCreation: 5 * time.Minute,
 	}
 }
 
@@ -243,12 +244,13 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 		}
 
 		// Wait for the Terraform apply/destroy Pod to be completed
-		exitCode, terminationMessage := t.waitForPod(ctx, logger, pod, t.deadlinePod)
-		succeeded := exitCode == 0
-		if succeeded {
+		status, terminationMessage := t.waitForPod(ctx, logger, pod)
+		if status == podStatusSucceeded {
 			podLogger.Info("Terraformer pod finished successfully")
+		} else if status == podStatusCreationTimeout {
+			podLogger.Info("Terraformer pod creation timed out")
 		} else {
-			podLogger.Info("Terraformer pod finished with error", "exitCode", exitCode)
+			podLogger.Info("Terraformer pod finished with error")
 
 			if terminationMessage != "" {
 				podLogger.V(1).Info("Termination message of Terraformer pod: " + terminationMessage)
@@ -269,7 +271,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 			return err
 		}
 
-		if !succeeded {
+		if status != podStatusSucceeded {
 			errorMessage := fmt.Sprintf("Terraform execution for command '%s' could not be completed", command)
 			if terraformErrors := findTerraformErrors(terminationMessage); terraformErrors != "" {
 				errorMessage += fmt.Sprintf(":\n\n%s", terraformErrors)
