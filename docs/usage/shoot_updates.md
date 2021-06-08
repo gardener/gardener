@@ -82,6 +82,7 @@ The complete list of fields that trigger a rolling update:
 * `.spec.provider.workers[].volume.type`
 * `.spec.provider.workers[].volume.size`
 * `.spec.provider.workers[].providerConfig`
+* `.spec.provider.workers[].cri.name`
 
 Generally, the provider extension controllers might have additional constraints for changes leading to rolling updates, so please consult the respective documentation as well.
 
