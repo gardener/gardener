@@ -75,7 +75,7 @@ Additionally, you might customize how the machine-controller-manager (abbrev.: M
 Apart from the above mentioned triggers, a rolling update of the shoot worker nodes is also triggered for some changes to your worker pool specification (`.spec.provider.workers[]`, even if you don't change the Kubernetes or machine image version).
 The complete list of fields that trigger a rolling update:
 
-* `.spec.kubernetes.version`
+* `.spec.kubernetes.version` (except for patch version changes)
 * `.spec.provider.workers[].machine.image.name`
 * `.spec.provider.workers[].machine.image.version`
 * `.spec.provider.workers[].machine.type`
