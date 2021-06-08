@@ -120,7 +120,7 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("20.0.0.10")))
+				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 
@@ -159,7 +159,7 @@ var _ = Describe("Networkpolicies", func() {
 				))
 				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("20.0.0.10")))
+				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 
@@ -177,7 +177,7 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("20.0.0.10")))
+				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 
@@ -195,7 +195,7 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("20.0.0.10")))
+				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 
@@ -213,7 +213,7 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("20.0.0.10")))
+				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 
@@ -231,7 +231,7 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("20.0.0.10")))
+				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 
@@ -251,7 +251,7 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
 				Expect(values.NodeLocalDNSEnabled).To(BeTrue())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("20.0.0.10")))
+				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
 		),
 	)
