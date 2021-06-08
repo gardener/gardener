@@ -93,6 +93,7 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 
 	g.deleteAllIncomingEdges(VertexTypeSecret, VertexTypeSeed, "", seed.Name)
 	g.deleteAllIncomingEdges(VertexTypeNamespace, VertexTypeSeed, "", seed.Name)
+	g.deleteAllIncomingEdges(VertexTypeLease, VertexTypeSeed, "", seed.Name)
 
 	seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", seed.Name)
 	namespaceVertex := g.getOrCreateVertex(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed.Name))
