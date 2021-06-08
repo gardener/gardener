@@ -53,6 +53,7 @@ type podStatus byte
 const (
 	podStatusSucceeded podStatus = iota
 	podStatusFailure
+	podStatusCreationTimeout
 )
 
 // waitForPod waits for the Terraform Pod to be completed (either successful or failed).
@@ -79,20 +80,33 @@ func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *c
 			return retry.SevereError(err)
 		}
 
-		// Check whether the Pod has been successful
 		var (
 			phase             = pod.Status.Phase
 			containerStatuses = pod.Status.ContainerStatuses
 		)
 
-		if (phase == corev1.PodSucceeded || phase == corev1.PodFailed) && len(containerStatuses) > 0 {
-			if containerStateTerminated := containerStatuses[0].State.Terminated; containerStateTerminated != nil {
-				if containerStateTerminated.ExitCode == 0 {
-					status = podStatusSucceeded
+		if len(containerStatuses) > 0 {
+			switch phase {
+			case corev1.PodPending:
+				// Check whether the Pod has been created successfully
+				if containerStateWaiting := containerStatuses[0].State.Waiting; containerStateWaiting != nil && containerStateWaiting.Reason == "ContainerCreating" {
+					if podAge := time.Now().UTC().Sub(pod.CreationTimestamp.Time.UTC()); podAge > 2*time.Minute {
+						status = podStatusCreationTimeout
+						log.Info("timeout creating pod")
+						return retry.Ok()
+					}
 				}
-				terminationMessage = containerStateTerminated.Message
+
+			case corev1.PodSucceeded, corev1.PodFailed:
+				// Check whether the Pod has been executed successfully
+				if containerStateTerminated := containerStatuses[0].State.Terminated; containerStateTerminated != nil {
+					if containerStateTerminated.ExitCode == 0 {
+						status = podStatusSucceeded
+					}
+					terminationMessage = containerStateTerminated.Message
+				}
+				return retry.Ok()
 			}
-			return retry.Ok()
 		}
 
 		log.Info("Waiting for Terraformer pod to be completed, pod hasn't finished yet", "phase", phase, "len-of-containerstatuses", len(containerStatuses))

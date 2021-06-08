@@ -246,6 +246,8 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 		status, terminationMessage := t.waitForPod(ctx, logger, pod, t.deadlinePod)
 		if status == podStatusSucceeded {
 			podLogger.Info("Terraformer pod finished successfully")
+		} else if status == podStatusCreationTimeout {
+			podLogger.Info("Terraformer pod creation timed out")
 		} else {
 			podLogger.Info("Terraformer pod finished with error")
 
