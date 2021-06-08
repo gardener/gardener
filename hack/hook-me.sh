@@ -26,6 +26,9 @@ namespace=${1:-}
 providerName=${2:-}
 [[ -z $providerName ]] && echo "Please specify the provider name (aws,gcp,azure,..etc.)!" && exit 1
 
+local inletsServerPort=${3:-}
+[[ -z $inletsServerPort ]] && echo "Please specify the inlets pod server port!" && exit 1
+
 tmpService=$(mktemp)
 kubectl get svc gardener-extension-provider-$providerName -o yaml > $tmpService
 
@@ -44,7 +47,7 @@ spec:
   ports:
   - port: 443
     protocol: TCP
-    targetPort: 9443
+    targetPort: $inletsServerPort
   selector:
     app: inlets-server
     app.kubernetes.io/instance: provider-$providerName
@@ -111,6 +114,9 @@ namespace=${1:-}
 providerName=${2:-}
 [[ -z $providerName ]] && echo "Please specify the provider name (aws,gcp,azure,..etc.)!" && exit 1
 
+local inletsServerPort=${3:-}
+[[ -z $inletsServerPort ]] && echo "Please specify the inlets pod server port!" && exit 1
+
 cat <<EOF | kubectl apply -f -
 ---
 apiVersion: v1
@@ -147,7 +153,7 @@ spec:
     - "--target"
     - "127.0.0.1:8080"
     - "--listen"
-    - "0.0.0.0:9443"
+    - "0.0.0.0:$inletsServerPort"
     - "--cacert"
     - "/etc/tls/ca.crt"
     - "--cert"
@@ -238,7 +244,7 @@ usage(){
   echo ""
 
   echo "========================================================USAGE======================================================================"
-  echo "> ./hack/hook-me.sh <provider e.g., aws> <extension namespace e.g. extension-provider-aws-fpr6w> <webhookserver port e.g., 8443>"
+  echo "> ./hack/hook-me.sh <provider e.g., aws> <extension namespace e.g. extension-provider-aws-fpr6w> <webhookserver port e.g., 8443> [<inlets-server port, e.g. 9443>]"
   echo "> \`make EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fpr6w> WEBHOOK_CONFIG_MODE=service start\`"
   echo "=================================================================================================================================="
 
@@ -266,6 +272,9 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
   webhookServerPort=${3:-}
   [[ -z $webhookServerPort ]] && echo "Please specify webhook server port" && exit 1
 
+  inletsServerPort=${4:-}
+  [[ -z $inletsServerPort ]] && echo "inlets-server port not specified, using default port of 9443" && inletsServerPort=9443
+
 
   trap 'cleanUP $namespace' SIGINT SIGTERM
 
@@ -285,13 +294,13 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
             echo "[Info] LB IP is $loadbalancerIPOrHostName"
 
             echo "[STEP 4] Creating the server Pod for TLS Termination and Tunneling connection..!";
-            createServerPod $namespace $providerName
+            createServerPod $namespace $providerName $inletsServerPort
 
             echo "[STEP 5] Waiting for Inlets Pod to be ready..!";
             waitForInletsPodToBeReady $namespace
 
             echo "[STEP 6] Creating WebhookSVC LB..!"
-            createOrUpdateWebhookSVC $namespace $providerName
+            createOrUpdateWebhookSVC $namespace $providerName $inletsServerPort
 
             echo "[STEP 7] Initializing the inlets client";
             echo "[Info] Inlets initialized, you are ready to go ahead and run \"make EXTENSION_NAMESPACE=$namespace WEBHOOK_CONFIG_MODE=service start\""
