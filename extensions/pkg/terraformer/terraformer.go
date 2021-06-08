@@ -121,8 +121,9 @@ func New(
 		logLevel:                      "info",
 		terminationGracePeriodSeconds: int64(3600),
 
-		deadlineCleaning: 20 * time.Minute,
-		deadlinePod:      20 * time.Minute,
+		deadlineCleaning:    20 * time.Minute,
+		deadlinePod:         20 * time.Minute,
+		deadlinePodCreation: 2 * time.Minute,
 	}
 }
 
@@ -243,7 +244,7 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 		}
 
 		// Wait for the Terraform apply/destroy Pod to be completed
-		status, terminationMessage := t.waitForPod(ctx, logger, pod, t.deadlinePod)
+		status, terminationMessage := t.waitForPod(ctx, logger, pod)
 		if status == podStatusSucceeded {
 			podLogger.Info("Terraformer pod finished successfully")
 		} else if status == podStatusCreationTimeout {

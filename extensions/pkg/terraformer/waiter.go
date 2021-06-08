@@ -58,14 +58,14 @@ const (
 
 // waitForPod waits for the Terraform Pod to be completed (either successful or failed).
 // It checks the Pod status field to identify the state.
-func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *corev1.Pod, deadline time.Duration) (podStatus, string) {
+func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *corev1.Pod) (podStatus, string) {
 	var (
 		status             = podStatusFailure
 		terminationMessage = ""
 		log                = logger.WithValues("pod", client.ObjectKeyFromObject(pod))
 	)
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, deadline)
+	timeoutCtx, cancel := context.WithTimeout(ctx, t.deadlinePod)
 	defer cancel()
 
 	log.Info("Waiting for Terraformer pod to be completed...")
@@ -90,7 +90,7 @@ func (t *terraformer) waitForPod(ctx context.Context, logger logr.Logger, pod *c
 			case corev1.PodPending:
 				// Check whether the Pod has been created successfully
 				if containerStateWaiting := containerStatuses[0].State.Waiting; containerStateWaiting != nil && containerStateWaiting.Reason == "ContainerCreating" {
-					if podAge := time.Now().UTC().Sub(pod.CreationTimestamp.Time.UTC()); podAge > 2*time.Minute {
+					if podAge := time.Now().UTC().Sub(pod.CreationTimestamp.Time.UTC()); podAge > t.deadlinePodCreation {
 						status = podStatusCreationTimeout
 						log.Info("timeout creating pod")
 						return retry.Ok()

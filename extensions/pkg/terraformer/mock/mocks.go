@@ -248,6 +248,20 @@ func (mr *MockTerraformerMockRecorder) SetDeadlinePod(arg0 interface{}) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDeadlinePod", reflect.TypeOf((*MockTerraformer)(nil).SetDeadlinePod), arg0)
 }
 
+// SetDeadlinePodCreation mocks base method.
+func (m *MockTerraformer) SetDeadlinePodCreation(arg0 time.Duration) terraformer.Terraformer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetDeadlinePodCreation", arg0)
+	ret0, _ := ret[0].(terraformer.Terraformer)
+	return ret0
+}
+
+// SetDeadlinePodCreation indicates an expected call of SetDeadlinePodCreation.
+func (mr *MockTerraformerMockRecorder) SetDeadlinePodCreation(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDeadlinePodCreation", reflect.TypeOf((*MockTerraformer)(nil).SetDeadlinePodCreation), arg0)
+}
+
 // SetEnvVars mocks base method.
 func (m *MockTerraformer) SetEnvVars(arg0 ...v1.EnvVar) terraformer.Terraformer {
 	m.ctrl.T.Helper()

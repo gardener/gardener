@@ -63,6 +63,12 @@ func (t *terraformer) SetDeadlinePod(d time.Duration) Terraformer {
 	return t
 }
 
+// SetDeadlinePodCreation configures the deadline while waiting for the creation of the Terraformer apply/destroy pod.
+func (t *terraformer) SetDeadlinePodCreation(d time.Duration) Terraformer {
+	t.deadlinePodCreation = d
+	return t
+}
+
 // SetOwnerRef configures the resource that will be used as owner of the secrets and configmaps
 func (t *terraformer) SetOwnerRef(owner *metav1.OwnerReference) Terraformer {
 	t.ownerRef = owner
