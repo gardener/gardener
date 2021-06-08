@@ -259,11 +259,17 @@ func (h *handler) admitLease(seedName string, request admission.Request) admissi
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
+	// This allows the gardenlet to create a Lease for leader election (if the garden cluster is a seed as well).
 	if request.Name == "gardenlet-leader-election" {
 		return admission.Allowed("")
 	}
 
-	return h.admit(seedName, &request.Name)
+	// Each gardenlet creates a Lease with the name of its own seed in the `gardener-system-seed-lease` namespace.
+	if request.Namespace == gardencorev1beta1.GardenerSeedLeaseNamespace {
+		return h.admit(seedName, &request.Name)
+	}
+
+	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
 }
 
 func (h *handler) admitSecret(ctx context.Context, seedName string, request admission.Request) admission.Response {

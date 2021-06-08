@@ -98,6 +98,9 @@ func (g *graph) handleSeedCreateOrUpdate(seed *gardencorev1beta1.Seed) {
 	namespaceVertex := g.getOrCreateVertex(VertexTypeNamespace, "", gutil.ComputeGardenNamespace(seed.Name))
 	g.addEdge(namespaceVertex, seedVertex)
 
+	leaseVertex := g.getOrCreateVertex(VertexTypeLease, gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name)
+	g.addEdge(leaseVertex, seedVertex)
+
 	if seed.Spec.SecretRef != nil {
 		secretVertex := g.getOrCreateVertex(VertexTypeSecret, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
 		g.addEdge(secretVertex, seedVertex)
