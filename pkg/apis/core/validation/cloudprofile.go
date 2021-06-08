@@ -339,8 +339,8 @@ func validateContainerRuntimesInterfaces(cris []core.CRI, fldPath *field.Path) f
 		}
 		duplicateCRI.Insert(string(cri.Name))
 
-		if !avaliableWorkerCRINames.Has(string(cri.Name)) {
-			allErrs = append(allErrs, field.NotSupported(criPath, cri, avaliableWorkerCRINames.List()))
+		if !availableWorkerCRINames.Has(string(cri.Name)) {
+			allErrs = append(allErrs, field.NotSupported(criPath, cri, availableWorkerCRINames.List()))
 		}
 		allErrs = append(allErrs, validateContainerRuntimes(cri.ContainerRuntimes, criPath.Child("containerRuntimes"))...)
 	}

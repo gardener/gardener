@@ -66,8 +66,24 @@ var (
 		string(core.ShootPurposeDevelopment),
 		string(core.ShootPurposeProduction),
 	)
-	avaliableWorkerCRINames = sets.NewString(
+	availableWorkerCRINames = sets.NewString(
 		string(core.CRINameContainerD),
+	)
+	// https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
+	availableOIDCSigningAlgs = sets.NewString(
+		"HS256",
+		"HS384",
+		"HS512",
+		"RS256",
+		"RS384",
+		"RS512",
+		"ES256",
+		"ES384",
+		"ES512",
+		"PS256",
+		"PS384",
+		"PS512",
+		"none",
 	)
 )
 
@@ -623,8 +639,10 @@ func validateKubernetes(kubernetes core.Kubernetes, fldPath *field.Path) field.E
 			if oidc.GroupsPrefix != nil && len(*oidc.GroupsPrefix) == 0 {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), *oidc.GroupsPrefix, "groupsPrefix cannot be empty when key is provided"))
 			}
-			if oidc.SigningAlgs != nil && len(oidc.SigningAlgs) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("signingAlgs"), oidc.SigningAlgs, "signingAlgs cannot be empty when key is provided"))
+			for i, alg := range oidc.SigningAlgs {
+				if !availableOIDCSigningAlgs.Has(alg) {
+					allErrs = append(allErrs, field.NotSupported(oidcPath.Child("signingAlgs").Index(i), alg, availableOIDCSigningAlgs.List()))
+				}
 			}
 			if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "usernameClaim cannot be empty when key is provided"))
@@ -1415,8 +1433,8 @@ func IsNotMoreThan100Percent(intOrStringValue *intstr.IntOrString, fldPath *fiel
 func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if !avaliableWorkerCRINames.Has(string(CRI.Name)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, avaliableWorkerCRINames.List()))
+	if !availableWorkerCRINames.Has(string(CRI.Name)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, availableWorkerCRINames.List()))
 	}
 
 	if CRI.ContainerRuntimes != nil {

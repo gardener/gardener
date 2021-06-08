@@ -143,9 +143,8 @@ spec:
   #     issuerURL: https://identity.example.com
   #     usernameClaim: username-claim
   #     usernamePrefix: username-prefix
-  #     signingAlgs:
+  #     signingAlgs: # See https://datatracker.ietf.org/doc/html/rfc7518#section-3.1 for the list of valid algorithms
   #     - RS256
-  #     - some-other-algorithm
   #     requiredClaims:
   #       key: value
   #   admissionPlugins:
