@@ -143,8 +143,12 @@ func (r *reconciler) reconcile(ctx context.Context, osc *extensionsv1alpha1.Oper
 		return extensionscontroller.ReconcileErr(err)
 	}
 
+	patch := client.MergeFrom(osc.DeepCopy())
 	setOSCStatus(osc, secret, command, units)
-
+	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
+		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
+		return extensionscontroller.ReconcileErr(err)
+	}
 	if err := r.statusUpdater.Success(ctx, osc, operationType, "Successfully reconciled operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -173,7 +177,12 @@ func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.Operat
 		return extensionscontroller.ReconcileErr(err)
 	}
 
+	patch := client.MergeFrom(osc.DeepCopy())
 	setOSCStatus(osc, secret, command, units)
+	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
+		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
+		return extensionscontroller.ReconcileErr(err)
+	}
 
 	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored operating system config"); err != nil {
 		return reconcile.Result{}, err
