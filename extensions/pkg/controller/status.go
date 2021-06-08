@@ -69,7 +69,7 @@ type StatusUpdater interface {
 	// Error updates the last operation of an extension resource when an operation was erroneous.
 	Error(context.Context, extensionsv1alpha1.Object, error, gardencorev1beta1.LastOperationType, string) error
 	// Success updates the last operation of an extension resource when an operation was successful.
-	Success(context.Context, extensionsv1alpha1.Object, gardencorev1beta1.LastOperationType, string, func() error) error
+	Success(context.Context, extensionsv1alpha1.Object, gardencorev1beta1.LastOperationType, string) error
 }
 
 // NewStatusUpdater returns a new status updater.
@@ -121,27 +121,21 @@ func (s *statusUpdater) Error(ctx context.Context, obj extensionsv1alpha1.Object
 	})
 }
 
-func (s *statusUpdater) Success(ctx context.Context, obj extensionsv1alpha1.Object, lastOperationType gardencorev1beta1.LastOperationType, description string, mutate func() error) error {
+func (s *statusUpdater) Success(ctx context.Context, obj extensionsv1alpha1.Object, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
 	if s.client == nil {
 		return fmt.Errorf("client is not set. Call InjectClient() first")
 	}
 
 	s.logger.Info(description, s.logKeysAndValues(obj)...)
 
-	patch := client.MergeFrom(obj.DeepCopyObject())
+	return TryUpdateStatus(ctx, retry.DefaultBackoff, s.client, obj, func() error {
+		lastOp, lastErr := ReconcileSucceeded(lastOperationType, description)
 
-	lastOp, lastErr := ReconcileSucceeded(lastOperationType, description)
-	obj.GetExtensionStatus().SetObservedGeneration(obj.GetGeneration())
-	obj.GetExtensionStatus().SetLastOperation(lastOp)
-	obj.GetExtensionStatus().SetLastError(lastErr)
-
-	if mutate != nil {
-		if err := mutate(); err != nil {
-			return err
-		}
-	}
-
-	return s.client.Status().Patch(ctx, obj, patch)
+		obj.GetExtensionStatus().SetObservedGeneration(obj.GetGeneration())
+		obj.GetExtensionStatus().SetLastOperation(lastOp)
+		obj.GetExtensionStatus().SetLastError(lastErr)
+		return nil
+	})
 }
 
 func (s *statusUpdater) logKeysAndValues(obj metav1.Object) []interface{} {

@@ -143,10 +143,9 @@ func (r *reconciler) reconcile(ctx context.Context, osc *extensionsv1alpha1.Oper
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, osc, operationType, "Successfully reconciled operating system config", func() error {
-		setOSCStatus(osc, secret, command, units)
-		return nil
-	}); err != nil {
+	setOSCStatus(osc, secret, command, units)
+
+	if err := r.statusUpdater.Success(ctx, osc, operationType, "Successfully reconciled operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -174,10 +173,9 @@ func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.Operat
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored operating system config", func() error {
-		setOSCStatus(osc, secret, command, units)
-		return nil
-	}); err != nil {
+	setOSCStatus(osc, secret, command, units)
+
+	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -203,7 +201,7 @@ func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.Operati
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted operating system config", nil); err != nil {
+	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -230,7 +228,7 @@ func (r *reconciler) migrate(ctx context.Context, osc *extensionsv1alpha1.Operat
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated operating system config", nil); err != nil {
+	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated operating system config"); err != nil {
 		return reconcile.Result{}, err
 	}
 

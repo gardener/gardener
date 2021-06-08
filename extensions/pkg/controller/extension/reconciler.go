@@ -217,7 +217,7 @@ func (r *reconciler) reconcile(ctx context.Context, ex *extensionsv1alpha1.Exten
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, ex, operationType, "Successfully reconciled Extension resource", nil); err != nil {
+	if err := r.statusUpdater.Success(ctx, ex, operationType, "Successfully reconciled Extension resource"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -239,7 +239,7 @@ func (r *reconciler) delete(ctx context.Context, ex *extensionsv1alpha1.Extensio
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, ex, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted Extension resource", nil); err != nil {
+	if err := r.statusUpdater.Success(ctx, ex, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted Extension resource"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -264,7 +264,7 @@ func (r *reconciler) restore(ctx context.Context, ex *extensionsv1alpha1.Extensi
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, ex, operationType, "Successfully restored Extension resource", nil); err != nil {
+	if err := r.statusUpdater.Success(ctx, ex, operationType, "Successfully restored Extension resource"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -285,7 +285,7 @@ func (r *reconciler) migrate(ctx context.Context, ex *extensionsv1alpha1.Extensi
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, ex, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Extension resource", nil); err != nil {
+	if err := r.statusUpdater.Success(ctx, ex, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Extension resource"); err != nil {
 		return reconcile.Result{}, err
 	}
 
