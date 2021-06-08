@@ -125,3 +125,26 @@ This admission controller reacts on `CREATE` and `UPDATE` operations for `Shoot`
 It validates certain configurations in the specification against the referred `CloudProfile` (e.g., machine images, machine types, used Kubernetes version, ...).
 Generally, it performs validations that cannot be handled by the static API validation due to their dynamic nature (e.g., when something needs to be checked against referred resources).
 Additionally, it takes over certain defaulting tasks (e.g., default machine image for worker pools).
+
+## `ShootManagedSeed`
+
+_(enabled by default)_
+
+This admission controller reacts on `DELETE` operations for `Shoot`s.
+It rejects the deletion if the `Shoot` is referred to by a `ManagedSeed`.
+
+## `ManagedSeedValidator`
+
+_(enabled by default)_
+
+This admission controller reacts on `CREATE` and `UPDATE` operations for `ManagedSeeds`s.
+It validates certain configuration values in the specification against the referred `Shoot`, for example Seed provider, network ranges, DNS domain, etc.
+Similarly to `ShootValidator`, it performs validations that cannot be handled by the static API validation due to their dynamic nature.
+Additionally, it performs certain defaulting tasks, making sure that configuration values that are not specified are defaulted to the values of the referred `Shoot`, for example Seed provider, network ranges, DNS domain, etc.
+
+## `ManagedSeedShoot`
+
+_(enabled by default)_
+
+This admission controller reacts on `DELETE` operations for `ManagedSeed`s.
+It rejects the deletion if there are `Shoot`s that are scheduled onto the `Seed` that is registered by the `ManagedSeed`.
