@@ -29,19 +29,18 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/utils/test"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/types"
+	"github.com/sirupsen/logrus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("extensions", func() {
@@ -128,43 +127,6 @@ var _ = Describe("extensions", func() {
 				State:          gardencorev1beta1.LastOperationStateSucceeded,
 				LastUpdateTime: metav1.Now(),
 			}
-
-			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
-			err := WaitUntilExtensionObjectReady(
-				ctx, c, log,
-				passedObj, extensionsv1alpha1.WorkerResource,
-				defaultInterval, defaultThreshold, defaultTimeout, nil,
-			)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should return error if client has not observed latest timestamp annotation", func() {
-			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: metav1.Now(),
-			}
-			now = time.Now()
-			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().String())
-			passedObj := expected.DeepCopy()
-			metav1.SetMetaDataAnnotation(&passedObj.ObjectMeta, v1beta1constants.GardenerTimestamp, now.Add(time.Millisecond).UTC().String())
-
-			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
-			err := WaitUntilExtensionObjectReady(
-				ctx, c, log,
-				passedObj, extensionsv1alpha1.WorkerResource,
-				defaultInterval, defaultThreshold, defaultTimeout, nil,
-			)
-			Expect(err).To(MatchError(ContainSubstring("annotation is not")), "worker readiness error")
-		})
-
-		It("should return success if extension object got ready again and we observed latest timestamp annotation", func() {
-			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				State:          gardencorev1beta1.LastOperationStateSucceeded,
-				LastUpdateTime: metav1.Now(),
-			}
-			now = time.Now()
-			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().String())
-			passedObj := expected.DeepCopy()
 
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilExtensionObjectReady(
@@ -270,16 +232,45 @@ var _ = Describe("extensions", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("should return success if health func does not return error", func() {
+		It("should return error if client has not observed latest timestamp annotation", func() {
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Now(),
+			}
+			now = time.Now()
+			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().String())
+			passedObj := expected.DeepCopy()
+			metav1.SetMetaDataAnnotation(&passedObj.ObjectMeta, v1beta1constants.GardenerTimestamp, now.Add(time.Millisecond).UTC().String())
+
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
 				func(obj client.Object) error {
 					return nil
 				},
-				expected, extensionsv1alpha1.WorkerResource,
-				defaultInterval, defaultThreshold, defaultTimeout,
-				nil,
+				passedObj, extensionsv1alpha1.WorkerResource,
+				defaultInterval, defaultThreshold, defaultTimeout, nil,
+			)
+			Expect(err).To(MatchError(ContainSubstring("annotation is not")), "worker readiness error")
+		})
+
+		It("should return success if health func does not return error and we observed latest timestamp annotation", func() {
+			expected.Status.LastOperation = &gardencorev1beta1.LastOperation{
+				State:          gardencorev1beta1.LastOperationStateSucceeded,
+				LastUpdateTime: metav1.Now(),
+			}
+			now = time.Now()
+			metav1.SetMetaDataAnnotation(&expected.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().String())
+			passedObj := expected.DeepCopy()
+
+			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
+			err := WaitUntilObjectReadyWithHealthFunction(
+				ctx, c, log,
+				func(obj client.Object) error {
+					return nil
+				},
+				passedObj, extensionsv1alpha1.WorkerResource,
+				defaultInterval, defaultThreshold, defaultTimeout, nil,
 			)
 			Expect(err).NotTo(HaveOccurred())
 		})

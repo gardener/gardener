@@ -1202,7 +1202,6 @@ func getManagedIngressDNSEntry(k8sSeedClient client.Client, seedFQDN string, loa
 		k8sSeedClient,
 		v1beta1constants.GardenNamespace,
 		values,
-		nil,
 	)
 }
 

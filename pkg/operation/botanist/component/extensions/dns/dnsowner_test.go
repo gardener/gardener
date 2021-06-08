@@ -132,6 +132,12 @@ var _ = Describe("#DNSOwner", func() {
 		})
 	})
 
+	Describe("#Wait", func() {
+		It("should succeed", func() {
+			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
+		})
+	})
+
 	Describe("#WaitCleanup", func() {
 		It("should not return error when it's already removed", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).ToNot(HaveOccurred())

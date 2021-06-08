@@ -123,7 +123,6 @@ func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) componen
 				},
 				Annotations: b.enableDNSProviderForShootDNSEntries(),
 			},
-			nil,
 		)
 	}
 
@@ -135,7 +134,6 @@ func (b *Botanist) DefaultExternalDNSProvider(seedClient client.Client) componen
 			Name:    DNSExternalName,
 			Purpose: DNSExternalName,
 		},
-		nil,
 	))
 }
 
@@ -149,7 +147,6 @@ func (b *Botanist) DefaultExternalDNSEntry(seedClient client.Client) component.D
 			Name: DNSExternalName,
 			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
-		nil,
 	))
 }
 
@@ -185,7 +182,6 @@ func (b *Botanist) DefaultInternalDNSProvider(seedClient client.Client) componen
 					Exclude: b.Garden.InternalDomain.ExcludeZones,
 				},
 			},
-			nil,
 		)
 	}
 
@@ -197,7 +193,6 @@ func (b *Botanist) DefaultInternalDNSProvider(seedClient client.Client) componen
 			Name:    DNSInternalName,
 			Purpose: DNSInternalName,
 		},
-		nil,
 	))
 }
 
@@ -211,7 +206,6 @@ func (b *Botanist) DefaultInternalDNSEntry(seedClient client.Client) component.D
 			Name: DNSInternalName,
 			TTL:  *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 		},
-		nil,
 	))
 }
 
@@ -295,7 +289,6 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context, gardenClient, see
 					},
 					Annotations: b.enableDNSProviderForShootDNSEntries(),
 				},
-				nil,
 			)
 		}
 	}
@@ -322,7 +315,6 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context, gardenClient, see
 					Purpose: p.Name,
 					Labels:  map[string]string{v1beta1constants.GardenRole: DNSProviderRoleAdditional},
 				},
-				nil,
 			))
 		}
 	}

@@ -32,6 +32,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
+
 	"github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -57,24 +58,11 @@ func WaitUntilExtensionObjectReady(
 	timeout time.Duration,
 	postReadyFunc func() error,
 ) error {
-	var healthFuncs []health.Func
-
-	// If the extension object has been reconciled successfully before we triggered a new reconciliation and our cache
-	// is not updated fast enough with our reconciliation trigger (i.e. adding the reconcile annotation), we might
-	// falsy return early from waiting for the extension object to be ready (as the last state already was "ready").
-	// Use the timestamp annotation on the object as an ensurance, that once we see it in our cache, we are observing
-	// a version of the object that is fresh enough.
-	if expectedTimestamp, ok := obj.GetAnnotations()[v1beta1constants.GardenerTimestamp]; ok {
-		healthFuncs = append(healthFuncs, health.ObjectHasAnnotationWithValue(v1beta1constants.GardenerTimestamp, expectedTimestamp))
-	}
-
-	healthFuncs = append(healthFuncs, health.CheckExtensionObject)
-
 	return WaitUntilObjectReadyWithHealthFunction(
 		ctx,
 		c,
 		logger,
-		health.And(healthFuncs...),
+		health.CheckExtensionObject,
 		obj,
 		kind,
 		interval,
@@ -108,6 +96,15 @@ func WaitUntilObjectReadyWithHealthFunction(
 		name      = obj.GetName()
 		namespace = obj.GetNamespace()
 	)
+
+	// If the object has been reconciled successfully before we triggered a new reconciliation and our cache
+	// is not updated fast enough with our reconciliation trigger (i.e. adding the reconcile annotation), we might
+	// falsy return early from waiting for the object to be ready (as the last state already was "ready").
+	// Use the timestamp annotation on the object as an ensurance, that once we see it in our cache, we are observing
+	// a version of the object that is fresh enough.
+	if expectedTimestamp, ok := obj.GetAnnotations()[v1beta1constants.GardenerTimestamp]; ok {
+		healthFunc = health.And(health.ObjectHasAnnotationWithValue(v1beta1constants.GardenerTimestamp, expectedTimestamp), healthFunc)
+	}
 
 	resetObj, err := kutil.CreateResetObjectFunc(obj, c.Scheme())
 	if err != nil {
