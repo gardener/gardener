@@ -123,7 +123,7 @@ func New(
 
 		deadlineCleaning:    20 * time.Minute,
 		deadlinePod:         20 * time.Minute,
-		deadlinePodCreation: 2 * time.Minute,
+		deadlinePodCreation: 5 * time.Minute,
 	}
 }
 
