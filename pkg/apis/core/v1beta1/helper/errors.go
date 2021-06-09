@@ -62,6 +62,9 @@ var (
 )
 
 // DetermineError determines the Garden error code for the given error and creates a new error with the given message.
+// TODO(timebertt): this is should be improved: clean up the usages to not pass the error twice (once as an error and
+// once as a string) and properly wrap the given error instead of creating a new one from the given error message,
+// so we can use errors.As up the call stack.
 func DetermineError(err error, message string) error {
 	if err == nil {
 		return errors.New(message)

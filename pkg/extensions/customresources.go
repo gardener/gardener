@@ -143,9 +143,9 @@ func WaitUntilObjectReadyWithHealthFunction(
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for %s to become ready", extensionKey(kind, namespace, name))
 		if lastObservedError != nil {
-			return gardencorev1beta1helper.NewErrorWithCodes(formatErrorMessage(message, lastObservedError.Error()), gardencorev1beta1helper.ExtractErrorCodes(lastObservedError)...)
+			return fmt.Errorf("%s: %w", message, lastObservedError)
 		}
-		return errors.New(formatErrorMessage(message, err.Error()))
+		return fmt.Errorf("%s: %w", message, err)
 	}
 
 	return nil
@@ -290,9 +290,9 @@ func WaitUntilExtensionObjectDeleted(
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete %s", extensionKey(kind, namespace, name))
 		if lastObservedError != nil {
-			return gardencorev1beta1helper.NewErrorWithCodes(formatErrorMessage(message, lastObservedError.Error()), gardencorev1beta1helper.ExtractErrorCodes(lastObservedError)...)
+			return fmt.Errorf("%s: %w", message, lastObservedError)
 		}
-		return errors.New(formatErrorMessage(message, err.Error()))
+		return fmt.Errorf("%s: %w", message, err)
 	}
 
 	return nil
@@ -511,8 +511,4 @@ func applyFuncToExtensionObjects(
 
 func extensionKey(kind, namespace, name string) string {
 	return fmt.Sprintf("%s %s/%s", kind, namespace, name)
-}
-
-func formatErrorMessage(message, description string) string {
-	return fmt.Sprintf("%s: %s", message, description)
 }

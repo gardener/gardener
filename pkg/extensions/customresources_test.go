@@ -23,6 +23,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	. "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
@@ -227,17 +228,28 @@ var _ = Describe("extensions", func() {
 		})
 
 		It("should return error if ready func returns error", func() {
+			fakeError := &specialWrappingError{
+				error: gardencorev1beta1helper.NewErrorWithCodes("foo", gardencorev1beta1.ErrorInfraUnauthorized),
+			}
+
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating worker succeeds")
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
 				func(obj client.Object) error {
-					return errors.New("error")
+					return fakeError
 				},
 				expected, extensionsv1alpha1.WorkerResource,
 				defaultInterval, defaultThreshold, defaultTimeout,
 				nil,
 			)
 			Expect(err).To(HaveOccurred())
+
+			// ensure, that errors are properly wrapped
+			var specialError interface {
+				Special()
+			}
+			Expect(errors.As(err, &specialError)).To(BeTrue(), "should properly wrap the error returned by the health func")
+			Expect(gardencorev1beta1helper.ExtractErrorCodes(err)).To(ConsistOf(gardencorev1beta1.ErrorInfraUnauthorized), "should be able to extract error codes from wrapped error")
 		})
 
 		It("should return error if client has not observed latest timestamp annotation", func() {
@@ -430,6 +442,25 @@ var _ = Describe("extensions", func() {
 				defaultInterval, defaultTimeout)
 
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("should return error with codes if extension object has status.lastError.codes", func() {
+			deletionTimestamp := metav1.Now()
+			expected.ObjectMeta.DeletionTimestamp = &deletionTimestamp
+			expected.Status.LastError = &gardencorev1beta1.LastError{
+				Description: "invalid credentials",
+				Codes:       []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraUnauthorized},
+			}
+
+			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
+			err := WaitUntilExtensionObjectDeleted(ctx, c, log,
+				expected, extensionsv1alpha1.WorkerResource,
+				defaultInterval, defaultTimeout)
+
+			Expect(err).To(HaveOccurred())
+
+			// ensure, that errors are properly wrapped
+			Expect(gardencorev1beta1helper.ExtractErrorCodes(err)).To(ConsistOf(gardencorev1beta1.ErrorInfraUnauthorized), "should be able to extract error codes from wrapped error")
 		})
 
 		It("should return success if extensions CRs gets deleted", func() {
@@ -749,3 +780,13 @@ var _ = Describe("extensions", func() {
 		})
 	})
 })
+
+type specialWrappingError struct {
+	error
+}
+
+func (s *specialWrappingError) Unwrap() error {
+	return s.error
+}
+
+func (s *specialWrappingError) Special() {}
