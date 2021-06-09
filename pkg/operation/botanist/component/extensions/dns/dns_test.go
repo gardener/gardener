@@ -104,6 +104,22 @@ var _ = Describe("#CheckDNSObject", func() {
 			}
 		})
 
+		It("should annotate error with state of dns object", func() {
+			for _, state := range []string{
+				dnsv1alpha1.STATE_ERROR,
+				dnsv1alpha1.STATE_INVALID,
+			} {
+				msg := "unknown owner id 'foo--bar'"
+				acc.SetState(state)
+				acc.SetMessage(&msg)
+				err := CheckDNSObject(obj)
+
+				var errorWithState ErrorWithDNSState
+				Expect(errors.As(err, &errorWithState)).To(BeTrue(), "state: "+state)
+				Expect(errorWithState.DNSState()).To(Equal(state), "state: "+state)
+			}
+		})
+
 		It("should not return error if object is ready", func() {
 			acc.SetGeneration(1)
 			acc.SetObservedGeneration(1)

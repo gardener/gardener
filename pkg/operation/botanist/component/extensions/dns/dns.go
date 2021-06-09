@@ -99,6 +99,9 @@ func CheckDNSObject(obj client.Object) error {
 			err = fmt.Errorf("state %s", state)
 		}
 
+		// TODO(timebertt): this should be the other way round: ErrorWithCodes should wrap the errorWithDNSState.
+		// DetermineError first needs to be improved to properly wrap the given error, afterwards we can clean up this
+		// code here
 		if state == dnsv1alpha1.STATE_ERROR || state == dnsv1alpha1.STATE_INVALID {
 			// return ErrorWithCodes, even if DetermineErrorCodes doesn't detect an error code
 			// this is the same behavior as in other extension components which leverage health.CheckExtensionObject, where
@@ -107,8 +110,38 @@ func CheckDNSObject(obj client.Object) error {
 			// retrying until the entire timeout is elapsed.
 			err = gardencorev1beta1helper.NewErrorWithCodes(err.Error(), gardencorev1beta1helper.DetermineErrorCodes(err)...)
 		}
-		return err
+		return &errorWithDNSState{underlying: err, state: state}
 	}
 
 	return nil
+}
+
+// ErrorWithDNSState is an error annotated with the state of a DNS object.
+type ErrorWithDNSState interface {
+	error
+
+	// DNSState returns the state of the DNS object this error is about.
+	DNSState() string
+}
+
+var _ ErrorWithDNSState = (*errorWithDNSState)(nil)
+
+type errorWithDNSState struct {
+	underlying error
+	state      string
+}
+
+// Error returns the error message of the underlying (wrapped) error.
+func (e *errorWithDNSState) Error() string {
+	return e.underlying.Error()
+}
+
+// DNSState returns the state of the DNS object this error is about.
+func (e *errorWithDNSState) DNSState() string {
+	return e.state
+}
+
+// Unwrap returns the underlying (wrapped) error.
+func (e *errorWithDNSState) Unwrap() error {
+	return e.underlying
 }

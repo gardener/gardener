@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -452,8 +453,15 @@ func (d dnsRestoreDeployer) Deploy(ctx context.Context) error {
 	if err := d.entry.Deploy(ctx); err != nil {
 		return err
 	}
-	if err := d.entry.Wait(ctx); err != nil && !strings.Contains(err.Error(), "status=") {
-		return err
+	if err := d.entry.Wait(ctx); err != nil {
+		var errWithState dns.ErrorWithDNSState
+		if errors.As(err, &errWithState) {
+			if errWithState.DNSState() != dnsv1alpha1.STATE_ERROR && errWithState.DNSState() != dnsv1alpha1.STATE_INVALID {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
 	// Deploy the owner and wait for it to become ready
