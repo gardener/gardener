@@ -115,7 +115,9 @@ func WaitUntilObjectReadyWithHealthFunction(
 		retryCountUntilSevere++
 
 		resetObj()
-		if err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj); err != nil {
+		obj.SetName(name)
+		obj.SetNamespace(namespace)
+		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.MinorError(err)
 			}
@@ -266,7 +268,9 @@ func WaitUntilExtensionObjectDeleted(
 
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
 		resetObj()
-		if err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj); err != nil {
+		obj.SetName(name)
+		obj.SetNamespace(namespace)
+		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
 			}
@@ -411,7 +415,9 @@ func WaitUntilExtensionObjectMigrated(
 
 	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
 		resetObj()
-		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
+		obj.SetName(name)
+		obj.SetNamespace(namespace)
+		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if client.IgnoreNotFound(err) == nil {
 				return retry.Ok()
 			}

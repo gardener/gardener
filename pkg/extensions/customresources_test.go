@@ -98,6 +98,10 @@ var _ = Describe("extensions", func() {
 	})
 
 	Describe("#WaitUntilExtensionObjectReady", func() {
+		AfterEach(func() {
+			Expect(client.ObjectKeyFromObject(expected)).To(Equal(client.ObjectKey{Namespace: namespace, Name: name}), "should not reset object's key")
+		})
+
 		It("should return error if extension object does not exist", func() {
 			err := WaitUntilExtensionObjectReady(
 				ctx, c, log,
@@ -179,6 +183,10 @@ var _ = Describe("extensions", func() {
 	})
 
 	Describe("#WaitUntilObjectReadyWithHealthFunction", func() {
+		AfterEach(func() {
+			Expect(client.ObjectKeyFromObject(expected)).To(Equal(client.ObjectKey{Namespace: namespace, Name: name}), "should not reset object's key")
+		})
+
 		It("should return error if object does not exist", func() {
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, c, log,
@@ -408,6 +416,10 @@ var _ = Describe("extensions", func() {
 	})
 
 	Describe("#WaitUntilExtensionObjectDeleted", func() {
+		AfterEach(func() {
+			Expect(client.ObjectKeyFromObject(expected)).To(Equal(client.ObjectKey{Namespace: namespace, Name: name}), "should not reset object's key")
+		})
+
 		It("should return error if extension object is not deleted", func() {
 			deletionTimestamp := metav1.Now()
 			expected.ObjectMeta.DeletionTimestamp = &deletionTimestamp
@@ -593,6 +605,10 @@ var _ = Describe("extensions", func() {
 	})
 
 	Describe("#WaitUntilExtensionObjectMigrated", func() {
+		AfterEach(func() {
+			Expect(client.ObjectKeyFromObject(expected)).To(Equal(client.ObjectKey{Namespace: namespace, Name: name}), "should not reset object's key")
+		})
+
 		It("should not return error if resource does not exist", func() {
 			err := WaitUntilExtensionObjectMigrated(
 				ctx,
