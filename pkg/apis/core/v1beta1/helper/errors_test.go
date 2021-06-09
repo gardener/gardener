@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -28,6 +29,12 @@ import (
 )
 
 var _ = Describe("errors", func() {
+	Describe("#ErrorWithCodes", func() {
+		It("should be marked as a retriable error", func() {
+			Expect(retry.IsRetriable(&ErrorWithCodes{})).To(BeTrue())
+		})
+	})
+
 	DescribeTable("#DetermineError",
 		func(err error, msg string, expectedErr error) {
 			Expect(DetermineError(err, msg)).To(Equal(expectedErr))

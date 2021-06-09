@@ -34,6 +34,9 @@ type ErrorWithCodes struct {
 	codes   []gardencorev1beta1.ErrorCode
 }
 
+// Retriable marks ErrorWithCodes as retriable.
+func (e *ErrorWithCodes) Retriable() {}
+
 // NewErrorWithCodes creates a new error that additionally exposes the given codes via the Coder interface.
 func NewErrorWithCodes(message string, codes ...gardencorev1beta1.ErrorCode) error {
 	return &ErrorWithCodes{message, codes}

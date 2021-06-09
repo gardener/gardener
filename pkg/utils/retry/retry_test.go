@@ -17,7 +17,6 @@ package retry_test
 import (
 	"errors"
 	"fmt"
-	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
@@ -31,11 +30,6 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/retry"
 	mockretry "github.com/gardener/gardener/pkg/utils/retry/mock"
 )
-
-func TestRetry(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Retry Suite")
-}
 
 var _ = Describe("Retry", func() {
 	var (
