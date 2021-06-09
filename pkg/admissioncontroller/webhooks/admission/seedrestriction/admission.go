@@ -179,7 +179,7 @@ func (h *handler) admitBackupEntry(ctx context.Context, seedName string, request
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if resp := h.admit(seedName, backupEntry.Spec.SeedName); !resp.Allowed {
+	if resp := h.admit(seedName, backupEntry.Spec.SeedName, backupEntry.Status.SeedName); !resp.Allowed {
 		return resp
 	}
 
@@ -444,18 +444,20 @@ func (h *handler) admitShootState(ctx context.Context, seedName string, request 
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	return h.admit(seedName, shoot.Spec.SeedName)
+	return h.admit(seedName, shoot.Spec.SeedName, shoot.Status.SeedName)
 }
 
-func (h *handler) admit(seedName string, seedNameForObject *string) admission.Response {
+func (h *handler) admit(seedName string, seedNamesForObject ...*string) admission.Response {
 	// Allow request if seed name is not known (ambiguous case).
 	if seedName == "" {
 		return admission.Allowed("")
 	}
 
-	// Allow request if seed name of object matches the seed name of the requesting user.
-	if seedNameForObject != nil && *seedNameForObject == seedName {
-		return admission.Allowed("")
+	// Allow request if one of the seed names for the object matches the seed name of the requesting user.
+	for _, seedNameForObject := range seedNamesForObject {
+		if seedNameForObject != nil && *seedNameForObject == seedName {
+			return admission.Allowed("")
+		}
 	}
 
 	return admission.Errored(http.StatusForbidden, fmt.Errorf("object does not belong to seed %q", seedName))
