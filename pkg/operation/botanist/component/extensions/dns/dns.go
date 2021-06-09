@@ -100,7 +100,12 @@ func CheckDNSObject(obj client.Object) error {
 		}
 
 		if state == dnsv1alpha1.STATE_ERROR || state == dnsv1alpha1.STATE_INVALID {
-			return gardencorev1beta1helper.DetermineError(err, "")
+			// return ErrorWithCodes, even if DetermineErrorCodes doesn't detect an error code
+			// this is the same behavior as in other extension components which leverage health.CheckExtensionObject, where
+			// ErrorWithCodes is returned if status.lastError is set (no matter if status.lastError.codes contains error codes).
+			// returning ErrorWithCodes makes WaitUntilObjectReadyWithHealthFunction surface errors faster, without
+			// retrying until the entire timeout is elapsed.
+			err = gardencorev1beta1helper.NewErrorWithCodes(err.Error(), gardencorev1beta1helper.DetermineErrorCodes(err)...)
 		}
 		return err
 	}

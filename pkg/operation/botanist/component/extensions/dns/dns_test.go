@@ -88,6 +88,22 @@ var _ = Describe("#CheckDNSObject", func() {
 			}
 		})
 
+		It("should return ErrorWithCodes, if status is Error or Invalid, even if no code is determined", func() {
+			for _, state := range []string{
+				dnsv1alpha1.STATE_ERROR,
+				dnsv1alpha1.STATE_INVALID,
+			} {
+				msg := "unknown owner id 'foo--bar'"
+				acc.SetState(state)
+				acc.SetMessage(&msg)
+				err := CheckDNSObject(obj)
+
+				var errorWithCodes *helper.ErrorWithCodes
+				Expect(errors.As(err, &errorWithCodes)).To(BeTrue(), "state: "+state)
+				Expect(errorWithCodes.Codes()).To(BeEmpty(), "state: "+state)
+			}
+		})
+
 		It("should not return error if object is ready", func() {
 			acc.SetGeneration(1)
 			acc.SetObservedGeneration(1)
