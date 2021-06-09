@@ -52,21 +52,18 @@ type Controller struct {
 	gardenClusterIdentity         string
 	identity                      *gardencorev1beta1.Gardener
 	careReconciler                reconcile.Reconciler
-	controllerInstallationControl ControllerInstallationControlInterface
 	seedRegistrationControl       SeedRegistrationControlInterface
 	recorder                      record.EventRecorder
 	imageVector                   imagevector.ImageVector
 	shootReconciliationDueTracker *reconciliationDueTracker
 
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister
-	seedLister                   gardencorelisters.SeedLister
-	shootLister                  gardencorelisters.ShootLister
+	seedLister  gardencorelisters.SeedLister
+	shootLister gardencorelisters.ShootLister
 
-	controllerInstallationQueue workqueue.RateLimitingInterface
-	shootCareQueue              workqueue.RateLimitingInterface
-	shootQueue                  workqueue.RateLimitingInterface
-	shootSeedQueue              workqueue.RateLimitingInterface
-	seedRegistrationQueue       workqueue.RateLimitingInterface
+	shootCareQueue        workqueue.RateLimitingInterface
+	shootQueue            workqueue.RateLimitingInterface
+	shootSeedQueue        workqueue.RateLimitingInterface
+	seedRegistrationQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs []cache.InformerSynced
 
@@ -81,9 +78,6 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 	gardenClusterIdentity string, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
-
-		controllerInstallationInformer = gardenCoreV1beta1Informer.ControllerInstallations()
-		controllerInstallationLister   = controllerInstallationInformer.Lister()
 
 		seedInformer = gardenCoreV1beta1Informer.Seeds()
 		seedLister   = seedInformer.Lister()
@@ -100,21 +94,18 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		identity:                      identity,
 		gardenClusterIdentity:         gardenClusterIdentity,
 		careReconciler:                NewCareReconciler(clientMap, gardenCoreV1beta1Informer, imageVector, identity, gardenClusterIdentity, config),
-		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreV1beta1Informer, recorder),
 		seedRegistrationControl:       NewDefaultSeedRegistrationControl(clientMap, recorder, logger.Logger),
 		recorder:                      recorder,
 		imageVector:                   imageVector,
 		shootReconciliationDueTracker: newReconciliationDueTracker(),
 
-		seedLister:                   seedLister,
-		shootLister:                  shootLister,
-		controllerInstallationLister: controllerInstallationLister,
+		seedLister:  seedLister,
+		shootLister: shootLister,
 
-		controllerInstallationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-controllerinstallation"),
-		shootCareQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
-		shootQueue:                  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
-		shootSeedQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-seeds"),
-		seedRegistrationQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shooted-seed-registration"),
+		shootCareQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
+		shootQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
+		shootSeedQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-seeds"),
+		seedRegistrationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shooted-seed-registration"),
 
 		workerCh: make(chan int),
 	}
@@ -138,14 +129,6 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		},
 	})
 
-	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    shootController.controllerInstallationAdd,
-			UpdateFunc: shootController.controllerInstallationUpdate,
-		},
-	})
-
 	shootInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
 		Handler: cache.ResourceEventHandlerFuncs{
@@ -155,7 +138,6 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 	})
 
 	shootController.hasSyncedFuncs = []cache.InformerSynced{
-		controllerInstallationInformer.Informer().HasSynced,
 		seedInformer.Informer().HasSynced,
 		shootInformer.Informer().HasSynced,
 	}
@@ -218,12 +200,10 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int
 	for i := 0; i < shootWorkers/2+1; i++ {
 		controllerutils.CreateWorker(ctx, c.shootSeedQueue, "Shooted Seeds Reconciliation", reconcile.Func(c.reconcileShootRequest), &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.seedRegistrationQueue, "Shooted Seeds Registration", reconcile.Func(c.reconcileShootedSeedRegistrationKey), &waitGroup, c.workerCh)
-		controllerutils.DeprecatedCreateWorker(ctx, c.controllerInstallationQueue, "ControllerInstallation Queue", c.reconcileControllerInstallationKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
-	c.controllerInstallationQueue.ShutDown()
 	c.seedRegistrationQueue.ShutDown()
 	c.shootCareQueue.ShutDown()
 	c.shootQueue.ShutDown()
@@ -231,12 +211,11 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int
 
 	for {
 		var (
-			controllerInstallationQueueLength = c.controllerInstallationQueue.Len()
-			seedRegistrationQueueLength       = c.seedRegistrationQueue.Len()
-			shootQueueLength                  = c.shootQueue.Len()
-			shootCareQueueLength              = c.shootCareQueue.Len()
-			shootSeedQueueLength              = c.shootSeedQueue.Len()
-			queueLengths                      = shootQueueLength + shootCareQueueLength + shootSeedQueueLength + seedRegistrationQueueLength + controllerInstallationQueueLength
+			seedRegistrationQueueLength = c.seedRegistrationQueue.Len()
+			shootQueueLength            = c.shootQueue.Len()
+			shootCareQueueLength        = c.shootCareQueue.Len()
+			shootSeedQueueLength        = c.shootSeedQueue.Len()
+			queueLengths                = shootQueueLength + shootCareQueueLength + shootSeedQueueLength + seedRegistrationQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			logger.Logger.Debug("No running Shoot worker and no items left in the queues. Terminated Shoot controller...")
