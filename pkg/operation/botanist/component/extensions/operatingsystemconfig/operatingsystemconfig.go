@@ -547,7 +547,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			KubeletCLIFlags:         d.kubeletCLIFlags,
 			KubeletDataVolumeName:   d.kubeletDataVolumeName,
 			KubernetesVersion:       d.kubernetesVersion,
-			SSHPublicKey:            d.sshPublicKey,
+			SSHPublicKeys:           []string{d.sshPublicKey},
 			PromtailRBACAuthToken:   d.promtailRBACAuthToken,
 			LokiIngress:             d.lokiIngressHostName,
 		})

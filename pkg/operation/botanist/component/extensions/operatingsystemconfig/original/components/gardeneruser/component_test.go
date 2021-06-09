@@ -15,6 +15,8 @@
 package gardeneruser_test
 
 import (
+	"strings"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/gardeneruser"
@@ -31,13 +33,16 @@ var _ = Describe("Component", func() {
 			component components.Component
 			ctx       components.Context
 
-			sshPublicKey       = "some-non-base64-encoded-public-key"
-			sshPublicKeyBase64 = utils.EncodeBase64([]byte(sshPublicKey))
+			sshPublicKeys = []string{
+				"some-non-base64-encoded-public-key",
+				"another-not-encoded-key",
+				"the-last-key-i-promise",
+			}
 		)
 
 		BeforeEach(func() {
 			component = New()
-			ctx = components.Context{SSHPublicKey: sshPublicKey}
+			ctx = components.Context{SSHPublicKeys: sshPublicKeys}
 		})
 
 		It("should return the expected units and files", func() {
@@ -60,12 +65,12 @@ ExecStart=/var/lib/gardener-user/run.sh
 			))
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
-					Path:        "/var/lib/gardener-user-ssh.key",
+					Path:        "/var/lib/gardener-user-authorized-keys",
 					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
-							Data:     sshPublicKeyBase64,
+							Data:     utils.EncodeBase64([]byte(strings.Join(sshPublicKeys, "\n"))),
 						},
 					},
 				},
@@ -94,7 +99,7 @@ USERNAME="gardener"
 id $USERNAME || useradd $USERNAME -mU
 if [ ! -f "$PATH_AUTHORIZED_KEYS" ]; then
   mkdir -p $DIR_SSH
-  cp -f /var/lib/gardener-user-ssh.key $PATH_AUTHORIZED_KEYS
+  cp -f /var/lib/gardener-user-authorized-keys $PATH_AUTHORIZED_KEYS
   chown $USERNAME:$USERNAME $PATH_AUTHORIZED_KEYS
 fi
 if [ ! -f "$PATH_SUDOERS" ]; then

@@ -112,7 +112,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						{Path: fmt.Sprintf("%v", cctx.KubeletConfigParameters)},
 						{Path: *cctx.KubeletDataVolumeName},
 						{Path: cctx.KubernetesVersion.String()},
-						{Path: cctx.SSHPublicKey},
+						{Path: fmt.Sprintf("%s", cctx.SSHPublicKeys)},
 					},
 					nil
 			}
@@ -217,7 +217,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					KubeletConfigParameters: kubeletConfigParameters,
 					KubeletDataVolumeName:   &kubeletDataVolumeName,
 					KubernetesVersion:       values.KubernetesVersion,
-					SSHPublicKey:            sshPublicKey,
+					SSHPublicKeys:           []string{sshPublicKey},
 				})
 
 				oscDownloader := &extensionsv1alpha1.OperatingSystemConfig{

@@ -17,6 +17,7 @@ package gardeneruser
 import (
 	"bytes"
 	_ "embed"
+	"strings"
 	"text/template"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -28,8 +29,8 @@ import (
 )
 
 var (
-	tplName = "create"
-	//go:embed templates/scripts/create.tpl.sh
+	tplName = "reconcile"
+	//go:embed templates/scripts/reconcile.tpl.sh
 	tplContent string
 	tpl        *template.Template
 )
@@ -46,8 +47,8 @@ func init() {
 }
 
 const (
-	pathScript       = "/var/lib/gardener-user/run.sh"
-	pathPublicSSHKey = "/var/lib/gardener-user-ssh.key"
+	pathScript            = "/var/lib/gardener-user/run.sh"
+	pathAuthorizedSSHKeys = "/var/lib/gardener-user-authorized-keys"
 )
 
 type component struct{}
@@ -63,9 +64,11 @@ func (component) Name() string {
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var script bytes.Buffer
-	if err := tpl.Execute(&script, map[string]interface{}{"pathPublicSSHKey": pathPublicSSHKey}); err != nil {
+	if err := tpl.Execute(&script, map[string]interface{}{"pathAuthorizedSSHKeys": pathAuthorizedSSHKeys}); err != nil {
 		return nil, nil, err
 	}
+
+	authorizedKeys := strings.Join(ctx.SSHPublicKeys, "\n")
 
 	return []extensionsv1alpha1.Unit{
 			{
@@ -83,12 +86,12 @@ ExecStart=` + pathScript + `
 		},
 		[]extensionsv1alpha1.File{
 			{
-				Path:        pathPublicSSHKey,
+				Path:        pathAuthorizedSSHKeys,
 				Permissions: pointer.Int32(0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
-						Data:     utils.EncodeBase64([]byte(ctx.SSHPublicKey)),
+						Data:     utils.EncodeBase64([]byte(authorizedKeys)),
 					},
 				},
 			},
