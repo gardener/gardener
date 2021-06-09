@@ -62,7 +62,47 @@ Today, the following rules are implemented:
 
 The `SeedAuthorizer` is implemented as [Kubernetes authorization webhook](https://kubernetes.io/docs/reference/access-authn-authz/webhook/) and part of the [`gardener-admission-controller`](../concepts/admission-controller.md) component running in the garden cluster.
 
-⚠️ This authorization plugin is still in development and should not be used yet.
+🎛 In order to activate it, you have to follow these steps:
+
+1. Set the following flags for the `kube-apiserver` of the garden cluster (i.e., the `kube-apiserver` whose API is extended by Gardener):
+   - `--authorization-mode=RBAC,Node,Webhook` (please note that `Webhook` should be the last one in the list; `Node` might not be needed if you use a virtual garden cluster)
+   - `--authorization-webhook-config-file=<path-to-the-webhook-config-file>`
+   - `--authorization-webhook-cache-authorized-ttl=0`
+   - `--authorization-webhook-cache-unauthorized-ttl=0`
+
+2. The webhook config file (stored at `<path-to-the-webhook-config-file>`) should look as follows:
+   ```yaml
+   apiVersion: v1
+   kind: Config
+   clusters:
+   - name: garden
+     cluster:
+       certificate-authority-data: base64(CA-CERT-OF-GARDENER-ADMISSION-CONTROLLER)
+       server: https://gardener-admission-controller.garden/webhooks/auth/seed
+   users:
+   - name: kube-apiserver
+     user: {}
+   contexts:
+   - name: auth-webhook
+     context:
+       cluster: garden
+       user: kube-apiserver
+   current-context: auth-webhook
+   ```
+
+3. When deploying the [Gardener `controlplane` Helm chart](../../charts/gardener/controlplane), set `.global.rbac.seedAuthorizer.enabled=true`. This will prevent that the RBAC resources granting global access for all gardenlets will be deployed.
+
+4. Delete the existing RBAC resources granting global access for all gardenlets by running:
+   ```bash
+   kubectl delete \
+     clusterrole.rbac.authorization.k8s.io/gardener.cloud:system:seeds \
+     clusterrolebinding.rbac.authorization.k8s.io/gardener.cloud:system:seeds \
+     --ignore-not-found
+   ```
+
+Please note that you should activate the [`SeedRestriction`](#seedrestriction-admission-webhook-enablement) admission handler as well.
+
+⚠️ This authorization plugin is still in development and should only be used for experimental or testing purposes.
 
 ### Authorizer Decisions
 
@@ -178,4 +218,15 @@ Afterwards, the vertex can either be added again or the updated edges can be cre
 
 The `SeedRestriction` is implemented as [Kubernetes admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/) and part of the [`gardener-admission-controller`](../concepts/admission-controller.md) component running in the garden cluster.
 
-⚠️ This admission plugin is still in development and should not be used yet.
+🎛 In order to activate it, you have to set `.global.admission.seedRestriction.enabled=true` when using the [Gardener `controlplane` Helm chart](../../charts/gardener/controlplane).
+This will add an additional webhook in the existing `ValidatingWebhookConfiguration` of the `gardener-admission-controller` which contains the configuration for the `SeedRestriction` handler.
+Please note that it should only be activated when the `SeedAuthorizer` is active as well.
+
+⚠️ This admission plugin is still in development and should only be used for experimental or testing purposes.
+
+### Admission Decisions
+
+The admission's purpose is to perform extended validation on requests which require the body of the object in question.
+Additionally, it handles `CREATE` requests of gardenlets (above discussed resource dependency graph cannot be used in such cases because there won't be any vertex/edge for non-existing resources).
+
+Gardenlets are restricted to only create new resources which are somehow related to the seed clusters they are responsible for.
