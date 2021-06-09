@@ -187,11 +187,11 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 			eventsErrorMessage, err2 := kutil.FetchEventMessages(ctx, b.K8sShootClient.Client().Scheme(), b.K8sShootClient.Client(), service, corev1.EventTypeWarning, 2)
 			if err2 != nil {
 				b.Logger.Errorf("error %q occured while fetching events for error %q", err2, err)
-				return true, fmt.Errorf("'%w' occurred but could not fetch events for more information", err)
+				return retry.SevereError(fmt.Errorf("'%w' occurred but could not fetch events for more information", err))
 			}
 
 			if eventsErrorMessage != "" {
-				return true, fmt.Errorf("%s\n\n%s", err.Error(), eventsErrorMessage)
+				return retry.SevereError(fmt.Errorf("%s\n\n%s", err.Error(), eventsErrorMessage))
 			}
 		}
 
