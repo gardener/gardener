@@ -208,7 +208,7 @@ var _ = Describe("handler", func() {
 					Entry("seed name is different", pointer.StringPtr("some-different-seed")),
 				)
 
-				It("should allow the request because seed name matches", func() {
+				It("should allow the request because seed name in spec matches", func() {
 					mockCache.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
 						(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: &seedName}}).DeepCopyInto(obj)
 						return nil
@@ -217,11 +217,31 @@ var _ = Describe("handler", func() {
 					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 				})
 
-				It("should allow the request because seed name is ambiguous", func() {
+				It("should allow the request because seed name in status matches", func() {
+					mockCache.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+						(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{SeedName: &seedName}}).DeepCopyInto(obj)
+						return nil
+					})
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+
+				It("should allow the request because seed name is ambiguous (spec)", func() {
 					request.UserInfo = ambiguousUser
 
 					mockCache.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
 						(&gardencorev1beta1.Shoot{Spec: gardencorev1beta1.ShootSpec{SeedName: pointer.StringPtr("some-different-seed")}}).DeepCopyInto(obj)
+						return nil
+					})
+
+					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+				})
+
+				It("should allow the request because seed name is ambiguous (status)", func() {
+					request.UserInfo = ambiguousUser
+
+					mockCache.EXPECT().Get(ctx, kutil.Key(namespace, name), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+						(&gardencorev1beta1.Shoot{Status: gardencorev1beta1.ShootStatus{SeedName: pointer.StringPtr("some-different-seed")}}).DeepCopyInto(obj)
 						return nil
 					})
 
