@@ -53,7 +53,7 @@ Today, the following rules are implemented:
 | `Shoot`                     | `get`, `list`, `watch`, `update`, `patch`                       | `Shoot` -> `Seed`                                                                                                             | Allow `get`, `list`, `watch` requests for all `Shoot`s. Allow only `update`, `patch` requests for `Shoot`s assigned to the `gardenlet`'s `Seed`. |
 | `ShootState`                | `get`, `create`, `update`, `patch`                              | `ShootState` -> `Shoot` -> `Seed`                                                                                             | Allow only `get`, `create`, `update`, `patch` requests for `ShootState`s belonging by `Shoot`s that are assigned to the `gardenlet`'s `Seed`. |
 
-[1] If you use `ManagedSeed` resources then the gardenlet reconciling them ("parent gardenlet") may be allowed to submit certain requests for the `Seed` resources resulting out of such `ManagedSeed` reconciliations (even if the "parent gardenlet" is not responsible for them): 
+[1] If you use `ManagedSeed` resources then the gardenlet reconciling them ("parent gardenlet") may be allowed to submit certain requests for the `Seed` resources resulting out of such `ManagedSeed` reconciliations (even if the "parent gardenlet" is not responsible for them):
 
 - ℹ️ It is allowed to delete the `Seed` resources if the corresponding `ManagedSeed` objects already have a `deletionTimestamp` (this is secure as gardenlets themselves don't have permissions for deleting `ManagedSeed`s).
 - ⚠ It is allowed to create or update `Seed` resources if the corresponding `ManagedSeed` objects use a seed template, i.e., `.spec.seedTemplate != nil`. In this case, there is at least one gardenlet in your system which is responsible for two or more `Seed`s. Please keep in mind that this use case is not recommended for production scenarios (you should only have one dedicated gardenlet per seed cluster), hence, the security improvements discussed in this document might be limited.
@@ -65,7 +65,7 @@ The `SeedAuthorizer` is implemented as [Kubernetes authorization webhook](https:
 🎛 In order to activate it, you have to follow these steps:
 
 1. Set the following flags for the `kube-apiserver` of the garden cluster (i.e., the `kube-apiserver` whose API is extended by Gardener):
-   - `--authorization-mode=RBAC,Node,Webhook` (please note that `Webhook` should be the last one in the list; `Node` might not be needed if you use a virtual garden cluster)
+   - `--authorization-mode=RBAC,Node,Webhook` (please note that `Webhook` should appear after `RBAC` in the list [1]; `Node` might not be needed if you use a virtual garden cluster)
    - `--authorization-webhook-config-file=<path-to-the-webhook-config-file>`
    - `--authorization-webhook-cache-authorized-ttl=0`
    - `--authorization-webhook-cache-unauthorized-ttl=0`
@@ -101,6 +101,8 @@ The `SeedAuthorizer` is implemented as [Kubernetes authorization webhook](https:
    ```
 
 Please note that you should activate the [`SeedRestriction`](#seedrestriction-admission-webhook-enablement) admission handler as well.
+
+> [1] The reason for the fact that `Webhook` authorization plugin should appear after `RBAC` is that the `kube-apiserver` will be depending on the `gardener-admission-controller` (serving the webhook). However, the `gardener-admission-controller` can only start when `gardener-apiserver` runs, but `gardener-apiserver` itself can only start when `kube-apiserver` runs. If `Webhook` is before `RBAC` then `gardener-apiserver` might not be able to start, leading to a deadlock.
 
 ⚠️ This authorization plugin is still in development and should only be used for experimental or testing purposes.
 
