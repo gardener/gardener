@@ -47,6 +47,7 @@ func (g *graph) setupBackupEntryWatch(_ context.Context, informer cache.Informer
 			}
 
 			if !apiequality.Semantic.DeepEqual(oldBackupEntry.Spec.SeedName, newBackupEntry.Spec.SeedName) ||
+				!apiequality.Semantic.DeepEqual(oldBackupEntry.Status.SeedName, newBackupEntry.Status.SeedName) ||
 				oldBackupEntry.Spec.BucketName != newBackupEntry.Spec.BucketName {
 				g.handleBackupEntryCreateOrUpdate(newBackupEntry)
 			}
@@ -84,6 +85,11 @@ func (g *graph) handleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.B
 
 	if backupEntry.Spec.SeedName != nil {
 		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *backupEntry.Spec.SeedName)
+		g.addEdge(backupEntryVertex, seedVertex)
+	}
+
+	if backupEntry.Status.SeedName != nil {
+		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *backupEntry.Status.SeedName)
 		g.addEdge(backupEntryVertex, seedVertex)
 	}
 }
