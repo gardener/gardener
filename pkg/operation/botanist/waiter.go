@@ -173,6 +173,8 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 			!b.Shoot.KonnectivityTunnelEnabled &&
 			!b.Shoot.ReversedVPNEnabled {
 
+			b.Logger.Errorf("error %v occurred while checking the tunnel connection", err)
+
 			service := &corev1.Service{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: corev1.SchemeGroupVersion.String(),
@@ -186,7 +188,7 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 
 			eventsErrorMessage, err2 := kutil.FetchEventMessages(ctx, b.K8sShootClient.Client().Scheme(), b.K8sShootClient.Client(), service, corev1.EventTypeWarning, 2)
 			if err2 != nil {
-				b.Logger.Errorf("error %q occured while fetching events for error %q", err2, err)
+				b.Logger.Errorf("error %v occurred while fetching events for VPN load balancer service", err2)
 				return retry.SevereError(fmt.Errorf("'%w' occurred but could not fetch events for more information", err))
 			}
 
