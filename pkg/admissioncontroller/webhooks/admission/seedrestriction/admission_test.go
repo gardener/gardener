@@ -506,7 +506,7 @@ var _ = Describe("handler", func() {
 					Entry("seed name is equal but bucket's seed name is different", &seedName, pointer.StringPtr("some-different-seed")),
 				)
 
-				It("should allow the request because seed name matches for both entry (spec) and bucket", func() {
+				It("should allow the request because seed name matches for both entry and bucket", func() {
 					objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
 						Spec: gardencorev1beta1.BackupEntrySpec{
 							BucketName: bucketName,
@@ -524,38 +524,14 @@ var _ = Describe("handler", func() {
 					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 				})
 
-				It("should allow the request because seed name matches for both entry (status) and bucket", func() {
-					objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
-						Spec: gardencorev1beta1.BackupEntrySpec{
-							BucketName: bucketName,
-							SeedName:   pointer.StringPtr("some-other-seed"),
-						},
-						Status: gardencorev1beta1.BackupEntryStatus{
-							SeedName: &seedName,
-						},
-					})
-					Expect(err).NotTo(HaveOccurred())
-					request.Object.Raw = objData
-
-					mockCache.EXPECT().Get(ctx, kutil.Key(bucketName), gomock.AssignableToTypeOf(&gardencorev1beta1.BackupBucket{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.BackupBucket) error {
-						(&gardencorev1beta1.BackupBucket{Spec: gardencorev1beta1.BackupBucketSpec{SeedName: &seedName}}).DeepCopyInto(obj)
-						return nil
-					})
-
-					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-				})
-
 				DescribeTable("should allow the request because seed name is ambiguous",
-					func(seedNameInBackupEntrySpec, seedNameInBackupEntryStatus, seedNameInBackupBucket *string) {
+					func(seedNameInBackupEntry, seedNameInBackupBucket *string) {
 						request.UserInfo = ambiguousUser
 
 						objData, err := runtime.Encode(encoder, &gardencorev1beta1.BackupEntry{
 							Spec: gardencorev1beta1.BackupEntrySpec{
 								BucketName: bucketName,
-								SeedName:   seedNameInBackupEntrySpec,
-							},
-							Status: gardencorev1beta1.BackupEntryStatus{
-								SeedName: seedNameInBackupEntryStatus,
+								SeedName:   seedNameInBackupEntry,
 							},
 						})
 						Expect(err).NotTo(HaveOccurred())
@@ -569,13 +545,10 @@ var _ = Describe("handler", func() {
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					},
 
-					Entry("seed name nil", nil, nil, nil),
-					Entry("seed name in spec is different", pointer.StringPtr("some-different-seed"), nil, nil),
-					Entry("seed name in spec is equal but bucket's seed name is nil", &seedName, nil, nil),
-					Entry("seed name in spec is equal but bucket's seed name is different", &seedName, nil, pointer.StringPtr("some-different-seed")),
-					Entry("seed name in status is different", nil, pointer.StringPtr("some-different-seed"), nil),
-					Entry("seed name in status is equal but bucket's seed name is nil", nil, &seedName, nil),
-					Entry("seed name in status is equal but bucket's seed name is different", nil, &seedName, pointer.StringPtr("some-different-seed")),
+					Entry("seed name nil", nil, nil),
+					Entry("seed name is different", pointer.StringPtr("some-different-seed"), nil),
+					Entry("seed name is equal but bucket's seed name is nil", &seedName, nil),
+					Entry("seed name is equal but bucket's seed name is different", &seedName, pointer.StringPtr("some-different-seed")),
 				)
 			})
 		})

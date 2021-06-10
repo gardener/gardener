@@ -179,7 +179,7 @@ func (h *handler) admitBackupEntry(ctx context.Context, seedName string, request
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if resp := h.admit(seedName, backupEntry.Spec.SeedName, backupEntry.Status.SeedName); !resp.Allowed {
+	if resp := h.admit(seedName, backupEntry.Spec.SeedName); !resp.Allowed {
 		return resp
 	}
 
