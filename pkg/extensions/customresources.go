@@ -115,7 +115,9 @@ func WaitUntilObjectReadyWithHealthFunction(
 		retryCountUntilSevere++
 
 		resetObj()
-		if err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj); err != nil {
+		obj.SetName(name)
+		obj.SetNamespace(namespace)
+		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.MinorError(err)
 			}
@@ -141,9 +143,9 @@ func WaitUntilObjectReadyWithHealthFunction(
 	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for %s to become ready", extensionKey(kind, namespace, name))
 		if lastObservedError != nil {
-			return gardencorev1beta1helper.NewErrorWithCodes(formatErrorMessage(message, lastObservedError.Error()), gardencorev1beta1helper.ExtractErrorCodes(lastObservedError)...)
+			return fmt.Errorf("%s: %w", message, lastObservedError)
 		}
-		return errors.New(formatErrorMessage(message, err.Error()))
+		return fmt.Errorf("%s: %w", message, err)
 	}
 
 	return nil
@@ -266,7 +268,9 @@ func WaitUntilExtensionObjectDeleted(
 
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
 		resetObj()
-		if err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj); err != nil {
+		obj.SetName(name)
+		obj.SetNamespace(namespace)
+		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
 			}
@@ -286,9 +290,9 @@ func WaitUntilExtensionObjectDeleted(
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete %s", extensionKey(kind, namespace, name))
 		if lastObservedError != nil {
-			return gardencorev1beta1helper.NewErrorWithCodes(formatErrorMessage(message, lastObservedError.Error()), gardencorev1beta1helper.ExtractErrorCodes(lastObservedError)...)
+			return fmt.Errorf("%s: %w", message, lastObservedError)
 		}
-		return errors.New(formatErrorMessage(message, err.Error()))
+		return fmt.Errorf("%s: %w", message, err)
 	}
 
 	return nil
@@ -411,7 +415,9 @@ func WaitUntilExtensionObjectMigrated(
 
 	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
 		resetObj()
-		if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, obj); err != nil {
+		obj.SetName(name)
+		obj.SetNamespace(namespace)
+		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if client.IgnoreNotFound(err) == nil {
 				return retry.Ok()
 			}
@@ -505,8 +511,4 @@ func applyFuncToExtensionObjects(
 
 func extensionKey(kind, namespace, name string) string {
 	return fmt.Sprintf("%s %s/%s", kind, namespace, name)
-}
-
-func formatErrorMessage(message, description string) string {
-	return fmt.Sprintf("%s: %s", message, description)
 }
