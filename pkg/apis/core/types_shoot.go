@@ -899,6 +899,7 @@ type CRIName string
 
 const (
 	CRINameContainerD CRIName = "containerd"
+	CRINameDocker     CRIName = "docker"
 )
 
 // ContainerRuntime contains information about worker's available container runtime
