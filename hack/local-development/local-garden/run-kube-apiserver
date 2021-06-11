@@ -44,7 +44,7 @@ EOF
 
 AUTHORIZATION_FLAGS="--authorization-mode=RBAC"
 if $ACTIVATE_SEEDAUTHORIZER; then
-  AUTHORIZATION_FLAGS="--authorization-mode=Webhook,RBAC --authorization-webhook-config-file=/configs/authwebhook.yaml --authorization-webhook-cache-authorized-ttl=0 --authorization-webhook-cache-unauthorized-ttl=0"
+  AUTHORIZATION_FLAGS="--authorization-mode=RBAC,Webhook --authorization-webhook-config-file=/configs/authwebhook.yaml --authorization-webhook-cache-authorized-ttl=0 --authorization-webhook-cache-unauthorized-ttl=0"
 fi
 
 echo "Starting gardener-dev kube-apiserver!"
