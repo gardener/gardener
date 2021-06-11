@@ -199,6 +199,7 @@ func autoConvert_v1alpha1_BastionStatus_To_operations_BastionStatus(in *BastionS
 	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
 	out.LastHeartbeatTimestamp = (*metav1.Time)(unsafe.Pointer(in.LastHeartbeatTimestamp))
 	out.ExpirationTimestamp = (*metav1.Time)(unsafe.Pointer(in.ExpirationTimestamp))
+	out.ObservedGeneration = (*int64)(unsafe.Pointer(in.ObservedGeneration))
 	return nil
 }
 
@@ -212,6 +213,7 @@ func autoConvert_operations_BastionStatus_To_v1alpha1_BastionStatus(in *operatio
 	out.Conditions = *(*[]corev1alpha1.Condition)(unsafe.Pointer(&in.Conditions))
 	out.LastHeartbeatTimestamp = (*metav1.Time)(unsafe.Pointer(in.LastHeartbeatTimestamp))
 	out.ExpirationTimestamp = (*metav1.Time)(unsafe.Pointer(in.ExpirationTimestamp))
+	out.ObservedGeneration = (*int64)(unsafe.Pointer(in.ObservedGeneration))
 	return nil
 }
 

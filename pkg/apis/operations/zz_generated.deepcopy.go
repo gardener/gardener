@@ -161,6 +161,11 @@ func (in *BastionStatus) DeepCopyInto(out *BastionStatus) {
 		in, out := &in.ExpirationTimestamp, &out.ExpirationTimestamp
 		*out = (*in).DeepCopy()
 	}
+	if in.ObservedGeneration != nil {
+		in, out := &in.ObservedGeneration, &out.ObservedGeneration
+		*out = new(int64)
+		**out = **in
+	}
 	return
 }
 
