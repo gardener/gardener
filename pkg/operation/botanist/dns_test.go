@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -36,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -97,11 +97,13 @@ var _ = Describe("dns", func() {
 		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(seedClient, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
 
-		fakeClientSet := fakeclientset.NewClientSetBuilder().
+		b.K8sGardenClient = fakeclientset.NewClientSetBuilder().
+			WithClient(gardenClient).
+			Build()
+		b.K8sSeedClient = fakeclientset.NewClientSetBuilder().
+			WithClient(seedClient).
 			WithChartApplier(chartApplier).
 			Build()
-
-		b.K8sSeedClient = fakeClientSet
 	})
 
 	Context("DefaultExternalDNSProvider", func() {
@@ -111,7 +113,7 @@ var _ = Describe("dns", func() {
 			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 
-			Expect(b.DefaultExternalDNSProvider(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.DefaultExternalDNSProvider().Deploy(ctx)).ToNot(HaveOccurred())
 
 			found := &dnsv1alpha1.DNSProvider{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: "external", Namespace: seedNS}, found)
@@ -145,7 +147,7 @@ var _ = Describe("dns", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "external", Namespace: seedNS},
 			})).NotTo(HaveOccurred())
 
-			Expect(b.DefaultExternalDNSProvider(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.DefaultExternalDNSProvider().Deploy(ctx)).ToNot(HaveOccurred())
 
 			found := &dnsv1alpha1.DNSProvider{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: "external", Namespace: seedNS}, found)
@@ -164,7 +166,7 @@ var _ = Describe("dns", func() {
 				ExcludeZones: []string{"zone-b"},
 			}
 
-			Expect(b.DefaultInternalDNSProvider(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.DefaultInternalDNSProvider().Deploy(ctx)).ToNot(HaveOccurred())
 
 			found := &dnsv1alpha1.DNSProvider{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: "internal", Namespace: seedNS}, found)
@@ -201,7 +203,7 @@ var _ = Describe("dns", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "internal", Namespace: seedNS},
 			})).ToNot(HaveOccurred())
 
-			Expect(b.DefaultInternalDNSProvider(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.DefaultInternalDNSProvider().Deploy(ctx)).ToNot(HaveOccurred())
 
 			found := &dnsv1alpha1.DNSProvider{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: "internal", Namespace: seedNS}, found)
@@ -215,7 +217,7 @@ var _ = Describe("dns", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "external", Namespace: seedNS},
 			})).ToNot(HaveOccurred())
 
-			Expect(b.DefaultExternalDNSEntry(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.DefaultExternalDNSEntry().Deploy(ctx)).ToNot(HaveOccurred())
 
 			found := &dnsv1alpha1.DNSEntry{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: "external", Namespace: seedNS}, found)
@@ -229,7 +231,7 @@ var _ = Describe("dns", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: seedNS + "-external"},
 			})).ToNot(HaveOccurred())
 
-			Expect(b.DefaultExternalDNSOwner(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.DefaultExternalDNSOwner().Deploy(ctx)).ToNot(HaveOccurred())
 
 			found := &dnsv1alpha1.DNSOwner{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-external"}, found)
@@ -243,7 +245,7 @@ var _ = Describe("dns", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "internal", Namespace: seedNS},
 			})).ToNot(HaveOccurred())
 
-			Expect(b.DefaultInternalDNSEntry(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.DefaultInternalDNSEntry().Deploy(ctx)).ToNot(HaveOccurred())
 
 			found := &dnsv1alpha1.DNSEntry{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: "internal", Namespace: seedNS}, found)
@@ -257,7 +259,7 @@ var _ = Describe("dns", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: seedNS + "-internal"},
 			})).ToNot(HaveOccurred())
 
-			Expect(b.DefaultInternalDNSOwner(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.DefaultInternalDNSOwner().Deploy(ctx)).ToNot(HaveOccurred())
 
 			found := &dnsv1alpha1.DNSOwner{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-internal"}, found)
@@ -288,7 +290,7 @@ var _ = Describe("dns", func() {
 			Expect(seedClient.Create(ctx, providerOne)).ToNot(HaveOccurred())
 			Expect(seedClient.Create(ctx, providerTwo)).ToNot(HaveOccurred())
 
-			ap, err := b.AdditionalDNSProviders(ctx, nil, seedClient)
+			ap, err := b.AdditionalDNSProviders(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(ap).To(HaveLen(2))
 			Expect(ap).To(HaveKey("to-remove"))
@@ -309,7 +311,7 @@ var _ = Describe("dns", func() {
 				Providers: []v1beta1.DNSProvider{{}},
 			}
 
-			ap, err := b.AdditionalDNSProviders(ctx, gardenClient, seedClient)
+			ap, err := b.AdditionalDNSProviders(ctx)
 			Expect(err).To(HaveOccurred())
 			Expect(ap).To(HaveLen(0))
 		})
@@ -322,7 +324,7 @@ var _ = Describe("dns", func() {
 				}},
 			}
 
-			ap, err := b.AdditionalDNSProviders(ctx, gardenClient, seedClient)
+			ap, err := b.AdditionalDNSProviders(ctx)
 			Expect(err).To(HaveOccurred())
 			Expect(ap).To(HaveLen(0))
 		})
@@ -336,7 +338,7 @@ var _ = Describe("dns", func() {
 				}},
 			}
 
-			ap, err := b.AdditionalDNSProviders(ctx, gardenClient, seedClient)
+			ap, err := b.AdditionalDNSProviders(ctx)
 			Expect(err).To(HaveOccurred())
 			Expect(ap).To(HaveLen(0))
 		})
@@ -393,7 +395,7 @@ var _ = Describe("dns", func() {
 			Expect(gardenClient.Create(ctx, secretOne)).NotTo(HaveOccurred())
 			Expect(gardenClient.Create(ctx, secretTwo)).NotTo(HaveOccurred())
 
-			ap, err := b.AdditionalDNSProviders(ctx, gardenClient, seedClient)
+			ap, err := b.AdditionalDNSProviders(ctx)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(ap).To(HaveLen(3))
 			Expect(ap).To(HaveKey("to-remove"))

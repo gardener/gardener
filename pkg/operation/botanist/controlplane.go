@@ -291,7 +291,7 @@ func (b *Botanist) PrepareKubeAPIServerForMigration(ctx context.Context) error {
 }
 
 // DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
-func (b *Botanist) DefaultControlPlane(seedClient client.Client, purpose extensionsv1alpha1.Purpose) extensionscontrolplane.Interface {
+func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) extensionscontrolplane.Interface {
 	values := &extensionscontrolplane.Values{
 		Name:      b.Shoot.Info.Name,
 		Namespace: b.Shoot.SeedNamespace,
@@ -311,7 +311,7 @@ func (b *Botanist) DefaultControlPlane(seedClient client.Client, purpose extensi
 
 	return extensionscontrolplane.New(
 		b.Logger,
-		seedClient,
+		b.K8sSeedClient.Client(),
 		values,
 		extensionscontrolplane.DefaultInterval,
 		extensionscontrolplane.DefaultSevereThreshold,

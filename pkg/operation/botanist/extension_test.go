@@ -22,6 +22,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
@@ -63,6 +64,7 @@ var _ = Describe("Extensions", func() {
 		gardenClient = mockclient.NewMockClient(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
 			K8sGardenClient: gardenClientInterface,
+			K8sSeedClient:   fakeclientset.NewClientSet(),
 			Shoot: &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					Extensions: &shootpkg.Extensions{
@@ -133,7 +135,7 @@ var _ = Describe("Extensions", func() {
 		It("should return the error because listing failed", func() {
 			gardenClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistrationList{})).Return(fakeErr)
 
-			ext, err := botanist.DefaultExtension(ctx, nil)
+			ext, err := botanist.DefaultExtension(ctx)
 			Expect(ext).To(BeNil())
 			Expect(err).To(MatchError(fakeErr))
 		})
@@ -146,7 +148,7 @@ var _ = Describe("Extensions", func() {
 					return nil
 				})
 
-				ext, err := botanist.DefaultExtension(ctx, nil)
+				ext, err := botanist.DefaultExtension(ctx)
 				Expect(err).To(BeNil())
 				Expect(ext.Extensions()).To(conditionMatcher)
 			},

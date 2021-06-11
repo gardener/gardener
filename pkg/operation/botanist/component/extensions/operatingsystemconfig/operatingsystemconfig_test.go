@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -35,7 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
@@ -403,7 +404,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(c.Create(ctx, expected[i])).To(Succeed())
 				}
 
-				Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("encountered error during reconciliation: " + errDescription)))
+				Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("error during reconciliation: " + errDescription)))
 			})
 
 			It("should return error when status does not contain cloud config information", func() {

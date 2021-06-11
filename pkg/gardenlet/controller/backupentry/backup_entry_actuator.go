@@ -23,7 +23,6 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -240,7 +239,7 @@ func (a *actuator) waitUntilBackupBucketReconciled(ctx context.Context) error {
 		a.logger,
 		health.CheckBackupBucket,
 		a.backupBucket,
-		extensionsv1alpha1.BackupBucketResource,
+		"BackupBucket",
 		defaultInterval,
 		defaultSevereThreshold,
 		defaultTimeout,

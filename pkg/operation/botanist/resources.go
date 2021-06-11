@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils"
+	unstructuredutils "github.com/gardener/gardener/pkg/utils/kubernetes/unstructured"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -37,7 +37,7 @@ func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 	var unstructuredObjs []*unstructured.Unstructured
 	for _, resource := range b.Shoot.Info.Spec.Resources {
 		// Read the resource from the Garden cluster
-		obj, err := utils.GetObjectByRef(ctx, b.K8sGardenClient.Client(), &resource.ResourceRef, b.Shoot.Info.Namespace)
+		obj, err := unstructuredutils.GetObjectByRef(ctx, b.K8sGardenClient.Client(), &resource.ResourceRef, b.Shoot.Info.Namespace)
 		if err != nil {
 			return err
 		}

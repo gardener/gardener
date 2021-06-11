@@ -24,17 +24,16 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultCoreBackupEntry creates the default deployer for the core.gardener.cloud/v1beta1.BackupEntry resource.
-func (b *Botanist) DefaultCoreBackupEntry(gardenClient client.Client) component.DeployMigrateWaiter {
+func (b *Botanist) DefaultCoreBackupEntry() component.DeployMigrateWaiter {
 	ownerRef := metav1.NewControllerRef(b.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
 	ownerRef.BlockOwnerDeletion = pointer.BoolPtr(false)
 
 	return corebackupentry.New(
 		b.Logger,
-		gardenClient,
+		b.K8sGardenClient.Client(),
 		&corebackupentry.Values{
 			Namespace:      b.Shoot.Info.Namespace,
 			Name:           gutil.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),

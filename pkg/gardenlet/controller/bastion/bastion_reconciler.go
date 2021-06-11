@@ -39,7 +39,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -108,9 +107,9 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if bastion.DeletionTimestamp != nil {
-		err = r.cleanupBastion(ctx, logger, gardenClient.Client(), seedClient.DirectClient(), bastion, &shoot)
+		err = r.cleanupBastion(ctx, logger, gardenClient.Client(), seedClient.Client(), bastion, &shoot)
 	} else {
-		err = r.reconcileBastion(ctx, logger, gardenClient.Client(), seedClient.DirectClient(), bastion, &shoot)
+		err = r.reconcileBastion(ctx, logger, gardenClient.Client(), seedClient.Client(), bastion, &shoot)
 	}
 
 	if cause := extensionscontroller.ReconcileErrCause(err); cause != nil {
@@ -148,8 +147,8 @@ func (r *reconciler) reconcileBastion(
 		}
 	}
 
-	// create or update the bastion in the seed cluster
-	if _, err := controllerutil.CreateOrUpdate(ctx, seedClient, extBastion, func() error {
+	// create or patch the bastion in the seed cluster
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, extBastion, func() error {
 		metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		metav1.SetMetaDataAnnotation(&extBastion.ObjectMeta, v1beta1constants.GardenerTimestamp, time.Now().UTC().String())
 
@@ -159,9 +158,11 @@ func (r *reconciler) reconcileBastion(
 
 		return nil
 	}); err != nil {
-		patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error())
+		if patchErr := patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
+			logger.Errorf("failed patching ready condition of Bastion: %v", patchErr)
+		}
 
-		return fmt.Errorf("failed ensure bastion extension resource: %v", err)
+		return fmt.Errorf("failed to ensure bastion extension resource: %v", err)
 	}
 
 	// wait for the extension controller to reconcile possible changes
@@ -176,18 +177,22 @@ func (r *reconciler) reconcileBastion(
 		defaultTimeout,
 		nil,
 	); err != nil {
-		patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error())
+		if patchErr := patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "FailedReconciling", err.Error()); patchErr != nil {
+			logger.Errorf("failed patching ready condition of Bastion: %v", patchErr)
+		}
 
 		return fmt.Errorf("failed wait for bastion extension resource to be reconciled: %v", err)
 	}
 
-	// copy over the extension's status to the garden and update the condition
-	return kutil.TryPatchStatus(ctx, retry.DefaultBackoff, gardenClient, bastion, func() error {
-		setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
-		bastion.Status.Ingress = extBastion.Status.Ingress.DeepCopy()
+	// copy over the extension's status to the garden and set the condition
+	patch := client.MergeFrom(bastion.DeepCopy())
+	setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
+	bastion.Status.Ingress = extBastion.Status.Ingress.DeepCopy()
 
-		return nil
-	})
+	if err := gardenClient.Status().Patch(ctx, bastion, patch); err != nil {
+		return fmt.Errorf("failed patching ready condition of Bastion: %v", err)
+	}
+	return nil
 }
 
 func (r *reconciler) cleanupBastion(
@@ -205,7 +210,9 @@ func (r *reconciler) cleanupBastion(
 		return nil
 	}
 
-	patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "DeletionInProgress", "The bastion is being deleted.")
+	if err := patchReadyCondition(ctx, gardenClient, bastion, gardencorev1alpha1.ConditionFalse, "DeletionInProgress", "The bastion is being deleted."); err != nil {
+		return fmt.Errorf("failed patching ready condition of Bastion: %w", err)
+	}
 
 	// delete bastion extension resource in seed cluster
 	extBastion := newBastionExtension(bastion, shoot)
@@ -246,12 +253,10 @@ func setReadyCondition(bastion *operationsv1alpha1.Bastion, status gardencorev1a
 	bastion.Status.Conditions = gardencorev1alpha1helper.MergeConditions(bastion.Status.Conditions, condition)
 }
 
-func patchReadyCondition(ctx context.Context, c client.Client, bastion *operationsv1alpha1.Bastion, status gardencorev1alpha1.ConditionStatus, reason string, message string) {
-	_ = kutil.TryPatchStatus(ctx, retry.DefaultBackoff, c, bastion, func() error {
-		setReadyCondition(bastion, status, reason, message)
-
-		return nil
-	})
+func patchReadyCondition(ctx context.Context, c client.StatusClient, bastion *operationsv1alpha1.Bastion, status gardencorev1alpha1.ConditionStatus, reason string, message string) error {
+	patch := client.MergeFrom(bastion.DeepCopy())
+	setReadyCondition(bastion, status, reason, message)
+	return c.Status().Patch(ctx, bastion, patch)
 }
 
 func createUserData(bastion *operationsv1alpha1.Bastion) []byte {

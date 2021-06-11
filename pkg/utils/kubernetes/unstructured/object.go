@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package unstructured
 
 import (
 	"context"
@@ -21,9 +21,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 var systemMetadataFields = []string{"ownerReferences", "uid", "resourceVersion", "generation", "selfLink", "creationTimestamp", "deletionTimestamp", "deletionGracePeriodSeconds", "managedFields"}
@@ -40,7 +41,7 @@ func GetObjectByRef(ctx context.Context, c client.Client, ref *autoscalingv1.Cro
 	return GetObject(ctx, c, gvk, ref.Name, namespace)
 }
 
-// GetObjectByRef returns the object with the given GVK, name, and namespace as a map using the given client.
+// GetObject returns the object with the given GVK, name, and namespace as a map using the given client.
 // The full content of the object is returned as map[string]interface{}, except for system metadata fields.
 // This function can be combined with runtime.DefaultUnstructuredConverter.FromUnstructured to get the object content
 // as runtime.RawExtension.
@@ -62,42 +63,39 @@ func GetObject(ctx context.Context, c client.Client, gvk schema.GroupVersionKind
 	return filterMetadata(obj.UnstructuredContent(), systemMetadataFields...), nil
 }
 
-// CreateOrUpdateObjectByRef creates or updates the object with the given reference and namespace using the given client.
-// The object is created or updated with the given content, except for system metadata fields.
+// CreateOrPatchObjectByRef creates or patches the object with the given reference and namespace using the given client.
+// The object is created or patched with the given content, except for system metadata fields.
 // This function can be combined with runtime.DefaultUnstructuredConverter.ToUnstructured to create or update an object
 // from runtime.RawExtension.
-func CreateOrUpdateObjectByRef(ctx context.Context, c client.Client, ref *autoscalingv1.CrossVersionObjectReference, namespace string, content map[string]interface{}) error {
+func CreateOrPatchObjectByRef(ctx context.Context, c client.Client, ref *autoscalingv1.CrossVersionObjectReference, namespace string, content map[string]interface{}) error {
 	gvk, err := gvkFromCrossVersionObjectReference(ref)
 	if err != nil {
 		return err
 	}
-	return CreateOrUpdateObject(ctx, c, gvk, ref.Name, namespace, content)
+	return CreateOrPatchObject(ctx, c, gvk, ref.Name, namespace, content)
 }
 
-// CreateOrUpdateObject creates or updates the object with the given GVK, name, and namespace using the given client.
-// The object is created or updated with the given content, except for system metadata fields, namespace, and name.
+// CreateOrPatchObject creates or patches the object with the given GVK, name, and namespace using the given client.
+// The object is created or patched with the given content, except for system metadata fields, namespace, and name.
 // This function can be combined with runtime.DefaultUnstructuredConverter.ToUnstructured to create or update an object
 // from runtime.RawExtension.
-func CreateOrUpdateObject(ctx context.Context, c client.Client, gvk schema.GroupVersionKind, name, namespace string, content map[string]interface{}) error {
+func CreateOrPatchObject(ctx context.Context, c client.Client, gvk schema.GroupVersionKind, name, namespace string, content map[string]interface{}) error {
 	// Initialize the object
 	obj := &unstructured.Unstructured{}
 	obj.SetGroupVersionKind(gvk)
 	obj.SetName(name)
 	obj.SetNamespace(namespace)
 
-	// Create or update the object
-	// TODO(timebertt): replace RetryOnConflict+CreateOrUpdate with PatchOrCreate
-	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		_, err := controllerutil.CreateOrUpdate(ctx, c, obj, func() error {
-			// Set object content
-			if content != nil {
-				obj.SetUnstructuredContent(mergeObjectContents(obj.UnstructuredContent(),
-					filterMetadata(content, add(systemMetadataFields, "namespace", "name")...)))
-			}
-			return nil
-		})
-		return err
+	// Create or patch the object
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, obj, func() error {
+		// Set object content
+		if content != nil {
+			obj.SetUnstructuredContent(mergeObjectContents(obj.UnstructuredContent(),
+				filterMetadata(content, add(systemMetadataFields, "namespace", "name")...)))
+		}
+		return nil
 	})
+	return err
 }
 
 // DeleteObjectByRef deletes the object with the given reference and namespace using the given client.
@@ -139,7 +137,7 @@ func mergeObjectContents(dest, src map[string]interface{}) map[string]interface{
 	if srcMetadataOK {
 		destMetadata, destMetadataOK := dest["metadata"].(map[string]interface{})
 		if destMetadataOK {
-			dest["metadata"] = MergeMaps(destMetadata, srcMetadata)
+			dest["metadata"] = utils.MergeMaps(destMetadata, srcMetadata)
 		} else {
 			dest["metadata"] = srcMetadata
 		}

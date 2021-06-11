@@ -103,6 +103,7 @@ var _ = Describe("dns", func() {
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
 
 		fakeClientSet := fakeclientset.NewClientSetBuilder().
+			WithClient(seedClient).
 			WithChartApplier(chartApplier).
 			Build()
 
@@ -115,7 +116,7 @@ var _ = Describe("dns", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "ingress", Namespace: seedNS},
 			})).ToNot(HaveOccurred())
 
-			Expect(b.DefaultNginxIngressDNSEntry(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.DefaultNginxIngressDNSEntry().Deploy(ctx)).ToNot(HaveOccurred())
 
 			found := &dnsv1alpha1.DNSEntry{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: "ingress", Namespace: seedNS}, found)
@@ -129,7 +130,7 @@ var _ = Describe("dns", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: seedNS + "-ingress"},
 			})).ToNot(HaveOccurred())
 
-			Expect(b.DefaultNginxIngressDNSOwner(seedClient).Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(b.DefaultNginxIngressDNSOwner().Deploy(ctx)).ToNot(HaveOccurred())
 
 			found := &dnsv1alpha1.DNSOwner{}
 			err := seedClient.Get(ctx, types.NamespacedName{Name: seedNS + "-ingress"}, found)

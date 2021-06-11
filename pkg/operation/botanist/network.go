@@ -19,15 +19,13 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/network"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultNetwork creates the default deployer for the Network custom resource.
-func (b *Botanist) DefaultNetwork(seedClient client.Client) component.DeployMigrateWaiter {
+func (b *Botanist) DefaultNetwork() component.DeployMigrateWaiter {
 	return network.New(
 		b.Logger,
-		seedClient,
+		b.K8sSeedClient.Client(),
 		&network.Values{
 			Namespace:      b.Shoot.SeedNamespace,
 			Name:           b.Shoot.Info.Name,

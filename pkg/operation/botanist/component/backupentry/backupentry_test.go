@@ -98,7 +98,6 @@ var _ = Describe("BackupEntry", func() {
 					v1beta1constants.GardenerTimestamp: now.UTC().String(),
 					v1beta1constants.ShootPurpose:      string(shootPurpose),
 				},
-				Finalizers:      []string{"gardener"},
 				OwnerReferences: []metav1.OwnerReference{*ownerRef},
 			},
 			Spec: gardencorev1beta1.BackupEntrySpec{
@@ -167,7 +166,7 @@ var _ = Describe("BackupEntry", func() {
 			}
 
 			Expect(c.Create(ctx, expected)).To(Succeed(), "creating BackupEntry succeeds")
-			Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("has not yet been reconciled")), "BackupEntry indicates error")
+			Expect(defaultDepWaiter.Wait(ctx)).To(MatchError(ContainSubstring("error during reconciliation: Some error")), "BackupEntry indicates error")
 		})
 
 		It("should return no error when is ready", func() {

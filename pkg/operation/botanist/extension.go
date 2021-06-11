@@ -24,11 +24,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultExtension creates the default deployer for the Extension custom resources.
-func (b *Botanist) DefaultExtension(ctx context.Context, seedClient client.Client) (extension.Interface, error) {
+func (b *Botanist) DefaultExtension(ctx context.Context) (extension.Interface, error) {
 	controllerRegistrations := &gardencorev1beta1.ControllerRegistrationList{}
 	if err := b.K8sGardenClient.Client().List(ctx, controllerRegistrations); err != nil {
 		return nil, err
@@ -41,7 +40,7 @@ func (b *Botanist) DefaultExtension(ctx context.Context, seedClient client.Clien
 
 	return extension.New(
 		b.Logger,
-		seedClient,
+		b.K8sSeedClient.Client(),
 		&extension.Values{
 			Namespace:  b.Shoot.SeedNamespace,
 			Extensions: extensions,
