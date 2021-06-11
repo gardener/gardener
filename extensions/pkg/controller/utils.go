@@ -184,7 +184,7 @@ func GetVerticalPodAutoscalerObject() *unstructured.Unstructured {
 
 // RemoveAnnotation removes an annotation key passed as annotation
 func RemoveAnnotation(ctx context.Context, c client.Client, obj client.Object, annotation string) error {
-	withAnnotation := obj.DeepCopyObject()
+	withAnnotation := obj.DeepCopyObject().(client.Object)
 
 	annotations := obj.GetAnnotations()
 	delete(annotations, annotation)

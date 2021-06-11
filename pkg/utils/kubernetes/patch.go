@@ -46,7 +46,7 @@ func tryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj cl
 		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			return false, err
 		}
-		beforeTransform := obj.DeepCopyObject()
+		beforeTransform := obj.DeepCopyObject().(client.Object)
 		if err := transform(); err != nil {
 			return false, err
 		}

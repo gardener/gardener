@@ -56,7 +56,7 @@ func CheckIfDeletionIsConfirmed(obj client.Object) error {
 // ConfirmDeletion adds Gardener's deletion confirmation and timestamp annotation to the given object and sends a PATCH
 // request. It does not ignore `NotFound` errors while patching.
 func ConfirmDeletion(ctx context.Context, w client.Writer, obj client.Object) error {
-	patch := client.MergeFrom(obj.DeepCopyObject())
+	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
 	kutil.SetMetaDataAnnotation(obj, ConfirmationDeletion, "true")
 	kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 	return w.Patch(ctx, obj, patch)

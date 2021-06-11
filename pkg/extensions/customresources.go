@@ -331,7 +331,7 @@ func RestoreExtensionObjectState(
 		purpose := extensionObj.GetExtensionSpec().GetExtensionPurpose()
 		list := gardencorev1alpha1helper.ExtensionResourceStateList(shootState.Spec.Extensions)
 		if extensionResourceState := list.Get(kind, &resourceName, purpose); extensionResourceState != nil {
-			patch := client.MergeFrom(extensionObj.DeepCopyObject())
+			patch := client.MergeFrom(extensionObj.DeepCopyObject().(client.Object))
 			extensionStatus := extensionObj.GetExtensionStatus()
 			extensionStatus.SetState(extensionResourceState.State)
 			extensionStatus.SetResources(extensionResourceState.Resources)
@@ -465,7 +465,7 @@ func WaitUntilExtensionObjectsMigrated(
 
 // AnnotateObjectWithOperation annotates the object with the provided operation annotation value.
 func AnnotateObjectWithOperation(ctx context.Context, w client.Writer, obj client.Object, operation string) error {
-	patch := client.MergeFrom(obj.DeepCopyObject())
+	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
 	kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerOperation, operation)
 	kutil.SetMetaDataAnnotation(obj, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
 	return w.Patch(ctx, obj, patch)

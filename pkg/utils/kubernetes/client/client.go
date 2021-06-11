@@ -86,7 +86,7 @@ var defaultFinalizer = NewFinalizer()
 
 // Finalize removes the finalizers (.meta.finalizers) of given resource.
 func (f *finalizer) Finalize(ctx context.Context, c client.Client, obj client.Object) error {
-	withFinalizers := obj.DeepCopyObject()
+	withFinalizers := obj.DeepCopyObject().(client.Object)
 	obj.SetFinalizers(nil)
 	return c.Patch(ctx, obj, client.MergeFrom(withFinalizers))
 }
