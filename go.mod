@@ -16,8 +16,8 @@ require (
 	github.com/gardener/landscaper/apis v0.7.0
 	github.com/gardener/machine-controller-manager v0.33.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-logr/logr v0.3.0
-	github.com/go-openapi/spec v0.19.3
+	github.com/go-logr/logr v0.4.0
+	github.com/go-openapi/spec v0.19.5
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/googleapis/gnostic v0.5.1
@@ -30,18 +30,18 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/robfig/cron v1.2.0
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.7.0
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.0
 	github.com/texttheater/golang-levenshtein v0.0.0-20191208221605-eb6844b05fc6
 	go.uber.org/zap v1.15.0
-	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
+	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
-	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
+	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	gomodules.xyz/jsonpatch/v2 v2.1.0
 	gonum.org/v1/gonum v0.8.2
-	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v2 v2.4.0
 	istio.io/api v0.0.0-20201123152548-197f11e4ea09
 	istio.io/client-go v1.8.1
 	k8s.io/api v0.21.1
