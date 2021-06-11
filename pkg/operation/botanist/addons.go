@@ -283,7 +283,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	)
 
 	if b.Shoot.IPVSEnabled() {
-		networkPolicyConfig.NodeLocalDNS.KubeDNSClusterIP = NodeLocalIPVSAddress
+		networkPolicyConfig.NodeLocalDNS.KubeDNSClusterIP = common.NodeLocalIPVSAddress
 	}
 
 	if b.APIServerSNIEnabled() {

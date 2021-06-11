@@ -83,7 +83,7 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 				PrivateNetworkPeers:  privateNetworkPeers,
 				DenyAllTraffic:       true,
 				NodeLocalDNSEnabled:  b.Shoot.NodeLocalDNSEnabled,
-				NodeLocalIPVSAddress: pointer.StringPtr(NodeLocalIPVSAddress),
+				NodeLocalIPVSAddress: pointer.StringPtr(common.NodeLocalIPVSAddress),
 				DNSServerAddress:     pointer.StringPtr(seedDNSServerAddress.String()),
 			},
 		},

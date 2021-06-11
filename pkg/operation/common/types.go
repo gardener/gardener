@@ -152,4 +152,7 @@ const (
 	// MonitoringIngressCredentialsUsers is a constant for the name of a secret containing the monitoring credentials
 	// for users monitoring for shoots.
 	MonitoringIngressCredentialsUsers = "monitoring-ingress-credentials-users"
+
+	// NodeLocalIPVSAddress is the IPv4 address used by node local dns when IPVS is used.
+	NodeLocalIPVSAddress = "169.254.20.10"
 )
