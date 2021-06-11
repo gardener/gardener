@@ -21,6 +21,7 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -111,7 +112,8 @@ type Interface interface {
 
 // New creates a new instance of DeployWaiter for the Etcd.
 func New(
-	client client.Client,
+	c client.Client,
+	logger logrus.FieldLogger,
 	namespace string,
 	role string,
 	class Class,
@@ -119,8 +121,16 @@ func New(
 	storageCapacity string,
 	defragmentationSchedule *string,
 ) Interface {
+	name := "etcd-" + role
+
+	var etcdLog logrus.FieldLogger
+	if logger != nil {
+		etcdLog = logger.WithField("etcd", client.ObjectKey{Namespace: namespace, Name: name})
+	}
+
 	return &etcd{
-		client:                  client,
+		client:                  c,
+		logger:                  etcdLog,
 		namespace:               namespace,
 		role:                    role,
 		class:                   class,
@@ -130,7 +140,7 @@ func New(
 
 		etcd: &druidv1alpha1.Etcd{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "etcd-" + role,
+				Name:      name,
 				Namespace: namespace,
 			},
 		},
@@ -139,6 +149,7 @@ func New(
 
 type etcd struct {
 	client                  client.Client
+	logger                  logrus.FieldLogger
 	namespace               string
 	role                    string
 	class                   Class

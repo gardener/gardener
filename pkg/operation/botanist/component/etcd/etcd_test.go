@@ -21,6 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
@@ -32,6 +33,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -58,6 +60,7 @@ var _ = Describe("Etcd", func() {
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
 		etcd Interface
+		log  logrus.FieldLogger
 
 		ctx                     = context.TODO()
 		fakeErr                 = fmt.Errorf("fake err")
@@ -463,7 +466,8 @@ var _ = Describe("Etcd", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
-		etcd = New(c, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+		log = logger.NewNopLogger()
+		etcd = New(c, log, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
 	})
 
 	AfterEach(func() {
@@ -639,7 +643,7 @@ var _ = Describe("Etcd", func() {
 					retainReplicas         = true
 				)
 
-				etcd = New(c, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+				etcd = New(c, log, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
 				setSecretsAndHVPAConfig()
 
 				gomock.InOrder(
@@ -842,7 +846,7 @@ var _ = Describe("Etcd", func() {
 						updateMode = hvpav1alpha1.UpdateModeOff
 					}
 
-					etcd = New(c, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+					etcd = New(c, log, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
 					getSetSecretsAndHVPAConfigFunc(updateMode)()
 
 					gomock.InOrder(
