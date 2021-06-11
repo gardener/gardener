@@ -1388,7 +1388,6 @@ var _ = Describe("kubernetes", func() {
 						MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "foo", Operator: metav1.LabelSelectorOpIn, Values: []string{}}},
 					}},
 			}
-			rsError := fmt.Errorf("failed to convert the pod selector from ReplicaSet %s/%s: for 'in', 'notin' operators, values set can't be empty", rs.Namespace, rs.Name)
 
 			c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&appsv1.ReplicaSetList{}), rsListOptions...).DoAndReturn(func(_ context.Context, list *appsv1.ReplicaSetList, _ ...client.ListOption) error {
 				*list = appsv1.ReplicaSetList{Items: []appsv1.ReplicaSet{*rs}}
@@ -1396,7 +1395,7 @@ var _ = Describe("kubernetes", func() {
 			})
 
 			pod, err := NewestPodForDeployment(ctx, c, deployment)
-			Expect(err).To(MatchError(rsError))
+			Expect(err).To(MatchError(ContainSubstring("for 'in', 'notin' operators, values set can't be empty")))
 			Expect(pod).To(BeNil())
 		})
 
