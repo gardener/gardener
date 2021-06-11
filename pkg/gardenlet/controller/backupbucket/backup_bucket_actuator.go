@@ -243,7 +243,7 @@ func (a *actuator) waitUntilBackupBucketExtensionReconciled(ctx context.Context)
 				}
 				ownerRef := metav1.NewControllerRef(a.extensionBackupBucket, gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"))
 
-				if _, err := controllerutil.CreateOrUpdate(ctx, a.gardenClient.Client(), coreGeneratedSecret, func() error {
+				if _, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, a.gardenClient.Client(), coreGeneratedSecret, func() error {
 					coreGeneratedSecret.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 					controllerutil.AddFinalizer(coreGeneratedSecret, finalizerName)
 					coreGeneratedSecret.Data = generatedSecret.DeepCopy().Data
