@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"path/filepath"
 	"strings"
 	"time"
@@ -886,10 +887,23 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
+
+	_, seedServiceCIDR, err := net.ParseCIDR(seed.Info.Spec.Networks.Services)
+	if err != nil {
+		return err
+	}
+	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
+	if err != nil {
+		return fmt.Errorf("cannot calculate CoreDNS ClusterIP: %v", err)
+	}
+
 	networkPolicies := networkpolicies.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{
-		SNIEnabled:          gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI,
-		DenyAllTraffic:      false,
-		PrivateNetworkPeers: privateNetworkPeers,
+		SNIEnabled:           gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI,
+		DenyAllTraffic:       false,
+		PrivateNetworkPeers:  privateNetworkPeers,
+		NodeLocalDNSEnabled:  gardenletfeatures.FeatureGate.Enabled(features.NodeLocalDNS),
+		NodeLocalIPVSAddress: pointer.StringPtr(common.NodeLocalIPVSAddress),
+		DNSServerAddress:     pointer.StringPtr(seedDNSServerAddress.String()),
 	})
 
 	grmImage, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager, imagevector.RuntimeVersion(sc.Version()), imagevector.TargetVersion(sc.Version()))
