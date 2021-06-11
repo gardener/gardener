@@ -70,7 +70,7 @@ func Add(mgr manager.Manager, args AddArgs) error {
 		decoder           = extensionscontroller.NewGardenDecoder()
 		defaultPredicates = []predicate.Predicate{
 			extensionspredicate.ClusterShootProviderType(decoder, args.Type),
-			extensionspredicate.ClusterShootKubernetesVersionAtLeast(decoder, args.CSIMigrationKubernetesVersion),
+			extensionspredicate.ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder, args.CSIMigrationKubernetesVersion),
 			ClusterCSIMigrationControllerNotFinished(),
 		}
 	)

@@ -115,7 +115,12 @@ func (r *reconciler) reconcile(ctx context.Context, cluster *extensionsv1alpha1.
 			return reconcile.Result{}, r.client.Update(ctx, cluster)
 		}
 
-		k8sVersionIsMinimum, err := version.CompareVersions(shoot.Spec.Kubernetes.Version, "~", r.csiMigrationKubernetesVersion)
+		kubernetesVersionForCSIMigration := r.csiMigrationKubernetesVersion
+		if overwrite, ok := shoot.Annotations[extensionsv1alpha1.ShootAlphaCSIMigrationKubernetesVersion]; ok {
+			kubernetesVersionForCSIMigration = overwrite
+		}
+
+		k8sVersionIsMinimum, err := version.CompareVersions(shoot.Spec.Kubernetes.Version, "~", kubernetesVersionForCSIMigration)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -154,7 +159,7 @@ func (r *reconciler) reconcile(ctx context.Context, cluster *extensionsv1alpha1.
 		}
 
 		for _, node := range nodeList.Items {
-			kubeletVersionAtLeastMinimum, err := version.CompareVersions(node.Status.NodeInfo.KubeletVersion, ">=", r.csiMigrationKubernetesVersion)
+			kubeletVersionAtLeastMinimum, err := version.CompareVersions(node.Status.NodeInfo.KubeletVersion, ">=", kubernetesVersionForCSIMigration)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
