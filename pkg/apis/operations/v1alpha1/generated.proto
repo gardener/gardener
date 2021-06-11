@@ -102,5 +102,10 @@ message BastionStatus {
   // garbage collected.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time expirationTimestamp = 4;
+
+  // ObservedGeneration is the most recent generation observed for this Bastion. It corresponds to the
+  // Bastion's generation, which is updated on mutation by the API Server.
+  // +optional
+  optional int64 observedGeneration = 5;
 }
 

@@ -80,4 +80,7 @@ type BastionStatus struct {
 	// ExpirationTimestamp is the time after which a Bastion is supposed to be
 	// garbage collected.
 	ExpirationTimestamp *metav1.Time
+	// ObservedGeneration is the most recent generation observed for this Bastion. It corresponds to the
+	// Bastion's generation, which is updated on mutation by the API Server.
+	ObservedGeneration *int64
 }

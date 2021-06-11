@@ -14402,6 +14402,13 @@ func schema_pkg_apis_operations_v1alpha1_BastionStatus(ref common.ReferenceCallb
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"observedGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ObservedGeneration is the most recent generation observed for this Bastion. It corresponds to the Bastion's generation, which is updated on mutation by the API Server.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
 				},
 			},
 		},

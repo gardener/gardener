@@ -188,6 +188,7 @@ func (r *reconciler) reconcileBastion(
 	patch := client.MergeFrom(bastion.DeepCopy())
 	setReadyCondition(bastion, gardencorev1alpha1.ConditionTrue, "SuccessfullyReconciled", "The bastion has been reconciled successfully.")
 	bastion.Status.Ingress = extBastion.Status.Ingress.DeepCopy()
+	bastion.Status.ObservedGeneration = &bastion.Generation
 
 	if err := gardenClient.Status().Patch(ctx, bastion, patch); err != nil {
 		return fmt.Errorf("failed patching ready condition of Bastion: %v", err)

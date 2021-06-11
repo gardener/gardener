@@ -97,4 +97,8 @@ type BastionStatus struct {
 	// garbage collected.
 	// +optional
 	ExpirationTimestamp *metav1.Time `json:"expirationTimestamp,omitempty" protobuf:"bytes,4,opt,name=expirationTimestamp"`
+	// ObservedGeneration is the most recent generation observed for this Bastion. It corresponds to the
+	// Bastion's generation, which is updated on mutation by the API Server.
+	// +optional
+	ObservedGeneration *int64 `json:"observedGeneration,omitempty" protobuf:"varint,5,opt,name=observedGeneration"`
 }

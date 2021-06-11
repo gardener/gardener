@@ -339,6 +339,19 @@ Kubernetes meta/v1.Time
 garbage collected.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>observedGeneration</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ObservedGeneration is the most recent generation observed for this Bastion. It corresponds to the
+Bastion&rsquo;s generation, which is updated on mutation by the API Server.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <hr/>

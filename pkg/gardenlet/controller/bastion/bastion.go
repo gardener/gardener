@@ -151,13 +151,17 @@ func (c *Controller) bastionAdd(obj interface{}) {
 	c.bastionQueue.Add(key)
 }
 
-func (c *Controller) bastionUpdate(oldObj, newObj interface{}) {
-	oldBastion := oldObj.(*operationsv1alpha1.Bastion)
+func (c *Controller) bastionUpdate(_, newObj interface{}) {
 	newBastion := newObj.(*operationsv1alpha1.Bastion)
 
-	if oldBastion.Generation != newBastion.Generation {
-		c.bastionAdd(newObj)
+	// If the generation did not change for an update event (i.e., no changes to the .spec section have
+	// been made), we do not want to add the Bastion to the queue. The periodic reconciliation is handled
+	// elsewhere by adding the Bastion to the queue to dedicated times.
+	if newBastion.Status.ObservedGeneration != nil && newBastion.Generation == *newBastion.Status.ObservedGeneration {
+		return
 	}
+
+	c.bastionAdd(newObj)
 }
 
 func (c *Controller) bastionDelete(obj interface{}) {
