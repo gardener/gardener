@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
 const (
@@ -81,7 +81,7 @@ func NewRuntimeClientWithCache(ctx context.Context, config *rest.Config, options
 }
 
 func newRuntimeClientWithCache(config *rest.Config, options client.Options, cache cache.Cache, uncachedObjects ...client.Object) (client.Client, error) {
-	return manager.NewClientBuilder().WithUncached(uncachedObjects...).Build(cache, config, options)
+	return cluster.DefaultNewClient(cache, config, options, uncachedObjects...)
 }
 
 func setClientOptionsDefaults(config *rest.Config, options *client.Options) error {
