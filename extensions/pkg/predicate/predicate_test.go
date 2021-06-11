@@ -18,8 +18,6 @@ import (
 	"context"
 	"encoding/json"
 
-	corev1 "k8s.io/api/core/v1"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -31,8 +29,10 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
@@ -172,7 +172,7 @@ var _ = Describe("Predicate", func() {
 		It("should match the type", func() {
 			var (
 				predicate                                           = ClusterShootProviderType(decoder, extensionType)
-				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version)
+				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version, nil)
 			)
 
 			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
@@ -184,7 +184,7 @@ var _ = Describe("Predicate", func() {
 		It("should not match the type", func() {
 			var (
 				predicate                                           = ClusterShootProviderType(decoder, extensionType)
-				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents("other-extension-type", version)
+				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents("other-extension-type", version, nil)
 			)
 
 			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
@@ -194,7 +194,7 @@ var _ = Describe("Predicate", func() {
 		})
 	})
 
-	Describe("#ClusterShootKubernetesVersionAtLeast", func() {
+	Describe("#ClusterShootKubernetesVersionForCSIMigrationAtLeast", func() {
 		var decoder runtime.Decoder
 
 		BeforeEach(func() {
@@ -203,8 +203,8 @@ var _ = Describe("Predicate", func() {
 
 		It("should match the minimum kubernetes version", func() {
 			var (
-				predicate                                           = ClusterShootKubernetesVersionAtLeast(decoder, version)
-				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version)
+				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder, version)
+				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version, nil)
 			)
 
 			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
@@ -215,14 +215,26 @@ var _ = Describe("Predicate", func() {
 
 		It("should not match the minimum kubernetes version", func() {
 			var (
-				predicate                                           = ClusterShootKubernetesVersionAtLeast(decoder, version)
-				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17")
+				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder, version)
+				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17", nil)
 			)
 
 			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
 			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeFalse())
 			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeFalse())
 			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeFalse())
+		})
+
+		It("should not match minimum kubernetes version due to overwrite", func() {
+			var (
+				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder, version)
+				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17", pointer.StringPtr("1.17"))
+			)
+
+			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
+			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
+			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
+			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
 		})
 	})
 
@@ -346,7 +358,7 @@ func computeClusterWithShoot(name string, shootMeta *metav1.ObjectMeta, shootSpe
 	}
 }
 
-func computeEvents(extensionType, kubernetesVersion string) (event.CreateEvent, event.UpdateEvent, event.DeleteEvent, event.GenericEvent) {
+func computeEvents(extensionType, kubernetesVersion string, kubernetesVersionOverwriteAnnotation *string) (event.CreateEvent, event.UpdateEvent, event.DeleteEvent, event.GenericEvent) {
 	spec := gardencorev1beta1.ShootSpec{
 		Provider: gardencorev1beta1.Provider{
 			Type: extensionType,
@@ -355,7 +367,17 @@ func computeEvents(extensionType, kubernetesVersion string) (event.CreateEvent, 
 			Version: kubernetesVersion,
 		},
 	}
-	cluster := computeClusterWithShoot("", nil, &spec, nil)
+
+	var meta *metav1.ObjectMeta
+	if kubernetesVersionOverwriteAnnotation != nil {
+		meta = &metav1.ObjectMeta{
+			Annotations: map[string]string{
+				"alpha.csimigration.shoot.extensions.gardener.cloud/kubernetes-version": *kubernetesVersionOverwriteAnnotation,
+			},
+		}
+	}
+
+	cluster := computeClusterWithShoot("", meta, &spec, nil)
 
 	return event.CreateEvent{Object: cluster},
 		event.UpdateEvent{ObjectOld: cluster, ObjectNew: cluster},

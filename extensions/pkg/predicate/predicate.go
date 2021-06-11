@@ -256,8 +256,8 @@ func GardenCoreProviderType(providerType string) predicate.Predicate {
 	}
 }
 
-// ClusterShootKubernetesVersionAtLeast is a predicate for the kubernetes version of the shoot in the cluster resource.
-func ClusterShootKubernetesVersionAtLeast(decoder runtime.Decoder, kubernetesVersion string) predicate.Predicate {
+// ClusterShootKubernetesVersionForCSIMigrationAtLeast is a predicate for the kubernetes version of the shoot in the cluster resource.
+func ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder runtime.Decoder, kubernetesVersion string) predicate.Predicate {
 	f := func(obj client.Object) bool {
 		if obj == nil {
 			return false
@@ -273,7 +273,12 @@ func ClusterShootKubernetesVersionAtLeast(decoder runtime.Decoder, kubernetesVer
 			return false
 		}
 
-		constraint, err := version.CompareVersions(shoot.Spec.Kubernetes.Version, ">=", kubernetesVersion)
+		kubernetesVersionForCSIMigration := kubernetesVersion
+		if overwrite, ok := shoot.Annotations[extensionsv1alpha1.ShootAlphaCSIMigrationKubernetesVersion]; ok {
+			kubernetesVersionForCSIMigration = overwrite
+		}
+
+		constraint, err := version.CompareVersions(shoot.Spec.Kubernetes.Version, ">=", kubernetesVersionForCSIMigration)
 		if err != nil {
 			return false
 		}
