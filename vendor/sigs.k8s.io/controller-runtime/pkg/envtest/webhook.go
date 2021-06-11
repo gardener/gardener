@@ -33,8 +33,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/internal/testing/integration"
-	"sigs.k8s.io/controller-runtime/pkg/internal/testing/integration/addr"
+	"sigs.k8s.io/controller-runtime/pkg/internal/testing/addr"
+	"sigs.k8s.io/controller-runtime/pkg/internal/testing/certs"
 	"sigs.k8s.io/yaml"
 )
 
@@ -80,7 +80,10 @@ type WebhookInstallOptions struct {
 // ModifyWebhookDefinitions modifies webhook definitions by:
 // - applying CABundle based on the provided tinyca
 // - if webhook client config uses service spec, it's removed and replaced with direct url
-func (o *WebhookInstallOptions) ModifyWebhookDefinitions(caData []byte) error {
+func (o *WebhookInstallOptions) ModifyWebhookDefinitions() error {
+	caData := o.LocalServingCAData
+
+	// generate host port.
 	hostPort, err := o.generateHostPort()
 	if err != nil {
 		return err
@@ -161,16 +164,15 @@ func (o *WebhookInstallOptions) generateHostPort() (string, error) {
 // controller-runtime, where we need a random host-port & caData for webhook
 // tests, but may be useful in similar scenarios.
 func (o *WebhookInstallOptions) PrepWithoutInstalling() error {
-	hookCA, err := o.setupCA()
-	if err != nil {
+	if err := o.setupCA(); err != nil {
 		return err
 	}
+
 	if err := parseWebhook(o); err != nil {
 		return err
 	}
 
-	err = o.ModifyWebhookDefinitions(hookCA)
-	if err != nil {
+	if err := o.ModifyWebhookDefinitions(); err != nil {
 		return err
 	}
 
@@ -179,8 +181,10 @@ func (o *WebhookInstallOptions) PrepWithoutInstalling() error {
 
 // Install installs specified webhooks to the API server
 func (o *WebhookInstallOptions) Install(config *rest.Config) error {
-	if err := o.PrepWithoutInstalling(); err != nil {
-		return err
+	if len(o.LocalServingCAData) == 0 {
+		if err := o.PrepWithoutInstalling(); err != nil {
+			return err
+		}
 	}
 
 	if err := createWebhooks(config, o.MutatingWebhooks, o.ValidatingWebhooks); err != nil {
@@ -269,38 +273,38 @@ func (p *webhookPoller) poll() (done bool, err error) {
 }
 
 // setupCA creates CA for testing and writes them to disk
-func (o *WebhookInstallOptions) setupCA() ([]byte, error) {
-	hookCA, err := integration.NewTinyCA()
+func (o *WebhookInstallOptions) setupCA() error {
+	hookCA, err := certs.NewTinyCA()
 	if err != nil {
-		return nil, fmt.Errorf("unable to set up webhook CA: %v", err)
+		return fmt.Errorf("unable to set up webhook CA: %v", err)
 	}
 
 	names := []string{"localhost", o.LocalServingHost, o.LocalServingHostExternalName}
 	hookCert, err := hookCA.NewServingCert(names...)
 	if err != nil {
-		return nil, fmt.Errorf("unable to set up webhook serving certs: %v", err)
+		return fmt.Errorf("unable to set up webhook serving certs: %v", err)
 	}
 
 	localServingCertsDir, err := ioutil.TempDir("", "envtest-serving-certs-")
 	o.LocalServingCertDir = localServingCertsDir
 	if err != nil {
-		return nil, fmt.Errorf("unable to create directory for webhook serving certs: %v", err)
+		return fmt.Errorf("unable to create directory for webhook serving certs: %v", err)
 	}
 
 	certData, keyData, err := hookCert.AsBytes()
 	if err != nil {
-		return nil, fmt.Errorf("unable to marshal webhook serving certs: %v", err)
+		return fmt.Errorf("unable to marshal webhook serving certs: %v", err)
 	}
 
 	if err := ioutil.WriteFile(filepath.Join(localServingCertsDir, "tls.crt"), certData, 0640); err != nil {
-		return nil, fmt.Errorf("unable to write webhook serving cert to disk: %v", err)
+		return fmt.Errorf("unable to write webhook serving cert to disk: %v", err)
 	}
 	if err := ioutil.WriteFile(filepath.Join(localServingCertsDir, "tls.key"), keyData, 0640); err != nil {
-		return nil, fmt.Errorf("unable to write webhook serving key to disk: %v", err)
+		return fmt.Errorf("unable to write webhook serving key to disk: %v", err)
 	}
 
 	o.LocalServingCAData = certData
-	return certData, nil
+	return err
 }
 
 func createWebhooks(config *rest.Config, mutHooks []client.Object, valHooks []client.Object) error {

@@ -20,26 +20,44 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/base64"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/retry"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/conversion"
 	"sigs.k8s.io/yaml"
 )
 
 // CRDInstallOptions are the options for installing CRDs
 type CRDInstallOptions struct {
+	// Scheme is used to determine if conversion webhooks should be enabled
+	// for a particular CRD / object.
+	//
+	// Conversion webhooks are going to be enabled if an object in the scheme
+	// implements Hub and Spoke conversions.
+	//
+	// If nil, scheme.Scheme is used.
+	Scheme *runtime.Scheme
+
 	// Paths is a list of paths to the directories or files containing CRDs
 	Paths []string
 
@@ -59,6 +77,13 @@ type CRDInstallOptions struct {
 	// uninstalled when terminating the test environment.
 	// Defaults to false.
 	CleanUpAfterUse bool
+
+	// WebhookOptions contains the conversion webhook information to install
+	// on the CRDs. This field is usually inherited by the EnvTest options.
+	//
+	// If you're passing this field manually, you need to make sure that
+	// the CA information and host port is filled in properly.
+	WebhookOptions WebhookInstallOptions
 }
 
 const defaultPollInterval = 100 * time.Millisecond
@@ -70,17 +95,21 @@ func InstallCRDs(config *rest.Config, options CRDInstallOptions) ([]client.Objec
 
 	// Read the CRD yamls into options.CRDs
 	if err := readCRDFiles(&options); err != nil {
+		return nil, fmt.Errorf("unable to read CRD files: %w", err)
+	}
+
+	if err := modifyConversionWebhooks(options.CRDs, options.Scheme, options.WebhookOptions); err != nil {
 		return nil, err
 	}
 
 	// Create the CRDs in the apiserver
 	if err := CreateCRDs(config, options.CRDs); err != nil {
-		return options.CRDs, err
+		return options.CRDs, fmt.Errorf("unable to create CRD instances: %w", err)
 	}
 
 	// Wait for the CRDs to appear as Resources in the apiserver
 	if err := WaitForCRDs(config, options.CRDs, options); err != nil {
-		return options.CRDs, err
+		return options.CRDs, fmt.Errorf("something went wrong waiting for CRDs to appear as API resources: %w", err)
 	}
 
 	return options.CRDs, nil
@@ -101,6 +130,9 @@ func readCRDFiles(options *CRDInstallOptions) error {
 
 // defaultCRDOptions sets the default values for CRDs
 func defaultCRDOptions(o *CRDInstallOptions) {
+	if o.Scheme == nil {
+		o.Scheme = scheme.Scheme
+	}
 	if o.MaxTime == 0 {
 		o.MaxTime = defaultMaxWait
 	}
@@ -249,7 +281,7 @@ func UninstallCRDs(config *rest.Config, options CRDInstallOptions) error {
 func CreateCRDs(config *rest.Config, crds []client.Object) error {
 	cs, err := client.New(config, client.Options{})
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create client: %w", err)
 	}
 
 	// Create each CRD
@@ -260,14 +292,19 @@ func CreateCRDs(config *rest.Config, crds []client.Object) error {
 		switch {
 		case apierrors.IsNotFound(err):
 			if err := cs.Create(context.TODO(), crd); err != nil {
-				return err
+				return fmt.Errorf("unable to create CRD %q: %w", crd.GetName(), err)
 			}
 		case err != nil:
-			return err
+			return fmt.Errorf("unable to get CRD %q to check if it exists: %w", crd.GetName(), err)
 		default:
 			log.V(1).Info("CRD already exists, updating", "crd", crd.GetName())
-			crd.SetResourceVersion(existingCrd.GetResourceVersion())
-			if err := cs.Update(context.TODO(), crd); err != nil {
+			if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				if err := cs.Get(context.TODO(), client.ObjectKey{Name: crd.GetName()}, existingCrd); err != nil {
+					return err
+				}
+				crd.SetResourceVersion(existingCrd.GetResourceVersion())
+				return cs.Update(context.TODO(), crd)
+			}); err != nil {
 				return err
 			}
 		}
@@ -332,6 +369,192 @@ func renderCRDs(options *CRDInstallOptions) ([]client.Object, error) {
 		res = append(res, obj)
 	}
 	return res, nil
+}
+
+// modifyConversionWebhooks takes all the registered CustomResourceDefinitions and applies modifications
+// to conditionally enable webhooks if the type is registered within the scheme.
+//
+// The complexity of this function is high mostly due to all the edge cases that we need to handle:
+// CRDv1beta1, CRDv1, and their unstructured counterpart.
+//
+// We should be able to simplify this code once we drop support for v1beta1 and standardize around the typed CRDv1 object.
+func modifyConversionWebhooks(crds []client.Object, scheme *runtime.Scheme, webhookOptions WebhookInstallOptions) error { //nolint:gocyclo
+	if len(webhookOptions.LocalServingCAData) == 0 {
+		return nil
+	}
+
+	// Determine all registered convertible types.
+	convertibles := map[schema.GroupKind]struct{}{}
+	for gvk := range scheme.AllKnownTypes() {
+		obj, err := scheme.New(gvk)
+		if err != nil {
+			return err
+		}
+		if ok, err := conversion.IsConvertible(scheme, obj); ok && err == nil {
+			convertibles[gvk.GroupKind()] = struct{}{}
+		}
+	}
+
+	// generate host port.
+	hostPort, err := webhookOptions.generateHostPort()
+	if err != nil {
+		return err
+	}
+	url := pointer.StringPtr(fmt.Sprintf("https://%s/convert", hostPort))
+
+	for _, crd := range crds {
+		switch c := crd.(type) {
+		case *apiextensionsv1beta1.CustomResourceDefinition:
+			// Continue if we're preserving unknown fields.
+			//
+			// preserveUnknownFields defaults to true if `nil` in v1beta1.
+			if c.Spec.PreserveUnknownFields == nil || *c.Spec.PreserveUnknownFields {
+				continue
+			}
+			// Continue if the GroupKind isn't registered as being convertible.
+			if _, ok := convertibles[schema.GroupKind{
+				Group: c.Spec.Group,
+				Kind:  c.Spec.Names.Kind,
+			}]; !ok {
+				continue
+			}
+			c.Spec.Conversion.Strategy = apiextensionsv1beta1.WebhookConverter
+			c.Spec.Conversion.WebhookClientConfig.Service = nil
+			c.Spec.Conversion.WebhookClientConfig = &apiextensionsv1beta1.WebhookClientConfig{
+				Service:  nil,
+				URL:      url,
+				CABundle: webhookOptions.LocalServingCAData,
+			}
+		case *apiextensionsv1.CustomResourceDefinition:
+			// Continue if we're preserving unknown fields.
+			if c.Spec.PreserveUnknownFields {
+				continue
+			}
+			// Continue if the GroupKind isn't registered as being convertible.
+			if _, ok := convertibles[schema.GroupKind{
+				Group: c.Spec.Group,
+				Kind:  c.Spec.Names.Kind,
+			}]; !ok {
+				continue
+			}
+			c.Spec.Conversion.Strategy = apiextensionsv1.WebhookConverter
+			c.Spec.Conversion.Webhook.ClientConfig.Service = nil
+			c.Spec.Conversion.Webhook.ClientConfig = &apiextensionsv1.WebhookClientConfig{
+				Service:  nil,
+				URL:      url,
+				CABundle: webhookOptions.LocalServingCAData,
+			}
+		case *unstructured.Unstructured:
+			webhookClientConfig := map[string]interface{}{
+				"url":      *url,
+				"caBundle": base64.StdEncoding.EncodeToString(webhookOptions.LocalServingCAData),
+			}
+
+			switch c.GroupVersionKind().Version {
+			case "v1beta1":
+				// Continue if we're preserving unknown fields.
+				//
+				// preserveUnknownFields defaults to true if `nil` in v1beta1.
+				if preserve, found, err := unstructured.NestedBool(c.Object, "spec", "preserveUnknownFields"); preserve || !found {
+					continue
+				} else if err != nil {
+					return err
+				}
+
+				// Continue if the GroupKind isn't registered as being convertible.
+				group, found, err := unstructured.NestedString(c.Object, "spec", "group")
+				if !found {
+					continue
+				} else if err != nil {
+					return err
+				}
+				kind, found, err := unstructured.NestedString(c.Object, "spec", "names", "kind")
+				if !found {
+					continue
+				} else if err != nil {
+					return err
+				}
+				if _, ok := convertibles[schema.GroupKind{
+					Group: group,
+					Kind:  kind,
+				}]; !ok {
+					continue
+				}
+
+				// Set the strategy.
+				if err := unstructured.SetNestedField(
+					c.Object,
+					string(apiextensionsv1beta1.WebhookConverter),
+					"spec", "conversion", "strategy"); err != nil {
+					return err
+				}
+				// Set the conversion review versions.
+				if err := unstructured.SetNestedStringSlice(
+					c.Object,
+					[]string{"v1beta1"},
+					"spec", "conversion", "webhook", "clientConfig"); err != nil {
+					return err
+				}
+				// Set the client configuration.
+				if err := unstructured.SetNestedMap(
+					c.Object,
+					webhookClientConfig,
+					"spec", "conversion", "webhookClientConfig"); err != nil {
+					return err
+				}
+			case "v1":
+				if preserve, _, err := unstructured.NestedBool(c.Object, "spec", "preserveUnknownFields"); preserve {
+					continue
+				} else if err != nil {
+					return err
+				}
+
+				// Continue if the GroupKind isn't registered as being convertible.
+				group, found, err := unstructured.NestedString(c.Object, "spec", "group")
+				if !found {
+					continue
+				} else if err != nil {
+					return err
+				}
+				kind, found, err := unstructured.NestedString(c.Object, "spec", "names", "kind")
+				if !found {
+					continue
+				} else if err != nil {
+					return err
+				}
+				if _, ok := convertibles[schema.GroupKind{
+					Group: group,
+					Kind:  kind,
+				}]; !ok {
+					continue
+				}
+
+				// Set the strategy.
+				if err := unstructured.SetNestedField(
+					c.Object,
+					string(apiextensionsv1.WebhookConverter),
+					"spec", "conversion", "strategy"); err != nil {
+					return err
+				}
+				// Set the conversion review versions.
+				if err := unstructured.SetNestedStringSlice(
+					c.Object,
+					[]string{"v1", "v1beta1"},
+					"spec", "conversion", "webhook", "conversionReviewVersions"); err != nil {
+					return err
+				}
+				// Set the client configuration.
+				if err := unstructured.SetNestedMap(
+					c.Object,
+					webhookClientConfig,
+					"spec", "conversion", "webhook", "clientConfig"); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // readCRDs reads the CRDs from files and Unmarshals them into structs
