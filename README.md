@@ -36,7 +36,6 @@ Please find more information regarding the concepts and a detailed description o
 
 Gardener takes part in the [Certified Kubernetes Conformance Program](https://www.cncf.io/certification/software-conformance/) to attest its compatibility with the K8s conformance testsuite. Currently Gardener is certified for K8s versions up to v1.20, see [the conformance spreadsheet](https://docs.google.com/spreadsheets/d/1LxSqBzjOxfGx3cmtZ4EbB_BGCxT_wlxW_xgHVVa23es/edit#gid=0&range=113:114).
 
-<!--
 Continuous conformance test results of the latest stable Gardener release are uploaded regularly to the CNCF test grid:
 
 | Provider/K8s | v1.21 | v1.20 | v1.19 | v1.18 | v1.17 | v1.16 | v1.15 |
@@ -50,7 +49,6 @@ Continuous conformance test results of the latest stable Gardener release are up
 | **vSphere** | N/A | N/A | N/A | N/A | N/A | N/A | N/A |
 
 [1] Conformance tests are still executed and validated, unfortunately [no longer shown in TestGrid](https://github.com/kubernetes/test-infra/pull/18509#issuecomment-668204180).
--->
 
 Besides the conformance tests, over 400 additional e2e tests are executed on a daily basis. Get an overview of the test results at [testgrid](https://testgrid.k8s.io/gardener-all).
 
