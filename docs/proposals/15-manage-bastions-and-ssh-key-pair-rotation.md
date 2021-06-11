@@ -147,6 +147,8 @@ spec:
       cidr: 1.2.3.4/32 # public IP of the user. CIDR is a string representing the IP Block. Valid examples are "192.168.1.1/24" or "2001:db9::/64"
 
 status:
+  observedGeneration: 1
+
   # the following fields are managed by the controller in the seed and synced by gardenlet
   ingress: # IP or hostname of the bastion
     ip: 1.2.3.5
@@ -186,6 +188,7 @@ spec:
   type: aws # from extensionsv1alpha1.DefaultSpec
 
 status:
+  observedGeneration: 1
   ingress:
     ip: 1.2.3.5
     # hostname: foo.bar
