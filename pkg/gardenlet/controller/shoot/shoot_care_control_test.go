@@ -323,7 +323,7 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should not set conditions / constraints", func() {
 					var updatedShoot *gardencorev1beta1.Shoot
 					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 							updatedShoot = shoot
 							return nil
 						})
@@ -352,7 +352,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 					var updatedShoot *gardencorev1beta1.Shoot
 					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 							updatedShoot = shoot
 							return nil
 						})
@@ -390,7 +390,7 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should not set conditions / constraints", func() {
 					var updatedShoot *gardencorev1beta1.Shoot
 					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 							updatedShoot = shoot
 							return nil
 						})
@@ -418,7 +418,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 					var updatedShoot *gardencorev1beta1.Shoot
 					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 							updatedShoot = shoot
 							return nil
 						})
@@ -538,7 +538,7 @@ var _ = Describe("Shoot Care Control", func() {
 					It("should merge shoot and seed conditions", func() {
 						var updatedShoot *gardencorev1beta1.Shoot
 						gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 								updatedShoot = shoot
 								return nil
 							})
@@ -570,7 +570,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 						var updatedShoot *gardencorev1beta1.Shoot
 						gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 								updatedShoot = shoot
 								return nil
 							})
@@ -593,7 +593,7 @@ var _ = Describe("Shoot Care Control", func() {
 					It("should set shoot to unhealthy", func() {
 						var updatedShoot *gardencorev1beta1.Shoot
 						gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 								updatedShoot = shoot
 								return nil
 							})
@@ -682,7 +682,7 @@ var _ = Describe("Shoot Care Control", func() {
 					It("should set shoot to healthy", func() {
 						var updatedShoot *gardencorev1beta1.Shoot
 						gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 								updatedShoot = shoot
 								return nil
 							})

@@ -81,7 +81,7 @@ var _ = Describe("BackupBucketReconciler", func() {
 
 		JustBeforeEach(func() {
 			sw.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(seed), gomock.Any()).DoAndReturn(
-				func(_ context.Context, obj client.Object, patch client.Patch) error {
+				func(_ context.Context, obj client.Object, patch client.Patch, _ ...client.PatchOption) error {
 					patchData, err := patch.Data(obj)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(json.Unmarshal(patchData, seedPatch)).To(Succeed())

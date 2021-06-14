@@ -309,7 +309,7 @@ var _ = Describe("Actuator", func() {
 				},
 			)
 			shc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
-				func(_ context.Context, ns *corev1.Namespace) error {
+				func(_ context.Context, ns *corev1.Namespace, _ ...client.CreateOption) error {
 					Expect(ns.Name).To(Equal(v1beta1constants.GardenNamespace))
 					return nil
 				},
@@ -318,7 +318,7 @@ var _ = Describe("Actuator", func() {
 
 		expectDeleteGardenNamespace = func() {
 			shc.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Namespace{})).DoAndReturn(
-				func(_ context.Context, ns *corev1.Namespace) error {
+				func(_ context.Context, ns *corev1.Namespace, _ ...client.DeleteOption) error {
 					Expect(ns.Name).To(Equal(v1beta1constants.GardenNamespace))
 					return nil
 				},
@@ -375,7 +375,7 @@ var _ = Describe("Actuator", func() {
 				},
 			)
 			gc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, s *corev1.Secret) error {
+				func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
 					Expect(s).To(Equal(backupSecret))
 					return nil
 				},
@@ -389,7 +389,7 @@ var _ = Describe("Actuator", func() {
 				},
 			)
 			gc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, s *corev1.Secret) error {
+				func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
 					Expect(s).To(Equal(seedSecret))
 					return nil
 				},
@@ -405,7 +405,7 @@ var _ = Describe("Actuator", func() {
 				},
 			)
 			gc.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, s *corev1.Secret) error {
+				func(_ context.Context, s *corev1.Secret, _ ...client.DeleteOption) error {
 					Expect(s.Name).To(Equal(backupSecretName))
 					Expect(s.Namespace).To(Equal(namespace))
 					return nil
@@ -414,7 +414,7 @@ var _ = Describe("Actuator", func() {
 
 			// Delete seed secret
 			gc.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, s *corev1.Secret) error {
+				func(_ context.Context, s *corev1.Secret, _ ...client.DeleteOption) error {
 					Expect(s.Name).To(Equal(seedSecretName))
 					Expect(s.Namespace).To(Equal(namespace))
 					return nil
@@ -448,7 +448,7 @@ var _ = Describe("Actuator", func() {
 
 		expectCreateSeed = func() {
 			gc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Seed) error {
+				func(_ context.Context, s *gardencorev1beta1.Seed, _ ...client.CreateOption) error {
 					Expect(s).To(Equal(seed))
 					return nil
 				},
@@ -457,7 +457,7 @@ var _ = Describe("Actuator", func() {
 
 		expectDeleteSeed = func() {
 			gc.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Seed) error {
+				func(_ context.Context, s *gardencorev1beta1.Seed, _ ...client.DeleteOption) error {
 					Expect(s.Name).To(Equal(name))
 					return nil
 				},
@@ -511,7 +511,7 @@ var _ = Describe("Actuator", func() {
 				},
 			).Times(3)
 			gc.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, s *corev1.Secret) error {
+				func(_ context.Context, s *corev1.Secret, _ ...client.CreateOption) error {
 					Expect(s.Name).To(Equal("bootstrap-token-a82f8a"))
 					Expect(s.Namespace).To(Equal(metav1.NamespaceSystem))
 					Expect(s.Type).To(Equal(corev1.SecretTypeBootstrapToken))

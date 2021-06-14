@@ -303,7 +303,7 @@ var _ = Describe("Replica", func() {
 	Describe("#CreateShoot", func() {
 		It("should create the shoot", func() {
 			c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot) error {
+				func(_ context.Context, s *gardencorev1beta1.Shoot, _ ...client.CreateOption) error {
 					Expect(s).To(Equal(&gardencorev1beta1.Shoot{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      replicaName,
@@ -335,7 +335,7 @@ var _ = Describe("Replica", func() {
 		It("should create the managed seed", func() {
 			shoot := shoot(nil, "", "", "", false)
 			c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed) error {
+				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.CreateOption) error {
 					Expect(ms).To(Equal(&seedmanagementv1alpha1.ManagedSeed{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      replicaName,
@@ -382,14 +382,14 @@ var _ = Describe("Replica", func() {
 		It("should clean the retries, confirm the deletion, and delete the shoot", func() {
 			shoot := shoot(nil, "", "", "", false)
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch) error {
+				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 					Expect(s.Annotations).To(HaveKeyWithValue(gutil.ConfirmationDeletion, "true"))
 					*shoot = *s
 					return nil
 				},
 			)
 			c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot) error {
+				func(_ context.Context, s *gardencorev1beta1.Shoot, _ ...client.DeleteOption) error {
 					Expect(s).To(Equal(shoot))
 					return nil
 				},
@@ -405,7 +405,7 @@ var _ = Describe("Replica", func() {
 		It("should delete the managed seed", func() {
 			managedSeed := managedSeed(nil, false, false)
 			c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed) error {
+				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.DeleteOption) error {
 					Expect(ms).To(Equal(managedSeed))
 					return nil
 				},
@@ -421,7 +421,7 @@ var _ = Describe("Replica", func() {
 		It("should set the operation to retry and the retries to 1", func() {
 			shoot := shoot(nil, "", "", "", false)
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch) error {
+				func(_ context.Context, s *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 					Expect(s.Annotations).To(HaveKeyWithValue(v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry))
 					return nil
 				},

@@ -246,14 +246,14 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				})
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, secret *corev1.Secret, _ client.Patch) error {
+				func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
 					defer m.Unlock()
 					m.Lock()
 					updatedSecrets = append(updatedSecrets, secret)
 					return nil
 				})
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, secret *corev1.Secret, _ client.Patch) error {
+				func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
 					defer m.Unlock()
 					m.Lock()
 					updatedSecrets = append(updatedSecrets, secret)
@@ -262,7 +262,7 @@ var _ = Describe("Shoot References", func() {
 
 			var updatedShoot *gardencorev1beta1.Shoot
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 					updatedShoot = shoot
 					return nil
 				})
@@ -330,14 +330,14 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				})
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, secret *corev1.Secret, _ client.Patch) error {
+				func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
 					updatedSecret = secret
 					return nil
 				})
 
 			var updatedShoot *gardencorev1beta1.Shoot
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 					updatedShoot = shoot
 					return nil
 				})
@@ -400,7 +400,7 @@ var _ = Describe("Shoot References", func() {
 
 			var updatedShoot *gardencorev1beta1.Shoot
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 					updatedShoot = shoot
 					return nil
 				})
@@ -455,7 +455,7 @@ var _ = Describe("Shoot References", func() {
 
 			var updatedSecret *corev1.Secret
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, secret *corev1.Secret, _ client.Patch) error {
+				func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
 					updatedSecret = secret
 					return nil
 				})
@@ -566,14 +566,14 @@ var _ = Describe("Shoot References", func() {
 
 			var updatedConfigMap *corev1.ConfigMap
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, configMap *corev1.ConfigMap, _ client.Patch) error {
+				func(_ context.Context, configMap *corev1.ConfigMap, _ client.Patch, _ ...client.PatchOption) error {
 					updatedConfigMap = configMap
 					return nil
 				})
 
 			var updatedShoot *gardencorev1beta1.Shoot
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 					updatedShoot = shoot
 					return nil
 				})
@@ -637,14 +637,14 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				})
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, cm *corev1.ConfigMap, _ client.Patch) error {
+				func(_ context.Context, cm *corev1.ConfigMap, _ client.Patch, _ ...client.PatchOption) error {
 					updatedConfigMap = cm
 					return nil
 				})
 
 			var updatedShoot *gardencorev1beta1.Shoot
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 					updatedShoot = shoot
 					return nil
 				})
@@ -711,7 +711,7 @@ var _ = Describe("Shoot References", func() {
 
 			var updatedShoot *gardencorev1beta1.Shoot
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch) error {
+				func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
 					updatedShoot = shoot
 					return nil
 				})
@@ -768,7 +768,7 @@ var _ = Describe("Shoot References", func() {
 
 			var updatedConfigMap *corev1.ConfigMap
 			cl.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, configMap *corev1.ConfigMap, _ client.Patch) error {
+				func(_ context.Context, configMap *corev1.ConfigMap, _ client.Patch, _ ...client.PatchOption) error {
 					updatedConfigMap = configMap
 					return nil
 				})

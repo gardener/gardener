@@ -201,7 +201,7 @@ var _ = Describe("Util", func() {
 				})
 				c.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(nil).Times(2)
 
-				c.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, s *corev1.Secret) error {
+				c.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, s *corev1.Secret, _ ...client.UpdateOption) error {
 					Expect(s.Name).To(Equal(bootstrapTokenSecretName))
 					Expect(s.Namespace).To(Equal(metav1.NamespaceSystem))
 					Expect(s.Type).To(Equal(bootstraptokenapi.SecretTypeBootstrapToken))
@@ -255,7 +255,7 @@ var _ = Describe("Util", func() {
 			)
 
 			It("should fail because the service account token controller has not yet created a secret for the service account", func() {
-				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(_ context.Context, s *corev1.ServiceAccount) error {
+				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(_ context.Context, s *corev1.ServiceAccount, _ ...client.CreateOption) error {
 					s.Name = serviceAccountName
 					s.Namespace = "garden"
 					s.Secrets = []corev1.ObjectReference{}
@@ -269,7 +269,7 @@ var _ = Describe("Util", func() {
 
 			It("should succeed", func() {
 				// create service account
-				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(_ context.Context, s *corev1.ServiceAccount) error {
+				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(_ context.Context, s *corev1.ServiceAccount, _ ...client.CreateOption) error {
 					Expect(s.Name).To(Equal(serviceAccountName))
 					Expect(s.Namespace).To(Equal("garden"))
 					s.Secrets = []corev1.ObjectReference{
@@ -294,7 +294,7 @@ var _ = Describe("Util", func() {
 						Name: fmt.Sprintf("gardener.cloud:system:seed-bootstrapper:%s:%s", serviceAccountNamespace, serviceAccountName),
 					},
 				}
-				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})).DoAndReturn(func(_ context.Context, s *rbacv1.ClusterRoleBinding) error {
+				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&rbacv1.ClusterRoleBinding{})).DoAndReturn(func(_ context.Context, s *rbacv1.ClusterRoleBinding, _ ...client.CreateOption) error {
 					expectedClusterRoleBinding := clusterRoleBinding
 					expectedClusterRoleBinding.RoleRef = rbacv1.RoleRef{
 						APIGroup: "rbac.authorization.k8s.io",
