@@ -19,7 +19,7 @@ require (
 	github.com/go-logr/logr v0.3.0
 	github.com/go-openapi/spec v0.19.3
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/mock v1.5.0
+	github.com/golang/mock v1.6.0
 	github.com/googleapis/gnostic v0.5.1
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/huandu/xstrings v1.3.2
