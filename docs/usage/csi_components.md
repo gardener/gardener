@@ -1,0 +1,22 @@
+# (Custom) CSI Components
+
+Some provider extensions for Gardener are using CSI components to manage persistent volumes in the shoot clusters.
+In most cases, controllers for taking volume snapshots are delivered out-of-the-box as well.
+
+End-users can deploy their own CSI components and controllers into shoot clusters.
+In such situations, there are multiple controllers acting on the `VolumeSnapshot` custom resources (each responsible for those instances associated with their respective driver provisioner types).
+
+## Recommendations
+
+Custom CSI components are typically regular `Deployment`s running in the shoot clusters.
+
+**Please label them with the `shoot.gardener.cloud/no-cleanup=true` label.**
+
+## Background Information
+
+When a shoot cluster is deleted, Gardener deletes most Kubernetes (`Deployment`s, `DaemonSet`s, `StatefulSet`s, etc.), i.e., CSI components without above mentioned label will be deleted immediately.
+
+If the CSI components (and all resources associated with them) managed by end-users aren't properly removed by the end-users before shoot deletion is triggered then the cluster deletion might cause problems and get stuck.
+
+Typically, it results in stuck `VolumeSnapshot` resources (still having finalizers that will never be cleaned up).
+Consequently, manual intervention is required to clean them up before the cluster deletion can continue.

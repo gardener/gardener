@@ -23,17 +23,20 @@
 
 ## Usage
 
-* [Register Shoot as Seed](usage/managed_seed.md)
+* [APIServerSNI environment variable injection](usage/apiserver-sni-injection.md)
 * [API Server Network Proxy Reverse Tunneling](usage/reverse-tunnel.md)
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
 * [Auto-Scaling for shoot clusters](usage/shoot_autoscaling.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
+* [(Custom) CSI components](usage/csi_components.md)
 * [Gardener configuration and usage](usage/configuration.md)
 * [`ManagedIstio` feature](usage/istio.md)
 * [Network Policies in the Shoot Cluster](usage/shoot_network_policies.md)
 * [`NodeLocalDNS` feature](usage/node-local-dns.md)
 * [OpenIDConnect presets](usage/openidconnect-presets.md)
 * [Projects](usage/projects.md)
+* [Register Shoot as Seed](usage/managed_seed.md)
+* [Reversed Cluster VPN](usage/reversed-vpn-tunnel.md)
 * [Seed Bootstrapping](usage/seed_bootstrapping.md)
 * [Seed Settings](usage/seed_settings.md)
 * [Shoot cluster purposes](usage/shoot_purposes.md)
@@ -47,8 +50,6 @@
 * [Trigger shoot operations](usage/shoot_operations.md)
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
-* [APIServerSNI environment variable injection](usage/apiserver-sni-injection.md)
-* [Reversed Cluster VPN](usage/reversed-vpn-tunnel.md)
 
 ## Proposals
 
