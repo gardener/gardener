@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"strconv"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -177,9 +178,14 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 	)
 
+	deleteWith, finalizeAfter, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupWebhooksFinalizeGracePeriodSeconds, 1)
+	if err != nil {
+		return err
+	}
+
 	return flow.Parallel(
-		cleanResourceFn(ops, c, &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(ops, c, &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, deleteWith, finalizeAfter),
 	)(ctx)
 }
 
@@ -192,9 +198,14 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 		crdCleanOps = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 	)
 
+	deleteWith, finalizeAfter, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterOneHour, v1beta1constants.AnnotationShootCleanupExtendedAPIsFinalizeGracePeriodSeconds, 0.1)
+	if err != nil {
+		return err
+	}
+
 	return flow.Parallel(
-		cleanResourceFn(defaultOps, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, GracePeriodFiveMinutes, FinalizeAfterOneHour),
-		cleanResourceFn(crdCleanOps, c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOption, GracePeriodFiveMinutes, FinalizeAfterOneHour),
+		cleanResourceFn(defaultOps, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(crdCleanOps, c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOption, deleteWith, finalizeAfter),
 	)(ctx)
 }
 
@@ -209,25 +220,30 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 	)
 
+	deleteWith, finalizeAfter, err := b.getCleanOptions(GracePeriodFiveMinutes, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupKubernetesResourcesFinalizeGracePeriodSeconds, 1)
+	if err != nil {
+		return err
+	}
+
 	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup) {
 		return flow.Parallel(
-			cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-			cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+			cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, deleteWith, finalizeAfter),
+			cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, deleteWith, finalizeAfter),
 		)(ctx)
 	}
 
 	return flow.Parallel(
-		cleanResourceFn(ops, c, &batchv1beta1.CronJobList{}, CronJobCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &appsv1.DeploymentList{}, DeploymentCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &extensionsv1beta1.IngressList{}, IngressCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &batchv1.JobList{}, JobCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &corev1.PodList{}, PodCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &appsv1.StatefulSetList{}, StatefulSetCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
-		cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, GracePeriodFiveMinutes, FinalizeAfterFiveMinutes),
+		cleanResourceFn(ops, c, &batchv1beta1.CronJobList{}, CronJobCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(ops, c, &appsv1.DeploymentList{}, DeploymentCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(ops, c, &extensionsv1beta1.IngressList{}, IngressCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(ops, c, &batchv1.JobList{}, JobCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(ops, c, &corev1.PodList{}, PodCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(ops, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(ops, c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(ops, c, &appsv1.StatefulSetList{}, StatefulSetCleanOption, deleteWith, finalizeAfter),
+		cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, deleteWith, finalizeAfter),
 	)(ctx)
 }
 
@@ -240,11 +256,44 @@ func (b *Botanist) CleanShootNamespaces(ctx context.Context) error {
 		namespaceCleanOps = utilclient.NewCleanOps(namespaceCleaner, utilclient.DefaultGoneEnsurer())
 	)
 
-	return cleanResourceFn(namespaceCleanOps, c, &corev1.NamespaceList{}, NamespaceMatchingLabelsSelector, NamespaceMatchingFieldsSelector, ZeroGracePeriod, FinalizeAfterFiveMinutes, NamespaceErrorToleration)(ctx)
+	deleteWith, finalizeAfter, err := b.getCleanOptions(ZeroGracePeriod, FinalizeAfterFiveMinutes, v1beta1constants.AnnotationShootCleanupNamespaceResourcesFinalizeGracePeriodSeconds, 0)
+	if err != nil {
+		return err
+	}
+
+	return cleanResourceFn(namespaceCleanOps, c, &corev1.NamespaceList{}, NamespaceMatchingLabelsSelector, NamespaceMatchingFieldsSelector, deleteWith, finalizeAfter, NamespaceErrorToleration)(ctx)
 }
 
 // CleanVolumeAttachments cleans up all VolumeAttachments in the cluster, waits for them to be gone and finalizes any
 // remaining ones after five minutes.
 func CleanVolumeAttachments(ctx context.Context, c client.Client) error {
 	return cleanResourceFn(utilclient.DefaultCleanOps(), c, &storagev1.VolumeAttachmentList{}, ZeroGracePeriod, FinalizeAfterFiveMinutes)(ctx)
+}
+
+func (b *Botanist) getCleanOptions(
+	defaultDeleteWith utilclient.DeleteWith,
+	defaultFinalizeAfter utilclient.FinalizeGracePeriodSeconds,
+	annotationKey string,
+	gracePeriodSecondsFactor float64,
+) (
+	utilclient.DeleteWith,
+	utilclient.FinalizeGracePeriodSeconds,
+	error,
+) {
+	var (
+		deleteWith    = defaultDeleteWith
+		finalizeAfter = defaultFinalizeAfter
+	)
+
+	if v, ok := b.Shoot.Info.Annotations[annotationKey]; ok {
+		seconds, err := strconv.Atoi(v)
+		if err != nil {
+			return nil, -1, err
+		}
+
+		deleteWith = utilclient.DeleteWith{client.GracePeriodSeconds(int(float64(seconds) * gracePeriodSecondsFactor))}
+		finalizeAfter = utilclient.FinalizeGracePeriodSeconds(seconds)
+	}
+
+	return deleteWith, finalizeAfter, nil
 }
