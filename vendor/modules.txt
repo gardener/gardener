@@ -374,7 +374,7 @@ github.com/shurcooL/sanitized_anchor_name
 # github.com/sirupsen/logrus v1.7.0
 ## explicit
 github.com/sirupsen/logrus
-# github.com/spf13/afero v1.2.2
+# github.com/spf13/afero v1.6.0
 github.com/spf13/afero
 github.com/spf13/afero/mem
 # github.com/spf13/cast v1.3.0
@@ -1417,6 +1417,14 @@ sigs.k8s.io/controller-runtime/pkg/webhook
 sigs.k8s.io/controller-runtime/pkg/webhook/admission
 sigs.k8s.io/controller-runtime/pkg/webhook/conversion
 sigs.k8s.io/controller-runtime/pkg/webhook/internal/metrics
+# sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20210609022947-fbf50b04fe17
+## explicit
+sigs.k8s.io/controller-runtime/tools/setup-envtest
+sigs.k8s.io/controller-runtime/tools/setup-envtest/env
+sigs.k8s.io/controller-runtime/tools/setup-envtest/remote
+sigs.k8s.io/controller-runtime/tools/setup-envtest/store
+sigs.k8s.io/controller-runtime/tools/setup-envtest/versions
+sigs.k8s.io/controller-runtime/tools/setup-envtest/workflows
 # sigs.k8s.io/controller-tools v0.4.1
 ## explicit
 sigs.k8s.io/controller-tools/cmd/controller-gen
