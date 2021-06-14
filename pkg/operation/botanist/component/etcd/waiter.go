@@ -20,72 +20,72 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	"github.com/hashicorp/go-multierror"
-	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (e *etcd) Wait(_ context.Context) error        { return nil }
+const (
+	// DefaultInterval is the default interval for retry operations.
+	DefaultInterval = 5 * time.Second
+	// DefaultSevereThreshold is the default threshold until an error reported by another component is treated as 'severe'.
+	DefaultSevereThreshold = 3 * time.Minute
+	// DefaultTimeout is the default timeout and defines how long Gardener should wait
+	// for a successful reconciliation of an Etcd resource.
+	DefaultTimeout = 5 * time.Minute
+)
+
+func (e *etcd) Wait(ctx context.Context) error {
+	return extensions.WaitUntilObjectReadyWithHealthFunction(
+		ctx,
+		e.client,
+		e.logger,
+		CheckEtcdObject,
+		e.etcd,
+		"Etcd",
+		DefaultInterval,
+		DefaultSevereThreshold,
+		DefaultTimeout,
+		nil,
+	)
+}
+
 func (e *etcd) WaitCleanup(_ context.Context) error { return nil }
 
-// WaitUntilEtcdsReady waits until all etcds in the given namespace are ready.
-func WaitUntilEtcdsReady(
-	ctx context.Context,
-	c client.Client,
-	logger logrus.FieldLogger,
-	namespace string,
-	count int,
-	interval time.Duration,
-	severeThreshold time.Duration,
-	timeout time.Duration,
-) error {
-	var retryCountUntilSevere int
+// CheckEtcdObject checks if the given Etcd object was reconciled successfully.
+func CheckEtcdObject(obj client.Object) error {
+	etcd, ok := obj.(*druidv1alpha1.Etcd)
+	if !ok {
+		return fmt.Errorf("expected *duridv1alpha1.Etcd but got %T", obj)
+	}
 
-	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
-		retryCountUntilSevere++
+	if etcd.Status.LastError != nil {
+		return retry.RetriableError(fmt.Errorf(*etcd.Status.LastError))
+	}
 
-		etcdList := &druidv1alpha1.EtcdList{}
-		if err := c.List(
-			ctx,
-			etcdList,
-			client.InNamespace(namespace),
-			client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane},
-		); err != nil {
-			return retry.SevereError(err)
-		}
+	if etcd.DeletionTimestamp != nil {
+		return fmt.Errorf("unexpectedly has a deletion timestamp")
+	}
 
-		if n := len(etcdList.Items); n < count {
-			logger.Info("Waiting until the etcd gets created...")
-			return retry.MinorError(fmt.Errorf("only %d/%d etcd resources found", n, count))
-		}
+	generation := etcd.Generation
+	observedGeneration := etcd.Status.ObservedGeneration
+	if observedGeneration == nil {
+		return fmt.Errorf("observed generation not recorded")
+	}
+	if generation != *observedGeneration {
+		return fmt.Errorf("observed generation outdated (%d/%d)", *observedGeneration, generation)
+	}
 
-		var lastErrors error
+	if op, ok := etcd.Annotations[v1beta1constants.GardenerOperation]; ok {
+		return fmt.Errorf("gardener operation %q is not yet picked up by etcd-druid", op)
+	}
 
-		for _, etcd := range etcdList.Items {
-			switch {
-			case etcd.Status.LastError != nil:
-				return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), fmt.Errorf("%s reconciliation errored: %s", etcd.Name, *etcd.Status.LastError))
-			case etcd.DeletionTimestamp != nil:
-				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s unexpectedly has a deletion timestamp", etcd.Name))
-			case etcd.Status.ObservedGeneration == nil || etcd.Generation != *etcd.Status.ObservedGeneration:
-				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation pending", etcd.Name))
-			case metav1.HasAnnotation(etcd.ObjectMeta, v1beta1constants.GardenerOperation):
-				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s reconciliation in process", etcd.Name))
-			case !utils.IsTrue(etcd.Status.Ready):
-				lastErrors = multierror.Append(lastErrors, fmt.Errorf("%s is not ready yet", etcd.Name))
-			}
-		}
+	if !utils.IsTrue(etcd.Status.Ready) {
+		return fmt.Errorf("is not ready yet")
+	}
 
-		if lastErrors == nil {
-			return retry.Ok()
-		}
-
-		logger.Info("Waiting until both the etcds are ready...")
-		return retry.MinorError(lastErrors)
-	})
+	return nil
 }

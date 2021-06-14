@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"hash/crc32"
-	"time"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -53,6 +52,7 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 
 	e := NewEtcd(
 		b.K8sSeedClient.Client(),
+		b.Logger,
 		b.Shoot.SeedNamespace,
 		role,
 		class,
@@ -120,16 +120,10 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 
 // WaitUntilEtcdsReady waits until both etcd-main and etcd-events are ready.
 func (b *Botanist) WaitUntilEtcdsReady(ctx context.Context) error {
-	return etcd.WaitUntilEtcdsReady(
-		ctx,
-		b.K8sSeedClient.DirectClient(),
-		b.Logger,
-		b.Shoot.SeedNamespace,
-		2,
-		5*time.Second,
-		3*time.Minute,
-		5*time.Minute,
-	)
+	return flow.Parallel(
+		b.Shoot.Components.ControlPlane.EtcdMain.Wait,
+		b.Shoot.Components.ControlPlane.EtcdEvents.Wait,
+	)(ctx)
 }
 
 // SnapshotEtcd executes into the etcd-main pod and triggers a full snapshot.

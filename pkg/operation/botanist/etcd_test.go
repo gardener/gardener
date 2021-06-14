@@ -42,6 +42,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -128,6 +129,7 @@ var _ = Describe("Etcd", func() {
 
 						validator := &newEtcdValidator{
 							expectedClient:                  Equal(c),
+							expectedLogger:                  BeNil(),
 							expectedNamespace:               Equal(namespace),
 							expectedRole:                    Equal(role),
 							expectedClass:                   Equal(class),
@@ -165,6 +167,7 @@ var _ = Describe("Etcd", func() {
 
 				validator := &newEtcdValidator{
 					expectedClient:                  Equal(c),
+					expectedLogger:                  BeNil(),
 					expectedNamespace:               Equal(namespace),
 					expectedRole:                    Equal(role),
 					expectedClass:                   Equal(class),
@@ -194,6 +197,7 @@ var _ = Describe("Etcd", func() {
 
 				validator := &newEtcdValidator{
 					expectedClient:                  Equal(c),
+					expectedLogger:                  BeNil(),
 					expectedNamespace:               Equal(namespace),
 					expectedRole:                    Equal(role),
 					expectedClass:                   Equal(class),
@@ -451,6 +455,7 @@ type newEtcdValidator struct {
 	etcd.Interface
 
 	expectedClient                  gomegatypes.GomegaMatcher
+	expectedLogger                  gomegatypes.GomegaMatcher
 	expectedNamespace               gomegatypes.GomegaMatcher
 	expectedRole                    gomegatypes.GomegaMatcher
 	expectedClass                   gomegatypes.GomegaMatcher
@@ -462,6 +467,7 @@ type newEtcdValidator struct {
 
 func (v *newEtcdValidator) NewEtcd(
 	client client.Client,
+	logger logrus.FieldLogger,
 	namespace string,
 	role string,
 	class etcd.Class,
@@ -470,6 +476,7 @@ func (v *newEtcdValidator) NewEtcd(
 	defragmentationSchedule *string,
 ) etcd.Interface {
 	Expect(client).To(v.expectedClient)
+	Expect(logger).To(v.expectedLogger)
 	Expect(namespace).To(v.expectedNamespace)
 	Expect(role).To(v.expectedRole)
 	Expect(class).To(v.expectedClass)

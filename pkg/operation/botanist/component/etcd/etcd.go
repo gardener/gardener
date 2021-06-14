@@ -21,6 +21,7 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
+	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -33,11 +34,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -88,11 +89,6 @@ var (
 	PortBackupRestore = int32(8080)
 )
 
-// Name returns the name of the Etcd object for the given role.
-func Name(role string) string {
-	return "etcd-" + role
-}
-
 // ServiceName returns the service name for an etcd for the given role.
 func ServiceName(role string) string {
 	return fmt.Sprintf("etcd-%s-client", role)
@@ -116,7 +112,8 @@ type Interface interface {
 
 // New creates a new instance of DeployWaiter for the Etcd.
 func New(
-	client client.Client,
+	c client.Client,
+	logger logrus.FieldLogger,
 	namespace string,
 	role string,
 	class Class,
@@ -124,25 +121,43 @@ func New(
 	storageCapacity string,
 	defragmentationSchedule *string,
 ) Interface {
+	name := "etcd-" + role
+
+	var etcdLog logrus.FieldLogger
+	if logger != nil {
+		etcdLog = logger.WithField("etcd", client.ObjectKey{Namespace: namespace, Name: name})
+	}
+
 	return &etcd{
-		client:                  client,
+		client:                  c,
+		logger:                  etcdLog,
 		namespace:               namespace,
 		role:                    role,
 		class:                   class,
 		retainReplicas:          retainReplicas,
 		storageCapacity:         storageCapacity,
 		defragmentationSchedule: defragmentationSchedule,
+
+		etcd: &druidv1alpha1.Etcd{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+		},
 	}
 }
 
 type etcd struct {
 	client                  client.Client
+	logger                  logrus.FieldLogger
 	namespace               string
 	role                    string
 	class                   Class
 	retainReplicas          bool
 	storageCapacity         string
 	defragmentationSchedule *string
+
+	etcd *druidv1alpha1.Etcd
 
 	secrets      Secrets
 	backupConfig *BackupConfig
@@ -162,23 +177,33 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 	var (
 		networkPolicy = e.emptyNetworkPolicy()
-		etcd          = e.emptyEtcd()
 		hvpa          = e.emptyHVPA()
+
+		existingEtcd        *druidv1alpha1.Etcd
+		existingSts         = &appsv1.StatefulSet{}
+		foundEtcd, foundSts bool
 	)
 
-	existingEtcd, foundEtcd, err := e.getExistingEtcd(ctx, Name(e.role))
-	if err != nil {
-		return err
+	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+	} else {
+		foundEtcd = true
+		existingEtcd = e.etcd.DeepCopy()
 	}
 
-	stsName := Name(e.role)
+	stsName := e.etcd.Name
 	if foundEtcd && existingEtcd.Status.Etcd.Name != "" {
 		stsName = existingEtcd.Status.Etcd.Name
 	}
 
-	existingSts, foundSts, err := e.getExistingStatefulSet(ctx, stsName)
-	if err != nil {
-		return err
+	if err := e.client.Get(ctx, client.ObjectKey{Namespace: e.namespace, Name: stsName}, existingSts); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+	} else {
+		foundSts = true
 	}
 
 	var (
@@ -205,7 +230,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			"checksum/secret-etcd-client-tls":  e.secrets.Client.Checksum,
 		}
 		metrics             = druidv1alpha1.Basic
-		volumeClaimTemplate = Name(e.role)
+		volumeClaimTemplate = e.etcd.Name
 		minAllowed          = corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("50m"),
 			corev1.ResourceMemory: resource.MustParse("200M"),
@@ -222,7 +247,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		}
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, e.client, networkPolicy, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, networkPolicy, func() error {
 		networkPolicy.Annotations = map[string]string{
 			v1beta1constants.GardenerDescription: "Allows Ingress to etcd pods from the Shoot's Kubernetes API Server.",
 		}
@@ -278,30 +303,30 @@ func (e *etcd) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, e.client, etcd, func() error {
-		etcd.Annotations = map[string]string{
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, e.etcd, func() error {
+		e.etcd.Annotations = map[string]string{
 			v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 			v1beta1constants.GardenerTimestamp: TimeNow().UTC().String(),
 		}
-		etcd.Labels = map[string]string{
+		e.etcd.Labels = map[string]string{
 			v1beta1constants.LabelRole:  e.role,
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}
-		etcd.Spec.Replicas = replicas
-		etcd.Spec.PriorityClassName = pointer.StringPtr(v1beta1constants.PriorityClassNameShootControlPlane)
-		etcd.Spec.Annotations = annotations
-		etcd.Spec.Labels = utils.MergeStringMaps(e.getLabels(), map[string]string{
+		e.etcd.Spec.Replicas = replicas
+		e.etcd.Spec.PriorityClassName = pointer.StringPtr(v1beta1constants.PriorityClassNameShootControlPlane)
+		e.etcd.Spec.Annotations = annotations
+		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getLabels(), map[string]string{
 			v1beta1constants.LabelApp:                            LabelAppValue,
 			v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToPublicNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
 		})
-		etcd.Spec.Selector = &metav1.LabelSelector{
+		e.etcd.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: utils.MergeStringMaps(e.getLabels(), map[string]string{
 				v1beta1constants.LabelApp: LabelAppValue,
 			}),
 		}
-		etcd.Spec.Etcd = druidv1alpha1.EtcdConfig{
+		e.etcd.Spec.Etcd = druidv1alpha1.EtcdConfig{
 			Resources: resourcesEtcd,
 			TLS: &druidv1alpha1.TLSConfig{
 				TLSCASecretRef: corev1.SecretReference{
@@ -323,7 +348,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			DefragmentationSchedule: e.computeDefragmentationSchedule(foundEtcd, existingEtcd),
 			Quota:                   &quota,
 		}
-		etcd.Spec.Backup = druidv1alpha1.BackupSpec{
+		e.etcd.Spec.Backup = druidv1alpha1.BackupSpec{
 			Port:                    &PortBackupRestore,
 			Resources:               resourcesBackupRestore,
 			GarbageCollectionPolicy: &garbageCollectionPolicy,
@@ -338,19 +363,19 @@ func (e *etcd) Deploy(ctx context.Context) error {
 				deltaSnapshotMemoryLimit = resource.MustParse("100Mi")
 			)
 
-			etcd.Spec.Backup.Store = &druidv1alpha1.StoreSpec{
+			e.etcd.Spec.Backup.Store = &druidv1alpha1.StoreSpec{
 				SecretRef: &corev1.SecretReference{Name: e.backupConfig.SecretRefName},
 				Container: &e.backupConfig.Container,
 				Provider:  &provider,
 				Prefix:    fmt.Sprintf("%s/etcd-%s", e.backupConfig.Prefix, e.role),
 			}
-			etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(foundEtcd, existingEtcd)
-			etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
-			etcd.Spec.Backup.DeltaSnapshotMemoryLimit = &deltaSnapshotMemoryLimit
+			e.etcd.Spec.Backup.FullSnapshotSchedule = e.computeFullSnapshotSchedule(foundEtcd, existingEtcd)
+			e.etcd.Spec.Backup.DeltaSnapshotPeriod = &deltaSnapshotPeriod
+			e.etcd.Spec.Backup.DeltaSnapshotMemoryLimit = &deltaSnapshotMemoryLimit
 		}
 
-		etcd.Spec.StorageCapacity = &storageCapacity
-		etcd.Spec.VolumeClaimTemplate = &volumeClaimTemplate
+		e.etcd.Spec.StorageCapacity = &storageCapacity
+		e.etcd.Spec.VolumeClaimTemplate = &volumeClaimTemplate
 		return nil
 	}); err != nil {
 		return err
@@ -369,7 +394,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			scaleDownUpdateMode = pointer.StringPtr(hvpav1alpha1.UpdateModeMaintenanceWindow)
 		}
 
-		if _, err := controllerutil.CreateOrUpdate(ctx, e.client, hvpa, func() error {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, hvpa, func() error {
 			hvpa.Labels = utils.MergeStringMaps(e.getLabels(), map[string]string{
 				v1beta1constants.LabelApp: LabelAppValue,
 			})
@@ -493,7 +518,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			return err
 		}
 	} else {
-		if err := kutil.DeleteObjects(ctx, e.client, e.emptyHVPA()); err != nil {
+		if err := kutil.DeleteObjects(ctx, e.client, hvpa); err != nil {
 			return err
 		}
 	}
@@ -506,7 +531,7 @@ func (e *etcd) Destroy(ctx context.Context) error {
 		ctx,
 		e.client,
 		e.emptyHVPA(),
-		e.emptyEtcd(),
+		e.etcd,
 		e.emptyNetworkPolicy(),
 	)
 }
@@ -518,42 +543,12 @@ func (e *etcd) getLabels() map[string]string {
 	}
 }
 
-func (e *etcd) getExistingEtcd(ctx context.Context, name string) (*druidv1alpha1.Etcd, bool, error) {
-	obj, found, err := e.getExistingResource(ctx, name, &druidv1alpha1.Etcd{})
-	if obj != nil {
-		return obj.(*druidv1alpha1.Etcd), found, err
-	}
-	return nil, found, err
-}
-
-func (e *etcd) getExistingStatefulSet(ctx context.Context, name string) (*appsv1.StatefulSet, bool, error) {
-	obj, found, err := e.getExistingResource(ctx, name, &appsv1.StatefulSet{})
-	if obj != nil {
-		return obj.(*appsv1.StatefulSet), found, err
-	}
-	return nil, found, err
-}
-
-func (e *etcd) getExistingResource(ctx context.Context, name string, obj client.Object) (client.Object, bool, error) {
-	if err := e.client.Get(ctx, kutil.Key(e.namespace, name), obj); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return nil, false, err
-		}
-		return nil, false, nil
-	}
-	return obj, true, nil
-}
-
 func (e *etcd) emptyNetworkPolicy() *networkingv1.NetworkPolicy {
 	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: NetworkPolicyName, Namespace: e.namespace}}
 }
 
-func (e *etcd) emptyEtcd() *druidv1alpha1.Etcd {
-	return &druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: Name(e.role), Namespace: e.namespace}}
-}
-
 func (e *etcd) emptyHVPA() *hvpav1alpha1.Hvpa {
-	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: Name(e.role), Namespace: e.namespace}}
+	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: e.etcd.Name, Namespace: e.namespace}}
 }
 
 func (e *etcd) Snapshot(ctx context.Context, podExecutor kubernetes.PodExecutor) error {

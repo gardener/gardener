@@ -16,7 +16,6 @@ package extensions
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -89,7 +88,6 @@ func WaitUntilObjectReadyWithHealthFunction(
 	postReadyFunc func() error,
 ) error {
 	var (
-		errorWithCode         *gardencorev1beta1helper.ErrorWithCodes
 		lastObservedError     error
 		retryCountUntilSevere int
 
@@ -127,7 +125,7 @@ func WaitUntilObjectReadyWithHealthFunction(
 		if err := healthFunc(obj); err != nil {
 			lastObservedError = err
 			logger.WithError(err).Errorf("%s did not get ready yet", extensionKey(kind, namespace, name))
-			if errors.As(err, &errorWithCode) {
+			if retry.IsRetriable(err) {
 				return retry.MinorOrSevereError(retryCountUntilSevere, int(severeThreshold.Nanoseconds()/interval.Nanoseconds()), err)
 			}
 			return retry.MinorError(err)

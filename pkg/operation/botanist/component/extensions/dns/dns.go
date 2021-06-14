@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // TimeNow returns the current time. Exposed for testing.
@@ -103,12 +104,12 @@ func CheckDNSObject(obj client.Object) error {
 		// DetermineError first needs to be improved to properly wrap the given error, afterwards we can clean up this
 		// code here
 		if state == dnsv1alpha1.STATE_ERROR || state == dnsv1alpha1.STATE_INVALID {
-			// return ErrorWithCodes, even if DetermineErrorCodes doesn't detect an error code
-			// this is the same behavior as in other extension components which leverage health.CheckExtensionObject, where
+			// return a retriable error for an Error or Invalid state (independent of the error code detection), which makes
+			// WaitUntilObjectReadyWithHealthFunction not treat the error as severe immediately but still surface errors
+			// faster, without retrying until the entire timeout is elapsed.
+			// This is the same behavior as in other extension components which leverage health.CheckExtensionObject, where
 			// ErrorWithCodes is returned if status.lastError is set (no matter if status.lastError.codes contains error codes).
-			// returning ErrorWithCodes makes WaitUntilObjectReadyWithHealthFunction surface errors faster, without
-			// retrying until the entire timeout is elapsed.
-			err = gardencorev1beta1helper.NewErrorWithCodes(err.Error(), gardencorev1beta1helper.DetermineErrorCodes(err)...)
+			err = retry.RetriableError(gardencorev1beta1helper.DetermineError(err, ""))
 		}
 		return &errorWithDNSState{underlying: err, state: state}
 	}

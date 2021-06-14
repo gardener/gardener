@@ -26,6 +26,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
+	"github.com/gardener/gardener/pkg/utils/retry"
 )
 
 var _ = Describe("#CheckDNSObject", func() {
@@ -35,7 +36,7 @@ var _ = Describe("#CheckDNSObject", func() {
 	)
 
 	It("should return error for non-dns object", func() {
-		Expect(CheckDNSObject(&corev1.ConfigMap{}))
+		Expect(CheckDNSObject(&corev1.ConfigMap{})).To(HaveOccurred())
 	})
 
 	test := func() {
@@ -78,17 +79,19 @@ var _ = Describe("#CheckDNSObject", func() {
 				acc.SetMessage(&msg)
 				err := CheckDNSObject(obj)
 
-				var errorWithCodes *helper.ErrorWithCodes
 				if state == dnsv1alpha1.STATE_ERROR || state == dnsv1alpha1.STATE_INVALID {
+					Expect(retry.IsRetriable(err)).To(BeTrue(), "state: "+state)
+
+					var errorWithCodes *helper.ErrorWithCodes
 					Expect(errors.As(err, &errorWithCodes)).To(BeTrue(), "state: "+state)
 					Expect(errorWithCodes.Codes()).To(ConsistOf(gardencorev1beta1.ErrorInfraUnauthorized), "state: "+state)
 				} else {
-					Expect(errors.As(err, &errorWithCodes)).To(BeFalse(), "state: "+state)
+					Expect(retry.IsRetriable(err)).To(BeFalse())
 				}
 			}
 		})
 
-		It("should return ErrorWithCodes, if status is Error or Invalid, even if no code is determined", func() {
+		It("should return a retriable error, if status is Error or Invalid, even if no code is determined", func() {
 			for _, state := range []string{
 				dnsv1alpha1.STATE_ERROR,
 				dnsv1alpha1.STATE_INVALID,
@@ -98,9 +101,8 @@ var _ = Describe("#CheckDNSObject", func() {
 				acc.SetMessage(&msg)
 				err := CheckDNSObject(obj)
 
-				var errorWithCodes *helper.ErrorWithCodes
-				Expect(errors.As(err, &errorWithCodes)).To(BeTrue(), "state: "+state)
-				Expect(errorWithCodes.Codes()).To(BeEmpty(), "state: "+state)
+				Expect(err).To(HaveOccurred(), "state: "+state)
+				Expect(retry.IsRetriable(err)).To(BeTrue(), "state: "+state)
 			}
 		})
 
