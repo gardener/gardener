@@ -1033,7 +1033,7 @@ var _ = Describe("Scheduler_Control", func() {
 			var runtimeClient = mockclient.NewMockClient(ctrl)
 
 			shoot.Spec.SeedName = &seed.Name
-			runtimeClient.EXPECT().Update(context.TODO(), shoot).DoAndReturn(func(_ context.Context, _ client.Object) error {
+			runtimeClient.EXPECT().Update(context.TODO(), shoot).DoAndReturn(func(_ context.Context, _ client.Object, _ ...client.UpdateOption) error {
 				return nil
 			})
 

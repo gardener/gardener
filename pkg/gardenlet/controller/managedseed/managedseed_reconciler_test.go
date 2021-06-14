@@ -116,7 +116,7 @@ var _ = Describe("Reconciler", func() {
 		}
 		expectPatchManagedSeed = func(expect func(*seedmanagementv1alpha1.ManagedSeed)) {
 			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch) error {
+				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch, _ ...client.PatchOption) error {
 					expect(ms)
 					*managedSeed = *ms
 					return nil
@@ -125,7 +125,7 @@ var _ = Describe("Reconciler", func() {
 		}
 		expectPatchManagedSeedStatus = func(expect func(*seedmanagementv1alpha1.ManagedSeed)) {
 			sw.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{}), gomock.Any()).DoAndReturn(
-				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch) error {
+				func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ client.Patch, _ ...client.PatchOption) error {
 					expect(ms)
 					*managedSeed = *ms
 					return nil

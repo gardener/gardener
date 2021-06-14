@@ -62,7 +62,7 @@ var _ = Describe("seed", func() {
 				},
 			}
 			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlaneWildcardCert}).DoAndReturn(
-				func(_ context.Context, secrets *corev1.SecretList, _ client.ListOption, _ client.ListOption) error {
+				func(_ context.Context, secrets *corev1.SecretList, _ ...client.ListOption) error {
 					*secrets = *secretList
 					return nil
 				})
@@ -81,7 +81,7 @@ var _ = Describe("seed", func() {
 				},
 			}
 			runtimeClient.EXPECT().List(context.TODO(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlaneWildcardCert}).DoAndReturn(
-				func(_ context.Context, secrets *corev1.SecretList, _ client.ListOption, _ client.ListOption) error {
+				func(_ context.Context, secrets *corev1.SecretList, _ ...client.ListOption) error {
 					*secrets = *secretList
 					return nil
 				})

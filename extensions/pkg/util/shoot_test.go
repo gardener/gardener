@@ -98,7 +98,7 @@ var _ = Describe("Shoot", func() {
 					MaxTimes(2)
 
 				c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
-					DoAndReturn(func(_ context.Context, _ *corev1.Secret) error {
+					DoAndReturn(func(_ context.Context, _ *corev1.Secret, _ ...client.CreateOption) error {
 						return nil
 					})
 
@@ -159,7 +159,7 @@ var _ = Describe("Shoot", func() {
 				MaxTimes(2)
 
 			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(_ context.Context, _ *corev1.Secret) error {
+				DoAndReturn(func(_ context.Context, _ *corev1.Secret, _ ...client.UpdateOption) error {
 					return nil
 				})
 

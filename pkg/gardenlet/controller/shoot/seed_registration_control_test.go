@@ -120,7 +120,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 						},
 					).Times(2)
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-						func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed) error {
+						func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.CreateOption) error {
 							Expect(ms).To(Equal(&seedmanagementv1alpha1.ManagedSeed{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      name,
@@ -178,7 +178,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 						},
 					).Times(2)
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-						func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed) error {
+						func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.CreateOption) error {
 							Expect(ms).To(Equal(&seedmanagementv1alpha1.ManagedSeed{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      name,
@@ -264,7 +264,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 						},
 					).Times(2)
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-						func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed) error {
+						func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.CreateOption) error {
 							Expect(ms).To(Equal(&seedmanagementv1alpha1.ManagedSeed{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      name,
@@ -335,7 +335,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 						},
 					).Times(2)
 					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-						func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed) error {
+						func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.CreateOption) error {
 							Expect(ms).To(Equal(&seedmanagementv1alpha1.ManagedSeed{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      name,
@@ -452,7 +452,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 					},
 				)
 				c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(
-					func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed) error {
+					func(_ context.Context, ms *seedmanagementv1alpha1.ManagedSeed, _ ...client.DeleteOption) error {
 						Expect(ms.Name).To(Equal(name))
 						Expect(ms.Namespace).To(Equal(namespace))
 						return nil
