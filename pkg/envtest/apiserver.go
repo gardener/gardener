@@ -37,17 +37,16 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/klog/v2"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	apiserverapp "github.com/gardener/gardener/cmd/gardener-apiserver/app"
 	"github.com/gardener/gardener/pkg/apiserver"
 	"github.com/gardener/gardener/pkg/apiserver/features"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -92,8 +91,8 @@ type GardenerAPIServer struct {
 
 	// caCert is the certificate of the CA that signed the GardenerAPIServer's serving cert.
 	caCert *secrets.Certificate
-	// restConfig is used to setup and register the APIServer with the envtest kube-apiserver.
-	restConfig *rest.Config
+	// user is used to setup and register the GardenerAPIServer with the envtest kube-apiserver.
+	user *envtest.AuthenticatedUser
 	// listenURL is the URL we end up listening on.
 	listenURL *url.URL
 	// terminateFunc holds a func that will terminate this GardenerAPIServer.
@@ -271,7 +270,7 @@ func (g *GardenerAPIServer) defaultSettings() error {
 
 // prepareKubeconfigFile marshals the test environments rest config to a kubeconfig file in the CertDir.
 func (g *GardenerAPIServer) prepareKubeconfigFile() (string, error) {
-	kubeconfigBytes, err := util.CreateGardenletKubeconfigWithClientCertificate(g.restConfig, nil, nil)
+	kubeconfigBytes, err := g.user.KubeConfig()
 	if err != nil {
 		return "", err
 	}
@@ -311,7 +310,7 @@ func (g *GardenerAPIServer) waitUntilHealthy(ctx context.Context) error {
 
 // registerGardenerAPIs registers GardenerAPIServer's APIs in the test environment and waits for them to be discoverable.
 func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
-	c, err := client.New(g.restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	c, err := client.New(g.user.Config(), client.Options{Scheme: kubernetes.GardenScheme})
 	if err != nil {
 		return err
 	}
@@ -358,7 +357,7 @@ func (g *GardenerAPIServer) registerGardenerAPIs(ctx context.Context) error {
 	}
 
 	// wait for all APIGroupVersions to be discoverable
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(g.restConfig)
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(g.user.Config())
 	if err != nil {
 		return err
 	}
