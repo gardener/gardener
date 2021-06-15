@@ -1,7 +1,7 @@
 # (Custom) CSI Components
 
 Some provider extensions for Gardener are using CSI components to manage persistent volumes in the shoot clusters.
-In most cases, controllers for taking volume snapshots are delivered out-of-the-box as well.
+Additionally, most of the provider extensions are even deploying controllers for taking volume snapshots (CSI snapshotter).
 
 End-users can deploy their own CSI components and controllers into shoot clusters.
 In such situations, there are multiple controllers acting on the `VolumeSnapshot` custom resources (each responsible for those instances associated with their respective driver provisioner types).
