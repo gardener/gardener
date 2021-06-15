@@ -18,5 +18,5 @@ When a shoot cluster is deleted, Gardener deletes most Kubernetes (`Deployment`s
 
 If the CSI components (and all resources associated with them) managed by end-users aren't properly removed by the end-users before shoot deletion is triggered then the cluster deletion might cause problems and get stuck.
 
-Typically, it results in stuck `VolumeSnapshot` resources (still having finalizers that will never be cleaned up).
+This results in `VolumeSnapshot` resources still having finalizers that will never be cleaned up.
 Consequently, manual intervention is required to clean them up before the cluster deletion can continue.
