@@ -475,6 +475,13 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			UsedForSSH: true,
 		},
 
+		// Secret definition for ssh-keypair.old
+		&secrets.RSASecretConfig{
+			Name:       v1beta1constants.SecretNameOldSSHKeyPair,
+			Bits:       4096,
+			UsedForSSH: true,
+		},
+
 		// Secret definition for service-account-key
 		&secrets.RSASecretConfig{
 			Name:       v1beta1constants.SecretNameServiceAccountKey,
