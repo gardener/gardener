@@ -15,6 +15,7 @@
 package v1alpha1_test
 
 import (
+	"fmt"
 	"time"
 
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -444,6 +445,30 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeTrue()))
 		})
+
+		It("should default cri.name for k8s versions >=1.22 to containerd", func() {
+			obj.Spec.Kubernetes.Version = "1.22"
+			obj.Spec.Provider.Workers = []Worker{
+				{Name: "DefaultWorker"},
+				{Name: "Worker with CRI configuration",
+					CRI: &CRI{Name: CRIName("some configured value")}},
+			}
+			SetDefaults_Shoot(obj)
+			assertCRIName(obj.Spec.Provider.Workers[0], CRINameContainerD)
+			assertCRIName(obj.Spec.Provider.Workers[1], CRIName("some configured value"))
+		})
+
+		It("should not default cri.name for k8s versions <1.22", func() {
+			obj.Spec.Kubernetes.Version = "1.21"
+			obj.Spec.Provider.Workers = []Worker{
+				{Name: "DefaultWorker"},
+				{Name: "Worker with CRI configuration",
+					CRI: &CRI{Name: CRIName("some configured value")}},
+			}
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Provider.Workers[0].CRI).To(BeNil())
+			assertCRIName(obj.Spec.Provider.Workers[1], CRIName("some configured value"))
+		})
 	})
 
 	Describe("#SetDefaults_Maintenance", func() {
@@ -505,3 +530,10 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 })
+
+func assertCRIName(worker Worker, expectedCRIName CRIName) {
+	if worker.CRI == nil || worker.CRI.Name == "" {
+		Fail(fmt.Sprintf("expected `worker.cri.name` to be not empty, got %+v", worker))
+	}
+	ExpectWithOffset(1, worker.CRI.Name).To(Equal(expectedCRIName))
+}
