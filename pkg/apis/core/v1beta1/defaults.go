@@ -238,7 +238,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if k8sVersionGreaterOrEqualThan122 {
-		for i, _ := range obj.Spec.Provider.Workers {
+		for i := 0; i < len(obj.Spec.Provider.Workers); i++ {
 			if obj.Spec.Provider.Workers[i].CRI != nil {
 				continue
 			}
