@@ -17,6 +17,7 @@ import (
 	record "k8s.io/client-go/tools/record"
 	cache "sigs.k8s.io/controller-runtime/pkg/cache"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
+	v1alpha1 "sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
 	healthz "sigs.k8s.io/controller-runtime/pkg/healthz"
 	manager "sigs.k8s.io/controller-runtime/pkg/manager"
 	webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -169,6 +170,20 @@ func (m *MockManager) GetConfig() *rest.Config {
 func (mr *MockManagerMockRecorder) GetConfig() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetConfig", reflect.TypeOf((*MockManager)(nil).GetConfig))
+}
+
+// GetControllerOptions mocks base method.
+func (m *MockManager) GetControllerOptions() v1alpha1.ControllerConfigurationSpec {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetControllerOptions")
+	ret0, _ := ret[0].(v1alpha1.ControllerConfigurationSpec)
+	return ret0
+}
+
+// GetControllerOptions indicates an expected call of GetControllerOptions.
+func (mr *MockManagerMockRecorder) GetControllerOptions() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetControllerOptions", reflect.TypeOf((*MockManager)(nil).GetControllerOptions))
 }
 
 // GetEventRecorderFor mocks base method.

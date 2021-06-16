@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
@@ -15,15 +15,7 @@
 # limitations under the License.
 set -e
 
-TEST_BIN_DIR="$(dirname "${0}")/../dev/testbin"
-mkdir -p ${TEST_BIN_DIR}
-
-ENVTEST_ASSETS_DIR="$(realpath ${TEST_BIN_DIR})"
-
 source "$(dirname $0)/setup-envtest.sh"
-
-fetch_envtest_tools ${ENVTEST_ASSETS_DIR}
-setup_envtest_env ${ENVTEST_ASSETS_DIR}
 
 echo "> Test Cover"
 

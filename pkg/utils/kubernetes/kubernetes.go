@@ -80,7 +80,7 @@ func HasMetaDataAnnotation(meta metav1.Object, key, value string) bool {
 // SetAnnotationAndUpdate sets the annotation on the given object and updates it.
 func SetAnnotationAndUpdate(ctx context.Context, c client.Client, obj client.Object, key, value string) error {
 	if !HasMetaDataAnnotation(obj, key, value) {
-		objCopy := obj.DeepCopyObject()
+		objCopy := obj.DeepCopyObject().(client.Object)
 		SetMetaDataAnnotation(obj, key, value)
 		return c.Patch(ctx, obj, client.MergeFrom(objCopy))
 	}

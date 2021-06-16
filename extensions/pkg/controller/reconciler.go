@@ -65,7 +65,7 @@ func (o *operationAnnotationWrapper) Reconcile(ctx context.Context, request reco
 	}
 
 	if annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile {
-		withOpAnnotation := obj.DeepCopyObject()
+		withOpAnnotation := obj.DeepCopyObject().(client.Object)
 		delete(annotations, v1beta1constants.GardenerOperation)
 		obj.SetAnnotations(annotations)
 		if err := o.client.Patch(ctx, obj, client.MergeFrom(withOpAnnotation)); err != nil {

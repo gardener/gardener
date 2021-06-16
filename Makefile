@@ -156,6 +156,7 @@ install-requirements:
 	@go install -mod=vendor github.com/onsi/ginkgo/ginkgo
 	@go install -mod=vendor github.com/ahmetb/gen-crd-api-reference-docs
 	@go install -mod=vendor github.com/golang/mock/mockgen
+	@go install -mod=vendor sigs.k8s.io/controller-runtime/tools/setup-envtest
 	@go install -mod=vendor sigs.k8s.io/controller-tools/cmd/controller-gen
 	@./hack/install-promtool.sh
 	@./hack/install-requirements.sh
@@ -164,7 +165,6 @@ install-requirements:
 revendor:
 	@GO111MODULE=on go mod vendor
 	@GO111MODULE=on go mod tidy
-	@curl -sSLo hack/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/$(CR_VERSION)/hack/setup-envtest.sh
 
 .PHONY: clean
 clean:

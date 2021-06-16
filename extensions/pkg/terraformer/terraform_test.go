@@ -628,7 +628,7 @@ var _ = Describe("terraformer", func() {
 						return nil
 					}),
 				c.EXPECT().
-					Patch(gomock.Any(), gomock.AssignableToTypeOf(secret.DeepCopyObject()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(secret.DeepCopyObject(), client.MergeFromWithOptimisticLock{}))),
+					Patch(gomock.Any(), gomock.AssignableToTypeOf(secret.DeepCopy()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(secret.DeepCopy(), client.MergeFromWithOptimisticLock{}))),
 
 				c.EXPECT().
 					Get(gomock.Any(), kutil.Key(namespace, stateName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
@@ -637,7 +637,7 @@ var _ = Describe("terraformer", func() {
 						return nil
 					}),
 				c.EXPECT().
-					Patch(gomock.Any(), gomock.AssignableToTypeOf(config.DeepCopyObject()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(config.DeepCopyObject(), client.MergeFromWithOptimisticLock{}))),
+					Patch(gomock.Any(), gomock.AssignableToTypeOf(config.DeepCopy()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(config.DeepCopy(), client.MergeFromWithOptimisticLock{}))),
 
 				c.EXPECT().
 					Get(gomock.Any(), kutil.Key(namespace, configName), gomock.AssignableToTypeOf(&corev1.ConfigMap{})).
@@ -646,7 +646,7 @@ var _ = Describe("terraformer", func() {
 						return nil
 					}),
 				c.EXPECT().
-					Patch(gomock.Any(), gomock.AssignableToTypeOf(state.DeepCopyObject()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(state.DeepCopyObject(), client.MergeFromWithOptimisticLock{}))),
+					Patch(gomock.Any(), gomock.AssignableToTypeOf(state.DeepCopy()), gomock.AssignableToTypeOf(client.MergeFromWithOptions(state.DeepCopy(), client.MergeFromWithOptimisticLock{}))),
 			)
 
 			Expect(t.RemoveTerraformerFinalizerFromConfig(ctx)).NotTo(HaveOccurred())
