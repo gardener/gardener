@@ -48,8 +48,8 @@ import (
 
 const (
 	pollInterval        = time.Second
-	pollSevereThreshold = 30 * time.Second
-	pollTimeout         = time.Minute
+	pollTimeout         = 5 * time.Minute
+	pollSevereThreshold = pollTimeout
 )
 
 var _ = Describe("BackupBucket", func() {

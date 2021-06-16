@@ -19,7 +19,7 @@ source "$(dirname $0)/setup-envtest.sh"
 
 echo "> Test Cover"
 
-export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT=1m
+export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT=2m
 GO111MODULE=on ginkgo -cover -timeout=2m -race -mod=vendor $@
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
