@@ -16,7 +16,6 @@ package envtest
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"k8s.io/client-go/rest"
@@ -49,7 +48,7 @@ func (e *GardenerTestEnvironment) Start() (*rest.Config, error) {
 
 	// manage k-api cert dir by ourselves, we will add aggregator certs to it
 	var err error
-	e.certDir, err = ioutil.TempDir("", "k8s_test_framework_")
+	e.certDir, err = os.MkdirTemp("", "k8s_test_framework_")
 	if err != nil {
 		return nil, err
 	}

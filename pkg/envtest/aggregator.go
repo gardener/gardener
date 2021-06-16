@@ -16,7 +16,7 @@ package envtest
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -73,7 +73,7 @@ func (a AggregatorConfig) generateCerts() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(a.caCrtPath(), ca.CertificatePEM, 0640); err != nil {
+	if err := os.WriteFile(a.caCrtPath(), ca.CertificatePEM, 0640); err != nil {
 		return fmt.Errorf("unable to save the proxy client CA certificate to %s: %w", a.caCrtPath(), err)
 	}
 
@@ -88,10 +88,10 @@ func (a AggregatorConfig) generateCerts() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(a.clientCrtPath(), clientCert.CertificatePEM, 0640); err != nil {
+	if err := os.WriteFile(a.clientCrtPath(), clientCert.CertificatePEM, 0640); err != nil {
 		return fmt.Errorf("unable to save the proxy client certificate to %s: %w", a.clientCrtPath(), err)
 	}
-	if err := ioutil.WriteFile(a.clientKeyPath(), clientCert.PrivateKeyPEM, 0640); err != nil {
+	if err := os.WriteFile(a.clientKeyPath(), clientCert.PrivateKeyPEM, 0640); err != nil {
 		return fmt.Errorf("unable to save the proxy client key to %s: %w", a.clientKeyPath(), err)
 	}
 
