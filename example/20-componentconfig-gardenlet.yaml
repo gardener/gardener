@@ -96,7 +96,7 @@ featureGates:
   APIServerSNI: true
   CachedRuntimeClients: true
   NodeLocalDNS: true
-  MountHostCADirectories: false
+  MountHostCADirectories: true
   SeedKubeScheduler: false
   ReversedVPN: false
 seedSelector: {} # selects all seeds, only use for development purposes

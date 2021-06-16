@@ -25,7 +25,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | HVPAForShootedSeed | `false` | `Alpha` | `0.32` | |
 | ManagedIstio | `true` | `Beta` | `1.19` | |
 | APIServerSNI | `true` | `Beta` | `1.19` | |
-| MountHostCADirectories | `false` | `Alpha` | `1.11.0` | |
+| MountHostCADirectories | `false` | `Alpha` | `1.11.0` | `1.25.0` |
+| MountHostCADirectories | `true` | `Beta` | `1.26.0` | |
 | SeedChange | `false` | `Alpha` | `1.12.0` | |
 | SeedKubeScheduler | `false` | `Alpha` | `1.15.0` | |
 | ReversedVPN | `false` | `Alpha` | `1.22.0` | |
