@@ -39,12 +39,14 @@ func (a AggregatorConfig) ConfigureAPIServerArgs(certDir string, args *envtest.A
 		return err
 	}
 
-	args.Set("requestheader-extra-headers-prefix", "X-Remote-Extra-").
+	args.
+		Set("requestheader-extra-headers-prefix", "X-Remote-Extra-").
 		Set("requestheader-group-headers", "X-Remote-Group").
 		Set("requestheader-username-headers", "X-Remote-User").
 		Set("requestheader-client-ca-file", a.caCrtPath()).
 		Set("proxy-client-cert-file", a.clientCrtPath()).
 		Set("proxy-client-key-file", a.clientKeyPath())
+
 	return nil
 }
 
