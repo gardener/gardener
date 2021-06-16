@@ -81,7 +81,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			kubeletConfigParameters = components.ConfigurableKubeletConfigParameters{}
 			kubeletDataVolumeName   = "foo"
 			machineTypes            []gardencorev1beta1.MachineType
-			sshPublicKey            = "ssh-public-key"
+			sshPublicKeys           = []string{"ssh-public-key", "ssh-public-key-b"}
 
 			ccdUnitContent = "ccd-unit-content"
 
@@ -176,7 +176,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					KubeletConfigParameters: kubeletConfigParameters,
 					KubeletCLIFlags:         kubeletCLIFlags,
 					MachineTypes:            machineTypes,
-					SSHPublicKey:            sshPublicKey,
+					SSHPublicKeys:           sshPublicKeys,
 				},
 			}
 
@@ -217,7 +217,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					KubeletConfigParameters: kubeletConfigParameters,
 					KubeletDataVolumeName:   &kubeletDataVolumeName,
 					KubernetesVersion:       values.KubernetesVersion,
-					SSHPublicKeys:           []string{sshPublicKey},
+					SSHPublicKeys:           sshPublicKeys,
 				})
 
 				oscDownloader := &extensionsv1alpha1.OperatingSystemConfig{

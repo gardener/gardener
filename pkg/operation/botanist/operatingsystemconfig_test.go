@@ -21,6 +21,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -63,6 +64,7 @@ var _ = Describe("operatingsystemconfig", func() {
 		caKubelet             = []byte("ca-kubelet")
 		caCloudProfile        = "ca-cloud-profile"
 		sshPublicKey          = []byte("ssh-public-key")
+		sshPublicKeyOld       = []byte("ssh-public-key-old")
 		kubernetesVersion     = "1.2.3"
 		promtailRBACAuthToken = "supersecrettoken"
 		ingressDomain         = "seed-test.ingress.domain.com"
@@ -73,9 +75,10 @@ var _ = Describe("operatingsystemconfig", func() {
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
 			Secrets: map[string]*corev1.Secret{
-				"ca":          {Data: map[string][]byte{"ca.crt": ca}},
-				"ca-kubelet":  {Data: map[string][]byte{"ca.crt": caKubelet}},
-				"ssh-keypair": {Data: map[string][]byte{"id_rsa.pub": sshPublicKey}},
+				v1beta1constants.SecretNameCACluster:     {Data: map[string][]byte{"ca.crt": ca}},
+				v1beta1constants.SecretNameCAKubelet:     {Data: map[string][]byte{"ca.crt": caKubelet}},
+				v1beta1constants.SecretNameSSHKeyPair:    {Data: map[string][]byte{"id_rsa.pub": sshPublicKey}},
+				v1beta1constants.SecretNameOldSSHKeyPair: {Data: map[string][]byte{"id_rsa.pub": sshPublicKeyOld}},
 			},
 			Shoot: &shootpkg.Shoot{
 				CloudProfile: &gardencorev1beta1.CloudProfile{},
@@ -111,7 +114,7 @@ var _ = Describe("operatingsystemconfig", func() {
 	Describe("#DeployOperatingSystemConfig", func() {
 		BeforeEach(func() {
 			operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
-			operatingSystemConfig.EXPECT().SetSSHPublicKey(string(sshPublicKey))
+			operatingSystemConfig.EXPECT().SetSSHPublicKeys([]string{string(sshPublicKey), string(sshPublicKeyOld)})
 		})
 
 		Context("deploy", func() {

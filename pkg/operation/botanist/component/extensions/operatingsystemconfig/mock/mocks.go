@@ -160,10 +160,10 @@ func (m *MockInterface) SetSSHPublicKey(arg0 string) {
 	m.ctrl.Call(m, "SetSSHPublicKey", arg0)
 }
 
-// SetSSHPublicKey indicates an expected call of SetSSHPublicKey.
-func (mr *MockInterfaceMockRecorder) SetSSHPublicKey(arg0 interface{}) *gomock.Call {
+// SetSSHPublicKeys indicates an expected call of SetSSHPublicKeys.
+func (mr *MockInterfaceMockRecorder) SetSSHPublicKeys(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSSHPublicKey", reflect.TypeOf((*MockInterface)(nil).SetSSHPublicKey), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSSHPublicKeys", reflect.TypeOf((*MockInterface)(nil).SetSSHPublicKeys), arg0)
 }
 
 // Wait mocks base method.

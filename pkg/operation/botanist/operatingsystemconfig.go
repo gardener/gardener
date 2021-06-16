@@ -89,7 +89,16 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle())
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetKubeletCACertificate(string(b.Secrets[v1beta1constants.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]))
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKey(string(b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]))
+
+	publicKeys := []string{
+		string(b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]),
+	}
+
+	if secret, exists := b.Secrets[v1beta1constants.SecretNameOldSSHKeyPair]; exists {
+		publicKeys = append(publicKeys, string(secret.Data[secrets.DataKeySSHAuthorizedKeys]))
+	}
+
+	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKeys(publicKeys)
 
 	if b.isShootNodeLoggingEnabled() {
 		b.Shoot.Components.Extensions.OperatingSystemConfig.SetPromtailRBACAuthToken(b.PromtailRBACAuthToken)
