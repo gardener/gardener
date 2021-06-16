@@ -61,7 +61,7 @@ var _ = Describe("Bootstrap", func() {
 		Expect(resourcesv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
 
 		codec = serializer.NewCodecFactory(s, serializer.EnableStrict)
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 	})
 
 	Context("fails", func() {

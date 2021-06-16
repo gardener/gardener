@@ -213,7 +213,7 @@ var _ = Describe("Gardenlet Landscaper reconciliation testing", func() {
 			codecs := serializer.NewCodecFactory(gardenletChartScheme)
 			gardenletChartUniversalDecoder = codecs.UniversalDecoder()
 
-			fakeGardenletChartClient = fake.NewFakeClientWithScheme(gardenletChartScheme)
+			fakeGardenletChartClient = fake.NewClientBuilder().WithScheme(gardenletChartScheme).Build()
 
 			gardenletMapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, appsv1.SchemeGroupVersion})
 			gardenletMapper.Add(appsv1.SchemeGroupVersion.WithKind("Deployment"), meta.RESTScopeNamespace)

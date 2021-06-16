@@ -109,15 +109,14 @@ var _ = Describe("KonnectivityServer", func() {
 		Context("when konnectivity is disabled", func() {
 			BeforeEach(func() {
 				botanist.Shoot.KonnectivityTunnelEnabled = false
-				c = fake.NewFakeClientWithScheme(
-					scheme,
+				c = fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 					&resourcesv1alpha1.ManagedResource{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "konnectivity-server",
 							Namespace: "bar",
 						},
 					},
-				)
+				).Build()
 
 				mockClient.EXPECT().Client().Return(c)
 			})
@@ -173,7 +172,7 @@ var _ = Describe("KonnectivityServer", func() {
 
 			Context("successfully create a konnectivity-server interface", func() {
 				BeforeEach(func() {
-					c = fake.NewFakeClientWithScheme(scheme)
+					c = fake.NewClientBuilder().WithScheme(scheme).Build()
 
 					mockClient.EXPECT().Client().Return(c)
 				})

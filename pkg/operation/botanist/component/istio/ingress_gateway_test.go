@@ -68,7 +68,7 @@ var _ = Describe("ingress", func() {
 		Expect(appsv1.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(networkingv1alpha3.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(policyv1beta1.AddToScheme(s)).ToNot(HaveOccurred())
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 		renderer := cr.NewWithServerVersion(&version.Info{})
 
 		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))

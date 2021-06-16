@@ -41,7 +41,7 @@ var _ = Describe("#tryUpdate", func() {
 			{Type: "Health", Reason: "reason", Message: "messages", Status: "status", LastUpdateTime: metav1.Now()},
 		}
 
-		c := fake.NewFakeClientWithScheme(s, objInFakeClient)
+		c := fake.NewClientBuilder().WithScheme(s).WithObjects(objInFakeClient).Build()
 		infraObj := newInfraObj()
 		transform := func() error {
 			infraState, _ := json.Marshal(state{"someState"})

@@ -72,7 +72,7 @@ var _ = Describe("Actuator", func() {
 		})
 
 		It("should return secrets matching the label selector", func() {
-			a := &genericActuator{client: fake.NewFakeClient(all...)}
+			a := &genericActuator{client: fake.NewClientBuilder().WithRuntimeObjects(all...).Build()}
 			actual, err := a.listMachineClassSecrets(context.TODO(), ns)
 
 			Expect(err).ToNot(HaveOccurred())
@@ -305,7 +305,7 @@ var _ = Describe("Actuator", func() {
 		})
 
 		It("should update the cloud credentials for all machine class secret", func() {
-			a := &genericActuator{client: fake.NewFakeClient(all...)}
+			a := &genericActuator{client: fake.NewClientBuilder().WithRuntimeObjects(all...).Build()}
 			secret1 := &corev1.Secret{}
 			secret2 := &corev1.Secret{}
 			secret3 := &corev1.Secret{}

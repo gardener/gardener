@@ -78,7 +78,7 @@ var _ = Describe("New", func() {
 
 		codec = serializer.NewCodecFactory(s, serializer.EnableStrict)
 
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 	})
 
 	Context("fails", func() {

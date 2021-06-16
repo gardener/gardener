@@ -117,7 +117,8 @@ var _ = Describe("Actuator", func() {
 
 			BeforeEach(func() {
 				// Create fake client
-				client = fakeclient.NewFakeClientWithScheme(scheme.Scheme, seedNamespace, beSecret)
+				client = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).
+					WithObjects(seedNamespace, beSecret).Build()
 			})
 
 			It("should create secrets", func() {
@@ -144,7 +145,8 @@ var _ = Describe("Actuator", func() {
 		Context("seed namespace does not exist", func() {
 			BeforeEach(func() {
 				// Create fake client
-				client = fakeclient.NewFakeClientWithScheme(scheme.Scheme, beSecret)
+				client = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).
+					WithObjects(beSecret).Build()
 			})
 
 			It("should not create secrets", func() {

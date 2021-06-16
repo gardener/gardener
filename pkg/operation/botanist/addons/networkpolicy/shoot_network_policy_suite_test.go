@@ -122,7 +122,7 @@ var _ = Describe("Shoot NetworkPolicy Chart", func() {
 		}
 
 		Expect(networkingv1.AddToScheme(s)).NotTo(HaveOccurred(), "adding to schema succeeds")
-		c = fakeclient.NewFakeClientWithScheme(s)
+		c = fakeclient.NewClientBuilder().WithScheme(s).Build()
 	})
 
 	JustBeforeEach(func() {

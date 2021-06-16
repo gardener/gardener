@@ -58,7 +58,7 @@ var _ = Describe("chart applier", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		ctx = context.TODO()
 
-		c = fake.NewFakeClientWithScheme(scheme.Scheme)
+		c = fake.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 
 		mapper = meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion})
 		mapper.Add(corev1.SchemeGroupVersion.WithKind("ConfigMap"), meta.RESTScopeNamespace)

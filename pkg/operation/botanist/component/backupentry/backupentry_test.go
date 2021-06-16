@@ -75,7 +75,7 @@ var _ = Describe("BackupEntry", func() {
 		s := runtime.NewScheme()
 		Expect(gardencorev1beta1.AddToScheme(s)).NotTo(HaveOccurred())
 
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		values = &Values{
 			Name:           name,

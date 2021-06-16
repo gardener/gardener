@@ -88,7 +88,7 @@ var _ = Describe("Extension", func() {
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		empty = &extensionsv1alpha1.Extension{
 			ObjectMeta: metav1.ObjectMeta{

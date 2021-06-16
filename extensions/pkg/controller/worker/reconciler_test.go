@@ -95,12 +95,11 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, false, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationReconcile),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -111,8 +110,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, false, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addDeletionTimestampToWorker(
 						addOperationAnnotationToWorker(
 							addLastOperationToWorker(
@@ -121,7 +119,7 @@ var _ = Describe("Worker Reconcile", func() {
 								gardencorev1beta1.LastOperationStateSucceeded,
 								"Migrate worker"),
 							v1beta1constants.GardenerOperationReconcile)),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -132,12 +130,11 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, false, false, true),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationMigrate),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -148,12 +145,11 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, false, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationMigrate),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -164,14 +160,13 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, false, false, true),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeMigrate,
 						gardencorev1beta1.LastOperationStateFailed,
 						"Migrate worker"),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -182,14 +177,13 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, true, true, false),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeMigrate,
 						gardencorev1beta1.LastOperationStateFailed,
 						"Migrate worker"),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -200,10 +194,9 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, true, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addFinalizerToWorker(addDeletionTimestampToWorker(getWorker()), worker.FinalizerName),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -214,10 +207,9 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, false, true, true),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addFinalizerToWorker(addDeletionTimestampToWorker(getWorker()), worker.FinalizerName),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -228,12 +220,11 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, false, true, false),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationRestore),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{Requeue: true},
@@ -244,12 +235,11 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, true, false, true),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationRestore),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -260,14 +250,13 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, false, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
 						gardencorev1beta1.LastOperationStateFailed,
 						"Reconcile worker"),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -278,14 +267,13 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, false, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
 						gardencorev1beta1.LastOperationStateProcessing,
 						"Processs worker reconcilation"),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -296,14 +284,13 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, true, true, true),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
 						gardencorev1beta1.LastOperationStateFailed,
 						"Reconcile worker"),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
@@ -314,14 +301,13 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, true, true, true),
 				ctx:      context.TODO(),
-				client: fake.NewFakeClientWithScheme(
-					extensionsclient.Scheme,
+				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
 						gardencorev1beta1.LastOperationStateProcessing,
 						"Processs worker reconcilation"),
-					getCluster()),
+					getCluster()).Build(),
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
