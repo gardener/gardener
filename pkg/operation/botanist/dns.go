@@ -457,7 +457,7 @@ func (d dnsRestoreDeployer) Deploy(ctx context.Context) error {
 	if err := d.entry.Wait(ctx); err != nil {
 		var errWithState dns.ErrorWithDNSState
 		if errors.As(err, &errWithState) {
-			if errWithState.DNSState() != dnsv1alpha1.STATE_ERROR && errWithState.DNSState() != dnsv1alpha1.STATE_INVALID {
+			if errWithState.DNSState() != dnsv1alpha1.STATE_ERROR && errWithState.DNSState() != dnsv1alpha1.STATE_INVALID && errWithState.DNSState() != dnsv1alpha1.STATE_STALE {
 				return err
 			}
 		} else {
