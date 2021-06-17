@@ -78,16 +78,17 @@ spec:
 ### `kubeconfig` for the Seed Cluster
 
 The `kubeconfig` is required to deploy the gardenlet Helm chart to the seed cluster. 
-This deployment requires admin privileges. 
+The gardenlet requires certain privileges to be able to operate. 
+These privileges are described in RBAC resources in the gardenlet Helm chart (see [charts/gardener/gardenlet/charts/runtime/templates](../../charts/gardener/gardenlet/charts/runtime/templates)). 
 The Helm chart contains a service account `gardenlet` 
 that the gardenlet deployment uses by default to talk to the Seed API server.
 
 > If the gardenlet isn’t deployed in the seed cluster, 
 > the gardenlet can be configured to use a `kubeconfig`, 
-> which also requires full admin rights, from a mounted directory. 
+> which also requires the above-mentioned privileges, from a mounted directory. 
 > The `kubeconfig` is specified in section `seedClientConnection.kubeconfig` 
 > of the [Gardenlet configuration](../../example/20-componentconfig-gardenlet.yaml).
-> This configuration option isn’t used in  the following,  
+> This configuration option isn’t used in the following,  
 > as this procedure only describes the recommended setup option 
 > where the gardenlet is running in the seed cluster itself. 
 

@@ -1,0 +1,22 @@
+{{- if .Values.global.gardenlet.enabled }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: gardener.cloud:system:gardenlet
+  namespace: garden
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gardener.cloud:system:gardenlet
+subjects:
+- kind: ServiceAccount
+  name: "{{ required ".Values.global.gardenlet.serviceAccountName is required" .Values.global.gardenlet.serviceAccountName }}"
+  namespace: garden
+{{- end }}

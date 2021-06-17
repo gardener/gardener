@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -40,6 +41,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	"github.com/gardener/gardener/pkg/features"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -104,68 +106,414 @@ func getEmptyPriorityClass() *schedulingv1.PriorityClass {
 }
 
 // ValidateGardenletChartRBAC validates the RBAC resources of the Gardenlet chart.
-func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLabels map[string]string, serviceAccountName string) {
-	// RBAC - Cluster Role
-	clusterRole := &rbacv1.ClusterRole{
+func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLabels map[string]string, serviceAccountName string, featureGates map[string]bool) {
+	// ClusterRoles
+	gardenletClusterRole := getGardenletClusterRole(expectedLabels)
+	expectedClusterRoles := map[types.NamespacedName]*rbacv1.ClusterRole{
+		{Name: gardenletClusterRole.Name}: gardenletClusterRole,
+	}
+	if featureGates[string(features.ManagedIstio)] {
+		managedIstioClusterRole := getManagedIstioClusterRole(expectedLabels)
+		key := types.NamespacedName{Name: managedIstioClusterRole.Name}
+		expectedClusterRoles[key] = managedIstioClusterRole
+	}
+	for key, expected := range expectedClusterRoles {
+		actual := &rbacv1.ClusterRole{}
+		Expect(c.Get(ctx, key, actual)).ToNot(HaveOccurred())
+
+		Expect(actual).To(Equal(expected))
+	}
+
+	// ClusterRoleBindings
+	gardenletClusterRoleBinding := getGardenletClusterRoleBinding(expectedLabels, serviceAccountName)
+	expectedClusterRoleBindings := map[types.NamespacedName]*rbacv1.ClusterRoleBinding{
+		{Name: gardenletClusterRoleBinding.Name}: gardenletClusterRoleBinding,
+	}
+	if featureGates[string(features.ManagedIstio)] {
+		managedIstioClusterRoleBinding := getManagedIstioClusterRoleBinding(expectedLabels, serviceAccountName)
+		key := types.NamespacedName{Name: managedIstioClusterRoleBinding.Name}
+		expectedClusterRoleBindings[key] = managedIstioClusterRoleBinding
+	}
+	for key, expected := range expectedClusterRoleBindings {
+		actual := &rbacv1.ClusterRoleBinding{}
+		Expect(c.Get(ctx, key, actual)).ToNot(HaveOccurred())
+
+		Expect(actual).To(Equal(expected))
+	}
+
+	// Roles
+	defaultGardenletRole := getDefaultGardenletRole(expectedLabels)
+	gardenGardenletRole := getGardenGardenletRole(expectedLabels)
+	expectedRoles := map[types.NamespacedName]*rbacv1.Role{
+		{Name: defaultGardenletRole.Name, Namespace: defaultGardenletRole.Namespace}: defaultGardenletRole,
+		{Name: gardenGardenletRole.Name, Namespace: gardenGardenletRole.Namespace}:   gardenGardenletRole,
+	}
+	for key, expected := range expectedRoles {
+		actual := &rbacv1.Role{}
+		Expect(c.Get(ctx, key, actual)).ToNot(HaveOccurred())
+
+		Expect(actual).To(Equal(expected))
+	}
+
+	// RoleBindings
+	defaultGardenletRoleBinding := getDefaultGardenletRoleBinding(expectedLabels, serviceAccountName)
+	gardenGardenletRoleBinding := getGardenGardenletRoleBinding(expectedLabels, serviceAccountName)
+	expectedRoleBindings := map[types.NamespacedName]*rbacv1.RoleBinding{
+		{Name: defaultGardenletRoleBinding.Name, Namespace: defaultGardenletRoleBinding.Namespace}: defaultGardenletRoleBinding,
+		{Name: gardenGardenletRoleBinding.Name, Namespace: gardenGardenletRoleBinding.Namespace}:   gardenGardenletRoleBinding,
+	}
+	for key, expected := range expectedRoleBindings {
+		actual := &rbacv1.RoleBinding{}
+		Expect(c.Get(ctx, key, actual)).ToNot(HaveOccurred())
+
+		Expect(actual).To(Equal(expected))
+	}
+}
+
+func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRole", APIVersion: rbacv1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener.cloud:system:gardenlet",
+			Name:            "gardener.cloud:system:gardenlet",
+			Labels:          labels,
+			ResourceVersion: "1",
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"nodes"},
+				Verbs:     []string{"list", "watch"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods"},
+				Verbs:     []string{"list", "watch", "delete", "deletecollection"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods/log"},
+				Verbs:     []string{"get"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps", "namespaces", "secrets", "serviceaccounts", "services"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"persistentvolumeclaims"},
+				Verbs:     []string{"get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups:     []string{""},
+				Resources:     []string{"persistentvolumeclaims"},
+				ResourceNames: []string{"alertmanager-db-alertmanager-0", "loki-loki-0", "prometheus-db-prometheus-0"},
+				Verbs:         []string{"delete"},
+			},
+			{
+				APIGroups: []string{"admissionregistration.k8s.io"},
+				Resources: []string{"mutatingwebhookconfigurations", "validatingwebhookconfigurations"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{"admissionregistration.k8s.io"},
+				Resources:     []string{"mutatingwebhookconfigurations"},
+				ResourceNames: []string{"vpa-webhook-config-seed"},
+				Verbs:         []string{"get", "delete", "update"},
+			},
+			{
+				APIGroups: []string{"apiextensions.k8s.io"},
+				Resources: []string{"customresourcedefinitions"},
+				Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups:     []string{"apiextensions.k8s.io"},
+				Resources:     []string{"customresourcedefinitions"},
+				ResourceNames: []string{"hvpas.autoscaling.k8s.io"},
+				Verbs:         []string{"delete"},
+			},
+			{
+				APIGroups: []string{"apps"},
+				Resources: []string{"deployments", "statefulsets", "replicasets"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"autoscaling"},
+				Resources: []string{"horizontalpodautoscalers"},
+				Verbs:     []string{"create", "delete", "get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"autoscaling.k8s.io"},
+				Resources: []string{"hvpas"},
+				Verbs:     []string{"create", "get", "list", "watch"},
+			},
+			{
+				APIGroups:     []string{"autoscaling.k8s.io"},
+				Resources:     []string{"hvpas"},
+				ResourceNames: []string{"etcd-events", "etcd-main", "kube-apiserver", "kube-controller-manager", "aggregate-prometheus", "prometheus", "loki"},
+				Verbs:         []string{"delete", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"autoscaling.k8s.io"},
+				Resources: []string{"verticalpodautoscalers"},
+				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"dns.gardener.cloud"},
+				Resources: []string{"dnsentries", "dnsowners", "dnsproviders"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"druid.gardener.cloud"},
+				Resources: []string{"etcds"},
+				Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"extensions.gardener.cloud"},
+				Resources: []string{"backupbuckets", "backupentries", "bastions", "clusters", "containerruntimes", "controlplanes", "extensions", "infrastructures", "networks", "operatingsystemconfigs", "workers"},
+				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"resources.gardener.cloud"},
+				Resources: []string{"managedresources"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"networking.k8s.io"},
+				Resources: []string{"networkpolicies"},
+				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"extensions", "networking.k8s.io"},
+				Resources: []string{"ingresses"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"policy"},
+				Resources: []string{"poddisruptionbudgets"},
+				Verbs:     []string{"create", "delete", "get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"rbac.authorization.k8s.io"},
+				Resources: []string{"clusterrolebindings", "clusterroles", "rolebindings", "roles"},
+				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"rbac.authorization.k8s.io"},
+				Resources: []string{"clusterroles", "roles"},
+				Verbs:     []string{"bind", "escalate"},
+			},
+			{
+				APIGroups: []string{"scheduling.k8s.io"},
+				Resources: []string{"priorityclasses"},
+				Verbs:     []string{"create", "delete", "get", "patch", "update"},
+			},
+			{
+				NonResourceURLs: []string{"/healthz", "/version"},
+				Verbs:           []string{"get"},
+			},
+			{
+				APIGroups: []string{"coordination.k8s.io"},
+				Resources: []string{"leases"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{"coordination.k8s.io"},
+				Resources:     []string{"leases"},
+				ResourceNames: []string{"gardenlet-leader-election"},
+				Verbs:         []string{"get", "watch", "update"},
+			},
+			{
+				APIGroups:     []string{"networking.istio.io"},
+				Resources:     []string{"virtualservices"},
+				ResourceNames: []string{"kube-apiserver"},
+				Verbs:         []string{"list"},
+			},
+			{
+				APIGroups: []string{"networking.istio.io"},
+				Resources: []string{"destinationrules", "gateways", "virtualservices", "envoyfilters"},
+				Verbs:     []string{"delete"},
+			},
 		},
 	}
-	expectedClusterRole := *clusterRole
-	expectedClusterRole.Labels = map[string]string{
-		gardencorev1beta1constants.GardenRole: "gardenlet",
-		"app":                                 "gardener",
-		"role":                                "gardenlet",
-		"chart":                               "runtime-0.1.0",
-		"release":                             "gardenlet",
-		"heritage":                            "Tiller",
-	}
-	expectedClusterRole.Rules = []rbacv1.PolicyRule{
-		{
-			APIGroups: []string{"*"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		},
-	}
+}
 
-	Expect(c.Get(
-		ctx,
-		kutil.Key(clusterRole.Name),
-		clusterRole,
-	)).ToNot(HaveOccurred())
-	Expect(clusterRole.Labels).To(Equal(expectedClusterRole.Labels))
-	Expect(clusterRole.Rules).To(Equal(expectedClusterRole.Rules))
-
-	// RBAC - Cluster Role Binding
-	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+func getManagedIstioClusterRole(labels map[string]string) *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRole", APIVersion: rbacv1.SchemeGroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener.cloud:system:gardenlet",
+			Name:            "gardener.cloud:system:gardenlet:managed-istio",
+			Labels:          labels,
+			ResourceVersion: "1",
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"networking.istio.io"},
+				Resources: []string{"destinationrules", "gateways", "virtualservices", "envoyfilters", "sidecars"},
+				Verbs:     []string{"create", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"security.istio.io"},
+				Resources: []string{"peerauthentications"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{"security.istio.io"},
+				Resources:     []string{"peerauthentications"},
+				ResourceNames: []string{"default"},
+				Verbs:         []string{"get", "patch", "update"},
+			},
+			{
+				APIGroups:     []string{"admissionregistration.k8s.io"},
+				Resources:     []string{"validatingwebhookconfigurations"},
+				ResourceNames: []string{"istiod"},
+				Verbs:         []string{"get", "patch", "update"},
+			},
 		},
 	}
-	expectedClusterRoleBinding := *clusterRoleBinding
-	expectedClusterRoleBinding.Labels = expectedLabels
-	expectedClusterRoleBinding.RoleRef = rbacv1.RoleRef{
-		APIGroup: rbacv1.SchemeGroupVersion.Group,
-		Kind:     "ClusterRole",
-		Name:     clusterRole.Name,
-	}
+}
 
-	expectedClusterRoleBinding.Subjects = []rbacv1.Subject{
-		{
-			Kind:      "ServiceAccount",
-			Name:      serviceAccountName,
-			Namespace: gardencorev1beta1constants.GardenNamespace,
+func getGardenletClusterRoleBinding(labels map[string]string, serviceAccountName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: rbacv1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "gardener.cloud:system:gardenlet",
+			Labels:          labels,
+			ResourceVersion: "1",
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Kind:     "ClusterRole",
+			Name:     "gardener.cloud:system:gardenlet",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccountName,
+				Namespace: gardencorev1beta1constants.GardenNamespace,
+			},
 		},
 	}
+}
 
-	Expect(c.Get(
-		ctx,
-		kutil.Key(clusterRoleBinding.Name),
-		clusterRoleBinding,
-	)).ToNot(HaveOccurred())
-	Expect(clusterRoleBinding.Labels).To(Equal(expectedClusterRoleBinding.Labels))
-	Expect(clusterRoleBinding.RoleRef).To(Equal(expectedClusterRoleBinding.RoleRef))
-	Expect(clusterRoleBinding.Subjects).To(Equal(expectedClusterRoleBinding.Subjects))
+func getManagedIstioClusterRoleBinding(labels map[string]string, serviceAccountName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: rbacv1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "gardener.cloud:system:gardenlet:managed-istio",
+			Labels:          labels,
+			ResourceVersion: "1",
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Kind:     "ClusterRole",
+			Name:     "gardener.cloud:system:gardenlet:managed-istio",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccountName,
+				Namespace: gardencorev1beta1constants.GardenNamespace,
+			},
+		},
+	}
+}
+
+func getDefaultGardenletRole(labels map[string]string) *rbacv1.Role {
+	return &rbacv1.Role{
+		TypeMeta: metav1.TypeMeta{Kind: "Role", APIVersion: rbacv1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "gardener.cloud:system:gardenlet",
+			Namespace:       metav1.NamespaceDefault,
+			Labels:          labels,
+			ResourceVersion: "1",
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"endpoints"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+		},
+	}
+}
+
+func getGardenGardenletRole(labels map[string]string) *rbacv1.Role {
+	return &rbacv1.Role{
+		TypeMeta: metav1.TypeMeta{Kind: "Role", APIVersion: rbacv1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "gardener.cloud:system:gardenlet",
+			Namespace:       "garden",
+			Labels:          labels,
+			ResourceVersion: "1",
+		},
+		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"events"},
+				Verbs:     []string{"create", "patch", "update"},
+			},
+			{
+				APIGroups:     []string{"apps"},
+				Resources:     []string{"daemonsets"},
+				ResourceNames: []string{"fluent-bit"},
+				Verbs:         []string{"delete", "get", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"apps"},
+				Resources: []string{"daemonsets"},
+				Verbs:     []string{"create"},
+			},
+		},
+	}
+}
+
+func getDefaultGardenletRoleBinding(labels map[string]string, serviceAccountName string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "RoleBinding", APIVersion: rbacv1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "gardener.cloud:system:gardenlet",
+			Namespace:       metav1.NamespaceDefault,
+			Labels:          labels,
+			ResourceVersion: "1",
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Kind:     "Role",
+			Name:     "gardener.cloud:system:gardenlet",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccountName,
+				Namespace: gardencorev1beta1constants.GardenNamespace,
+			},
+		},
+	}
+}
+
+func getGardenGardenletRoleBinding(labels map[string]string, serviceAccountName string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "RoleBinding", APIVersion: rbacv1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "gardener.cloud:system:gardenlet",
+			Namespace:       "garden",
+			Labels:          labels,
+			ResourceVersion: "1",
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Kind:     "Role",
+			Name:     "gardener.cloud:system:gardenlet",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccountName,
+				Namespace: gardencorev1beta1constants.GardenNamespace,
+			},
+		},
+	}
 }
 
 // ValidateGardenletChartServiceAccount validates the Service Account of the Gardenlet chart.
@@ -201,7 +549,12 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 
 // ComputeExpectedGardenletConfiguration computes the expected Gardenlet configuration based
 // on input parameters.
-func ComputeExpectedGardenletConfiguration(componentConfigUsesTlsServerConfig, hasGardenClientConnectionKubeconfig, hasSeedClientConnectionKubeconfig bool, bootstrapKubeconfig *corev1.SecretReference, kubeconfigSecret *corev1.SecretReference, seedConfig *gardenletconfigv1alpha1.SeedConfig) gardenletconfigv1alpha1.GardenletConfiguration {
+func ComputeExpectedGardenletConfiguration(
+	componentConfigUsesTlsServerConfig, hasGardenClientConnectionKubeconfig, hasSeedClientConnectionKubeconfig bool,
+	bootstrapKubeconfig *corev1.SecretReference,
+	kubeconfigSecret *corev1.SecretReference,
+	seedConfig *gardenletconfigv1alpha1.SeedConfig,
+	featureGates map[string]bool) gardenletconfigv1alpha1.GardenletConfiguration {
 	var (
 		zero   = 0
 		one    = 1
@@ -355,6 +708,7 @@ func ComputeExpectedGardenletConfiguration(componentConfigUsesTlsServerConfig, h
 				Port:        2720,
 			},
 		}},
+		FeatureGates: featureGates,
 		Resources: &gardenletconfigv1alpha1.ResourcesConfiguration{
 			Capacity: corev1.ResourceList{
 				"shoots": resource.MustParse("250"),
