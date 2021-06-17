@@ -46,8 +46,8 @@ import (
 
 var (
 	// UseCachedRuntimeClients is a flag for enabling cached controller-runtime clients (defaults to false).
-	// If enabled, the client returned by Interface.Client() will be backed by a cache, otherwise it will be the same
-	// client that will be returned by Interface.DirectClient().
+	// If enabled, the client returned by Interface.Client() will be backed by a cache, otherwise it will talk directly
+	// to the API server.
 	UseCachedRuntimeClients = false
 )
 
@@ -272,7 +272,7 @@ func newClientSet(conf *Config) (Interface, error) {
 		return nil, err
 	}
 
-	directClient, err := client.New(conf.restConfig, conf.clientOptions)
+	c, err := client.New(conf.restConfig, conf.clientOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -281,7 +281,7 @@ func newClientSet(conf *Config) (Interface, error) {
 	if UseCachedRuntimeClients && !conf.disableCache {
 		delegatingClient, err := client.NewDelegatingClient(client.NewDelegatingClientInput{
 			CacheReader:     runtimeCache,
-			Client:          directClient,
+			Client:          c,
 			UncachedObjects: conf.uncachedObjects,
 		})
 		if err != nil {
@@ -290,10 +290,10 @@ func newClientSet(conf *Config) (Interface, error) {
 
 		runtimeClient = &fallbackClient{
 			Client: delegatingClient,
-			reader: directClient,
+			reader: c,
 		}
 	} else {
-		runtimeClient = directClient
+		runtimeClient = c
 	}
 
 	// prepare rest config with contentType defaulted to protobuf for client-go style clients that either talk to
@@ -336,9 +336,9 @@ func newClientSet(conf *Config) (Interface, error) {
 
 		applier: NewApplier(runtimeClient, conf.clientOptions.Mapper),
 
-		client:       runtimeClient,
-		directClient: directClient,
-		cache:        runtimeCache,
+		client:    runtimeClient,
+		apiReader: c,
+		cache:     runtimeCache,
 
 		kubernetes:           kubernetes,
 		gardenCore:           gardenCore,

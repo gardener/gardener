@@ -44,7 +44,6 @@ type ClientSet struct {
 	restConfig           *rest.Config
 	client               client.Client
 	apiReader            client.Reader
-	directClient         client.Client
 	cache                cache.Cache
 	kubernetes           kubernetesclientset.Interface
 	gardenCore           gardencoreclientset.Interface
@@ -89,13 +88,6 @@ func (c *ClientSet) Client() client.Client {
 // APIReader returns a client.Reader that directly reads from the API server.
 func (c *ClientSet) APIReader() client.Reader {
 	return c.apiReader
-}
-
-// DirectClient returns a controller-runtime client, which can be used to talk to the API server directly
-// (without using a cache).
-// Deprecated: used APIReader instead, if the controller can't tolerate stale reads.
-func (c *ClientSet) DirectClient() client.Client {
-	return c.directClient
 }
 
 // Cache returns the clientset's controller-runtime cache. It can be used to get Informers for arbitrary objects.

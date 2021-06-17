@@ -285,7 +285,7 @@ var _ = Describe("ShootState Control", func() {
 		It("should not try to patch the ShootState if there are no changes to the extension state", func() {
 			ctrl := gomock.NewController(GinkgoT())
 			mc := mockclient.NewMockClient(ctrl)
-			fakeClientSet := fakeclientset.NewClientSetBuilder().WithDirectClient(mc).WithClient(mc).Build()
+			fakeClientSet := fakeclientset.NewClientSetBuilder().WithClient(mc).Build()
 			recorder := record.NewFakeRecorder(64)
 			shootStateControl = extensions.NewShootStateControl(fakeClientSet, fakeClientSet, log.WithField("seed", "test-seed"), recorder)
 			gomock.InOrder(

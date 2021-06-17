@@ -85,8 +85,8 @@ func WithCacheResyncPeriod(resync time.Duration) ConfigFunc {
 	}
 }
 
-// WithDisabledCachedClient disables the cache in the controller-runtime client, so Client() will be equivalent to
-// DirectClient().
+// WithDisabledCachedClient disables the cache in the controller-runtime client, so Client() will talk directly to the
+// API server.
 func WithDisabledCachedClient() ConfigFunc {
 	return func(config *Config) error {
 		config.disableCache = true
