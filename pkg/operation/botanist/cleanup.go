@@ -290,8 +290,10 @@ func (b *Botanist) getCleanOptions(
 			return nil, err
 		}
 
-		gracePeriodSeconds = client.GracePeriodSeconds(int(float64(seconds) * gracePeriodSecondsFactor))
-		finalizeAfter = utilclient.FinalizeGracePeriodSeconds(seconds)
+		if int64(seconds) < int64(defaultFinalizeAfter) {
+			gracePeriodSeconds = client.GracePeriodSeconds(int(float64(seconds) * gracePeriodSecondsFactor))
+			finalizeAfter = utilclient.FinalizeGracePeriodSeconds(seconds)
+		}
 	}
 
 	cleanOpts := &utilclient.CleanOptions{}

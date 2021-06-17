@@ -21,8 +21,7 @@ It is possible to override the finalization grace periods via annotations on the
 - `shoot.gardener.cloud/cleanup-kubernetes-resources-finalize-grace-period-seconds` (for the resources handled in step 3)
 - `shoot.gardener.cloud/cleanup-namespaces-finalize-grace-period-seconds` (for the resources handled in step 4)
 
-If `"0"` is provided then all resources are finalized immediately without waiting for any graceful deletion.
+⚠️ If `"0"` is provided then all resources are finalized immediately without waiting for any graceful deletion.
+Please be aware that this might lead to orphaned infrastructure artefacts.
 
-⚠️ Please be aware that this might lead to orphaned infrastructure artefacts.
-
- 
+ℹ️️ All grace period values larger than the above mentioned defaults are ignored.
