@@ -417,8 +417,6 @@ users:
 					secret.Data = map[string][]byte{kubernetes.KubeConfig: []byte(testKubeconfig)}
 					return nil
 				})
-
-				mockSeedInterface.EXPECT().DirectClient().Return(mockSeedClient).AnyTimes()
 			})
 
 			It("should not return an error", func() {

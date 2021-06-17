@@ -16,7 +16,6 @@ package kubernetes
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -25,11 +24,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -39,15 +36,6 @@ import (
 const (
 	defaultCacheResyncPeriod = 6 * time.Hour
 )
-
-// NewDirectClient creates a new client.Client which can be used to talk to the API directly (without a cache).
-func NewDirectClient(config *rest.Config, options client.Options) (client.Client, error) {
-	if err := setClientOptionsDefaults(config, &options); err != nil {
-		return nil, err
-	}
-
-	return client.New(config, options)
-}
 
 // NewRuntimeClientWithCache creates a new client.client with the given config and options.
 // The client uses a new cache, which will be started immediately using the given context.
@@ -149,43 +137,4 @@ func setCacheOptionsDefaults(options *cache.Options) error {
 	}
 
 	return nil
-}
-
-// NewDirectClientFromSecret creates a new controller runtime Client struct for a given secret.
-func NewDirectClientFromSecret(secret *corev1.Secret, fns ...ConfigFunc) (client.Client, error) {
-	if kubeconfig, ok := secret.Data[KubeConfig]; ok {
-		return NewDirectClientFromBytes(kubeconfig, fns...)
-	}
-	return nil, errors.New("no valid kubeconfig found")
-}
-
-// NewDirectClientFromBytes creates a new controller runtime Client struct for a given kubeconfig byte slice.
-func NewDirectClientFromBytes(kubeconfig []byte, fns ...ConfigFunc) (client.Client, error) {
-	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := validateClientConfig(clientConfig); err != nil {
-		return nil, err
-	}
-
-	config, err := clientConfig.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	opts := append([]ConfigFunc{WithRESTConfig(config)}, fns...)
-	return NewDirectClientWithConfig(opts...)
-}
-
-// NewDirectClientWithConfig returns a new controller runtime client from a config.
-func NewDirectClientWithConfig(fns ...ConfigFunc) (client.Client, error) {
-	conf := &Config{}
-	for _, f := range fns {
-		if err := f(conf); err != nil {
-			return nil, err
-		}
-	}
-	return NewDirectClient(conf.restConfig, conf.clientOptions)
 }

@@ -37,7 +37,6 @@ type ClientSetBuilder struct {
 	restConfig            *rest.Config
 	client                client.Client
 	apiReader             client.Reader
-	directClient          client.Client
 	cache                 cache.Cache
 	kubernetes            kubernetesclientset.Interface
 	gardenCore            gardencoreclientset.Interface
@@ -88,13 +87,6 @@ func (b *ClientSetBuilder) WithClient(client client.Client) *ClientSetBuilder {
 // WithAPIReader sets the apiReader attribute of the builder.
 func (b *ClientSetBuilder) WithAPIReader(apiReader client.Reader) *ClientSetBuilder {
 	b.apiReader = apiReader
-	return b
-}
-
-// WithDirectClient sets the directClient attribute of the builder.
-// Deprecated: kubernetes.Interface.DirectClient is also deprecated.
-func (b *ClientSetBuilder) WithDirectClient(directClient client.Client) *ClientSetBuilder {
-	b.directClient = directClient
 	return b
 }
 
@@ -174,7 +166,6 @@ func (b *ClientSetBuilder) Build() *ClientSet {
 		restConfig:            b.restConfig,
 		client:                b.client,
 		apiReader:             b.apiReader,
-		directClient:          b.directClient,
 		cache:                 b.cache,
 		kubernetes:            b.kubernetes,
 		gardenCore:            b.gardenCore,

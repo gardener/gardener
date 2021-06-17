@@ -97,13 +97,6 @@ var _ = Describe("Fake ClientSet", func() {
 		Expect(cs.APIReader()).To(BeIdenticalTo(apiReader))
 	})
 
-	It("should correctly set directClient attribute", func() {
-		directClient := mockclient.NewMockClient(ctrl)
-		cs := builder.WithDirectClient(directClient).Build()
-
-		Expect(cs.DirectClient()).To(BeIdenticalTo(directClient))
-	})
-
 	It("should correctly set cache attribute", func() {
 		cache := mockcache.NewMockCache(ctrl)
 		cs := builder.WithCache(cache).Build()

@@ -231,7 +231,7 @@ var _ = Describe("operation", func() {
 			ctrl = gomock.NewController(GinkgoT())
 			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 			o = &Operation{
-				K8sGardenClient: fakeclientset.NewClientSetBuilder().WithClient(k8sGardenRuntimeClient).WithDirectClient(k8sGardenRuntimeClient).Build(),
+				K8sGardenClient: fakeclientset.NewClientSetBuilder().WithClient(k8sGardenRuntimeClient).Build(),
 				ShootState:      &gardencorev1alpha1.ShootState{},
 			}
 		})

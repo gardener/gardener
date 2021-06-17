@@ -172,20 +172,6 @@ func (mr *MockInterfaceMockRecorder) Client() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Client", reflect.TypeOf((*MockInterface)(nil).Client))
 }
 
-// DirectClient mocks base method.
-func (m *MockInterface) DirectClient() client.Client {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DirectClient")
-	ret0, _ := ret[0].(client.Client)
-	return ret0
-}
-
-// DirectClient indicates an expected call of DirectClient.
-func (mr *MockInterfaceMockRecorder) DirectClient() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DirectClient", reflect.TypeOf((*MockInterface)(nil).DirectClient))
-}
-
 // DiscoverVersion mocks base method.
 func (m *MockInterface) DiscoverVersion() (*version.Info, error) {
 	m.ctrl.T.Helper()

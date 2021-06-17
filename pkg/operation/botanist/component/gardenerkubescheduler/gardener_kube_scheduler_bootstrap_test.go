@@ -67,10 +67,6 @@ var _ = Describe("Bootstrap", func() {
 	Context("fails", func() {
 		var err error
 
-		It("when client is nil", func() {
-			sched, err = Bootstrap(nil, "foo", image, &semver.Version{})
-		})
-
 		It("when namespace is empty", func() {
 			sched, err = Bootstrap(c, "", image, &semver.Version{})
 		})

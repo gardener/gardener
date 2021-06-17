@@ -35,10 +35,10 @@ import (
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/configurator"
 	"github.com/gardener/gardener/pkg/utils"
@@ -394,7 +394,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	)
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, k.client, namespace, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, namespace, func() error {
 		namespace.Labels = utils.MergeStringMaps(namespace.Labels, getLabels())
 		return nil
 	}); err != nil {

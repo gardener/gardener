@@ -413,7 +413,7 @@ func (g *gardenerSeedAdmissionController) getReplicas(ctx context.Context) (int3
 	nodeList := &metav1.PartialObjectMetadataList{}
 	nodeList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("NodeList"))
 
-	err := g.client.List(ctx, nodeList)
+	err := g.client.List(ctx, nodeList, client.Limit(defaultReplicas))
 	if err != nil {
 		return 0, err
 	}

@@ -54,7 +54,7 @@ func NewApplierForConfig(config *rest.Config) (Applier, error) {
 		return nil, err
 	}
 
-	c, err := NewDirectClient(config, opts)
+	c, err := client.New(config, opts)
 	if err != nil {
 		return nil, err
 	}
