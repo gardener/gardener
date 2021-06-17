@@ -269,7 +269,7 @@ var _ = Describe("Shoot", func() {
 
 	Describe("#GetShootProjectSecretSuffixes", func() {
 		It("should return the expected list", func() {
-			Expect(GetShootProjectSecretSuffixes()).To(ConsistOf("kubeconfig", "ssh-keypair", "monitoring"))
+			Expect(GetShootProjectSecretSuffixes()).To(ConsistOf("kubeconfig", "ssh-keypair", "ssh-keypair.old", "monitoring"))
 		})
 	})
 
