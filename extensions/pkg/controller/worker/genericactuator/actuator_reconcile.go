@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -43,6 +42,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 )
@@ -290,7 +290,7 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, logger l
 			},
 		}
 
-		if _, err := controllerutil.CreateOrUpdate(ctx, a.client, machineDeployment, func() error {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, machineDeployment, func() error {
 			machineDeployment.Spec = machinev1alpha1.MachineDeploymentSpec{
 				Replicas:        replicas,
 				MinReadySeconds: 500,

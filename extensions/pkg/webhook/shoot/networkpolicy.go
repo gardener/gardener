@@ -17,14 +17,15 @@ package shoot
 import (
 	"context"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // GetNetworkPolicyMeta returns the network policy object with filled meta data.
@@ -40,7 +41,7 @@ func EnsureNetworkPolicy(ctx context.Context, c client.Client, namespace, provid
 	policyPort := intstr.FromInt(port)
 	policyProtocol := corev1.ProtocolTCP
 
-	_, err := controllerutil.CreateOrUpdate(ctx, c, networkPolicy, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, networkPolicy, func() error {
 		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 			Egress: []networkingv1.NetworkPolicyEgressRule{

@@ -25,6 +25,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -42,7 +43,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -498,10 +498,10 @@ func deployNeededInstallation(
 
 	if controllerInstallationName != "" {
 		// The installation already exists, however, we do not have the latest version of the ControllerInstallation object.
-		// Hence, we are running the `CreateOrUpdate` function as it first GETs the current objects and then runs the mutate()
-		// function before sending the UPDATE. This way we ensure that we have applied our mutations to the latest version.
+		// Hence, we are running the `GetAndCreateOrMergePatch` function as it first GETs the current objects and then runs the
+		// mutate() func before sending the PATCH. This way we ensure that we have applied our mutations to the latest version.
 		controllerInstallation.Name = controllerInstallationName
-		_, err := controllerutil.CreateOrUpdate(ctx, c, controllerInstallation, mutate)
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, controllerInstallation, mutate)
 		return err
 	}
 

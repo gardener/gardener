@@ -21,6 +21,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/namespaces"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -29,7 +30,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // DeploySeedNamespace creates a namespace in the Seed cluster which is used to deploy all the control plane
@@ -42,7 +42,7 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), namespace, func() error {
 		namespace.Annotations = map[string]string{
 			v1beta1constants.ShootUID: string(b.Shoot.Info.Status.UID),
 		}

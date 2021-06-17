@@ -48,7 +48,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // Actuator acts upon ManagedSeed resources.
@@ -128,7 +127,7 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 
 	// Create or update garden namespace in the shoot
 	a.reconcilingInfoEventf(ms, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
-	if err := a.createOrUpdateGardenNamespace(ctx, shootClient); err != nil {
+	if err := a.ensureGardenNamespace(ctx, shootClient.Client()); err != nil {
 		return status, false, fmt.Errorf("could not create or update garden namespace in shoot %s: %w", kutil.ObjectName(shoot), err)
 	}
 
@@ -264,16 +263,21 @@ func (a *actuator) Delete(ctx context.Context, ms *seedmanagementv1alpha1.Manage
 	return status, false, true, nil
 }
 
-func (a *actuator) createOrUpdateGardenNamespace(ctx context.Context, shootClient kubernetes.Interface) error {
+func (a *actuator) ensureGardenNamespace(ctx context.Context, shootClient client.Client) error {
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: v1beta1constants.GardenNamespace,
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, shootClient.Client(), gardenNamespace, func() error {
-		return nil
-	})
-	return err
+	if err := shootClient.Get(ctx, client.ObjectKeyFromObject(gardenNamespace), gardenNamespace); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+		if err := shootClient.Create(ctx, gardenNamespace); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (a *actuator) deleteGardenNamespace(ctx context.Context, shootClient kubernetes.Interface) error {

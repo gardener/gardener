@@ -168,7 +168,7 @@ var _ = Describe("helper", func() {
 		})
 	})
 
-	Describe("#CreateOrUpdateNetworkPolicy", func() {
+	Describe("#EnsureNetworkPolicy", func() {
 		var (
 			ctrl              *gomock.Controller
 			mockRuntimeClient = mockclient.NewMockClient(ctrl)
@@ -224,7 +224,7 @@ var _ = Describe("helper", func() {
 				return nil
 			})
 
-			err := CreateOrUpdateNetworkPolicy(ctx, mockRuntimeClient, namespace, expectedRules)
+			err := EnsureNetworkPolicy(ctx, mockRuntimeClient, namespace, expectedRules)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -245,7 +245,7 @@ var _ = Describe("helper", func() {
 				return nil
 			})
 
-			err := CreateOrUpdateNetworkPolicy(ctx, mockRuntimeClient, namespace, expectedRules)
+			err := EnsureNetworkPolicy(ctx, mockRuntimeClient, namespace, expectedRules)
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})

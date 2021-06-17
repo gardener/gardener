@@ -21,6 +21,7 @@ import (
 	"reflect"
 
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/utils"
@@ -34,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // GenerateEncryptionConfiguration generates new encryption configuration data or syncs it from the etcd encryption configuration secret if it already exists.
@@ -81,7 +81,7 @@ func (b *Botanist) ApplyEncryptionConfiguration(ctx context.Context) error {
 	}
 
 	conf = etcdencryption.NewEncryptionConfiguration(b.Shoot.ETCDEncryption)
-	_, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), secret, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
 		if b.Shoot.ETCDEncryption.ForcePlainTextResources {
 			kutil.SetMetaDataAnnotation(secret, common.EtcdEncryptionForcePlaintextAnnotationName, "true")
 		}

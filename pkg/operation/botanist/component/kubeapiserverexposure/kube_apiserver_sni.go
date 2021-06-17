@@ -25,6 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -39,7 +40,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // SNIValues configure the kube-apiserver service SNI.
@@ -116,7 +116,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, s.client, destinationRule, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, destinationRule, func() error {
 		destinationRule.Labels = getLabels()
 		destinationRule.Spec = istioapinetworkingv1beta1.DestinationRule{
 			ExportTo: []string{"*"},
@@ -141,7 +141,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, s.client, gateway, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, gateway, func() error {
 		gateway.Labels = getLabels()
 		gateway.Spec = istioapinetworkingv1beta1.Gateway{
 			Selector: s.values.IstioIngressGateway.Labels,
@@ -162,7 +162,7 @@ func (s *sni) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, s.client, virtualService, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, s.client, virtualService, func() error {
 		virtualService.Labels = getLabels()
 		virtualService.Spec = istioapinetworkingv1beta1.VirtualService{
 			ExportTo: []string{"*"},

@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
@@ -26,7 +27,6 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // ComputeBootstrapToken computes and creates a new bootstrap token, and returns it.
@@ -65,7 +65,7 @@ func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, descri
 		bootstraptokenapi.BootstrapTokenUsageSigningKey:     []byte("true"),
 	}
 
-	_, err2 := controllerutil.CreateOrUpdate(ctx, c, secret, func() error {
+	_, err2 := controllerutils.GetAndCreateOrMergePatch(ctx, c, secret, func() error {
 		secret.Type = bootstraptokenapi.SecretTypeBootstrapToken
 		secret.Data = data
 		return nil

@@ -25,12 +25,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/gardener/gardener/landscaper/pkg/gardenlet/chart"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -232,16 +232,14 @@ func (g *Landscaper) deploySeedSecret(ctx context.Context, runtimeClusterKubecon
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, g.gardenClient.Client(), secret, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, g.gardenClient.Client(), secret, func() error {
 		secret.Data = map[string][]byte{
 			kubernetes.KubeConfig: runtimeClusterKubeconfig,
 		}
 		secret.Type = corev1.SecretTypeOpaque
 		return nil
-	}); err != nil {
-		return err
-	}
-	return nil
+	})
+	return err
 }
 
 func (g *Landscaper) deployBackupSecret(ctx context.Context, providerName string, credentials map[string][]byte, backupSecretRef corev1.SecretReference) error {
@@ -252,15 +250,13 @@ func (g *Landscaper) deployBackupSecret(ctx context.Context, providerName string
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, g.gardenClient.Client(), secret, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, g.gardenClient.Client(), secret, func() error {
 		secret.Data = credentials
 		secret.Type = corev1.SecretTypeOpaque
 		secret.Labels = map[string]string{
 			"provider": providerName,
 		}
 		return nil
-	}); err != nil {
-		return err
-	}
-	return nil
+	})
+	return err
 }

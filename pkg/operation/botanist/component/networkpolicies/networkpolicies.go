@@ -19,12 +19,12 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // Values contains deployment parameters for the network policies.
@@ -59,7 +59,7 @@ func (n *networkPolicies) Deploy(ctx context.Context) error {
 			},
 		}
 
-		if _, err := controllerutil.CreateOrUpdate(ctx, n.client, obj, transformer.transform(obj)); err != nil {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, n.client, obj, transformer.transform(obj)); err != nil {
 			return err
 		}
 	}

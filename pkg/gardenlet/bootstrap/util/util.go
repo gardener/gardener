@@ -41,7 +41,6 @@ import (
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -95,7 +94,7 @@ func UpdateGardenKubeconfigSecret(ctx context.Context, certClientConfig *rest.Co
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, seedClient, kubeconfigSecret, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, kubeconfigSecret, func() error {
 		kubeconfigSecret.Data = map[string][]byte{kubernetes.KubeConfig: kubeconfig}
 		return nil
 	}); err != nil {

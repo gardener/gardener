@@ -19,6 +19,7 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -34,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -68,24 +68,20 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 
 	framework.CBeforeEach(func(ctx context.Context) {
 		checkRequiredResources(ctx, f.SeedClient)
-		//Get shoot namespace name
+		// Get shoot namespace name
 		shootNamespace.ObjectMeta.Name = f.ShootSeedNamespace()
-		//Get the grafana-operators Ingress
+		// Get the grafana-operators Ingress
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaOperators}, grafanaOperatorsIngress))
-		//Get the grafana-users Ingress
+		// Get the grafana-users Ingress
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaUsers}, grafanaUsersIngress))
-		//Set label to the testing namespace
-		_, err := controllerutil.CreateOrUpdate(ctx, f.SeedClient.Client(), shootNamespace, func() error {
-			if shootNamespace.Labels == nil {
-				shootNamespace.Labels = map[string]string{}
-			}
-			shootNamespace.Labels[shootNamespaceLabelKey] = shootNamespaceLabelValue
-
+		// Set label to the testing namespace
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, f.SeedClient.Client(), shootNamespace, func() error {
+			metav1.SetMetaDataLabel(&shootNamespace.ObjectMeta, shootNamespaceLabelKey, shootNamespaceLabelValue)
 			return nil
 		})
 		framework.ExpectNoError(err)
 
-		//Deploy Loki ValidatingWebhookConfiguration
+		// Deploy Loki ValidatingWebhookConfiguration
 		validatingWebhookParams := map[string]interface{}{
 			"NamespaceLabelKey":   shootNamespaceLabelKey,
 			"NamespaceLabelValue": shootNamespaceLabelValue,
@@ -146,17 +142,17 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Wait until user logger application is ready")
-		loggerLabels := labels.SelectorFromSet(labels.Set(map[string]string{
+		loggerLabels := labels.SelectorFromSet(map[string]string{
 			"app": userLoggerAppLabel,
-		}))
+		})
 
 		err = f.WaitUntilDeploymentsWithLabelsIsReady(ctx, loggerLabels, f.ShootSeedNamespace(), f.SeedClient)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Wait until operator logger application is ready")
-		loggerLabels = labels.SelectorFromSet(labels.Set(map[string]string{
+		loggerLabels = labels.SelectorFromSet(map[string]string{
 			"app": operatorLoggerAppLabel,
-		}))
+		})
 
 		err = f.WaitUntilDeploymentsWithLabelsIsReady(ctx, loggerLabels, f.ShootSeedNamespace(), f.SeedClient)
 		framework.ExpectNoError(err)
@@ -207,9 +203,8 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		err = kutil.DeleteObject(ctx, f.SeedClient.Client(), webhookToDelete)
 		framework.ExpectNoError(err)
 
-		_, err = controllerutil.CreateOrUpdate(ctx, f.SeedClient.Client(), shootNamespace, func() error {
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, f.SeedClient.Client(), shootNamespace, func() error {
 			delete(shootNamespace.Labels, shootNamespaceLabelKey)
-
 			return nil
 		})
 		framework.ExpectNoError(err)

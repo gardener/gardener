@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -35,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // NewBuilder returns a new Builder.
@@ -391,7 +391,7 @@ func generateMonitoringSecret(ctx context.Context, k8sGardenClient kubernetes.In
 			Namespace: v1beta1constants.GardenNamespace,
 		},
 	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, k8sGardenClient.Client(), secret, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k8sGardenClient.Client(), secret, func() error {
 		secret.Labels = map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleGlobalMonitoring,
 		}

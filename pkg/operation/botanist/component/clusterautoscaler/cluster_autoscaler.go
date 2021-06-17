@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -41,7 +42,6 @@ import (
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -122,7 +122,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, c.client, clusterRoleBinding, func() error {
+	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c.client, clusterRoleBinding, func() error {
 		clusterRoleBinding.OwnerReferences = []metav1.OwnerReference{{
 			APIVersion:         "v1",
 			Kind:               "Namespace",
@@ -146,7 +146,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, c.client, service, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, service, func() error {
 		service.Labels = getLabels()
 		service.Spec.Selector = getLabels()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
@@ -163,7 +163,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, c.client, deployment, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
@@ -246,7 +246,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, c.client, vpa, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, vpa, func() error {
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 			Kind:       "Deployment",

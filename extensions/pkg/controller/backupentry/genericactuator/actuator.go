@@ -22,11 +22,11 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -96,7 +96,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 		},
 	}
 
-	_, err = controllerutil.CreateOrUpdate(ctx, a.client, etcdSecret, func() error {
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, a.client, etcdSecret, func() error {
 		etcdSecret.Data = etcdSecretData
 		return nil
 	})

@@ -38,7 +38,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -260,7 +259,7 @@ func createOrUpdateResourceQuota(ctx context.Context, c client.Client, projectNa
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, c, projectResourceQuota, func() error {
+	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, projectResourceQuota, func() error {
 		projectResourceQuota.SetOwnerReferences(kutil.MergeOwnerReferences(projectResourceQuota.GetOwnerReferences(), *ownerReference))
 		quotas := make(map[corev1.ResourceName]resource.Quantity)
 		for resourceName, quantity := range resourceQuota.Spec.Hard {

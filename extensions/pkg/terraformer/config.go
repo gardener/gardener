@@ -137,7 +137,7 @@ func createOrUpdateConfigMap(ctx context.Context, c client.Client, namespace, na
 			Name:      name,
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(ctx, c, configMap, func() error {
+	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, configMap, func() error {
 		if configMap.Data == nil {
 			configMap.Data = make(map[string]string)
 		}
@@ -177,7 +177,7 @@ func CreateOrUpdateTFVarsSecret(ctx context.Context, c client.Client, namespace,
 		},
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, c, secret, func() error {
+	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, secret, func() error {
 		if secret.Data == nil {
 			secret.Data = make(map[string][]byte)
 		}

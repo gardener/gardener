@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -29,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // CAChecksumAnnotation is a resource annotation used to store the checksum of a certificate authority.
@@ -86,7 +86,7 @@ func GetOrCreateShootKubeconfig(ctx context.Context, c client.Client, certificat
 		return nil, fmt.Errorf("error creating kubeconfig: %v", err)
 	}
 
-	_, err = controllerutil.CreateOrUpdate(ctx, c, &secret, func() error {
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, c, &secret, func() error {
 		secret.Data = controlPlane.SecretData()
 		if secret.Annotations == nil {
 			secret.Annotations = make(map[string]string)
