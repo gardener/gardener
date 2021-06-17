@@ -17,7 +17,7 @@ Custom CSI components are typically regular `Deployment`s running in the shoot c
 
 ## Background Information
 
-When a shoot cluster is deleted, Gardener deletes most Kubernetes (`Deployment`s, `DaemonSet`s, `StatefulSet`s, etc.) resources, i.e., CSI components not having above mentioned label will be deleted immediately.
+When a shoot cluster is deleted, Gardener deletes most Kubernetes resources (`Deployment`s, `DaemonSet`s, `StatefulSet`s, etc.). Gardener will also try to delete CSI components if they are not marked with the above mentioned label.
 
 If the CSI components (and all resources associated with them) managed by end-users aren't properly removed by the end-users before shoot deletion is triggered then the cluster deletion might cause problems and get stuck.
 
