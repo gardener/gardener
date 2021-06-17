@@ -46,10 +46,6 @@ func Bootstrap(
 	component.DeployWaiter,
 	error,
 ) {
-	if c == nil {
-		return nil, errors.New("client is required")
-	}
-
 	if len(seedAdmissionControllerNamespace) == 0 {
 		return nil, errors.New("seedAdmissionControllerNamespace is required")
 	}
