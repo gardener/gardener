@@ -164,7 +164,8 @@ func constructNPAllowToShootNetworks(namespace string, peers []networkingv1.Netw
 
 func expectGetUpdate(ctx context.Context, c *mockclient.MockClient, expected *networkingv1.NetworkPolicy) {
 	c.EXPECT().Get(ctx, kutil.Key(expected.Namespace, expected.Name), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}))
-	c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
-		Expect(obj).To(DeepEqual(expected))
-	})
+	c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
+		Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+			Expect(obj).To(DeepEqual(expected))
+		})
 }

@@ -272,13 +272,14 @@ var _ = Describe("operatingsystemconfig", func() {
 				kubernetesClientShoot.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&corev1.Secret{})).AnyTimes().Return(params.bootstrapTokenSecretReadError)
 
 				if params.bootstrapTokenSecretReadError == nil {
-					kubernetesClientShoot.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj *corev1.Secret, _ ...client.UpdateOption) error {
-						(&corev1.Secret{Data: map[string][]byte{
-							"token-id":     []byte(bootstrapTokenID),
-							"token-secret": []byte(bootstrapTokenSecret),
-						}}).DeepCopyInto(obj)
-						return nil
-					})
+					kubernetesClientShoot.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						DoAndReturn(func(_ context.Context, obj *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
+							(&corev1.Secret{Data: map[string][]byte{
+								"token-id":     []byte(bootstrapTokenID),
+								"token-secret": []byte(bootstrapTokenSecret),
+							}}).DeepCopyInto(obj)
+							return nil
+						})
 
 					// image vector for retrieval of required images
 					botanist.ImageVector = params.imageVector

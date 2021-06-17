@@ -540,7 +540,7 @@ var _ = Describe("Actuator", func() {
 				Spec:       resourcesv1alpha1.ManagedResourceSpec{SecretRefs: []corev1.LocalObjectReference{{Name: ShootWebhooksResourceName}}},
 			}
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace3", Name: networkPolicyName}, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}))
-			c.EXPECT().Update(ctx, constructNetworkPolicy(providerName, "namespace3", port))
+			c.EXPECT().Patch(ctx, constructNetworkPolicy(providerName, "namespace3", port), gomock.Any())
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace3", Name: ShootWebhooksResourceName}, gomock.AssignableToTypeOf(&corev1.Secret{}))
 			c.EXPECT().Update(ctx, createdMRSecretForShootWebhooksNS3)
 			c.EXPECT().Get(ctx, client.ObjectKey{Namespace: "namespace3", Name: ShootWebhooksResourceName}, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}))

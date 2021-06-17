@@ -186,7 +186,6 @@ var _ = Describe("SeedReconciler", func() {
 					return nil
 				})
 
-				// cause namespace update
 				cl.EXPECT().Get(context.Background(), kutil.Key(gutil.ComputeGardenNamespace(seed.Name)), gomock.AssignableToTypeOf(&corev1.Namespace{})).
 					DoAndReturn(func(_ context.Context, _ client.ObjectKey, ns *corev1.Namespace) error {
 						namespace.DeepCopyInto(ns)
@@ -195,7 +194,7 @@ var _ = Describe("SeedReconciler", func() {
 
 				// expect update for existing secret
 				cl.EXPECT().Get(context.Background(), kutil.Key(namespace.Name, oldSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
-				cl.EXPECT().Update(context.Background(), gomock.AssignableToTypeOf(&corev1.Secret{}))
+				cl.EXPECT().Patch(context.Background(), gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any())
 
 				// expect create for non existing secret
 				cl.EXPECT().Get(context.Background(), kutil.Key(namespace.Name, addedSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
