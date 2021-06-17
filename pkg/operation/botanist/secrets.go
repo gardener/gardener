@@ -268,20 +268,15 @@ func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResource
 			return fmt.Errorf("failed to get old SSH keypair secret: %v", err)
 		}
 
-		patch := client.MergeFrom(oldSecret.DeepCopy())
-		oldSecret.Data = map[string][]byte{
-			secrets.DataKeyRSAPrivateKey:     oldPrivateKey,
-			secrets.DataKeySSHAuthorizedKeys: oldPublicKey,
-		}
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), oldSecret, func() error {
+			oldSecret.Data = map[string][]byte{
+				secrets.DataKeyRSAPrivateKey:     oldPrivateKey,
+				secrets.DataKeySSHAuthorizedKeys: oldPublicKey,
+			}
 
-		if oldSecret.CreationTimestamp.IsZero() {
-			if err = b.K8sSeedClient.Client().Create(ctx, oldSecret); err != nil {
-				return fmt.Errorf("failed to create old SSH keypair secret: %v", err)
-			}
-		} else {
-			if err = b.K8sSeedClient.Client().Patch(ctx, oldSecret, patch); err != nil {
-				return fmt.Errorf("failed to patch old SSH keypair secret: %v", err)
-			}
+			return nil
+		}); err != nil {
+			return fmt.Errorf("failed to reconcile old SSH keypair secret: %v", err)
 		}
 	}
 
