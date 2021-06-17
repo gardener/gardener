@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetes
+package bootstraptoken
 
 import (
 	"context"
@@ -21,6 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +43,7 @@ func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, descri
 		},
 	}
 
-	if err = c.Get(ctx, Key(secret.Namespace, secret.Name), secret); client.IgnoreNotFound(err) != nil {
+	if err = c.Get(ctx, kubernetes.Key(secret.Namespace, secret.Name), secret); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
 
@@ -74,7 +75,7 @@ func ComputeBootstrapToken(ctx context.Context, c client.Client, tokenID, descri
 	return secret, err2
 }
 
-// BootstrapTokenFrom returns the bootstrap token based on the secret data.
-func BootstrapTokenFrom(data map[string][]byte) string {
+// FromSecretData returns the bootstrap token based on the secret data.
+func FromSecretData(data map[string][]byte) string {
 	return bootstraptokenutil.TokenFromIDAndSecret(string(data[bootstraptokenapi.BootstrapTokenIDKey]), string(data[bootstraptokenapi.BootstrapTokenSecretKey]))
 }

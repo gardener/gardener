@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/bootstraptoken"
 
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -206,13 +207,13 @@ func ComputeGardenletKubeconfigWithBootstrapToken(ctx context.Context, gardenCli
 	}
 
 	if refreshBootstrapToken {
-		bootstrapTokenSecret, err = kutil.ComputeBootstrapToken(ctx, gardenClient, tokenID, description, validity)
+		bootstrapTokenSecret, err = bootstraptoken.ComputeBootstrapToken(ctx, gardenClient, tokenID, description, validity)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, kutil.BootstrapTokenFrom(bootstrapTokenSecret.Data))
+	return CreateGardenletKubeconfigWithToken(gardenClientRestConfig, bootstraptoken.FromSecretData(bootstrapTokenSecret.Data))
 }
 
 // ComputeGardenletKubeconfigWithServiceAccountToken creates a kubeconfig containing the token of a service account
