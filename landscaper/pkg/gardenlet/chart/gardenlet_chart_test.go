@@ -98,7 +98,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		universalDecoder = codecs.UniversalDecoder()
 
 		// fake client to use for the chart applier
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, appsv1.SchemeGroupVersion})
 

@@ -90,7 +90,7 @@ var _ = Describe("#Interface", func() {
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		region = "europe"
 		sshPublicKey = []byte("secure")

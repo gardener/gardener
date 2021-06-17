@@ -72,7 +72,7 @@ var _ = Describe("istiod", func() {
 		Expect(autoscalingv1beta2.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(autoscalingv1.AddToScheme(s)).NotTo(HaveOccurred())
 
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 		renderer := cr.NewWithServerVersion(&version.Info{})
 
 		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))

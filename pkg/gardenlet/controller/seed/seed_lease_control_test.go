@@ -104,7 +104,7 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 			Status:     gardencorev1beta1.SeedStatus{Conditions: seedConditions},
 		}
 
-		k8sClient = fake.NewFakeClientWithScheme(gardencorescheme.Scheme, seed)
+		k8sClient = fake.NewClientBuilder().WithScheme(gardencorescheme.Scheme).WithObjects(seed).Build()
 		k8sGardenClient.EXPECT().Client().Return(k8sClient).AnyTimes()
 
 		seedLeaseControl := &fakeLeaseController{

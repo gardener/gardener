@@ -85,7 +85,7 @@ var _ = Describe("#Network", func() {
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
 
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		podCIDR := net.IPNet{
 			IP:   net.ParseIP(networkPodIp),

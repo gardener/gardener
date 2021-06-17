@@ -79,7 +79,7 @@ var _ = Describe("controlplane", func() {
 		scheme = runtime.NewScheme()
 		Expect(dnsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		client = fake.NewFakeClientWithScheme(scheme)
+		client = fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
 		controlPlane = mockcontrolplane.NewMockInterface(ctrl)

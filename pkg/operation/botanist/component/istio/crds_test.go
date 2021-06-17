@@ -51,7 +51,7 @@ var _ = Describe("#CRDs", func() {
 		Expect(apiextensionsv1beta1.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(apiextensionsv1.AddToScheme(s)).NotTo(HaveOccurred())
 
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{apiextensionsv1beta1.SchemeGroupVersion})
 		mapper.Add(apiextensionsv1beta1.SchemeGroupVersion.WithKind("CustomResourceDefinition"), meta.RESTScopeRoot)

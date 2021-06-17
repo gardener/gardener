@@ -18,17 +18,16 @@ import (
 	"context"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	. "github.com/gardener/gardener/pkg/client/kubernetes"
-
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
+	. "github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 var _ = Describe("scale", func() {
@@ -47,11 +46,11 @@ var _ = Describe("scale", func() {
 		Expect(appsv1.AddToScheme(s)).NotTo(HaveOccurred(), "adding apps to schema succeeds")
 		Expect(druidv1alpha1.AddToScheme(s)).NotTo(HaveOccurred(), "adding druid to schema succeeds")
 
-		c = fake.NewFakeClientWithScheme(s,
+		c = fake.NewClientBuilder().WithScheme(s).WithObjects(
 			&appsv1.StatefulSet{ObjectMeta: om},
 			&appsv1.Deployment{ObjectMeta: om},
 			&druidv1alpha1.Etcd{ObjectMeta: om},
-		)
+		).Build()
 	})
 
 	Context("ScaleStatefulSet", func() {

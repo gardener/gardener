@@ -35,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/restmapper"
@@ -416,19 +417,26 @@ func apiServiceNameForSchemeGroupVersion(gv schema.GroupVersion) string {
 
 // Stop stops this GardenerAPIServer and cleans its temporary resources.
 func (g *GardenerAPIServer) Stop() error {
-	// trigger stop procedure
-	g.terminateFunc()
+	var errList []error
 
-	select {
-	case <-g.exited:
-		break
-	case <-time.After(g.StopTimeout):
-		return fmt.Errorf("timeout waiting for gardener-apiserver to stop")
+	// trigger stop procedure
+	if g.terminateFunc != nil {
+		g.terminateFunc()
+
+		select {
+		case <-g.exited:
+			break
+		case <-time.After(g.StopTimeout):
+			errList = append(errList, fmt.Errorf("timeout waiting for gardener-apiserver to stop"))
+		}
 	}
 
 	// cleanup temp dirs
 	if g.CertDir != "" {
-		return os.RemoveAll(g.CertDir)
+		if err := os.RemoveAll(g.CertDir); err != nil {
+			errList = append(errList, err)
+		}
 	}
-	return nil
+
+	return utilerrors.NewAggregate(errList)
 }

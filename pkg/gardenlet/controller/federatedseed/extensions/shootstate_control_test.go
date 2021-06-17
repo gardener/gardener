@@ -81,13 +81,13 @@ var _ = Describe("ShootState Control", func() {
 		gardenScheme := runtime.NewScheme()
 		Expect(gardencorev1alpha1.AddToScheme(gardenScheme)).NotTo(HaveOccurred())
 		Expect(gardencorev1beta1.AddToScheme(gardenScheme)).NotTo(HaveOccurred())
-		gardenClient := fake.NewFakeClientWithScheme(gardenScheme)
+		gardenClient := fake.NewClientBuilder().WithScheme(gardenScheme).Build()
 		fakeGardenClient = fakeclientset.NewClientSetBuilder().WithClient(gardenClient).Build()
 
 		seedScheme := runtime.NewScheme()
 		Expect(corev1.AddToScheme(seedScheme)).NotTo(HaveOccurred())
 		Expect(extensionsv1alpha1.AddToScheme(seedScheme)).NotTo(HaveOccurred())
-		seedClient := fake.NewFakeClientWithScheme(seedScheme)
+		seedClient := fake.NewClientBuilder().WithScheme(seedScheme).Build()
 		fakeSeedClient = fakeclientset.NewClientSetBuilder().WithClient(seedClient).Build()
 
 		recorder := record.NewFakeRecorder(64)

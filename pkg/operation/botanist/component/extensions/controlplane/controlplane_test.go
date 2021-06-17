@@ -78,7 +78,7 @@ var _ = Describe("ControlPlane", func() {
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		empty = &extensionsv1alpha1.ControlPlane{
 			ObjectMeta: metav1.ObjectMeta{

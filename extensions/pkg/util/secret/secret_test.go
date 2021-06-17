@@ -20,13 +20,13 @@ import (
 
 	secretutil "github.com/gardener/gardener/extensions/pkg/util/secret"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 func TestSecretUtils(t *testing.T) {
@@ -79,11 +79,11 @@ var _ = Describe("Secret", func() {
 		})
 
 		It("should return false when the Secret is not used", func() {
-			client := fake.NewFakeClientWithScheme(
-				scheme,
+			client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+
 				secret,
 				secretBinding,
-			)
+			).Build()
 
 			isUsed, err := secretutil.IsSecretInUseByShoot(context.TODO(), client, secret, "gcp")
 			Expect(isUsed).To(BeFalse())
@@ -91,12 +91,11 @@ var _ = Describe("Secret", func() {
 		})
 
 		It("should return false when the Secret is in use but the provider does not match", func() {
-			client := fake.NewFakeClientWithScheme(
-				scheme,
+			client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				secret,
 				secretBinding,
 				shoot,
-			)
+			).Build()
 
 			isUsed, err := secretutil.IsSecretInUseByShoot(context.TODO(), client, secret, "other")
 			Expect(isUsed).To(BeFalse())
@@ -104,12 +103,11 @@ var _ = Describe("Secret", func() {
 		})
 
 		It("should return true when the Secret is in use by Shoot with the given provider", func() {
-			client := fake.NewFakeClientWithScheme(
-				scheme,
+			client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				secret,
 				secretBinding,
 				shoot,
-			)
+			).Build()
 
 			isUsed, err := secretutil.IsSecretInUseByShoot(context.TODO(), client, secret, "gcp")
 			Expect(isUsed).To(BeTrue())
@@ -134,12 +132,11 @@ var _ = Describe("Secret", func() {
 				},
 			}
 
-			client := fake.NewFakeClientWithScheme(
-				scheme,
+			client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				secret,
 				secretBinding,
 				shoot,
-			)
+			).Build()
 
 			isUsed, err := secretutil.IsSecretInUseByShoot(context.TODO(), client, secret, "gcp")
 			Expect(isUsed).To(BeTrue())

@@ -67,7 +67,7 @@ var _ = Describe("Proxy protocol", func() {
 		Expect(networkingv1beta1.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(networkingv1alpha3.AddToScheme(s)).NotTo(HaveOccurred())
 
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		expectedGW = &networkingv1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{

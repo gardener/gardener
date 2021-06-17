@@ -91,7 +91,7 @@ var _ = Describe("NewServer", func() {
 		Expect(sb.AddToScheme(s)).To(Succeed())
 
 		codec = serializer.NewCodecFactory(s, serializer.EnableStrict)
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		serverOptions = &ServerOptions{
 			Client:             c,

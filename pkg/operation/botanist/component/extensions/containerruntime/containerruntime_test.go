@@ -81,7 +81,7 @@ var _ = Describe("#ContainerRuntime", func() {
 
 		s := runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
-		c = fake.NewFakeClientWithScheme(s)
+		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		workers = make([]gardencorev1beta1.Worker, 0, len(workerNames))
 

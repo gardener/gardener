@@ -19,5 +19,5 @@ source "$(dirname $0)/setup-envtest.sh"
 
 echo "> Test"
 
-export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT=1m
+export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT=2m
 GO111MODULE=on go test -race -mod=vendor $@ | grep -v 'no test files'

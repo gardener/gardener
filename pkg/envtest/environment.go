@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -114,15 +115,27 @@ func (e *GardenerTestEnvironment) Start() (*rest.Config, error) {
 
 // Stop stops the underlying envtest.Environment and the GardenerAPIServer.
 func (e *GardenerTestEnvironment) Stop() error {
-	if err := e.GardenerAPIServer.Stop(); err != nil {
-		return err
+	var errList []error
+
+	log.V(1).Info("stopping gardener-apiserver")
+	if e.GardenerAPIServer != nil {
+		if err := e.GardenerAPIServer.Stop(); err != nil {
+			errList = append(errList, err)
+		}
 	}
-	if err := e.Environment.Stop(); err != nil {
-		return err
+
+	log.V(1).Info("stopping envtest control plane")
+	if e.Environment != nil {
+		if err := e.Environment.Stop(); err != nil {
+			errList = append(errList, err)
+		}
 	}
 
 	if e.certDir != "" {
-		return os.RemoveAll(e.certDir)
+		if err := os.RemoveAll(e.certDir); err != nil {
+			errList = append(errList, err)
+		}
 	}
-	return nil
+
+	return utilerrors.Flatten(utilerrors.NewAggregate(errList))
 }
