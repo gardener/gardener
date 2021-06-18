@@ -54,6 +54,14 @@ type ControlPlaneListerExpansion interface{}
 // ControlPlaneNamespaceLister.
 type ControlPlaneNamespaceListerExpansion interface{}
 
+// DNSRecordListerExpansion allows custom methods to be added to
+// DNSRecordLister.
+type DNSRecordListerExpansion interface{}
+
+// DNSRecordNamespaceListerExpansion allows custom methods to be added to
+// DNSRecordNamespaceLister.
+type DNSRecordNamespaceListerExpansion interface{}
+
 // ExtensionListerExpansion allows custom methods to be added to
 // ExtensionLister.
 type ExtensionListerExpansion interface{}

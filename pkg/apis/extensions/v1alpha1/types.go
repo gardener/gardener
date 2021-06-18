@@ -85,6 +85,7 @@ var ExtensionKinds = sets.NewString(
 	ContainerRuntimeResource,
 	ControlPlaneResource,
 	dnsv1alpha1.DNSProviderKind,
+	DNSRecordResource,
 	ExtensionResource,
 	InfrastructureResource,
 	NetworkResource,

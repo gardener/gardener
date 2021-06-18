@@ -32,6 +32,7 @@ type ExtensionsV1alpha1Interface interface {
 	ClustersGetter
 	ContainerRuntimesGetter
 	ControlPlanesGetter
+	DNSRecordsGetter
 	ExtensionsGetter
 	InfrastructuresGetter
 	NetworksGetter
@@ -66,6 +67,10 @@ func (c *ExtensionsV1alpha1Client) ContainerRuntimes(namespace string) Container
 
 func (c *ExtensionsV1alpha1Client) ControlPlanes(namespace string) ControlPlaneInterface {
 	return newControlPlanes(c, namespace)
+}
+
+func (c *ExtensionsV1alpha1Client) DNSRecords(namespace string) DNSRecordInterface {
+	return newDNSRecords(c, namespace)
 }
 
 func (c *ExtensionsV1alpha1Client) Extensions(namespace string) ExtensionInterface {

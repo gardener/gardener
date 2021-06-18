@@ -55,6 +55,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ContainerRuntimeList{},
 		&ControlPlane{},
 		&ControlPlaneList{},
+		&DNSRecord{},
+		&DNSRecordList{},
 		&Extension{},
 		&ExtensionList{},
 		&Infrastructure{},

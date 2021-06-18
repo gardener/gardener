@@ -30,6 +30,8 @@ type ContainerRuntimeExpansion interface{}
 
 type ControlPlaneExpansion interface{}
 
+type DNSRecordExpansion interface{}
+
 type ExtensionExpansion interface{}
 
 type InfrastructureExpansion interface{}

@@ -52,6 +52,10 @@ func (c *FakeExtensionsV1alpha1) ControlPlanes(namespace string) v1alpha1.Contro
 	return &FakeControlPlanes{c, namespace}
 }
 
+func (c *FakeExtensionsV1alpha1) DNSRecords(namespace string) v1alpha1.DNSRecordInterface {
+	return &FakeDNSRecords{c, namespace}
+}
+
 func (c *FakeExtensionsV1alpha1) Extensions(namespace string) v1alpha1.ExtensionInterface {
 	return &FakeExtensions{c, namespace}
 }

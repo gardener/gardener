@@ -22,6 +22,8 @@ Resource Types:
 </li><li>
 <a href="#extensions.gardener.cloud/v1alpha1.ControlPlane">ControlPlane</a>
 </li><li>
+<a href="#extensions.gardener.cloud/v1alpha1.DNSRecord">DNSRecord</a>
+</li><li>
 <a href="#extensions.gardener.cloud/v1alpha1.Extension">Extension</a>
 </li><li>
 <a href="#extensions.gardener.cloud/v1alpha1.Infrastructure">Infrastructure</a>
@@ -765,6 +767,183 @@ Kubernetes core/v1.SecretReference
 <em>
 <a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneStatus">
 ControlPlaneStatus
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.DNSRecord">DNSRecord
+</h3>
+<p>
+<p>DNSRecord is a specification for a DNSRecord resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>apiVersion</code></br>
+string</td>
+<td>
+<code>
+extensions.gardener.cloud/v1alpha1
+</code>
+</td>
+</tr>
+<tr>
+<td>
+<code>kind</code></br>
+string
+</td>
+<td><code>DNSRecord</code></td>
+</tr>
+<tr>
+<td>
+<code>metadata</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#objectmeta-v1-meta">
+Kubernetes meta/v1.ObjectMeta
+</a>
+</em>
+</td>
+<td>
+Refer to the Kubernetes API documentation for the fields of the
+<code>metadata</code> field.
+</td>
+</tr>
+<tr>
+<td>
+<code>spec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DNSRecordSpec">
+DNSRecordSpec
+</a>
+</em>
+</td>
+<td>
+<br/>
+<br/>
+<table>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the cloud provider specific credentials.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Region is the region of this DNS record. If not specified, the region specified in SecretRef will be used.
+If that is also not specified, a certain default region will be used, e.g. us-west-2 for AWS route53.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zone</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zone is the DNS hosted zone of this DNS record. If not specified, it will be determined automatically by
+getting all hosted zones of the account and searching for the longest zone name that is a suffix of Name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the fully qualified domain name, e.g. api.<shoot domain>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>recordType</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DNSRecordType">
+DNSRecordType
+</a>
+</em>
+</td>
+<td>
+<p>RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>values</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Values is a list of IP addresses for A records, a single hostname for CNAME records, or a list of texts for TXT records.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ttl</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TTL is the time to live in seconds. Defaults to 120.</p>
+</td>
+</tr>
+</table>
+</td>
+</tr>
+<tr>
+<td>
+<code>status</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DNSRecordStatus">
+DNSRecordStatus
 </a>
 </em>
 </td>
@@ -2191,6 +2370,183 @@ DefaultStatus
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.DNSRecordSpec">DNSRecordSpec
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.DNSRecord">DNSRecord</a>)
+</p>
+<p>
+<p>DNSRecordSpec is the spec of a DNSRecord resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultSpec</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultSpec">
+DefaultSpec
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultSpec</code> are embedded into this type.)
+</p>
+<p>DefaultSpec is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>secretRef</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#secretreference-v1-core">
+Kubernetes core/v1.SecretReference
+</a>
+</em>
+</td>
+<td>
+<p>SecretRef is a reference to a secret that contains the cloud provider specific credentials.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>region</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Region is the region of this DNS record. If not specified, the region specified in SecretRef will be used.
+If that is also not specified, a certain default region will be used, e.g. us-west-2 for AWS route53.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zone</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zone is the DNS hosted zone of this DNS record. If not specified, it will be determined automatically by
+getting all hosted zones of the account and searching for the longest zone name that is a suffix of Name.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>name</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Name is the fully qualified domain name, e.g. api.<shoot domain>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>recordType</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DNSRecordType">
+DNSRecordType
+</a>
+</em>
+</td>
+<td>
+<p>RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>values</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<p>Values is a list of IP addresses for A records, a single hostname for CNAME records, or a list of texts for TXT records.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ttl</code></br>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>TTL is the time to live in seconds. Defaults to 120.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.DNSRecordStatus">DNSRecordStatus
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.DNSRecord">DNSRecord</a>)
+</p>
+<p>
+<p>DNSRecordStatus is the status of a DNSRecord resource.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>DefaultStatus</code></br>
+<em>
+<a href="#extensions.gardener.cloud/v1alpha1.DefaultStatus">
+DefaultStatus
+</a>
+</em>
+</td>
+<td>
+<p>
+(Members of <code>DefaultStatus</code> are embedded into this type.)
+</p>
+<p>DefaultStatus is a structure containing common fields used by all extension resources.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>zone</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Zone is the DNS hosted zone of this DNS record.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="extensions.gardener.cloud/v1alpha1.DNSRecordType">DNSRecordType
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#extensions.gardener.cloud/v1alpha1.DNSRecordSpec">DNSRecordSpec</a>)
+</p>
+<p>
+<p>DNSRecordType is a string alias.</p>
+</p>
 <h3 id="extensions.gardener.cloud/v1alpha1.DataVolume">DataVolume
 </h3>
 <p>
@@ -2265,6 +2621,7 @@ bool
 <a href="#extensions.gardener.cloud/v1alpha1.BastionSpec">BastionSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeSpec">ContainerRuntimeSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneSpec">ControlPlaneSpec</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.DNSRecordSpec">DNSRecordSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ExtensionSpec">ExtensionSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.InfrastructureSpec">InfrastructureSpec</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.NetworkSpec">NetworkSpec</a>, 
@@ -2318,6 +2675,7 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <a href="#extensions.gardener.cloud/v1alpha1.BastionStatus">BastionStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeStatus">ContainerRuntimeStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ControlPlaneStatus">ControlPlaneStatus</a>, 
+<a href="#extensions.gardener.cloud/v1alpha1.DNSRecordStatus">DNSRecordStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.ExtensionStatus">ExtensionStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.InfrastructureStatus">InfrastructureStatus</a>, 
 <a href="#extensions.gardener.cloud/v1alpha1.NetworkStatus">NetworkStatus</a>, 
