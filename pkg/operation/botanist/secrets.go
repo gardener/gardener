@@ -261,7 +261,7 @@ func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResource
 	oldPrivateKey := currentSecret.Data[secrets.DataKeyRSAPrivateKey]
 	oldPublicKey := currentSecret.Data[secrets.DataKeySSHAuthorizedKeys]
 
-	// if the is a current key, transfer it to the .old Secret
+	// if there is a current key, transfer it to the .old Secret
 	if len(oldPrivateKey) > 0 && len(oldPublicKey) > 0 {
 		oldSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameOldSSHKeyPair, Namespace: b.Shoot.SeedNamespace}}
 		if err = b.K8sSeedClient.Client().Get(ctx, client.ObjectKeyFromObject(oldSecret), oldSecret); client.IgnoreNotFound(err) != nil {

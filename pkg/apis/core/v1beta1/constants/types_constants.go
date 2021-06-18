@@ -36,7 +36,7 @@ const (
 	// SecretNameSSHKeyPair is a constant for the name of a Kubernetes secret object that contains the SSH key pair
 	// (public and private key) that can be used to SSH into the shoot nodes.
 	SecretNameSSHKeyPair = "ssh-keypair"
-	// SecretNameOldSSHKeyPair is asdasdsada constant for the name of a Kubernetes secret object that contains the previous
+	// SecretNameOldSSHKeyPair is a constant for the name of a Kubernetes secret object that contains the previous
 	// SSH key pair for a shoot cluster. This exists only after the first key rotation. Both the current and the
 	// old key are placed onto each shoot node.
 	SecretNameOldSSHKeyPair = "ssh-keypair.old"
