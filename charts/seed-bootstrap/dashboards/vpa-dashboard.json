@@ -189,7 +189,6 @@
       }
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 19,
   "style": "dark",
   "tags": [
