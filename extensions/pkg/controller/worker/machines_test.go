@@ -184,6 +184,20 @@ var _ = Describe("Machines", func() {
 					},
 				})
 			})
+
+			It("when changing CRI configuration from `nil` to `docker`", func() {
+				v, err = WorkerPoolHash(*p, &extensionscontroller.Cluster{
+					Shoot: &gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Kubernetes: gardencorev1beta1.Kubernetes{
+								Version: "1.2.4",
+							},
+							Provider: gardencorev1beta1.Provider{Workers: []gardencorev1beta1.Worker{
+								{Name: "test-worker", CRI: &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker}}}},
+						},
+					},
+				})
+			})
 		})
 
 		Context("hash value should change", func() {
