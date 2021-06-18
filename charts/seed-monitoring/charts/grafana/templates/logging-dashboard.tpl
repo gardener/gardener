@@ -510,7 +510,7 @@
         "14d"
       ]
     },
-    "timezone": "browser",
+    "timezone": "utc",
     "title": "Controlplane Logs Dashboard",
     "version": 1
   }

@@ -596,7 +596,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "VPA Recommendations",
   "uid": "vpa-recommendations",
   "version": 1

@@ -1430,7 +1430,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "NodeLocalDNS",
   "uid": "node-local-dns",
   "version": 1

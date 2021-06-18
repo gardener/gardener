@@ -1562,7 +1562,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Istio Mesh Dashboard",
   "uid": "istio-mesh-dashboard",
   "version": 1

@@ -677,7 +677,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Node/Worker Pool Overview",
   "uid": "node-worker-pool-overview",
   "version": 1

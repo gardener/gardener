@@ -1289,7 +1289,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Node Details",
   "uid": "node-details",
   "version": 1

@@ -1157,7 +1157,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Prometheus",
   "uid": "prometheus",
   "version": 19

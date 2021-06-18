@@ -1430,7 +1430,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "CoreDNS",
   "uid": "core-dns",
   "version": 1

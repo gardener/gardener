@@ -1310,7 +1310,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "ETCD Backup and Restore",
   "uid": "etcd-backup-restore",
   "version": 1

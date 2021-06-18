@@ -941,7 +941,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Kubernetes StatefulSets",
   "uid": "kube-statefulsets",
   "version": 1

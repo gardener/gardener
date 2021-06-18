@@ -952,7 +952,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "VPN",
   "uid": "vpn",
   "version": 1

@@ -949,7 +949,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Kubernetes Deployments",
   "uid": "kube-deployments",
   "version": 1

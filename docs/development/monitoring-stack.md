@@ -228,7 +228,7 @@ Example dashboard configuration
 ```json
 {
   "title": "example-component",
-  "timezone": "browser",
+  "timezone": "utc",
   "tags": [
     "seed",
     "control-plane"
