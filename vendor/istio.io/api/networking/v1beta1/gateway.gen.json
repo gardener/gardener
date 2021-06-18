@@ -43,7 +43,7 @@
             "$ref": "#/components/schemas/istio.networking.v1beta1.Port"
           },
           "bind": {
-            "description": "The ip or the Unix domain socket to which the listener should be bound to. Format: `x.x.x.x` or `unix:///path/to/uds` or `unix://@foobar` (Linux abstract namespace). When using Unix domain sockets, the port number should be 0.",
+            "description": "The ip or the Unix domain socket to which the listener should be bound to. Format: `x.x.x.x` or `unix:///path/to/uds` or `unix://@foobar` (Linux abstract namespace). When using Unix domain sockets, the port number should be 0. This can be used to restrict the reachability of this server to be gateway internal only. This is typically used when a gateway needs to communicate to another mesh service e.g. publishing metrics. In such case, the server created with the specified bind will not be available to external gateway clients.",
             "type": "string",
             "format": "string"
           },
@@ -103,7 +103,7 @@
             "format": "string"
           },
           "credentialName": {
-            "description": "For gateways running on Kubernetes, the name of the secret that holds the TLS certs including the CA certificates. Applicable only on Kubernetes, and only if the dynamic credential fetching feature is enabled in the proxy by setting `ISTIO_META_USER_SDS` metadata variable. The secret (of type `generic`) should contain the following keys and values: `key: \u003cprivateKey\u003e` and `cert: \u003cserverCert\u003e`. For mutual TLS, `cacert: \u003cCACertificate\u003e` can be provided in the same secret or a separate secret named `\u003csecret\u003e-cacert`. Secret of type tls for server certificates along with ca.crt key for CA certificates is also supported. Only one of server certificates and CA certificate or credentialName can be specified.",
+            "description": "For gateways running on Kubernetes, the name of the secret that holds the TLS certs including the CA certificates. Applicable only on Kubernetes. The secret (of type `generic`) should contain the following keys and values: `key: \u003cprivateKey\u003e` and `cert: \u003cserverCert\u003e`. For mutual TLS, `cacert: \u003cCACertificate\u003e` can be provided in the same secret or a separate secret named `\u003csecret\u003e-cacert`. Secret of type tls for server certificates along with ca.crt key for CA certificates is also supported. Only one of server certificates and CA certificate or credentialName can be specified.",
             "type": "string",
             "format": "string"
           },

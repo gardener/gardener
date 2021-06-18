@@ -98,22 +98,22 @@
             "format": "int32"
           },
           "timeoutSeconds": {
-            "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.",
+            "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1 second.",
             "type": "integer",
             "format": "int32"
           },
           "periodSeconds": {
-            "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.",
+            "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1 second.",
             "type": "integer",
             "format": "int32"
           },
           "successThreshold": {
-            "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1.",
+            "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1 second.",
             "type": "integer",
             "format": "int32"
           },
           "failureThreshold": {
-            "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3.",
+            "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3 seconds.",
             "type": "integer",
             "format": "int32"
           }
@@ -201,16 +201,16 @@
             "format": "string"
           },
           "port": {
-            "description": "port on which the endpoint lives.",
+            "description": "Port on which the endpoint lives.",
             "type": "integer"
           },
           "scheme": {
-            "description": "http or https, defaults to http",
+            "description": "HTTP or HTTPS, defaults to HTTP",
             "type": "string",
             "format": "string"
           },
           "httpHeaders": {
-            "description": "headers the proxy will pass on to make the request. allows repeated headers.",
+            "description": "Headers the proxy will pass on to make the request. Allows repeated headers.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/istio.networking.v1alpha3.HTTPHeader"
@@ -222,12 +222,12 @@
         "type": "object",
         "properties": {
           "host": {
-            "description": "host to connect to, defaults to localhost",
+            "description": "Host to connect to, defaults to localhost",
             "type": "string",
             "format": "string"
           },
           "port": {
-            "description": "port of host",
+            "description": "Port of host",
             "type": "integer"
           }
         }
@@ -236,7 +236,7 @@
         "type": "object",
         "properties": {
           "command": {
-            "description": "command to run. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.",
+            "description": "Command to run. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.",
             "type": "array",
             "items": {
               "type": "string",

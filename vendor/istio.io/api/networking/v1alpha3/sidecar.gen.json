@@ -17,7 +17,7 @@
         }
       },
       "istio.networking.v1alpha3.WorkloadSelector": {
-        "description": "`WorkloadSelector` specifies the criteria used to determine if the `Gateway`, `Sidecar`, or `EnvoyFilter` or `ServiceEntry` configuration can be applied to a proxy. The matching criteria includes the metadata associated with a proxy, workload instance info such as labels attached to the pod/VM, or any other info that the proxy provides to Istio during the initial handshake. If multiple conditions are specified, all conditions need to match in order for the workload instance to be selected. Currently, only label based selection mechanism is supported.",
+        "description": "`WorkloadSelector` specifies the criteria used to determine if the `Gateway`, `Sidecar`, `EnvoyFilter`, or `ServiceEntry` configuration can be applied to a proxy. The matching criteria includes the metadata associated with a proxy, workload instance info such as labels attached to the pod/VM, or any other info that the proxy provides to Istio during the initial handshake. If multiple conditions are specified, all conditions need to match in order for the workload instance to be selected. Currently, only label based selection mechanism is supported.",
         "type": "object",
         "properties": {
           "labels": {
@@ -93,7 +93,7 @@
             "format": "string"
           },
           "defaultEndpoint": {
-            "description": "The loopback IP endpoint or Unix domain socket to which traffic should be forwarded to. This configuration can be used to redirect traffic arriving at the bind `IP:Port` on the sidecar to a `localhost:port` or Unix domain socket where the application workload instance is listening for connections. Format should be `127.0.0.1:PORT` or `unix:///path/to/socket`",
+            "description": "The IP endpoint or Unix domain socket to which traffic should be forwarded to. This configuration can be used to redirect traffic arriving at the bind `IP:Port` on the sidecar to a `localhost:port` or Unix domain socket where the application workload instance is listening for connections. Arbitrary IPs are not supported. Format should be one of `127.0.0.1:PORT`, `0.0.0.0:PORT` (which will forward to the instance IP), or `unix:///path/to/socket`",
             "type": "string",
             "format": "string"
           },

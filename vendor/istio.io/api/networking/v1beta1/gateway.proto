@@ -21,6 +21,7 @@ import "google/api/field_behavior.proto";
 // $description: Configuration affecting edge load balancer.
 // $location: https://istio.io/docs/reference/config/networking/gateway.html
 // $aliases: [/docs/reference/config/networking/v1beta1/gateway]
+// $mode: none
 
 // `Gateway` describes a load balancer operating at the edge of the mesh
 // receiving incoming or outgoing HTTP/TCP connections. The specification
@@ -261,9 +262,7 @@ import "google/api/field_behavior.proto";
 //   hosts:
 //   - mongosvr.prod.svc.cluster.local # name of internal Mongo service
 //   gateways:
-//   - some-config-namespace/my-gateway # can omit the namespace if gateway is
-//   in same
-//                                        namespace as virtual service.
+//   - some-config-namespace/my-gateway # can omit the namespace if gateway is in same namespace as virtual service.
 //   tcp:
 //   - match:
 //     - port: 27017
@@ -286,9 +285,7 @@ import "google/api/field_behavior.proto";
 //   hosts:
 //   - mongosvr.prod.svc.cluster.local # name of internal Mongo service
 //   gateways:
-//   - some-config-namespace/my-gateway # can omit the namespace if gateway is
-//   in same
-//                                        namespace as virtual service.
+//   - some-config-namespace/my-gateway # can omit the namespace if gateway is in same namespace as virtual service.
 //   tcp:
 //   - match:
 //     - port: 27017
@@ -534,11 +531,14 @@ message Server {
   // connections.
   Port port = 1 [(google.api.field_behavior) = REQUIRED];
 
-  // $hide_from_docs
   // The ip or the Unix domain socket to which the listener should be bound
   // to. Format: `x.x.x.x` or `unix:///path/to/uds` or `unix://@foobar`
   // (Linux abstract namespace). When using Unix domain sockets, the port
   // number should be 0.
+  // This can be used to restrict the reachability of this server to be gateway internal only. 
+  // This is typically used when a gateway needs to communicate to another mesh service 
+  // e.g. publishing metrics. In such case, the server created with the
+  // specified bind will not be available to external gateway clients.
   string bind = 4;
 
   // One or more hosts exposed by this gateway.
@@ -640,6 +640,9 @@ message ServerTLSSettings {
     // not have direct connectivity between their respective
     // endpoints. Use of this mode assumes that both the source and
     // the destination are using Istio mTLS to secure traffic.
+    // In order for this mode to be enabled, the gateway deployment
+    // must be configured with the `ISTIO_META_ROUTER_MODE=sni-dnat`
+    // environment variable.
     AUTO_PASSTHROUGH = 3;
 
     // Secure connections from the downstream using mutual TLS by
@@ -671,12 +674,10 @@ message ServerTLSSettings {
 
   // For gateways running on Kubernetes, the name of the secret that
   // holds the TLS certs including the CA certificates. Applicable
-  // only on Kubernetes, and only if the dynamic credential fetching
-  // feature is enabled in the proxy by setting
-  // `ISTIO_META_USER_SDS` metadata variable.  The secret (of type
-  // `generic`) should contain the following keys and values: `key:
-  // <privateKey>` and `cert: <serverCert>`. For mutual TLS, 
-  // `cacert: <CACertificate>` can be provided in the same secret or 
+  // only on Kubernetes. The secret (of type `generic`) should
+  // contain the following keys and values: `key:
+  // <privateKey>` and `cert: <serverCert>`. For mutual TLS,
+  // `cacert: <CACertificate>` can be provided in the same secret or
   // a separate secret named `<secret>-cacert`.
   // Secret of type tls for server certificates along with
   // ca.crt key for CA certificates is also supported.

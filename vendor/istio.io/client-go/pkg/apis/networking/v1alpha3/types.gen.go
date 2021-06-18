@@ -88,7 +88,7 @@ type DestinationRuleList struct {
 // +cue-gen:EnvoyFilter:subresource:status
 // +cue-gen:EnvoyFilter:scope:Namespaced
 // +cue-gen:EnvoyFilter:resource:categories=istio-io,networking-istio-io
-// +cue-gen:EnvoyFilter:preserveUnknownFields:true
+// +cue-gen:EnvoyFilter:preserveUnknownFields:configPatches.[].patch.value
 // -->
 //
 // <!-- go code generation tags
@@ -382,6 +382,7 @@ type WorkloadEntryList struct {
 // +cue-gen:WorkloadGroup:groupName:networking.istio.io
 // +cue-gen:WorkloadGroup:version:v1alpha3
 // +cue-gen:WorkloadGroup:storageVersion
+// +cue-gen:WorkloadGroup:labels:app=istio-pilot,chart=istio,heritage=Tiller,release=istio
 // +cue-gen:WorkloadGroup:subresource:status
 // +cue-gen:WorkloadGroup:scope:Namespaced
 // +cue-gen:WorkloadGroup:resource:categories=istio-io,networking-istio-io,shortNames=wg,plural=workloadgroups

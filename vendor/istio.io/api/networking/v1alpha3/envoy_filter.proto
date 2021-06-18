@@ -37,7 +37,7 @@ import "networking/v1alpha3/sidecar.proto";
 // namespace](https://istio.io/docs/reference/config/istio.mesh.v1alpha1/#MeshConfig),
 // followed by all matching EnvoyFilters in the workload's namespace.
 //
-// **NOTE 1**: Some aspects of this API is deeply tied to the internal
+// **NOTE 1**: Some aspects of this API are deeply tied to the internal
 // implementation in Istio networking subsystem as well as Envoy's XDS
 // API. While the EnvoyFilter API by itself will maintain backward
 // compatibility, any envoy configuration provided through this
@@ -82,9 +82,9 @@ import "networking/v1alpha3/sidecar.proto";
 //     patch:
 //       operation: INSERT_BEFORE
 //       value:
-//         # This is the full filter config including the name and config or typed_config section.
+//         # This is the full filter config including the name and typed_config section.
 //         name: "envoy.config.filter.network.custom_protocol"
-//         config:
+//         typed_config:
 //          ...
 //   - applyTo: NETWORK_FILTER # http connection manager is a filter in Envoy
 //     match:
@@ -101,7 +101,7 @@ import "networking/v1alpha3/sidecar.proto";
 //           "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
 //           common_http_protocol_options:
 //             idle_timeout: 30s
-//```
+// ```
 //
 // The following example enables Envoy's Lua filter for all inbound
 // HTTP calls arriving at service port 8080 of the reviews service pod
@@ -127,26 +127,30 @@ import "networking/v1alpha3/sidecar.proto";
 //       context: SIDECAR_INBOUND
 //       listener:
 //         portNumber: 8080
+//         filterChain:
+//           filter:
+//             name: "envoy.filters.network.http_connection_manager"
+//             subFilter:
+//               name: "envoy.filters.http.router"
 //     patch:
-//       operation: ADD
-//       filterClass: AUTHZ # This filter will run *after* the Istio authz filter.
+//       operation: INSERT_BEFORE
 //       value: # lua filter specification
-//         name: envoy.filters.http.lua
-//         typed_config:
+//        name: envoy.lua
+//        typed_config:
 //           "@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua"
 //           inlineCode: |
-//            function envoy_on_request(request_handle)
-//              -- Make an HTTP call to an upstream host with the following headers, body, and timeout.
-//              local headers, body = request_handle:httpCall(
-//               "lua_cluster",
-//               {
-//                [":method"] = "POST",
-//                [":path"] = "/acl",
-//                [":authority"] = "internal.org.net"
-//               },
-//              "authorize call",
-//              5000)
-//            end
+//             function envoy_on_request(request_handle)
+//               -- Make an HTTP call to an upstream host with the following headers, body, and timeout.
+//               local headers, body = request_handle:httpCall(
+//                "lua_cluster",
+//                {
+//                 [":method"] = "POST",
+//                 [":path"] = "/acl",
+//                 [":authority"] = "internal.org.net"
+//                },
+//               "authorize call",
+//               5000)
+//             end
 //   # The second patch adds the cluster that is referenced by the lua code
 //   # cds match is omitted as a new cluster is being added
 //   - applyTo: CLUSTER
@@ -159,12 +163,16 @@ import "networking/v1alpha3/sidecar.proto";
 //         type: STRICT_DNS
 //         connect_timeout: 0.5s
 //         lb_policy: ROUND_ROBIN
-//         hosts:
-//         - socket_address:
-//             protocol: TCP
-//             address: "internal.org.net"
-//             port_value: 8888
-//
+//         load_assignment:
+//           cluster_name: lua_cluster
+//           endpoints:
+//           - lb_endpoints:
+//             - endpoint:
+//                 address:
+//                   socket_address:
+//                     protocol: TCP
+//                     address: "internal.org.net"
+//                     port_value: 8888
 // ```
 //
 // The following example overwrites certain fields (HTTP idle timeout
@@ -194,10 +202,12 @@ import "networking/v1alpha3/sidecar.proto";
 //     patch:
 //       operation: MERGE
 //       value:
-//         common_http_protocol_options:
-//           idle_timeout: 30s
-//         xff_num_trusted_hops: 5
-//```
+//         typed_config:
+//           "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager"
+//           xff_num_trusted_hops: 5
+//           common_http_protocol_options:
+//             idle_timeout: 30s
+// ```
 //
 // The following example inserts an attributegen filter
 // that produces `istio_operationId` attribute which is consumed
@@ -269,9 +279,9 @@ import "networking/v1alpha3/sidecar.proto";
 //           grpc_service:
 //             envoy_grpc:
 //               cluster_name: acme-ext-authz
-//               initial_metadata:
-//               - key: foo
-//                 value: myauth.acme # required by local ext auth server.
+//             initial_metadata:
+//             - key: foo
+//               value: myauth.acme # required by local ext auth server.
 // ```
 //
 // A workload in the `myns` namespace needs to access a different ext_auth server
@@ -337,8 +347,10 @@ import "networking/v1alpha3/sidecar.proto";
 //                 remote:
 //                   http_uri:
 //                     uri: http://my-wasm-binary-uri
-//             configuration: |
-//               {}
+//             configuration:
+//               "@type": "type.googleapis.com/google.protobuf.StringValue"
+//               value: |
+//                 {}
 //   # The second patch instructs to apply the above Wasm filter to the listener/http connection manager.
 //   - applyTo: HTTP_FILTER
 //     match:
@@ -358,7 +370,6 @@ import "networking/v1alpha3/sidecar.proto";
 //                   cluster_name: xds-grpc
 //           type_urls: ["envoy.extensions.filters.http.wasm.v3.Wasm"]
 // ```
-
 package istio.networking.v1alpha3;
 
 option go_package = "istio.io/api/networking/v1alpha3";
@@ -375,7 +386,7 @@ option go_package = "istio.io/api/networking/v1alpha3";
 // +cue-gen:EnvoyFilter:subresource:status
 // +cue-gen:EnvoyFilter:scope:Namespaced
 // +cue-gen:EnvoyFilter:resource:categories=istio-io,networking-istio-io
-// +cue-gen:EnvoyFilter:preserveUnknownFields:true
+// +cue-gen:EnvoyFilter:preserveUnknownFields:configPatches.[].patch.value
 // -->
 //
 // <!-- go code generation tags
@@ -596,6 +607,10 @@ message EnvoyFilter {
       // to `envoy.filters.network.http_connection_manager` to add a filter or apply a
       // patch to the HTTP connection manager.
       FilterMatch filter = 5;
+
+       // The destination_port value used by a filter chain's match condition.
+       // This condition will evaluate to false if the filter chain has no destination_port match.
+       uint32 destination_port = 6;
     };
 
     // Conditions to match a specific filter within a filter chain.
@@ -653,7 +668,7 @@ message EnvoyFilter {
 
       // Merge the provided config with the generated config using
       // proto merge semantics. If you are specifying config in its
-      // entirity, use `REPLACE` instead.
+      // entirety, use `REPLACE` instead.
       MERGE = 1;
 
       // Add the provided config to an existing list (of listeners,
@@ -671,8 +686,8 @@ message EnvoyFilter {
 
       // Insert operation on an array of named objects. This operation
       // is typically useful only in the context of filters or routes,
-      // where the order of elements matter. Routes should be ordered 
-      // based on most to least specific matching criteria since the 
+      // where the order of elements matter. Routes should be ordered
+      // based on most to least specific matching criteria since the
       // first matching element is selected. For clusters and virtual hosts,
       // order of the element in the array does not matter. Insert
       // before the selected filter or sub filter. If no filter is
@@ -682,8 +697,8 @@ message EnvoyFilter {
 
       // Insert operation on an array of named objects. This operation
       // is typically useful only in the context of filters or routes,
-      // where the order of elements matter. Routes should be ordered 
-      // based on most to least specific matching criteria since the 
+      // where the order of elements matter. Routes should be ordered
+      // based on most to least specific matching criteria since the
       // first matching element is selected. For clusters and virtual hosts,
       // order of the element in the array does not matter. Insert
       // after the selected filter or sub filter. If no filter is
@@ -693,8 +708,8 @@ message EnvoyFilter {
 
       // Insert operation on an array of named objects. This operation
       // is typically useful only in the context of filters or routes,
-      // where the order of elements matter. Routes should be ordered 
-      // based on most to least specific matching criteria since the 
+      // where the order of elements matter. Routes should be ordered
+      // based on most to least specific matching criteria since the
       // first matching element is selected. For clusters and virtual hosts,
       // order of the element in the array does not matter. Insert
       // first in the list based on the presence of selected filter or not.

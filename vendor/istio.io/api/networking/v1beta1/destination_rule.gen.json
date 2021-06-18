@@ -437,7 +437,7 @@
             "format": "int32"
           },
           "connectTimeout": {
-            "description": "TCP connection timeout.",
+            "description": "TCP connection timeout. format: 1h/1m/1s/1ms. MUST BE \u003e=1ms. Default is 10s.",
             "type": "string"
           },
           "tcpKeepalive": {
@@ -520,7 +520,7 @@
         ]
       },
       "istio.networking.v1beta1.LocalityLoadBalancerSetting.Distribute": {
-        "description": "Describes how traffic originating in the 'from' zone or sub-zone is distributed over a set of 'to' zones. Syntax for specifying a zone is {region}/{zone}/{sub-zone} and terminal wildcards are allowed on any segment of the specification. Examples: * - matches all localities us-west/* - all zones and sub-zones within the us-west region us-west/zone-1/* - all sub-zones within us-west/zone-1",
+        "description": "Describes how traffic originating in the 'from' zone or sub-zone is distributed over a set of 'to' zones. Syntax for specifying a zone is {region}/{zone}/{sub-zone} and terminal wildcards are allowed on any segment of the specification. Examples: `*` - matches all localities",
         "type": "object",
         "properties": {
           "from": {
@@ -529,7 +529,7 @@
             "format": "string"
           },
           "to": {
-            "description": "Map of upstream localities to traffic distribution weights. The sum of all weights should be == 100. Any locality not assigned a weight will receive no traffic.",
+            "description": "Map of upstream localities to traffic distribution weights. The sum of all weights should be 100. Any locality not present will receive no traffic.",
             "type": "object",
             "additionalProperties": {
               "type": "integer"

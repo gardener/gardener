@@ -17,7 +17,6 @@ syntax = "proto3";
 import "google/api/field_behavior.proto";
 import "networking/v1alpha3/gateway.proto";
 import "networking/v1alpha3/virtual_service.proto";
-import "networking/v1alpha3/destination_rule.proto";
 
 // $schema: istio.networking.v1alpha3.Sidecar
 // $title: Sidecar
@@ -479,11 +478,12 @@ message IstioIngressListener {
   // expected to be captured (or not).
   CaptureMode capture_mode = 3;
 
-  // The loopback IP endpoint or Unix domain socket to which
+  // The IP endpoint or Unix domain socket to which
   // traffic should be forwarded to. This configuration can be used to
   // redirect traffic arriving at the bind `IP:Port` on the sidecar to a `localhost:port`
   // or Unix domain socket where the application workload instance is listening for
-  // connections. Format should be `127.0.0.1:PORT` or `unix:///path/to/socket`
+  // connections. Arbitrary IPs are not supported. Format should be one of `127.0.0.1:PORT`, `0.0.0.0:PORT`
+  // (which will forward to the instance IP), or `unix:///path/to/socket`
   string default_endpoint = 4 [(google.api.field_behavior) = REQUIRED];
 
   reserved "localhost_client_tls";
@@ -545,15 +545,6 @@ message IstioEgressListener {
   // Private configurations (e.g., `exportTo` set to `.`) will
   // not be available. Refer to the `exportTo` setting in `VirtualService`,
   // `DestinationRule`, and `ServiceEntry` configurations for details.
-  //
-  // **WARNING:** The list of egress hosts in a `Sidecar` must also include
-  // the Mixer control plane services if they are enabled. Envoy will not
-  // be able to reach them otherwise. For example, add host
-  // `istio-system/istio-telemetry.istio-system.svc.cluster.local` if telemetry
-  // is enabled, `istio-system/istio-policy.istio-system.svc.cluster.local` if
-  // policy is enabled, or add `istio-system/*` to allow all services in the
-  // `istio-system` namespace. This requirement is temporary and will be removed
-  // in a future Istio release.
   repeated string hosts = 4 [(google.api.field_behavior) = REQUIRED];
 
   reserved "localhost_server_tls";
@@ -561,7 +552,7 @@ message IstioEgressListener {
 }
 
 // `WorkloadSelector` specifies the criteria used to determine if the
-// `Gateway`, `Sidecar`, or `EnvoyFilter` or `ServiceEntry`
+// `Gateway`, `Sidecar`, `EnvoyFilter`, or `ServiceEntry`
 // configuration can be applied to a proxy. The matching criteria
 // includes the metadata associated with a proxy, workload instance
 // info such as labels attached to the pod/VM, or any other info that

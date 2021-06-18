@@ -43,7 +43,7 @@
 //      path: /foo/bar
 //      host: 127.0.0.1
 //      port: 3100
-//      scheme: https
+//      scheme: HTTPS
 //      httpHeaders:
 //      - name: Lit-Header
 //        value: Im-The-Best

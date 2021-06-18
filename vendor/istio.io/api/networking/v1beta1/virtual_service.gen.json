@@ -340,7 +340,7 @@
             "format": "int32"
           },
           "perTryTimeout": {
-            "description": "Timeout per retry attempt for a given request. format: 1h/1m/1s/1ms. MUST BE \u003e=1ms. Default is same value as request `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute), which means no timeout.",
+            "description": "Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST BE \u003e=1ms. Default is same value as request `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute), which means no timeout.",
             "type": "string"
           },
           "retryOn": {
