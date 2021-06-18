@@ -15,7 +15,11 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"time"
+
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -108,6 +112,29 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 
 	if obj.SNI == nil {
 		obj.SNI = &SNI{}
+	}
+
+	var defaultSVCName = DefaultSNIIngresServiceName
+	for i, handler := range obj.ExposureClassHandlers {
+		if obj.ExposureClassHandlers[i].SNI == nil {
+			obj.ExposureClassHandlers[i].SNI = &SNI{Ingress: &SNIIngress{}}
+		}
+		if obj.ExposureClassHandlers[i].SNI.Ingress == nil {
+			obj.ExposureClassHandlers[i].SNI.Ingress = &SNIIngress{}
+		}
+		if obj.ExposureClassHandlers[i].SNI.Ingress.Namespace == nil {
+			namespaceName := fmt.Sprintf("istio-ingress-handler-%s", handler.Name)
+			obj.ExposureClassHandlers[i].SNI.Ingress.Namespace = &namespaceName
+		}
+		if obj.ExposureClassHandlers[i].SNI.Ingress.ServiceName == nil {
+			obj.ExposureClassHandlers[i].SNI.Ingress.ServiceName = &defaultSVCName
+		}
+		if len(obj.ExposureClassHandlers[i].SNI.Ingress.Labels) == 0 {
+			obj.ExposureClassHandlers[i].SNI.Ingress.Labels = map[string]string{
+				v1beta1constants.LabelApp:    DefaultIngressGatewayAppLabelValue,
+				v1alpha1constants.GardenRole: v1alpha1constants.GardenRoleExposureClassHandler,
+			}
+		}
 	}
 }
 
@@ -340,6 +367,9 @@ func SetDefaults_SNIIngress(obj *SNIIngress) {
 	}
 
 	if obj.Labels == nil {
-		obj.Labels = map[string]string{"istio": "ingressgateway"}
+		obj.Labels = map[string]string{
+			v1beta1constants.LabelApp: DefaultIngressGatewayAppLabelValue,
+			"istio":                   "ingressgateway",
+		}
 	}
 }

@@ -20,7 +20,11 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	protobuftypes "github.com/gogo/protobuf/types"
 	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
@@ -81,6 +85,12 @@ type Interface interface {
 	SetSecrets(Secrets)
 	// SetSeedNamespaceObjectUID sets UID for the namespace
 	SetSeedNamespaceObjectUID(namespaceUID types.UID)
+
+	// SetExposureClassHandlerName sets the name of the ExposureClass handler.
+	SetExposureClassHandlerName(string)
+
+	// SetSNIConfig set the sni config.
+	SetSNIConfig(*config.SNI)
 }
 
 // Secrets is collection of secrets for the vpn-seed-server.
@@ -137,8 +147,11 @@ type vpnSeedServer struct {
 	podNetwork          string
 	nodeNetwork         *string
 	replicas            int32
-	istioIngressGateway IstioIngressGateway
-	secrets             Secrets
+
+	istioIngressGateway      IstioIngressGateway
+	exposureClassHandlerName *string
+	sniConfig                *config.SNI
+	secrets                  Secrets
 }
 
 func (v *vpnSeedServer) Deploy(ctx context.Context) error {
@@ -165,6 +178,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		destinationRule = v.emptyDestinationRule()
 		vpa             = v.emptyVPA()
 		envoyFilter     = v.emptyEnvoyFilter()
+		igwSelectors    = v.getIngressGatewaySelectors()
 
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 	)
@@ -224,10 +238,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							// we don't want to modify existing labels on the istio namespace
 							NamespaceSelector: &metav1.LabelSelector{},
 							PodSelector: &metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									// TODO (mvladev): use configurable labels
-									v1beta1constants.LabelApp: "istio-ingressgateway",
-								},
+								MatchLabels: igwSelectors,
 							},
 						},
 					},
@@ -455,9 +466,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, gateway, func() error {
 		gateway.Spec = istionetworkingv1beta1.Gateway{
-			Selector: map[string]string{
-				"istio": "ingressgateway",
-			},
+			Selector: igwSelectors,
 			Servers: []*istionetworkingv1beta1.Server{
 				{
 					Hosts: []string{*v.kubeAPIServerHost},
@@ -583,6 +592,11 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	envoyFilterSelector := v.istioIngressGateway.Labels
+	if v.sniConfig != nil && v.exposureClassHandlerName != nil {
+		envoyFilterSelector = igwSelectors
+	}
+
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, envoyFilter, func() error {
 		envoyFilter.ObjectMeta.Name = envoyFilter.Name
 		envoyFilter.ObjectMeta.Namespace = envoyFilter.Namespace
@@ -597,7 +611,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 			},
 		}
 		envoyFilter.Spec.WorkloadSelector = &istionetworkingv1alpha3.WorkloadSelector{
-			Labels: v.istioIngressGateway.Labels,
+			Labels: envoyFilterSelector,
 		}
 		envoyFilter.Spec.ConfigPatches = []*istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
 			&istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
@@ -788,6 +802,10 @@ func (v *vpnSeedServer) SetSecrets(secrets Secrets) { v.secrets = secrets }
 func (v *vpnSeedServer) SetSeedNamespaceObjectUID(namespaceUID types.UID) {
 	v.namespaceUID = namespaceUID
 }
+func (v *vpnSeedServer) SetExposureClassHandlerName(handlerName string) {
+	v.exposureClassHandlerName = &handlerName
+}
+func (v *vpnSeedServer) SetSNIConfig(cfg *config.SNI) { v.sniConfig = cfg }
 
 func (v *vpnSeedServer) emptyConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: envoyConfigName, Namespace: v.namespace}}
@@ -826,7 +844,26 @@ func (v *vpnSeedServer) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 }
 
 func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
-	return &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: v.namespace + "-vpn", Namespace: v.istioIngressGateway.Namespace}}
+	var namespace = v.istioIngressGateway.Namespace
+	if v.sniConfig != nil && v.exposureClassHandlerName != nil {
+		namespace = *v.sniConfig.Ingress.Namespace
+	}
+	return &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: v.namespace + "-vpn", Namespace: namespace}}
+}
+
+func (v *vpnSeedServer) getIngressGatewaySelectors() map[string]string {
+	var defaulIgwSelectors = map[string]string{
+		v1beta1constants.LabelApp: gardenletconfigv1alpha1.DefaultIngressGatewayAppLabelValue,
+	}
+
+	if v.sniConfig != nil {
+		if v.exposureClassHandlerName != nil {
+			return gutil.GetMandatoryExposureClassHandlerSNILabels(v.sniConfig.Ingress.Labels, *v.exposureClassHandlerName)
+		}
+		return utils.MergeStringMaps(v.sniConfig.Ingress.Labels, defaulIgwSelectors)
+	}
+
+	return defaulIgwSelectors
 }
 
 var envoyConfig = `static_resources:

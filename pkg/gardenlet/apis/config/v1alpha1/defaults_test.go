@@ -15,6 +15,7 @@
 package v1alpha1_test
 
 import (
+	"fmt"
 	"time"
 
 	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
@@ -60,9 +61,40 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Server.HTTPS.Port).To(Equal(2720))
 			Expect(obj.SNI).ToNot(BeNil())
 			Expect(obj.SNI.Ingress).ToNot(BeNil())
-			Expect(obj.SNI.Ingress.Labels).To(Equal(map[string]string{"istio": "ingressgateway"}))
 			Expect(obj.SNI.Ingress.Namespace).To(PointTo(Equal("istio-ingress")))
 			Expect(obj.SNI.Ingress.ServiceName).To(PointTo(Equal("istio-ingressgateway")))
+			Expect(obj.SNI.Ingress.Labels).To(Equal(map[string]string{
+				"app":   "istio-ingressgateway",
+				"istio": "ingressgateway",
+			}))
+		})
+
+		It("should default the gardenlets exposure class handlers sni config", func() {
+			obj.ExposureClassHandlers = []ExposureClassHandler{
+				{Name: "test1"},
+				{Name: "test2", SNI: &SNI{}},
+			}
+
+			SetObjectDefaults_GardenletConfiguration(obj)
+
+			Expect(obj.ExposureClassHandlers[0].SNI).ToNot(BeNil())
+			Expect(obj.ExposureClassHandlers[0].SNI.Ingress).ToNot(BeNil())
+			Expect(obj.ExposureClassHandlers[0].SNI.Ingress.Namespace).ToNot(BeNil())
+			Expect(*obj.ExposureClassHandlers[0].SNI.Ingress.Namespace).To(Equal(fmt.Sprintf("istio-ingress-handler-%s", obj.ExposureClassHandlers[0].Name)))
+			Expect(*obj.ExposureClassHandlers[0].SNI.Ingress.ServiceName).To(Equal("istio-ingressgateway"))
+			Expect(obj.ExposureClassHandlers[0].SNI.Ingress.Labels).To(Equal(map[string]string{
+				"app":                 "istio-ingressgateway",
+				"gardener.cloud/role": "exposureclass-handler",
+			}))
+
+			Expect(obj.ExposureClassHandlers[1].SNI.Ingress).ToNot(BeNil())
+			Expect(obj.ExposureClassHandlers[1].SNI.Ingress.Namespace).ToNot(BeNil())
+			Expect(*obj.ExposureClassHandlers[1].SNI.Ingress.Namespace).To(Equal(fmt.Sprintf("istio-ingress-handler-%s", obj.ExposureClassHandlers[1].Name)))
+			Expect(*obj.ExposureClassHandlers[1].SNI.Ingress.ServiceName).To(Equal("istio-ingressgateway"))
+			Expect(obj.ExposureClassHandlers[1].SNI.Ingress.Labels).To(Equal(map[string]string{
+				"app":                 "istio-ingressgateway",
+				"gardener.cloud/role": "exposureclass-handler",
+			}))
 		})
 
 		Describe("ClientConnection settings", func() {

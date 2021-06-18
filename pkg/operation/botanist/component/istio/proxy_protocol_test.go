@@ -72,14 +72,12 @@ var _ = Describe("Proxy protocol", func() {
 		expectedGW = &networkingv1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					"app":   "istio-ingressgateway",
-					"istio": "ingressgateway",
+					"app": "istio-ingressgateway",
 				},
 			},
 			Spec: v1beta1.Gateway{
 				Selector: map[string]string{
-					"app":   "istio-ingressgateway",
-					"istio": "ingressgateway",
+					"app": "istio-ingressgateway",
 				},
 				Servers: []*v1beta1.Server{{
 					Port: &v1beta1.Port{
@@ -95,8 +93,7 @@ var _ = Describe("Proxy protocol", func() {
 		expectedVS = &networkingv1beta1.VirtualService{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					"app":   "istio-ingressgateway",
-					"istio": "ingressgateway",
+					"app": "istio-ingressgateway",
 				},
 			},
 			Spec: v1beta1.VirtualService{
@@ -120,15 +117,13 @@ var _ = Describe("Proxy protocol", func() {
 		expectedEF = &networkingv1alpha3.EnvoyFilter{
 			ObjectMeta: metav1.ObjectMeta{
 				Labels: map[string]string{
-					"app":   "istio-ingressgateway",
-					"istio": "ingressgateway",
+					"app": "istio-ingressgateway",
 				},
 			},
 			Spec: v1alpha3.EnvoyFilter{
 				WorkloadSelector: &v1alpha3.WorkloadSelector{
 					Labels: map[string]string{
-						"app":   "istio-ingressgateway",
-						"istio": "ingressgateway",
+						"app": "istio-ingressgateway",
 					},
 				},
 				ConfigPatches: []*v1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{{
@@ -162,7 +157,7 @@ var _ = Describe("Proxy protocol", func() {
 		)
 		Expect(ca).NotTo(BeNil(), "should return chart applier")
 
-		proxy = NewProxyProtocolGateway(deployNS, ca, chartsRootPath)
+		proxy = NewProxyProtocolGateway(nil, deployNS, ca, chartsRootPath)
 	})
 
 	JustBeforeEach(func() {

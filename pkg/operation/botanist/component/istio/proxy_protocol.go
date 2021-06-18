@@ -25,19 +25,27 @@ import (
 )
 
 type proxyProtocol struct {
+	values       *ProxyValues
 	namespace    string
 	chartApplier kubernetes.ChartApplier
 	chartPath    string
 }
 
+// ProxyValues holds values for the istio-proxy-protocol chart.
+type ProxyValues struct {
+	Labels map[string]string `json:"labels,omitempty"`
+}
+
 // NewProxyProtocolGateway creates a new DeployWaiter for istio which
 // adds a PROXY Protocol listener to the istio-ingressgateway.
 func NewProxyProtocolGateway(
+	values *ProxyValues,
 	namespace string,
 	chartApplier kubernetes.ChartApplier,
 	chartsRootPath string,
 ) component.DeployWaiter {
 	return &proxyProtocol{
+		values:       values,
 		namespace:    namespace,
 		chartApplier: chartApplier,
 		chartPath:    filepath.Join(chartsRootPath, istioReleaseName, "istio-proxy-protocol"),
@@ -45,7 +53,7 @@ func NewProxyProtocolGateway(
 }
 
 func (i *proxyProtocol) Deploy(ctx context.Context) error {
-	return i.chartApplier.Apply(ctx, i.chartPath, i.namespace, istioReleaseName)
+	return i.chartApplier.Apply(ctx, i.chartPath, i.namespace, istioReleaseName, kubernetes.Values(i.values))
 }
 
 func (i *proxyProtocol) Destroy(ctx context.Context) error {

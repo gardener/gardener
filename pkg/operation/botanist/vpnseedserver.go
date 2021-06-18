@@ -100,6 +100,11 @@ func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 	})
 
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSeedNamespaceObjectUID(b.SeedNamespaceObject.UID)
+	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSNIConfig(b.Config.SNI)
+	if b.ExposureClassHandler != nil {
+		b.Shoot.Components.ControlPlane.VPNSeedServer.SetExposureClassHandlerName(b.ExposureClassHandler.Name)
+		b.Shoot.Components.ControlPlane.VPNSeedServer.SetSNIConfig(b.ExposureClassHandler.SNI)
+	}
 
 	return b.Shoot.Components.ControlPlane.VPNSeedServer.Deploy(ctx)
 }

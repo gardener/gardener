@@ -379,7 +379,7 @@ var _ = Describe("VpnSeedServer", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
 			Spec: v1beta1.Gateway{
 				Selector: map[string]string{
-					"istio": "ingressgateway",
+					"app": "istio-ingressgateway",
 				},
 				Servers: []*v1beta1.Server{
 					{
