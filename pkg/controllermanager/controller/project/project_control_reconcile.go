@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/projectrbac"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
@@ -40,9 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-// NamespacePrefix is the prefix of namespaces representing projects.
-const NamespacePrefix = "garden-"
 
 func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, gardenReader client.Reader) (reconcile.Result, error) {
 	var (
@@ -169,7 +167,7 @@ func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, ga
 	if namespaceName == nil {
 		obj := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName:    fmt.Sprintf("%s%s-", NamespacePrefix, project.Name),
+				GenerateName:    fmt.Sprintf("%s%s-", gutil.ProjectNamespacePrefix, project.Name),
 				OwnerReferences: []metav1.OwnerReference{*ownerReference},
 				Labels:          projectLabels,
 				Annotations:     projectAnnotations,
