@@ -18,12 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,6 +29,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 func (c *Controller) seedEnqueue(obj interface{}) {
@@ -88,11 +88,21 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.gardenClient, namespace, func() error {
-		namespace.OwnerReferences = []metav1.OwnerReference{*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))}
-		return nil
-	}); err != nil {
-		return reconcileResult(err)
+	if err := r.gardenClient.Get(ctx, client.ObjectKeyFromObject(namespace), namespace); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return reconcile.Result{}, err
+		}
+
+		// create namespace with controller ref to seed
+		namespace.SetOwnerReferences([]metav1.OwnerReference{*metav1.NewControllerRef(seed, gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"))})
+		if err := r.gardenClient.Create(ctx, namespace); err != nil {
+			return reconcile.Result{}, err
+		}
+	} else {
+		// namespace already exists, check if it has controller ref to seed
+		if !metav1.IsControlledBy(namespace, seed) {
+			return reconcile.Result{}, fmt.Errorf("namespace %q is not controlled by seed %q", namespace.Name, seed.Name)
+		}
 	}
 
 	syncedSecrets, err := r.syncGardenSecrets(ctx, r.gardenClient, namespace)
