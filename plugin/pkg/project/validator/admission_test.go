@@ -41,9 +41,6 @@ var _ = Describe("Admission", func() {
 					Name:      projectName,
 					Namespace: namespaceName,
 				},
-				Spec: core.ProjectSpec{
-					Namespace: &namespaceName,
-				},
 			}
 		)
 
@@ -54,7 +51,15 @@ var _ = Describe("Admission", func() {
 			project = projectBase
 		})
 
-		It("should allow creating the project", func() {
+		It("should allow creating the project (namespace nil)", func() {
+			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+		})
+
+		It("should allow creating the project(namespace non-nil)", func() {
+			project.Spec.Namespace = &namespaceName
+
 			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
 			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
@@ -81,7 +86,7 @@ var _ = Describe("Admission", func() {
 	})
 
 	Describe("#New", func() {
-		It("should only handle CREATE or UPDATE operations", func() {
+		It("should only handle CREATE operations", func() {
 			dr, err := New()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dr.Handles(admission.Create)).To(BeTrue())
