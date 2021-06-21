@@ -29,6 +29,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// ProjectNamespacePrefix is the prefix of namespaces representing projects.
+const ProjectNamespacePrefix = "garden-"
+
 // ProjectForNamespaceFromInternalLister returns the Project responsible for a given <namespace>. It lists all Projects
 // via the given lister, iterates over them and tries to identify the Project by looking for the namespace name
 // in the project spec.

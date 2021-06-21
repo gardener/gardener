@@ -55,6 +55,15 @@ This admission controller reacts on `CREATE` and `UPDATE` operations for `Plant`
 It sets the `gardener.cloud/created-by` annotation for newly created `Plant` resources.
 Also, it prevents creating new `Plant` resources in `Project`s that are already have a deletion timestamp.
 
+## `ProjectValidator`
+
+_(enabled by default)_
+
+This admission controller reacts on `CREATE` operations for `Project`s.
+It prevents creating `Project`s with a non-empty `.spec.namespace` if the value in `.spec.namespace` does not start with `garden-`.
+
+⚠️ This admission plugin will be removed in a future release and its business logic will be incorporated into the static validation of the `gardener-apiserver`.
+
 ## `ResourceQuota`
 
 _(enabled by default)_
