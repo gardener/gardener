@@ -11,6 +11,9 @@ if [ ! -f "$PATH_AUTHORIZED_KEYS" ]; then
   cp -f {{ .pathAuthorizedSSHKeys }} $PATH_AUTHORIZED_KEYS
   chown $USERNAME:$USERNAME $PATH_AUTHORIZED_KEYS
 fi
+if [ -f "{{ .pathPublicSSHKey }}" ]; then
+  rm -- "{{ .pathPublicSSHKey }}"
+fi
 if [ ! -f "$PATH_SUDOERS" ]; then
   echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > $PATH_SUDOERS
 fi

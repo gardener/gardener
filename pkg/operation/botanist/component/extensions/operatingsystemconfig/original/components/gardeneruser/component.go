@@ -47,7 +47,13 @@ func init() {
 }
 
 const (
-	pathScript            = "/var/lib/gardener-user/run.sh"
+	pathScript = "/var/lib/gardener-user/run.sh"
+
+	// pathPublicSSHKey is the old file that contained just a single SSH public key.
+	// If this file is found on a node, it will be deleted.
+	pathPublicSSHKey = "/var/lib/gardener-user-ssh.key"
+
+	// pathAuthorizedSSHKeys is the new file that can contain multiple SSH public keys.
 	pathAuthorizedSSHKeys = "/var/lib/gardener-user-authorized-keys"
 )
 
@@ -64,7 +70,10 @@ func (component) Name() string {
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	var script bytes.Buffer
-	if err := tpl.Execute(&script, map[string]interface{}{"pathAuthorizedSSHKeys": pathAuthorizedSSHKeys}); err != nil {
+	if err := tpl.Execute(&script, map[string]interface{}{
+		"pathPublicSSHKey":      pathPublicSSHKey,
+		"pathAuthorizedSSHKeys": pathAuthorizedSSHKeys,
+	}); err != nil {
 		return nil, nil, err
 	}
 
