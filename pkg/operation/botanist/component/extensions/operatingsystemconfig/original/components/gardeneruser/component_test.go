@@ -96,12 +96,20 @@ PATH_AUTHORIZED_KEYS="$DIR_SSH/authorized_keys"
 PATH_SUDOERS="/etc/sudoers.d/99-gardener-user"
 USERNAME="gardener"
 
+# create user if missing
 id $USERNAME || useradd $USERNAME -mU
-if [ ! -f "$PATH_AUTHORIZED_KEYS" ]; then
-  mkdir -p $DIR_SSH
-  cp -f /var/lib/gardener-user-authorized-keys $PATH_AUTHORIZED_KEYS
-  chown $USERNAME:$USERNAME $PATH_AUTHORIZED_KEYS
+
+# copy authorized_keys file
+mkdir -p $DIR_SSH
+cp -f "/var/lib/gardener-user-authorized-keys" $PATH_AUTHORIZED_KEYS
+chown $USERNAME:$USERNAME $PATH_AUTHORIZED_KEYS
+
+# remove unused legacy file
+if [ -f "/var/lib/gardener-user-ssh.key" ]; then
+  rm -- "/var/lib/gardener-user-ssh.key"
 fi
+
+# allow sudo for gardener user
 if [ ! -f "$PATH_SUDOERS" ]; then
   echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" > $PATH_SUDOERS
 fi
