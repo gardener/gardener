@@ -27,6 +27,7 @@
 * [API Server Network Proxy Reverse Tunneling](usage/reverse-tunnel.md)
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
 * [Auto-Scaling for shoot clusters](usage/shoot_autoscaling.md)
+* [Cleanup of Shoot clusters in deletion](usage/shoot_cleanup.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
 * [(Custom) CSI components](usage/csi_components.md)
 * [Gardener configuration and usage](usage/configuration.md)

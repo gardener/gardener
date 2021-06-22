@@ -36,6 +36,24 @@ type CleanOptions struct {
 	ErrorToleration            []TolerateErrorFunc
 }
 
+var _ CleanOption = &CleanOptions{}
+
+// ApplyToClean implements CleanOption for CleanOptions.
+func (o *CleanOptions) ApplyToClean(co *CleanOptions) {
+	if o.ListOptions != nil {
+		co.ListOptions = o.ListOptions
+	}
+	if o.DeleteOptions != nil {
+		co.DeleteOptions = o.DeleteOptions
+	}
+	if o.FinalizeGracePeriodSeconds != nil {
+		co.FinalizeGracePeriodSeconds = o.FinalizeGracePeriodSeconds
+	}
+	if o.ErrorToleration != nil {
+		co.ErrorToleration = o.ErrorToleration
+	}
+}
+
 // ApplyOptions applies the OptFuncs to the CleanOptions.
 func (o *CleanOptions) ApplyOptions(opts []CleanOption) *CleanOptions {
 	for _, opt := range opts {
