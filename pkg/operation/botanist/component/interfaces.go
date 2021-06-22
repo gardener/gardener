@@ -61,9 +61,6 @@ type CentralMonitoringConfiguration func() (CentralMonitoringConfig, error)
 // CentralLoggingConfiguration is a function alias for returning configuration for the central logging.
 type CentralLoggingConfiguration func() (CentralLoggingConfig, error)
 
-// DependencyWatchdogConfiguration is a function alias for returning configuration for the dependency-watchdog.
-type DependencyWatchdogConfiguration func() (string, error)
-
 // DeployWaiter controls and waits for life-cycle operations of a component.
 type DeployWaiter interface {
 	Deployer

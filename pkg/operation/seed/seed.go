@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
@@ -332,7 +333,6 @@ func RunReconcileSeedFlow(
 			charts.ImageNameVpaRecommender,
 			charts.ImageNameVpaUpdater,
 			charts.ImageNameHvpaController,
-			charts.ImageNameDependencyWatchdog,
 			charts.ImageNameKubeStateMetrics,
 			charts.ImageNameNginxIngressControllerSeed,
 			charts.ImageNameIngressDefaultBackend,
@@ -360,18 +360,6 @@ func RunReconcileSeedFlow(
 		if err := kutil.DeleteObjects(ctx, k8sSeedClient.Client(), resources...); err != nil {
 			return err
 		}
-	}
-
-	// Fetch component-specific dependency-watchdog configuration
-	var dependencyWatchdogConfigurations []string
-	for _, componentFn := range []component.DependencyWatchdogConfiguration{
-		func() (string, error) { return etcd.DependencyWatchdogConfiguration(v1beta1constants.ETCDRoleMain) },
-	} {
-		dwdConfig, err := componentFn()
-		if err != nil {
-			return err
-		}
-		dependencyWatchdogConfigurations = append(dependencyWatchdogConfigurations, dwdConfig)
 	}
 
 	// Fetch component-specific central monitoring configuration
@@ -810,9 +798,6 @@ func RunReconcileSeedFlow(
 				},
 			},
 		},
-		"dependency-watchdog": map[string]interface{}{
-			"config": strings.Join(dependencyWatchdogConfigurations, "\n"),
-		},
 		"nginx-ingress": computeNginxIngress(seed),
 		"hvpa": map[string]interface{}{
 			"enabled": hvpaEnabled,
@@ -894,6 +879,10 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
+	dwdEndpoint, dwdProbe, err := defaultDependencyWatchdogs(sc, imageVector)
+	if err != nil {
+		return err
+	}
 
 	var (
 		g = flow.NewGraph("Seed cluster creation")
@@ -948,6 +937,16 @@ func runCreateSeedFlow(
 			Fn:           kubeScheduler.Deploy,
 			Dependencies: flow.NewTaskIDs(deployResourceManager),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying dependency-watchdog-endpoint",
+			Fn:           dwdEndpoint.Deploy,
+			Dependencies: flow.NewTaskIDs(deployResourceManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying dependency-watchdog-probe",
+			Fn:           dwdProbe.Deploy,
+			Dependencies: flow.NewTaskIDs(deployResourceManager),
+		})
 	)
 
 	if err := g.Compile().Run(flow.Opts{Logger: seedLogger}); err != nil {
@@ -977,6 +976,8 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 		etcdDruid       = etcd.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, "", kubernetesVersion, nil)
 		networkPolicies = networkpolicies.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{})
 		clusterIdentity = clusteridentity.NewForSeed(sc.Client(), v1beta1constants.GardenNamespace, "")
+		dwdEndpoint     = dependencywatchdog.New(sc.Client(), v1beta1constants.GardenNamespace, dependencywatchdog.Values{Role: dependencywatchdog.RoleEndpoint})
+		dwdProbe        = dependencywatchdog.New(sc.Client(), v1beta1constants.GardenNamespace, dependencywatchdog.Values{Role: dependencywatchdog.RoleProbe})
 	)
 	scheduler, err := gardenerkubescheduler.Bootstrap(sc.Client(), v1beta1constants.GardenNamespace, nil, kubernetesVersion)
 	if err != nil {
@@ -1023,6 +1024,14 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 			Name: "Destroy network policies",
 			Fn:   component.OpDestroyAndWait(networkPolicies).Destroy,
 		})
+		destroyDWDEndpoint = g.Add(flow.Task{
+			Name: "Destroy dependency-watchdog-endpoint",
+			Fn:   component.OpDestroyAndWait(dwdEndpoint).Destroy,
+		})
+		destroyDWDProbe = g.Add(flow.Task{
+			Name: "Destroy dependency-watchdog-probe",
+			Fn:   component.OpDestroyAndWait(dwdProbe).Destroy,
+		})
 		_ = g.Add(flow.Task{
 			Name: "Destroying gardener-resource-manager",
 			Fn:   resourceManager.Destroy,
@@ -1033,6 +1042,8 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 				destroyClusterAutoscaler,
 				destroyKubeScheduler,
 				destroyNetworkPolicies,
+				destroyDWDEndpoint,
+				destroyDWDProbe,
 				noControllerInstallations,
 			),
 		})

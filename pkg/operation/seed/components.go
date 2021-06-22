@@ -24,8 +24,10 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/networkpolicies"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
@@ -34,6 +36,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/Masterminds/semver"
+	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
+	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 )
@@ -150,4 +154,68 @@ func defaultNetworkPolicies(
 		NodeLocalIPVSAddress: pointer.String(common.NodeLocalIPVSAddress),
 		DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
 	}), nil
+}
+
+func defaultDependencyWatchdogs(
+	sc kubernetes.Interface,
+	imageVector imagevector.ImageVector,
+) (
+	dwdEndpoint component.DeployWaiter,
+	dwdProbe component.DeployWaiter,
+	err error,
+) {
+	// Fetch component-specific dependency-watchdog configuration
+	var (
+		dependencyWatchdogEndpointConfigurationFuncs = []dependencywatchdog.EndpointConfigurationFunc{
+			func() (map[string]restarterapi.Service, error) {
+				return etcd.DependencyWatchdogEndpointConfiguration(v1beta1constants.ETCDRoleMain)
+			},
+			kubeapiserver.DependencyWatchdogEndpointConfiguration,
+		}
+		dependencyWatchdogEndpointConfigurations = restarterapi.ServiceDependants{
+			Services: make(map[string]restarterapi.Service, len(dependencyWatchdogEndpointConfigurationFuncs)),
+		}
+
+		dependencyWatchdogProbeConfigurationFuncs = []dependencywatchdog.ProbeConfigurationFunc{
+			kubeapiserver.DependencyWatchdogProbeConfiguration,
+		}
+		dependencyWatchdogProbeConfigurations = scalerapi.ProbeDependantsList{
+			Probes: make([]scalerapi.ProbeDependants, 0, len(dependencyWatchdogProbeConfigurationFuncs)),
+		}
+	)
+
+	for _, componentFn := range dependencyWatchdogEndpointConfigurationFuncs {
+		dwdConfig, err := componentFn()
+		if err != nil {
+			return nil, nil, err
+		}
+		for k, v := range dwdConfig {
+			dependencyWatchdogEndpointConfigurations.Services[k] = v
+		}
+	}
+
+	for _, componentFn := range dependencyWatchdogProbeConfigurationFuncs {
+		dwdConfig, err := componentFn()
+		if err != nil {
+			return nil, nil, err
+		}
+		dependencyWatchdogProbeConfigurations.Probes = append(dependencyWatchdogProbeConfigurations.Probes, dwdConfig...)
+	}
+
+	image, err := imageVector.FindImage(charts.ImageNameDependencyWatchdog, imagevector.RuntimeVersion(sc.Version()), imagevector.TargetVersion(sc.Version()))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	dwdEndpoint = dependencywatchdog.New(sc.Client(), v1beta1constants.GardenNamespace, dependencywatchdog.Values{
+		Role:           dependencywatchdog.RoleEndpoint,
+		Image:          image.String(),
+		ValuesEndpoint: dependencywatchdog.ValuesEndpoint{ServiceDependants: dependencyWatchdogEndpointConfigurations},
+	})
+	dwdProbe = dependencywatchdog.New(sc.Client(), v1beta1constants.GardenNamespace, dependencywatchdog.Values{
+		Role:        dependencywatchdog.RoleProbe,
+		Image:       image.String(),
+		ValuesProbe: dependencywatchdog.ValuesProbe{ProbeDependantsList: dependencyWatchdogProbeConfigurations},
+	})
+	return
 }
