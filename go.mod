@@ -38,7 +38,7 @@ require (
 	go.uber.org/zap v1.17.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
-	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
+	golang.org/x/time v0.0.0-20210611083556-38a9dc6acbc6
 	gomodules.xyz/jsonpatch/v2 v2.2.0
 	gonum.org/v1/gonum v0.8.2
 	gopkg.in/yaml.v2 v2.4.0
