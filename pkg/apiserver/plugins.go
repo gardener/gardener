@@ -27,6 +27,7 @@ import (
 	projectvalidator "github.com/gardener/gardener/plugin/pkg/project/validator"
 	seedvalidator "github.com/gardener/gardener/plugin/pkg/seed/validator"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
+	shootexposureclass "github.com/gardener/gardener/plugin/pkg/shoot/exposureclass"
 	shootmanagedseed "github.com/gardener/gardener/plugin/pkg/shoot/managedseed"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/clusteropenidconnectpreset"
 	"github.com/gardener/gardener/plugin/pkg/shoot/oidc/openidconnectpreset"
@@ -50,6 +51,7 @@ var (
 		resourcereferencemanager.PluginName,        // ResourceReferenceManager
 		extensionvalidation.PluginName,             // ExtensionValidator
 		shoottolerationrestriction.PluginName,      // ShootTolerationRestriction
+		shootexposureclass.PluginName,              // ShootExposureClass
 		shootdns.PluginName,                        // ShootDNS
 		shootmanagedseed.PluginName,                // ShootManagedSeed
 		shootquotavalidator.PluginName,             // ShootQuotaValidator
@@ -84,6 +86,7 @@ var (
 		resourcereferencemanager.PluginName,        // ResourceReferenceManager
 		extensionvalidation.PluginName,             // ExtensionValidator
 		shoottolerationrestriction.PluginName,      // ShootTolerationRestriction
+		shootexposureclass.PluginName,              // ShootExposureClass
 		shootdns.PluginName,                        // ShootDNS
 		shootmanagedseed.PluginName,                // ShootManagedSeed
 		shootquotavalidator.PluginName,             // ShootQuotaValidator
@@ -114,6 +117,7 @@ func RegisterAllAdmissionPlugins(plugins *admission.Plugins) {
 	deletionconfirmation.Register(plugins)
 	extensionvalidation.Register(plugins)
 	shoottolerationrestriction.Register(plugins)
+	shootexposureclass.Register(plugins)
 	shootquotavalidator.Register(plugins)
 	shootdns.Register(plugins)
 	shootmanagedseed.Register(plugins)
