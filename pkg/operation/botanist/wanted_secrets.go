@@ -22,6 +22,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
@@ -581,7 +582,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
 			Name: kubeapiserver.DependencyWatchdogInternalProbeSecretName,
 
-			CommonName:   common.DependencyWatchdogUserName,
+			CommonName:   dependencywatchdog.UserName,
 			Organization: nil,
 			DNSNames:     nil,
 			IPAddresses:  nil,
@@ -597,7 +598,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		CertificateSecretConfig: &secrets.CertificateSecretConfig{
 			Name: kubeapiserver.DependencyWatchdogExternalProbeSecretName,
 
-			CommonName:   common.DependencyWatchdogUserName,
+			CommonName:   dependencywatchdog.UserName,
 			Organization: nil,
 			DNSNames:     nil,
 			IPAddresses:  nil,

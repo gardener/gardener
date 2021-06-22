@@ -1,8 +1,0 @@
-global:
-  images:
-    dependency-watchdog: image-repository:image-tag
-
-podAnnotations: {}
-replicas: 1
-
-config: ""

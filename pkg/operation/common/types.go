@@ -84,9 +84,6 @@ const (
 	// KubecfgSecretName is the name of the kubecfg secret.
 	KubecfgSecretName = "kubecfg"
 
-	// DependencyWatchdogUserName is the user name of the dependency-watchdog.
-	DependencyWatchdogUserName = "gardener.cloud:system:dependency-watchdog"
-
 	// KubeAPIServerHealthCheck is a key for the kube-apiserver-health-check user.
 	KubeAPIServerHealthCheck = "kube-apiserver-health-check"
 
