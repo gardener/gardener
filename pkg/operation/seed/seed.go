@@ -478,6 +478,7 @@ func RunReconcileSeedFlow(
 
 		componentsFunctions := []component.CentralLoggingConfiguration{
 			// seed system components
+			dependencywatchdog.CentralLoggingConfiguration,
 			seedadmissioncontroller.CentralLoggingConfiguration,
 			resourcemanager.CentralLoggingConfiguration,
 			// shoot control plane components
