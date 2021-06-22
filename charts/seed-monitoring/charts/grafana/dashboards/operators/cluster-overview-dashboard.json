@@ -1859,7 +1859,6 @@
       }
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 18,
   "style": "dark",
   "tags": [
@@ -1898,7 +1897,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Cluster Overview",
   "uid": "cluster-overview",
   "version": 1

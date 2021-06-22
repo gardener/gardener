@@ -1808,7 +1808,6 @@
       }
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 26,
   "style": "dark",
   "tags": [
@@ -1905,7 +1904,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Istio Control Plane Dashboard",
   "uid": "istio-control-plane-dashboard",
   "version": 1

@@ -328,7 +328,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Shoot VPA Recommendations",
   "uid": "shoot-vpa",
   "version": 1

@@ -1272,7 +1272,6 @@
       }
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 21,
   "style": "dark",
   "tags": [
@@ -1310,7 +1309,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "ETCD Backup and Restore",
   "uid": "etcd-backup-restore",
   "version": 1

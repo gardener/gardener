@@ -1350,7 +1350,6 @@
       "type": "row"
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [
@@ -1422,7 +1421,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "ETCD",
   "uid": "etcd",
   "version": 1

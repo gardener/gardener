@@ -548,7 +548,6 @@
       "type": "logs"
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 26,
   "style": "dark",
   "tags": [
@@ -688,7 +687,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Kubernetes Pods",
   "uid": "kube-pods",
   "version": 1

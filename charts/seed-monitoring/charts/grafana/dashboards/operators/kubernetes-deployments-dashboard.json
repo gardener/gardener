@@ -849,7 +849,6 @@
       "type": "table-old"
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 25,
   "style": "dark",
   "tags": [
@@ -949,7 +948,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Kubernetes Deployments",
   "uid": "kube-deployments",
   "version": 1

@@ -3320,7 +3320,6 @@
       }
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 26,
   "style": "dark",
   "tags": [
@@ -3515,7 +3514,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "API Server",
   "uid": "apiserver-overview"
 }

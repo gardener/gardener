@@ -1357,7 +1357,6 @@
       }
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 27,
   "style": "dark",
   "tags": [
@@ -1430,7 +1429,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "CoreDNS",
   "uid": "core-dns",
   "version": 1

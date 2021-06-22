@@ -714,7 +714,6 @@
       "type": "table"
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 16,
   "style": "dark",
   "tags": [
@@ -805,7 +804,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Kubernetes DaemonSets",
   "uid": "kube-daemonset",
   "version": 1

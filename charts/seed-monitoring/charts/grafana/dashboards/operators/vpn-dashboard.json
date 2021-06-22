@@ -912,7 +912,6 @@
       "type": "row"
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 19,
   "style": "dark",
   "tags": [
@@ -952,7 +951,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "VPN",
   "uid": "vpn",
   "version": 1

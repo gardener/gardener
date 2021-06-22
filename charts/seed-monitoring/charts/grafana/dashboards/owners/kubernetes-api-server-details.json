@@ -1170,7 +1170,6 @@
       }
     }
   ],
-  "refresh": "30s",
   "schemaVersion": 26,
   "style": "dark",
   "tags": [
@@ -1321,7 +1320,7 @@
       "14d"
     ]
   },
-  "timezone": "browser",
+  "timezone": "utc",
   "title": "Kubernetes API Server Details",
   "uid": "kube-apiserver-details",
   "version": 1
