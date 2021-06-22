@@ -17,14 +17,51 @@ package kubeapiserver_test
 import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 
+	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("DependencyWatchdog", func() {
+	Describe("#DependencyWatchdogEndpointConfiguration", func() {
+		It("should compute the correct configuration", func() {
+			config, err := DependencyWatchdogEndpointConfiguration()
+			Expect(config).To(Equal(map[string]restarterapi.Service{
+				"kube-apiserver": {
+					Dependants: []restarterapi.DependantPods{
+						{
+							Name: "controlplane",
+							Selector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      "gardener.cloud/role",
+										Operator: "In",
+										Values:   []string{"controlplane"},
+									},
+									{
+										Key:      "role",
+										Operator: "NotIn",
+										Values:   []string{"main"},
+									},
+									{
+										Key:      "role",
+										Operator: "NotIn",
+										Values:   []string{"apiserver"},
+									},
+								},
+							},
+						},
+					},
+				},
+			}))
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
 	Describe("#DependencyWatchdogProbeConfiguration", func() {
 		It("should compute the correct configuration", func() {
 			config, err := DependencyWatchdogProbeConfiguration()
