@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenlogger "github.com/gardener/gardener/pkg/logger"
 
 	"github.com/robfig/cron"
@@ -29,6 +28,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -81,7 +81,7 @@ func LocationLogger(logger logrus.FieldLogger, location *time.Location) logrus.F
 }
 
 // ComputeHibernationSchedule computes the HibernationSchedule for the given Shoot.
-func ComputeHibernationSchedule(ctx context.Context, gardenClient kubernetes.Interface, logger logrus.FieldLogger, recorder record.EventRecorder, shoot *gardencorev1beta1.Shoot) (HibernationSchedule, error) {
+func ComputeHibernationSchedule(ctx context.Context, gardenClient client.Client, logger logrus.FieldLogger, recorder record.EventRecorder, shoot *gardencorev1beta1.Shoot) (HibernationSchedule, error) {
 	var (
 		schedules           = getShootHibernationSchedules(shoot)
 		locationToSchedules = GroupHibernationSchedulesByLocation(schedules)
@@ -181,7 +181,7 @@ func (c *Controller) shootHibernationDelete(obj interface{}) {
 // NewShootHibernationReconciler creates a new instance of a reconciler which hibernates shoots or wakes them up.
 func NewShootHibernationReconciler(
 	l logrus.FieldLogger,
-	gardenClient kubernetes.Interface,
+	gardenClient client.Client,
 	hibernationScheduleRegistry HibernationScheduleRegistry,
 	recorder record.EventRecorder,
 ) reconcile.Reconciler {
@@ -195,7 +195,7 @@ func NewShootHibernationReconciler(
 
 type shootHibernationReconciler struct {
 	logger                      logrus.FieldLogger
-	gardenClient                kubernetes.Interface
+	gardenClient                client.Client
 	hibernationScheduleRegistry HibernationScheduleRegistry
 	recorder                    record.EventRecorder
 }
@@ -204,7 +204,7 @@ func (r *shootHibernationReconciler) Reconcile(ctx context.Context, request reco
 	key := fmt.Sprintf("%s/%s", request.Namespace, request.Name)
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, shoot); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.deleteShootCron(r.logger, key)
 			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
