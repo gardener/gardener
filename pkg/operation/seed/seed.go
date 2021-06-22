@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"path/filepath"
 	"strings"
 	"time"
@@ -75,8 +74,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/util/retry"
-	"k8s.io/component-base/version"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -877,76 +874,23 @@ func runCreateSeedFlow(
 
 	dnsEntry := getManagedIngressDNSEntry(sc.Client(), seed.GetIngressFQDN("*"), ingressLoadBalancerAddress, seedLogger)
 
-	networks := []string{seed.Info.Spec.Networks.Pods, seed.Info.Spec.Networks.Services}
-	if v := seed.Info.Spec.Networks.Nodes; v != nil {
-		networks = append(networks, *v)
-	}
-	privateNetworkPeers, err := networkpolicies.ToNetworkPolicyPeersWithExceptions(networkpolicies.AllPrivateNetworkBlocks(), networks...)
+	networkPolicies, err := defaultNetworkPolicies(sc, seed.Info, anySNI)
 	if err != nil {
 		return err
 	}
-
-	_, seedServiceCIDR, err := net.ParseCIDR(seed.Info.Spec.Networks.Services)
+	gardenerResourceManager, err := defaultGardenerResourceManager(sc, imageVector)
 	if err != nil {
 		return err
 	}
-	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
-	if err != nil {
-		return fmt.Errorf("cannot calculate CoreDNS ClusterIP: %v", err)
-	}
-
-	networkPolicies := networkpolicies.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{
-		SNIEnabled:           gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI,
-		DenyAllTraffic:       false,
-		PrivateNetworkPeers:  privateNetworkPeers,
-		NodeLocalIPVSAddress: pointer.String(common.NodeLocalIPVSAddress),
-		DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
-	})
-
-	grmImage, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager, imagevector.RuntimeVersion(sc.Version()), imagevector.TargetVersion(sc.Version()))
+	etcdDruid, err := defaultEtcdDruid(sc, imageVector, kubernetesVersion, imageVectorOverwrites)
 	if err != nil {
 		return err
 	}
-	resourceManager := resourcemanager.New(sc.Client(), v1beta1constants.GardenNamespace, grmImage.String(), 1, resourcemanager.Values{
-		ConcurrentSyncs:  pointer.Int32(20),
-		HealthSyncPeriod: utils.DurationPtr(time.Minute),
-		ResourceClass:    pointer.String(v1beta1constants.SeedResourceManagerClass),
-		SyncPeriod:       utils.DurationPtr(time.Hour),
-	})
-
-	etcdImage, err := imageVector.FindImage(charts.ImageNameEtcdDruid, imagevector.RuntimeVersion(sc.Version()), imagevector.TargetVersion(sc.Version()))
+	gardenerSeedAdmissionController, err := defaultGardenerSeedAdmissionController(sc, imageVector, kubernetesVersion)
 	if err != nil {
 		return err
 	}
-	var etcdImageVectorOverwrite *string
-	if val, ok := imageVectorOverwrites[etcd.Druid]; ok {
-		etcdImageVectorOverwrite = &val
-	}
-	etcdDruid := etcd.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, etcdImage.String(), kubernetesVersion, etcdImageVectorOverwrite)
-
-	gsacImage, err := imageVector.FindImage(charts.ImageNameGardenerSeedAdmissionController)
-	if err != nil {
-		return err
-	}
-	var (
-		repository = gsacImage.String()
-		tag        = version.Get().GitVersion
-	)
-	if gsacImage.Tag != nil {
-		repository = gsacImage.Repository
-		tag = *gsacImage.Tag
-	}
-	gsacImage = &imagevector.Image{
-		Repository: repository,
-		Tag:        &tag,
-	}
-	gsac := seedadmissioncontroller.New(sc.Client(), v1beta1constants.GardenNamespace, gsacImage.String(), kubernetesVersion)
-
-	schedulerImage, err := imageVector.FindImage(charts.ImageNameKubeScheduler, imagevector.TargetVersion(kubernetesVersion.String()))
-	if err != nil {
-		return err
-	}
-	scheduler, err := gardenerkubescheduler.Bootstrap(sc.Client(), v1beta1constants.GardenNamespace, schedulerImage, kubernetesVersion)
+	kubeScheduler, err := defaultKubeScheduler(sc, imageVector, kubernetesVersion)
 	if err != nil {
 		return err
 	}
@@ -977,7 +921,7 @@ func runCreateSeedFlow(
 		})
 		deployResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager",
-			Fn:   component.OpWaiter(resourceManager).Deploy,
+			Fn:   component.OpWaiter(gardenerResourceManager).Deploy,
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying cluster-identity",
@@ -996,12 +940,12 @@ func runCreateSeedFlow(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying gardener-seed-admission-controller",
-			Fn:           gsac.Deploy,
+			Fn:           gardenerSeedAdmissionController.Deploy,
 			Dependencies: flow.NewTaskIDs(deployResourceManager),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying kube-scheduler for shoot control plane pods",
-			Fn:           scheduler.Deploy,
+			Fn:           kubeScheduler.Deploy,
 			Dependencies: flow.NewTaskIDs(deployResourceManager),
 		})
 	)
@@ -1072,7 +1016,7 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 			Fn:   component.OpDestroyAndWait(gsac).Destroy,
 		})
 		destroyKubeScheduler = g.Add(flow.Task{
-			Name: "Destroying kubescheduler",
+			Name: "Destroying kube-scheduler",
 			Fn:   component.OpDestroyAndWait(scheduler).Destroy,
 		})
 		destroyNetworkPolicies = g.Add(flow.Task{
