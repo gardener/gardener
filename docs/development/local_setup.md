@@ -227,7 +227,54 @@ make remote-garden-down
 
 > Note: The minimum K8S version of the remote cluster that can be used as Garden cluster is `1.19.x`.
 
-> ⚠️ Please be aware that in the remote garden setup all Gardener components run with administrative permissions, i.e., there is no fine-grained access control via RBAC (as opposed to productive installations of Gardener).
+ℹ️ [Optional] If you want to use the remote Garden cluster setup with the `SeedAuthorization` feature you have to adapt the `kube-apiserver` process of your remote Garden cluster. To do this, perform the following steps after running `make remote-garden-up`:
+
+* Create an [authorization webhook configuration file](https://kubernetes.io/docs/reference/access-authn-authz/webhook/#configuration-file-format) using the IP of the `garden/quic-server` pod running in your remote Garden cluster and port 10444 that tunnels to your locally running `gardener-admission-controller` process.
+  
+  ```yaml
+  apiVersion: v1
+  kind: Config
+  current-context: seedauthorizer
+  clusters:
+  - name: gardener-admission-controller
+    cluster:
+      insecure-skip-tls-verify: true
+      server: https://<quic-server-pod-ip>:10444/webhooks/auth/seed
+  users:
+  - name: kube-apiserver
+    user: {}
+  contexts:
+  - name: seedauthorizer
+    context:
+      cluster: gardener-admission-controller
+      user: kube-apiserver
+  ```
+* Change or add the following command line parameters to your `kube-apiserver` process:
+  - `--authorization-mode=<...>,Webhook`
+  - `--authorization-webhook-config-file=<path to config file>`
+  - `--authorization-webhook-cache-authorized-ttl=0`
+  - `--authorization-webhook-cache-unauthorized-ttl=0`
+* Delete the cluster role and rolebinding `gardener.cloud:system:seeds` from your remote Garden cluster.
+
+If your remote Garden cluster is a Gardener shoot, and you can access the seed on which this shoot is scheduled, you can automate the above steps by running the [`enable-seed-authorizer` script](../../hack/local-development/remote-garden/enable-seed-authorizer) and passing the kubeconfig of the seed cluster and the shoot namespace as parameters:
+
+```bash
+hack/local-development/remote-garden/enable-seed-authorizer <seed kubeconfig> <namespace>
+```
+
+> Note: The configuration changes introduced by this script result in a working `SeedAuthorization` feature only on shoots for which the `ReversedVPN` feature is not enabled. If the corresponding feature gate is enabled in `gardenlet`, add the annotation `alpha.featuregates.shoot.gardener.cloud/reversed-vpn: 'false'` to the remote Garden shoot to disable it for that particular shoot. 
+
+To prevent Gardener from reconciling the shoot and overwriting your changes, add the annotation `shoot.gardener.cloud/ignore: 'true'` to the remote Garden shoot. Note that this annotation takes effect only if it is enabled via the `constollers.shoot.respectSyncPeriodOverwrite: true` option in the `gardenlet` configuration.
+
+To disable the seed authorizer again, run the same script with `-d` as a third parameter:
+
+```bash
+hack/local-development/remote-garden/enable-seed-authorizer <seed kubeconfig> <namespace> -d
+```
+
+If the seed authorizer is enabled, you also have to start the `gardener-admission-controller` via `make start-admission-controller`.
+
+> ⚠️ In the remote garden setup all Gardener components run with administrative permissions, i.e., there is no fine-grained access control via RBAC (as opposed to productive installations of Gardener).
 
 </details>
 
