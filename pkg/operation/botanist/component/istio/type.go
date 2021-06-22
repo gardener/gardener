@@ -16,4 +16,6 @@ package istio
 
 const (
 	istioReleaseName = "istio"
+	// GatewayPort is the port exposed by the istio ingress gateway
+	GatewayPort = 8132
 )
