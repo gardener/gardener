@@ -590,18 +590,18 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 }
 
 func (c *Controller) removeFinalizerFrom(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
-	newShoot, err := c.updateShootStatusOperationSuccess(ctx, gardenClient.GardenCore(), nil, shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete)
-	if err != nil {
+	if err := c.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), nil, shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
 		return err
 	}
 
-	if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), newShoot, gardencorev1beta1.GardenerName); err != nil {
+	if err := controllerutils.PatchRemoveFinalizers(ctx, gardenClient.Client(), shoot, gardencorev1beta1.GardenerName); err != nil {
 		return fmt.Errorf("could not remove finalizer from Shoot: %s", err.Error())
 	}
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
 	return retryutils.UntilTimeout(ctx, time.Second, 30*time.Second, func(context.Context) (done bool, err error) {
+		// TODO(timebertt): switch to c-r cache here, once shoot controller uses c-r informers
 		shoot, err := c.shootLister.Shoots(shoot.Namespace).Get(shoot.Name)
 		if apierrors.IsNotFound(err) {
 			return retryutils.Ok()
