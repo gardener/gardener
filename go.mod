@@ -9,6 +9,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/envoyproxy/go-control-plane v0.9.7-0.20200730005029-803dd64f0468
 	github.com/gardener/component-spec/bindings-go v0.0.33
+	github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
 	github.com/gardener/etcd-druid v0.5.0
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/gardener-resource-manager v0.18.0

@@ -95,6 +95,10 @@ github.com/gardener/component-spec/bindings-go/apis/v2/jsonscheme
 github.com/gardener/component-spec/bindings-go/apis/v2/validation
 github.com/gardener/component-spec/bindings-go/codec
 github.com/gardener/component-spec/bindings-go/utils/selector
+# github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
+## explicit
+github.com/gardener/dependency-watchdog/pkg/restarter/api
+github.com/gardener/dependency-watchdog/pkg/scaler/api
 # github.com/gardener/etcd-druid v0.5.0
 ## explicit
 github.com/gardener/etcd-druid/api/v1alpha1
