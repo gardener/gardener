@@ -91,22 +91,25 @@ brew install iproute2mac
 ```bash
 go get -u github.com/bronze1man/yaml2json
 brew install jq
+```
+
+And make sure the yaml2json binary is on your `PATH` (you might want to do this in your `~/.zshrc`)
+```bash
 export PATH=$PATH:$(go env GOPATH)/bin
 ```
 
+
 ## Installing GNU Parallel
 
-[GNU Parallel](https://www.gnu.org/software/parallel/) is a shell tool for executing jobs in parallel, used by the code generation scripts (`make generate`).
-
-On MacOS run
+[GNU Parallel](https://www.gnu.org/software/parallel/) is a shell tool for executing jobs in parallel, used by the code generation scripts (`make generate`). On macOS run
 
 ```bash
 brew install parallel
 ```
 
-## [MacOS only] Install GNU core utilities
+## [macOS only] Install GNU core utilities
 
-When running on MacOS you have to install the GNU core utilities:
+When running on macOS you have to install the GNU core utilities:
 
 ```bash
 brew install coreutils gnu-sed
@@ -116,7 +119,7 @@ This will create symbolic links for the GNU utilities with `g` prefix in `/usr/l
 
 ## [Windows] WSL2
 
-Apart from Linux distributions and MacOS, the local gardener setup can also run on the Windows Subsystem for Linux 2.
+Apart from Linux distributions and macOS, the local gardener setup can also run on the Windows Subsystem for Linux 2. 
 
 While WSL1, plain docker for windows and various Linux distributions and local Kubernetes environments may be supported, this setup was verified with:
 * [WSL2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-index)
