@@ -17,33 +17,40 @@ package etcd_test
 import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 
+	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("DependencyWatchdog", func() {
-	Describe("#DependencyWatchdogConfiguration", func() {
+	Describe("#DependencyWatchdogEndpointConfiguration", func() {
 		It("should compute the correct configuration", func() {
-			config, err := etcd.DependencyWatchdogConfiguration(testRole)
-			Expect(config).To(Equal(expectedDependencyWatchdogConfiguration))
+			config, err := etcd.DependencyWatchdogEndpointConfiguration(testRole)
+			Expect(config).To(Equal(map[string]restarterapi.Service{
+				"etcd-" + testRole + "-client": {
+					Dependants: []restarterapi.DependantPods{
+						{
+							Name: "controlplane",
+							Selector: &metav1.LabelSelector{
+								MatchExpressions: []metav1.LabelSelectorRequirement{
+									{
+										Key:      "gardener.cloud/role",
+										Operator: "In",
+										Values:   []string{"controlplane"},
+									},
+									{
+										Key:      "role",
+										Operator: "In",
+										Values:   []string{"apiserver"},
+									},
+								},
+							},
+						},
+					},
+				},
+			}))
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })
-
-const (
-	expectedDependencyWatchdogConfiguration = `etcd-` + testRole + `-client:
-  dependantPods:
-  - name: controlplane
-    selector:
-      matchExpressions:
-      - key: gardener.cloud/role
-        operator: In
-        values:
-        - controlplane
-      - key: role
-        operator: In
-        values:
-        - apiserver
-`
-)
