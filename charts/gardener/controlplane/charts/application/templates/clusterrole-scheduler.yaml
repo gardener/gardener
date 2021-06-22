@@ -52,6 +52,7 @@ rules:
   - get
   - list
   - watch
+  - patch
   - update
 - apiGroups:
   - coordination.k8s.io

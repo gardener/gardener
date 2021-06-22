@@ -19,10 +19,10 @@ type AlreadyScheduledError struct {
 	msg string // description of error
 }
 
-func (e *AlreadyScheduledError) Error() string { return e.msg }
+func (e AlreadyScheduledError) Error() string { return e.msg }
 
 // NewAlreadyScheduledError creates new AlreadyScheduledError object with <message>.
-func NewAlreadyScheduledError(message string) AlreadyScheduledError {
+func NewAlreadyScheduledError(message string) error {
 	return AlreadyScheduledError{
 		msg: message,
 	}
