@@ -10,6 +10,7 @@ import (
 
 	vpnseedserver "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	gomock "github.com/golang/mock/gomock"
+	types "k8s.io/apimachinery/pkg/types"
 )
 
 // MockInterface is a mock of Interface interface.
@@ -73,6 +74,18 @@ func (m *MockInterface) SetSecrets(arg0 vpnseedserver.Secrets) {
 func (mr *MockInterfaceMockRecorder) SetSecrets(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecrets", reflect.TypeOf((*MockInterface)(nil).SetSecrets), arg0)
+}
+
+// SetSeedNamespaceObjectUID mocks base method.
+func (m *MockInterface) SetSeedNamespaceObjectUID(arg0 types.UID) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetSeedNamespaceObjectUID", arg0)
+}
+
+// SetSeedNamespaceObjectUID indicates an expected call of SetSeedNamespaceObjectUID.
+func (mr *MockInterfaceMockRecorder) SetSeedNamespaceObjectUID(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSeedNamespaceObjectUID", reflect.TypeOf((*MockInterface)(nil).SetSeedNamespaceObjectUID), arg0)
 }
 
 // Wait mocks base method.

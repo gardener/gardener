@@ -21,15 +21,19 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	istio "github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	"github.com/gogo/protobuf/types"
+	protobuftypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	"istio.io/api/networking/v1beta1"
+	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -37,6 +41,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
@@ -60,6 +65,14 @@ var _ = Describe("VpnSeedServer", func() {
 		nodeNetwork             = "10.0.2.0/24"
 		replicas          int32 = 1
 		vpaUpdateMode           = autoscalingv1beta2.UpdateModeAuto
+
+		namespaceUID        = types.UID("123456")
+		istioLabels         = map[string]string{"foo": "bar"}
+		istioNamespace      = "istio-foo"
+		istioIngressGateway = IstioIngressGateway{
+			Namespace: istioNamespace,
+			Labels:    istioLabels,
+		}
 
 		secretNameTLSAuth     = VpnSeedServerTLSAuth
 		secretChecksumTLSAuth = "1234"
@@ -339,25 +352,25 @@ var _ = Describe("VpnSeedServer", func() {
 
 		destinationRule = &networkingv1beta1.DestinationRule{
 			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
-			Spec: v1beta1.DestinationRule{
+			Spec: istionetworkingv1beta1.DestinationRule{
 				ExportTo: []string{"*"},
 				Host:     fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, namespace),
-				TrafficPolicy: &v1beta1.TrafficPolicy{
-					ConnectionPool: &v1beta1.ConnectionPoolSettings{
-						Tcp: &v1beta1.ConnectionPoolSettings_TCPSettings{
+				TrafficPolicy: &istionetworkingv1beta1.TrafficPolicy{
+					ConnectionPool: &istionetworkingv1beta1.ConnectionPoolSettings{
+						Tcp: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
 							MaxConnections: 5000,
-							TcpKeepalive: &v1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-								Interval: &types.Duration{
+							TcpKeepalive: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
+								Interval: &protobuftypes.Duration{
 									Seconds: 75,
 								},
-								Time: &types.Duration{
+								Time: &protobuftypes.Duration{
 									Seconds: 7200,
 								},
 							},
 						},
 					},
-					Tls: &v1beta1.ClientTLSSettings{
-						Mode: v1beta1.ClientTLSSettings_DISABLE,
+					Tls: &istionetworkingv1beta1.ClientTLSSettings{
+						Mode: istionetworkingv1beta1.ClientTLSSettings_DISABLE,
 					},
 				},
 			},
@@ -374,7 +387,7 @@ var _ = Describe("VpnSeedServer", func() {
 						Hosts: []string{kubeAPIServerHost},
 						Port: &v1beta1.Port{
 							Name:     "tls-tunnel",
-							Number:   8132,
+							Number:   istio.GatewayPort,
 							Protocol: "HTTP",
 						},
 					},
@@ -547,13 +560,187 @@ var _ = Describe("VpnSeedServer", func() {
 				},
 			},
 		}
+
+		envoyFilter = &networkingv1alpha3.EnvoyFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      namespace + "-vpn",
+				Namespace: istioNamespace,
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion:         "v1",
+					Kind:               "Namespace",
+					Name:               namespace,
+					UID:                namespaceUID,
+					BlockOwnerDeletion: pointer.BoolPtr(false),
+					Controller:         pointer.BoolPtr(false),
+				}},
+			},
+			Spec: istionetworkingv1alpha3.EnvoyFilter{
+				WorkloadSelector: &istionetworkingv1alpha3.WorkloadSelector{
+					Labels: istioLabels,
+				},
+				ConfigPatches: []*istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
+					&istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
+						ApplyTo: istionetworkingv1alpha3.EnvoyFilter_NETWORK_FILTER,
+						Match: &istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch{
+							Context: istionetworkingv1alpha3.EnvoyFilter_GATEWAY,
+							ObjectTypes: &istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
+								Listener: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch{
+									Name:       "0.0.0.0_" + string(rune(istio.GatewayPort)),
+									PortNumber: istio.GatewayPort,
+									FilterChain: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterChainMatch{
+										Filter: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterMatch{
+											Name: "envoy.filters.network.http_connection_manager",
+										},
+									},
+								},
+							},
+						},
+						Patch: &istionetworkingv1alpha3.EnvoyFilter_Patch{
+							Operation: istionetworkingv1alpha3.EnvoyFilter_Patch_MERGE,
+							Value: &protobuftypes.Struct{
+								Fields: map[string]*protobuftypes.Value{
+									"name": &protobuftypes.Value{
+										Kind: &protobuftypes.Value_StringValue{
+											StringValue: "envoy.filters.network.http_connection_manager",
+										},
+									},
+									"typed_config": &protobuftypes.Value{
+										Kind: &protobuftypes.Value_StructValue{
+											StructValue: &protobuftypes.Struct{
+												Fields: map[string]*protobuftypes.Value{
+													"@type": &protobuftypes.Value{
+														Kind: &protobuftypes.Value_StringValue{
+															StringValue: "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
+														},
+													},
+													"route_config": &protobuftypes.Value{
+														Kind: &protobuftypes.Value_StructValue{
+															StructValue: &protobuftypes.Struct{
+																Fields: map[string]*protobuftypes.Value{
+																	"virtual_hosts": &protobuftypes.Value{
+																		Kind: &protobuftypes.Value_ListValue{
+																			ListValue: &protobuftypes.ListValue{
+																				Values: []*protobuftypes.Value{
+																					{
+																						Kind: &protobuftypes.Value_StructValue{
+																							StructValue: &protobuftypes.Struct{
+																								Fields: map[string]*protobuftypes.Value{
+																									"name": &protobuftypes.Value{
+																										Kind: &protobuftypes.Value_StringValue{
+																											StringValue: namespace,
+																										},
+																									},
+																									"domains": &protobuftypes.Value{
+																										Kind: &protobuftypes.Value_ListValue{
+																											ListValue: &protobuftypes.ListValue{
+																												Values: []*protobuftypes.Value{
+																													{
+																														Kind: &protobuftypes.Value_StringValue{
+																															StringValue: kubeAPIServerHost + ":" + string(rune(istio.GatewayPort)),
+																														},
+																													},
+																												},
+																											},
+																										},
+																									},
+																									"routes": &protobuftypes.Value{
+																										Kind: &protobuftypes.Value_ListValue{
+																											ListValue: &protobuftypes.ListValue{
+																												Values: []*protobuftypes.Value{
+																													{
+																														Kind: &protobuftypes.Value_StructValue{
+																															StructValue: &protobuftypes.Struct{
+																																Fields: map[string]*protobuftypes.Value{
+																																	"match": &protobuftypes.Value{
+																																		Kind: &protobuftypes.Value_StructValue{
+																																			StructValue: &protobuftypes.Struct{
+																																				Fields: map[string]*protobuftypes.Value{
+																																					"connect_matcher": &protobuftypes.Value{
+																																						Kind: &protobuftypes.Value_StructValue{
+																																							StructValue: &protobuftypes.Struct{},
+																																						},
+																																					},
+																																				},
+																																			},
+																																		},
+																																	},
+																																	"route": &protobuftypes.Value{
+																																		Kind: &protobuftypes.Value_StructValue{
+																																			StructValue: &protobuftypes.Struct{
+																																				Fields: map[string]*protobuftypes.Value{
+																																					"cluster": &protobuftypes.Value{
+																																						Kind: &protobuftypes.Value_StringValue{
+																																							StringValue: "outbound|1194||" + ServiceName + "." + namespace + ".svc.cluster.local",
+																																						},
+																																					},
+																																					"upgrade_configs": &protobuftypes.Value{
+																																						Kind: &protobuftypes.Value_ListValue{
+																																							ListValue: &protobuftypes.ListValue{
+																																								Values: []*protobuftypes.Value{
+																																									{
+																																										Kind: &protobuftypes.Value_StructValue{
+																																											StructValue: &protobuftypes.Struct{
+																																												Fields: map[string]*protobuftypes.Value{
+																																													"upgrade_type": &protobuftypes.Value{
+																																														Kind: &protobuftypes.Value_StringValue{
+																																															StringValue: "CONNECT",
+																																														},
+																																													},
+																																													"connect_config": &protobuftypes.Value{
+																																														Kind: &protobuftypes.Value_StructValue{
+																																															StructValue: &protobuftypes.Struct{},
+																																														},
+																																													},
+																																												},
+																																											},
+																																										},
+																																									},
+																																								},
+																																							},
+																																						},
+																																					},
+																																				},
+																																			},
+																																		},
+																																	},
+																																},
+																															},
+																														},
+																													},
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
-		vpnSeedServer = New(c, namespace, envoyImage, vpnImage, &kubeAPIServerHost, serviceNetwork, podNetwork, nil, replicas)
+		vpnSeedServer = New(c, namespace, envoyImage, vpnImage, &kubeAPIServerHost, serviceNetwork, podNetwork, nil, replicas, istioIngressGateway)
 	})
 
 	AfterEach(func() {
@@ -583,6 +770,7 @@ var _ = Describe("VpnSeedServer", func() {
 		Context("secret information available", func() {
 			BeforeEach(func() {
 				vpnSeedServer.SetSecrets(secrets)
+				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 			})
 
 			It("should fail because the server secret cannot be created", func() {
@@ -840,13 +1028,18 @@ var _ = Describe("VpnSeedServer", func() {
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(vpa))
 					}),
+					c.EXPECT().Get(ctx, kutil.Key(istioNamespace, namespace+"-vpn"), gomock.AssignableToTypeOf(&networkingv1alpha3.EnvoyFilter{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1alpha3.EnvoyFilter{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(envoyFilter))
+					}),
 				)
 				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
 			})
 
 			It("should successfully deploy all resources (w/ node network)", func() {
-				vpnSeedServer = New(c, namespace, envoyImage, vpnImage, &kubeAPIServerHost, serviceNetwork, podNetwork, &nodeNetwork, replicas)
+				vpnSeedServer = New(c, namespace, envoyImage, vpnImage, &kubeAPIServerHost, serviceNetwork, podNetwork, &nodeNetwork, replicas, istioIngressGateway)
 				vpnSeedServer.SetSecrets(secrets)
+				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
@@ -892,6 +1085,10 @@ var _ = Describe("VpnSeedServer", func() {
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-vpa"), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})).Do(func(ctx context.Context, obj client.Object, opts ...client.UpdateOption) {
 						Expect(obj).To(DeepEqual(vpa))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(istioNamespace, namespace+"-vpn"), gomock.AssignableToTypeOf(&networkingv1alpha3.EnvoyFilter{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1alpha3.EnvoyFilter{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(envoyFilter))
 					}),
 				)
 
@@ -1058,6 +1255,7 @@ var _ = Describe("VpnSeedServer", func() {
 				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}),
 				c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-vpa"}}),
+				c.EXPECT().Delete(ctx, &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: namespace + "-vpn"}}),
 			)
 			Expect(vpnSeedServer.Destroy(ctx)).To(Succeed())
 		})

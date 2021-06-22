@@ -26,7 +26,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/Masterminds/sprig"
@@ -50,18 +49,12 @@ type SNIValues struct {
 	APIServerClusterIP       string
 	APIServerInternalDNSName string
 	IstioIngressGateway      IstioIngressGateway
-	ReversedVPN              ReversedVPN
 }
 
 // IstioIngressGateway contains the values for istio ingress gateway configuration.
 type IstioIngressGateway struct {
 	Namespace string
 	Labels    map[string]string
-}
-
-// ReversedVPN contains whether the reversed vpn is enabled or not.
-type ReversedVPN struct {
-	Enabled bool
 }
 
 // NewSNI creates a new instance of DeployWaiter which deploys Istio resources for
@@ -93,11 +86,10 @@ type sni struct {
 
 type envoyFilterTemplateValues struct {
 	*SNIValues
-	Name                     string
-	Namespace                string
-	Host                     string
-	Port                     int
-	VPNSeedServerServiceName string
+	Name      string
+	Namespace string
+	Host      string
+	Port      int
 }
 
 func (s *sni) Deploy(ctx context.Context) error {
@@ -112,12 +104,11 @@ func (s *sni) Deploy(ctx context.Context) error {
 	)
 
 	if err := envoyFilterSpecTemplate.Execute(&envoyFilterSpec, envoyFilterTemplateValues{
-		SNIValues:                s.values,
-		Name:                     envoyFilter.Name,
-		Namespace:                envoyFilter.Namespace,
-		Host:                     hostName,
-		Port:                     servicePort,
-		VPNSeedServerServiceName: vpnseedserver.ServiceName,
+		SNIValues: s.values,
+		Name:      envoyFilter.Name,
+		Namespace: envoyFilter.Namespace,
+		Host:      hostName,
+		Port:      servicePort,
 	}); err != nil {
 		return err
 	}

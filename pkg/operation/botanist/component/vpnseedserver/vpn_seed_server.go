@@ -19,11 +19,14 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	istio "github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	"github.com/gogo/protobuf/types"
+	protobuftypes "github.com/gogo/protobuf/types"
+	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -31,6 +34,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
@@ -75,6 +79,8 @@ type Interface interface {
 
 	// SetSecrets sets the secrets.
 	SetSecrets(Secrets)
+	// SetSeedNamespaceObjectUID sets UID for the namespace
+	SetSeedNamespaceObjectUID(namespaceUID types.UID)
 }
 
 // Secrets is collection of secrets for the vpn-seed-server.
@@ -85,6 +91,12 @@ type Secrets struct {
 	Server component.Secret
 	// DiffieHellmanKey is a secret containing the diffie hellman key.
 	DiffieHellmanKey component.Secret
+}
+
+// IstioIngressGateway contains the values for istio ingress gateway configuration.
+type IstioIngressGateway struct {
+	Namespace string
+	Labels    map[string]string
 }
 
 // New creates a new instance of DeployWaiter for the vpn-seed-server.
@@ -98,6 +110,7 @@ func New(
 	podNetwork string,
 	nodeNetwork *string,
 	replicas int32,
+	istioIngressGateway IstioIngressGateway,
 ) Interface {
 	return &vpnSeedServer{
 		client:              client,
@@ -109,12 +122,14 @@ func New(
 		podNetwork:          podNetwork,
 		nodeNetwork:         nodeNetwork,
 		replicas:            replicas,
+		istioIngressGateway: istioIngressGateway,
 	}
 }
 
 type vpnSeedServer struct {
 	client              client.Client
 	namespace           string
+	namespaceUID        types.UID
 	imageAPIServerProxy string
 	imageVPNSeedServer  string
 	kubeAPIServerHost   *string
@@ -122,8 +137,8 @@ type vpnSeedServer struct {
 	podNetwork          string
 	nodeNetwork         *string
 	replicas            int32
-
-	secrets Secrets
+	istioIngressGateway IstioIngressGateway
+	secrets             Secrets
 }
 
 func (v *vpnSeedServer) Deploy(ctx context.Context) error {
@@ -149,6 +164,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		virtualService  = v.emptyVirtualService()
 		destinationRule = v.emptyDestinationRule()
 		vpa             = v.emptyVPA()
+		envoyFilter     = v.emptyEnvoyFilter()
 
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 	)
@@ -447,7 +463,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 					Hosts: []string{*v.kubeAPIServerHost},
 					Port: &istionetworkingv1beta1.Port{
 						Name:     "tls-tunnel",
-						Number:   8132,
+						Number:   istio.GatewayPort,
 						Protocol: "HTTP",
 					},
 				},
@@ -467,10 +483,10 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 					Tcp: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
 						MaxConnections: 5000,
 						TcpKeepalive: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings_TcpKeepalive{
-							Interval: &types.Duration{
+							Interval: &protobuftypes.Duration{
 								Seconds: 75,
 							},
-							Time: &types.Duration{
+							Time: &protobuftypes.Duration{
 								Seconds: 7200,
 							},
 						},
@@ -567,6 +583,183 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, envoyFilter, func() error {
+		envoyFilter.ObjectMeta = metav1.ObjectMeta{
+			Name:      envoyFilter.Name,
+			Namespace: envoyFilter.Namespace,
+			OwnerReferences: []metav1.OwnerReference{
+				metav1.OwnerReference{
+					APIVersion:         "v1",
+					Kind:               "Namespace",
+					Name:               v.namespace,
+					UID:                v.namespaceUID,
+					Controller:         pointer.BoolPtr(false),
+					BlockOwnerDeletion: pointer.BoolPtr(false),
+				},
+			},
+		}
+		envoyFilter.Spec.WorkloadSelector = &istionetworkingv1alpha3.WorkloadSelector{
+			Labels: v.istioIngressGateway.Labels,
+		}
+		envoyFilter.Spec.ConfigPatches = []*istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
+			&istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
+				ApplyTo: istionetworkingv1alpha3.EnvoyFilter_NETWORK_FILTER,
+				Match: &istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch{
+					Context: istionetworkingv1alpha3.EnvoyFilter_GATEWAY,
+					ObjectTypes: &istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
+						Listener: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch{
+							Name:       "0.0.0.0_" + string(rune(istio.GatewayPort)),
+							PortNumber: istio.GatewayPort,
+							FilterChain: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterChainMatch{
+								Filter: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterMatch{
+									Name: "envoy.filters.network.http_connection_manager",
+								},
+							},
+						},
+					},
+				},
+				Patch: &istionetworkingv1alpha3.EnvoyFilter_Patch{
+					Operation: istionetworkingv1alpha3.EnvoyFilter_Patch_MERGE,
+					Value: &protobuftypes.Struct{
+						Fields: map[string]*protobuftypes.Value{
+							"name": &protobuftypes.Value{
+								Kind: &protobuftypes.Value_StringValue{
+									StringValue: "envoy.filters.network.http_connection_manager",
+								},
+							},
+							"typed_config": &protobuftypes.Value{
+								Kind: &protobuftypes.Value_StructValue{
+									StructValue: &protobuftypes.Struct{
+										Fields: map[string]*protobuftypes.Value{
+											"@type": &protobuftypes.Value{
+												Kind: &protobuftypes.Value_StringValue{
+													StringValue: "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
+												},
+											},
+											"route_config": &protobuftypes.Value{
+												Kind: &protobuftypes.Value_StructValue{
+													StructValue: &protobuftypes.Struct{
+														Fields: map[string]*protobuftypes.Value{
+															"virtual_hosts": &protobuftypes.Value{
+																Kind: &protobuftypes.Value_ListValue{
+																	ListValue: &protobuftypes.ListValue{
+																		Values: []*protobuftypes.Value{
+																			{
+																				Kind: &protobuftypes.Value_StructValue{
+																					StructValue: &protobuftypes.Struct{
+																						Fields: map[string]*protobuftypes.Value{
+																							"name": &protobuftypes.Value{
+																								Kind: &protobuftypes.Value_StringValue{
+																									StringValue: v.namespace,
+																								},
+																							},
+																							"domains": &protobuftypes.Value{
+																								Kind: &protobuftypes.Value_ListValue{
+																									ListValue: &protobuftypes.ListValue{
+																										Values: []*protobuftypes.Value{
+																											{
+																												Kind: &protobuftypes.Value_StringValue{
+																													StringValue: *v.kubeAPIServerHost + ":" + string(rune(istio.GatewayPort)),
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																							"routes": &protobuftypes.Value{
+																								Kind: &protobuftypes.Value_ListValue{
+																									ListValue: &protobuftypes.ListValue{
+																										Values: []*protobuftypes.Value{
+																											{
+																												Kind: &protobuftypes.Value_StructValue{
+																													StructValue: &protobuftypes.Struct{
+																														Fields: map[string]*protobuftypes.Value{
+																															"match": &protobuftypes.Value{
+																																Kind: &protobuftypes.Value_StructValue{
+																																	StructValue: &protobuftypes.Struct{
+																																		Fields: map[string]*protobuftypes.Value{
+																																			"connect_matcher": &protobuftypes.Value{
+																																				Kind: &protobuftypes.Value_StructValue{
+																																					StructValue: &protobuftypes.Struct{},
+																																				},
+																																			},
+																																		},
+																																	},
+																																},
+																															},
+																															"route": &protobuftypes.Value{
+																																Kind: &protobuftypes.Value_StructValue{
+																																	StructValue: &protobuftypes.Struct{
+																																		Fields: map[string]*protobuftypes.Value{
+																																			"cluster": &protobuftypes.Value{
+																																				Kind: &protobuftypes.Value_StringValue{
+																																					StringValue: "outbound|1194||" + ServiceName + "." + v.namespace + ".svc.cluster.local",
+																																				},
+																																			},
+																																			"upgrade_configs": &protobuftypes.Value{
+																																				Kind: &protobuftypes.Value_ListValue{
+																																					ListValue: &protobuftypes.ListValue{
+																																						Values: []*protobuftypes.Value{
+																																							{
+																																								Kind: &protobuftypes.Value_StructValue{
+																																									StructValue: &protobuftypes.Struct{
+																																										Fields: map[string]*protobuftypes.Value{
+																																											"upgrade_type": &protobuftypes.Value{
+																																												Kind: &protobuftypes.Value_StringValue{
+																																													StringValue: "CONNECT",
+																																												},
+																																											},
+																																											"connect_config": &protobuftypes.Value{
+																																												Kind: &protobuftypes.Value_StructValue{
+																																													StructValue: &protobuftypes.Struct{},
+																																												},
+																																											},
+																																										},
+																																									},
+																																								},
+																																							},
+																																						},
+																																					},
+																																				},
+																																			},
+																																		},
+																																	},
+																																},
+																															},
+																														},
+																													},
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -585,6 +778,7 @@ func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 		v.emptyVirtualService(),
 		v.emptyService(),
 		v.emptyVPA(),
+		v.emptyEnvoyFilter(),
 	)
 }
 
@@ -592,6 +786,10 @@ func (v *vpnSeedServer) Wait(_ context.Context) error        { return nil }
 func (v *vpnSeedServer) WaitCleanup(_ context.Context) error { return nil }
 
 func (v *vpnSeedServer) SetSecrets(secrets Secrets) { v.secrets = secrets }
+
+func (v *vpnSeedServer) SetSeedNamespaceObjectUID(namespaceUID types.UID) {
+	v.namespaceUID = namespaceUID
+}
 
 func (v *vpnSeedServer) emptyConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: envoyConfigName, Namespace: v.namespace}}
@@ -627,6 +825,10 @@ func (v *vpnSeedServer) emptyDestinationRule() *networkingv1beta1.DestinationRul
 
 func (v *vpnSeedServer) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-vpa", Namespace: v.namespace}}
+}
+
+func (v *vpnSeedServer) emptyEnvoyFilter() *networkingv1alpha3.EnvoyFilter {
+	return &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Name: v.namespace + "-vpn", Namespace: v.istioIngressGateway.Namespace}}
 }
 
 var envoyConfig = `static_resources:
