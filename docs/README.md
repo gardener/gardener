@@ -29,6 +29,7 @@
 * [Cleanup of Shoot clusters in deletion](usage/shoot_cleanup.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
 * [(Custom) CSI components](usage/csi_components.md)
+* [ExposureClasses](usage/exposureclasses.md)
 * [Gardener configuration and usage](usage/configuration.md)
 * [`ManagedIstio` feature](usage/istio.md)
 * [Network Policies in the Shoot Cluster](usage/shoot_network_policies.md)
