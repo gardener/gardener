@@ -818,9 +818,6 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
 			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
-			ReversedVPN: kubeapiserverexposure.ReversedVPN{
-				Enabled: b.Shoot.ReversedVPNEnabled,
-			},
 		},
 	))
 }
@@ -848,9 +845,6 @@ func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 				Labels:    b.Config.SNI.Ingress.Labels,
 			},
 			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
-			ReversedVPN: kubeapiserverexposure.ReversedVPN{
-				Enabled: b.Shoot.ReversedVPNEnabled,
-			},
 		},
 	)
 }
