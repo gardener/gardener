@@ -98,7 +98,7 @@ featureGates:
   NodeLocalDNS: true
   MountHostCADirectories: true
   SeedKubeScheduler: false
-  ReversedVPN: false
+  ReversedVPN: true
 seedSelector: {} # selects all seeds, only use for development purposes
 # seedConfig:
 #   metadata:

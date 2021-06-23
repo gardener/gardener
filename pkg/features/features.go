@@ -95,6 +95,7 @@ const (
 	// ReversedVPN moves the openvpn server to the seed.
 	// owner: @scheererj @docktofuture
 	// alpha: v1.22.0
+	// beta: v1.26.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
 
 	// AdminKubeconfigRequest enables the AdminKubeconfigRequest endpoint on shoot resources.
