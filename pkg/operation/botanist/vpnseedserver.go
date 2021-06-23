@@ -73,6 +73,10 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		b.Shoot.Networks.Pods.String(),
 		b.Shoot.GetNodeNetwork(),
 		b.Shoot.GetReplicas(1),
+		vpnseedserver.IstioIngressGateway{
+			Namespace: *b.Config.SNI.Ingress.Namespace,
+			Labels:    b.Config.SNI.Ingress.Labels,
+		},
 	), nil
 }
 
@@ -94,6 +98,8 @@ func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 		Server:           component.Secret{Name: vpnseedserver.DeploymentName, Checksum: b.CheckSums[vpnseedserver.DeploymentName], Data: b.Secrets[vpnseedserver.DeploymentName].Data},
 		DiffieHellmanKey: component.Secret{Name: v1beta1constants.GardenRoleOpenVPNDiffieHellman, Checksum: checkSumDH, Data: openvpnDiffieHellmanSecret},
 	})
+
+	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSeedNamespaceObjectUID(b.SeedNamespaceObject.UID)
 
 	return b.Shoot.Components.ControlPlane.VPNSeedServer.Deploy(ctx)
 }
