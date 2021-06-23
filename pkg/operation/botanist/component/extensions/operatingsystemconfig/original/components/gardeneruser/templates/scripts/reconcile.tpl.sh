@@ -15,7 +15,7 @@ chown $USERNAME:$USERNAME $PATH_AUTHORIZED_KEYS
 
 # remove unused legacy file
 if [ -f "{{ .pathPublicSSHKey }}" ]; then
-  rm -- "{{ .pathPublicSSHKey }}"
+  rm -f "{{ .pathPublicSSHKey }}"
 fi
 
 # allow sudo for gardener user

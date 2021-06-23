@@ -251,11 +251,9 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
 	var err error
 
-	// fetch the current SSH keypair
-	currentSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameSSHKeyPair, Namespace: b.Shoot.SeedNamespace}}
-
-	if err = b.K8sSeedClient.Client().Get(ctx, client.ObjectKeyFromObject(currentSecret), currentSecret); client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("failed to get SSH keypair secret: %v", err)
+	currentSecret, ok := b.Secrets[v1beta1constants.SecretNameSSHKeyPair]
+	if !ok {
+		return fmt.Errorf("no Secret named %s loaded", v1beta1constants.SecretNameSSHKeyPair)
 	}
 
 	oldPrivateKey := currentSecret.Data[secrets.DataKeyRSAPrivateKey]
