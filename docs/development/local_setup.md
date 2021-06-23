@@ -1,11 +1,11 @@
 # Overview
 
-Conceptually, all Gardener components are designated to run as a Pod inside a Kubernetes cluster.
-The API server extends the Kubernetes API via the user-aggregated API server concepts.
+Conceptually, all Gardener components are designed to run as a Pod inside a Kubernetes cluster.
+The Gardener API server extends the Kubernetes API via the user-aggregated API server concepts.
 However, if you want to develop it, you may want to work locally with the Gardener without building a Docker image and deploying it to a cluster each and every time.
 That means that the Gardener runs outside a Kubernetes cluster which requires providing a [Kubeconfig](https://kubernetes.io/docs/tasks/access-application-cluster/authenticate-across-clusters-kubeconfig/) in your local filesystem and point the Gardener to it when starting it (see below).
 
-Further details could be found in
+Further details can be found in
 
 1. [Principles of Kubernetes](https://kubernetes.io/docs/concepts/), and its [components](https://kubernetes.io/docs/concepts/overview/components/)
 1. [Kubernetes Development Guide](https://github.com/kubernetes/community/tree/master/contributors/devel)
