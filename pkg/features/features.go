@@ -50,11 +50,6 @@ const (
 	// beta: v1.19.0
 	ManagedIstio featuregate.Feature = "ManagedIstio"
 
-	// KonnectivityTunnel enables inverting the connection direction to be shoot->seed instead of seed->shoot (only for Shoots with Kubernetes version >= 1.18).
-	// owner @DockToFuture @mvladev
-	// alpha: v1.6.0
-	KonnectivityTunnel featuregate.Feature = "KonnectivityTunnel"
-
 	// APIServerSNI allows to use only one LoadBalancer in the Seed cluster
 	// for all Shoot clusters. Requires Istio to be installed in the cluster or
 	// ManagedIstio feature gate to be enabled.

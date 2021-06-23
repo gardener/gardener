@@ -40,20 +40,18 @@ const (
 
 // ServiceValues configure the kube-apiserver service.
 type ServiceValues struct {
-	Annotations               map[string]string
-	KonnectivityTunnelEnabled bool
-	SNIPhase                  component.Phase
+	Annotations map[string]string
+	SNIPhase    component.Phase
 }
 
 // serviceValues configure the kube-apiserver service.
 // this one is not exposed as not all values should be configured
 // from the outside.
 type serviceValues struct {
-	annotations              map[string]string
-	serviceType              corev1.ServiceType
-	enableSNI                bool
-	enableKonnectivityTunnel bool
-	gardenerManaged          bool
+	annotations     map[string]string
+	serviceType     corev1.ServiceType
+	enableSNI       bool
+	gardenerManaged bool
 }
 
 // NewService creates a new instance of DeployWaiter for the Service used to expose the kube-apiserver.
@@ -112,7 +110,6 @@ func NewService(
 		}
 
 		internalValues.annotations = values.Annotations
-		internalValues.enableKonnectivityTunnel = values.KonnectivityTunnelEnabled
 	}
 
 	return &service{
@@ -154,24 +151,14 @@ func (s *service) Deploy(ctx context.Context) error {
 
 		obj.Spec.Type = s.values.serviceType
 		obj.Spec.Selector = getLabels()
-
-		desiredPorts := []corev1.ServicePort{
+		obj.Spec.Ports = kutil.ReconcileServicePorts(obj.Spec.Ports, []corev1.ServicePort{
 			{
 				Name:       servicePortName,
 				Protocol:   corev1.ProtocolTCP,
 				Port:       servicePort,
 				TargetPort: intstr.FromInt(kubeapiserver.Port),
 			},
-		}
-		if s.values.enableKonnectivityTunnel && !s.values.enableSNI {
-			desiredPorts = append(desiredPorts, corev1.ServicePort{
-				Name:       "konnectivity-server",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       8132,
-				TargetPort: intstr.FromInt(8132),
-			})
-		}
-		obj.Spec.Ports = kutil.ReconcileServicePorts(obj.Spec.Ports, desiredPorts, s.values.serviceType)
+		}, s.values.serviceType)
 
 		return nil
 	}); err != nil {

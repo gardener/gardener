@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
@@ -74,14 +73,6 @@ func (b *Botanist) wantedCertificateAuthorities() map[string]*secrets.Certificat
 		},
 	}
 
-	if b.Shoot.KonnectivityTunnelEnabled && b.APIServerSNIEnabled() {
-		wantedCertificateAuthorities[konnectivity.SecretNameServerCA] = &secrets.CertificateSecretConfig{
-			Name:       konnectivity.SecretNameServerCA,
-			CommonName: konnectivity.ServerName,
-			CertType:   secrets.CACert,
-		}
-	}
-
 	return wantedCertificateAuthorities
 }
 
@@ -105,13 +96,6 @@ func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig 
 				UserID:   common.KubeAPIServerHealthCheck,
 			},
 		},
-	}
-
-	if b.Shoot.KonnectivityTunnelEnabled {
-		staticTokenConfig.Tokens[konnectivity.ServerAudience] = secrets.TokenConfig{
-			Username: konnectivity.ServerAudience,
-			UserID:   konnectivity.ServerAudience,
-		}
 	}
 
 	if b.Shoot.WantsVerticalPodAutoscaler {
@@ -144,10 +128,6 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 		kubeControllerManagerCertDNSNames = kubernetes.DNSNamesForService(kubecontrollermanager.ServiceName, b.Shoot.SeedNamespace)
 		kubeSchedulerCertDNSNames         = kubernetes.DNSNamesForService(kubescheduler.ServiceName, b.Shoot.SeedNamespace)
-
-		konnectivityServerDNSNames = append([]string{
-			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-		}, kubernetes.DNSNamesForService(konnectivity.ServerName, b.Shoot.SeedNamespace)...)
 
 		etcdCertDNSNames = append(
 			b.Shoot.Components.ControlPlane.EtcdMain.ServiceDNSNames(),
@@ -630,57 +610,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		}},
 	})
 
-	if b.Shoot.KonnectivityTunnelEnabled {
-		var konnectivityServerToken *secrets.Token
-		if staticToken != nil {
-			var err error
-			konnectivityServerToken, err = staticToken.GetTokenForUsername(konnectivity.ServerAudience)
-			if err != nil {
-				return nil, err
-			}
-		}
-		// Secret definitions for konnectivity-server and konnectivity Agent
-		secretList = append(secretList,
-			&secrets.ControlPlaneSecretConfig{
-				CertificateSecretConfig: &secrets.CertificateSecretConfig{
-					Name:      konnectivity.SecretNameServerKubeconfig,
-					SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-				},
-
-				BasicAuth: basicAuthAPIServer,
-				Token:     konnectivityServerToken,
-
-				KubeConfigRequests: []secrets.KubeConfigRequest{{
-					ClusterName:   b.Shoot.SeedNamespace,
-					APIServerHost: fmt.Sprintf("%s.%s", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
-				}},
-			},
-			&secrets.ControlPlaneSecretConfig{
-				CertificateSecretConfig: &secrets.CertificateSecretConfig{
-					Name:       konnectivity.SecretNameServerTLS,
-					CommonName: konnectivity.SecretNameServerTLS,
-					DNSNames:   konnectivityServerDNSNames,
-
-					CertType:  secrets.ServerCert,
-					SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-				},
-			})
-
-		if b.APIServerSNIEnabled() {
-			secretList = append(secretList,
-				&secrets.CertificateSecretConfig{
-					Name: konnectivity.SecretNameServerTLSClient,
-
-					CommonName:   "kube-apiserver",
-					Organization: nil,
-					DNSNames:     nil,
-					IPAddresses:  nil,
-
-					CertType:  secrets.ClientCert,
-					SigningCA: certificateAuthorities[konnectivity.SecretNameServerCA],
-				})
-		}
-	} else if b.Shoot.ReversedVPNEnabled {
+	if b.Shoot.ReversedVPNEnabled {
 		secretList = append(secretList,
 			// Secret definition for vpn-shoot (OpenVPN client side)
 			&secrets.CertificateSecretConfig{

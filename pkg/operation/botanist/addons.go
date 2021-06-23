@@ -32,14 +32,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -409,36 +406,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.Info.Status.ClusterIdentity},
 	}
 
-	shootClient := b.K8sShootClient.Client()
-
-	if b.Shoot.KonnectivityTunnelEnabled {
-		konnectivityAgentConfig := map[string]interface{}{
-			"proxyHost": gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-konnectivity-agent": b.CheckSums["konnectivity-agent"],
-			},
-		}
-
-		// Konnectivity agent related values
-		konnectivityAgent, err := b.InjectShootShootImages(konnectivityAgentConfig, charts.ImageNameKonnectivityAgent)
-		if err != nil {
-			return nil, err
-		}
-
-		values["konnectivity-agent"] = common.GenerateAddonConfig(konnectivityAgent, true)
-
-		// TODO: remove when konnectivity tunnel is the default tunneling method for all shoots.
-		secret, err := kutil.GetSecretByReference(ctx, shootClient, &corev1.SecretReference{Namespace: metav1.NamespaceSystem, Name: "vpn-shoot"})
-		if err != nil && !apierrors.IsNotFound(err) {
-			return nil, err
-		}
-
-		if secret != nil {
-			if err := b.K8sShootClient.Client().Delete(ctx, secret); err != nil {
-				return nil, err
-			}
-		}
-	} else if b.Shoot.ReversedVPNEnabled {
+	if b.Shoot.ReversedVPNEnabled {
 		var (
 			vpnTLSAuthSecret = b.Secrets[vpnseedserver.VpnSeedServerTLSAuth]
 			vpnShootSecret   = b.Secrets[vpnseedserver.VpnShootSecretName]

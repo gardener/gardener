@@ -92,7 +92,6 @@ featureGates:
   HVPA: true
   HVPAForShootedSeed: true
   ManagedIstio: true
-  KonnectivityTunnel: false
   APIServerSNI: true
   CachedRuntimeClients: true
   MountHostCADirectories: true

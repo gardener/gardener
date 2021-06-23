@@ -21,7 +21,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	istio "github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -387,7 +386,7 @@ var _ = Describe("VpnSeedServer", func() {
 						Hosts: []string{kubeAPIServerHost},
 						Port: &v1beta1.Port{
 							Name:     "tls-tunnel",
-							Number:   istio.GatewayPort,
+							Number:   8132,
 							Protocol: "HTTP",
 						},
 					},
@@ -585,8 +584,8 @@ var _ = Describe("VpnSeedServer", func() {
 							Context: istionetworkingv1alpha3.EnvoyFilter_GATEWAY,
 							ObjectTypes: &istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
 								Listener: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch{
-									Name:       fmt.Sprintf("0.0.0.0_%d", istio.GatewayPort),
-									PortNumber: istio.GatewayPort,
+									Name:       fmt.Sprintf("0.0.0.0_%d", 8132),
+									PortNumber: 8132,
 									FilterChain: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterChainMatch{
 										Filter: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterMatch{
 											Name: "envoy.filters.network.http_connection_manager",
@@ -636,7 +635,7 @@ var _ = Describe("VpnSeedServer", func() {
 																												Values: []*protobuftypes.Value{
 																													{
 																														Kind: &protobuftypes.Value_StringValue{
-																															StringValue: fmt.Sprintf("%s:%d", kubeAPIServerHost, istio.GatewayPort),
+																															StringValue: fmt.Sprintf("%s:%d", kubeAPIServerHost, 8132),
 																														},
 																													},
 																												},

@@ -23,7 +23,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
@@ -53,15 +52,6 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 	}
 
 	if b.Shoot.Info.DeletionTimestamp == nil {
-		if b.Shoot.KonnectivityTunnelEnabled {
-			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot", vpnseedserver.DeploymentName, vpnseedserver.VpnShootSecretName, vpnseedserver.VpnSeedServerTLSAuth); err != nil {
-				return err
-			}
-		} else {
-			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, konnectivity.SecretNameServerKubeconfig, konnectivity.SecretNameServerTLS); err != nil {
-				return err
-			}
-		}
 		if b.Shoot.ReversedVPNEnabled {
 			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"); err != nil {
 				return err
@@ -226,9 +216,6 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 		common.StaticTokenSecretName,
 		common.BasicAuthSecretName,
 		common.KubecfgSecretName,
-	}
-	if b.Shoot.KonnectivityTunnelEnabled {
-		secrets = append(secrets, konnectivity.SecretNameServerKubeconfig)
 	}
 
 	for _, secretName := range secrets {

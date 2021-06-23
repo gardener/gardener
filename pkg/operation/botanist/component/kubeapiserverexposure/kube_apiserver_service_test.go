@@ -43,14 +43,13 @@ var _ = Describe("#Service", func() {
 		defaultDepWaiter component.DeployWaiter
 		expected         *corev1.Service
 
-		ingressIP          string
-		clusterIP          string
-		sniPhase           component.Phase
-		enableKonnectivity bool
-		clusterIPFunc      func(string)
-		ingressIPFunc      func(string)
-		serviceObjKey      client.ObjectKey
-		sniServiceObjKey   client.ObjectKey
+		ingressIP        string
+		clusterIP        string
+		sniPhase         component.Phase
+		clusterIPFunc    func(string)
+		ingressIPFunc    func(string)
+		serviceObjKey    client.ObjectKey
+		sniServiceObjKey client.ObjectKey
 	)
 
 	BeforeEach(func() {
@@ -64,7 +63,6 @@ var _ = Describe("#Service", func() {
 		ingressIP = ""
 		clusterIP = ""
 		sniPhase = component.PhaseUnknown
-		enableKonnectivity = false
 		serviceObjKey = client.ObjectKey{Name: "test-deploy", Namespace: "test-namespace"}
 		sniServiceObjKey = client.ObjectKey{Name: "foo", Namespace: "bar"}
 		clusterIPFunc = func(c string) { clusterIP = c }
@@ -121,9 +119,8 @@ var _ = Describe("#Service", func() {
 			log,
 			c,
 			&ServiceValues{
-				Annotations:               map[string]string{"foo": "bar"},
-				KonnectivityTunnelEnabled: enableKonnectivity,
-				SNIPhase:                  sniPhase,
+				Annotations: map[string]string{"foo": "bar"},
+				SNIPhase:    sniPhase,
 			},
 			serviceObjKey,
 			sniServiceObjKey,
@@ -131,31 +128,6 @@ var _ = Describe("#Service", func() {
 			clusterIPFunc,
 			ingressIPFunc,
 		)
-	})
-
-	Context("Konnectivity enabled", func() {
-		BeforeEach(func() {
-			enableKonnectivity = true
-			expected.Annotations = map[string]string{"foo": "bar"}
-			expected.Spec.Ports = append(expected.Spec.Ports, corev1.ServicePort{
-				Name:       "konnectivity-server",
-				Port:       8132,
-				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt(8132),
-			})
-		})
-
-		It("deploys service", func() {
-			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
-
-			actual := &corev1.Service{}
-			Expect(c.Get(ctx, serviceObjKey, actual)).To(Succeed())
-
-			Expect(actual).To(DeepEqual(expected))
-
-			Expect(ingressIP).To(BeEmpty())
-			Expect(clusterIP).To(Equal("1.1.1.1"))
-		})
 	})
 
 	var assertDisabledSNI = func() {

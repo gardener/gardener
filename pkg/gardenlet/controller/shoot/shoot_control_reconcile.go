@@ -283,16 +283,6 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           flow.TaskFn(botanist.DeployKubeScheduler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilKubeAPIServerIsReady),
 		})
-		deployKonnectivityServer = g.Add(flow.Task{
-			Name:         "Deploying konnectivity-server",
-			Fn:           flow.TaskFn(botanist.DeployKonnectivityServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets),
-		})
-		waitUntilKonnectityServerReady = g.Add(flow.Task{
-			Name:         "Waiting until konnectivity-server is ready",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KonnectivityServer.Wait),
-			Dependencies: flow.NewTaskIDs(deployKonnectivityServer),
-		})
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.TaskFn(botanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -393,13 +383,13 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		vpnLBReady = g.Add(flow.Task{
 			Name:         "Waiting until vpn-shoot LoadBalancer is ready",
-			Fn:           flow.TaskFn(botanist.WaitUntilVpnShootServiceIsReady).SkipIf(o.Shoot.HibernationEnabled || o.Shoot.KonnectivityTunnelEnabled || o.Shoot.ReversedVPNEnabled),
+			Fn:           flow.TaskFn(botanist.WaitUntilVpnShootServiceIsReady).SkipIf(o.Shoot.HibernationEnabled || o.Shoot.ReversedVPNEnabled),
 			Dependencies: flow.NewTaskIDs(deployManagedResourcesForAddons, waitUntilNetworkIsReady, waitUntilWorkerReady),
 		})
 		waitUntilTunnelConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
 			Fn:           flow.TaskFn(botanist.WaitUntilTunnelConnectionExists).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deployManagedResourcesForAddons, waitUntilNetworkIsReady, waitUntilWorkerReady, waitUntilKonnectityServerReady, vpnLBReady),
+			Dependencies: flow.NewTaskIDs(deployManagedResourcesForAddons, waitUntilNetworkIsReady, waitUntilWorkerReady, vpnLBReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until all shoot worker nodes have updated the cloud config user data",

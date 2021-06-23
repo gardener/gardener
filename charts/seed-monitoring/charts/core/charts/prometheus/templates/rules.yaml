@@ -6,15 +6,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
 {{ range $name, $bytes := .Files.Glob "rules/**.yaml" }}
-  {{ if eq $name "rules/vpn.rules.yaml" }}
-  {{ if not $.Values.konnectivityTunnel.enabled }}
   {{ base $name }}: |-
 {{ toString $bytes | indent 4}}
-  {{ end }}
-  {{ else }}
-  {{ base $name }}: |-
-{{ toString $bytes | indent 4}}
-  {{ end }}
 {{ end }}
 # additional rules
 {{- if .Values.additionalRules }}

@@ -175,9 +175,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		}
 		prometheusConfig = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-			"konnectivityTunnel": map[string]interface{}{
-				"enabled": b.Shoot.KonnectivityTunnelEnabled,
-			},
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": b.Shoot.NodeLocalDNSEnabled,
 			},
@@ -206,9 +203,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 					},
 					"hvpa": map[string]interface{}{
 						"enabled": gardenletfeatures.FeatureGate.Enabled(features.HVPA),
-					},
-					"vpn": map[string]interface{}{
-						"enabled": !b.Shoot.KonnectivityTunnelEnabled,
 					},
 				},
 			},
@@ -453,9 +447,6 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 			"observedPods": observedPods,
 		},
 		"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
-		"konnectivityTunnel": map[string]interface{}{
-			"enabled": b.Shoot.KonnectivityTunnelEnabled,
-		},
 		"sni": map[string]interface{}{
 			"enabled": b.APIServerSNIEnabled(),
 		},

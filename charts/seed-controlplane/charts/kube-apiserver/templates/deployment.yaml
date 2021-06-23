@@ -34,7 +34,7 @@ spec:
         checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/configmap-audit-policy.yaml") . | sha256sum }}
         checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/secret-oidc-ca.yaml") . | sha256sum }}
         checksum/configmap-admission-config: {{ include (print $.Template.BasePath "/configmap-admission-config.yaml") . | sha256sum }}
-        {{- if or .Values.konnectivityTunnel.enabled .Values.reversedVPN.enabled }}
+        {{- if .Values.reversedVPN.enabled }}
         checksum/egress-selection-config: {{ include (print $.Template.BasePath "/configmap-egress-selection.yaml") . | sha256sum }}
         {{- end}}
 {{- if .Values.podAnnotations }}
@@ -51,9 +51,6 @@ spec:
         networking.gardener.cloud/to-shoot-networks: allowed
         networking.gardener.cloud/from-prometheus: allowed
     spec:
-      {{- if and .Values.konnectivityTunnel.enabled (not .Values.sni.enabled) }}
-      serviceAccountName: kube-apiserver
-      {{- end }}
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -71,7 +68,7 @@ spec:
                     values:
                     - apiserver
       priorityClassName: {{ .Values.priorityClassName }}
-      {{- if and (not .Values.konnectivityTunnel.enabled) (not .Values.reversedVPN.enabled)}}
+      {{- if (not .Values.reversedVPN.enabled) }}
       initContainers:
       - name: set-iptable-rules
         image: {{ index .Values.images "alpine-iptables" }}
@@ -96,7 +93,7 @@ spec:
         {{- else }}
         - /usr/local/bin/kube-apiserver
         {{- end }}
-        {{- if or .Values.konnectivityTunnel.enabled .Values.reversedVPN.enabled }}
+        {{- if .Values.reversedVPN.enabled }}
         - --egress-selector-config-file=/etc/kubernetes/egress/egress-selector-configuration.yaml
         {{- end}}
         - --enable-admission-plugins={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
@@ -226,18 +223,6 @@ spec:
         - name: egress-selection-config
           mountPath: /etc/kubernetes/egress
         {{- end }}
-        {{- if .Values.konnectivityTunnel.enabled }}
-        - name: egress-selection-config
-          mountPath: /etc/kubernetes/egress
-        {{- if .Values.sni.enabled }}
-        - name: konnectivity-server-client-tls
-          mountPath: /etc/srv/kubernetes/konnectivity-server-client-tls
-        {{- else }}
-        - name: konnectivity-uds
-          mountPath: /etc/srv/kubernetes/konnectivity-server
-          readOnly: false
-        {{- end }}
-        {{- end }}
         - name: audit-policy-config
           mountPath: /etc/kubernetes/audit
         - name: ca
@@ -333,65 +318,7 @@ spec:
         - name: kube-apiserver
           mountPath: /srv/kubernetes/apiserver
       {{- end }}
-      {{- if and .Values.konnectivityTunnel.enabled (not .Values.sni.enabled ) }}
-      - name: konnectivity-server
-        image: {{ index .Values.images "konnectivity-server" }}
-        command:
-        - /replica-reloader
-        args:
-        - --namespace={{ .Release.Namespace }}
-        - --deployment-name=kube-apiserver
-        - --jitter=10s
-        - --jitter-factor=5
-        - --v=2
-        - --
-        - /proxy-server
-        - --uds-name=/etc/srv/kubernetes/konnectivity-server/konnectivity-server.socket
-        - --logtostderr=true
-        - --cluster-cert=/certs/konnectivity-server/konnectivity-server.crt
-        - --cluster-key=/certs/konnectivity-server/konnectivity-server.key
-        - --agent-namespace={{ .Values.konnectivityTunnel.agentNamespace }}
-        - --agent-service-account=konnectivity-agent
-        - --kubeconfig=/etc/srv/kubernetes/konnectivity-server-kubeconfig/kubeconfig
-        - --authentication-audience=system:konnectivity-server
-        - --keepalive-time=1h
-        - --log-file-max-size=0
-        - --delete-existing-uds-file=true
-        - --mode=http-connect
-        # the server port should always be 0 when using UDS
-        - --server-port=0
-        - --agent-port={{ .Values.konnectivityTunnel.agentPort }}
-        - --admin-port={{ .Values.konnectivityTunnel.adminPort }}
-        - --health-port={{ .Values.konnectivityTunnel.healthPort }}
-        - --v=2
-        # the last argument should be server-count - the reloader injects the actual count after it
-        - --server-count
-        resources:
-{{ toYaml .Values.konnectivityTunnelResources | indent 10 }}
-        livenessProbe:
-          httpGet:
-            scheme: HTTP
-            port: {{ .Values.konnectivityTunnel.healthPort }}
-            path: /healthz
-          initialDelaySeconds: 30
-          timeoutSeconds: 60
-        ports:
-        - name: agentport
-          containerPort: {{ .Values.konnectivityTunnel.agentPort }}
-        - name: adminport
-          containerPort: {{ .Values.konnectivityTunnel.adminPort }}
-        - name: healthport
-          containerPort: {{ .Values.konnectivityTunnel.healthPort }}
-        volumeMounts:
-        - name: konnectivity-server-certs
-          mountPath: /certs/konnectivity-server
-          readOnly: true
-        - name: konnectivity-server-kubeconfig
-          mountPath: /etc/srv/kubernetes/konnectivity-server-kubeconfig
-        - name: konnectivity-uds
-          mountPath: /etc/srv/kubernetes/konnectivity-server
-          readOnly: false
-      {{- else if and (not .Values.konnectivityTunnel.enabled) (not .Values.reversedVPN.enabled) }}
+      {{- if (not .Values.reversedVPN.enabled) }}
       - name: vpn-seed
         image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
@@ -496,25 +423,7 @@ spec:
       - name: kube-apiserver-admission-config
         configMap:
           name: kube-apiserver-admission-config
-      {{- if .Values.konnectivityTunnel.enabled }}
-      - name: egress-selection-config
-        configMap:
-          name: kube-apiserver-egress-selector-configuration
-      {{- if .Values.sni.enabled }}
-      - name: konnectivity-server-client-tls
-        secret:
-          secretName: konnectivity-server-client-tls
-      {{- else }}
-      - name: konnectivity-server-certs
-        secret:
-          secretName: konnectivity-server
-      - name: konnectivity-server-kubeconfig
-        secret:
-          secretName: konnectivity-server-kubeconfig
-      - name: konnectivity-uds
-        emptyDir: {}
-      {{- end }}
-      {{- else if .Values.reversedVPN.enabled }}
+      {{- if .Values.reversedVPN.enabled }}
       - name: egress-selection-config
         configMap:
           name: kube-apiserver-egress-selector-configuration

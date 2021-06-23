@@ -11,10 +11,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: node-local-dns.enabled
-- name: konnectivity-agent
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: konnectivity-agent.enabled
 - name: kube-apiserver-kubelet
   repository: http://localhost:10191
   version: 0.1.0

@@ -24,7 +24,6 @@
 ## Usage
 
 * [APIServerSNI environment variable injection](usage/apiserver-sni-injection.md)
-* [API Server Network Proxy Reverse Tunneling](usage/reverse-tunnel.md)
 * [Audit a Kubernetes cluster](usage/shoot_auditpolicy.md)
 * [Auto-Scaling for shoot clusters](usage/shoot_autoscaling.md)
 * [Cleanup of Shoot clusters in deletion](usage/shoot_cleanup.md)
