@@ -84,7 +84,7 @@ var _ = Describe("VPNSeedServer", func() {
 			botanist.Config = &config.GardenletConfiguration{
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{
-						Namespace: pointer.String("test-ns"),
+						Namespace: pointer.StringPtr("test-ns"),
 						Labels: map[string]string{
 							"istio": "foo-bar",
 						},
@@ -155,7 +155,7 @@ var _ = Describe("VPNSeedServer", func() {
 			botanist.Config = &config.GardenletConfiguration{
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{
-						Namespace: pointer.String("test-ns"),
+						Namespace: pointer.StringPtr("test-ns"),
 						Labels: map[string]string{
 							"istio": "foo-bar",
 						},

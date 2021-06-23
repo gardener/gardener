@@ -584,18 +584,16 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, envoyFilter, func() error {
-		envoyFilter.ObjectMeta = metav1.ObjectMeta{
-			Name:      envoyFilter.Name,
-			Namespace: envoyFilter.Namespace,
-			OwnerReferences: []metav1.OwnerReference{
-				metav1.OwnerReference{
-					APIVersion:         "v1",
-					Kind:               "Namespace",
-					Name:               v.namespace,
-					UID:                v.namespaceUID,
-					Controller:         pointer.BoolPtr(false),
-					BlockOwnerDeletion: pointer.BoolPtr(false),
-				},
+		envoyFilter.ObjectMeta.Name = envoyFilter.Name
+		envoyFilter.ObjectMeta.Namespace = envoyFilter.Namespace
+		envoyFilter.ObjectMeta.OwnerReferences = []metav1.OwnerReference{
+			{
+				APIVersion:         "v1",
+				Kind:               "Namespace",
+				Name:               v.namespace,
+				UID:                v.namespaceUID,
+				Controller:         pointer.BoolPtr(false),
+				BlockOwnerDeletion: pointer.BoolPtr(false),
 			},
 		}
 		envoyFilter.Spec.WorkloadSelector = &istionetworkingv1alpha3.WorkloadSelector{
@@ -608,7 +606,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 					Context: istionetworkingv1alpha3.EnvoyFilter_GATEWAY,
 					ObjectTypes: &istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
 						Listener: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch{
-							Name:       "0.0.0.0_" + string(rune(istio.GatewayPort)),
+							Name:       fmt.Sprintf("0.0.0.0_%d", istio.GatewayPort),
 							PortNumber: istio.GatewayPort,
 							FilterChain: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterChainMatch{
 								Filter: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterMatch{
@@ -659,7 +657,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 																										Values: []*protobuftypes.Value{
 																											{
 																												Kind: &protobuftypes.Value_StringValue{
-																													StringValue: *v.kubeAPIServerHost + ":" + string(rune(istio.GatewayPort)),
+																													StringValue: fmt.Sprintf("%s:%d", *v.kubeAPIServerHost, istio.GatewayPort),
 																												},
 																											},
 																										},
