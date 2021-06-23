@@ -273,9 +273,7 @@ func (a *actuator) ensureGardenNamespace(ctx context.Context, shootClient client
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
-		if err := shootClient.Create(ctx, gardenNamespace); err != nil {
-			return err
-		}
+		return shootClient.Create(ctx, gardenNamespace)
 	}
 	return nil
 }
