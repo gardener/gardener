@@ -7,7 +7,7 @@
   "components": {
     "schemas": {
       "istio.mesh.v1alpha1.MeshConfig": {
-        "description": "MeshConfig defines mesh-wide variables shared by all Envoy instances in the Istio service mesh.",
+        "description": "MeshConfig defines mesh-wide settings for the Istio service mesh.",
         "type": "object",
         "properties": {
           "localityLbSetting": {
@@ -22,6 +22,13 @@
           },
           "h2UpgradePolicy": {
             "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.H2UpgradePolicy"
+          },
+          "caCertificates": {
+            "description": "The extra root certificates for workload-to-workload communication. The plugin certificates (the 'cacerts' secret) or self-signed certificates (the 'istio-ca-secret' secret) are automatically added by Istiod. The CA certificate that signs the workload certificates is automatically added by Istio Agent.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.CertificateData"
+            }
           },
           "outboundTrafficPolicy": {
             "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.OutboundTrafficPolicy"
@@ -57,14 +64,6 @@
             "description": "Defines which gateway deployment to use as the Ingress controller. This field corresponds to the Gateway.selector field, and will be set as `istio: INGRESS_SELECTOR`. By default, `ingressgateway` is used, which will select the default IngressGateway as it has the `istio: ingressgateway` labels. It is recommended that this is the same value as ingress_service.",
             "type": "string",
             "format": "string"
-          },
-          "authPolicy": {
-            "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.AuthPolicy",
-            "deprecated": true
-          },
-          "rdsRefreshDelay": {
-            "type": "string",
-            "deprecated": true
           },
           "enableTracing": {
             "description": "Flag to control generation of trace spans and request IDs. Requires a trace span collector defined in the proxy configuration.",
@@ -193,11 +192,24 @@
             "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.CA"
           },
           "extensionProviders": {
-            "description": "Defines a list of extension providers that extend Istio's functionality. For example, the AuthorizationPolicy can be used with an extension provider to delegate the authorization decision to a custom authorization system. Note, currently at most 1 extension provider is allowed.",
+            "description": "Defines a list of extension providers that extend Istio's functionality. For example, the AuthorizationPolicy can be used with an extension provider to delegate the authorization decision to a custom authorization system.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider"
             }
+          },
+          "defaultProviders": {
+            "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.DefaultProviders"
+          },
+          "discoverySelectors": {
+            "description": "A list of Kubernetes selectors that specify the set of namespaces that Istio considers when computing configuration updates for sidecars. This can be used to reduce Istio's computational load by limiting the number of entities (including services, pods, and endpoints) that are watched and processed. If omitted, Istio will use the default behavior of processing all namespaces in the cluster. Elements in the list are disjunctive (OR semantics), i.e. a namespace will be included if it matches any selector. The following example selects any namespace that matches either below: 1. The namespace has both of these labels: `env: prod` and `region: us-east1` 2. The namespace has label `app` equal to `cassandra` or `spark`. ```yaml discoverySelectors: - matchLabels: env: prod region: us-east1 - matchExpressions: - key: app operator: In values: - cassandra - spark ``` Refer to the [kubernetes selector docs](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors) for additional detail on selector semantics.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector"
+            }
+          },
+          "pathNormalization": {
+            "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalization"
           }
         }
       },
@@ -208,13 +220,6 @@
           "OFF",
           "DEFAULT",
           "STRICT"
-        ]
-      },
-      "istio.mesh.v1alpha1.MeshConfig.AuthPolicy": {
-        "type": "string",
-        "enum": [
-          "NONE",
-          "MUTUAL_TLS"
         ]
       },
       "istio.mesh.v1alpha1.MeshConfig.AccessLogEncoding": {
@@ -228,6 +233,9 @@
         "description": "ProxyConfig defines variables for individual Envoy instances.",
         "type": "object",
         "properties": {
+          "tracing": {
+            "$ref": "#/components/schemas/istio.mesh.v1alpha1.Tracing"
+          },
           "configPath": {
             "description": "Path to the generated configuration file directory. Proxy agent generates the actual configuration and stores it in this directory.",
             "type": "string",
@@ -312,9 +320,6 @@
           "interceptionMode": {
             "$ref": "#/components/schemas/istio.mesh.v1alpha1.ProxyConfig.InboundInterceptionMode"
           },
-          "tracing": {
-            "$ref": "#/components/schemas/istio.mesh.v1alpha1.Tracing"
-          },
           "sds": {
             "$ref": "#/components/schemas/istio.mesh.v1alpha1.SDS"
           },
@@ -325,7 +330,7 @@
             "$ref": "#/components/schemas/istio.mesh.v1alpha1.RemoteService"
           },
           "proxyMetadata": {
-            "description": "Additional env variables for the proxy. Names starting with ISTIO_META_ will be included in the generated bootstrap and sent to the XDS server.",
+            "description": "Additional environment variables for the proxy. Names starting with `ISTIO_META_` will be included in the generated bootstrap and sent to the XDS server.",
             "type": "object",
             "additionalProperties": {
               "type": "string",
@@ -367,6 +372,14 @@
             "description": "Boolean flag for enabling/disabling the holdApplicationUntilProxyStarts behavior. This feature adds hooks to delay application startup until the pod proxy is ready to accept traffic, mitigating some startup race conditions. Default value is 'false'.",
             "type": "boolean",
             "nullable": true
+          },
+          "caCertificatesPem": {
+            "description": "The PEM data of the extra root certificates for workload-to-workload communication. This includes the certificates defined in MeshConfig and any other certificates that Istiod uses as CA. The plugin certificates (the 'cacerts' secret), self-signed certificates (the 'istio-ca-secret' secret) are added automatically by Istiod.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "string"
+            }
           }
         }
       },
@@ -398,6 +411,65 @@
             }
           }
         }
+      },
+      "istio.mesh.v1alpha1.MeshConfig.CertificateData": {
+        "type": "object",
+        "oneOf": [
+          {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "pem"
+                  ],
+                  "properties": {
+                    "pem": {
+                      "description": "The PEM data of the certificate.",
+                      "type": "string",
+                      "format": "string"
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "spiffeBundleUrl"
+                  ],
+                  "properties": {
+                    "spiffeBundleUrl": {
+                      "description": "The SPIFFE bundle endpoint URL that complies to: https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE_Trust_Domain_and_Bundle.md#the-spiffe-trust-domain-and-bundle The endpoint should support authentication based on Web PKI: https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE_Trust_Domain_and_Bundle.md#521-web-pki The certificate is retrieved from the endpoint.",
+                      "type": "string",
+                      "format": "string"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "required": [
+              "pem"
+            ],
+            "properties": {
+              "pem": {
+                "description": "The PEM data of the certificate.",
+                "type": "string",
+                "format": "string"
+              }
+            }
+          },
+          {
+            "required": [
+              "spiffeBundleUrl"
+            ],
+            "properties": {
+              "spiffeBundleUrl": {
+                "description": "The SPIFFE bundle endpoint URL that complies to: https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE_Trust_Domain_and_Bundle.md#the-spiffe-trust-domain-and-bundle The endpoint should support authentication based on Web PKI: https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE_Trust_Domain_and_Bundle.md#521-web-pki The certificate is retrieved from the endpoint.",
+                "type": "string",
+                "format": "string"
+              }
+            }
+          }
+        ]
       },
       "istio.mesh.v1alpha1.MeshConfig.H2UpgradePolicy": {
         "description": "Default Policy for upgrading http1.1 connections to http2.",
@@ -479,6 +551,7 @@
         }
       },
       "istio.mesh.v1alpha1.MeshConfig.ExtensionProvider": {
+        "description": "REQUIRED. Specifies detailed configuration for the extension provider.",
         "type": "object",
         "properties": {
           "name": {
@@ -510,6 +583,56 @@
                       "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationGrpcProvider"
                     }
                   }
+                },
+                {
+                  "required": [
+                    "zipkin"
+                  ],
+                  "properties": {
+                    "zipkin": {
+                      "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ZipkinTracingProvider"
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "lightstep"
+                  ],
+                  "properties": {
+                    "lightstep": {
+                      "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.LightstepTracingProvider"
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "datadog"
+                  ],
+                  "properties": {
+                    "datadog": {
+                      "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.DatadogTracingProvider"
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "stackdriver"
+                  ],
+                  "properties": {
+                    "stackdriver": {
+                      "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.StackdriverProvider"
+                    }
+                  }
+                },
+                {
+                  "required": [
+                    "opencensus"
+                  ],
+                  "properties": {
+                    "opencensus": {
+                      "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.OpenCensusAgentTracingProvider"
+                    }
+                  }
                 }
               ]
             }
@@ -533,7 +656,83 @@
                 "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationGrpcProvider"
               }
             }
+          },
+          {
+            "required": [
+              "zipkin"
+            ],
+            "properties": {
+              "zipkin": {
+                "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ZipkinTracingProvider"
+              }
+            }
+          },
+          {
+            "required": [
+              "lightstep"
+            ],
+            "properties": {
+              "lightstep": {
+                "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.LightstepTracingProvider"
+              }
+            }
+          },
+          {
+            "required": [
+              "datadog"
+            ],
+            "properties": {
+              "datadog": {
+                "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.DatadogTracingProvider"
+              }
+            }
+          },
+          {
+            "required": [
+              "stackdriver"
+            ],
+            "properties": {
+              "stackdriver": {
+                "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.StackdriverProvider"
+              }
+            }
+          },
+          {
+            "required": [
+              "opencensus"
+            ],
+            "properties": {
+              "opencensus": {
+                "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.OpenCensusAgentTracingProvider"
+              }
+            }
           }
+        ]
+      },
+      "istio.mesh.v1alpha1.MeshConfig.DefaultProviders": {
+        "description": "Holds the name references to the providers that will be used by default in other Istio configuration resources if the provider is not specified.",
+        "type": "object",
+        "properties": {
+          "tracing": {
+            "description": "Name of the default provider for tracing. This must match a provider defined in `extension_providers` that is one of the support tracing providers.",
+            "type": "string",
+            "format": "string"
+          }
+        }
+      },
+      "istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalization": {
+        "type": "object",
+        "properties": {
+          "normalization": {
+            "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalization.NormalizationType"
+          }
+        }
+      },
+      "istio.mesh.v1alpha1.MeshConfig.AuthPolicy": {
+        "type": "string",
+        "enum": [
+          "NONE",
+          "MUTUAL_TLS"
         ]
       },
       "istio.mesh.v1alpha1.MeshConfig.OutboundTrafficPolicy.Mode": {
@@ -561,9 +760,13 @@
             "type": "integer"
           },
           "service": {
-            "description": "REQUIRED. Specifies the service that implements the Envoy ext_authz HTTP authorization service. The format is \"[\u003cNamespace\u003e/]\u003cService\u003e\". If the \u003cNamespace\u003e is omitted then it is resolved within the same namespace as this configuration resource. The \u003cService\u003e is the name of the service object (k8s service or ServiceEntry). Example: \"foo/my-ext-authz\" or \"my-ext-authz\".",
+            "description": "REQUIRED. Specifies the service that implements the Envoy ext_authz HTTP authorization service. The format is \"[\u003cNamespace\u003e/]\u003cHostname\u003e\". The specification of \u003cNamespace\u003e is required only when it is insufficient to unambiguously resolve a service in the service registry. The \u003cHostname\u003e is a fully qualified host name of a service defined by the Kubernetes service or ServiceEntry.",
             "type": "string",
             "format": "string"
+          },
+          "timeout": {
+            "description": "The maximum duration that the proxy will wait for a response from the provider (default timeout: 600s). When this timeout condition is met, the proxy marks the communication to the authorization service as failure. In this situation, the response sent back to the client will depend on the configured `fail_open` field.",
+            "type": "string"
           },
           "pathPrefix": {
             "description": "Sets a prefix to the value of authorization request header *Path*. For example, setting this to \"/check\" for an original user request at path \"/admin\" will cause the authorization check request to be sent to the authorization service at the path \"/check/admin\" instead of \"/admin\".",
@@ -580,12 +783,31 @@
             "format": "string"
           },
           "includeHeadersInCheck": {
-            "description": "List of headers that should be included in the authorization request sent to the authorization service. Note that in addition to the headers supplied by users: 1. *Host*, *Method*, *Path* and *Content-Length* are automatically sent. 2. *Content-Length* will be set to 0 and the request will not have a message body.",
+            "description": "DEPRECATED. Use include_request_headers_in_check instead.",
             "type": "array",
             "items": {
               "type": "string",
               "format": "string"
             }
+          },
+          "includeRequestHeadersInCheck": {
+            "description": "List of client request headers that should be included in the authorization request sent to the authorization service. Note that in addition to the headers specified here following headers are included by default: 1. *Host*, *Method*, *Path* and *Content-Length* are automatically sent. 2. *Content-Length* will be set to 0 and the request will not have a message body. However, the authorization request can include the buffered client request body (controlled by include_request_body_in_check setting), consequently the value of Content-Length of the authorization request reflects the size of its payload size.",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "includeAdditionalHeadersInCheck": {
+            "description": "Set of additional fixed headers that should be included in the authorization request sent to the authorization service. Key is the header name and value is the header value. Note that client request of the same key or headers specified in include_request_headers_in_check will be overridden.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "includeRequestBodyInCheck": {
+            "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationRequestBody"
           },
           "headersToUpstreamOnAllow": {
             "description": "List of headers from the authorization service that should be added or overridden in the original request and forwarded to the upstream when the authorization check result is allowed (HTTP code 200). If not specified, the original request will not be modified and forwarded to backend as-is. Note, any existing headers will be overridden.",
@@ -613,20 +835,182 @@
             "type": "integer"
           },
           "service": {
-            "description": "REQUIRED. Specifies the service that implements the Envoy ext_authz gRPC authorization service. The format is \"[\u003cNamespace\u003e/]\u003cService\u003e\". If the \u003cNamespace\u003e is omitted then it is resolved within the same namespace as this configuration resource. The \u003cService\u003e is the name of the service object (k8s service or ServiceEntry). Example: \"foo/my-ext-authz\" or \"my-ext-authz\".",
+            "description": "REQUIRED. Specifies the service that implements the Envoy ext_authz gRPC authorization service. The format is \"[\u003cNamespace\u003e/]\u003cHostname\u003e\". The specification of \u003cNamespace\u003e is required only when it is insufficient to unambiguously resolve a service in the service registry. The \u003cHostname\u003e is a fully qualified host name of a service defined by the Kubernetes service or ServiceEntry.",
             "type": "string",
             "format": "string"
           },
+          "timeout": {
+            "description": "The maximum duration that the proxy will wait for a response from the provider, this is the timeout for a specific request (default timeout: 600s). When this timeout condition is met, the proxy marks the communication to the authorization service as failure. In this situation, the response sent back to the client will depend on the configured `fail_open` field.",
+            "type": "string"
+          },
           "failOpen": {
-            "description": "If true, the user request will be allowed even if the communication with the authorization service has failed, or if the authorization service has returned a HTTP 5xx error. Default is false and the request will be rejected with \"Forbidden\" response.",
+            "description": "If true, the HTTP request or TCP connection will be allowed even if the communication with the authorization service has failed, or if the authorization service has returned a HTTP 5xx error. Default is false. For HTTP request, it will be rejected with 403 (HTTP Forbidden). For TCP connection, it will be closed immediately.",
             "type": "boolean"
           },
           "statusOnError": {
             "description": "Sets the HTTP status that is returned to the client when there is a network error to the authorization service. The default status is \"403\" (HTTP Forbidden).",
             "type": "string",
             "format": "string"
+          },
+          "includeRequestBodyInCheck": {
+            "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationRequestBody"
           }
         }
+      },
+      "istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.ZipkinTracingProvider": {
+        "description": "Defines configuration for a Zipkin tracer.",
+        "type": "object",
+        "properties": {
+          "port": {
+            "description": "REQUIRED. Specifies the port of the service.",
+            "type": "integer"
+          },
+          "service": {
+            "description": "REQUIRED. Specifies the service that the Zipkin API. The format is \"[\u003cNamespace\u003e/]\u003cHostname\u003e\". The specification of \u003cNamespace\u003e is required only when it is insufficient to unambiguously resolve a service in the service registry. The \u003cHostname\u003e is a fully qualified host name of a service defined by the Kubernetes service or ServiceEntry.",
+            "type": "string",
+            "format": "string"
+          },
+          "maxTagLength": {
+            "description": "Optional. Controls the overall path length allowed in a reported span. NOTE: currently only controls max length of the path tag.",
+            "type": "integer"
+          }
+        }
+      },
+      "istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.LightstepTracingProvider": {
+        "description": "Defines configuration for a Lightstep tracer.",
+        "type": "object",
+        "properties": {
+          "port": {
+            "description": "REQUIRED. Specifies the port of the service.",
+            "type": "integer"
+          },
+          "service": {
+            "description": "REQUIRED. Specifies the service for the Lightstep collector. The format is \"[\u003cNamespace\u003e/]\u003cHostname\u003e\". The specification of \u003cNamespace\u003e is required only when it is insufficient to unambiguously resolve a service in the service registry. The \u003cHostname\u003e is a fully qualified host name of a service defined by the Kubernetes service or ServiceEntry.",
+            "type": "string",
+            "format": "string"
+          },
+          "maxTagLength": {
+            "description": "Optional. Controls the overall path length allowed in a reported span. NOTE: currently only controls max length of the path tag.",
+            "type": "integer"
+          },
+          "accessToken": {
+            "description": "The Lightstep access token.",
+            "type": "string",
+            "format": "string"
+          }
+        }
+      },
+      "istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.DatadogTracingProvider": {
+        "description": "Defines configuration for a Datadog tracer.",
+        "type": "object",
+        "properties": {
+          "port": {
+            "description": "REQUIRED. Specifies the port of the service.",
+            "type": "integer"
+          },
+          "service": {
+            "description": "REQUIRED. Specifies the service for the Datadog agent. The format is \"[\u003cNamespace\u003e/]\u003cHostname\u003e\". The specification of \u003cNamespace\u003e is required only when it is insufficient to unambiguously resolve a service in the service registry. The \u003cHostname\u003e is a fully qualified host name of a service defined by the Kubernetes service or ServiceEntry.",
+            "type": "string",
+            "format": "string"
+          },
+          "maxTagLength": {
+            "description": "Optional. Controls the overall path length allowed in a reported span. NOTE: currently only controls max length of the path tag.",
+            "type": "integer"
+          }
+        }
+      },
+      "istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.StackdriverProvider": {
+        "description": "Defines configuration for Stackdriver.",
+        "type": "object",
+        "properties": {
+          "maxTagLength": {
+            "description": "Optional. Controls the overall path length allowed in a reported span. NOTE: currently only controls max length of the path tag.",
+            "type": "integer"
+          },
+          "debug": {
+            "description": "debug enables trace output to stdout. $hide_from_docs",
+            "type": "boolean"
+          },
+          "maxNumberOfAttributes": {
+            "description": "The global default max number of attributes per span. default is 200. $hide_from_docs",
+            "type": "integer",
+            "nullable": true
+          },
+          "maxNumberOfAnnotations": {
+            "description": "The global default max number of annotation events per span. default is 200. $hide_from_docs",
+            "type": "integer",
+            "nullable": true
+          },
+          "maxNumberOfMessageEvents": {
+            "description": "The global default max number of message events per span. default is 200. $hide_from_docs",
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.OpenCensusAgentTracingProvider": {
+        "description": "Defines configuration for an OpenCensus tracer writing to an OpenCensus backend.",
+        "type": "object",
+        "properties": {
+          "port": {
+            "description": "REQUIRED. Specifies the port of the service.",
+            "type": "integer"
+          },
+          "service": {
+            "description": "REQUIRED. Specifies the service for the OpenCensusAgent. The format is \"[\u003cNamespace\u003e/]\u003cHostname\u003e\". The specification of \u003cNamespace\u003e is required only when it is insufficient to unambiguously resolve a service in the service registry. The \u003cHostname\u003e is a fully qualified host name of a service defined by the Kubernetes service or ServiceEntry.",
+            "type": "string",
+            "format": "string"
+          },
+          "context": {
+            "description": "Specifies the set of context propagation headers used for distributed tracing. Default is `[\"W3C_TRACE_CONTEXT\"]`. If multiple values are specified, the proxy will attempt to read each header for each request and will write all headers.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.OpenCensusAgentTracingProvider.TraceContext"
+            }
+          },
+          "maxTagLength": {
+            "description": "Optional. Controls the overall path length allowed in a reported span. NOTE: currently only controls max length of the path tag.",
+            "type": "integer"
+          }
+        }
+      },
+      "istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.EnvoyExternalAuthorizationRequestBody": {
+        "type": "object",
+        "properties": {
+          "maxRequestBytes": {
+            "description": "Sets the maximum size of a message body that the ext-authz filter will hold in memory. If max_request_bytes is reached, and allow_partial_message is false, Envoy will return a 413 (Payload Too Large). Otherwise the request will be sent to the provider with a partial message. Note that this setting will have precedence over the fail_open field, the 413 will be returned even when the fail_open is set to true.",
+            "type": "integer"
+          },
+          "allowPartialMessage": {
+            "description": "When this field is true, ext-authz filter will buffer the message until max_request_bytes is reached. The authorization request will be dispatched and no 413 HTTP error will be returned by the filter. A \"x-envoy-auth-partial-body: false|true\" metadata header will be added to the authorization request message indicating if the body data is partial.",
+            "type": "boolean"
+          },
+          "packAsBytes": {
+            "description": "If true, the body sent to the external authorization service in the gRPC authorization request is set with raw bytes in the raw_body field (https://github.com/envoyproxy/envoy/blame/cffb095d59d7935abda12b9509bcd136808367bb/api/envoy/service/auth/v3/attribute_context.proto#L153). Otherwise, it will be filled with UTF-8 string in the body field (https://github.com/envoyproxy/envoy/blame/cffb095d59d7935abda12b9509bcd136808367bb/api/envoy/service/auth/v3/attribute_context.proto#L147). This field only works with the envoy_ext_authz_grpc provider and has no effect for the envoy_ext_authz_http provider.",
+            "type": "boolean"
+          }
+        }
+      },
+      "istio.mesh.v1alpha1.MeshConfig.ExtensionProvider.OpenCensusAgentTracingProvider.TraceContext": {
+        "description": "TraceContext selects the context propagation headers used for distributed tracing.",
+        "type": "string",
+        "enum": [
+          "UNSPECIFIED",
+          "W3C_TRACE_CONTEXT",
+          "GRPC_BIN",
+          "CLOUD_TRACE_CONTEXT",
+          "B3"
+        ]
+      },
+      "istio.mesh.v1alpha1.MeshConfig.ProxyPathNormalization.NormalizationType": {
+        "type": "string",
+        "enum": [
+          "DEFAULT",
+          "NONE",
+          "BASE",
+          "MERGE_SLASHES",
+          "DECODE_AND_MERGE_SLASHES"
+        ]
       },
       "istio.mesh.v1alpha1.Resource": {
         "description": "Resource describes the source of configuration",
@@ -827,7 +1211,7 @@
             "type": "integer"
           },
           "sampling": {
-            "description": "The percentage of requests (0.0 - 100.0) that will be randomly selected for trace generation, if not requested by the client or not forced. Default is 100. $hide_from_docs",
+            "description": "The percentage of requests (0.0 - 100.0) that will be randomly selected for trace generation, if not requested by the client or not forced. Default is 1.0.",
             "type": "number",
             "format": "double"
           }
@@ -1335,28 +1719,28 @@
             "allOf": [
               {
                 "properties": {
+                  "timeoutSeconds": {
+                    "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1 second.",
+                    "type": "integer",
+                    "format": "int32"
+                  },
                   "initialDelaySeconds": {
                     "description": "Number of seconds after the container has started before readiness probes are initiated.",
                     "type": "integer",
                     "format": "int32"
                   },
-                  "timeoutSeconds": {
-                    "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.",
-                    "type": "integer",
-                    "format": "int32"
-                  },
                   "periodSeconds": {
-                    "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.",
+                    "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1 second.",
                     "type": "integer",
                     "format": "int32"
                   },
                   "successThreshold": {
-                    "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1.",
+                    "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1 second.",
                     "type": "integer",
                     "format": "int32"
                   },
                   "failureThreshold": {
-                    "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3.",
+                    "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3 seconds.",
                     "type": "integer",
                     "format": "int32"
                   }
@@ -1370,28 +1754,28 @@
                         "httpGet"
                       ],
                       "properties": {
+                        "timeoutSeconds": {
+                          "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1 second.",
+                          "type": "integer",
+                          "format": "int32"
+                        },
                         "initialDelaySeconds": {
                           "description": "Number of seconds after the container has started before readiness probes are initiated.",
                           "type": "integer",
                           "format": "int32"
                         },
-                        "timeoutSeconds": {
-                          "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.",
-                          "type": "integer",
-                          "format": "int32"
-                        },
                         "periodSeconds": {
-                          "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.",
+                          "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1 second.",
                           "type": "integer",
                           "format": "int32"
                         },
                         "successThreshold": {
-                          "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1.",
+                          "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1 second.",
                           "type": "integer",
                           "format": "int32"
                         },
                         "failureThreshold": {
-                          "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3.",
+                          "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3 seconds.",
                           "type": "integer",
                           "format": "int32"
                         },
@@ -1405,28 +1789,28 @@
                         "tcpSocket"
                       ],
                       "properties": {
+                        "timeoutSeconds": {
+                          "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1 second.",
+                          "type": "integer",
+                          "format": "int32"
+                        },
                         "initialDelaySeconds": {
                           "description": "Number of seconds after the container has started before readiness probes are initiated.",
                           "type": "integer",
                           "format": "int32"
                         },
-                        "timeoutSeconds": {
-                          "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.",
-                          "type": "integer",
-                          "format": "int32"
-                        },
                         "periodSeconds": {
-                          "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.",
+                          "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1 second.",
                           "type": "integer",
                           "format": "int32"
                         },
                         "successThreshold": {
-                          "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1.",
+                          "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1 second.",
                           "type": "integer",
                           "format": "int32"
                         },
                         "failureThreshold": {
-                          "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3.",
+                          "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3 seconds.",
                           "type": "integer",
                           "format": "int32"
                         },
@@ -1440,28 +1824,28 @@
                         "exec"
                       ],
                       "properties": {
+                        "timeoutSeconds": {
+                          "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1 second.",
+                          "type": "integer",
+                          "format": "int32"
+                        },
                         "initialDelaySeconds": {
                           "description": "Number of seconds after the container has started before readiness probes are initiated.",
                           "type": "integer",
                           "format": "int32"
                         },
-                        "timeoutSeconds": {
-                          "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.",
-                          "type": "integer",
-                          "format": "int32"
-                        },
                         "periodSeconds": {
-                          "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.",
+                          "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1 second.",
                           "type": "integer",
                           "format": "int32"
                         },
                         "successThreshold": {
-                          "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1.",
+                          "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1 second.",
                           "type": "integer",
                           "format": "int32"
                         },
                         "failureThreshold": {
-                          "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3.",
+                          "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3 seconds.",
                           "type": "integer",
                           "format": "int32"
                         },
@@ -1480,28 +1864,28 @@
               "httpGet"
             ],
             "properties": {
+              "timeoutSeconds": {
+                "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1 second.",
+                "type": "integer",
+                "format": "int32"
+              },
               "initialDelaySeconds": {
                 "description": "Number of seconds after the container has started before readiness probes are initiated.",
                 "type": "integer",
                 "format": "int32"
               },
-              "timeoutSeconds": {
-                "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.",
-                "type": "integer",
-                "format": "int32"
-              },
               "periodSeconds": {
-                "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.",
+                "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1 second.",
                 "type": "integer",
                 "format": "int32"
               },
               "successThreshold": {
-                "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1.",
+                "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1 second.",
                 "type": "integer",
                 "format": "int32"
               },
               "failureThreshold": {
-                "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3.",
+                "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3 seconds.",
                 "type": "integer",
                 "format": "int32"
               },
@@ -1515,28 +1899,28 @@
               "tcpSocket"
             ],
             "properties": {
+              "timeoutSeconds": {
+                "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1 second.",
+                "type": "integer",
+                "format": "int32"
+              },
               "initialDelaySeconds": {
                 "description": "Number of seconds after the container has started before readiness probes are initiated.",
                 "type": "integer",
                 "format": "int32"
               },
-              "timeoutSeconds": {
-                "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.",
-                "type": "integer",
-                "format": "int32"
-              },
               "periodSeconds": {
-                "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.",
+                "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1 second.",
                 "type": "integer",
                 "format": "int32"
               },
               "successThreshold": {
-                "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1.",
+                "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1 second.",
                 "type": "integer",
                 "format": "int32"
               },
               "failureThreshold": {
-                "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3.",
+                "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3 seconds.",
                 "type": "integer",
                 "format": "int32"
               },
@@ -1550,28 +1934,28 @@
               "exec"
             ],
             "properties": {
+              "timeoutSeconds": {
+                "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1 second.",
+                "type": "integer",
+                "format": "int32"
+              },
               "initialDelaySeconds": {
                 "description": "Number of seconds after the container has started before readiness probes are initiated.",
                 "type": "integer",
                 "format": "int32"
               },
-              "timeoutSeconds": {
-                "description": "Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1.",
-                "type": "integer",
-                "format": "int32"
-              },
               "periodSeconds": {
-                "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.",
+                "description": "How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1 second.",
                 "type": "integer",
                 "format": "int32"
               },
               "successThreshold": {
-                "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1.",
+                "description": "Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1 second.",
                 "type": "integer",
                 "format": "int32"
               },
               "failureThreshold": {
-                "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3.",
+                "description": "Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3 seconds.",
                 "type": "integer",
                 "format": "int32"
               },
@@ -1581,6 +1965,26 @@
             }
           }
         ]
+      },
+      "k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector": {
+        "type": "object",
+        "properties": {
+          "matchLabels": {
+            "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is \"key\", the operator is \"In\", and the values array contains only \"value\". The requirements are ANDed. +optional",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          "matchExpressions": {
+            "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed. +optional",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement"
+            }
+          }
+        }
       },
       "istio.networking.v1alpha3.ClientTLSSettings.TLSmode": {
         "description": "Indicates whether connections to this port should be secured using TLS. The value of this field determines how TLS is enforced.",
@@ -1593,11 +1997,11 @@
         ]
       },
       "istio.networking.v1alpha3.ExecHealthCheckConfig": {
-        "description": "health is determined by how the command that is executed exited.",
+        "description": "Health is determined by how the command that is executed exited.",
         "type": "object",
         "properties": {
           "command": {
-            "description": "command to run. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.",
+            "description": "Command to run. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.",
             "type": "array",
             "items": {
               "type": "string",
@@ -1607,7 +2011,7 @@
         }
       },
       "istio.networking.v1alpha3.HTTPHealthCheckConfig": {
-        "description": "an http get is performed to a given endpoint and the status/able to connect determines health.",
+        "description": "`httpGet` is performed to a given endpoint and the status/able to connect determines health.",
         "type": "object",
         "properties": {
           "path": {
@@ -1621,16 +2025,16 @@
             "format": "string"
           },
           "port": {
-            "description": "port on which the endpoint lives.",
+            "description": "Port on which the endpoint lives.",
             "type": "integer"
           },
           "scheme": {
-            "description": "http or https, defaults to http",
+            "description": "HTTP or HTTPS, defaults to HTTP",
             "type": "string",
             "format": "string"
           },
           "httpHeaders": {
-            "description": "headers the proxy will pass on to make the request. allows repeated headers.",
+            "description": "Headers the proxy will pass on to make the request. Allows repeated headers.",
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/istio.networking.v1alpha3.HTTPHeader"
@@ -1671,17 +2075,40 @@
         }
       },
       "istio.networking.v1alpha3.TCPHealthCheckConfig": {
-        "description": "health is determined by if the proxy is able to connect.",
+        "description": "Health is determined by if the proxy is able to connect.",
         "type": "object",
         "properties": {
           "host": {
-            "description": "host to connect to, defaults to localhost",
+            "description": "Host to connect to, defaults to localhost",
             "type": "string",
             "format": "string"
           },
           "port": {
-            "description": "port of host",
+            "description": "Port of host",
             "type": "integer"
+          }
+        }
+      },
+      "k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelectorRequirement": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "description": "key is the label key that the selector applies to. +patchMergeKey=key +patchStrategy=merge",
+            "type": "string",
+            "format": "string"
+          },
+          "operator": {
+            "description": "operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.",
+            "type": "string",
+            "format": "string"
+          },
+          "values": {
+            "description": "values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch. +optional",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "string"
+            }
           }
         }
       },

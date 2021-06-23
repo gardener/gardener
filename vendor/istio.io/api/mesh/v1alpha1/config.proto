@@ -18,40 +18,21 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/wrappers.proto";
 import "mesh/v1alpha1/proxy.proto";
 import "networking/v1alpha3/destination_rule.proto";
+import "k8s.io/apimachinery/pkg/apis/meta/v1/generated.proto";
 
 // $title: Global Mesh Options
 // $description: Configuration affecting the service mesh as a whole.
 // $location: https://istio.io/docs/reference/config/istio.mesh.v1alpha1.html
 // $weight: 20
+// $mode: package
 
 // Configuration affecting the service mesh as a whole.
 package istio.mesh.v1alpha1;
 
 option go_package="istio.io/api/mesh/v1alpha1";
 
-// MeshConfig defines mesh-wide variables shared by all Envoy instances in the
-// Istio service mesh.
-//
-// NOTE: This configuration type should be used for the low-level global
-// configuration, such as component addresses and port numbers. It should not
-// be used for the features of the mesh that can be scoped by service or by
-// namespace. Some of the fields in the mesh config are going to be deprecated
-// and replaced with several individual configuration types (for example,
-// tracing configuration).
+// MeshConfig defines mesh-wide settings for the Istio service mesh.
 message MeshConfig {
-  reserved 1;
-  reserved "mixer_check_server";
-  reserved 2;
-  reserved "mixer_report_server";
-  reserved 3;
-  reserved "disable_policy_checks";
-  reserved 48;
-  reserved "disable_mixer_http_reports";
-  reserved 25;
-  reserved "policy_check_fail_open";
-  reserved 30;
-  reserved "sidecar_to_telemetry_session_affinity";
-
   // Port on which Envoy should listen for incoming connections from
   // other services. Default port is 15001.
   int32 proxy_listen_port = 4;
@@ -98,7 +79,7 @@ message MeshConfig {
     // contain any annotation or whose annotations match the value
     // specified in the ingress_class parameter described earlier. Use this
     // mode if Istio ingress controller will be the default ingress
-    // controller for the entireKubernetes cluster.
+    // controller for the entire Kubernetes cluster.
     DEFAULT = 2;
 
     // Istio ingress controller will only act on ingress resources whose
@@ -125,12 +106,6 @@ message MeshConfig {
     NONE = 0;
     MUTUAL_TLS = 1;
   }
-
-  // $hide_from_docs
-  AuthPolicy auth_policy = 10 [deprecated=true];
-
-  // $hide_from_docs
-  google.protobuf.Duration rds_refresh_delay = 11 [deprecated=true];
 
   // Flag to control generation of trace spans and request IDs.
   // Requires a trace span collector defined in the proxy configuration.
@@ -168,17 +143,12 @@ message MeshConfig {
   // Default value is `false`.
   bool disable_envoy_listener_log = 56;
 
-  // Default proxy config used by the proxy injection mechanism operating in the mesh
-  // (e.g. Kubernetes admission controller)
+  // Default proxy config used by gateway and sidecars.
   // In case of Kubernetes, the proxy config is applied once during the injection process,
   // and remain constant for the duration of the pod. The rest of the mesh config can be changed
   // at runtime and config gets distributed dynamically.
+  // On Kubernetes, this can be overridden on individual pods with the `proxy.istio.io/config` annotation.
   ProxyConfig default_config = 14;
-
-  reserved 15;
-
-  reserved 16;
-  reserved "mixer_address";
 
   message OutboundTrafficPolicy {
     enum Mode {
@@ -209,17 +179,6 @@ message MeshConfig {
   // Default mode is `ALLOW_ANY` which means outbound traffic to unknown destinations will be allowed.
   OutboundTrafficPolicy outbound_traffic_policy = 17;
 
-  reserved 18;
-
-  reserved 19;
-  reserved "enable_client_side_policy_check";
-
-  reserved 20;
-  reserved "sds_uds_path";
-
-  reserved 21;
-  reserved "sds_refresh_delay";
-
   // ConfigSource describes a source of configuration data for networking
   // rules, and other Istio configuration artifacts. Multiple data sources
   // can be configured for a single control plane.
@@ -238,13 +197,6 @@ message MeshConfig {
   // If service `DestinationRule` exists and has `ClientTLSSettings` specified, that is always used instead.
   google.protobuf.BoolValue enable_auto_mtls = 43;
 
-
-  reserved 23;
-  reserved "enable_sds_token_mount";
-
-  reserved 29;
-  reserved "sds_use_k8s_sa_jwt";
-
   // The trust domain corresponds to the trust root of a system.
   // Refer to [SPIFFE-ID](https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE-ID.md#21-trust-domain)
   string trust_domain = 26;
@@ -258,6 +210,25 @@ message MeshConfig {
   // Any service with the identity `td1/ns/foo/sa/a-service-account`, `td2/ns/foo/sa/a-service-account`,
   // or `td3/ns/foo/sa/a-service-account` will be treated the same in the Istio mesh.
   repeated string trust_domain_aliases = 46;
+
+  message CertificateData {
+    oneof certificate_data {
+      // The PEM data of the certificate.
+      string pem = 1;
+      // The SPIFFE bundle endpoint URL that complies to:
+      // https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE_Trust_Domain_and_Bundle.md#the-spiffe-trust-domain-and-bundle
+      // The endpoint should support authentication based on Web PKI:
+      // https://github.com/spiffe/spiffe/blob/master/standards/SPIFFE_Trust_Domain_and_Bundle.md#521-web-pki
+      // The certificate is retrieved from the endpoint.
+      string spiffe_bundle_url = 2;
+    }
+  }
+
+  // The extra root certificates for workload-to-workload communication.
+  // The plugin certificates (the 'cacerts' secret) or self-signed certificates (the 'istio-ca-secret' secret)
+  // are automatically added by Istiod.
+  // The CA certificate that signs the workload certificates is automatically added by Istio Agent.
+  repeated CertificateData ca_certificates = 58;
 
   // The default value for the ServiceEntry.export_to field and services
   // imported through container registry integrations, e.g. this applies to
@@ -315,15 +286,6 @@ message MeshConfig {
   // Configures DNS refresh rate for Envoy clusters of type `STRICT_DNS`
   // Default refresh rate is `5s`.
   google.protobuf.Duration dns_refresh_rate = 36;
-
-  reserved 37;
-  reserved "disable_report_batch";
-
-  reserved 38;
-  reserved "report_batch_max_entries";
-
-  reserved 39;
-  reserved "report_batch_max_time";
 
   // Default Policy for upgrading http1.1 connections to http2.
   enum H2UpgradePolicy {
@@ -424,8 +386,8 @@ message MeshConfig {
       //     this service-by-service (e.g. mysvc.myns.svc.cluster.local) or as a group
       //     (e.g. *.myns.svc.cluster.local).
       //
-      // By default, Istio will consider all services in the kube-system namespace to be cluster-local,
-      // unless explicitly overridden here.
+      // By default Istio will consider kubernetes.default.svc (i.e. the API Server) as well as all
+      // services in the kube-system namespace to be cluster-local, unless explicitly overridden here.
       bool cluster_local = 1;
     }
 
@@ -453,9 +415,6 @@ message MeshConfig {
   // `prometheus.istio.io/merge-metrics: "false"` annotation.
   // If not specified, this will be enabled by default.
   google.protobuf.BoolValue enable_prometheus_merge = 51;
-
-  reserved 53;
-  reserved "termination_drain_duration";
 
   // `VerifyCertificateAtClient` sets the mesh global default for peer certificate validation
   // at the client-side proxy when `SIMPLE` TLS or `MUTUAL` TLS (non `ISTIO_MUTUAL`) origination
@@ -504,7 +463,6 @@ message MeshConfig {
   // using the Istio CA gRPC API.
   CA ca = 55;
 
-  // $hide_from_docs
   message ExtensionProvider {
     // REQUIRED. A unique name identifying the extension provider.
     string name = 1;
@@ -515,18 +473,55 @@ message MeshConfig {
       EnvoyExternalAuthorizationHttpProvider envoy_ext_authz_http = 2;
       // Configures an external authorizer that implements the Envoy ext_authz filter authorization check service using the gRPC API.
       EnvoyExternalAuthorizationGrpcProvider envoy_ext_authz_grpc = 3;
+      // Configures a tracing provider that uses the Zipkin API.
+      ZipkinTracingProvider zipkin = 4;
+      // Configures a Lightstep tracing provider.
+      LightstepTracingProvider lightstep = 5;
+      // Configures a Datadog tracing provider.
+      DatadogTracingProvider datadog = 6;
+      // Configures a Stackdriver provider.
+      StackdriverProvider stackdriver = 7;
+      // Configures an OpenCensusAgent tracing provider.
+      OpenCensusAgentTracingProvider opencensus = 8;
     }
 
-    // $hide_from_docs
+    message EnvoyExternalAuthorizationRequestBody {
+      // Sets the maximum size of a message body that the ext-authz filter will hold in memory.
+      // If max_request_bytes is reached, and allow_partial_message is false, Envoy will return a 413 (Payload Too Large).
+      // Otherwise the request will be sent to the provider with a partial message.
+      // Note that this setting will have precedence over the fail_open field, the 413 will be returned even when the
+      // fail_open is set to true.
+      uint32 max_request_bytes = 1;
+
+      // When this field is true, ext-authz filter will buffer the message until max_request_bytes is reached.
+      // The authorization request will be dispatched and no 413 HTTP error will be returned by the filter.
+      // A "x-envoy-auth-partial-body: false|true" metadata header will be added to the authorization request message
+      // indicating if the body data is partial.
+      bool allow_partial_message = 2;
+
+      // If true, the body sent to the external authorization service in the gRPC authorization request is set with raw bytes
+      // in the raw_body field (https://github.com/envoyproxy/envoy/blame/cffb095d59d7935abda12b9509bcd136808367bb/api/envoy/service/auth/v3/attribute_context.proto#L153).
+      // Otherwise, it will be filled with UTF-8 string in the body field (https://github.com/envoyproxy/envoy/blame/cffb095d59d7935abda12b9509bcd136808367bb/api/envoy/service/auth/v3/attribute_context.proto#L147).
+      // This field only works with the envoy_ext_authz_grpc provider and has no effect for the envoy_ext_authz_http provider.
+      bool pack_as_bytes = 3;
+    }
+
     message EnvoyExternalAuthorizationHttpProvider {
       // REQUIRED. Specifies the service that implements the Envoy ext_authz HTTP authorization service.
-      // The format is "[<Namespace>/]<Service>". If the <Namespace> is omitted then it is resolved within the same
-      // namespace as this configuration resource. The <Service> is the name of the service object (k8s service or ServiceEntry).
-      // Example: "foo/my-ext-authz" or "my-ext-authz".
+      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // service defined by the Kubernetes service or ServiceEntry.
+      //
+      // Example: "my-ext-authz.foo.svc.cluster.local" or "bar/my-ext-authz.example.com".
       string service = 1;
 
       // REQUIRED. Specifies the port of the service.
       uint32 port = 2;
+
+      // The maximum duration that the proxy will wait for a response from the provider (default timeout: 600s).
+      // When this timeout condition is met, the proxy marks the communication to the authorization service as failure.
+      // In this situation, the response sent back to the client will depend on the configured `fail_open` field.
+      google.protobuf.Duration timeout = 9;
 
       // Sets a prefix to the value of authorization request header *Path*.
       // For example, setting this to "/check" for an original user request at path "/admin" will cause the
@@ -542,16 +537,41 @@ message MeshConfig {
       // The default status is "403" (HTTP Forbidden).
       string status_on_error = 5;
 
-      // List of headers that should be included in the authorization request sent to the authorization service.
-      // Note that in addition to the headers supplied by users:
-      // 1. *Host*, *Method*, *Path* and *Content-Length* are automatically sent.
-      // 2. *Content-Length* will be set to 0 and the request will not have a message body.
+      // DEPRECATED. Use include_request_headers_in_check instead.
       repeated string include_headers_in_check = 6;
+
+      // List of client request headers that should be included in the authorization request sent to the authorization service.
+      // Note that in addition to the headers specified here following headers are included by default:
+      // 1. *Host*, *Method*, *Path* and *Content-Length* are automatically sent.
+      // 2. *Content-Length* will be set to 0 and the request will not have a message body. However, the authorization
+      // request can include the buffered client request body (controlled by include_request_body_in_check setting),
+      // consequently the value of Content-Length of the authorization request reflects the size of its payload size.
+      //
+      // Exact, prefix and suffix matches are supported (similar to the authorization policy rule syntax except the presence match
+      // https://istio.io/latest/docs/reference/config/security/authorization-policy/#Rule):
+      // - Exact match: "abc" will match on value "abc".
+      // - Prefix match: "abc*" will match on value "abc" and "abcd".
+      // - Suffix match: "*abc" will match on value "abc" and "xabc".
+      repeated string include_request_headers_in_check = 10;
+
+      // Set of additional fixed headers that should be included in the authorization request sent to the authorization service.
+      // Key is the header name and value is the header value.
+      // Note that client request of the same key or headers specified in include_request_headers_in_check will be overridden.
+      map<string, string> include_additional_headers_in_check = 11;
+
+      // If set, the client request body will be included in the authorization request sent to the authorization service.
+      EnvoyExternalAuthorizationRequestBody include_request_body_in_check = 12;
 
       // List of headers from the authorization service that should be added or overridden in the original request and
       // forwarded to the upstream when the authorization check result is allowed (HTTP code 200).
       // If not specified, the original request will not be modified and forwarded to backend as-is.
       // Note, any existing headers will be overridden.
+      //
+      // Exact, prefix and suffix matches are supported (similar to the authorization policy rule syntax except the presence match
+      // https://istio.io/latest/docs/reference/config/security/authorization-policy/#Rule):
+      // - Exact match: "abc" will match on value "abc".
+      // - Prefix match: "abc*" will match on value "abc" and "abcd".
+      // - Suffix match: "*abc" will match on value "abc" and "xabc".
       repeated string headers_to_upstream_on_allow = 7;
 
       // List of headers from the authorization service that should be forwarded to downstream when the authorization
@@ -561,39 +581,293 @@ message MeshConfig {
       // When a header is included in this list, *Path*, *Status*, *Content-Length*, *WWWAuthenticate* and *Location* are
       // automatically added.
       // Note, the body from the authorization service is always included in the response to downstream.
+      //
+      // Exact, prefix and suffix matches are supported (similar to the authorization policy rule syntax except the presence match
+      // https://istio.io/latest/docs/reference/config/security/authorization-policy/#Rule):
+      // - Exact match: "abc" will match on value "abc".
+      // - Prefix match: "abc*" will match on value "abc" and "abcd".
+      // - Suffix match: "*abc" will match on value "abc" and "xabc".
       repeated string headers_to_downstream_on_deny = 8;
+
+      // $hide_from_docs
+      // Next available field number: 13
     }
 
-    // $hide_from_docs
     message EnvoyExternalAuthorizationGrpcProvider {
       // REQUIRED. Specifies the service that implements the Envoy ext_authz gRPC authorization service.
-      // The format is "[<Namespace>/]<Service>". If the <Namespace> is omitted then it is resolved within the same
-      // namespace as this configuration resource. The <Service> is the name of the service object (k8s service or ServiceEntry).
-      // Example: "foo/my-ext-authz" or "my-ext-authz".
+      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // service defined by the Kubernetes service or ServiceEntry.
+      //
+      // Example: "my-ext-authz.foo.svc.cluster.local" or "bar/my-ext-authz.example.com".
       string service = 1;
 
       // REQUIRED. Specifies the port of the service.
       uint32 port = 2;
 
-      // If true, the user request will be allowed even if the communication with the authorization service has failed,
+      // The maximum duration that the proxy will wait for a response from the provider, this is the timeout for a specific request (default timeout: 600s).
+      // When this timeout condition is met, the proxy marks the communication to the authorization service as failure.
+      // In this situation, the response sent back to the client will depend on the configured `fail_open` field.
+      google.protobuf.Duration timeout = 5;
+
+      // If true, the HTTP request or TCP connection will be allowed even if the communication with the authorization service has failed,
       // or if the authorization service has returned a HTTP 5xx error.
-      // Default is false and the request will be rejected with "Forbidden" response.
+      // Default is false. For HTTP request, it will be rejected with 403 (HTTP Forbidden). For TCP connection, it will be closed immediately.
       bool fail_open = 3;
 
       // Sets the HTTP status that is returned to the client when there is a network error to the authorization service.
       // The default status is "403" (HTTP Forbidden).
       string status_on_error = 4;
+
+      // If set, the client request body will be included in the authorization request sent to the authorization service.
+      EnvoyExternalAuthorizationRequestBody include_request_body_in_check = 6;
+
+      // $hide_from_docs
+      // Next available field number: 7
+    }
+
+    // Defines configuration for a Zipkin tracer.
+    message ZipkinTracingProvider {
+      // REQUIRED. Specifies the service that the Zipkin API.
+      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // service defined by the Kubernetes service or ServiceEntry.
+      //
+      // Example: "zipkin.default.svc.cluster.local" or "bar/zipkin.example.com".
+      string service = 1;
+
+      // REQUIRED. Specifies the port of the service.
+      uint32 port = 2;
+
+      // Optional. Controls the overall path length allowed in a reported span.
+      // NOTE: currently only controls max length of the path tag.
+      uint32 max_tag_length = 3;
+    }
+
+    // Defines configuration for a Lightstep tracer.
+    message LightstepTracingProvider {
+      // REQUIRED. Specifies the service for the Lightstep collector.
+      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // service defined by the Kubernetes service or ServiceEntry.
+      //
+      // Example: "lightstep.default.svc.cluster.local" or "bar/lightstep.example.com".
+      string service = 1;
+
+      // REQUIRED. Specifies the port of the service.
+      uint32 port = 2;
+
+      // The Lightstep access token.
+      string access_token = 3;
+
+      // Optional. Controls the overall path length allowed in a reported span.
+      // NOTE: currently only controls max length of the path tag.
+      uint32 max_tag_length = 4;
+    }
+
+    // Defines configuration for a Datadog tracer.
+    message DatadogTracingProvider {
+      // REQUIRED. Specifies the service for the Datadog agent.
+      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // service defined by the Kubernetes service or ServiceEntry.
+      //
+      // Example: "datadog.default.svc.cluster.local" or "bar/datadog.example.com".
+      string service = 1;
+
+      // REQUIRED. Specifies the port of the service.
+      uint32 port = 2;
+
+      // Optional. Controls the overall path length allowed in a reported span.
+      // NOTE: currently only controls max length of the path tag.
+      uint32 max_tag_length = 3;
+    }
+
+    // Defines configuration for Stackdriver.
+    message StackdriverProvider {
+      // debug enables trace output to stdout.
+      // $hide_from_docs
+      bool debug = 1;
+      // The global default max number of attributes per span.
+      // default is 200.
+      // $hide_from_docs
+      google.protobuf.Int64Value max_number_of_attributes = 2;
+      // The global default max number of annotation events per span.
+      // default is 200.
+      // $hide_from_docs
+      google.protobuf.Int64Value max_number_of_annotations = 3;
+      // The global default max number of message events per span.
+      // default is 200.
+      // $hide_from_docs
+      google.protobuf.Int64Value max_number_of_message_events = 4;
+
+      // Optional. Controls the overall path length allowed in a reported span.
+      // NOTE: currently only controls max length of the path tag.
+      uint32 max_tag_length = 5;
+    }
+
+    // Defines configuration for an OpenCensus tracer writing to an OpenCensus backend.
+    message OpenCensusAgentTracingProvider {
+      // REQUIRED. Specifies the service for the OpenCensusAgent.
+      // The format is "[<Namespace>/]<Hostname>". The specification of <Namespace> is required only when it is insufficient
+      // to unambiguously resolve a service in the service registry. The <Hostname> is a fully qualified host name of a
+      // service defined by the Kubernetes service or ServiceEntry.
+      //
+      // Example: "ocagent.default.svc.cluster.local" or "bar/ocagent.example.com".
+      string service = 1;
+
+      // REQUIRED. Specifies the port of the service.
+      uint32 port = 2;
+
+      // TraceContext selects the context propagation headers used for
+      // distributed tracing.
+      enum TraceContext {
+        // $hide_from_docs
+        // Unspecified context. Should not be used for now, but added to reserve
+        // the 0 enum value if TraceContext is used outside of a repeated field.
+        UNSPECIFIED = 0;
+        // Use W3C Trace Context propagation using the `traceparent` HTTP header.
+        // See the
+        // [Trace Context documentation](https://www.w3.org/TR/trace-context/) for details.
+        W3C_TRACE_CONTEXT = 1;
+        // Use gRPC binary context propagation using the `grpc-trace-bin` http header.
+        GRPC_BIN = 2;
+        // Use Cloud Trace context propagation using the
+        // `X-Cloud-Trace-Context` http header.
+        CLOUD_TRACE_CONTEXT = 3;
+        // Use multi-header B3 context propagation using the `X-B3-TraceId`,
+        // `X-B3-SpanId`, and `X-B3-Sampled` HTTP headers. See
+        // [B3 header propagation README](https://github.com/openzipkin/b3-propagation)
+        // for details.
+        B3 = 4;
+      }
+
+      // Specifies the set of context propagation headers used for distributed
+      // tracing. Default is `["W3C_TRACE_CONTEXT"]`. If multiple values are specified,
+      // the proxy will attempt to read each header for each request and will
+      // write all headers.
+      repeated TraceContext context = 3;
+
+      // Optional. Controls the overall path length allowed in a reported span.
+      // NOTE: currently only controls max length of the path tag.
+      uint32 max_tag_length = 4;
     }
   }
 
-  // $hide_from_docs
   // Defines a list of extension providers that extend Istio's functionality. For example, the AuthorizationPolicy
   // can be used with an extension provider to delegate the authorization decision to a custom authorization system.
-  // Note, currently at most 1 extension provider is allowed.
   repeated ExtensionProvider extension_providers = 57;
 
+  // Holds the name references to the providers that will be used by default
+  // in other Istio configuration resources if the provider is not specified.
+  message DefaultProviders {
+    // Name of the default provider for tracing. This must match a provider
+    // defined in `extension_providers` that is one of the support tracing
+    // providers.
+    string tracing = 1;
+  }
+
+  // Specifies extension providers to use by default in Istio configuration resources.
+  DefaultProviders default_providers = 60;
+
+  // A list of Kubernetes selectors that specify the set of namespaces that Istio considers when
+  // computing configuration updates for sidecars. This can be used to reduce Istio's computational load
+  // by limiting the number of entities (including services, pods, and endpoints) that are watched and processed.
+  // If omitted, Istio will use the default behavior of processing all namespaces in the cluster.
+  // Elements in the list are disjunctive (OR semantics), i.e. a namespace will be included if it matches any selector.
+  // The following example selects any namespace that matches either below:
+  // 1. The namespace has both of these labels: `env: prod` and `region: us-east1`
+  // 2. The namespace has label `app` equal to `cassandra` or `spark`.
+  // ```yaml
+  // discoverySelectors:
+  //   - matchLabels:
+  //       env: prod
+  //       region: us-east1
+  //   - matchExpressions:
+  //     - key: app
+  //       operator: In
+  //       values:
+  //         - cassandra
+  //         - spark
+  // ```
+  // Refer to the [kubernetes selector docs](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors)
+  // for additional detail on selector semantics.
+  repeated k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector discovery_selectors = 59;
+
+  message ProxyPathNormalization {
+    enum NormalizationType {
+      // Apply default normalizations. Currently, this is BASE.
+      DEFAULT = 0;
+
+      // No normalization, paths are used as is.
+      NONE = 1;
+
+      // Normalize according to [RFC 3986](https://tools.ietf.org/html/rfc3986).
+      // For Envoy proxies, this is the [`normalize_path`](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/http_connection_manager/v3/http_connection_manager.proto.html) option.
+      // For example, `/a/../b` normalizes to `/b`.
+      BASE = 2;
+
+      // In addition to the `BASE` normalization, consecutive slashes are also merged.
+      // For example, `/a//b` normalizes to `a/b`.
+      MERGE_SLASHES = 3;
+
+      // In addition to normalization in `MERGE_SLASHES`, slash characters are UTF-8 decoded (case insensitive) prior to merging.
+      // This means `%2F`, `%2f`, `%5C`, and `%5c` sequences in the request path will be rewritten to `/` or `\`.
+      // For example, `/a%2f/b` normalizes to `a/b`.
+      DECODE_AND_MERGE_SLASHES = 4;
+    }
+    NormalizationType normalization = 1;
+  }
+
+  // ProxyPathNormalization configures how URL paths in incoming and outgoing HTTP requests are
+  // normalized by the sidecars and gateways.
+  // The normalized paths will be used in all aspects through the requests' lifetime on the
+  // sidecars and gateways, which includes routing decisions in outbound direction (client proxy),
+  // authorization policy match and enforcement in inbound direction (server proxy), and the URL
+  // path proxied to the upstream service.
+  // If not set, the NormalizationType.DEFAULT configuration will be used.
+  ProxyPathNormalization path_normalization = 61;
+
   // $hide_from_docs
-  // Next available field number: 58
+  // Next available field number: 62
+  reserved 1;
+  reserved "mixer_check_server";
+  reserved 2;
+  reserved "mixer_report_server";
+  reserved 3;
+  reserved "disable_policy_checks";
+  reserved 48;
+  reserved "disable_mixer_http_reports";
+  reserved 25;
+  reserved "policy_check_fail_open";
+  reserved 30;
+  reserved "sidecar_to_telemetry_session_affinity";
+  reserved 10;
+  reserved "auth_policy";
+  reserved 11;
+  reserved "rds_refresh_delay";
+  reserved 15;
+  reserved 16;
+  reserved "mixer_address";
+  reserved 18;
+  reserved 19;
+  reserved "enable_client_side_policy_check";
+  reserved 20;
+  reserved "sds_uds_path";
+  reserved 21;
+  reserved "sds_refresh_delay";
+  reserved 23;
+  reserved "enable_sds_token_mount";
+  reserved 29;
+  reserved "sds_use_k8s_sa_jwt";
+  reserved 53;
+  reserved "termination_drain_duration";
+  reserved 37;
+  reserved "disable_report_batch";
+  reserved 38;
+  reserved "report_batch_max_entries";
+  reserved 39;
+  reserved "report_batch_max_time";
 }
 
 // Resource describes the source of configuration

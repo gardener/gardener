@@ -43,7 +43,7 @@
             "$ref": "#/components/schemas/istio.networking.v1alpha3.Port"
           },
           "bind": {
-            "description": "The ip or the Unix domain socket to which the listener should be bound to. Format: `x.x.x.x` or `unix:///path/to/uds` or `unix://@foobar` (Linux abstract namespace). When using Unix domain sockets, the port number should be 0.",
+            "description": "The ip or the Unix domain socket to which the listener should be bound to. Format: `x.x.x.x` or `unix:///path/to/uds` or `unix://@foobar` (Linux abstract namespace). When using Unix domain sockets, the port number should be 0. This can be used to restrict the reachability of this server to be gateway internal only. This is typically used when a gateway needs to communicate to another mesh service e.g. publishing metrics. In such case, the server created with the specified bind will not be available to external gateway clients.",
             "type": "string",
             "format": "string"
           },

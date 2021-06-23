@@ -24,6 +24,7 @@ import "gogoproto/gogo.proto";
 // $description: Configuration affecting load balancing, outlier detection, etc.
 // $location: https://istio.io/docs/reference/config/networking/destination-rule.html
 // $aliases: [/docs/reference/config/networking/v1beta1/destination-rule]
+// $mode: none
 
 // `DestinationRule` defines policies that apply to traffic intended for a
 // service after routing has occurred. These rules specify configuration
@@ -180,8 +181,8 @@ option go_package = "istio.io/api/networking/v1beta1";
 // +cue-gen:DestinationRule:scope:Namespaced
 // +cue-gen:DestinationRule:resource:categories=istio-io,networking-istio-io,shortNames=dr
 // +cue-gen:DestinationRule:printerColumn:name=Host,type=string,JSONPath=.spec.host,description="The name of a service from the service registry"
-// +cue-gen:DestinationRule:printerColumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp,description="CreationTimestamp is a timestamp 
-// representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. 
+// +cue-gen:DestinationRule:printerColumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp,description="CreationTimestamp is a timestamp
+// representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations.
 // Clients may not set this value. It is represented in RFC3339 form and is in UTC.
 // Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
 // +cue-gen:DestinationRule:preserveUnknownFields:false
@@ -589,7 +590,8 @@ message ConnectionPoolSettings {
     // Maximum number of HTTP1 /TCP connections to a destination host. Default 2^32-1.
     int32 max_connections = 1;
 
-    // TCP connection timeout.
+    // TCP connection timeout. format:
+    // 1h/1m/1s/1ms. MUST BE >=1ms. Default is 10s.
     google.protobuf.Duration connect_timeout = 2;
 
     // If set then set SO_KEEPALIVE on the socket to enable TCP Keepalives.
@@ -613,13 +615,13 @@ message ConnectionPoolSettings {
     // cluster at a given time. Defaults to 2^32-1.
     int32 max_retries = 4;
 
-    // The idle timeout for upstream connection pool connections. The idle timeout 
+    // The idle timeout for upstream connection pool connections. The idle timeout
     // is defined as the period in which there are no active requests.
-    // If not set, the default is 1 hour. When the idle timeout is reached, 
-    // the connection will be closed. If the connection is an HTTP/2 
-    // connection a drain sequence will occur prior to closing the connection. 
-    // Note that request based timeouts mean that HTTP/2 PINGs will not 
-    // keep the connection alive. Applies to both HTTP1.1 and HTTP2 connections. 
+    // If not set, the default is 1 hour. When the idle timeout is reached,
+    // the connection will be closed. If the connection is an HTTP/2
+    // connection a drain sequence will occur prior to closing the connection.
+    // Note that request based timeouts mean that HTTP/2 PINGs will not
+    // keep the connection alive. Applies to both HTTP1.1 and HTTP2 connections.
     google.protobuf.Duration idle_timeout = 5;
 
     // Policy for upgrading http1.1 connections to http2.
@@ -681,7 +683,7 @@ message ConnectionPoolSettings {
 //         http2MaxRequests: 1000
 //         maxRequestsPerConnection: 10
 //     outlierDetection:
-//       consecutiveErrors: 7
+//       consecutive5xxErrors: 7
 //       interval: 5m
 //       baseEjectionTime: 15m
 // ```
@@ -703,7 +705,7 @@ message ConnectionPoolSettings {
 //         http2MaxRequests: 1000
 //         maxRequestsPerConnection: 10
 //     outlierDetection:
-//       consecutiveErrors: 7
+//       consecutive5xxErrors: 7
 //       interval: 5m
 //       baseEjectionTime: 15m
 // ```
@@ -1001,15 +1003,18 @@ message LocalityLoadBalancerSetting{
     // distributed over a set of 'to' zones. Syntax for specifying a zone is
     // {region}/{zone}/{sub-zone} and terminal wildcards are allowed on any
     // segment of the specification. Examples:
-    // * - matches all localities
-    // us-west/* - all zones and sub-zones within the us-west region
-    // us-west/zone-1/* - all sub-zones within us-west/zone-1
+    //
+    // `*` - matches all localities
+    //
+    // `us-west/*` - all zones and sub-zones within the us-west region
+    //
+    // `us-west/zone-1/*` - all sub-zones within us-west/zone-1
     message Distribute{
         // Originating locality, '/' separated, e.g. 'region/zone/sub_zone'.
         string from = 1;
 
         // Map of upstream localities to traffic distribution weights. The sum of
-        // all weights should be == 100. Any locality not assigned a weight will
+        // all weights should be 100. Any locality not present will
         // receive no traffic.
         map<string, uint32> to = 2;
     };

@@ -209,10 +209,8 @@ message Tracing {
   uint32 max_path_tag_length = 6;
 
   // The percentage of requests (0.0 - 100.0) that will be randomly selected for trace generation,
-  // if not requested by the client or not forced. Default is 100.
-  // $hide_from_docs
+  // if not requested by the client or not forced. Default is 1.0.
   double sampling = 7;
-
 
   // Use the tls_settings to specify the tls mode to use. If the remote tracing service
   // uses Istio mutual TLS and shares the root CA with Pilot, specify the TLS
@@ -412,9 +410,8 @@ message ProxyConfig {
   // for details about Envoy's Metrics Service API.
   RemoteService envoy_metrics_service = 23;
 
-  // $hide_from_docs
-  // Additional env variables for the proxy.
-  // Names starting with ISTIO_META_ will be included in the generated bootstrap and sent to the XDS server.
+  // Additional environment variables for the proxy.
+  // Names starting with `ISTIO_META_` will be included in the generated bootstrap and sent to the XDS server.
   map<string,string> proxy_metadata = 24;
 
   // Port on which the agent should listen for administrative commands such as readiness probe.
@@ -496,6 +493,11 @@ message ProxyConfig {
   // Default value is 'false'.
   google.protobuf.BoolValue hold_application_until_proxy_starts = 33;
 
+  // The PEM data of the extra root certificates for workload-to-workload communication.
+  // This includes the certificates defined in MeshConfig and any other certificates that Istiod uses as CA.
+  // The plugin certificates (the 'cacerts' secret), self-signed certificates (the 'istio-ca-secret' secret)
+  // are added automatically by Istiod.
+  repeated string ca_certificates_pem = 34;
 }
 
 message RemoteService {

@@ -483,7 +483,7 @@ message VirtualService {
 //     name: example-http
 //     protocol: HTTP
 //   resolution: DNS
-//
+// ---
 // apiVersion: networking.istio.io/v1alpha3
 // kind: VirtualService
 // metadata:
@@ -514,7 +514,7 @@ message VirtualService {
 //     name: example-http
 //     protocol: HTTP
 //   resolution: DNS
-//
+// ---
 // apiVersion: networking.istio.io/v1alpha3
 // kind: VirtualService
 // metadata:
@@ -588,12 +588,16 @@ message HTTPRoute {
 
   // Delegate is used to specify the particular VirtualService which
   // can be used to define delegate HTTPRoute.
-  // It can be set only when `Route` and `Redirect` are empty, and the route rules of the
-  // delegate VirtualService will be merged with that in the current one.
+  //
+  // It can be set only when `Route` and `Redirect` are empty, and the route
+  // rules of the delegate VirtualService will be merged with that in the
+  // current one.
+  //
   // **NOTE**:
-  //    1. Only one level delegation is supported.
-  //    2. The delegate's HTTPMatchRequest must be a strict subset of the root's,
-  //       otherwise there is a conflict and the HTTPRoute will not take effect.
+  //
+  // 1. Only one level delegation is supported.
+  // 2. The delegate's HTTPMatchRequest must be a strict subset of the root's,
+  //    otherwise there is a conflict and the HTTPRoute will not take effect.
   Delegate delegate = 20;
 
   // Rewrite HTTP URIs and Authority headers. Rewrite cannot be used with
@@ -739,7 +743,7 @@ message Delegate {
 //   - headers:
 //       request:
 //         set:
-//           test: true
+//           test: "true"
 //     route:
 //     - destination:
 //         host: reviews.prod.svc.cluster.local
@@ -769,7 +773,7 @@ message Delegate {
 //   - headers:
 //       request:
 //         set:
-//           test: true
+//           test: "true"
 //     route:
 //     - destination:
 //         host: reviews.prod.svc.cluster.local
@@ -1079,10 +1083,13 @@ message HTTPMatchRequest {
   // Query parameters for matching.
   //
   // Ex:
+  //
   // - For a query parameter like "?key=true", the map key would be "key" and
   //   the string match could be defined as `exact: "true"`.
+  //
   // - For a query parameter like "?key", the map key would be "key" and the
   //   string match could be defined as `exact: ""`.
+  //
   // - For a query parameter like "?key=123", the map key would be "key" and the
   //   string match could be defined as `regex: "\d+$"`. Note that this
   //   configuration will only match values like "123" but not "a123" or "123a".
@@ -1544,7 +1551,7 @@ message HTTPRetry {
   // the specified request `timeout` and `per_try_timeout` values.
   int32 attempts = 1 [(google.api.field_behavior) = REQUIRED];
 
-  // Timeout per retry attempt for a given request. format: 1h/1m/1s/1ms. MUST BE >=1ms.
+  // Timeout per attempt for a given request, including the initial call and any retries. Format: 1h/1m/1s/1ms. MUST BE >=1ms.
   // Default is same value as request 
   // `timeout` of the [HTTP route](https://istio.io/docs/reference/config/networking/virtual-service/#HTTPRoute), 
   // which means no timeout.

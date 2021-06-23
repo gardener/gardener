@@ -24,6 +24,7 @@ import "networking/v1beta1/workload_entry.proto";
 // $description: Configuration affecting service registry.
 // $location: https://istio.io/docs/reference/config/networking/service-entry.html
 // $aliases: [/docs/reference/config/networking/v1beta1/service-entry]
+// $mode: none
 
 // `ServiceEntry` enables adding additional entries into Istio's
 // internal service registry, so that auto-discovered services in the

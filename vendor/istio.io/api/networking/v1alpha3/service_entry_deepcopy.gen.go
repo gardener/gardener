@@ -563,13 +563,13 @@
 //   endpoints:
 //   - address: us.foo.bar.com
 //     ports:
-//       https: 8080
+//       http: 8080
 //   - address: uk.foo.bar.com
 //     ports:
-//       https: 9080
+//       http: 9080
 //   - address: in.foo.bar.com
 //     ports:
-//       https: 7080
+//       http: 7080
 // ```
 // {{</tab>}}
 // {{</tabset>}}
