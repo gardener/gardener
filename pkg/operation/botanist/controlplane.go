@@ -395,8 +395,7 @@ func getResourcesForAPIServer(nodeCount int32, scalingClass string) (string, str
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
 }
 
-// DeployKubeAPIServer deploys kube-apiserver deployment.
-func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
+func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	var (
 		hvpaEnabled               = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 		mountHostCADirectories    = gardenletfeatures.FeatureGate.Enabled(features.MountHostCADirectories)
