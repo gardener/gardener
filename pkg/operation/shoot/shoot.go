@@ -284,7 +284,11 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	}
 	shoot.Networks = networks
 
-	shoot.NodeLocalDNSEnabled = gardenletfeatures.FeatureGate.Enabled(features.NodeLocalDNS)
+	shoot.NodeLocalDNSEnabled = false
+	if nodeLocalDNSEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationNodeLocalDNS]); err == nil {
+		shoot.NodeLocalDNSEnabled = nodeLocalDNSEnabled
+	}
+
 	shoot.Purpose = gardencorev1beta1helper.GetPurpose(shootObject)
 
 	return shoot, nil

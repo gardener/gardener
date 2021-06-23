@@ -70,11 +70,6 @@ const (
 	// alpha: v1.7.0
 	CachedRuntimeClients featuregate.Feature = "CachedRuntimeClients"
 
-	// NodeLocalDNS enables node-local-dns cache feature.
-	// owner @DockToFuture
-	// alpha: v1.7.0
-	NodeLocalDNS featuregate.Feature = "NodeLocalDNS"
-
 	// MountHostCADirectories enables mounting common CA certificate directories in the Shoot API server pod that might be required for webhooks or OIDC.
 	// owner @danielfoehrKn
 	// alpha: v1.11.0

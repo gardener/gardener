@@ -127,7 +127,7 @@ func constructNPAllowToBlockedCIDRs(namespace string, blockedAddresses []string)
 	return obj
 }
 
-func constructNPAllowToDNS(namespace string, nodeLocalDNSEnabled bool, dnsServerAddress, nodeLocalIPVSAddress *string) *networkingv1.NetworkPolicy {
+func constructNPAllowToDNS(namespace string, dnsServerAddress, nodeLocalIPVSAddress *string) *networkingv1.NetworkPolicy {
 	var (
 		protocolUDP = corev1.ProtocolUDP
 		protocolTCP = corev1.ProtocolTCP
@@ -171,22 +171,20 @@ func constructNPAllowToDNS(namespace string, nodeLocalDNSEnabled bool, dnsServer
 		}
 	)
 
-	if nodeLocalDNSEnabled {
-		if dnsServerAddress != nil {
-			obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
-				IPBlock: &networkingv1.IPBlock{
-					CIDR: fmt.Sprintf("%s/32", *dnsServerAddress),
-				},
-			})
-		}
+	if dnsServerAddress != nil {
+		obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
+			IPBlock: &networkingv1.IPBlock{
+				CIDR: fmt.Sprintf("%s/32", *dnsServerAddress),
+			},
+		})
+	}
 
-		if nodeLocalIPVSAddress != nil {
-			obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
-				IPBlock: &networkingv1.IPBlock{
-					CIDR: fmt.Sprintf("%s/32", *nodeLocalIPVSAddress),
-				},
-			})
-		}
+	if nodeLocalIPVSAddress != nil {
+		obj.Spec.Egress[0].To = append(obj.Spec.Egress[0].To, networkingv1.NetworkPolicyPeer{
+			IPBlock: &networkingv1.IPBlock{
+				CIDR: fmt.Sprintf("%s/32", *nodeLocalIPVSAddress),
+			},
+		})
 	}
 
 	return obj

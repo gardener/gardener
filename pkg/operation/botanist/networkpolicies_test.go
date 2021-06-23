@@ -118,7 +118,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
-				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
 				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
@@ -157,7 +156,6 @@ var _ = Describe("Networkpolicies", func() {
 						Except: []string{podCIDRShoot},
 					}},
 				))
-				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
 				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
@@ -175,7 +173,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
-				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
 				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
@@ -193,7 +190,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
-				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
 				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
@@ -211,7 +207,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
-				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
 				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},
@@ -229,27 +224,6 @@ var _ = Describe("Networkpolicies", func() {
 				Expect(values.DenyAllTraffic).To(BeTrue())
 				Expect(values.ShootNetworkPeers).To(BeEmpty())
 				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
-				Expect(values.NodeLocalDNSEnabled).To(BeFalse())
-				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
-				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
-			},
-		),
-
-		Entry(
-			"node local DNS enabled",
-			component.PhaseDisabled,
-			func() {
-				botanist.Shoot.NodeLocalDNSEnabled = true
-			},
-			func(client client.Client, namespace string, values networkpolicies.Values) {
-				Expect(client).To(Equal(c))
-				Expect(namespace).To(Equal(seedNamespace))
-				Expect(values.SNIEnabled).To(BeFalse())
-				Expect(values.BlockedAddresses).To(BeEmpty())
-				Expect(values.DenyAllTraffic).To(BeTrue())
-				Expect(values.ShootNetworkPeers).To(BeEmpty())
-				Expect(values.PrivateNetworkPeers).To(ConsistOf(defaultExpectedShootNetworkPeers...))
-				Expect(values.NodeLocalDNSEnabled).To(BeTrue())
 				Expect(values.NodeLocalIPVSAddress).To(PointTo(Equal("169.254.20.10")))
 				Expect(values.DNSServerAddress).To(PointTo(Equal("192.168.0.10")))
 			},

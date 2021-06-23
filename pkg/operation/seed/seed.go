@@ -901,7 +901,6 @@ func runCreateSeedFlow(
 		SNIEnabled:           gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI,
 		DenyAllTraffic:       false,
 		PrivateNetworkPeers:  privateNetworkPeers,
-		NodeLocalDNSEnabled:  gardenletfeatures.FeatureGate.Enabled(features.NodeLocalDNS),
 		NodeLocalIPVSAddress: pointer.StringPtr(common.NodeLocalIPVSAddress),
 		DNSServerAddress:     pointer.StringPtr(seedDNSServerAddress.String()),
 	})

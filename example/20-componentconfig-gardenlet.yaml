@@ -95,7 +95,6 @@ featureGates:
   KonnectivityTunnel: false
   APIServerSNI: true
   CachedRuntimeClients: true
-  NodeLocalDNS: true
   MountHostCADirectories: true
   SeedKubeScheduler: false
   ReversedVPN: false
