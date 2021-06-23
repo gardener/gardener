@@ -2778,7 +2778,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid CRI name", core.CRINameContainerD, HaveLen(0)),
+			Entry("containerd as CRI name", core.CRINameContainerD, HaveLen(0)),
+			Entry("docker as CRI name", core.CRINameDocker, HaveLen(0)),
 			Entry("not valid CRI name", core.CRIName("other"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("cri.name"),

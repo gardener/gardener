@@ -31,6 +31,7 @@ spec:
     versions:
     - version: 18.04.201906170
     # cri:
+    # - name: docker
     # - name: containerd
     #   containerRuntimes:
     #   - type: gvisor
