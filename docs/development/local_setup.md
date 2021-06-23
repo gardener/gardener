@@ -23,33 +23,18 @@ Currently, it is not possible to run Gardener entirely isolated from any cloud p
 
 # Preparing the Setup
 
-## Installing kubectl and helm
+## [macOS only] Installing homebrew
 
-As already mentioned in the introduction, the communication with the Gardener happens via the Kubernetes (Garden) cluster it is targeting. To interact with that cluster, you need to install `kubectl`. Please make sure that the version of `kubectl` is at least `v1.11.x`.
+The copy-paste instructions in this guide are designed for macOS and use the package manager [Homebrew](https://brew.sh/).
 
-On MacOS run
-
+On macOS run
 ```bash
-brew install kubernetes-cli
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
-
-Please check the [kubectl installation documentation](https://kubernetes.io/docs/tasks/tools/install-kubectl/) for other OS.
-
-You may also need to develop Helm charts or interact with Tiller using the [Helm](https://github.com/kubernetes/helm) CLI:
-
-On MacOS run
-
-```bash
-brew install kubernetes-helm
-```
-
-On other OS please check the [Helm installation documentation](https://helm.sh/docs/intro/install/).
 
 ## Installing git
 
-We use `git` as VCS which you need to install.
-
-On MacOS run
+We use `git` as VCS which you need to install. On macOS run
 
 ```bash
 brew install git
@@ -57,13 +42,40 @@ brew install git
 
 On other OS, please check the [Git installation documentation](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
 
+## Installing Go
+
+Install the latest version of Go. On macOS run
+
+```bash
+brew install go
+```
+
+For other OS, please check [Go installation documentation](https://golang.org/doc/install).
+
+## Installing kubectl
+
+Install `kubectl`. Please make sure that the version of `kubectl` is at least `v1.11.x`. On macOS run
+
+```bash
+brew install kubernetes-cli
+```
+
+Please check the [kubectl installation documentation](https://kubernetes.io/docs/tasks/tools/install-kubectl/) for other OS.
+
+## Installing helm
+You also need the [Helm](https://github.com/kubernetes/helm) CLI. On macOS run
+
+```bash
+brew install helm
+```
+
+On other OS please check the [Helm installation documentation](https://helm.sh/docs/intro/install/).
+
 ## Installing openvpn
 
 We use `OpenVPN` to establish network connectivity from the control plane running in the Seed cluster to the Shoot's worker nodes running in private networks.
 To harden the security we need to generate another secret to encrypt the network traffic ([details](https://openvpn.net/index.php/open-source/documentation/howto.html#security)).
-Please install the `openvpn` binary.
-
-On MacOS run
+Please install the `openvpn` binary. On macOS run
 
 ```bash
 brew install openvpn
@@ -74,13 +86,16 @@ On other OS, please check the [OpenVPN downloads page](https://openvpn.net/index
 
 ## Installing Docker
 
-You'll need to have [docker](https://docs.docker.com/get-docker/) installed and running.
+You need to have docker installed and running. On macOS run
+```bash
+brew install --cask docker
+```
+
+On other OS please check the [docker installation documentation](https://docs.docker.com/get-docker/)
 
 ## Installing iproute2
 
-`iproute2` provides a collection of utilities for network administration and configuration.
-
-On MacOS run
+`iproute2` provides a collection of utilities for network administration and configuration. On macOS run
 
 ```bash
 brew install iproute2mac
@@ -117,9 +132,9 @@ brew install coreutils gnu-sed
 
 This will create symbolic links for the GNU utilities with `g` prefix in `/usr/local/bin`, e.g., `gsed` or `gbase64`. To allow using them without the `g` prefix please put `/usr/local/opt/coreutils/libexec/gnubin` at the beginning of your `PATH` environment variable, e.g., `export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH`.
 
-## [Windows] WSL2
+## [Windows only] WSL2
 
-Apart from Linux distributions and macOS, the local gardener setup can also run on the Windows Subsystem for Linux 2. 
+Apart from Linux distributions and macOS, the local gardener setup can also run on the Windows Subsystem for Linux 2.
 
 While WSL1, plain docker for windows and various Linux distributions and local Kubernetes environments may be supported, this setup was verified with:
 * [WSL2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-index)
@@ -138,7 +153,7 @@ Clone the repository from GitHub into your `$GOPATH`.
 ```bash
 mkdir -p $GOPATH/src/github.com/gardener
 cd $GOPATH/src/github.com/gardener
-git clone git@github.com:gardener/gardener.git
+git clone https://github.com/gardener/gardener.git
 cd gardener
 ```
 
