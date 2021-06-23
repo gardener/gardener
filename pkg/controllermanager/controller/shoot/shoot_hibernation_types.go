@@ -100,6 +100,7 @@ type hibernationJob struct {
 
 // Run implements cron.Job.
 func (h *hibernationJob) Run() {
+	h.logger.Infof("Setting hibernation.enabled to %t", h.enabled)
 	if err := func() error {
 		shoot := &gardencorev1beta1.Shoot{}
 		if err := h.gardenClient.Get(h.ctx, client.ObjectKeyFromObject(h.target), shoot); err != nil {
@@ -120,7 +121,6 @@ func (h *hibernationJob) Run() {
 		return
 	}
 
-	h.logger.Debugf("Successfully set hibernation.enabled to %t", h.enabled)
 	if h.enabled {
 		msg := "Hibernating cluster due to schedule"
 		h.recorder.Eventf(h.target, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, "%s", msg)
