@@ -585,7 +585,7 @@ var _ = Describe("VpnSeedServer", func() {
 							Context: istionetworkingv1alpha3.EnvoyFilter_GATEWAY,
 							ObjectTypes: &istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
 								Listener: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch{
-									Name:       "0.0.0.0_" + string(rune(istio.GatewayPort)),
+									Name:       fmt.Sprintf("0.0.0.0_%d", istio.GatewayPort),
 									PortNumber: istio.GatewayPort,
 									FilterChain: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterChainMatch{
 										Filter: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterMatch{
@@ -636,7 +636,7 @@ var _ = Describe("VpnSeedServer", func() {
 																												Values: []*protobuftypes.Value{
 																													{
 																														Kind: &protobuftypes.Value_StringValue{
-																															StringValue: kubeAPIServerHost + ":" + string(rune(istio.GatewayPort)),
+																															StringValue: fmt.Sprintf("%s:%d", kubeAPIServerHost, istio.GatewayPort),
 																														},
 																													},
 																												},
