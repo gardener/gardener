@@ -73,6 +73,8 @@ net.core.netdev_max_backlog = 5000
 net.core.rmem_max = 16777216
 # Default Socket Send Buffer
 net.core.wmem_max = 16777216
+# enable martian packets
+net.ipv4.conf.default.log_martians = 1
 # Increase the maximum total buffer-space allocatable
 net.ipv4.tcp_wmem = 4096 12582912 16777216
 net.ipv4.tcp_rmem = 4096 12582912 16777216
