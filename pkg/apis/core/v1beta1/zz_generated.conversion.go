@@ -2779,6 +2779,7 @@ func autoConvert_v1beta1_KubeProxyConfig_To_core_KubeProxyConfig(in *KubeProxyCo
 		return err
 	}
 	out.Mode = (*core.ProxyMode)(unsafe.Pointer(in.Mode))
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	return nil
 }
 
@@ -2792,6 +2793,7 @@ func autoConvert_core_KubeProxyConfig_To_v1beta1_KubeProxyConfig(in *core.KubePr
 		return err
 	}
 	out.Mode = (*ProxyMode)(unsafe.Pointer(in.Mode))
+	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
 	return nil
 }
 

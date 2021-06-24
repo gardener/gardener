@@ -4336,6 +4336,20 @@ ProxyMode
 defaults to IPTables.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Enabled indicates whether kube-proxy should be deployed or not.
+Depending on the networking extensions switching kube-proxy off might be rejected. Consulting the respective documentation of the used networking extension is recommended before using this field.
+defaults to true if not specified.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeSchedulerConfig">KubeSchedulerConfig

@@ -172,6 +172,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 		defaultProxyMode := ProxyModeIPTables
 		obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
 	}
+	if obj.Spec.Kubernetes.KubeProxy.Enabled == nil {
+		obj.Spec.Kubernetes.KubeProxy.Enabled = pointer.BoolPtr(true)
+	}
 
 	if obj.Spec.Addons == nil {
 		obj.Spec.Addons = &Addons{}
