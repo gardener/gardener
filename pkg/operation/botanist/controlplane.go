@@ -48,24 +48,6 @@ import (
 
 var chartPathControlPlane = filepath.Join(charts.Path, "seed-controlplane", "charts")
 
-// DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
-func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
-	// invalidate shoot client here before deleting API server
-	if err := b.ClientMap.InvalidateClient(keys.ForShoot(b.Shoot.Info)); err != nil {
-		return err
-	}
-	b.K8sShootClient = nil
-
-	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1beta1constants.DeploymentNameKubeAPIServer,
-			Namespace: b.Shoot.SeedNamespace,
-		},
-	}
-
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptions...))
-}
-
 // DeployVerticalPodAutoscaler deploys the VPA into the shoot namespace in the seed.
 func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 	if !b.Shoot.WantsVerticalPodAutoscaler {
