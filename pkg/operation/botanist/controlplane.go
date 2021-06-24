@@ -221,15 +221,6 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	return client.IgnoreNotFound(b.ScaleETCDToZero(ctx))
 }
 
-// PrepareKubeAPIServerForMigration deletes the kube-apiserver and deletes its hvpa
-func (b *Botanist) PrepareKubeAPIServerForMigration(ctx context.Context) error {
-	if err := b.K8sSeedClient.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
-		return err
-	}
-
-	return b.DeleteKubeAPIServer(ctx)
-}
-
 // DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
 func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) extensionscontrolplane.Interface {
 	values := &extensionscontrolplane.Values{

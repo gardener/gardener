@@ -30,7 +30,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
@@ -147,14 +146,7 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	}
 	b.K8sShootClient = nil
 
-	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1beta1constants.DeploymentNameKubeAPIServer,
-			Namespace: b.Shoot.SeedNamespace,
-		},
-	}
-
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptions...))
+	return b.Shoot.Components.ControlPlane.KubeAPIServer.Destroy(ctx)
 }
 
 // WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
@@ -189,4 +181,3 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
 	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
 }
-
