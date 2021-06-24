@@ -306,7 +306,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{"scheduling.k8s.io"},
 				Resources: []string{"priorityclasses"},
-				Verbs:     []string{"create", "delete", "get", "patch", "update"},
+				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 			},
 			{
 				NonResourceURLs: []string{"/healthz", "/version"},
