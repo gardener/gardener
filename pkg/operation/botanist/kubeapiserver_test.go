@@ -39,9 +39,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,6 +53,7 @@ var _ = Describe("KubeAPIServer", func() {
 		c             client.Client
 		k8sSeedClient kubernetes.Interface
 		botanist      *Botanist
+		kubeAPIServer *mockkubeapiserver.MockInterface
 
 		ctx            = context.TODO()
 		shootNamespace = "shoot--foo--bar"
@@ -65,6 +64,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		k8sSeedClient = fake.NewClientSetBuilder().WithClient(c).Build()
+		kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				K8sSeedClient: k8sSeedClient,
@@ -73,7 +73,9 @@ var _ = Describe("KubeAPIServer", func() {
 					Info:          &gardencorev1beta1.Shoot{},
 					SeedNamespace: shootNamespace,
 					Components: &shootpkg.Components{
-						ControlPlane: &shootpkg.ControlPlane{},
+						ControlPlane: &shootpkg.ControlPlane{
+							KubeAPIServer: kubeAPIServer,
+						},
 					},
 				},
 			},
@@ -300,15 +302,6 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#DeployKubeAPIServer", func() {
-		var (
-			kubeAPIServer *mockkubeapiserver.MockInterface
-		)
-
-		BeforeEach(func() {
-			kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
-			botanist.Shoot.Components.ControlPlane.KubeAPIServer = kubeAPIServer
-		})
-
 		DescribeTable("should correctly set the autoscaling replicas",
 			func(prepTest func(), autoscalingConfig kubeapiserver.AutoscalingConfig, expectedReplicas int32) {
 				if prepTest != nil {
@@ -375,7 +368,7 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#DeleteKubeAPIServer", func() {
-		It("should properly invalidate the client and delete the deployment", func() {
+		It("should properly invalidate the client and destroy the component", func() {
 			clientMap := fakeclientmap.NewClientMap().AddClient(keys.ForShoot(botanist.Shoot.Info), k8sSeedClient)
 			botanist.ClientMap = clientMap
 
@@ -386,9 +379,7 @@ var _ = Describe("KubeAPIServer", func() {
 			k8sShootClient := fake.NewClientSetBuilder().WithClient(c).Build()
 			botanist.K8sShootClient = k8sShootClient
 
-			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: shootNamespace}}
-			Expect(c.Create(ctx, deployment)).To(Succeed())
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+			kubeAPIServer.EXPECT().Destroy(ctx)
 
 			Expect(botanist.DeleteKubeAPIServer(ctx)).To(Succeed())
 
@@ -397,8 +388,6 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(shootClient).To(BeNil())
 
 			Expect(botanist.K8sShootClient).To(BeNil())
-
-			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: appsv1.SchemeGroupVersion.Group, Resource: "deployments"}, deployment.Name)))
 		})
 	})
 
