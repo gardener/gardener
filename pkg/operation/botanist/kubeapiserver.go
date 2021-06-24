@@ -156,3 +156,32 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 
 	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptions...))
 }
+
+// WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
+func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
+	sniPhase := b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase.Done()
+
+	if err := b.DeployKubeAPIService(ctx, sniPhase); err != nil {
+		return err
+	}
+	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
+		return err
+	}
+	if b.APIServerSNIEnabled() {
+		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
+			return err
+		}
+	}
+	if err := b.DeployKubeAPIServer(ctx); err != nil {
+		return err
+	}
+	if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
+		return err
+	}
+	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+

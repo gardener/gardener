@@ -142,34 +142,6 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values))
 }
 
-// WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
-func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
-	sniPhase := b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase.Done()
-
-	if err := b.DeployKubeAPIService(ctx, sniPhase); err != nil {
-		return err
-	}
-	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
-		return err
-	}
-	if b.APIServerSNIEnabled() {
-		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
-			return err
-		}
-	}
-	if err := b.DeployKubeAPIServer(ctx); err != nil {
-		return err
-	}
-	if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
-		return err
-	}
-	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.
 func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	if b.K8sShootClient != nil {
