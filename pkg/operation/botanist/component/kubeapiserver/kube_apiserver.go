@@ -27,10 +27,8 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -110,7 +108,6 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		hpaTargetAverageUtilizationCPU    int32 = 80
 		hpaTargetAverageUtilizationMemory int32 = 80
 		vpaUpdateMode                           = autoscalingv1beta2.UpdateModeOff
-		pdbMaxUnavailable                       = intstr.FromInt(1)
 
 		horizontalPodAutoscaler = k.emptyHorizontalPodAutoscaler()
 		verticalPodAutoscaler   = k.emptyVerticalPodAutoscaler()
@@ -118,14 +115,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		podDisruptionBudget     = k.emptyPodDisruptionBudget()
 	)
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, podDisruptionBudget, func() error {
-		podDisruptionBudget.Labels = getLabels()
-		podDisruptionBudget.Spec = policyv1beta1.PodDisruptionBudgetSpec{
-			MaxUnavailable: &pdbMaxUnavailable,
-			Selector:       &metav1.LabelSelector{MatchLabels: getLabels()},
-		}
-		return nil
-	}); err != nil {
+	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
 		return err
 	}
 
@@ -392,10 +382,6 @@ func (k *kubeAPIServer) emptyVerticalPodAutoscaler() *autoscalingv1beta2.Vertica
 
 func (k *kubeAPIServer) emptyHVPA() *hvpav1alpha1.Hvpa {
 	return &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
-}
-
-func (k *kubeAPIServer) emptyPodDisruptionBudget() *policyv1beta1.PodDisruptionBudget {
-	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
 }
 
 func getLabels() map[string]string {
