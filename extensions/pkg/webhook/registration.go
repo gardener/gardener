@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/pkg/errors"
@@ -29,7 +30,6 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -95,7 +95,7 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 			ownerReference.BlockOwnerDeletion = pointer.BoolPtr(false)
 		}
 
-		if _, err := controllerutil.CreateOrUpdate(ctx, c, mutatingWebhookConfigurationSeed, func() error {
+		if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, mutatingWebhookConfigurationSeed, func() error {
 			if ownerReference != nil {
 				mutatingWebhookConfigurationSeed.SetOwnerReferences(kubernetes.MergeOwnerReferences(mutatingWebhookConfigurationSeed.GetOwnerReferences(), *ownerReference))
 			}

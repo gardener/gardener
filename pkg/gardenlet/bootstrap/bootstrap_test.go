@@ -189,15 +189,14 @@ var _ = Describe("Bootstrap", func() {
 
 			seedClient.EXPECT().Get(ctx, kutil.Key(gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 
-			seedClient.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
-				secret, ok := obj.(*corev1.Secret)
-				Expect(ok).To(BeTrue())
-				Expect(secret.Name).To(Equal(gardenClientConnection.KubeconfigSecret.Name))
-				Expect(secret.Namespace).To(Equal(gardenClientConnection.KubeconfigSecret.Namespace))
-				Expect(secret.Data).ToNot(BeNil())
-				Expect(secret.Data[kubernetes.KubeConfig]).ToNot(BeEmpty())
-				return nil
-			})
+			seedClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+				DoAndReturn(func(_ context.Context, secret *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
+					Expect(secret.Name).To(Equal(gardenClientConnection.KubeconfigSecret.Name))
+					Expect(secret.Namespace).To(Equal(gardenClientConnection.KubeconfigSecret.Namespace))
+					Expect(secret.Data).ToNot(BeNil())
+					Expect(secret.Data[kubernetes.KubeConfig]).ToNot(BeEmpty())
+					return nil
+				})
 			seedClient.EXPECT().Delete(ctx, &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      gardenClientConnection.BootstrapKubeconfig.Name,

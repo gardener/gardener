@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -36,7 +37,6 @@ import (
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -238,7 +238,7 @@ func (r *resourceManager) ensureRBAC(ctx context.Context) error {
 
 func (r *resourceManager) ensureClusterRole(ctx context.Context, policies []rbacv1.PolicyRule) error {
 	clusterRole := r.emptyClusterRole()
-	_, err := controllerutil.CreateOrUpdate(ctx, r.client, clusterRole, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, clusterRole, func() error {
 		clusterRole.Labels = r.getLabels()
 		clusterRole.Rules = policies
 		return nil
@@ -252,7 +252,7 @@ func (r *resourceManager) emptyClusterRole() *rbacv1.ClusterRole {
 
 func (r *resourceManager) ensureClusterRoleBinding(ctx context.Context) error {
 	clusterRoleBinding := r.emptyClusterRoleBinding()
-	_, err := controllerutil.CreateOrUpdate(ctx, r.client, clusterRoleBinding, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, clusterRoleBinding, func() error {
 		clusterRoleBinding.Labels = r.getLabels()
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -278,7 +278,7 @@ func (r *resourceManager) ensureRoleInWatchedNamespace(ctx context.Context, poli
 	if err != nil {
 		return err
 	}
-	_, err = controllerutil.CreateOrUpdate(ctx, r.client, role, func() error {
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, role, func() error {
 		role.Labels = r.getLabels()
 		role.Rules = policies
 		return nil
@@ -298,7 +298,7 @@ func (r *resourceManager) ensureRoleBinding(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = controllerutil.CreateOrUpdate(ctx, r.client, roleBinding, func() error {
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, roleBinding, func() error {
 		roleBinding.Labels = r.getLabels()
 		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -329,7 +329,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 	)
 
 	service := r.emptyService()
-	_, err := controllerutil.CreateOrUpdate(ctx, r.client, service, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, service, func() error {
 		service.Labels = r.getLabels()
 		service.Spec.Selector = appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
@@ -358,7 +358,7 @@ func (r *resourceManager) emptyService() *corev1.Service {
 func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	deployment := r.emptyDeployment()
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.client, deployment, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
 		deployment.Spec.Replicas = &r.replicas
@@ -511,7 +511,7 @@ func (r *resourceManager) computeCommand() []string {
 
 func (r *resourceManager) ensureServiceAccount(ctx context.Context) error {
 	serviceAccount := r.emptyServiceAccount()
-	_, err := controllerutil.CreateOrUpdate(ctx, r.client, serviceAccount, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, serviceAccount, func() error {
 		serviceAccount.Labels = r.getLabels()
 		return nil
 	})
@@ -526,7 +526,7 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 	vpa := r.emptyVPA()
 	vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
 
-	_, err := controllerutil.CreateOrUpdate(ctx, r.client, vpa, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, vpa, func() error {
 		vpa.Labels = r.getLabels()
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: appsv1.SchemeGroupVersion.String(),

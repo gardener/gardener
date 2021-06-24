@@ -17,6 +17,7 @@ package worker
 import (
 	"context"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -28,7 +29,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -359,7 +359,7 @@ func ApplyMachineResources(ctx context.Context, c client.Client) error {
 		spec := crd.Spec.DeepCopy()
 
 		fns = append(fns, func(ctx context.Context) error {
-			_, err := controllerutil.CreateOrUpdate(ctx, c, obj, func() error {
+			_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, obj, func() error {
 				obj.Labels = utils.MergeStringMaps(obj.Labels, deletionProtectionLabels)
 				obj.Spec = *spec
 				return nil

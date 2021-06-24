@@ -201,19 +201,20 @@ var _ = Describe("Util", func() {
 				})
 				c.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, bootstrapTokenSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})).Return(nil).Times(2)
 
-				c.EXPECT().Update(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, s *corev1.Secret, _ ...client.UpdateOption) error {
-					Expect(s.Name).To(Equal(bootstrapTokenSecretName))
-					Expect(s.Namespace).To(Equal(metav1.NamespaceSystem))
-					Expect(s.Type).To(Equal(bootstraptokenapi.SecretTypeBootstrapToken))
-					Expect(s.Data).ToNot(BeNil())
-					Expect(s.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]).ToNot(BeNil())
-					Expect(s.Data[bootstraptokenapi.BootstrapTokenIDKey]).To(Equal([]byte(tokenID)))
-					Expect(s.Data[bootstraptokenapi.BootstrapTokenSecretKey]).ToNot(BeNil())
-					Expect(s.Data[bootstraptokenapi.BootstrapTokenExpirationKey]).ToNot(BeNil())
-					Expect(s.Data[bootstraptokenapi.BootstrapTokenUsageAuthentication]).To(Equal([]byte("true")))
-					Expect(s.Data[bootstraptokenapi.BootstrapTokenUsageSigningKey]).To(Equal([]byte("true")))
-					return nil
-				})
+				c.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, s *corev1.Secret, _ client.Patch, _ ...client.PatchOption) error {
+						Expect(s.Name).To(Equal(bootstrapTokenSecretName))
+						Expect(s.Namespace).To(Equal(metav1.NamespaceSystem))
+						Expect(s.Type).To(Equal(bootstraptokenapi.SecretTypeBootstrapToken))
+						Expect(s.Data).ToNot(BeNil())
+						Expect(s.Data[bootstraptokenapi.BootstrapTokenDescriptionKey]).ToNot(BeNil())
+						Expect(s.Data[bootstraptokenapi.BootstrapTokenIDKey]).To(Equal([]byte(tokenID)))
+						Expect(s.Data[bootstraptokenapi.BootstrapTokenSecretKey]).ToNot(BeNil())
+						Expect(s.Data[bootstraptokenapi.BootstrapTokenExpirationKey]).ToNot(BeNil())
+						Expect(s.Data[bootstraptokenapi.BootstrapTokenUsageAuthentication]).To(Equal([]byte("true")))
+						Expect(s.Data[bootstraptokenapi.BootstrapTokenUsageSigningKey]).To(Equal([]byte("true")))
+						return nil
+					})
 
 				kubeconfig, err := ComputeGardenletKubeconfigWithBootstrapToken(ctx, c, restConfig, tokenID, description, validity)
 				Expect(err).ToNot(HaveOccurred())

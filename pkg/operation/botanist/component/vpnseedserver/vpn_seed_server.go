@@ -39,7 +39,6 @@ import (
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -169,7 +168,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 	)
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, serverSecret, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, serverSecret, func() error {
 		serverSecret.Type = corev1.SecretTypeTLS
 		serverSecret.Data = v.secrets.Server.Data
 		return nil
@@ -177,7 +176,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, tlsAuthSecret, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, tlsAuthSecret, func() error {
 		tlsAuthSecret.Type = corev1.SecretTypeOpaque
 		tlsAuthSecret.Data = v.secrets.TLSAuth.Data
 		return nil
@@ -185,7 +184,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, dhSecret, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, dhSecret, func() error {
 		dhSecret.Type = corev1.SecretTypeOpaque
 		dhSecret.Data = v.secrets.DiffieHellmanKey.Data
 		return nil
@@ -193,7 +192,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, networkPolicy, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, networkPolicy, func() error {
 		networkPolicy.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerDescription: "Allows only Ingress/Egress between the kube-apiserver of the same control plane and the corresponding vpn-seed-server and Ingress from the istio ingress gateway to the vpn-seed-server.",
 		}
@@ -258,7 +257,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, deployment, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, deployment, func() error {
 		maxSurge := intstr.FromInt(100)
 		maxUnavailable := intstr.FromInt(0)
 		deployment.Labels = map[string]string{
@@ -444,7 +443,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, configMap, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, configMap, func() error {
 		configMap.Data = map[string]string{
 			envoyConfigFileName: envoyConfig,
 		}
@@ -453,7 +452,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, gateway, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, gateway, func() error {
 		gateway.Spec = istionetworkingv1beta1.Gateway{
 			Selector: map[string]string{
 				"istio": "ingressgateway",
@@ -474,7 +473,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, destinationRule, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, destinationRule, func() error {
 		destinationRule.Spec = istionetworkingv1beta1.DestinationRule{
 			ExportTo: []string{"*"},
 			Host:     fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, v.namespace),
@@ -501,7 +500,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 	}); err != nil {
 		return err
 	}
-	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, virtualService, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, virtualService, func() error {
 		virtualService.Spec = istionetworkingv1beta1.VirtualService{
 			ExportTo: []string{"*"},
 			Hosts:    []string{*v.kubeAPIServerHost},
@@ -526,7 +525,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, service, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, service, func() error {
 		service.Annotations = map[string]string{
 			"networking.istio.io/exportTo": "*",
 		}
@@ -551,7 +550,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, v.client, vpa, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, vpa, func() error {
 		vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 			APIVersion: appsv1.SchemeGroupVersion.String(),
 			Kind:       "Deployment",

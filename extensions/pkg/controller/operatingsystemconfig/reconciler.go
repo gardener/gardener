@@ -137,7 +137,7 @@ func (r *reconciler) reconcile(ctx context.Context, osc *extensionsv1alpha1.Oper
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	secret, err := r.createOrUpdateOSCResultSecret(ctx, osc, userData)
+	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Could not apply secret for generated cloud config")
 		return extensionscontroller.ReconcileErr(err)
@@ -171,7 +171,7 @@ func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.Operat
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	secret, err := r.createOrUpdateOSCResultSecret(ctx, osc, userData)
+	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
 	if err != nil {
 		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config")
 		return extensionscontroller.ReconcileErr(err)
@@ -253,9 +253,9 @@ func (r *reconciler) migrate(ctx context.Context, osc *extensionsv1alpha1.Operat
 	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) createOrUpdateOSCResultSecret(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, userData []byte) (*corev1.Secret, error) {
+func (r *reconciler) reconcileOSCResultSecret(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, userData []byte) (*corev1.Secret, error) {
 	secret := &corev1.Secret{ObjectMeta: SecretObjectMetaForConfig(osc)}
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.client, secret, func() error {
+	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, r.client, secret, func() error {
 		if secret.Data == nil {
 			secret.Data = make(map[string][]byte)
 		}

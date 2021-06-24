@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -200,7 +201,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	return nil
 }
 
-// registerSeed create or update the seed resource if gardenlet is configured to takes care about it.
+// registerSeed reconciles the seed resource if gardenlet is configured to take care about it.
 func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenClient kubernetes.Interface) error {
 	seed := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
@@ -214,7 +215,7 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 		return fmt.Errorf("could not convert gardenlet configuration: %+v", err)
 	}
 
-	operationResult, err := controllerutil.CreateOrUpdate(ctx, gardenClient.Client(), seed, func() error {
+	operationResult, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient.Client(), seed, func() error {
 		seed.Labels = utils.MergeStringMaps(map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		}, f.cfg.SeedConfig.Labels)

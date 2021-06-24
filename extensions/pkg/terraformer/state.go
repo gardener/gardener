@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -219,7 +220,7 @@ func (cus CreateOrUpdateState) Initialize(ctx context.Context, c client.Client, 
 	}
 	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, c, configMap, func() error {
+	_, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, configMap, func() error {
 		if configMap.Data == nil {
 			configMap.Data = make(map[string]string)
 		}

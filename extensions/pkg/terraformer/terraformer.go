@@ -23,17 +23,18 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -288,17 +289,22 @@ const (
 	rbacName = "gardener.cloud:system:terraformer"
 )
 
-func (t *terraformer) createOrUpdateServiceAccount(ctx context.Context) error {
+func (t *terraformer) ensureServiceAccount(ctx context.Context) error {
 	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: name}}
-	_, err := controllerutil.CreateOrUpdate(ctx, t.client, serviceAccount, func() error {
-		return nil
-	})
-	return err
+	if err := t.client.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+		if err := t.client.Create(ctx, serviceAccount); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (t *terraformer) createOrUpdateRole(ctx context.Context) error {
+func (t *terraformer) ensureRole(ctx context.Context) error {
 	role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: rbacName}}
-	_, err := controllerutil.CreateOrUpdate(ctx, t.client, role, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, t.client, role, func() error {
 		role.Rules = []rbacv1.PolicyRule{{
 			APIGroups: []string{""},
 			Resources: []string{"configmaps", "secrets"},
@@ -309,9 +315,9 @@ func (t *terraformer) createOrUpdateRole(ctx context.Context) error {
 	return err
 }
 
-func (t *terraformer) createOrUpdateRoleBinding(ctx context.Context) error {
+func (t *terraformer) ensureRoleBinding(ctx context.Context) error {
 	roleBinding := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: rbacName}}
-	_, err := controllerutil.CreateOrUpdate(ctx, t.client, roleBinding, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, t.client, roleBinding, func() error {
 		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "Role",
@@ -327,14 +333,14 @@ func (t *terraformer) createOrUpdateRoleBinding(ctx context.Context) error {
 	return err
 }
 
-func (t *terraformer) createOrUpdateTerraformerAuth(ctx context.Context) error {
-	if err := t.createOrUpdateServiceAccount(ctx); err != nil {
+func (t *terraformer) ensureTerraformerAuth(ctx context.Context) error {
+	if err := t.ensureServiceAccount(ctx); err != nil {
 		return err
 	}
-	if err := t.createOrUpdateRole(ctx); err != nil {
+	if err := t.ensureRole(ctx); err != nil {
 		return err
 	}
-	return t.createOrUpdateRoleBinding(ctx)
+	return t.ensureRoleBinding(ctx)
 }
 
 func (t *terraformer) ensureStateHasOwnerRef(ctx context.Context) error {
@@ -357,7 +363,7 @@ func (t *terraformer) ensureStateHasOwnerRef(ctx context.Context) error {
 }
 
 func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, command string) (*corev1.Pod, error) {
-	if err := t.createOrUpdateTerraformerAuth(ctx); err != nil {
+	if err := t.ensureTerraformerAuth(ctx); err != nil {
 		return nil, err
 	}
 

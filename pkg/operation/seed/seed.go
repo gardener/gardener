@@ -77,7 +77,6 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // NewBuilder returns a new Builder.
@@ -307,7 +306,7 @@ func RunReconcileSeedFlow(
 				},
 			}
 
-			if _, err := controllerutil.CreateOrUpdate(ctx, k8sSeedClient.Client(), secretObj, func() error {
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k8sSeedClient.Client(), secretObj, func() error {
 				secretObj.Type = corev1.SecretTypeOpaque
 				secretObj.Data = secret.Data
 				return nil
@@ -1110,7 +1109,7 @@ func copySecretToSeed(ctx context.Context, gardenClient, seedClient client.Clien
 		return err
 	}
 
-	_, err := controllerutil.CreateOrUpdate(ctx, seedClient, targetSecret, func() error {
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, targetSecret, func() error {
 		targetSecret.Type = gardenSecret.Type
 		targetSecret.Data = gardenSecret.Data
 		return nil
@@ -1145,7 +1144,7 @@ func createDNSProviderTask(seedClient client.Client, dnsConfig gardencorev1beta1
 			providerSecret = emptyDNSProviderSecret()
 		)
 
-		_, err := controllerutil.CreateOrUpdate(ctx, seedClient, dnsProvider, func() error {
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, dnsProvider, func() error {
 			dnsProvider.Spec = dnsv1alpha1.DNSProviderSpec{
 				Type: dnsConfig.Provider.Type,
 				SecretRef: &corev1.SecretReference{

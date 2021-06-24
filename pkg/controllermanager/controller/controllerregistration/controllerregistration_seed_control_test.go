@@ -838,10 +838,10 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				}
 
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Update(ctx, installation2)
+				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
 
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation3.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Update(ctx, installation3)
+				k8sClient.EXPECT().Patch(ctx, installation3, gomock.Any())
 
 				k8sClient.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
 
@@ -873,7 +873,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				}
 
 				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Update(ctx, installation2)
+				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
 
 				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithShootDNSEnabled, wantedControllerRegistrations, registrations, registrationNameToInstallationName)
 

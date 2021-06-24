@@ -243,7 +243,7 @@ var _ = Describe("ProjectControlReconcile", func() {
 			expectedResourceQuota.SetOwnerReferences([]metav1.OwnerReference{existingOwnerRef, *ownerRef})
 			expectedResourceQuota.Spec.Hard[secrets] = quantity
 
-			c.EXPECT().Update(ctx, expectedResourceQuota).Return(nil)
+			c.EXPECT().Patch(ctx, expectedResourceQuota, gomock.Any()).Return(nil)
 
 			Expect(createOrUpdateResourceQuota(ctx, c, namespace, ownerRef, config)).To(Succeed())
 		})

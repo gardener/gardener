@@ -168,7 +168,7 @@ var _ = Describe("helper", func() {
 		})
 	})
 
-	Describe("#CreateOrUpdateNetworkPolicy", func() {
+	Describe("#EnsureNetworkPolicy", func() {
 		var (
 			ctrl              *gomock.Controller
 			mockRuntimeClient = mockclient.NewMockClient(ctrl)
@@ -224,28 +224,27 @@ var _ = Describe("helper", func() {
 				return nil
 			})
 
-			err := CreateOrUpdateNetworkPolicy(ctx, mockRuntimeClient, namespace, expectedRules)
+			err := EnsureNetworkPolicy(ctx, mockRuntimeClient, namespace, expectedRules)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should update the allow-to-seed-apiserver Network Policy", func() {
 			mockRuntimeClient.EXPECT().Get(ctx, kutil.Key(namespace, AllowToSeedAPIServer), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).Return(nil)
-			mockRuntimeClient.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})).DoAndReturn(func(_ context.Context, obj client.Object, _ ...client.UpdateOption) error {
-				policy, ok := obj.(*networkingv1.NetworkPolicy)
-				Expect(ok).To(BeTrue())
-				Expect(policy.Annotations).To(HaveKeyWithValue("gardener.cloud/description", "Allows Egress from pods labeled with 'networking.gardener.cloud/to-seed-apiserver=allowed' to Seed's Kubernetes API Server endpoints in the default namespace."))
-				Expect(policy.Spec).To(Equal(networkingv1.NetworkPolicySpec{
-					PodSelector: metav1.LabelSelector{
-						MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed},
-					},
-					PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-					Egress:      expectedRules,
-					Ingress:     []networkingv1.NetworkPolicyIngressRule{},
-				}))
-				return nil
-			})
+			mockRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).
+				DoAndReturn(func(_ context.Context, policy *networkingv1.NetworkPolicy, _ client.Patch, _ ...client.PatchOption) error {
+					Expect(policy.Annotations).To(HaveKeyWithValue("gardener.cloud/description", "Allows Egress from pods labeled with 'networking.gardener.cloud/to-seed-apiserver=allowed' to Seed's Kubernetes API Server endpoints in the default namespace."))
+					Expect(policy.Spec).To(Equal(networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{v1beta1constants.LabelNetworkPolicyToSeedAPIServer: v1beta1constants.LabelNetworkPolicyAllowed},
+						},
+						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+						Egress:      expectedRules,
+						Ingress:     []networkingv1.NetworkPolicyIngressRule{},
+					}))
+					return nil
+				})
 
-			err := CreateOrUpdateNetworkPolicy(ctx, mockRuntimeClient, namespace, expectedRules)
+			err := EnsureNetworkPolicy(ctx, mockRuntimeClient, namespace, expectedRules)
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})

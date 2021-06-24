@@ -119,7 +119,7 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, nil
 	}
 
-	err = helper.CreateOrUpdateNetworkPolicy(ctx, r.seedClient, request.Name, egressRules)
+	err = helper.EnsureNetworkPolicy(ctx, r.seedClient, request.Name, egressRules)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

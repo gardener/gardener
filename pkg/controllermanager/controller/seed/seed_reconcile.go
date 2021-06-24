@@ -18,6 +18,13 @@ import (
 	"context"
 	"fmt"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -27,14 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
 func (c *Controller) seedEnqueue(obj interface{}) {
@@ -166,7 +166,7 @@ func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient client.
 				},
 			}
 
-			if _, err := controllerutil.CreateOrUpdate(ctx, gardenClient, seedSecret, func() error {
+			if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, seedSecret, func() error {
 				seedSecret.Annotations = secret.Annotations
 				seedSecret.Labels = secret.Labels
 				seedSecret.Data = secret.Data

@@ -21,6 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -32,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -252,7 +252,7 @@ func (p *projectRBAC) reconcileResources(
 	ownerRef.BlockOwnerDeletion = pointer.BoolPtr(false)
 
 	clusterRole := emptyClusterRole(clusterRoleName)
-	if _, err := controllerutil.CreateOrUpdate(ctx, p.client, clusterRole, func() error {
+	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, p.client, clusterRole, func() error {
 		clusterRole.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 		clusterRole.Labels = labels
 		clusterRole.AggregationRule = aggregationRule
@@ -264,7 +264,7 @@ func (p *projectRBAC) reconcileResources(
 
 	if withClusterRoleBinding {
 		clusterRoleBinding := emptyClusterRoleBinding(clusterRoleName)
-		if _, err := controllerutil.CreateOrUpdate(ctx, p.client, clusterRoleBinding, func() error {
+		if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, p.client, clusterRoleBinding, func() error {
 			clusterRoleBinding.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 			clusterRoleBinding.Labels = labels
 			clusterRoleBinding.RoleRef = rbacv1.RoleRef{
@@ -281,7 +281,7 @@ func (p *projectRBAC) reconcileResources(
 
 	if roleBindingName != nil {
 		roleBinding := emptyRoleBinding(*roleBindingName, *p.project.Spec.Namespace)
-		if _, err := controllerutil.CreateOrUpdate(ctx, p.client, roleBinding, func() error {
+		if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, p.client, roleBinding, func() error {
 			roleBinding.OwnerReferences = []metav1.OwnerReference{*ownerRef}
 			roleBinding.Labels = labels
 			roleBinding.RoleRef = rbacv1.RoleRef{

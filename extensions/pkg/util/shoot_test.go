@@ -158,10 +158,7 @@ var _ = Describe("Shoot", func() {
 				}).
 				MaxTimes(2)
 
-			c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
-				DoAndReturn(func(_ context.Context, _ *corev1.Secret, _ ...client.UpdateOption) error {
-					return nil
-				})
+			c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any())
 
 			updatedSecret, err := util.GetOrCreateShootKubeconfig(ctx, c, *certificateConfig, namespace)
 

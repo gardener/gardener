@@ -22,18 +22,19 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
 
 	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,7 +45,6 @@ import (
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -177,7 +177,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, service, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, service, func() error {
 		service.Labels = getLabels()
 		service.Spec.Selector = getLabels()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
@@ -194,7 +194,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, deployment, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
@@ -323,7 +323,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			scaleDownUpdateMode = pointer.StringPtr(hvpav1alpha1.UpdateModeAuto)
 		}
 
-		if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, hvpa, func() error {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, hvpa, func() error {
 			hvpa.Labels = getLabels()
 			hvpa.Spec.Replicas = pointer.Int32Ptr(1)
 			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
@@ -384,7 +384,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 		vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
 
-		if _, err := controllerutil.CreateOrUpdate(ctx, k.seedClient, vpa, func() error {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, vpa, func() error {
 			vpa.Spec.TargetRef = &autoscalingv1.CrossVersionObjectReference{
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 				Kind:       "Deployment",

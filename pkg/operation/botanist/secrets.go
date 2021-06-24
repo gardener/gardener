@@ -36,7 +36,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // GenerateAndSaveSecrets creates a CA certificate for the Shoot cluster and uses it to sign the server certificate
@@ -154,21 +153,21 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 
 	if wildcardCert != nil {
 		// Copy certificate to shoot namespace
-		crt := &corev1.Secret{
+		certSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      wildcardCert.GetName(),
 				Namespace: b.Shoot.SeedNamespace,
 			},
 		}
 
-		if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), crt, func() error {
-			crt.Data = wildcardCert.Data
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), certSecret, func() error {
+			certSecret.Data = wildcardCert.Data
 			return nil
 		}); err != nil {
 			return err
 		}
 
-		b.ControlPlaneWildcardCert = crt
+		b.ControlPlaneWildcardCert = certSecret
 	}
 
 	return nil
@@ -187,7 +186,7 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		}
 	)
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), secret, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
 		secret.Annotations = map[string]string{
 			"checksum/data": checksum,
 		}
@@ -279,7 +278,7 @@ func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *s
 			return err
 		}
 
-		if _, err := controllerutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), secret, func() error {
+		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
 			secret.Data = map[string][]byte{
 				secrets.DataKeyToken:         []byte(token.Token),
 				secrets.DataKeyCertificateCA: caCert,

@@ -24,9 +24,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 const AllowToSeedAPIServer = "allow-to-seed-apiserver"
@@ -71,8 +71,8 @@ func GetEgressRules(subsets ...corev1.EndpointSubset) []networkingv1.NetworkPoli
 	return egressRules
 }
 
-// CreateOrUpdateNetworkPolicy creates or updates the Network Policy 'allow-to-seed-apiserver' in the given namespace
-func CreateOrUpdateNetworkPolicy(ctx context.Context, seedClient client.Client, namespace string, egressRules []networkingv1.NetworkPolicyEgressRule) error {
+// EnsureNetworkPolicy ensures the Network Policy 'allow-to-seed-apiserver' in the given namespace
+func EnsureNetworkPolicy(ctx context.Context, seedClient client.Client, namespace string, egressRules []networkingv1.NetworkPolicyEgressRule) error {
 	policy := networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      AllowToSeedAPIServer,
@@ -80,7 +80,7 @@ func CreateOrUpdateNetworkPolicy(ctx context.Context, seedClient client.Client, 
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, seedClient, &policy, func() error {
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, &policy, func() error {
 		MutatePolicy(&policy, egressRules)
 		return nil
 	}); err != nil {

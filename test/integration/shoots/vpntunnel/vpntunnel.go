@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
@@ -35,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -142,7 +142,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 		framework.ExpectNoError(err)
 
 		testSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: copyDeployment, Namespace: namespace}}
-		_, err = controllerutil.CreateOrUpdate(ctx, f.ShootClient.Client(), testSecret, func() error {
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, f.ShootClient.Client(), testSecret, func() error {
 			testSecret.Type = corev1.SecretTypeOpaque
 			testSecret.Data = kubeCfgSecret.Data
 			return nil
