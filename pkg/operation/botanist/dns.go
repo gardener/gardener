@@ -353,7 +353,7 @@ func (b *Botanist) NeedsAdditionalDNSProviders() bool {
 
 // APIServerSNIPodMutatorEnabled returns false if the value of the Shoot annotation
 // 'alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector' is 'disable' or
-// APIServereSNI feature is disabled.
+// APIServerSNI feature is disabled.
 func (b *Botanist) APIServerSNIPodMutatorEnabled() bool {
 	sniEnabled := b.APIServerSNIEnabled()
 	if !sniEnabled {

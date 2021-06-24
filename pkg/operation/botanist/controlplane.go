@@ -395,34 +395,13 @@ func getResourcesForAPIServer(nodeCount int32, scalingClass string) (string, str
 
 func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	var (
-		hvpaEnabled               = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-		mountHostCADirectories    = gardenletfeatures.FeatureGate.Enabled(features.MountHostCADirectories)
-		memoryMetricForHpaEnabled = false
-
-		scaleDownUpdateMode       = hvpav1alpha1.UpdateModeAuto
-		minReplicas         int32 = 1
-		maxReplicas         int32 = 4
+		hvpaEnabled            = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+		mountHostCADirectories = gardenletfeatures.FeatureGate.Enabled(features.MountHostCADirectories)
 	)
-
-	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
-		minReplicas = 2
-	}
-
-	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
-		minReplicas = 4
-		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
-	}
 
 	if b.ManagedSeed != nil {
 		// Override for shooted seeds
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
-		memoryMetricForHpaEnabled = true
-
-		if b.ManagedSeedAPIServer != nil {
-			autoscaler := b.ManagedSeedAPIServer.Autoscaler
-			minReplicas = *autoscaler.MinReplicas
-			maxReplicas = autoscaler.MaxReplicas
-		}
 	}
 
 	var (
@@ -439,8 +418,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			"checksum/secret-etcd-encryption":        b.CheckSums[common.EtcdEncryptionSecretName],
 		}
 		defaultValues = map[string]interface{}{
-			"minReplicas":               minReplicas,
-			"maxReplicas":               maxReplicas,
 			"etcdServicePort":           etcd.PortEtcdClient,
 			"kubernetesVersion":         b.Shoot.Info.Spec.Kubernetes.Version,
 			"priorityClassName":         v1beta1constants.PriorityClassNameShootControlPlane,
@@ -451,13 +428,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			"podAnnotations":            podAnnotations,
 			"reversedVPN": map[string]interface{}{
 				"enabled": b.Shoot.ReversedVPNEnabled,
-			},
-			"hvpa": map[string]interface{}{
-				"enabled": hvpaEnabled,
-			},
-			"scaleDownUpdateMode": scaleDownUpdateMode,
-			"hpa": map[string]interface{}{
-				"memoryMetricForHpaEnabled": memoryMetricForHpaEnabled,
 			},
 			"enableAnonymousAuthentication": gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.Info.Spec.Kubernetes.KubeAPIServer),
 		}
@@ -658,21 +628,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	)
 	if err != nil {
 		return err
-	}
-
-	// If HVPA is disabled, delete any HVPA that was already deployed
-	if !hvpaEnabled {
-		hvpa := &hvpav1alpha1.Hvpa{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      v1beta1constants.DeploymentNameKubeAPIServer,
-			},
-		}
-		if err := b.K8sSeedClient.Client().Delete(ctx, hvpa); err != nil {
-			if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-				return err
-			}
-		}
 	}
 
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, kubernetes.Values(values))

@@ -28,6 +28,7 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
+	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -59,6 +60,7 @@ var _ = Describe("KubeAPIServer", func() {
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				K8sSeedClient: k8sSeedClient,
+				Garden:        &gardenpkg.Garden{},
 				Shoot: &shootpkg.Shoot{
 					Info:          &gardencorev1beta1.Shoot{},
 					SeedNamespace: shootNamespace,
@@ -91,18 +93,22 @@ var _ = Describe("KubeAPIServer", func() {
 					nil,
 					featureGatePtr(features.HVPA), pointer.Bool(false),
 					kubeapiserver.AutoscalingConfig{
-						HVPAEnabled: false,
-						MinReplicas: 1,
-						MaxReplicas: 4,
+						HVPAEnabled:               false,
+						MinReplicas:               1,
+						MaxReplicas:               4,
+						UseMemoryMetricForHvpaHPA: false,
+						ScaleDownDisabledForHvpa:  false,
 					},
 				),
 				Entry("default behaviour, HVPA is enabled",
 					nil,
 					featureGatePtr(features.HVPA), pointer.Bool(true),
 					kubeapiserver.AutoscalingConfig{
-						HVPAEnabled: true,
-						MinReplicas: 1,
-						MaxReplicas: 4,
+						HVPAEnabled:               true,
+						MinReplicas:               1,
+						MaxReplicas:               4,
+						UseMemoryMetricForHvpaHPA: false,
+						ScaleDownDisabledForHvpa:  false,
 					},
 				),
 				Entry("shoot purpose production",
@@ -111,9 +117,11 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil, nil,
 					kubeapiserver.AutoscalingConfig{
-						HVPAEnabled: false,
-						MinReplicas: 2,
-						MaxReplicas: 4,
+						HVPAEnabled:               false,
+						MinReplicas:               2,
+						MaxReplicas:               4,
+						UseMemoryMetricForHvpaHPA: false,
+						ScaleDownDisabledForHvpa:  false,
 					},
 				),
 				Entry("shoot disables scale down",
@@ -122,9 +130,11 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil, nil,
 					kubeapiserver.AutoscalingConfig{
-						HVPAEnabled: false,
-						MinReplicas: 4,
-						MaxReplicas: 4,
+						HVPAEnabled:               false,
+						MinReplicas:               4,
+						MaxReplicas:               4,
+						UseMemoryMetricForHvpaHPA: false,
+						ScaleDownDisabledForHvpa:  true,
 					},
 				),
 				Entry("shoot is a managed seed and HVPAForShootedSeed is disabled",
@@ -133,9 +143,11 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(false),
 					kubeapiserver.AutoscalingConfig{
-						HVPAEnabled: false,
-						MinReplicas: 1,
-						MaxReplicas: 4,
+						HVPAEnabled:               false,
+						MinReplicas:               1,
+						MaxReplicas:               4,
+						UseMemoryMetricForHvpaHPA: true,
+						ScaleDownDisabledForHvpa:  false,
 					},
 				),
 				Entry("shoot is a managed seed and HVPAForShootedSeed is enabled",
@@ -144,9 +156,11 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(true),
 					kubeapiserver.AutoscalingConfig{
-						HVPAEnabled: true,
-						MinReplicas: 1,
-						MaxReplicas: 4,
+						HVPAEnabled:               true,
+						MinReplicas:               1,
+						MaxReplicas:               4,
+						UseMemoryMetricForHvpaHPA: true,
+						ScaleDownDisabledForHvpa:  false,
 					},
 				),
 				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is enabled",
@@ -162,9 +176,11 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(true),
 					kubeapiserver.AutoscalingConfig{
-						HVPAEnabled: true,
-						MinReplicas: 16,
-						MaxReplicas: 32,
+						HVPAEnabled:               true,
+						MinReplicas:               16,
+						MaxReplicas:               32,
+						UseMemoryMetricForHvpaHPA: true,
+						ScaleDownDisabledForHvpa:  false,
 					},
 				),
 				Entry("shoot is a managed seed w/ APIServer settings and HVPAForShootedSeed is disabled",
@@ -180,10 +196,91 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(false),
 					kubeapiserver.AutoscalingConfig{
-						HVPAEnabled: false,
-						MinReplicas: 16,
-						MaxReplicas: 32,
-						Replicas:    pointer.Int32(24),
+						HVPAEnabled:               false,
+						MinReplicas:               16,
+						MaxReplicas:               32,
+						Replicas:                  pointer.Int32(24),
+						UseMemoryMetricForHvpaHPA: true,
+						ScaleDownDisabledForHvpa:  false,
+					},
+				),
+			)
+		})
+
+		Describe("SNIConfig", func() {
+			DescribeTable("should have the expected SNI config",
+				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedConfig kubeapiserver.SNIConfig) {
+					if prepTest != nil {
+						prepTest()
+					}
+
+					if featureGate != nil && value != nil {
+						defer test.WithFeatureGate(gardenletfeatures.FeatureGate, *featureGate, *value)()
+					}
+
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(kubeAPIServer.GetValues().SNI).To(Equal(expectedConfig))
+				},
+
+				Entry("SNI disabled",
+					nil,
+					featureGatePtr(features.APIServerSNI), pointer.Bool(false),
+					kubeapiserver.SNIConfig{
+						PodMutatorEnabled: false,
+					},
+				),
+				Entry("SNI enabled but no need for internal DNS",
+					func() {
+						botanist.Shoot.DisableDNS = true
+					},
+					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
+					kubeapiserver.SNIConfig{
+						PodMutatorEnabled: false,
+					},
+				),
+				Entry("SNI enabled but no need for external DNS",
+					func() {
+						botanist.Shoot.DisableDNS = false
+						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
+						botanist.Shoot.Info.Spec.DNS = nil
+					},
+					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
+					kubeapiserver.SNIConfig{
+						PodMutatorEnabled: false,
+					},
+				),
+				Entry("SNI and both DNS enabled",
+					func() {
+						botanist.Shoot.DisableDNS = false
+						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
+						botanist.Shoot.ExternalDomain = &gardenpkg.Domain{}
+						botanist.Shoot.ExternalClusterDomain = pointer.StringPtr("some-domain")
+						botanist.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{
+							Domain:    pointer.StringPtr("some-domain"),
+							Providers: []gardencorev1beta1.DNSProvider{{}},
+						}
+					},
+					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
+					kubeapiserver.SNIConfig{
+						PodMutatorEnabled: true,
+					},
+				),
+				Entry("SNI and both DNS enabled but pod injector disabled via annotation",
+					func() {
+						botanist.Shoot.DisableDNS = false
+						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
+						botanist.Shoot.ExternalDomain = &gardenpkg.Domain{}
+						botanist.Shoot.ExternalClusterDomain = pointer.StringPtr("some-domain")
+						botanist.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{
+							Domain:    pointer.StringPtr("some-domain"),
+							Providers: []gardencorev1beta1.DNSProvider{{}},
+						}
+						botanist.Shoot.Info.Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector": "disable"}
+					},
+					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
+					kubeapiserver.SNIConfig{
+						PodMutatorEnabled: false,
 					},
 				),
 			)
