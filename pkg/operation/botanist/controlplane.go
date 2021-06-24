@@ -43,7 +43,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -661,23 +660,8 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
-	// If HVPA feature gate is enabled then we should delete the old HPA and VPA resources as
-	// the HVPA controller will create its own for the kube-apiserver deployment.
-	if hvpaEnabled {
-		objects := []client.Object{
-			&autoscalingv1beta2.VerticalPodAutoscaler{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: b.Shoot.SeedNamespace,
-					Name:      v1beta1constants.DeploymentNameKubeAPIServer + "-vpa",
-				},
-			},
-		}
-
-		if err := kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...); err != nil {
-			return err
-		}
-	} else {
-		// If HVPA is disabled, delete any HVPA that was already deployed
+	// If HVPA is disabled, delete any HVPA that was already deployed
+	if !hvpaEnabled {
 		hvpa := &hvpav1alpha1.Hvpa{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
