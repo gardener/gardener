@@ -444,6 +444,31 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeTrue()))
 		})
+
+		It("should default cri.name for k8s versions >=1.22 to containerd", func() {
+			obj.Spec.Kubernetes.Version = "1.22"
+			obj.Spec.Provider.Workers = []Worker{
+				{Name: "DefaultWorker"},
+				{Name: "Worker with CRI configuration",
+					CRI: &CRI{Name: CRIName("some configured value")}},
+			}
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Provider.Workers[0].CRI).ToNot(BeNil())
+			Expect(obj.Spec.Provider.Workers[0].CRI.Name).To(Equal(CRINameContainerD))
+			Expect(obj.Spec.Provider.Workers[1].CRI.Name).To(BeEquivalentTo("some configured value"))
+		})
+
+		It("should not default cri.name for k8s versions <1.22", func() {
+			obj.Spec.Kubernetes.Version = "1.21"
+			obj.Spec.Provider.Workers = []Worker{
+				{Name: "DefaultWorker"},
+				{Name: "Worker with CRI configuration",
+					CRI: &CRI{Name: CRIName("some configured value")}},
+			}
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Provider.Workers[0].CRI).To(BeNil())
+			Expect(obj.Spec.Provider.Workers[1].CRI.Name).To(BeEquivalentTo("some configured value"))
+		})
 	})
 
 	Describe("#SetDefaults_Maintenance", func() {

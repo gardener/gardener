@@ -124,8 +124,9 @@ func SetDefaults_Seed(obj *Seed) {
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
 	k8sVersionLessThan116, _ := versionutils.CompareVersions(obj.Spec.Kubernetes.Version, "<", "1.16")
+	k8sVersionGreaterOrEqualThan122, _ := versionutils.CompareVersions(obj.Spec.Kubernetes.Version, ">=", "1.22")
 	// Error is ignored here because we cannot do anything meaningful with it.
-	// k8sVersionLessThan116 will default to `false`.
+	// k8sVersionLessThan116 and k8sVersionGreaterOrEqualThan122 will default to `false`.
 
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.BoolPtr(true)
@@ -234,6 +235,15 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 	if obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication == nil {
 		obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = pointer.BoolPtr(false)
+	}
+
+	if k8sVersionGreaterOrEqualThan122 {
+		for i := range obj.Spec.Provider.Workers {
+			if obj.Spec.Provider.Workers[i].CRI != nil {
+				continue
+			}
+			obj.Spec.Provider.Workers[i].CRI = &CRI{Name: CRINameContainerD}
+		}
 	}
 }
 

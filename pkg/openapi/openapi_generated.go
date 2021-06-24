@@ -7531,7 +7531,7 @@ func schema_pkg_apis_core_v1alpha1_Worker(ref common.ReferenceCallback) common.O
 					},
 					"cri": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CRI contains configurations of CRI support of every machine in the worker pool",
+							Description: "CRI contains configurations of CRI support of every machine in the worker pool. Defaults to a CRI with name `containerd` when the Kubernetes version of the `Shoot` is >= 1.22.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.CRI"),
 						},
 					},
@@ -13979,7 +13979,7 @@ func schema_pkg_apis_core_v1beta1_Worker(ref common.ReferenceCallback) common.Op
 					},
 					"cri": {
 						SchemaProps: spec.SchemaProps{
-							Description: "CRI contains configurations of CRI support of every machine in the worker pool",
+							Description: "CRI contains configurations of CRI support of every machine in the worker pool. Defaults to a CRI with name `containerd` when the Kubernetes version of the `Shoot` is >= 1.22.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.CRI"),
 						},
 					},
