@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	kubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -60,6 +61,32 @@ func (m *MockInterface) Destroy(arg0 context.Context) error {
 func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
+}
+
+// GetValues mocks base method.
+func (m *MockInterface) GetValues() kubeapiserver.Values {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetValues")
+	ret0, _ := ret[0].(kubeapiserver.Values)
+	return ret0
+}
+
+// GetValues indicates an expected call of GetValues.
+func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
+}
+
+// SetAutoscalingReplicas mocks base method.
+func (m *MockInterface) SetAutoscalingReplicas(arg0 *int32) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetAutoscalingReplicas", arg0)
+}
+
+// SetAutoscalingReplicas indicates an expected call of SetAutoscalingReplicas.
+func (mr *MockInterfaceMockRecorder) SetAutoscalingReplicas(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAutoscalingReplicas", reflect.TypeOf((*MockInterface)(nil).SetAutoscalingReplicas), arg0)
 }
 
 // Wait mocks base method.
