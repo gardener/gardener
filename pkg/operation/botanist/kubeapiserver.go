@@ -37,16 +37,21 @@ func (b *Botanist) DefaultKubeAPIServer() (kubeapiserver.Interface, error) {
 		b.Shoot.SeedNamespace,
 		kubeapiserver.Values{
 			Autoscaling: b.computeKubeAPIServerAutoscalingConfig(),
+			SNI: kubeapiserver.SNIConfig{
+				PodMutatorEnabled: b.APIServerSNIPodMutatorEnabled(),
+			},
 		},
 	), nil
 }
 
 func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.AutoscalingConfig {
 	var (
-		hvpaEnabled     = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-		defaultReplicas *int32
-		minReplicas     int32 = 1
-		maxReplicas     int32 = 4
+		hvpaEnabled               = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+		useMemoryMetricForHvpaHPA = false
+		scaleDownDisabledForHvpa  = false
+		defaultReplicas           *int32
+		minReplicas               int32 = 1
+		maxReplicas               int32 = 4
 	)
 
 	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
@@ -55,10 +60,12 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 
 	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
 		minReplicas = 4
+		scaleDownDisabledForHvpa = true
 	}
 
 	if b.ManagedSeed != nil {
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+		useMemoryMetricForHvpaHPA = true
 
 		if b.ManagedSeedAPIServer != nil {
 			minReplicas = *b.ManagedSeedAPIServer.Autoscaler.MinReplicas
@@ -71,10 +78,12 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 	}
 
 	return kubeapiserver.AutoscalingConfig{
-		HVPAEnabled: hvpaEnabled,
-		Replicas:    defaultReplicas,
-		MinReplicas: minReplicas,
-		MaxReplicas: maxReplicas,
+		HVPAEnabled:               hvpaEnabled,
+		Replicas:                  defaultReplicas,
+		MinReplicas:               minReplicas,
+		MaxReplicas:               maxReplicas,
+		UseMemoryMetricForHvpaHPA: useMemoryMetricForHvpaHPA,
+		ScaleDownDisabledForHvpa:  scaleDownDisabledForHvpa,
 	}
 }
 
