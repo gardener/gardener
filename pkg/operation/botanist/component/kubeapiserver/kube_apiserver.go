@@ -91,21 +91,24 @@ type kubeAPIServer struct {
 
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	var (
+		podDisruptionBudget     = k.emptyPodDisruptionBudget()
 		horizontalPodAutoscaler = k.emptyHorizontalPodAutoscaler()
 		verticalPodAutoscaler   = k.emptyVerticalPodAutoscaler()
 		hvpa                    = k.emptyHVPA()
-		podDisruptionBudget     = k.emptyPodDisruptionBudget()
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
 		return err
 	}
+
 	if err := k.reconcileHorizontalPodAutoscaler(ctx, horizontalPodAutoscaler); err != nil {
 		return err
 	}
+
 	if err := k.reconcileVerticalPodAutoscaler(ctx, verticalPodAutoscaler); err != nil {
 		return err
 	}
+
 	if err := k.reconcileHVPA(ctx, hvpa); err != nil {
 		return err
 	}
