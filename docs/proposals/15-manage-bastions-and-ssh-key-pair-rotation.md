@@ -222,3 +222,8 @@ Currently, the `ssh` key pair for the shoot nodes are created once during shoot 
         - The "execution" script includes also the original user data script, which it writes to `PATH_CLOUDCONFIG`, compares it against the previous cloud config and runs the script in case it has changed
         - Running the [original user data](https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original) script will also run the `gardeneruser` component, where the `authorized_keys` file will be updated
         - After the most recent cloud-config user data was applied, the "execution" script annotates the node with `checksum/cloud-config-data: <cloud-config-checksum>` to indicate the success
+
+### Limitations
+
+For some cloud providers, like GCP, SSH keypairs are managed at the provider side and not on the seed cluster as Kubernetes
+Secrets. For these providers, the key rotation is out of scope of this proposal.
