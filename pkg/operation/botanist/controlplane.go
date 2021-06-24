@@ -38,7 +38,6 @@ import (
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -671,9 +670,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 					Namespace: b.Shoot.SeedNamespace,
 					Name:      v1beta1constants.DeploymentNameKubeAPIServer + "-vpa",
 				},
-			},
-			&autoscalingv2beta2.HorizontalPodAutoscaler{
-				ObjectMeta: kutil.ObjectMeta(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer),
 			},
 		}
 
