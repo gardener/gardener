@@ -185,3 +185,8 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 	return nil
 }
 
+// ScaleKubeAPIServerToOne scales kube-apiserver replicas to one.
+func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
+	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
+}
+

@@ -401,6 +401,20 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: appsv1.SchemeGroupVersion.Group, Resource: "deployments"}, deployment.Name)))
 		})
 	})
+
+	Describe("#ScaleKubeAPIServerToOne", func() {
+		deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver", Namespace: shootNamespace}}
+
+		It("should scale the KAPI deployment", func() {
+			Expect(c.Create(ctx, deployment)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			Expect(botanist.ScaleKubeAPIServerToOne(ctx)).To(Succeed())
+
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+			Expect(deployment.Spec.Replicas).To(Equal(pointer.Int32(1)))
+		})
+	})
 })
 
 func featureGatePtr(f featuregate.Feature) *featuregate.Feature {
