@@ -35,13 +35,14 @@ import (
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
 func (b *Botanist) DefaultKubeAPIServer() (kubeapiserver.Interface, error) {
 	return kubeapiserver.New(
-		b.K8sSeedClient.Client(),
+		b.K8sSeedClient,
 		b.Shoot.SeedNamespace,
 		kubeapiserver.Values{
 			Autoscaling: b.computeKubeAPIServerAutoscalingConfig(),
 			SNI: kubeapiserver.SNIConfig{
 				PodMutatorEnabled: b.APIServerSNIPodMutatorEnabled(),
 			},
+			Version: b.Shoot.KubernetesVersion,
 		},
 	), nil
 }
@@ -170,7 +171,7 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 	if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
 		return err
 	}
-	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
+	if err := b.Shoot.Components.ControlPlane.KubeAPIServer.Wait(ctx); err != nil {
 		return err
 	}
 

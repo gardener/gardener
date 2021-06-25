@@ -110,7 +110,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 			})
 		}
 
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, hvpa, func() error {
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), hvpa, func() error {
 			hvpa.Spec.Replicas = pointer.Int32Ptr(1)
 			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
 				Selector: &metav1.LabelSelector{MatchLabels: hpaLabels},
@@ -203,5 +203,5 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 		return err
 	}
 
-	return kutil.DeleteObject(ctx, k.client, hvpa)
+	return kutil.DeleteObject(ctx, k.client.Client(), hvpa)
 }

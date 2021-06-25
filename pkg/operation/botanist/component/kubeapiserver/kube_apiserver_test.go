@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -35,6 +36,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
@@ -51,8 +53,9 @@ var _ = Describe("KubeAPIServer", func() {
 		vpaUpdateMode      = autoscalingv1beta2.UpdateModeOff
 		containerPolicyOff = autoscalingv1beta2.ContainerScalingModeOff
 
-		c    client.Client
-		kapi Interface
+		kubernetesInterface kubernetes.Interface
+		c                   client.Client
+		kapi                Interface
 
 		deployment              *appsv1.Deployment
 		horizontalPodAutoscaler *autoscalingv2beta1.HorizontalPodAutoscaler
@@ -63,7 +66,8 @@ var _ = Describe("KubeAPIServer", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		kapi = New(c, namespace, Values{})
+		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
+		kapi = New(kubernetesInterface, namespace, Values{})
 
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -101,7 +105,7 @@ var _ = Describe("KubeAPIServer", func() {
 		Describe("HorizontalPodAutoscaler", func() {
 			DescribeTable("should delete the HPA resource",
 				func(autoscalingConfig AutoscalingConfig) {
-					kapi = New(c, namespace, Values{Autoscaling: autoscalingConfig})
+					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
 
 					Expect(c.Create(ctx, horizontalPodAutoscaler)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
@@ -121,7 +125,7 @@ var _ = Describe("KubeAPIServer", func() {
 					MinReplicas: 4,
 					MaxReplicas: 6,
 				}
-				kapi = New(c, namespace, Values{Autoscaling: autoscalingConfig})
+				kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2beta1.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscaler.Name)))
 				Expect(kapi.Deploy(ctx)).To(Succeed())
@@ -167,7 +171,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 		Describe("VerticalPodAutoscaler", func() {
 			It("should delete the VPA resource", func() {
-				kapi = New(c, namespace, Values{Autoscaling: AutoscalingConfig{HVPAEnabled: true}})
+				kapi = New(kubernetesInterface, namespace, Values{Autoscaling: AutoscalingConfig{HVPAEnabled: true}})
 
 				Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
@@ -177,7 +181,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 			It("should successfully deploy the VPA resource", func() {
 				autoscalingConfig := AutoscalingConfig{HVPAEnabled: false}
-				kapi = New(c, namespace, Values{Autoscaling: autoscalingConfig})
+				kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
 
 				Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
 				Expect(kapi.Deploy(ctx)).To(Succeed())
@@ -209,7 +213,7 @@ var _ = Describe("KubeAPIServer", func() {
 		Describe("HVPA", func() {
 			DescribeTable("should delete the HVPA resource",
 				func(autoscalingConfig AutoscalingConfig) {
-					kapi = New(c, namespace, Values{Autoscaling: autoscalingConfig})
+					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
 
 					Expect(c.Create(ctx, hvpa)).To(Succeed())
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
@@ -268,7 +272,7 @@ var _ = Describe("KubeAPIServer", func() {
 					expectedVPAContainerResourcePolicies []autoscalingv1beta2.ContainerResourcePolicy,
 					expectedWeightBasedScalingIntervals []hvpav1alpha1.WeightBasedScalingInterval,
 				) {
-					kapi = New(c, namespace, Values{
+					kapi = New(kubernetesInterface, namespace, Values{
 						Autoscaling: autoscalingConfig,
 						SNI:         sniConfig,
 					})
@@ -554,6 +558,92 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: hvpav1alpha1.SchemeGroupVersionHvpa.Group, Resource: "hvpas"}, hvpa.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1beta1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
+		})
+	})
+
+	Describe("#Wait", func() {
+		It("should successfully wait for the deployment to be ready", func() {
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+			kapi = New(fakeKubernetesInterface, namespace, Values{})
+			deploy := deployment.DeepCopy()
+
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+
+			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
+
+			timer := time.AfterFunc(10*time.Millisecond, func() {
+				deploy.Generation = 24
+				deploy.Status.ObservedGeneration = deploy.Generation
+				deploy.Spec.Replicas = pointer.Int32(4)
+				deploy.Status.Replicas = *deploy.Spec.Replicas
+				deploy.Status.UpdatedReplicas = *deploy.Spec.Replicas
+				deploy.Status.AvailableReplicas = *deploy.Spec.Replicas
+				Expect(fakeClient.Update(ctx, deploy)).To(Succeed())
+			})
+			defer timer.Stop()
+
+			Expect(kapi.Wait(ctx)).To(Succeed())
+		})
+
+		It("should fail while waiting for the deployment to be ready due to outdated generation", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
+
+			deployment.Generation = 24
+			deployment.Status.ObservedGeneration = deployment.Generation - 1
+			Expect(c.Create(ctx, deployment)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("not observed at latest generation")))
+		})
+
+		It("should fail while waiting for the deployment to be ready due to outdated replicas field", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
+
+			deployment.Generation = 24
+			deployment.Status.ObservedGeneration = deployment.Generation
+			deployment.Spec.Replicas = pointer.Int32(4)
+			deployment.Status.Replicas = *deployment.Spec.Replicas - 1
+			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas
+			Expect(c.Create(ctx, deployment)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("has outdated replicas")))
+		})
+
+		It("should fail while waiting for the deployment to be ready due to outdated updatedReplicas field", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
+
+			deployment.Generation = 24
+			deployment.Status.ObservedGeneration = deployment.Generation
+			deployment.Spec.Replicas = pointer.Int32(4)
+			deployment.Status.Replicas = *deployment.Spec.Replicas
+			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas - 1
+			Expect(c.Create(ctx, deployment)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("does not have enough updated replicas")))
+		})
+
+		It("should fail while waiting for the deployment to be ready due to outdated updatedReplicas field", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
+
+			deployment.Generation = 24
+			deployment.Status.ObservedGeneration = deployment.Generation
+			deployment.Spec.Replicas = pointer.Int32(4)
+			deployment.Status.Replicas = *deployment.Spec.Replicas
+			deployment.Status.UpdatedReplicas = *deployment.Spec.Replicas
+			deployment.Status.AvailableReplicas = *deployment.Spec.Replicas - 1
+			Expect(c.Create(ctx, deployment)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			Expect(kapi.Wait(ctx)).To(MatchError(ContainSubstring("does not have enough available replicas")))
 		})
 	})
 
