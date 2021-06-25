@@ -749,11 +749,6 @@ func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 	}
 }
 
-// DeployKubeAPIService deploys for kube-apiserver service.
-func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.Phase) error {
-	return b.newKubeAPIServiceServiceComponent(sniPhase).Deploy(ctx)
-}
-
 // DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
 func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
