@@ -18,6 +18,8 @@ import (
 	"context"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/utils"
@@ -96,6 +98,12 @@ func (b *Botanist) getIngressGatewayConfig() kubeapiserverexposure.IstioIngressG
 	}
 
 	return ingressGatewayConfig
+}
+
+// APIServerSNIEnabled returns true if APIServerSNI feature gate is enabled and the shoot uses internal and external
+// DNS.
+func (b *Botanist) APIServerSNIEnabled() bool {
+	return gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) && b.NeedsInternalDNS() && b.NeedsExternalDNS()
 }
 
 // SNIPhase returns the current phase of the SNI enablement of kube-apiserver's service.
