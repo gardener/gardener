@@ -47,7 +47,10 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 		sniServiceKey,
 		nil,
 		b.setAPIServerServiceClusterIP,
-		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.Client()) },
+		func(address string) {
+			b.APIServerAddress = address
+			b.newDNSComponentsTargetingAPIServerAddress()
+		},
 	)
 }
 
