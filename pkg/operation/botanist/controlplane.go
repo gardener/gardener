@@ -717,38 +717,6 @@ func (b *Botanist) getAuditPolicy(ctx context.Context, name, namespace string) (
 	return auditPolicy, nil
 }
 
-// SNIPhase returns the current phase of the SNI enablement of kube-apiserver's service.
-func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
-	var (
-		svc        = &corev1.Service{}
-		sniEnabled = b.APIServerSNIEnabled()
-	)
-
-	if err := b.K8sSeedClient.APIReader().Get(
-		ctx,
-		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
-		svc,
-	); client.IgnoreNotFound(err) != nil {
-		return component.PhaseUnknown, err
-	}
-
-	switch {
-	case svc.Spec.Type == corev1.ServiceTypeLoadBalancer && sniEnabled:
-		return component.PhaseEnabling, nil
-	case svc.Spec.Type == corev1.ServiceTypeClusterIP && sniEnabled:
-		return component.PhaseEnabled, nil
-	case svc.Spec.Type == corev1.ServiceTypeClusterIP && !sniEnabled:
-		return component.PhaseDisabling, nil
-	default:
-		if sniEnabled {
-			// initial cluster creation with SNI enabled (enabling only relevant for migration).
-			return component.PhaseEnabled, nil
-		}
-		// initial cluster creation with SNI disabled.
-		return component.PhaseDisabled, nil
-	}
-}
-
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 	if b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase == component.PhaseDisabled {
 		return
