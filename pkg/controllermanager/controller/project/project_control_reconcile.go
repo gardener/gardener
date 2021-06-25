@@ -261,6 +261,8 @@ func createOrUpdateResourceQuota(ctx context.Context, c client.Client, projectNa
 
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, projectResourceQuota, func() error {
 		projectResourceQuota.SetOwnerReferences(kutil.MergeOwnerReferences(projectResourceQuota.GetOwnerReferences(), *ownerReference))
+		projectResourceQuota.Labels = utils.MergeStringMaps(projectResourceQuota.Labels, resourceQuota.Labels)
+		projectResourceQuota.Annotations = utils.MergeStringMaps(projectResourceQuota.Annotations, resourceQuota.Annotations)
 		quotas := make(map[corev1.ResourceName]resource.Quantity)
 		for resourceName, quantity := range resourceQuota.Spec.Hard {
 			if val, ok := projectResourceQuota.Spec.Hard[resourceName]; ok {
