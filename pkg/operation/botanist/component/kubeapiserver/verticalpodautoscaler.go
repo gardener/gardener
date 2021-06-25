@@ -35,7 +35,7 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscaler(ctx context.Context, vert
 	vpaUpdateMode := autoscalingv1beta2.UpdateModeOff
 
 	if !k.values.Autoscaling.HVPAEnabled {
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, verticalPodAutoscaler, func() error {
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), verticalPodAutoscaler, func() error {
 			verticalPodAutoscaler.Spec = autoscalingv1beta2.VerticalPodAutoscalerSpec{
 				TargetRef: &autoscalingv1.CrossVersionObjectReference{
 					APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -51,5 +51,5 @@ func (k *kubeAPIServer) reconcileVerticalPodAutoscaler(ctx context.Context, vert
 		return err
 	}
 
-	return kutil.DeleteObject(ctx, k.client, verticalPodAutoscaler)
+	return kutil.DeleteObject(ctx, k.client.Client(), verticalPodAutoscaler)
 }

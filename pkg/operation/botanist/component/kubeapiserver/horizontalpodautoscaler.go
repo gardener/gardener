@@ -42,7 +42,7 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, ho
 		k.values.Autoscaling.Replicas != nil &&
 		*k.values.Autoscaling.Replicas > 0 {
 
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, horizontalPodAutoscaler, func() error {
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), horizontalPodAutoscaler, func() error {
 			horizontalPodAutoscaler.Spec = autoscalingv2beta1.HorizontalPodAutoscalerSpec{
 				MinReplicas: &k.values.Autoscaling.MinReplicas,
 				MaxReplicas: k.values.Autoscaling.MaxReplicas,
@@ -73,5 +73,5 @@ func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, ho
 		return err
 	}
 
-	return kutil.DeleteObject(ctx, k.client, horizontalPodAutoscaler)
+	return kutil.DeleteObject(ctx, k.client.Client(), horizontalPodAutoscaler)
 }
