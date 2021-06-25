@@ -717,11 +717,6 @@ func (b *Botanist) getAuditPolicy(ctx context.Context, name, namespace string) (
 	return auditPolicy, nil
 }
 
-// DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
-func (b *Botanist) DefaultKubeAPIServerService(sniPhase component.Phase) component.DeployWaiter {
-	return b.kubeAPIServiceService(sniPhase)
-}
-
 func (b *Botanist) getKubeApiServerServiceAnnotations(sniPhase component.Phase) map[string]string {
 	if b.ExposureClassHandler != nil && sniPhase != component.PhaseEnabled {
 		return utils.MergeStringMaps(b.Seed.LoadBalancerServiceAnnotations, b.ExposureClassHandler.LoadBalancerService.Annotations)
