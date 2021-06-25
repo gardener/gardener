@@ -147,6 +147,9 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 	}
 	if b.NeedsIngressDNS() {
 		values.Type = b.Shoot.ExternalDomain.Provider
+		if b.Shoot.ExternalDomain.Zone != "" {
+			values.Zone = &b.Shoot.ExternalDomain.Zone
+		}
 		values.SecretData = b.Shoot.ExternalDomain.SecretData
 		values.DNSName = b.Shoot.GetIngressFQDN("*")
 	}

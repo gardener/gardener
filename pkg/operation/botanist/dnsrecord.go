@@ -32,6 +32,9 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 	}
 	if b.NeedsExternalDNS() {
 		values.Type = b.Shoot.ExternalDomain.Provider
+		if b.Shoot.ExternalDomain.Zone != "" {
+			values.Zone = &b.Shoot.ExternalDomain.Zone
+		}
 		values.SecretData = b.Shoot.ExternalDomain.SecretData
 		values.DNSName = gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain)
 	}
@@ -55,6 +58,9 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 	}
 	if b.NeedsInternalDNS() {
 		values.Type = b.Garden.InternalDomain.Provider
+		if b.Garden.InternalDomain.Zone != "" {
+			values.Zone = &b.Garden.InternalDomain.Zone
+		}
 		values.SecretData = b.Garden.InternalDomain.SecretData
 		values.DNSName = gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain)
 	}

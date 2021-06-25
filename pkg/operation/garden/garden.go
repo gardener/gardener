@@ -142,7 +142,7 @@ func GetInternalDomain(secrets map[string]*corev1.Secret) (*Domain, error) {
 }
 
 func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
-	provider, domain, includeZones, excludeZones, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+	provider, domain, zone, includeZones, excludeZones, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -150,6 +150,7 @@ func constructDomainFromSecret(secret *corev1.Secret) (*Domain, error) {
 	return &Domain{
 		Domain:       domain,
 		Provider:     provider,
+		Zone:         zone,
 		SecretData:   secret.Data,
 		IncludeZones: includeZones,
 		ExcludeZones: excludeZones,
@@ -239,7 +240,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
-			_, domain, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
 				continue
@@ -252,7 +253,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
-			_, domain, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
 				continue
