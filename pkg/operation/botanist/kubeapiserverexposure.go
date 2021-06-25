@@ -54,17 +54,30 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 	)
 }
 
-// DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
+// DefaultKubeAPIServerService returns a deployer for the kube-apiserver service.
 func (b *Botanist) DefaultKubeAPIServerService(sniPhase component.Phase) component.DeployWaiter {
 	return b.newKubeAPIServiceServiceComponent(sniPhase)
 }
 
-// DeployKubeAPIService deploys for kube-apiserver service.
+// DeployKubeAPIService deploys the kube-apiserver service.
 func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.Phase) error {
 	return b.newKubeAPIServiceServiceComponent(sniPhase).Deploy(ctx)
 }
 
-// DefaultKubeAPIServerSNI returns a deployer for kube-apiserver SNI.
+func (b *Botanist) getKubeAPIServerServiceAnnotations(sniPhase component.Phase) map[string]string {
+	if b.ExposureClassHandler != nil && sniPhase != component.PhaseEnabled {
+		return utils.MergeStringMaps(b.Seed.LoadBalancerServiceAnnotations, b.ExposureClassHandler.LoadBalancerService.Annotations)
+	}
+	return b.Seed.LoadBalancerServiceAnnotations
+}
+
+// APIServerSNIEnabled returns true if APIServerSNI feature gate is enabled and the shoot uses internal and external
+// DNS.
+func (b *Botanist) APIServerSNIEnabled() bool {
+	return gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) && b.NeedsInternalDNS() && b.NeedsExternalDNS()
+}
+
+// DefaultKubeAPIServerSNI returns a deployer for the kube-apiserver SNI.
 func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 	return component.OpDestroy(kubeapiserverexposure.NewSNI(
 		b.K8sSeedClient.Client(),
@@ -82,13 +95,6 @@ func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
 	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
 }
 
-func (b *Botanist) getKubeAPIServerServiceAnnotations(sniPhase component.Phase) map[string]string {
-	if b.ExposureClassHandler != nil && sniPhase != component.PhaseEnabled {
-		return utils.MergeStringMaps(b.Seed.LoadBalancerServiceAnnotations, b.ExposureClassHandler.LoadBalancerService.Annotations)
-	}
-	return b.Seed.LoadBalancerServiceAnnotations
-}
-
 func (b *Botanist) getIngressGatewayConfig() kubeapiserverexposure.IstioIngressGateway {
 	ingressGatewayConfig := kubeapiserverexposure.IstioIngressGateway{
 		Namespace: *b.Config.SNI.Ingress.Namespace,
@@ -101,12 +107,6 @@ func (b *Botanist) getIngressGatewayConfig() kubeapiserverexposure.IstioIngressG
 	}
 
 	return ingressGatewayConfig
-}
-
-// APIServerSNIEnabled returns true if APIServerSNI feature gate is enabled and the shoot uses internal and external
-// DNS.
-func (b *Botanist) APIServerSNIEnabled() bool {
-	return gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) && b.NeedsInternalDNS() && b.NeedsExternalDNS()
 }
 
 // SNIPhase returns the current phase of the SNI enablement of kube-apiserver's service.
