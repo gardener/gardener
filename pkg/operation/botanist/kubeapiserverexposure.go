@@ -15,6 +15,8 @@
 package botanist
 
 import (
+	"context"
+
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
@@ -34,7 +36,7 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 		b.Logger,
 		b.K8sSeedClient.Client(),
 		&kubeapiserverexposure.ServiceValues{
-			Annotations: b.getKubeApiServerServiceAnnotations(sniPhase),
+			Annotations: b.getKubeAPIServerServiceAnnotations(sniPhase),
 			SNIPhase:    sniPhase,
 		},
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
@@ -48,6 +50,11 @@ func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) c
 // DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
 func (b *Botanist) DefaultKubeAPIServerService(sniPhase component.Phase) component.DeployWaiter {
 	return b.newKubeAPIServiceServiceComponent(sniPhase)
+}
+
+// DeployKubeAPIService deploys for kube-apiserver service.
+func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.Phase) error {
+	return b.newKubeAPIServiceServiceComponent(sniPhase).Deploy(ctx)
 }
 
 func (b *Botanist) getKubeAPIServerServiceAnnotations(sniPhase component.Phase) map[string]string {
