@@ -717,28 +717,6 @@ func (b *Botanist) getAuditPolicy(ctx context.Context, name, namespace string) (
 	return auditPolicy, nil
 }
 
-func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.DeployWaiter {
-	var sniServiceKey = client.ObjectKey{Name: *b.Config.SNI.Ingress.ServiceName, Namespace: *b.Config.SNI.Ingress.Namespace}
-	if b.ExposureClassHandler != nil {
-		sniServiceKey.Name = *b.ExposureClassHandler.SNI.Ingress.ServiceName
-		sniServiceKey.Namespace = *b.ExposureClassHandler.SNI.Ingress.Namespace
-	}
-
-	return kubeapiserverexposure.NewService(
-		b.Logger,
-		b.K8sSeedClient.Client(),
-		&kubeapiserverexposure.ServiceValues{
-			Annotations: b.getKubeApiServerServiceAnnotations(sniPhase),
-			SNIPhase:    sniPhase,
-		},
-		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
-		sniServiceKey,
-		nil,
-		b.setAPIServerServiceClusterIP,
-		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.Client()) },
-	)
-}
-
 // SNIPhase returns the current phase of the SNI enablement of kube-apiserver's service.
 func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 	var (
@@ -773,7 +751,7 @@ func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 
 // DeployKubeAPIService deploys for kube-apiserver service.
 func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.Phase) error {
-	return b.kubeAPIServiceService(sniPhase).Deploy(ctx)
+	return b.newKubeAPIServiceServiceComponent(sniPhase).Deploy(ctx)
 }
 
 // DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
