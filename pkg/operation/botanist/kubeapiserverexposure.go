@@ -137,3 +137,26 @@ func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 		return component.PhaseDisabled, nil
 	}
 }
+
+func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
+	if b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase == component.PhaseDisabled {
+		return
+	}
+
+	b.APIServerClusterIP = clusterIP
+	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
+		b.K8sSeedClient.Client(),
+		b.K8sSeedClient.Applier(),
+		b.Shoot.SeedNamespace,
+		&kubeapiserverexposure.SNIValues{
+			APIServerClusterIP: clusterIP,
+			NamespaceUID:       b.SeedNamespaceObject.UID,
+			Hosts: []string{
+				gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+				gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+			},
+			IstioIngressGateway:      b.getIngressGatewayConfig(),
+			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
+		},
+	)
+}

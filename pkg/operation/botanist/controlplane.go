@@ -30,11 +30,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -715,30 +713,6 @@ func (b *Botanist) getAuditPolicy(ctx context.Context, name, namespace string) (
 		return "", fmt.Errorf("missing '.data.policy' in audit policy configmap %v/%v", namespace, name)
 	}
 	return auditPolicy, nil
-}
-
-func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	if b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase == component.PhaseDisabled {
-		return
-	}
-
-	b.APIServerClusterIP = clusterIP
-
-	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
-		b.K8sSeedClient.Client(),
-		b.K8sSeedClient.Applier(),
-		b.Shoot.SeedNamespace,
-		&kubeapiserverexposure.SNIValues{
-			APIServerClusterIP: clusterIP,
-			NamespaceUID:       b.SeedNamespaceObject.UID,
-			Hosts: []string{
-				gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-				gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-			},
-			IstioIngressGateway:      b.getIngressGatewayConfig(),
-			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
-		},
-	)
 }
 
 // setAPIServerAddress sets the IP address of the API server's LoadBalancer.
