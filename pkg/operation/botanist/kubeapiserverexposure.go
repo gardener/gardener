@@ -15,13 +15,39 @@
 package botanist
 
 import (
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/utils"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+func (b *Botanist) newKubeAPIServiceServiceComponent(sniPhase component.Phase) component.DeployWaiter {
+	var sniServiceKey = client.ObjectKey{Name: *b.Config.SNI.Ingress.ServiceName, Namespace: *b.Config.SNI.Ingress.Namespace}
+	if b.ExposureClassHandler != nil {
+		sniServiceKey.Name = *b.ExposureClassHandler.SNI.Ingress.ServiceName
+		sniServiceKey.Namespace = *b.ExposureClassHandler.SNI.Ingress.Namespace
+	}
+
+	return kubeapiserverexposure.NewService(
+		b.Logger,
+		b.K8sSeedClient.Client(),
+		&kubeapiserverexposure.ServiceValues{
+			Annotations: b.getKubeApiServerServiceAnnotations(sniPhase),
+			SNIPhase:    sniPhase,
+		},
+		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
+		sniServiceKey,
+		nil,
+		b.setAPIServerServiceClusterIP,
+		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.Client()) },
+	)
+}
 
 // DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
 func (b *Botanist) DefaultKubeAPIServerService(sniPhase component.Phase) component.DeployWaiter {
-	return b.kubeAPIServiceService(sniPhase)
+	return b.newKubeAPIServiceServiceComponent(sniPhase)
 }
 
 func (b *Botanist) getKubeAPIServerServiceAnnotations(sniPhase component.Phase) map[string]string {
