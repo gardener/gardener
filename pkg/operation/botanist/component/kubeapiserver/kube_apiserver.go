@@ -16,11 +16,14 @@ package kubeapiserver
 
 import (
 	"context"
+	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -128,7 +131,32 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 }
 
 func (k *kubeAPIServer) Wait(_ context.Context) error        { return nil }
-func (k *kubeAPIServer) WaitCleanup(_ context.Context) error { return nil }
+var (
+	// IntervalWaitForDeployment is the interval used while waiting for the Deployments to become healthy
+	// or deleted.
+	IntervalWaitForDeployment = 5 * time.Second
+	// TimeoutWaitForDeployment is the timeout used while waiting for the Deployments to become healthy
+	// or deleted.
+	TimeoutWaitForDeployment = 5 * time.Minute
+)
+
+func (k *kubeAPIServer) WaitCleanup(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForDeployment)
+	defer cancel()
+
+	return retry.Until(timeoutCtx, IntervalWaitForDeployment, func(ctx context.Context) (done bool, err error) {
+		deploy := k.emptyDeployment()
+		err = k.client.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)
+		switch {
+		case apierrors.IsNotFound(err):
+			return retry.Ok()
+		case err == nil:
+			return retry.MinorError(err)
+		default:
+			return retry.SevereError(err)
+		}
+	})
+}
 
 func (k *kubeAPIServer) GetValues() Values {
 	return k.values

@@ -16,9 +16,11 @@ package kubeapiserver_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -552,6 +554,51 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: hvpav1alpha1.SchemeGroupVersionHvpa.Group, Resource: "hvpas"}, hvpa.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1beta1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
+		})
+	})
+
+	Describe("#WaitCleanup", func() {
+		It("should successfully wait for the deployment to be deleted", func() {
+			fakeClient := fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
+			fakeKubernetesInterface := fakekubernetes.NewClientSetBuilder().WithAPIReader(fakeClient).WithClient(fakeClient).Build()
+			kapi = New(fakeKubernetesInterface, namespace, Values{})
+			deploy := deployment.DeepCopy()
+
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+
+			Expect(fakeClient.Create(ctx, deploy)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(Succeed())
+
+			timer := time.AfterFunc(10*time.Millisecond, func() {
+				Expect(fakeClient.Delete(ctx, deploy)).To(Succeed())
+				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deploy), deploy)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: appsv1.SchemeGroupVersion.Group, Resource: "deployments"}, deploy.Name)))
+			})
+			defer timer.Stop()
+
+			Expect(kapi.WaitCleanup(ctx)).To(Succeed())
+		})
+
+		It("should time out while waiting for the deployment to be deleted", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+
+			Expect(c.Create(ctx, deployment)).To(Succeed())
+
+			Expect(kapi.WaitCleanup(ctx)).To(MatchError(ContainSubstring("context deadline exceeded")))
+		})
+
+		It("should abort due to a severe error while waiting for the deployment to be deleted", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+
+			Expect(c.Create(ctx, deployment)).To(Succeed())
+
+			scheme := runtime.NewScheme()
+			clientWithoutScheme := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+			kubernetesInterface2 := fakekubernetes.NewClientSetBuilder().WithClient(clientWithoutScheme).Build()
+			kapi = New(kubernetesInterface2, namespace, Values{})
+
+			Expect(runtime.IsNotRegisteredError(kapi.WaitCleanup(ctx))).To(BeTrue())
 		})
 	})
 })
