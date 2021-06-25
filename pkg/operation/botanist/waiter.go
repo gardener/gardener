@@ -29,7 +29,6 @@ import (
 	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -66,22 +65,6 @@ func (b *Botanist) WaitUntilVpnShootServiceIsReady(ctx context.Context) error {
 
 	_, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.K8sShootClient, metav1.NamespaceSystem, "vpn-shoot", timeout, b.Logger)
 	return err
-}
-
-// WaitUntilKubeAPIServerIsDeleted waits until the kube-apiserver is deleted
-func (b *Botanist) WaitUntilKubeAPIServerIsDeleted(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		deploy := &appsv1.Deployment{}
-		err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploy)
-		switch {
-		case apierrors.IsNotFound(err):
-			return retry.Ok()
-		case err == nil:
-			return retry.MinorError(err)
-		default:
-			return retry.SevereError(err)
-		}
-	})
 }
 
 // WaitUntilKubeAPIServerReady waits until the kube-apiserver pod(s) indicate readiness in their statuses.
