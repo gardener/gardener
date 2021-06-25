@@ -179,7 +179,7 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 	if b.APIServerSNIEnabled() {
-		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
+		if err := b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx); err != nil {
 			return err
 		}
 	}
@@ -747,11 +747,6 @@ func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 		// initial cluster creation with SNI disabled.
 		return component.PhaseDisabled, nil
 	}
-}
-
-// DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
-func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
-	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
 }
 
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {

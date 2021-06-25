@@ -190,7 +190,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service SNI settings in the Seed cluster",
-			Fn:           flow.TaskFn(botanist.DeployKubeAPIServerSNI).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
 		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
