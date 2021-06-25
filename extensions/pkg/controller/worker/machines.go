@@ -146,10 +146,7 @@ func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontr
 
 	for _, w := range cluster.Shoot.Spec.Provider.Workers {
 		if pool.Name == w.Name {
-			if w.CRI != nil {
-				if w.CRI.Name == gardencorev1beta1.CRINameDocker {
-					continue
-				}
+			if w.CRI != nil && w.CRI.Name != gardencorev1beta1.CRINameDocker {
 				data = append(data, string(w.CRI.Name))
 			}
 		}
