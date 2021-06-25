@@ -25,10 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane/mock"
 	mockdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord/mock"
 	mockinfrastructure "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure/mock"
@@ -281,107 +279,6 @@ var _ = Describe("controlplane", func() {
 
 			externalEntry = &dnsv1alpha1.DNSEntry{}
 			Expect(client.Get(ctx, types.NamespacedName{Name: "external", Namespace: seedNS}, externalEntry)).To(BeNotFoundError())
-		})
-	})
-
-	Describe("SNIPhase", func() {
-		var svc *corev1.Service
-
-		BeforeEach(func() {
-			gardenletfeatures.RegisterFeatureGates()
-
-			svc = &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "kube-apiserver",
-					Namespace: seedNS,
-				},
-			}
-		})
-
-		Context("sni enabled", func() {
-			BeforeEach(func() {
-				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
-				botanist.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
-				botanist.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
-				botanist.Shoot.ExternalClusterDomain = pointer.String("baz")
-				botanist.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
-			})
-
-			It("returns Enabled for not existing services", func() {
-				phase, err := botanist.SNIPhase(ctx)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(phase).To(Equal(component.PhaseEnabled))
-			})
-
-			It("returns Enabling for service of type LoadBalancer", func() {
-				svc.Spec.Type = corev1.ServiceTypeLoadBalancer
-				Expect(client.Create(ctx, svc)).NotTo(HaveOccurred())
-
-				phase, err := botanist.SNIPhase(ctx)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(phase).To(Equal(component.PhaseEnabling))
-			})
-
-			It("returns Enabled for service of type ClusterIP", func() {
-				svc.Spec.Type = corev1.ServiceTypeClusterIP
-				Expect(client.Create(ctx, svc)).NotTo(HaveOccurred())
-
-				phase, err := botanist.SNIPhase(ctx)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(phase).To(Equal(component.PhaseEnabled))
-			})
-
-			DescribeTable(
-				"return Enabled for service of type",
-				func(svcType corev1.ServiceType) {
-					svc.Spec.Type = svcType
-					Expect(client.Create(ctx, svc)).NotTo(HaveOccurred())
-
-					phase, err := botanist.SNIPhase(ctx)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(phase).To(Equal(component.PhaseEnabled))
-				},
-
-				Entry("ExternalName", corev1.ServiceTypeExternalName),
-				Entry("NodePort", corev1.ServiceTypeNodePort),
-			)
-		})
-
-		Context("sni disabled", func() {
-			BeforeEach(func() {
-				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=false")).ToNot(HaveOccurred())
-			})
-
-			It("returns Disabled for not existing services", func() {
-				phase, err := botanist.SNIPhase(ctx)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(phase).To(Equal(component.PhaseDisabled))
-			})
-
-			It("returns Disabling for service of type ClusterIP", func() {
-				svc.Spec.Type = corev1.ServiceTypeClusterIP
-				Expect(client.Create(ctx, svc)).NotTo(HaveOccurred())
-
-				phase, err := botanist.SNIPhase(ctx)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(phase).To(Equal(component.PhaseDisabling))
-			})
-
-			DescribeTable(
-				"return Disabled for service of type",
-				func(svcType corev1.ServiceType) {
-					svc.Spec.Type = svcType
-					Expect(client.Create(ctx, svc)).NotTo(HaveOccurred())
-
-					phase, err := botanist.SNIPhase(ctx)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(phase).To(Equal(component.PhaseDisabled))
-				},
-
-				Entry("ExternalName", corev1.ServiceTypeExternalName),
-				Entry("LoadBalancer", corev1.ServiceTypeLoadBalancer),
-				Entry("NodePort", corev1.ServiceTypeNodePort),
-			)
 		})
 	})
 
