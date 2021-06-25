@@ -717,13 +717,6 @@ func (b *Botanist) getAuditPolicy(ctx context.Context, name, namespace string) (
 	return auditPolicy, nil
 }
 
-func (b *Botanist) getKubeApiServerServiceAnnotations(sniPhase component.Phase) map[string]string {
-	if b.ExposureClassHandler != nil && sniPhase != component.PhaseEnabled {
-		return utils.MergeStringMaps(b.Seed.LoadBalancerServiceAnnotations, b.ExposureClassHandler.LoadBalancerService.Annotations)
-	}
-	return b.Seed.LoadBalancerServiceAnnotations
-}
-
 func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.DeployWaiter {
 	var sniServiceKey = client.ObjectKey{Name: *b.Config.SNI.Ingress.ServiceName, Namespace: *b.Config.SNI.Ingress.Namespace}
 	if b.ExposureClassHandler != nil {

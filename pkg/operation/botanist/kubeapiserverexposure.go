@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
@@ -23,3 +24,9 @@ func (b *Botanist) DefaultKubeAPIServerService(sniPhase component.Phase) compone
 	return b.kubeAPIServiceService(sniPhase)
 }
 
+func (b *Botanist) getKubeAPIServerServiceAnnotations(sniPhase component.Phase) map[string]string {
+	if b.ExposureClassHandler != nil && sniPhase != component.PhaseEnabled {
+		return utils.MergeStringMaps(b.Seed.LoadBalancerServiceAnnotations, b.ExposureClassHandler.LoadBalancerService.Annotations)
+	}
+	return b.Seed.LoadBalancerServiceAnnotations
+}
