@@ -25,18 +25,15 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -48,7 +45,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -713,67 +709,6 @@ func (b *Botanist) getAuditPolicy(ctx context.Context, name, namespace string) (
 		return "", fmt.Errorf("missing '.data.policy' in audit policy configmap %v/%v", namespace, name)
 	}
 	return auditPolicy, nil
-}
-
-// setAPIServerAddress sets the IP address of the API server's LoadBalancer.
-func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client) {
-	b.Operation.APIServerAddress = address
-
-	if b.NeedsInternalDNS() {
-		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSInternalName
-		b.Shoot.Components.Extensions.DNS.InternalOwner = dns.NewOwner(
-			seedClient,
-			b.Shoot.SeedNamespace,
-			&dns.OwnerValues{
-				Name:    DNSInternalName,
-				Active:  pointer.Bool(true),
-				OwnerID: ownerID,
-			},
-		)
-		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewEntry(
-			b.Logger,
-			seedClient,
-			b.Shoot.SeedNamespace,
-			&dns.EntryValues{
-				Name:    DNSInternalName,
-				DNSName: gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-				Targets: []string{b.APIServerAddress},
-				OwnerID: ownerID,
-				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
-			},
-		)
-
-		b.Shoot.Components.Extensions.InternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(address))
-		b.Shoot.Components.Extensions.InternalDNSRecord.SetValues([]string{address})
-	}
-
-	if b.NeedsExternalDNS() {
-		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSExternalName
-		b.Shoot.Components.Extensions.DNS.ExternalOwner = dns.NewOwner(
-			seedClient,
-			b.Shoot.SeedNamespace,
-			&dns.OwnerValues{
-				Name:    DNSExternalName,
-				Active:  pointer.Bool(true),
-				OwnerID: ownerID,
-			},
-		)
-		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewEntry(
-			b.Logger,
-			seedClient,
-			b.Shoot.SeedNamespace,
-			&dns.EntryValues{
-				Name:    DNSExternalName,
-				DNSName: gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-				Targets: []string{b.APIServerAddress},
-				OwnerID: ownerID,
-				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
-			},
-		)
-
-		b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(address))
-		b.Shoot.Components.Extensions.ExternalDNSRecord.SetValues([]string{address})
-	}
 }
 
 // RestartControlPlanePods restarts (deletes) pods of the shoot control plane.

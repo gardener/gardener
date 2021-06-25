@@ -214,7 +214,7 @@ func scaleFromManagedSeedSet(mss *seedmanagement.ManagedSeedSet) (*autoscalingv1
 			CreationTimestamp: mss.CreationTimestamp,
 		},
 		Spec: autoscalingv1.ScaleSpec{
-			Replicas: pointer.Int32PtrDerefOr(mss.Spec.Replicas, 0),
+			Replicas: pointer.Int32Deref(mss.Spec.Replicas, 0),
 		},
 		Status: autoscalingv1.ScaleStatus{
 			Replicas: mss.Status.Replicas,
