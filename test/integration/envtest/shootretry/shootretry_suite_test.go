@@ -62,7 +62,10 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	By("setup manager")
-	mgr, err := manager.New(restConfig, manager.Options{Scheme: kubernetes.GardenScheme})
+	mgr, err := manager.New(restConfig, manager.Options{
+		Scheme:             kubernetes.GardenScheme,
+		MetricsBindAddress: "0",
+	})
 	Expect(err).ToNot(HaveOccurred())
 
 	err = addShootRetryControllerToManager(mgr)

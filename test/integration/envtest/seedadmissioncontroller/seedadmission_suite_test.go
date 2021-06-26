@@ -85,6 +85,8 @@ var _ = BeforeSuite(func() {
 		Port:    testEnv.WebhookInstallOptions.LocalServingPort,
 		Host:    testEnv.WebhookInstallOptions.LocalServingHost,
 		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+
+		MetricsBindAddress: "0",
 	})
 	Expect(err).NotTo(HaveOccurred())
 
