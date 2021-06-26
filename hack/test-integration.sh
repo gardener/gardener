@@ -13,9 +13,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-set -e
+set -o errexit
+set -o pipefail
 
-source "$(dirname $0)/setup-envtest.sh"
+ENVTEST_K8S_VERSION=${ENVTEST_K8S_VERSION:-"1.20"}
+
+echo "> Installing envtest tools@${ENVTEST_K8S_VERSION} with setup-envtest if necessary"
+if ! command -v setup-envtest &> /dev/null ; then
+  >&2 echo "setup-envtest not available, please install it first by running 'make install-requirements'"
+  exit 1
+fi
+
+# --use-env allows overwriting the envtest tools path via the KUBEBUILDER_ASSETS env var just like it was before
+setup-envtest use --use-env -p env ${ENVTEST_K8S_VERSION}
+source <(setup-envtest use --use-env -p env ${ENVTEST_K8S_VERSION})
+echo "using envtest tools installed at '$KUBEBUILDER_ASSETS'"
 
 echo "> Integration Tests"
 
