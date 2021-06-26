@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package backupbucket_test
+package backupbucket
 
 import (
 	"context"
@@ -33,7 +33,7 @@ import (
 
 func TestBackupBucket(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Extensions Controller BackupBucket Test Suite")
+	RunSpecs(t, "Extensions Controller BackupBucket Integration Test Suite")
 }
 
 var (
@@ -44,32 +44,30 @@ var (
 	restConfig *rest.Config
 )
 
-var _ = Describe("BackupBucket Controller", func() {
-	BeforeSuite(func() {
-		// enable manager logs
-		logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
-		log := logrus.New()
-		log.SetOutput(GinkgoWriter)
-		logger = logrus.NewEntry(log)
+var _ = BeforeSuite(func() {
+	// enable manager logs
+	logf.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
+	log := logrus.New()
+	log.SetOutput(GinkgoWriter)
+	logger = logrus.NewEntry(log)
 
-		By("starting test environment")
-		testEnv = &envtest.Environment{}
-		restConfig, err = testEnv.Start()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(restConfig).ToNot(BeNil())
+	By("starting test environment")
+	testEnv = &envtest.Environment{}
+	restConfig, err = testEnv.Start()
+	Expect(err).ToNot(HaveOccurred())
+	Expect(restConfig).ToNot(BeNil())
 
-		By("installing CRDs")
-		applier, err := kubernetes.NewChartApplierForConfig(restConfig)
-		Expect(err).NotTo(HaveOccurred())
-		repoRoot := filepath.Join("..", "..", "..", "..")
-		Expect(applier.Apply(ctx, filepath.Join(repoRoot, "charts", "seed-bootstrap", "charts", "extensions"), "extensions", "")).To(Succeed())
-	})
+	By("installing CRDs")
+	applier, err := kubernetes.NewChartApplierForConfig(restConfig)
+	Expect(err).NotTo(HaveOccurred())
+	repoRoot := filepath.Join("..", "..", "..", "..", "..")
+	Expect(applier.Apply(ctx, filepath.Join(repoRoot, "charts", "seed-bootstrap", "charts", "extensions"), "extensions", "")).To(Succeed())
+})
 
-	AfterSuite(func() {
-		By("running cleanup actions")
-		framework.RunCleanupActions()
+var _ = AfterSuite(func() {
+	By("running cleanup actions")
+	framework.RunCleanupActions()
 
-		By("stopping test environment")
-		Expect(testEnv.Stop()).To(Succeed())
-	})
+	By("stopping test environment")
+	Expect(testEnv.Stop()).To(Succeed())
 })

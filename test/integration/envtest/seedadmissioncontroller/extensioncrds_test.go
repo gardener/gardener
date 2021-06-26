@@ -90,7 +90,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		By("applying CRDs")
 		applier, err := kubernetes.NewChartApplierForConfig(restConfig)
 		Expect(err).NotTo(HaveOccurred())
-		repoRoot := filepath.Join("..", "..")
+		repoRoot := filepath.Join("..", "..", "..", "..")
 		Expect(applier.Apply(ctx, filepath.Join(repoRoot, "charts", "seed-bootstrap", "charts", "extensions"), "extensions", "")).To(Succeed())
 
 		Eventually(func() bool {
@@ -128,7 +128,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 	Context("extension resources", func() {
 		BeforeEach(func() {
 			By("creating extension test objects")
-			_, err := test.EnsureTestResources(ctx, c, filepath.Join("webhooks", "admission", "extensioncrds", "testdata"))
+			_, err := test.EnsureTestResources(ctx, c, "testdata")
 			Expect(err).NotTo(HaveOccurred())
 		})
 

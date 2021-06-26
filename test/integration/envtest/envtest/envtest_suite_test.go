@@ -32,7 +32,7 @@ import (
 
 func TestEnvtest(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardener Envtest Suite")
+	RunSpecs(t, "Gardener Envtest Integration Test Suite")
 }
 
 var (
@@ -44,24 +44,22 @@ var (
 	testClient client.Client
 )
 
-var _ = Describe("Envtest experiment", func() {
-	BeforeSuite(func() {
-		logf.SetLogger(logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter)))
+var _ = BeforeSuite(func() {
+	logf.SetLogger(logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter)))
 
-		By("starting test environment")
-		testEnv = &envtest.GardenerTestEnvironment{}
-		restConfig, err = testEnv.Start()
-		Expect(err).ToNot(HaveOccurred())
+	By("starting test environment")
+	testEnv = &envtest.GardenerTestEnvironment{}
+	restConfig, err = testEnv.Start()
+	Expect(err).ToNot(HaveOccurred())
 
-		testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
-		Expect(err).NotTo(HaveOccurred())
-	})
+	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetes.GardenScheme})
+	Expect(err).NotTo(HaveOccurred())
+})
 
-	AfterSuite(func() {
-		By("running cleanup actions")
-		framework.RunCleanupActions()
+var _ = AfterSuite(func() {
+	By("running cleanup actions")
+	framework.RunCleanupActions()
 
-		By("stopping test environment")
-		Expect(testEnv.Stop()).To(Succeed())
-	})
+	By("stopping test environment")
+	Expect(testEnv.Stop()).To(Succeed())
 })

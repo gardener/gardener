@@ -48,7 +48,7 @@ import (
 
 func TestSeedAdmissionController(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SeedAdmissionController Suite")
+	RunSpecs(t, "SeedAdmissionController Integration Test Suite")
 }
 
 var (
