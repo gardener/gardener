@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+# Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
 # limitations under the License.
 set -e
 
-echo "> Test"
+source "$(dirname $0)/setup-envtest.sh"
 
-GO111MODULE=on go test -race -timeout=2m -mod=vendor $@ | grep -v 'no test files'
+echo "> Integration Tests"
+
+export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT=2m
+GO111MODULE=on go test -timeout=5m -mod=vendor $@ | grep -v 'no test files'
