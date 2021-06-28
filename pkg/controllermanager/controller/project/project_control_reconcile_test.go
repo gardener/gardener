@@ -214,8 +214,8 @@ var _ = Describe("ProjectControlReconcile", func() {
 
 			expectedResourceQuota := resourceQuota.DeepCopy()
 			expectedResourceQuota.SetOwnerReferences([]metav1.OwnerReference{*ownerRef})
-			expectedResourceQuota.ObjectMeta.Labels = map[string]string{"bar":"baz"}
-			expectedResourceQuota.ObjectMeta.Annotations = map[string]string{"foo":"bar"}
+			expectedResourceQuota.ObjectMeta.Labels = map[string]string{"bar": "baz"}
+			expectedResourceQuota.ObjectMeta.Annotations = map[string]string{"foo": "bar"}
 			expectedResourceQuota.SetName(ResourceQuotaName)
 			expectedResourceQuota.SetNamespace(namespace)
 
@@ -251,8 +251,8 @@ var _ = Describe("ProjectControlReconcile", func() {
 
 			expectedResourceQuota := existingResourceQuota.DeepCopy()
 			expectedResourceQuota.SetOwnerReferences([]metav1.OwnerReference{existingOwnerRef, *ownerRef})
-			expectedResourceQuota.ObjectMeta.Labels = map[string]string{"bar":"baz"}
-			expectedResourceQuota.ObjectMeta.Annotations = map[string]string{"foo":"bar"}
+			expectedResourceQuota.ObjectMeta.Labels = map[string]string{"bar": "baz"}
+			expectedResourceQuota.ObjectMeta.Annotations = map[string]string{"foo": "bar"}
 			expectedResourceQuota.Spec.Hard[secrets] = quantity
 
 			c.EXPECT().Patch(ctx, expectedResourceQuota, gomock.Any()).Return(nil)
