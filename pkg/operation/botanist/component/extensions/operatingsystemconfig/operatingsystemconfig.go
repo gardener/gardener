@@ -576,6 +576,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		d.osc.Spec.Units = units
 		d.osc.Spec.Files = files
 
+		d.osc.Spec.CRIConfig = nil
 		if d.worker.CRI != nil {
 			d.osc.Spec.CRIConfig = &extensionsv1alpha1.CRIConfig{
 				Name: extensionsv1alpha1.CRIName(d.worker.CRI.Name),

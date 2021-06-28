@@ -303,6 +303,32 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(actual).To(Equal(obj))
 				}
 			})
+
+			It("removes spec.CRIConfig when removing worker.CRI", func() {
+				defer test.WithVars(
+					&TimeNow, mockNow.Do,
+					&DownloaderConfigFn, downloaderConfigFn,
+					&OriginalConfigFn, originalConfigFn,
+				)()
+
+				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+				// first deploy with worker1 cri==nil and worker2 cri.name==containerd
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				values.Workers[1].CRI = nil
+
+				// create new waiter with the changed workers and re-deploy
+				defaultDepWaiter = New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				for _, e := range expected {
+					actual := &extensionsv1alpha1.OperatingSystemConfig{}
+					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
+					Expect(actual.Spec.CRIConfig).To(BeNil())
+				}
+
+			})
 		})
 
 		Describe("#Restore", func() {
