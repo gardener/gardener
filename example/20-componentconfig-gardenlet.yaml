@@ -98,7 +98,6 @@ featureGates:
   MountHostCADirectories: true
   SeedKubeScheduler: false
   ReversedVPN: false
-seedSelector: {} # selects all seeds, only use for development purposes
 # seedConfig:
 #   metadata:
 #     name: my-seed

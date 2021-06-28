@@ -17,7 +17,9 @@
 source $(dirname "${0}")/common/helpers
 source $(dirname "${0}")/common/local-imagevector-overwrite
 
-REPO_ROOT=$(dirname $0)/../..
+REPO_ROOT=$(dirname "${0}")/../..
+DEV_DIR=$REPO_ROOT/dev
+EXAMPLE_DIR=$REPO_ROOT/example
 
 kubeconfig="$KUBECONFIG"
 
@@ -29,19 +31,57 @@ else
   trap cleanup_kubeconfig EXIT
 fi
 
+GARDEN_KUBECONFIG="${GARDEN_KUBECONFIG:-$kubeconfig}"
+
+# determine the seed to manage; if multiple seeds exist on the
+# garden, the SEED_NAME env variable must be set
+if [ -n "${SEED_NAME:-}" ]; then
+  seedConfig="$(kubectl --kubeconfig="$GARDEN_KUBECONFIG" get seed "$SEED_NAME" -o json)"
+else
+  seeds="$(kubectl --kubeconfig="$GARDEN_KUBECONFIG" get seeds -o json | jq '.items')"
+  case $(echo "$seeds" | jq -r 'length') in
+    0)
+      echo "No seed found in garden cluster."
+      exit 1
+      ;;
+    1)
+      seedConfig="$(echo "$seeds" | jq '.[0]')"
+      SEED_NAME="$(echo "$seedConfig" | jq -r '.metadata.name')"
+      ;;
+    *)
+      names="$(echo "$seeds" | jq -r -c '[.[].metadata.name]')"
+      echo "Multiple seeds exist in the garden, please specify \$SEED_NAME to select one of $names"
+      exit 1
+      ;;
+  esac
+fi
+
+# cleanup a bit to make the generated file look a bit neater
+seedConfig="$(echo "$seedConfig" | jq 'del(.apiVersion,.kind,.status,.metadata.annotations,.metadata.managedFields)')"
+
+# create a fresh copy of the gardenlet configuration, then append the current seed config
+configFile=20-componentconfig-gardenlet.yaml
+cp $EXAMPLE_DIR/$configFile $DEV_DIR/
+
+cat << EOF >> $DEV_DIR/$configFile
+seedConfig: $seedConfig
+EOF
+
 file_imagevector_overwrite="$(mktemp_imagevector_overwrite github.com/gardener/gardener "$REPO_ROOT" "$REPO_ROOT"/charts)"
 if [ ! -f "$file_imagevector_overwrite" ]; then
-    echo "failed to generate local image vector override: $file_imagevector_overwrite"
+  echo "failed to generate local image vector override: $file_imagevector_overwrite"
 else
   trap cleanup_imagevector_overwrite EXIT
 
+  echo "Starting gardenlet for seed $SEED_NAME..."
+
   KUBECONFIG="$kubeconfig" \
-  GARDEN_KUBECONFIG="${GARDEN_KUBECONFIG:-$kubeconfig}" \
+  GARDEN_KUBECONFIG="$GARDEN_KUBECONFIG" \
   IMAGEVECTOR_OVERWRITE="$file_imagevector_overwrite" \
   GO111MODULE=on \
       go run \
         -mod=vendor \
         -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
-        "$(dirname $0)"/../../cmd/gardenlet/main.go \
-        --config="$(dirname $0)"/../../dev/20-componentconfig-gardenlet.yaml
+        "$REPO_ROOT/cmd/gardenlet/main.go" \
+        --config="$DEV_DIR/$configFile"
 fi
