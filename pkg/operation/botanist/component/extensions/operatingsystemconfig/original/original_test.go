@@ -123,7 +123,7 @@ var _ = Describe("Original", func() {
 			}))
 		})
 
-		It("should compute the units and files w/ docker", func() {
+		It("should compute the units and files w/ containerd", func() {
 			var order []string
 			for _, component := range Components(extensionsv1alpha1.CRINameContainerD) {
 				order = append(order, component.Name())
