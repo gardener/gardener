@@ -277,7 +277,7 @@ func FeatureGatesToCommandLineParameter(fg map[string]bool) string {
 // existing port (identified by name), and applies the settings from the desired port to it. This way it can keep fields
 // that are defaulted by controllers, e.g. the node port. However, it does not keep ports that are not part of the
 // desired list.
-func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []corev1.ServicePort) []corev1.ServicePort {
+func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []corev1.ServicePort, desiredServiceType corev1.ServiceType) []corev1.ServicePort {
 	var out []corev1.ServicePort
 
 	for _, desiredPort := range desiredPorts {
@@ -300,7 +300,16 @@ func ReconcileServicePorts(existingPorts []corev1.ServicePort, desiredPorts []co
 		if desiredPort.TargetPort.Type == intstr.Int || desiredPort.TargetPort.Type == intstr.String {
 			port.TargetPort = desiredPort.TargetPort
 		}
-		if desiredPort.NodePort != 0 {
+
+		// If the desired service type is "LoadBalancer" or "NodePort", then overwrite the existing nodePort
+		// only when the desired nodePort != 0 (in this way we preserve the value defaulted by the controller).
+		// Otherwise, always set the existing nodePort to the desired one.
+		switch desiredServiceType {
+		case corev1.ServiceTypeLoadBalancer, corev1.ServiceTypeNodePort:
+			if desiredPort.NodePort != 0 {
+				port.NodePort = desiredPort.NodePort
+			}
+		default:
 			port.NodePort = desiredPort.NodePort
 		}
 
