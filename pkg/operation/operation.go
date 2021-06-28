@@ -423,7 +423,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 	)
 
 	if err := func() error {
-		patch := client.StrategicMergeFrom(shoot.DeepCopy())
+		statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
 
 		if shoot.Status.LastOperation == nil {
 			return fmt.Errorf("last operation of Shoot %s/%s is unset", shoot.Namespace, shoot.Name)
@@ -437,7 +437,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		shoot.Status.LastOperation.Progress = progress
 		shoot.Status.LastOperation.LastUpdateTime = lastUpdateTime
 
-		return o.K8sGardenClient.Client().Status().Patch(ctx, shoot, patch)
+		return o.K8sGardenClient.Client().Status().Patch(ctx, shoot, statusPatch)
 	}(); err != nil {
 		o.Logger.Errorf("Could not report shoot progress: %v", err)
 		return
@@ -453,8 +453,7 @@ func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context,
 	statusPatch := client.MergeFrom(shoot.DeepCopy())
 	// LastErrors doesn't have patchMergeKey as TaskID is optional, so strategic merge wouldn't make a difference.
 	// This will effectively overwrite the whole LastErrors array. Though, this should be fine, as this controller is
-	// supposed to be the exclusive owner of this field. Even if some other goroutine writes to LastErrors concurrently,
-	// it will be eventually consistent.
+	// supposed to be the exclusive owner of this field.
 	shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
 	if err := o.K8sGardenClient.Client().Status().Patch(ctx, shoot, statusPatch); err != nil {
 		o.Logger.Errorf("Could not update shoot's %s/%s last errors: %v", shoot.Namespace, shoot.Name, err)

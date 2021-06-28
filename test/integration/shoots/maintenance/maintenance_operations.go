@@ -36,7 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CleanupCloudProfile tries to update the CloudProfile with retries to make sure the machine image version & kubernetes version introduced during the integration test is being removed
+// CleanupCloudProfile tries to patch the CloudProfile to make sure the machine image version & kubernetes version introduced during the integration test is being removed
 func CleanupCloudProfile(ctx context.Context, gardenClient client.Client, cloudProfileName string, testMachineImage gardencorev1beta1.ShootMachineImage, testKubernetesVersions []gardencorev1beta1.ExpirableVersion) error {
 	// then delete the test versions
 	cloudProfile := &gardencorev1beta1.CloudProfile{}

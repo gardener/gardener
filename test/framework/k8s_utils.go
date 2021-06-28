@@ -347,8 +347,8 @@ func DownloadKubeconfig(ctx context.Context, client kubernetes.Interface, namesp
 	return nil
 }
 
-// UpdateSecret updates the Secret with an backoff
-func UpdateSecret(ctx context.Context, c client.Client, secret *corev1.Secret) error {
+// PatchSecret patches the Secret.
+func PatchSecret(ctx context.Context, c client.Client, secret *corev1.Secret) error {
 	existingSecret := &corev1.Secret{}
 	if err := c.Get(ctx, client.ObjectKey{Namespace: secret.Namespace, Name: secret.Name}, existingSecret); err != nil {
 		return err
