@@ -796,14 +796,15 @@ var _ = Describe("kubernetes", func() {
 	)
 
 	DescribeTable("#ReconcileServicePorts",
-		func(existingPorts []corev1.ServicePort, matcher gomegatypes.GomegaMatcher) {
-			Expect(ReconcileServicePorts(existingPorts, desiredPorts)).To(matcher)
+		func(existingPorts []corev1.ServicePort, serviceType corev1.ServiceType, matcher gomegatypes.GomegaMatcher) {
+			Expect(ReconcileServicePorts(existingPorts, desiredPorts, serviceType)).To(matcher)
 		},
-		Entry("existing ports is nil", nil, ConsistOf(port1, port2, port3)),
-		Entry("no existing ports", []corev1.ServicePort{}, ConsistOf(port1, port2, port3)),
-		Entry("existing but undesired ports", []corev1.ServicePort{{Name: "foo"}}, ConsistOf(port1, port2, port3)),
-		Entry("existing and desired ports", []corev1.ServicePort{{Name: port1.Name, NodePort: 1337}}, ConsistOf(corev1.ServicePort{Name: port1.Name, Protocol: port1.Protocol, Port: port1.Port, NodePort: 1337}, port2, port3)),
-		Entry("existing and both desired and undesired ports", []corev1.ServicePort{{Name: "foo"}, {Name: port1.Name, NodePort: 1337}}, ConsistOf(corev1.ServicePort{Name: port1.Name, Protocol: port1.Protocol, Port: port1.Port, NodePort: 1337}, port2, port3)),
+		Entry("existing ports is nil", nil, corev1.ServiceTypeLoadBalancer, ConsistOf(port1, port2, port3)),
+		Entry("no existing ports", []corev1.ServicePort{}, corev1.ServiceTypeLoadBalancer, ConsistOf(port1, port2, port3)),
+		Entry("existing but undesired ports", []corev1.ServicePort{{Name: "foo"}}, corev1.ServiceTypeLoadBalancer, ConsistOf(port1, port2, port3)),
+		Entry("existing and desired ports when spec.type=LoadBalancer", []corev1.ServicePort{{Name: port1.Name, NodePort: 1337}}, corev1.ServiceTypeLoadBalancer, ConsistOf(corev1.ServicePort{Name: port1.Name, Protocol: port1.Protocol, Port: port1.Port, NodePort: 1337}, port2, port3)),
+		Entry("existing and desired ports when spec.type=ClusterIP", []corev1.ServicePort{{Name: port1.Name, NodePort: 1337}}, corev1.ServiceTypeClusterIP, ConsistOf(port1, port2, port3)),
+		Entry("existing and both desired and undesired ports", []corev1.ServicePort{{Name: "foo"}, {Name: port1.Name, NodePort: 1337}}, corev1.ServiceTypeLoadBalancer, ConsistOf(corev1.ServicePort{Name: port1.Name, Protocol: port1.Protocol, Port: port1.Port, NodePort: 1337}, port2, port3)),
 	)
 
 	Describe("#WaitUntilLoadBalancerIsReady", func() {
