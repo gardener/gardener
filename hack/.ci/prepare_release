@@ -16,7 +16,7 @@
 
 set -e
 
-repo_root_dir="$1"
+repo_root_dir="$(realpath $1)"
 repo_base="$2"
 repo_name="$3"
 
@@ -48,7 +48,7 @@ echo "Downloading go $GOLANG_VERSION"
 wget -q -O - "https://golang.org/dl/go$GOLANG_VERSION.src.tar.gz" | tar zx -C /usr/local
 cd /usr/local/go/src
 echo "Executing make on go $GOLANG_VERSION"
-./make.bash > /dev/null 2>&1
+./make.bash
 
 # Make the newly "installed from source" go the default one
 export PATH="/usr/local/go/bin:$PATH"
