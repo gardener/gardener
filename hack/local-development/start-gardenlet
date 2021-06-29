@@ -56,6 +56,20 @@ else
   esac
 fi
 
+# cleanup a bit to make the generated configuration file look a bit neater
+seedConfig="$(echo "$seedConfig" | jq 'del(.apiVersion,.kind,.status,.metadata.annotations,.metadata.managedFields)')"
+
+# create seed-specific configuration file if it doesn't exist yet
+configFile="$DEV_DIR/20-componentconfig-gardenlet-seed-$SEED_NAME.yaml"
+
+if [ ! -f "$configFile" ]; then
+  cp "$DEV_DIR/20-componentconfig-gardenlet.yaml" "$configFile"
+fi
+
+# update gardenlet config "in-place"
+cat "$configFile" | yaml2json | jq --argjson seedConfig "$seedConfig" '.seedConfig|=$seedConfig' > "$configFile.new"
+mv "$configFile.new" "$configFile"
+
 # fetch seed kubeconfig
 seedKubeconfigName="$(echo "$seedConfig" | jq -r '.spec.secretRef.name')"
 seedKubeconfigNamespace="$(echo "$seedConfig" | jq -r '.spec.secretRef.namespace')"
@@ -64,17 +78,6 @@ seedKubeconfig="$DEV_DIR/gardenlet-seed-$SEED_NAME.conf"
 kubectl --kubeconfig="$GARDEN_KUBECONFIG" --namespace "$seedKubeconfigNamespace" get secret "$seedKubeconfigName" -o json |
   jq -r '.data.kubeconfig' |
   base64 -d > "$seedKubeconfig"
-
-# cleanup a bit to make the generated configuration file look a bit neater
-seedConfig="$(echo "$seedConfig" | jq 'del(.apiVersion,.kind,.status,.metadata.annotations,.metadata.managedFields)')"
-
-# create a fresh copy of the gardenlet configuration, then append the current seed config
-configFile=20-componentconfig-gardenlet.yaml
-cp $EXAMPLE_DIR/$configFile $DEV_DIR/
-
-cat << EOF >> $DEV_DIR/$configFile
-seedConfig: $seedConfig
-EOF
 
 file_imagevector_overwrite="$(mktemp_imagevector_overwrite github.com/gardener/gardener "$REPO_ROOT" "$REPO_ROOT"/charts)"
 if [ ! -f "$file_imagevector_overwrite" ]; then
@@ -92,5 +95,5 @@ else
         -mod=vendor \
         -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
         "$REPO_ROOT/cmd/gardenlet/main.go" \
-        --config="$DEV_DIR/$configFile"
+        --config="$configFile"
 fi
