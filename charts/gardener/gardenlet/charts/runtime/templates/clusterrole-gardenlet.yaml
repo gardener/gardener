@@ -38,6 +38,12 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - pods/exec
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
   - configmaps
   - namespaces
   - secrets
@@ -216,6 +222,21 @@ rules:
   - get
   - list
   - watch
+  - patch
+  - update
+- apiGroups:
+  - extensions.gardener.cloud
+  resources:
+  - backupbuckets/status
+  - backupentries/status
+  - containerruntimes/status
+  - controlplanes/status
+  - extensions/status
+  - infrastructures/status
+  - networks/status
+  - operatingsystemconfigs/status
+  - workers/status
+  verbs:
   - patch
   - update
 - apiGroups:
