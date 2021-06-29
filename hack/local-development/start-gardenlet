@@ -56,7 +56,16 @@ else
   esac
 fi
 
-# cleanup a bit to make the generated file look a bit neater
+# fetch seed kubeconfig
+seedKubeconfigName="$(echo "$seedConfig" | jq -r '.spec.secretRef.name')"
+seedKubeconfigNamespace="$(echo "$seedConfig" | jq -r '.spec.secretRef.namespace')"
+seedKubeconfig="$DEV_DIR/gardenlet-seed-$SEED_NAME.conf"
+
+kubectl --kubeconfig="$GARDEN_KUBECONFIG" --namespace "$seedKubeconfigNamespace" get secret "$seedKubeconfigName" -o json |
+  jq -r '.data.kubeconfig' |
+  base64 -d > "$seedKubeconfig"
+
+# cleanup a bit to make the generated configuration file look a bit neater
 seedConfig="$(echo "$seedConfig" | jq 'del(.apiVersion,.kind,.status,.metadata.annotations,.metadata.managedFields)')"
 
 # create a fresh copy of the gardenlet configuration, then append the current seed config
@@ -75,7 +84,7 @@ else
 
   echo "Starting gardenlet for seed $SEED_NAME..."
 
-  KUBECONFIG="$kubeconfig" \
+  KUBECONFIG="$seedKubeconfig" \
   GARDEN_KUBECONFIG="$GARDEN_KUBECONFIG" \
   IMAGEVECTOR_OVERWRITE="$file_imagevector_overwrite" \
   GO111MODULE=on \
