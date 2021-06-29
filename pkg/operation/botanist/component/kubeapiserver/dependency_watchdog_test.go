@@ -45,12 +45,7 @@ var _ = Describe("DependencyWatchdog", func() {
 									{
 										Key:      "role",
 										Operator: "NotIn",
-										Values:   []string{"main"},
-									},
-									{
-										Key:      "role",
-										Operator: "NotIn",
-										Values:   []string{"apiserver"},
+										Values:   []string{"main", "apiserver"},
 									},
 								},
 							},

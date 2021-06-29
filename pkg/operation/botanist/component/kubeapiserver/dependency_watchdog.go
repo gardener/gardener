@@ -50,12 +50,7 @@ func DependencyWatchdogEndpointConfiguration() (map[string]restarterapi.Service,
 							{
 								Key:      v1beta1constants.LabelRole,
 								Operator: metav1.LabelSelectorOpNotIn,
-								Values:   []string{v1beta1constants.ETCDRoleMain},
-							},
-							{
-								Key:      v1beta1constants.LabelRole,
-								Operator: metav1.LabelSelectorOpNotIn,
-								Values:   []string{v1beta1constants.LabelAPIServer},
+								Values:   []string{v1beta1constants.ETCDRoleMain, v1beta1constants.LabelAPIServer},
 							},
 						},
 					},
