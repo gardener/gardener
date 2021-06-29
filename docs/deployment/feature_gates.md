@@ -23,13 +23,25 @@ The following tables are a summary of the feature gates that you can set on diff
 | Logging | `false` | `Alpha` | `0.13` | |
 | HVPA | `false` | `Alpha` | `0.31` | |
 | HVPAForShootedSeed | `false` | `Alpha` | `0.32` | |
+| ManagedIstio | `false` | `Alpha` | `1.5` | `1.18` |
 | ManagedIstio | `true` | `Beta` | `1.19` | |
+| APIServerSNI | `false` | `Alpha` | `1.7` | `1.18` |
 | APIServerSNI | `true` | `Beta` | `1.19` | |
-| MountHostCADirectories | `false` | `Alpha` | `1.11.0` | `1.25.0` |
-| MountHostCADirectories | `true` | `Beta` | `1.26.0` | |
-| SeedChange | `false` | `Alpha` | `1.12.0` | |
-| SeedKubeScheduler | `false` | `Alpha` | `1.15.0` | |
-| ReversedVPN | `false` | `Alpha` | `1.22.0` | |
+| SeedChange | `false` | `Alpha` | `1.12` | |
+| SeedKubeScheduler | `false` | `Alpha` | `1.15` | |
+| ReversedVPN | `false` | `Alpha` | `1.22` | |
+
+## Feature gates for graduated or deprecated features
+
+| Feature | Default | Stage | Since | Until |
+| --- | --- | --- | --- | --- |
+| NodeLocalDNS | `false` | `Alpha` | `1.7` | |
+| NodeLocalDNS | | `Removed` | `1.26` | |
+| KonnectivityTunnel | `false` | `Alpha` | `1.6` | |
+| KonnectivityTunnel | | `Removed` | `1.27` | |
+| MountHostCADirectories | `false` | `Alpha` | `1.11` | `1.25` |
+| MountHostCADirectories | `true` | `Beta` | `1.26` | `1.27` |
+| MountHostCADirectories | `true` | `GA` | `1.27` | |
 
 ## Using a feature
 

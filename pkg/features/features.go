@@ -69,6 +69,7 @@ const (
 	// owner @danielfoehrKn
 	// alpha: v1.11.0
 	// beta: v1.26.0
+	// GA: v1.27.0
 	MountHostCADirectories featuregate.Feature = "MountHostCADirectories"
 
 	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
