@@ -39,6 +39,7 @@ rules:
   - security.istio.io
   - networking.istio.io
   - authentication.istio.io
+  - telemetry.istio.io
   verbs:
   - get
   - watch
