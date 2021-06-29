@@ -373,6 +373,8 @@ const (
 	AnnotationShootKonnectivityTunnel = "alpha.featuregates.shoot.gardener.cloud/konnectivity-tunnel"
 	// AnnotationReversedVPN moves the vpn-server to the seed.
 	AnnotationReversedVPN = "alpha.featuregates.shoot.gardener.cloud/reversed-vpn"
+	// AnnotationNodeLocalDNS enables a per node dns cache on the shoot cluster.
+	AnnotationNodeLocalDNS = "alpha.featuregates.shoot.gardener.cloud/node-local-dns"
 
 	// AnnotationShootAPIServerSNIPodInjector is the key for an annotation of a Shoot cluster whose value indicates
 	// if pod injection of 'KUBERNETES_SERVICE_HOST' environment variable should happen for clusters where APIServerSNI

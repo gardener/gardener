@@ -68,7 +68,7 @@ var _ = Describe("Networkpolicies", func() {
 			expectGetUpdate(ctx, c, constructNPAllowToAggregatePrometheus(namespace))
 			expectGetUpdate(ctx, c, constructNPAllowToAllShootAPIServers(namespace, values.SNIEnabled))
 			expectGetUpdate(ctx, c, constructNPAllowToBlockedCIDRs(namespace, values.BlockedAddresses))
-			expectGetUpdate(ctx, c, constructNPAllowToDNS(namespace, values.NodeLocalDNSEnabled, values.DNSServerAddress, values.NodeLocalIPVSAddress))
+			expectGetUpdate(ctx, c, constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))
 			expectGetUpdate(ctx, c, constructNPDenyAll(namespace, values.DenyAllTraffic))
 			expectGetUpdate(ctx, c, constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))
 			expectGetUpdate(ctx, c, constructNPAllowToPublicNetworks(namespace, values.BlockedAddresses))
@@ -77,7 +77,7 @@ var _ = Describe("Networkpolicies", func() {
 			Expect(deployer.Deploy(ctx)).To(Succeed())
 		})
 
-		It("w/ SNI enabled, w/ blocked addresses, w/ node-local DNS, w/ deny all, w/ private network peers, w/ shoot network peers", func() {
+		It("w/ SNI enabled, w/ blocked addresses, w/ deny all, w/ private network peers, w/ shoot network peers", func() {
 			values = Values{
 				ShootNetworkPeers: []networkingv1.NetworkPolicyPeer{
 					{IPBlock: &networkingv1.IPBlock{CIDR: "1.2.3.4/5"}},
@@ -91,7 +91,6 @@ var _ = Describe("Networkpolicies", func() {
 						{IPBlock: &networkingv1.IPBlock{CIDR: "6.7.8.9/10"}},
 					},
 					DenyAllTraffic:       true,
-					NodeLocalDNSEnabled:  true,
 					NodeLocalIPVSAddress: pointer.StringPtr("node-local-ipvs-address"),
 					DNSServerAddress:     pointer.StringPtr("dns-server-address"),
 				},
@@ -101,7 +100,7 @@ var _ = Describe("Networkpolicies", func() {
 			expectGetUpdate(ctx, c, constructNPAllowToAggregatePrometheus(namespace))
 			expectGetUpdate(ctx, c, constructNPAllowToAllShootAPIServers(namespace, values.SNIEnabled))
 			expectGetUpdate(ctx, c, constructNPAllowToBlockedCIDRs(namespace, values.BlockedAddresses))
-			expectGetUpdate(ctx, c, constructNPAllowToDNS(namespace, values.NodeLocalDNSEnabled, values.DNSServerAddress, values.NodeLocalIPVSAddress))
+			expectGetUpdate(ctx, c, constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))
 			expectGetUpdate(ctx, c, constructNPDenyAll(namespace, values.DenyAllTraffic))
 			expectGetUpdate(ctx, c, constructNPAllowToPrivateNetworks(namespace, values.PrivateNetworkPeers))
 			expectGetUpdate(ctx, c, constructNPAllowToPublicNetworks(namespace, values.BlockedAddresses))

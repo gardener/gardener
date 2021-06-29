@@ -21,12 +21,11 @@ To workaround the issues described above, `node-local-dns` was introduced. The a
 
 ## Configuring NodeLocalDNS
 
-All that needs to be done to enable the usage of the `node-local-dns` feature is to set the corresponding feature-gate to true for the
-`Gardenlet`:
+All that needs to be done to enable the usage of the `node-local-dns` feature is to annotate the `Shoot` resource with the annotation `alpha.featuregates.shoot.gardener.cloud/node-local-dns` set to `"true"`:
 
 ```yaml
- featureGates:
-   NodeLocalDNS: true
+ annotations:
+   alpha.featuregates.shoot.gardener.cloud/node-local-dns: "true"
 ```
 
 It is worth noting that: 
