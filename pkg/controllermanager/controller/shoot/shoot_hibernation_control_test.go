@@ -19,13 +19,11 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	mockgardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned/mock"
-	mockgardencorev1beta1 "github.com/gardener/gardener/pkg/client/core/clientset/versioned/typed/core/v1beta1/mock"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	mockshoot "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/mock"
 	"github.com/gardener/gardener/pkg/logger"
 	mockevent "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/utils/test"
 
@@ -37,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MustParseStandard parses the standardSpec and errors otherwise.
@@ -49,16 +48,14 @@ func MustParseStandard(standardSpec string) cron.Schedule {
 var _ = Describe("Shoot Hibernation", func() {
 	var (
 		ctrl         *gomock.Controller
-		c            *mockgardencore.MockInterface
-		gardenClient *fakeclientset.ClientSet
+		gardenClient *mockclient.MockClient
 
 		ctx = context.TODO()
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		c = mockgardencore.NewMockInterface(ctrl)
-		gardenClient = fakeclientset.NewClientSetBuilder().WithGardenCore(c).Build()
+		gardenClient = mockclient.NewMockClient(ctrl)
 	})
 
 	AfterEach(func() {
@@ -234,28 +231,24 @@ var _ = Describe("Shoot Hibernation", func() {
 	Context("HibernationJob", func() {
 		Describe("#Run", func() {
 			var (
-				gardenIface *mockgardencorev1beta1.MockCoreV1beta1Interface
-				shootIface  *mockgardencorev1beta1.MockShootInterface
-				log         *logrus.Logger
-				recorder    *mockevent.MockEventRecorder
-				shoot       gardencorev1beta1.Shoot
+				log      *logrus.Logger
+				recorder *mockevent.MockEventRecorder
+				shoot    *gardencorev1beta1.Shoot
 
 				namespace string
 				name      string
 			)
 
 			BeforeEach(func() {
-				gardenIface = mockgardencorev1beta1.NewMockCoreV1beta1Interface(ctrl)
-				shootIface = mockgardencorev1beta1.NewMockShootInterface(ctrl)
 				log = logger.NewNopLogger()
 				recorder = mockevent.NewMockEventRecorder(ctrl)
 
 				namespace = "foo"
 				name = "bar"
-				shoot = gardencorev1beta1.Shoot{
+				shoot = &gardencorev1beta1.Shoot{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "foo",
-						Name:      "bar",
+						Namespace: namespace,
+						Name:      name,
 					},
 					Spec: gardencorev1beta1.ShootSpec{
 						Hibernation: &gardencorev1beta1.Hibernation{},
@@ -264,21 +257,21 @@ var _ = Describe("Shoot Hibernation", func() {
 			})
 			It("should set the hibernation status correctly to enabled", func() {
 				enabled := true
-				job := NewHibernationJob(ctx, gardenClient, log, recorder, &shoot, enabled)
+				job := NewHibernationJob(ctx, gardenClient, log, recorder, shoot, enabled)
 
 				gomock.InOrder(
-					c.EXPECT().CoreV1beta1().Return(gardenIface),
-					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
-					shootIface.EXPECT().Get(context.Background(), name, metav1.GetOptions{}).Return(&shoot, nil),
-
-					c.EXPECT().CoreV1beta1().Return(gardenIface),
-					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
-					shootIface.EXPECT().Update(context.Background(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), metav1.UpdateOptions{}).Do(func(_ context.Context, actual *gardencorev1beta1.Shoot, _ metav1.UpdateOptions) {
-						Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1beta1.Hibernation{
-							Enabled: &enabled,
-						}))
-					}),
-					recorder.EXPECT().Eventf(&shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, "%s", "Hibernating cluster due to schedule"),
+					gardenClient.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shoot), gomock.AssignableToTypeOf(shoot)).
+						Do(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						}),
+					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(shoot), gomock.Any()).
+						Do(func(_ context.Context, actual *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) {
+							Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1beta1.Hibernation{
+								Enabled: &enabled,
+							}))
+						}),
+					recorder.EXPECT().Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, "%s", "Hibernating cluster due to schedule"),
 				)
 
 				job.Run()
@@ -286,20 +279,21 @@ var _ = Describe("Shoot Hibernation", func() {
 
 			It("should set the hibernation status correctly to disabled", func() {
 				enabled := false
-				job := NewHibernationJob(ctx, gardenClient, log, recorder, &shoot, enabled)
+				job := NewHibernationJob(ctx, gardenClient, log, recorder, shoot, enabled)
 
-				gomock.InOrder(c.EXPECT().CoreV1beta1().Return(gardenIface),
-					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
-					shootIface.EXPECT().Get(context.Background(), name, metav1.GetOptions{}).Return(&shoot, nil),
-
-					c.EXPECT().CoreV1beta1().Return(gardenIface),
-					gardenIface.EXPECT().Shoots(namespace).Return(shootIface),
-					shootIface.EXPECT().Update(context.Background(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), metav1.UpdateOptions{}).Do(func(_ context.Context, actual *gardencorev1beta1.Shoot, _ metav1.UpdateOptions) {
-						Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1beta1.Hibernation{
-							Enabled: &enabled,
-						}))
-					}),
-					recorder.EXPECT().Eventf(&shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationDisabled, "%s", "Waking up cluster due to schedule").Times(1),
+				gomock.InOrder(
+					gardenClient.EXPECT().Get(gomock.Any(), client.ObjectKeyFromObject(shoot), gomock.AssignableToTypeOf(shoot)).
+						Do(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						}),
+					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(shoot), gomock.Any()).
+						Do(func(_ context.Context, actual *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) {
+							Expect(actual.Spec.Hibernation).To(Equal(&gardencorev1beta1.Hibernation{
+								Enabled: &enabled,
+							}))
+						}),
+					recorder.EXPECT().Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationDisabled, "%s", "Waking up cluster due to schedule"),
 				)
 
 				job.Run()

@@ -41,7 +41,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -235,7 +234,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	verifyBackupBucket(backupBucket, 1, 1, timeIn1, lastOperationTypeMatcher, lastOperationStateMatcher)
 
 	By("provoke error in reconciliation")
-	Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
+	Expect(patchBackupBucketObject(ctx, c, backupBucket, func() {
 		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyDesiredOperationState, test.AnnotationValueDesiredOperationStateError)
 
 		// This is to trigger a reconciliation for this error provocation
@@ -249,7 +248,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	Expect(waitForBackupBucketToBeErroneous(ctx, c, gardencorev1beta1.LastOperationTypeReconcile, backupBucketObjectKey)).To(Succeed())
 
 	By("fixing reconciliation error")
-	Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
+	Expect(patchBackupBucketObject(ctx, c, backupBucket, func() {
 		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyDesiredOperationState, "")
 	})).To(Succeed())
 
@@ -263,7 +262,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 
 	By("update time-in annotation (no generation change and no operation annotation -> no reconciliation)")
 	timeIn2 := time.Now().String()
-	Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
+	Expect(patchBackupBucketObject(ctx, c, backupBucket, func() {
 		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyTimeIn, timeIn2)
 	})).To(Succeed())
 
@@ -282,7 +281,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	if ignoreOperationAnnotation {
 		By("update backupbucket spec (generation change -> reconciliation)")
 		timeIn3 := time.Now().String()
-		Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
+		Expect(patchBackupBucketObject(ctx, c, backupBucket, func() {
 			metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyTimeIn, timeIn3)
 			backupBucket.Spec.Region += "1"
 		})).To(Succeed())
@@ -297,7 +296,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 
 		By("update time-in annotation (to test secret mapping)")
 		timeIn4 := time.Now().String()
-		Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
+		Expect(patchBackupBucketObject(ctx, c, backupBucket, func() {
 			metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyTimeIn, timeIn4)
 		})).To(Succeed())
 
@@ -325,7 +324,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	} else {
 		By("update backupbucket spec (generation change but no operation annotation -> no reconciliation)")
 		timeIn3 := time.Now().String()
-		Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
+		Expect(patchBackupBucketObject(ctx, c, backupBucket, func() {
 			metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyTimeIn, timeIn3)
 			backupBucket.Spec.Region += "1"
 		})).To(Succeed())
@@ -336,7 +335,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 		verifyBackupBucket(backupBucket, 3, 2, timeIn1, Equal(gardencorev1beta1.LastOperationTypeReconcile), lastOperationStateMatcher)
 
 		By("add operation annotation (should trigger reconciliation)")
-		Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
+		Expect(patchBackupBucketObject(ctx, c, backupBucket, func() {
 			metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
 		})).To(Succeed())
 
@@ -351,7 +350,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	}
 
 	By("provoke error in deletion")
-	Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
+	Expect(patchBackupBucketObject(ctx, c, backupBucket, func() {
 		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyDesiredOperationState, test.AnnotationValueDesiredOperationStateError)
 	})).To(Succeed())
 
@@ -362,7 +361,7 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	Expect(waitForBackupBucketToBeErroneous(ctx, c, gardencorev1beta1.LastOperationTypeDelete, backupBucketObjectKey)).To(Succeed())
 
 	By("fixing deletion error")
-	Expect(updateBackupBucketObject(ctx, c, backupBucket, func() {
+	Expect(patchBackupBucketObject(ctx, c, backupBucket, func() {
 		metav1.SetMetaDataAnnotation(&backupBucket.ObjectMeta, test.AnnotationKeyDesiredOperationState, "")
 	})).To(Succeed())
 
@@ -379,14 +378,10 @@ func runTest(c client.Client, namespaceName string, ignoreOperationAnnotation bo
 	Expect(secret.Finalizers).NotTo(ConsistOf(backupbucketcontroller.FinalizerName))
 }
 
-func updateBackupBucketObject(ctx context.Context, c client.Client, backupBucket *extensionsv1alpha1.BackupBucket, transform func()) error {
-	return retry.RetryOnConflict(retry.DefaultBackoff, func() (err error) {
-		if err := c.Get(ctx, client.ObjectKey{Namespace: backupBucket.Namespace, Name: backupBucket.Name}, backupBucket); err != nil {
-			return err
-		}
-		transform()
-		return c.Update(ctx, backupBucket)
-	})
+func patchBackupBucketObject(ctx context.Context, c client.Client, backupBucket *extensionsv1alpha1.BackupBucket, transform func()) error {
+	patch := client.MergeFrom(backupBucket.DeepCopy())
+	transform()
+	return c.Patch(ctx, backupBucket, patch)
 }
 
 func waitForBackupBucketToBeReady(ctx context.Context, c client.Client, logger *logrus.Entry, backupBucket *extensionsv1alpha1.BackupBucket, minOperationUpdateTime ...metav1.Time) error {

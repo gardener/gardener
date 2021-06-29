@@ -69,7 +69,7 @@ func NewGardenerScheduler(
 	schedulerController := &SchedulerController{
 		reconciler: NewReconciler(logger.Logger, config, gardenClient, recorder),
 		config:     config,
-		shootQueue: workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(config.Schedulers.Shoot.RetrySyncPeriod.Duration, 12*time.Hour), "gardener-shoot-scheduler"),
+		shootQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "gardener-shoot-scheduler"),
 		workerCh:   make(chan int),
 	}
 

@@ -170,7 +170,7 @@ users:
 
 			ginkgo.By("Update Plant secret with invalid kubeconfig")
 
-			err = framework.UpdateSecret(ctx, f.GardenClient, secret)
+			err = framework.PatchSecret(ctx, f.GardenClient.Client(), secret)
 			framework.ExpectNoError(err)
 
 			ginkgo.By("Wait for PlantController to update to status 'unknown'")
@@ -185,7 +185,7 @@ users:
 
 			// remove data.kubeconfigpath to update the secret with false information
 			secret.Data[framework.KubeconfigSecretKeyName] = nil
-			err = framework.UpdateSecret(ctx, f.GardenClient, secret)
+			err = framework.PatchSecret(ctx, f.GardenClient.Client(), secret)
 			framework.ExpectNoError(err)
 
 			ginkgo.By("Wait for PlantController to update to status 'unknown'")
@@ -205,7 +205,7 @@ users:
 		framework.ExpectNoError(f.WaitForPlantToBeReconciledWithUnknownStatus(ctx, plant))
 
 		secret.Data[framework.KubeconfigSecretKeyName] = validKubeConfigContent
-		err = framework.UpdateSecret(ctx, f.GardenClient, secret)
+		err = framework.PatchSecret(ctx, f.GardenClient.Client(), secret)
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Plant secret updated to contain valid kubeconfig again")

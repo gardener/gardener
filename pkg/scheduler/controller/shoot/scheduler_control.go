@@ -36,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -108,7 +107,13 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	schedulerLogger := logger.NewFieldLogger(logger.Logger, "scheduler", "shoot").WithField("shoot", shoot.Name)
+	schedulerLogger := r.logger.WithField("scheduler", "shoot").
+		WithField("shoot", client.ObjectKeyFromObject(shoot).String())
+
+	if shoot.Spec.SeedName != nil {
+		schedulerLogger.Infof("shoot already scheduled onto seed %q, nothing left to do", *shoot.Spec.SeedName)
+		return reconcile.Result{}, nil
+	}
 
 	// If no Seed is referenced, we try to determine an adequate one.
 	seed, err := determineSeed(ctx, r.gardenClient.Cache(), shoot, r.config.Schedulers.Shoot.Strategy)
@@ -117,24 +122,10 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	updateShoot := func(ctx context.Context, shootToUpdate *gardencorev1beta1.Shoot) error {
-		// need retry logic, because the controller-manager is acting on it at the same time: setting Status to Pending until scheduled
-		_, err = kutil.TryUpdateShoot(ctx, r.gardenClient.GardenCore(), retry.DefaultBackoff, shootToUpdate.ObjectMeta, func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			if shoot.Spec.SeedName != nil {
-				alreadyScheduledErr := common.NewAlreadyScheduledError(fmt.Sprintf("shoot has already a seed assigned when trying to schedule the shoot to %s", *shootToUpdate.Spec.SeedName))
-				return nil, &alreadyScheduledErr
-			}
-			shoot.Spec.SeedName = shootToUpdate.Spec.SeedName
-			return shoot, nil
-		})
-		return err
-	}
-
-	if err := UpdateShootToBeScheduledOntoSeed(ctx, shoot, seed, updateShoot); err != nil {
-		// there was an external change while trying to schedule the shoot. The shoot is already scheduled. Fine, do not raise an error.
-		if _, ok := err.(*common.AlreadyScheduledError); ok {
-			return reconcile.Result{}, nil
-		}
+	// attempt scheduling shoot, run with optimistic locking to prevent any wrongful (re)scheduling in case we missed
+	// some updates
+	shoot.Spec.SeedName = &seed.Name
+	if err := r.gardenClient.Client().Update(ctx, shoot); err != nil {
 		r.reportFailedScheduling(shoot, err)
 		return reconcile.Result{}, err
 	}
@@ -145,11 +136,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reportFailedScheduling(shoot *gardencorev1beta1.Shoot, err error) {
-	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, MsgUnschedulable+" '%s' : %+v", shoot.Name, err)
+	r.reportEvent(shoot, corev1.EventTypeWarning, gardencorev1beta1.ShootEventSchedulingFailed, MsgUnschedulable+" '%s': %+v", shoot.Name, err)
 }
 
-func (r *reconciler) reportEvent(project *gardencorev1beta1.Shoot, eventType string, eventReason, messageFmt string, args ...interface{}) {
-	r.recorder.Eventf(project, eventType, eventReason, messageFmt, args...)
+func (r *reconciler) reportEvent(shoot *gardencorev1beta1.Shoot, eventType string, eventReason, messageFmt string, args ...interface{}) {
+	r.recorder.Eventf(shoot, eventType, eventReason, messageFmt, args...)
 }
 
 // determineSeed returns an appropriate Seed cluster (or nil).
@@ -448,14 +439,6 @@ func ignoreSeedDueToDNSConfiguration(seed *gardencorev1beta1.Seed, shoot *garden
 		return false
 	}
 	return !gardencorev1beta1helper.ShootUsesUnmanagedDNS(shoot)
-}
-
-type executeSchedulingRequest = func(context.Context, *gardencorev1beta1.Shoot) error
-
-// UpdateShootToBeScheduledOntoSeed sets the seed name where the shoot should be scheduled on. Then it executes the actual update call to the API server. The call is capsuled to allow for easier testing.
-func UpdateShootToBeScheduledOntoSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, executeSchedulingRequest executeSchedulingRequest) error {
-	shoot.Spec.SeedName = &seed.Name
-	return executeSchedulingRequest(ctx, shoot)
 }
 
 func errorMapToString(errs map[string]error) string {

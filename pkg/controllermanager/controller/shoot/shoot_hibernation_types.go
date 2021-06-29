@@ -20,15 +20,13 @@ import (
 	"sync"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/robfig/cron"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Cron is an interface that allows mocking cron.Cron.
@@ -93,7 +91,7 @@ func NewHibernationScheduleRegistry() HibernationScheduleRegistry {
 
 type hibernationJob struct {
 	ctx          context.Context
-	gardenClient kubernetes.Interface
+	gardenClient client.Client
 	logger       logrus.FieldLogger
 	recorder     record.EventRecorder
 	target       *gardencorev1beta1.Shoot
@@ -102,23 +100,27 @@ type hibernationJob struct {
 
 // Run implements cron.Job.
 func (h *hibernationJob) Run() {
-	if _, err := kutil.TryUpdateShootHibernation(h.ctx, h.gardenClient.GardenCore(), retry.DefaultBackoff, h.target.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			if shoot.Spec.Hibernation == nil || !equality.Semantic.DeepEqual(h.target.Spec.Hibernation.Schedules, shoot.Spec.Hibernation.Schedules) {
-				return nil, fmt.Errorf("shoot %s/%s hibernation schedule changed mid-air", shoot.Namespace, shoot.Name)
-			}
-			if shoot.Status.LastOperation == nil || shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateFailed {
-				shoot.Spec.Hibernation.Enabled = &h.enabled
-			}
+	h.logger.Infof("Setting hibernation.enabled to %t", h.enabled)
+	if err := func() error {
+		shoot := &gardencorev1beta1.Shoot{}
+		if err := h.gardenClient.Get(h.ctx, client.ObjectKeyFromObject(h.target), shoot); err != nil {
+			return err
+		}
+		patch := client.MergeFrom(shoot.DeepCopy())
 
-			return shoot, nil
-		},
-	); err != nil {
+		if shoot.Spec.Hibernation == nil || !equality.Semantic.DeepEqual(h.target.Spec.Hibernation.Schedules, shoot.Spec.Hibernation.Schedules) {
+			return fmt.Errorf("shoot %s/%s hibernation schedule changed mid-air", shoot.Namespace, shoot.Name)
+		}
+		if shoot.Status.LastOperation == nil || shoot.Status.LastOperation.State != gardencorev1beta1.LastOperationStateFailed {
+			shoot.Spec.Hibernation.Enabled = &h.enabled
+		}
+
+		return h.gardenClient.Patch(h.ctx, shoot, patch)
+	}(); err != nil {
 		h.logger.Errorf("Could not set hibernation.enabled to %t: %+v", h.enabled, err)
 		return
 	}
 
-	h.logger.Debugf("Successfully set hibernation.enabled to %t", h.enabled)
 	if h.enabled {
 		msg := "Hibernating cluster due to schedule"
 		h.recorder.Eventf(h.target, corev1.EventTypeNormal, gardencorev1beta1.ShootEventHibernationEnabled, "%s", msg)
@@ -129,6 +131,6 @@ func (h *hibernationJob) Run() {
 }
 
 // NewHibernationJob creates a new cron.Job that sets the hibernation of the given shoot to enabled when it triggers.
-func NewHibernationJob(ctx context.Context, gardenClient kubernetes.Interface, logger logrus.FieldLogger, recorder record.EventRecorder, target *gardencorev1beta1.Shoot, enabled bool) cron.Job {
+func NewHibernationJob(ctx context.Context, gardenClient client.Client, logger logrus.FieldLogger, recorder record.EventRecorder, target *gardencorev1beta1.Shoot, enabled bool) cron.Job {
 	return &hibernationJob{ctx, gardenClient, logger, recorder, target, enabled}
 }

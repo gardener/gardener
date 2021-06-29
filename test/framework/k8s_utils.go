@@ -36,7 +36,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
-	k8sretry "k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -348,19 +347,16 @@ func DownloadKubeconfig(ctx context.Context, client kubernetes.Interface, namesp
 	return nil
 }
 
-// UpdateSecret updates the Secret with an backoff
-func UpdateSecret(ctx context.Context, k8sClient kubernetes.Interface, secret *corev1.Secret) error {
-	if err := k8sretry.RetryOnConflict(k8sretry.DefaultBackoff, func() (err error) {
-		existingSecret := &corev1.Secret{}
-		if err = k8sClient.Client().Get(ctx, client.ObjectKey{Namespace: secret.Namespace, Name: secret.Name}, existingSecret); err != nil {
-			return err
-		}
-		existingSecret.Data = secret.Data
-		return k8sClient.Client().Update(ctx, existingSecret)
-	}); err != nil {
+// PatchSecret patches the Secret.
+func PatchSecret(ctx context.Context, c client.Client, secret *corev1.Secret) error {
+	existingSecret := &corev1.Secret{}
+	if err := c.Get(ctx, client.ObjectKey{Namespace: secret.Namespace, Name: secret.Name}, existingSecret); err != nil {
 		return err
 	}
-	return nil
+	patch := client.MergeFrom(secret.DeepCopy())
+
+	existingSecret.Data = secret.Data
+	return c.Patch(ctx, existingSecret, patch)
 }
 
 // GetObjectFromSecret returns object from secret

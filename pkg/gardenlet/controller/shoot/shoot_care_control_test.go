@@ -23,7 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -34,17 +33,14 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	. "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/care"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 
-	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
@@ -52,9 +48,8 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -76,8 +71,7 @@ var _ = Describe("Shoot Care Control", func() {
 		var (
 			ctx context.Context
 
-			ctrl                      *gomock.Controller
-			gardenClient              *mockclient.MockClient
+			gardenClient              client.Client
 			gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
 			careSyncPeriod            time.Duration
 
@@ -86,26 +80,13 @@ var _ = Describe("Shoot Care Control", func() {
 			seedName, shootName, shootNamespace string
 			req                                 reconcile.Request
 			shoot                               *gardencorev1beta1.Shoot
-
-			gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
 		)
 
 		BeforeEach(func() {
 			ctx = context.Background()
 
-			ctrl = gomock.NewController(GinkgoT())
-			gardenClient = mockclient.NewMockClient(ctrl)
+			gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 			careSyncPeriod = 1 * time.Minute
-
-			gardenSecrets = []corev1.Secret{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        "internal-domain-secret",
-						Annotations: map[string]string{gutil.DNSProvider: "fooDNS", gutil.DNSDomain: "foo.bar"},
-						Labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
-					},
-				},
-			}
 
 			seedName = "seed"
 			seed = &gardencorev1beta1.Seed{
@@ -120,6 +101,15 @@ var _ = Describe("Shoot Care Control", func() {
 					},
 				},
 			}
+
+			gardenSecrets = []corev1.Secret{{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "internal-domain-secret",
+					Namespace:   gutil.ComputeGardenNamespace(seedName),
+					Annotations: map[string]string{gutil.DNSProvider: "fooDNS", gutil.DNSDomain: "foo.bar"},
+					Labels:      map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleInternalDomain},
+				},
+			}}
 
 			shootName = "shoot"
 			shootNamespace = "project"
@@ -155,34 +145,19 @@ var _ = Describe("Shoot Care Control", func() {
 			Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 		})
 
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
 		JustBeforeEach(func() {
-			gardenClient.EXPECT().List(
-				gomock.Any(),
-				gomock.AssignableToTypeOf(&corev1.SecretList{}),
-				&client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(gardenRoleReq)},
-			).DoAndReturn(
-				func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
-					secrets, ok := list.(*corev1.SecretList)
-					Expect(ok).To(BeTrue())
-					secrets.Items = gardenSecrets
-					return nil
-				}).MaxTimes(1)
+			Expect(gardenClient.Create(ctx, shoot)).To(Succeed())
+
+			for _, secret := range gardenSecrets {
+				Expect(gardenClient.Create(ctx, secret.DeepCopy())).To(Succeed())
+			}
 		})
 
 		Context("when health check setup is broken", func() {
-			var (
-				gardenCoreClient *fake.Clientset
-				clientMapBuilder *fakeclientmap.ClientMapBuilder
-			)
+			var clientMapBuilder *fakeclientmap.ClientMapBuilder
 
 			JustBeforeEach(func() {
-				gardenCoreClient = fake.NewSimpleClientset(shoot)
 				gardenClientSet := fakeclientset.NewClientSetBuilder().
-					WithGardenCore(gardenCoreClient).
 					WithClient(gardenClient).
 					Build()
 				clientMapBuilder.WithClientSetForKey(keys.ForGarden(), gardenClientSet)
@@ -203,8 +178,9 @@ var _ = Describe("Shoot Care Control", func() {
 					careControl = NewCareReconciler(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
 
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
-					updatedShoot, err := gardenCoreClient.CoreV1beta1().Shoots(shootNamespace).Get(context.Background(), shootName, metav1.GetOptions{})
-					Expect(err).To(Not(HaveOccurred()))
+
+					updatedShoot := &gardencorev1beta1.Shoot{}
+					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(consistOfConditionsInUnknownStatus("Precondition failed: operation could not be initialized"))
 					Expect(updatedShoot.Status.Constraints).To(consistOfConstraintsInUnknownStatus("Precondition failed: operation could not be initialized"))
 				})
@@ -241,8 +217,9 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should report a setup failure", func() {
 					careControl = NewCareReconciler(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
-					updatedShoot, err := gardenCoreClient.CoreV1beta1().Shoots(shootNamespace).Get(context.Background(), shootName, metav1.GetOptions{})
-					Expect(err).To(Not(HaveOccurred()))
+
+					updatedShoot := &gardencorev1beta1.Shoot{}
+					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(consistOfConditionsInUnknownStatus("Precondition failed: seed client cannot be constructed"))
 					Expect(updatedShoot.Status.Constraints).To(consistOfConstraintsInUnknownStatus("Precondition failed: seed client cannot be constructed"))
 				})
@@ -251,9 +228,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 		Context("when health check setup is successful", func() {
 			var (
-				seedClient       *mockclient.MockClient
-				clientMap        clientmap.ClientMap
-				gardenCoreClient *fake.Clientset
+				clientMap clientmap.ClientMap
 
 				managedSeed *seedmanagementv1alpha1.ManagedSeed
 
@@ -262,14 +237,10 @@ var _ = Describe("Shoot Care Control", func() {
 			)
 
 			JustBeforeEach(func() {
-				gardenCoreClient = fake.NewSimpleClientset(shoot)
-
 				gardenClientSet := fakeclientset.NewClientSetBuilder().
-					WithGardenCore(gardenCoreClient).
 					WithClient(gardenClient).
 					Build()
 				seedClientSet := fakeclientset.NewClientSetBuilder().
-					WithClient(seedClient).
 					Build()
 				clientMap = fakeclientmap.NewClientMapBuilder().
 					WithClientSetForKey(keys.ForGarden(), gardenClientSet).
@@ -291,10 +262,6 @@ var _ = Describe("Shoot Care Control", func() {
 					test.WithVar(&NewGarbageCollector, nopGarbageCollectorFunc()),
 				)
 				careControl = NewCareReconciler(clientMap, gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
-			})
-
-			BeforeEach(func() {
-				seedClient = mockclient.NewMockClient(ctrl)
 			})
 
 			AfterEach(func() {
@@ -321,42 +288,35 @@ var _ = Describe("Shoot Care Control", func() {
 					}
 				})
 				It("should not set conditions / constraints", func() {
-					var updatedShoot *gardencorev1beta1.Shoot
-					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
-							updatedShoot = shoot
-							return nil
-						})
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+					updatedShoot := &gardencorev1beta1.Shoot{}
+					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 					Expect(updatedShoot.Status.Constraints).To(BeEmpty())
 					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
 				It("should remove conditions / constraints", func() {
 					apiServerCondition := gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootAPIServerAvailable,
-						Status:         gardencorev1beta1.ConditionTrue,
-						LastUpdateTime: metav1.Now(),
+						Type:   gardencorev1beta1.ShootAPIServerAvailable,
+						Status: gardencorev1beta1.ConditionTrue,
 					}
 
 					hibernationConstraint := gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootHibernationPossible,
-						Status:         gardencorev1beta1.ConditionFalse,
-						LastUpdateTime: metav1.Now(),
+						Type:   gardencorev1beta1.ShootHibernationPossible,
+						Status: gardencorev1beta1.ConditionFalse,
 					}
 
 					shoot.Status = gardencorev1beta1.ShootStatus{
 						Conditions:  []gardencorev1beta1.Condition{apiServerCondition},
 						Constraints: []gardencorev1beta1.Condition{hibernationConstraint},
 					}
+					Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
 
-					var updatedShoot *gardencorev1beta1.Shoot
-					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
-							updatedShoot = shoot
-							return nil
-						})
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+					updatedShoot := &gardencorev1beta1.Shoot{}
+					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 					Expect(updatedShoot.Status.Constraints).To(BeEmpty())
 					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
@@ -388,41 +348,34 @@ var _ = Describe("Shoot Care Control", func() {
 				})
 
 				It("should not set conditions / constraints", func() {
-					var updatedShoot *gardencorev1beta1.Shoot
-					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
-							updatedShoot = shoot
-							return nil
-						})
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+					updatedShoot := &gardencorev1beta1.Shoot{}
+					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
 				It("should not amend existing conditions / constraints", func() {
 					apiServerCondition := gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootAPIServerAvailable,
-						Status:         gardencorev1beta1.ConditionTrue,
-						LastUpdateTime: metav1.Now(),
+						Type:   gardencorev1beta1.ShootAPIServerAvailable,
+						Status: gardencorev1beta1.ConditionTrue,
 					}
 
 					hibernationConstraint := gardencorev1beta1.Condition{
-						Type:           gardencorev1beta1.ShootHibernationPossible,
-						Status:         gardencorev1beta1.ConditionFalse,
-						LastUpdateTime: metav1.Now(),
+						Type:   gardencorev1beta1.ShootHibernationPossible,
+						Status: gardencorev1beta1.ConditionFalse,
 					}
 
 					shoot.Status = gardencorev1beta1.ShootStatus{
 						Conditions:  []gardencorev1beta1.Condition{apiServerCondition},
 						Constraints: []gardencorev1beta1.Condition{hibernationConstraint},
 					}
+					Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
 
-					var updatedShoot *gardencorev1beta1.Shoot
-					gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-						func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
-							updatedShoot = shoot
-							return nil
-						})
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+					updatedShoot := &gardencorev1beta1.Shoot{}
+					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(ConsistOf(apiServerCondition))
 					Expect(updatedShoot.Status.Constraints).To(ConsistOf(hibernationConstraint))
 					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
@@ -449,9 +402,8 @@ var _ = Describe("Shoot Care Control", func() {
 							Reason: "bar",
 						},
 						{
-							Type:           gardencorev1beta1.ShootEveryNodeReady,
-							Status:         gardencorev1beta1.ConditionProgressing,
-							LastUpdateTime: metav1.Now(),
+							Type:   gardencorev1beta1.ShootEveryNodeReady,
+							Status: gardencorev1beta1.ConditionProgressing,
 						},
 						{
 							Type:    gardencorev1beta1.ShootSystemComponentsHealthy,
@@ -524,11 +476,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 						managedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 
-						gardenClient.EXPECT().Get(gomock.Any(), kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(
-							func(_ context.Context, _ client.ObjectKey, s *gardencorev1beta1.Seed) error {
-								*s = *seed
-								return nil
-							})
+						Expect(gardenClient.Create(ctx, seed)).To(Succeed())
 					})
 
 					AfterEach(func() {
@@ -536,13 +484,10 @@ var _ = Describe("Shoot Care Control", func() {
 					})
 
 					It("should merge shoot and seed conditions", func() {
-						var updatedShoot *gardencorev1beta1.Shoot
-						gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
-								updatedShoot = shoot
-								return nil
-							})
 						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+						updatedShoot := &gardencorev1beta1.Shoot{}
+						Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(append(conditions, seedConditions...)))
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
 						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
@@ -552,29 +497,25 @@ var _ = Describe("Shoot Care Control", func() {
 				Context("when shoot doesn't have a last operation", func() {
 					It("should update the shoot conditions", func() {
 						apiServerCondition := gardencorev1beta1.Condition{
-							Type:           gardencorev1beta1.ShootAPIServerAvailable,
-							Status:         gardencorev1beta1.ConditionUnknown,
-							LastUpdateTime: metav1.Now(),
+							Type:   gardencorev1beta1.ShootAPIServerAvailable,
+							Status: gardencorev1beta1.ConditionUnknown,
 						}
 
 						hibernationConstraint := gardencorev1beta1.Condition{
-							Type:           gardencorev1beta1.ShootHibernationPossible,
-							Status:         gardencorev1beta1.ConditionFalse,
-							LastUpdateTime: metav1.Now(),
+							Type:   gardencorev1beta1.ShootHibernationPossible,
+							Status: gardencorev1beta1.ConditionFalse,
 						}
 
 						shoot.Status = gardencorev1beta1.ShootStatus{
 							Conditions:  []gardencorev1beta1.Condition{apiServerCondition},
 							Constraints: []gardencorev1beta1.Condition{hibernationConstraint},
 						}
+						Expect(gardenClient.Update(ctx, shoot)).To(Succeed())
 
-						var updatedShoot *gardencorev1beta1.Shoot
-						gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
-								updatedShoot = shoot
-								return nil
-							})
 						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+						updatedShoot := &gardencorev1beta1.Shoot{}
+						Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
 						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
@@ -591,13 +532,10 @@ var _ = Describe("Shoot Care Control", func() {
 						}
 					})
 					It("should set shoot to unhealthy", func() {
-						var updatedShoot *gardencorev1beta1.Shoot
-						gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
-								updatedShoot = shoot
-								return nil
-							})
 						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+						updatedShoot := &gardencorev1beta1.Shoot{}
+						Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
 						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusUnhealthy)))
@@ -680,13 +618,10 @@ var _ = Describe("Shoot Care Control", func() {
 						}
 					})
 					It("should set shoot to healthy", func() {
-						var updatedShoot *gardencorev1beta1.Shoot
-						gardenClient.EXPECT().Patch(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{}), gomock.Any()).DoAndReturn(
-							func(_ context.Context, shoot *gardencorev1beta1.Shoot, _ client.Patch, _ ...client.PatchOption) error {
-								updatedShoot = shoot
-								return nil
-							})
 						Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
+
+						updatedShoot := &gardencorev1beta1.Shoot{}
+						Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 					})

@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencore "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -33,7 +32,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -146,9 +144,10 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 
 	var fns []flow.TaskFn
 
-	for _, shoot := range shootList.Items {
+	for _, s := range shootList.Items {
+		shoot := s
 		fns = append(fns, func(ctx context.Context) error {
-			return setShootStatusToUnknown(ctx, c.gardenClient.GardenCore(), shoot)
+			return setShootStatusToUnknown(ctx, c.gardenClient.Client(), &shoot)
 		})
 	}
 
@@ -159,7 +158,7 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	return reconcileAfter(1 * time.Minute)
 }
 
-func setShootStatusToUnknown(ctx context.Context, g gardencore.Interface, shoot gardencorev1beta1.Shoot) error {
+func setShootStatusToUnknown(ctx context.Context, c client.StatusClient, shoot *gardencorev1beta1.Shoot) error {
 	var (
 		reason = "StatusUnknown"
 		msg    = "Gardenlet stopped sending heartbeats."
@@ -189,14 +188,10 @@ func setShootStatusToUnknown(ctx context.Context, g gardencore.Interface, shoot 
 		constraints[conditionType] = c
 	}
 
-	_, err := kutil.TryUpdateShootStatus(ctx, g, retry.DefaultBackoff, shoot.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			shoot.Status.Conditions = gardencorev1beta1helper.MergeConditions(shoot.Status.Conditions, conditionMapToConditions(conditions)...)
-			shoot.Status.Constraints = gardencorev1beta1helper.MergeConditions(shoot.Status.Constraints, conditionMapToConditions(constraints)...)
-			return shoot, nil
-		},
-	)
-	return err
+	patch := client.StrategicMergeFrom(shoot.DeepCopy())
+	shoot.Status.Conditions = gardencorev1beta1helper.MergeConditions(shoot.Status.Conditions, conditionMapToConditions(conditions)...)
+	shoot.Status.Constraints = gardencorev1beta1helper.MergeConditions(shoot.Status.Constraints, conditionMapToConditions(constraints)...)
+	return c.Status().Patch(ctx, shoot, patch)
 }
 
 func conditionMapToConditions(m map[gardencorev1beta1.ConditionType]gardencorev1beta1.Condition) []gardencorev1beta1.Condition {

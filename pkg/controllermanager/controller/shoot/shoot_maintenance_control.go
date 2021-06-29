@@ -23,7 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
@@ -39,7 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -76,7 +75,7 @@ func (c *Controller) shootMaintenanceDelete(obj interface{}) {
 }
 
 // NewShootMaintenanceReconciler creates a new instance of a reconciler which maintains Shoots.
-func NewShootMaintenanceReconciler(l logrus.FieldLogger, gardenClient kubernetes.Interface, config config.ShootMaintenanceControllerConfiguration, recorder record.EventRecorder) reconcile.Reconciler {
+func NewShootMaintenanceReconciler(l logrus.FieldLogger, gardenClient client.Client, config config.ShootMaintenanceControllerConfiguration, recorder record.EventRecorder) reconcile.Reconciler {
 	return &shootMaintenanceReconciler{
 		logger:       l,
 		gardenClient: gardenClient,
@@ -87,14 +86,14 @@ func NewShootMaintenanceReconciler(l logrus.FieldLogger, gardenClient kubernetes
 
 type shootMaintenanceReconciler struct {
 	logger       logrus.FieldLogger
-	gardenClient kubernetes.Interface
+	gardenClient client.Client
 	config       config.ShootMaintenanceControllerConfiguration
 	recorder     record.EventRecorder
 }
 
 func (r *shootMaintenanceReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, shoot); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
 			return reconcile.Result{}, nil
@@ -130,14 +129,14 @@ func requeueAfterDuration(shoot *gardencorev1beta1.Shoot) time.Duration {
 	return duration
 }
 
-func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenClient kubernetes.Interface) error {
+func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *gardencorev1beta1.Shoot, gardenClient client.Client) error {
 	key := fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name)
 
 	shootLogger := r.logger.WithField("shoot", key)
 	shootLogger.Infof("[SHOOT MAINTENANCE] %s", key)
 
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := r.gardenClient.Client().Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
+	if err := r.gardenClient.Get(ctx, kutil.Key(shoot.Spec.CloudProfileName), cloudProfile); err != nil {
 		return err
 	}
 
@@ -153,51 +152,47 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		shootLogger.Error(fmt.Sprintf("Could not maintain kubernetes version: %s", err.Error()))
 	}
 
-	// Update the Shoot resource object.
-	_, err = kutil.TryUpdateShoot(ctx, gardenClient.GardenCore(), retry.DefaultBackoff, shoot.ObjectMeta, func(s *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-		if !apiequality.Semantic.DeepEqual(shoot.Spec.Maintenance.AutoUpdate, s.Spec.Maintenance.AutoUpdate) {
-			return nil, fmt.Errorf("auto update section of Shoot %s/%s changed mid-air", s.Namespace, s.Name)
-		}
+	// Update shoot object
 
-		// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
-		if s.Status.LastOperation != nil && s.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
-			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-		}
+	// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
+	if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+	}
 
-		var needsRetry bool
-		if val, ok := s.Annotations[v1beta1constants.FailedShootNeedsRetryOperation]; ok {
-			needsRetry, _ = strconv.ParseBool(val)
-		}
-		delete(s.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
+	var needsRetry bool
+	if val, ok := shoot.Annotations[v1beta1constants.FailedShootNeedsRetryOperation]; ok {
+		needsRetry, _ = strconv.ParseBool(val)
+	}
+	delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
 
-		if needsRetry {
-			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
-		}
+	if needsRetry {
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
+	}
 
-		controllerutils.AddTasks(s.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)
-		if utils.IsTrue(r.config.EnableShootControlPlaneRestarter) {
-			controllerutils.AddTasks(s.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
-		}
+	controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)
+	if utils.IsTrue(r.config.EnableShootControlPlaneRestarter) {
+		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
+	}
 
-		if utils.IsTrue(r.config.EnableShootCoreAddonRestarter) {
-			controllerutils.AddTasks(s.Annotations, v1beta1constants.ShootTaskRestartCoreAddons)
-		}
+	if utils.IsTrue(r.config.EnableShootCoreAddonRestarter) {
+		controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskRestartCoreAddons)
+	}
 
-		if updatedMachineImages != nil {
-			gardencorev1beta1helper.UpdateMachineImages(s.Spec.Provider.Workers, updatedMachineImages)
-		}
-		if updatedKubernetesVersion != nil {
-			s.Spec.Kubernetes.Version = *updatedKubernetesVersion
-		}
+	if updatedMachineImages != nil {
+		gardencorev1beta1helper.UpdateMachineImages(shoot.Spec.Provider.Workers, updatedMachineImages)
+	}
+	if updatedKubernetesVersion != nil {
+		shoot.Spec.Kubernetes.Version = *updatedKubernetesVersion
+	}
 
-		if hasMaintainNowAnnotation(s) {
-			delete(s.Annotations, v1beta1constants.GardenerOperation)
-		}
+	if hasMaintainNowAnnotation(shoot) {
+		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+	}
 
-		return s, nil
-	})
-	if err != nil {
-		shootLogger.Error(fmt.Sprintf("Could not update the Shoot specification: %s", err.Error()))
+	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale
+	// data (e.g. when calculating the updated k8s version), so rather return error and backoff
+	if err := gardenClient.Update(ctx, shoot); err != nil {
+		shootLogger.Errorf("Failed to update Shoot spec: %+v", err)
 		return err
 	}
 

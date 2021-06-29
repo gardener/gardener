@@ -1020,29 +1020,5 @@ var _ = Describe("Scheduler_Control", func() {
 			Expect(len(candidates)).To(Equal(1))
 			Expect(candidates[0].Name).To(Equal(oldSeedEnvironment1.Name))
 		})
-
-	})
-
-	Context("Scheduling", func() {
-		var (
-			shoot = shootBase.DeepCopy()
-			seed  = *seedBase.DeepCopy()
-		)
-
-		It("should request the scheduling of the shoot to the seed", func() {
-			var runtimeClient = mockclient.NewMockClient(ctrl)
-
-			shoot.Spec.SeedName = &seed.Name
-			runtimeClient.EXPECT().Update(context.TODO(), shoot).DoAndReturn(func(_ context.Context, _ client.Object, _ ...client.UpdateOption) error {
-				return nil
-			})
-
-			executeSchedulingRequest := func(ctx context.Context, shoot *gardencorev1beta1.Shoot) error {
-				return runtimeClient.Update(ctx, shoot)
-			}
-
-			err := UpdateShootToBeScheduledOntoSeed(context.TODO(), shoot, &seed, executeSchedulingRequest)
-			Expect(err).NotTo(HaveOccurred())
-		})
 	})
 })

@@ -29,10 +29,8 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	resourceshealth "github.com/gardener/gardener-resource-manager/pkg/health"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/retry"
 )
 
 func (c *Controller) controllerInstallationCareAdd(obj interface{}) {
@@ -108,15 +106,8 @@ func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.C
 	}
 
 	defer func() {
-		if _, err := kutil.TryUpdateControllerInstallationStatusWithEqualFunc(ctx, gardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta,
-			func(controllerInstallation *gardencorev1beta1.ControllerInstallation) (*gardencorev1beta1.ControllerInstallation, error) {
-				controllerInstallation.Status.Conditions = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled)
-				return controllerInstallation, nil
-			}, func(cur, updated *gardencorev1beta1.ControllerInstallation) bool {
-				return equality.Semantic.DeepEqual(cur.Status.Conditions, updated.Status.Conditions)
-			},
-		); err != nil {
-			controllerInstallationLogger.Errorf("Failed to update ControllerInstallation status: %v", err.Error())
+		if err := patchConditions(ctx, gardenClient.Client(), controllerInstallation, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled); err != nil {
+			controllerInstallationLogger.Errorf("Failed to patch ControllerInstallation status: %+v", err.Error())
 		}
 	}()
 

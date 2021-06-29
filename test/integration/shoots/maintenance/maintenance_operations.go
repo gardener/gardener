@@ -36,54 +36,45 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CleanupCloudProfile tries to update the CloudProfile with retries to make sure the machine image version & kubernetes version introduced during the integration test is being removed
+// CleanupCloudProfile tries to patch the CloudProfile to make sure the machine image version & kubernetes version introduced during the integration test is being removed
 func CleanupCloudProfile(ctx context.Context, gardenClient client.Client, cloudProfileName string, testMachineImage gardencorev1beta1.ShootMachineImage, testKubernetesVersions []gardencorev1beta1.ExpirableVersion) error {
-	var (
-		attempt int
-	)
-
 	// then delete the test versions
-	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() (err error) {
-		existingCloudProfile := &gardencorev1beta1.CloudProfile{}
-		if err = gardenClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, existingCloudProfile); err != nil {
-			return err
-		}
+	cloudProfile := &gardencorev1beta1.CloudProfile{}
+	if err = gardenClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile); err != nil {
+		return err
+	}
+	patch := client.StrategicMergeFrom(cloudProfile.DeepCopy())
 
-		// clean machine image
-		removedCloudProfileImages := []gardencorev1beta1.MachineImage{}
-		for _, image := range existingCloudProfile.Spec.MachineImages {
-			versionExists, index := helper.ShootMachineImageVersionExists(image, testMachineImage)
-			if versionExists {
-				image.Versions = append(image.Versions[:index], image.Versions[index+1:]...)
-			}
-			removedCloudProfileImages = append(removedCloudProfileImages, image)
+	// clean machine image
+	var removedCloudProfileImages []gardencorev1beta1.MachineImage
+	for _, image := range cloudProfile.Spec.MachineImages {
+		versionExists, index := helper.ShootMachineImageVersionExists(image, testMachineImage)
+		if versionExists {
+			image.Versions = append(image.Versions[:index], image.Versions[index+1:]...)
 		}
-		existingCloudProfile.Spec.MachineImages = removedCloudProfileImages
+		removedCloudProfileImages = append(removedCloudProfileImages, image)
+	}
+	cloudProfile.Spec.MachineImages = removedCloudProfileImages
 
-		// clean kubernetes CloudProfile Version
-		removedKubernetesVersions := []gardencorev1beta1.ExpirableVersion{}
-		for _, cloudprofileVersion := range existingCloudProfile.Spec.Kubernetes.Versions {
-			versionShouldBeRemoved := false
-			for _, versionToBeRemoved := range testKubernetesVersions {
-				if cloudprofileVersion.Version == versionToBeRemoved.Version {
-					versionShouldBeRemoved = true
-					break
-				}
-			}
-			if !versionShouldBeRemoved {
-				removedKubernetesVersions = append(removedKubernetesVersions, cloudprofileVersion)
+	// clean kubernetes CloudProfile Version
+	var removedKubernetesVersions []gardencorev1beta1.ExpirableVersion
+	for _, cloudprofileVersion := range cloudProfile.Spec.Kubernetes.Versions {
+		versionShouldBeRemoved := false
+		for _, versionToBeRemoved := range testKubernetesVersions {
+			if cloudprofileVersion.Version == versionToBeRemoved.Version {
+				versionShouldBeRemoved = true
+				break
 			}
 		}
-		existingCloudProfile.Spec.Kubernetes.Versions = removedKubernetesVersions
-
-		// update Cloud Profile to remove the test machine image
-		if err = gardenClient.Update(ctx, existingCloudProfile); err != nil {
-			logger.Logger.Errorf("attempt %d failed to update CloudProfile %s due to %v", attempt, existingCloudProfile.Name, err)
-			return err
+		if !versionShouldBeRemoved {
+			removedKubernetesVersions = append(removedKubernetesVersions, cloudprofileVersion)
 		}
+	}
+	cloudProfile.Spec.Kubernetes.Versions = removedKubernetesVersions
 
-		return nil
-	}); err != nil {
+	// update Cloud Profile to remove the test machine image
+	if err = gardenClient.Patch(ctx, cloudProfile, patch); err != nil {
+		logger.Logger.Errorf("failed to patch CloudProfile %s: %v", cloudProfile.Name, err)
 		return err
 	}
 	return nil

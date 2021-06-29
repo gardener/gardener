@@ -34,7 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
-	"github.com/gardener/gardener/pkg/operation/shoot"
+	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -46,7 +46,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -77,7 +76,7 @@ func NewBuilder() *Builder {
 		seedFunc: func(context.Context) (*seed.Seed, error) {
 			return nil, fmt.Errorf("seed object is required but not set")
 		},
-		shootFunc: func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error) {
+		shootFunc: func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shootpkg.Shoot, error) {
 			return nil, fmt.Errorf("shoot object is required but not set")
 		},
 		exposureClassFunc: func(string) (*config.ExposureClassHandler, error) {
@@ -159,8 +158,8 @@ func (b *Builder) WithSeedFrom(k8sGardenCoreInformers gardencoreinformers.Interf
 }
 
 // WithShoot sets the shootFunc attribute at the Builder.
-func (b *Builder) WithShoot(s *shoot.Shoot) *Builder {
-	b.shootFunc = func(_ context.Context, _ client.Client, _ *garden.Garden, _ *seed.Seed) (*shoot.Shoot, error) {
+func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
+	b.shootFunc = func(_ context.Context, _ client.Client, _ *garden.Garden, _ *seed.Seed) (*shootpkg.Shoot, error) {
 		return s, nil
 	}
 	return b
@@ -168,8 +167,8 @@ func (b *Builder) WithShoot(s *shoot.Shoot) *Builder {
 
 // WithShootFrom sets the shootFunc attribute at the Builder which will build a new Shoot object.
 func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Interface, gardenClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
-	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shoot.Shoot, error) {
-		return shoot.
+	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
+		return shootpkg.
 			NewBuilder().
 			WithShootObject(s).
 			WithCloudProfileObjectFromReader(gardenClient.Client()).
@@ -187,10 +186,10 @@ func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Inter
 // WithShootFromCluster sets the shootFunc attribute at the Builder which will build a new Shoot object constructed from the cluster resource.
 // The shoot status is still taken from the passed `shoot`, though.
 func (b *Builder) WithShootFromCluster(gardenClient, seedClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
-	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shoot.Shoot, error) {
-		shootNamespace := shoot.ComputeTechnicalID(gardenObj.Project.Name, s)
+	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
+		shootNamespace := shootpkg.ComputeTechnicalID(gardenObj.Project.Name, s)
 
-		shoot, err := shoot.
+		shoot, err := shootpkg.
 			NewBuilder().
 			WithShootObjectFromCluster(seedClient, shootNamespace).
 			WithCloudProfileObjectFromCluster(seedClient, shootNamespace).
@@ -420,56 +419,56 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		description    = makeDescription(stats)
 		progress       = stats.ProgressPercent()
 		lastUpdateTime = metav1.Now()
+		shoot          = o.Shoot.Info
 	)
 
-	newShoot, err := kutil.TryUpdateShootStatus(ctx, o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			if shoot.Status.LastOperation == nil {
-				return nil, fmt.Errorf("last operation of Shoot %s/%s is unset", shoot.Namespace, shoot.Name)
-			}
-			if shoot.Status.LastOperation.LastUpdateTime.After(lastUpdateTime.Time) {
-				return nil, fmt.Errorf("last operation of Shoot %s/%s was updated mid-air", shoot.Namespace, shoot.Name)
-			}
-			if description != "" {
-				shoot.Status.LastOperation.Description = description
-			}
-			shoot.Status.LastOperation.Progress = progress
-			shoot.Status.LastOperation.LastUpdateTime = lastUpdateTime
-			return shoot, nil
-		})
-	if err != nil {
+	if err := func() error {
+		statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
+
+		if shoot.Status.LastOperation == nil {
+			return fmt.Errorf("last operation of Shoot %s/%s is unset", shoot.Namespace, shoot.Name)
+		}
+		if shoot.Status.LastOperation.LastUpdateTime.After(lastUpdateTime.Time) {
+			return fmt.Errorf("last operation of Shoot %s/%s was updated mid-air", shoot.Namespace, shoot.Name)
+		}
+		if description != "" {
+			shoot.Status.LastOperation.Description = description
+		}
+		shoot.Status.LastOperation.Progress = progress
+		shoot.Status.LastOperation.LastUpdateTime = lastUpdateTime
+
+		return o.K8sGardenClient.Client().Status().Patch(ctx, shoot, statusPatch)
+	}(); err != nil {
 		o.Logger.Errorf("Could not report shoot progress: %v", err)
 		return
 	}
-
-	o.Shoot.Info = newShoot
 }
 
 // CleanShootTaskErrorAndUpdateStatusLabel removes the error with taskID from the Shoot's status.LastErrors array.
 // If the status.LastErrors array is empty then status.LastErrors is also removed. It also re-evaluates the shoot status
 // in case the last error list is empty now, and if necessary, updates the status label on the shoot.
 func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context, taskID string) {
-	updatedShoot, err := kutil.TryUpdateShootStatus(ctx, o.K8sGardenClient.GardenCore(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
-		func(shoot *gardencorev1beta1.Shoot) (*gardencorev1beta1.Shoot, error) {
-			shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(o.Shoot.Info.Status.LastErrors, taskID)
-			return shoot, nil
-		},
-	)
-	if err != nil {
-		o.Logger.Errorf("Could not update shoot's %s/%s last errors: %v", o.Shoot.Info.Namespace, o.Shoot.Info.Name, err)
+	shoot := o.Shoot.Info
+
+	statusPatch := client.MergeFrom(shoot.DeepCopy())
+	// LastErrors doesn't have patchMergeKey as TaskID is optional, so strategic merge wouldn't make a difference.
+	// This will effectively overwrite the whole LastErrors array. Though, this should be fine, as this controller is
+	// supposed to be the exclusive owner of this field.
+	shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
+	if err := o.K8sGardenClient.Client().Status().Patch(ctx, shoot, statusPatch); err != nil {
+		o.Logger.Errorf("Could not update shoot's %s/%s last errors: %v", shoot.Namespace, shoot.Name, err)
 		return
 	}
-	o.Shoot.Info = updatedShoot
 
-	if len(o.Shoot.Info.Status.LastErrors) == 0 {
-		oldObj := o.Shoot.Info.DeepCopy()
-		kutil.SetMetaDataLabel(&o.Shoot.Info.ObjectMeta, v1beta1constants.ShootStatus, string(shoot.ComputeStatus(
-			o.Shoot.Info.Status.LastOperation,
-			o.Shoot.Info.Status.LastErrors,
-			o.Shoot.Info.Status.Conditions...,
+	if len(shoot.Status.LastErrors) == 0 {
+		metaPatch := client.MergeFrom(shoot.DeepCopy())
+		kutil.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(shootpkg.ComputeStatus(
+			shoot.Status.LastOperation,
+			shoot.Status.LastErrors,
+			shoot.Status.Conditions...,
 		)))
-		if err := o.K8sGardenClient.Client().Patch(ctx, o.Shoot.Info, client.MergeFrom(oldObj)); err != nil {
-			o.Logger.Errorf("Could not update shoot's %s/%s status label after removing an erroneous task: %v", o.Shoot.Info.Namespace, o.Shoot.Info.Name, err)
+		if err := o.K8sGardenClient.Client().Patch(ctx, shoot, metaPatch); err != nil {
+			o.Logger.Errorf("Could not update shoot's %s/%s status label after removing an erroneous task: %v", shoot.Namespace, shoot.Name, err)
 			return
 		}
 	}
@@ -610,7 +609,7 @@ func (o *Operation) ComputePrometheusHost() string {
 
 // ComputeIngressHost computes the host for a given prefix.
 func (o *Operation) ComputeIngressHost(prefix string) string {
-	shortID := strings.Replace(o.Shoot.Info.Status.TechnicalID, shoot.TechnicalIDPrefix, "", 1)
+	shortID := strings.Replace(o.Shoot.Info.Status.TechnicalID, shootpkg.TechnicalIDPrefix, "", 1)
 	return fmt.Sprintf("%s-%s.%s", prefix, shortID, o.Seed.IngressDomain())
 }
 
