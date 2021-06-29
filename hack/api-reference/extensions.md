@@ -872,7 +872,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>Region is the region of this DNS record. If not specified, the region specified in SecretRef will be used.
-If that is also not specified, a certain default region will be used, e.g. us-west-2 for AWS route53.</p>
+If that is also not specified, the extension controller will use its default region.</p>
 </td>
 </tr>
 <tr>
@@ -896,7 +896,7 @@ string
 </em>
 </td>
 <td>
-<p>Name is the fully qualified domain name, e.g. api.<shoot domain>.</p>
+<p>Name is the fully qualified domain name, e.g. &ldquo;api.<shoot domain>&rdquo;.</p>
 </td>
 </tr>
 <tr>
@@ -2426,7 +2426,7 @@ string
 <td>
 <em>(Optional)</em>
 <p>Region is the region of this DNS record. If not specified, the region specified in SecretRef will be used.
-If that is also not specified, a certain default region will be used, e.g. us-west-2 for AWS route53.</p>
+If that is also not specified, the extension controller will use its default region.</p>
 </td>
 </tr>
 <tr>
@@ -2450,7 +2450,7 @@ string
 </em>
 </td>
 <td>
-<p>Name is the fully qualified domain name, e.g. api.<shoot domain>.</p>
+<p>Name is the fully qualified domain name, e.g. &ldquo;api.<shoot domain>&rdquo;.</p>
 </td>
 </tr>
 <tr>

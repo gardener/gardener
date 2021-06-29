@@ -26,12 +26,13 @@ const DNSRecordResource = "DNSRecord"
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:resource:scope=Namespaced,path=DNSRecords,shortName=cp,singular=DNSRecord
+// +kubebuilder:resource:scope=Namespaced,path=dnsrecords,shortName=dns,singular=dnsrecord
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name=Type,JSONPath=".spec.type",type=string,description="The control plane type."
-// +kubebuilder:printcolumn:name=Purpose,JSONPath=".spec.purpose",type=string,description="Purpose of control plane resource."
-// +kubebuilder:printcolumn:name=Status,JSONPath=".status.lastOperation.state",type=string,description="Status of control plane resource."
-// +kubebuilder:printcolumn:name=Age,JSONPath=".metadata.creationTimestamp",type=date,description="creation timestamp"
+// +kubebuilder:printcolumn:name=Type,JSONPath=".spec.type",type=string,description="The DNS record provider type."
+// +kubebuilder:printcolumn:name="Domain Name",JSONPath=".spec.name",type=string,description="The DNS record domain name."
+// +kubebuilder:printcolumn:name="Record Type",JSONPath=".spec.name",type=string,description="The DNS record type (A, CNAME, or TXT)."
+// +kubebuilder:printcolumn:name=Status,JSONPath=".status.lastOperation.state",type=string,description=""
+// +kubebuilder:printcolumn:name=Age,JSONPath=".metadata.creationTimestamp",type=date,description=""
 
 // DNSRecord is a specification for a DNSRecord resource.
 type DNSRecord struct {
@@ -71,14 +72,14 @@ type DNSRecordSpec struct {
 	// SecretRef is a reference to a secret that contains the cloud provider specific credentials.
 	SecretRef corev1.SecretReference `json:"secretRef"`
 	// Region is the region of this DNS record. If not specified, the region specified in SecretRef will be used.
-	// If that is also not specified, a certain default region will be used, e.g. us-west-2 for AWS route53.
+	// If that is also not specified, the extension controller will use its default region.
 	// +optional
 	Region *string `json:"region,omitempty"`
 	// Zone is the DNS hosted zone of this DNS record. If not specified, it will be determined automatically by
 	// getting all hosted zones of the account and searching for the longest zone name that is a suffix of Name.
 	// +optional
 	Zone *string `json:"zone,omitempty"`
-	// Name is the fully qualified domain name, e.g. api.<shoot domain>.
+	// Name is the fully qualified domain name, e.g. "api.<shoot domain>".
 	Name string `json:"name"`
 	// RecordType is the DNS record type. Only A, CNAME, and TXT records are currently supported.
 	RecordType DNSRecordType `json:"recordType"`
