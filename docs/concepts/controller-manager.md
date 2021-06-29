@@ -49,7 +49,8 @@ controllers:
 ```
 
 The Project controller takes the shown `config` and creates a `ResourceQuota` with the name `gardener` in the project namespace.
-If a `ResourceQuota` resource with the name `gardener` already exists, the controller will only update fields in `spec.hard` which are **unavailable** at that time.
+If a `ResourceQuota` resource with the name `gardener` already exists, the controller will only update fields in `spec.hard` which are **unavailable** at that time. 
+Labels and annotations on the `ResourceQuota` `config` get merged with the respective fields on existing `ResourceQuota`s.
 An optional `projectSelector` narrows down the amount of projects that are equipped with the given `config`.
 If multiple configs match for a project, then only the first match in the list is applied to the project namespace.
 
