@@ -301,8 +301,12 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 
 	proxyConfig := b.Shoot.Info.Spec.Kubernetes.KubeProxy
+	kubeProxyEnabled := true
 	if proxyConfig != nil {
 		kubeProxyConfig["featureGates"] = proxyConfig.FeatureGates
+		if proxyConfig.Enabled != nil {
+			kubeProxyEnabled = *proxyConfig.Enabled
+		}
 	}
 
 	if domain := b.Shoot.ExternalClusterDomain; domain != nil {
@@ -392,7 +396,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		"node-local-dns":         common.GenerateAddonConfig(nodelocalDNS, b.Shoot.NodeLocalDNSEnabled),
 		"kube-apiserver-kubelet": common.GenerateAddonConfig(nil, true),
 		"apiserver-proxy":        common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
-		"kube-proxy":             common.GenerateAddonConfig(kubeProxy, true),
+		"kube-proxy":             common.GenerateAddonConfig(kubeProxy, kubeProxyEnabled),
 		"monitoring": common.GenerateAddonConfig(map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,

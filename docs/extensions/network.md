@@ -78,6 +78,12 @@ Once applied, the presumably implemented `Gardenet` extension controller, would 
 
 For additional reference, please have a look at the [networking-calico](https://github.com/gardener/gardener-extension-networking-calico) provider extension, which provides more information on how to configure the necessary charts as well as the actuators required to reconcile networking inside the `Shoot` cluster to the desired state.
 
+## Supporting `kube-proxy` less Service Routing
+
+Some networking extensions support service routing without the `kube-proxy` component. This is why Gardener supports disabling of `kube-proxy` for service routing by setting `.spec.kubernetes.kubeproxy.enabled` to `false` in the `Shoot` specification. The implicit contract of the flag is: If `kube-proxy` is disabled then the networking extension is responsible for the service routing.
+The networking extensions need to handle this twofold:
+1. During the reconciliation of the networking resources, the extension needs to check whether `kube-proxy` takes care of the service routing or the networking extension itself should handle it. In case the networking extension should be responsible according to `.spec.kubernetes.kubeproxy.enabled` (but is unable to perform the service routing) it should raise an error during the reconciliation. If the networking extension should handle the service routing it may reconfigure itself accordingly.
+2. (optional) In case the networking extension does not support taking over the service routing (in some scenarios), it is recommended to also provide a validating admission webhook to reject corresponding changes early on. The validation may take the current operating mode of the networking extension into consideration.
 
 ## References
 

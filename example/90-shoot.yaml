@@ -190,6 +190,7 @@ spec:
   #   featureGates:
   #     SomeKubernetesFeature: true
   #   mode: IPVS
+  #   enabled: true
   # kubelet:
   #   cpuCFSQuota: true
   #   failSwapOn: true

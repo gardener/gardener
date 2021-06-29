@@ -923,6 +923,12 @@ message KubeProxyConfig {
   // defaults to IPTables.
   // +optional
   optional string mode = 2;
+
+  // Enabled indicates whether kube-proxy should be deployed or not.
+  // Depending on the networking extensions switching kube-proxy off might be rejected. Consulting the respective documentation of the used networking extension is recommended before using this field.
+  // defaults to true if not specified.
+  // +optional
+  optional bool enabled = 3;
 }
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.

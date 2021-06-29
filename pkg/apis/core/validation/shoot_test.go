@@ -1835,6 +1835,32 @@ var _ = Describe("Shoot Validation Tests", func() {
 				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
 				Expect(errorList).To(BeEmpty())
 			})
+
+			It("shoul fail when kube-proxy is switched off", func() {
+				kubernetesConfig := core.KubernetesConfig{}
+				disabled := false
+				config := core.KubeProxyConfig{
+					KubernetesConfig: kubernetesConfig,
+					Enabled:          &disabled,
+				}
+				shoot.Spec.Kubernetes.KubeProxy = &config
+				enabled := true
+				oldConfig := core.KubeProxyConfig{
+					KubernetesConfig: kubernetesConfig,
+					Enabled:          &enabled,
+				}
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.Kubernetes.KubeProxy = &oldConfig
+
+				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
+
+				Expect(errorList).ToNot(BeEmpty())
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeProxy.enabled"),
+					"Detail": Equal(`field is immutable`),
+				}))
+			})
 		})
 
 		Context("ClusterAutoscaler validation", func() {

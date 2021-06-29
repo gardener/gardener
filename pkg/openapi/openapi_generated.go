@@ -3413,6 +3413,13 @@ func schema_pkg_apis_core_v1alpha1_KubeProxyConfig(ref common.ReferenceCallback)
 							Format:      "",
 						},
 					},
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled indicates whether kube-proxy should be deployed or not. Depending on the networking extensions switching kube-proxy off might be rejected. Consulting the respective documentation of the used networking extension is recommended before using this field. defaults to true if not specified.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -10079,6 +10086,13 @@ func schema_pkg_apis_core_v1beta1_KubeProxyConfig(ref common.ReferenceCallback) 
 						SchemaProps: spec.SchemaProps{
 							Description: "Mode specifies which proxy mode to use. defaults to IPTables.",
 							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled indicates whether kube-proxy should be deployed or not. Depending on the networking extensions switching kube-proxy off might be rejected. Consulting the respective documentation of the used networking extension is recommended before using this field. defaults to true if not specified.",
+							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
