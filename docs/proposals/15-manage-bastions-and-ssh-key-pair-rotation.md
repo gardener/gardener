@@ -225,5 +225,4 @@ Currently, the `ssh` key pair for the shoot nodes are created once during shoot 
 
 ### Limitations
 
-For some cloud providers, like GCP, SSH keypairs are managed at the provider side and not on the seed cluster as Kubernetes
-Secrets. For these providers, the key rotation is out of scope of this proposal.
+On Google Cloud Platform, the VMs do not have any static users (i.e. no `gardener` user) and there is an agent on the nodes that syncs the users with their SSH keypairs from the GCP IAM service.

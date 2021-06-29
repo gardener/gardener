@@ -171,7 +171,7 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 	if needsRetry {
 		operation = v1beta1constants.ShootOperationRetry
 	}
-	metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 
 	controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)
 	if utils.IsTrue(r.config.EnableShootControlPlaneRestarter) {

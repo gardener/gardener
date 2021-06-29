@@ -106,7 +106,7 @@ chown $USERNAME:$USERNAME $PATH_AUTHORIZED_KEYS
 
 # remove unused legacy file
 if [ -f "/var/lib/gardener-user-ssh.key" ]; then
-  rm -- "/var/lib/gardener-user-ssh.key"
+  rm -f "/var/lib/gardener-user-ssh.key"
 fi
 
 # allow sudo for gardener user

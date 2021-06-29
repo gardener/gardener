@@ -249,40 +249,27 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 }
 
 func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
-	var err error
-
-	currentSecret, ok := b.Secrets[v1beta1constants.SecretNameSSHKeyPair]
-	if !ok {
+	currentSecret := gardenerResourceDataList.Get(v1beta1constants.SecretNameSSHKeyPair)
+	if currentSecret == nil {
 		return fmt.Errorf("no Secret named %s loaded", v1beta1constants.SecretNameSSHKeyPair)
 	}
 
-	oldPrivateKey := currentSecret.Data[secrets.DataKeyRSAPrivateKey]
-	oldPublicKey := currentSecret.Data[secrets.DataKeySSHAuthorizedKeys]
+	// copy current key to old secret
+	oldSecret := currentSecret.DeepCopy()
+	oldSecret.Name = v1beta1constants.SecretNameOldSSHKeyPair
+	gardenerResourceDataList.Upsert(oldSecret)
 
-	// if there is a current key, transfer it to the .old Secret
-	if len(oldPrivateKey) > 0 && len(oldPublicKey) > 0 {
-		oldSecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.SecretNameOldSSHKeyPair, Namespace: b.Shoot.SeedNamespace}}
-		if err = b.K8sSeedClient.Client().Get(ctx, client.ObjectKeyFromObject(oldSecret), oldSecret); client.IgnoreNotFound(err) != nil {
-			return fmt.Errorf("failed to get old SSH keypair secret: %v", err)
-		}
-
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), oldSecret, func() error {
-			oldSecret.Data = map[string][]byte{
-				secrets.DataKeyRSAPrivateKey:     oldPrivateKey,
-				secrets.DataKeySSHAuthorizedKeys: oldPublicKey,
-			}
-
-			return nil
-		}); err != nil {
-			return fmt.Errorf("failed to reconcile old SSH keypair secret: %v", err)
-		}
+	names := []string{
+		v1beta1constants.SecretNameSSHKeyPair,
+		v1beta1constants.SecretNameOldSSHKeyPair,
 	}
 
-	// delete the current key so it gets re-generated later
-	if err := b.K8sSeedClient.Client().Delete(ctx, currentSecret); client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("failed to delete current SSH keypair: %v", err)
+	for _, secretName := range names {
+		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
+			return err
+		}
 	}
-	gardenerResourceDataList.Delete(currentSecret.Name)
+	gardenerResourceDataList.Delete(v1beta1constants.SecretNameSSHKeyPair)
 
 	// remove operation annotation
 	oldObj := b.Shoot.Info.DeepCopy()
