@@ -196,6 +196,11 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{""},
+				Resources: []string{"pods/exec"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups: []string{""},
 				Resources: []string{"configmaps", "namespaces", "secrets", "serviceaccounts", "services"},
 				Verbs:     []string{"create", "delete", "deletecollection", "get", "list", "watch", "patch", "update"},
 			},
@@ -272,6 +277,11 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 				APIGroups: []string{"extensions.gardener.cloud"},
 				Resources: []string{"backupbuckets", "backupentries", "bastions", "clusters", "containerruntimes", "controlplanes", "extensions", "infrastructures", "networks", "operatingsystemconfigs", "workers"},
 				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
+			},
+			{
+				APIGroups: []string{"extensions.gardener.cloud"},
+				Resources: []string{"backupbuckets/status", "backupentries/status", "containerruntimes/status", "controlplanes/status", "extensions/status", "infrastructures/status", "networks/status", "operatingsystemconfigs/status", "workers/status"},
+				Verbs:     []string{"patch", "update"},
 			},
 			{
 				APIGroups: []string{"resources.gardener.cloud"},
