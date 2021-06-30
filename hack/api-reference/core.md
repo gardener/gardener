@@ -4644,6 +4644,32 @@ KubeletConfigReserved
 When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>imageGCHighThresholdPercent</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
+Default: 50</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>imageGCLowThresholdPercent</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free.
+Default: 40</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction

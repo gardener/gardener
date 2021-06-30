@@ -2846,6 +2846,8 @@ func autoConvert_v1beta1_KubeletConfig_To_core_KubeletConfig(in *KubeletConfig, 
 	out.FailSwapOn = (*bool)(unsafe.Pointer(in.FailSwapOn))
 	out.KubeReserved = (*core.KubeletConfigReserved)(unsafe.Pointer(in.KubeReserved))
 	out.SystemReserved = (*core.KubeletConfigReserved)(unsafe.Pointer(in.SystemReserved))
+	out.ImageGCHighThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCHighThresholdPercent))
+	out.ImageGCLowThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCLowThresholdPercent))
 	return nil
 }
 
@@ -2872,6 +2874,8 @@ func autoConvert_core_KubeletConfig_To_v1beta1_KubeletConfig(in *core.KubeletCon
 	out.FailSwapOn = (*bool)(unsafe.Pointer(in.FailSwapOn))
 	out.KubeReserved = (*KubeletConfigReserved)(unsafe.Pointer(in.KubeReserved))
 	out.SystemReserved = (*KubeletConfigReserved)(unsafe.Pointer(in.SystemReserved))
+	out.ImageGCHighThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCHighThresholdPercent))
+	out.ImageGCLowThresholdPercent = (*int32)(unsafe.Pointer(in.ImageGCLowThresholdPercent))
 	return nil
 }
 
