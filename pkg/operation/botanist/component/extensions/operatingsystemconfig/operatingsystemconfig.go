@@ -327,7 +327,7 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			oscName := Key(worker.Name, o.values.KubernetesVersion) + purposeToKeySuffix(purpose)
+			oscName := Key(worker.Name, o.values.KubernetesVersion, worker.CRI) + purposeToKeySuffix(purpose)
 
 			osc, ok := o.oscs[oscName]
 			if !ok {
@@ -412,7 +412,7 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		osc:                     osc,
 		worker:                  worker,
 		purpose:                 purpose,
-		key:                     Key(worker.Name, o.values.KubernetesVersion),
+		key:                     Key(worker.Name, o.values.KubernetesVersion, worker.CRI),
 		apiServerURL:            o.values.APIServerURL,
 		caBundle:                caBundle,
 		clusterDNSAddress:       o.values.ClusterDNSAddress,
@@ -592,13 +592,18 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 }
 
 // Key returns the key that can be used as secret name based on the provided worker name and Kubernetes version.
-func Key(workerName string, kubernetesVersion *semver.Version) string {
+func Key(workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
 	if kubernetesVersion == nil {
 		return ""
 	}
 
 	kubernetesMajorMinorVersion := fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
-	return fmt.Sprintf("cloud-config-%s-%s", workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion))[:5])
+
+	var criName gardencorev1beta1.CRIName
+	if criConfig != nil {
+		criName = criConfig.Name
+	}
+	return fmt.Sprintf("cloud-config-%s-%s", workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
 }
 
 func purposeToKeySuffix(purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {

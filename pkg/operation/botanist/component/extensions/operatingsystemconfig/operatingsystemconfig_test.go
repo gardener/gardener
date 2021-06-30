@@ -196,7 +196,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 				if worker.CRI != nil {
 					criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
 					criConfig = &extensionsv1alpha1.CRIConfig{Name: extensionsv1alpha1.CRIName(worker.CRI.Name)}
-					configHash = "-77ac3"
+					configHash = "-cf2c8"
 				} else {
 					criName = extensionsv1alpha1.CRINameDocker
 					configHash = "-77ac3"
@@ -585,19 +585,20 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					worker2Name: {
 						Downloader: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-77ac3-downloader",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-77ac3-downloader"),
+							Content: "foobar-cloud-config-" + worker2Name + "-cf2c8-downloader",
+							Command: pointer.String("foo-cloud-config-" + worker2Name + "-cf2c8-downloader"),
+
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-77ac3-downloader",
-								"baz-cloud-config-" + worker2Name + "-77ac3-downloader",
+								"bar-cloud-config-" + worker2Name + "-cf2c8-downloader",
+								"baz-cloud-config-" + worker2Name + "-cf2c8-downloader",
 							},
 						},
 						Original: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-77ac3-original",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-77ac3-original"),
+							Content: "foobar-cloud-config-" + worker2Name + "-cf2c8-original",
+							Command: pointer.String("foo-cloud-config-" + worker2Name + "-cf2c8-original"),
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-77ac3-original",
-								"baz-cloud-config-" + worker2Name + "-77ac3-original",
+								"bar-cloud-config-" + worker2Name + "-cf2c8-original",
+								"baz-cloud-config-" + worker2Name + "-cf2c8-original",
 							},
 						},
 					},
@@ -759,11 +760,16 @@ var _ = Describe("OperatingSystemConfig", func() {
 		var workerName = "foo"
 
 		It("should return an empty string", func() {
-			Expect(Key(workerName, nil)).To(BeEmpty())
+			Expect(Key(workerName, nil, nil)).To(BeEmpty())
 		})
 
-		It("should return the expected key", func() {
-			Expect(Key(workerName, semver.MustParse("1.2.3"))).To(Equal("cloud-config-" + workerName + "-77ac3"))
+		It("is different for different worker.cri configurations", func() {
+			containerDKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
+			dockerKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
+			nilKey := Key(workerName, semver.MustParse("1.2.3"), nil)
+			Expect(containerDKey).NotTo(Equal(dockerKey))
+			Expect(containerDKey).NotTo(Equal(nilKey))
+			Expect(dockerKey).NotTo(Equal(nilKey))
 		})
 	})
 })
