@@ -1,0 +1,131 @@
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package validation
+
+import (
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
+
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+)
+
+// ValidateDNSRecord validates a DNSRecord object.
+func ValidateDNSRecord(dns *extensionsv1alpha1.DNSRecord) field.ErrorList {
+	allErrs := field.ErrorList{}
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&dns.ObjectMeta, true, apivalidation.NameIsDNSSubdomain, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateDNSRecordSpec(&dns.Spec, field.NewPath("spec"))...)
+
+	return allErrs
+}
+
+// ValidateDNSRecordUpdate validates a DNSRecord object before an update.
+func ValidateDNSRecordUpdate(new, old *extensionsv1alpha1.DNSRecord) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&new.ObjectMeta, &old.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateDNSRecordSpecUpdate(&new.Spec, &old.Spec, new.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateDNSRecord(new)...)
+
+	return allErrs
+}
+
+// ValidateDNSRecordSpec validates the specification of a DNSRecord object.
+func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(spec.Type) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "field is required"))
+	}
+
+	if len(spec.SecretRef.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("secretRef", "name"), "field is required"))
+	}
+
+	if spec.Region != nil && len(*spec.Region) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("region"), *spec.Region, "field cannot be empty if specified"))
+	}
+
+	if spec.Zone != nil && len(*spec.Zone) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("zone"), *spec.Zone, "field cannot be empty if specified"))
+	}
+
+	// This will return FieldValueRequired for an empty spec.Name
+	allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(fldPath.Child("name"), spec.Name)...)
+
+	validRecordTypes := []string{string(extensionsv1alpha1.DNSRecordTypeA), string(extensionsv1alpha1.DNSRecordTypeCNAME), string(extensionsv1alpha1.DNSRecordTypeTXT)}
+	if !utils.ValueExists(string(spec.RecordType), validRecordTypes) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("recordType"), spec.RecordType, validRecordTypes))
+	}
+
+	if len(spec.Values) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("values"), "field is required"))
+	}
+	if spec.RecordType == extensionsv1alpha1.DNSRecordTypeCNAME && len(spec.Values) > 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("values"), spec.Values, "CNAME records must have a single value"))
+	}
+	for _, value := range spec.Values {
+		allErrs = append(allErrs, validateValue(spec.RecordType, value, fldPath.Child("values"))...)
+	}
+
+	if spec.TTL != nil {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(*spec.TTL, fldPath.Child("ttl"))...)
+	}
+
+	return allErrs
+}
+
+// ValidateDNSRecordSpecUpdate validates the spec of a DNSRecord object before an update.
+func ValidateDNSRecordSpecUpdate(new, old *extensionsv1alpha1.DNSRecordSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(new, old) {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new, old, fldPath)...)
+		return allErrs
+	}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Type, old.Type, fldPath.Child("type"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Name, old.Name, fldPath.Child("name"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.RecordType, old.RecordType, fldPath.Child("recordType"))...)
+
+	return allErrs
+}
+
+// ValidateDNSRecordStatus validates the status of a DNSRecord object.
+func ValidateDNSRecordStatus(spec *extensionsv1alpha1.DNSRecordStatus, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	return allErrs
+}
+
+// ValidateDNSRecordStatusUpdate validates the status field of a DNSRecord object.
+func ValidateDNSRecordStatusUpdate(newStatus, oldStatus extensionsv1alpha1.DNSRecordStatus) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	return allErrs
+}
+
+func validateValue(recordType extensionsv1alpha1.DNSRecordType, value string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	switch recordType {
+	case extensionsv1alpha1.DNSRecordTypeA:
+		allErrs = append(allErrs, validation.IsValidIPv4Address(fldPath, value)...)
+	case extensionsv1alpha1.DNSRecordTypeCNAME:
+		allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(fldPath, value)...)
+	}
+	return allErrs
+}
