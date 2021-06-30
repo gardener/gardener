@@ -189,18 +189,21 @@ var _ = Describe("OperatingSystemConfig", func() {
 			expected = make([]*extensionsv1alpha1.OperatingSystemConfig, 0, 2*len(workers))
 			for _, worker := range workers {
 				var (
-					criName   extensionsv1alpha1.CRIName
-					criConfig *extensionsv1alpha1.CRIConfig
+					criName    extensionsv1alpha1.CRIName
+					criConfig  *extensionsv1alpha1.CRIConfig
+					configHash string
 				)
 				if worker.CRI != nil {
 					criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
 					criConfig = &extensionsv1alpha1.CRIConfig{Name: extensionsv1alpha1.CRIName(worker.CRI.Name)}
+					configHash = "-77ac3"
 				} else {
 					criName = extensionsv1alpha1.CRINameDocker
+					configHash = "-77ac3"
 				}
 
 				downloaderUnits, downloaderFiles, _ := downloaderConfigFn(
-					"cloud-config-"+worker.Name+"-77ac3",
+					"cloud-config-"+worker.Name+configHash,
 					apiServerURL,
 				)
 				originalUnits, originalFiles, _ := originalConfigFn(components.Context{
@@ -219,7 +222,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				oscDownloader := &extensionsv1alpha1.OperatingSystemConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cloud-config-" + worker.Name + "-77ac3-downloader",
+						Name:      "cloud-config-" + worker.Name + configHash + "-downloader",
 						Namespace: namespace,
 						Annotations: map[string]string{
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
@@ -240,7 +243,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				oscOriginal := &extensionsv1alpha1.OperatingSystemConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cloud-config-" + worker.Name + "-77ac3-original",
+						Name:      "cloud-config-" + worker.Name + configHash + "-original",
 						Namespace: namespace,
 						Annotations: map[string]string{
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
@@ -314,16 +317,16 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 			BeforeEach(func() {
 				extensions := make([]gardencorev1alpha1.ExtensionResourceState, 0, 2*len(workers))
-				for _, worker := range workers {
+				for _, osc := range expected {
 					extensions = append(extensions,
 						gardencorev1alpha1.ExtensionResourceState{
-							Name:    pointer.String("cloud-config-" + worker.Name + "-77ac3-downloader"),
+							Name:    pointer.String(osc.Name),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
 							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
 							State:   &runtime.RawExtension{Raw: stateDownloader},
 						},
 						gardencorev1alpha1.ExtensionResourceState{
-							Name:    pointer.String("cloud-config-" + worker.Name + "-77ac3-original"),
+							Name:    pointer.String(osc.Name),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
 							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
 							State:   &runtime.RawExtension{Raw: stateOriginal},
