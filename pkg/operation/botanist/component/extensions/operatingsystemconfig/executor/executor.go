@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/Masterminds/sprig"
 	corev1 "k8s.io/api/core/v1"
@@ -72,7 +73,7 @@ const (
 func Script(
 	bootstrapToken string,
 	cloudConfigUserData []byte,
-	images map[string]interface{},
+	hyperkubeImage *imagevector.Image,
 	kubeletDataVolume *gardencorev1beta1.DataVolume,
 	reloadConfigCommand string,
 	units []string,
@@ -102,7 +103,7 @@ func Script(
 		"cloudConfigDownloaderName":      downloader.Name,
 		"executionMinDelaySeconds":       downloader.UnitRestartSeconds,
 		"executionMaxDelaySeconds":       ExecutionMaxDelaySeconds,
-		"images":                         images,
+		"hyperkubeImage":                 hyperkubeImage.String(),
 		"reloadConfigCommand":            reloadConfigCommand,
 		"units":                          units,
 		"unitNameCloudConfigDownloader":  downloader.UnitName,

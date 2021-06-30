@@ -50,9 +50,7 @@ function format-data-device() {
 format-data-device
 {{- end }}
 
-{{ range $name, $image := .images -}}
-docker-preload "{{ $name }}" "{{ $image }}"
-{{ end }}
+docker-preload "hyperkube" "{{ .hyperkubeImage }}"
 
 cat << 'EOF' | base64 -d > "$PATH_CLOUDCONFIG"
 {{ .cloudConfigUserData }}

@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo"
@@ -35,7 +36,7 @@ var _ = Describe("Executor", func() {
 		var (
 			bootstrapToken      string
 			cloudConfigUserData []byte
-			images              map[string]interface{}
+			hyperkubeImage      *imagevector.Image
 			kubeletDataVolume   *gardencorev1beta1.DataVolume
 			reloadConfigCommand string
 			units               []string
@@ -44,7 +45,7 @@ var _ = Describe("Executor", func() {
 		BeforeEach(func() {
 			bootstrapToken = "token"
 			cloudConfigUserData = []byte("user-data")
-			images = map[string]interface{}{"foo": "bar:v1.0"}
+			hyperkubeImage = &imagevector.Image{Repository: "bar", Tag: pointer.String("v1.0")}
 			kubeletDataVolume = nil
 			reloadConfigCommand = "/var/bin/reload"
 			units = []string{
@@ -59,23 +60,23 @@ var _ = Describe("Executor", func() {
 		})
 
 		It("should correctly render the executor script (w/o kubelet data volume)", func() {
-			script, err := executor.Script(bootstrapToken, cloudConfigUserData, images, kubeletDataVolume, reloadConfigCommand, units)
+			script, err := executor.Script(bootstrapToken, cloudConfigUserData, hyperkubeImage, kubeletDataVolume, reloadConfigCommand, units)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(script)).To(matchers.DeepEqual(scriptFor(bootstrapToken, cloudConfigUserData, images, nil, reloadConfigCommand, units)))
+			Expect(string(script)).To(matchers.DeepEqual(scriptFor(bootstrapToken, cloudConfigUserData, hyperkubeImage, nil, reloadConfigCommand, units)))
 		})
 
 		It("should correctly render the executor script (w/ kubelet data volume)", func() {
 			kubeletDataVolume = &gardencorev1beta1.DataVolume{VolumeSize: "64Gi"}
 
-			script, err := executor.Script(bootstrapToken, cloudConfigUserData, images, kubeletDataVolume, reloadConfigCommand, units)
+			script, err := executor.Script(bootstrapToken, cloudConfigUserData, hyperkubeImage, kubeletDataVolume, reloadConfigCommand, units)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(script)).To(matchers.DeepEqual(scriptFor(bootstrapToken, cloudConfigUserData, images, pointer.String("68719476736"), reloadConfigCommand, units)))
+			Expect(string(script)).To(matchers.DeepEqual(scriptFor(bootstrapToken, cloudConfigUserData, hyperkubeImage, pointer.String("68719476736"), reloadConfigCommand, units)))
 		})
 
 		It("should return an error because the data volume size cannot be parsed", func() {
 			kubeletDataVolume = &gardencorev1beta1.DataVolume{VolumeSize: "not-parsable"}
 
-			script, err := executor.Script(bootstrapToken, cloudConfigUserData, images, kubeletDataVolume, reloadConfigCommand, units)
+			script, err := executor.Script(bootstrapToken, cloudConfigUserData, hyperkubeImage, kubeletDataVolume, reloadConfigCommand, units)
 			Expect(script).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("quantities must match the regular expression")))
 		})
@@ -113,7 +114,7 @@ var _ = Describe("Executor", func() {
 func scriptFor(
 	bootstrapToken string,
 	cloudConfigUserData []byte,
-	images map[string]interface{},
+	hyperkubeImage *imagevector.Image,
 	kubeletDataVolumeSize *string,
 	reloadConfigCommand string,
 	units []string,
@@ -175,14 +176,10 @@ format-data-device`
 
 	imagesPreloadingPart := `
 
+docker-preload "hyperkube" "` + hyperkubeImage.String() + `"
 `
-	for name, image := range images {
-		imagesPreloadingPart += `docker-preload "` + name + `" "` + image.(string) + `"
-`
-	}
 
 	footerPart := `
-
 cat << 'EOF' | base64 -d > "$PATH_CLOUDCONFIG"
 ` + utils.EncodeBase64(cloudConfigUserData) + `
 EOF

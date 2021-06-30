@@ -306,8 +306,8 @@ var _ = Describe("operatingsystemconfig", func() {
 				// fake function for generation of executor script
 				oldExecutorScriptFn := ExecutorScriptFn
 				defer func() { ExecutorScriptFn = oldExecutorScriptFn }()
-				ExecutorScriptFn = func(bootstrapToken string, cloudConfigUserData []byte, images map[string]interface{}, kubeletDataVolume *gardencorev1beta1.DataVolume, reloadConfigCommand string, units []string) ([]byte, error) {
-					return []byte(fmt.Sprintf("%s_%s_%s_%s_%s_%s", bootstrapToken, cloudConfigUserData, images, kubeletDataVolume, reloadConfigCommand, units)), params.executorScriptFnError
+				ExecutorScriptFn = func(bootstrapToken string, cloudConfigUserData []byte, hyperkubeImage *imagevector.Image, kubeletDataVolume *gardencorev1beta1.DataVolume, reloadConfigCommand string, units []string) ([]byte, error) {
+					return []byte(fmt.Sprintf("%s_%s_%s_%s_%s_%s", bootstrapToken, cloudConfigUserData, hyperkubeImage.String(), kubeletDataVolume, reloadConfigCommand, units)), params.executorScriptFnError
 				}
 
 				// bootstrap token secret generation/retrieval
@@ -336,7 +336,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 							// managed resource secret reconciliation for executor scripts for worker pools
 							// worker pool 1
-							worker1ExecutorScript, _ := ExecutorScriptFn(bootstrapTokenID+"."+bootstrapTokenSecret, []byte(worker1OriginalContent), map[string]interface{}{"hyperkube": ":v"}, nil, worker1OriginalCommand, worker1OriginalUnits)
+							worker1ExecutorScript, _ := ExecutorScriptFn(bootstrapTokenID+"."+bootstrapTokenSecret, []byte(worker1OriginalContent), &imagevector.Image{Tag: pointer.String("v")}, nil, worker1OriginalCommand, worker1OriginalUnits)
 							kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker1Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 							kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
 								ObjectMeta: metav1.ObjectMeta{
@@ -362,7 +362,7 @@ metadata:
 							})
 
 							// worker pool 2
-							worker2ExecutorScript, _ := ExecutorScriptFn(bootstrapTokenID+"."+bootstrapTokenSecret, []byte(worker2OriginalContent), map[string]interface{}{"hyperkube": ":v"}, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits)
+							worker2ExecutorScript, _ := ExecutorScriptFn(bootstrapTokenID+"."+bootstrapTokenSecret, []byte(worker2OriginalContent), &imagevector.Image{Tag: pointer.String("v")}, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits)
 							kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker2Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 							kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
 								ObjectMeta: metav1.ObjectMeta{
