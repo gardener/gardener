@@ -36,20 +36,20 @@ GARDEN_KUBECONFIG="${GARDEN_KUBECONFIG:-$kubeconfig}"
 # determine the seed to manage; if multiple seeds exist on the
 # garden, the SEED_NAME env variable must be set
 if [ -n "${SEED_NAME:-}" ]; then
-  seedConfig="$(kubectl --kubeconfig="$GARDEN_KUBECONFIG" get seed "$SEED_NAME" -o json)"
+  seedConfig="$(kubectl --kubeconfig="$GARDEN_KUBECONFIG" get seed "$SEED_NAME" -o yaml)"
 else
-  seeds="$(kubectl --kubeconfig="$GARDEN_KUBECONFIG" get seeds -o json | jq '.items')"
-  case $(echo "$seeds" | jq -r 'length') in
+  seeds="$(kubectl --kubeconfig="$GARDEN_KUBECONFIG" get seeds -o yaml | yq eval '.items' -)"
+  case $(echo "$seeds" | yq eval 'length' -) in
     0)
       echo "No seed found in garden cluster."
       exit 1
       ;;
     1)
-      seedConfig="$(echo "$seeds" | jq '.[0]')"
-      SEED_NAME="$(echo "$seedConfig" | jq -r '.metadata.name')"
+      seedConfig="$(echo "$seeds" | yq eval '.[0]' -)"
+      SEED_NAME="$(echo "$seedConfig" | yq eval '.metadata.name' -)"
       ;;
     *)
-      names="$(echo "$seeds" | jq -r -c '[.[].metadata.name]')"
+      names="$(echo "$seeds" | yq eval --tojson --indent 0 '[.[].metadata.name]' -)"
       echo "Multiple seeds exist in the garden, please specify \$SEED_NAME to select one of $names"
       exit 1
       ;;
@@ -57,7 +57,8 @@ else
 fi
 
 # cleanup a bit to make the generated configuration file look a bit neater
-seedConfig="$(echo "$seedConfig" | jq 'del(.apiVersion,.kind,.status,.metadata.annotations,.metadata.managedFields)')"
+tmpFile="$DEV_DIR/seed-$SEED_NAME.yaml"
+echo "$seedConfig" | yq eval 'del(.apiVersion,.kind,.status,.metadata.annotations,.metadata.managedFields)' - > "$tmpFile"
 
 # create seed-specific configuration file if it doesn't exist yet
 configFile="$DEV_DIR/20-componentconfig-gardenlet-seed-$SEED_NAME.yaml"
@@ -66,17 +67,16 @@ if [ ! -f "$configFile" ]; then
   cp "$DEV_DIR/20-componentconfig-gardenlet.yaml" "$configFile"
 fi
 
-# update gardenlet config "in-place"
-cat "$configFile" | yaml2json | jq --argjson seedConfig "$seedConfig" '.seedConfig|=$seedConfig' > "$configFile.new"
-mv "$configFile.new" "$configFile"
+# update gardenlet config
+yq eval-all --inplace 'select(fileIndex==0).seedConfig = select(fileIndex==1) | select(fileIndex==0)' "$configFile" "$tmpFile"
 
 # fetch seed kubeconfig
-seedKubeconfigName="$(echo "$seedConfig" | jq -r '.spec.secretRef.name')"
-seedKubeconfigNamespace="$(echo "$seedConfig" | jq -r '.spec.secretRef.namespace')"
+seedKubeconfigName="$(yq eval '.spec.secretRef.name' "$tmpFile")"
+seedKubeconfigNamespace="$(yq eval '.spec.secretRef.namespace' "$tmpFile")"
 seedKubeconfig="$DEV_DIR/gardenlet-seed-$SEED_NAME.conf"
 
-kubectl --kubeconfig="$GARDEN_KUBECONFIG" --namespace "$seedKubeconfigNamespace" get secret "$seedKubeconfigName" -o json |
-  jq -r '.data.kubeconfig' |
+kubectl --kubeconfig="$GARDEN_KUBECONFIG" --namespace "$seedKubeconfigNamespace" get secret "$seedKubeconfigName" -o yaml |
+  yq eval '.data.kubeconfig' - |
   base64 -d > "$seedKubeconfig"
 
 file_imagevector_overwrite="$(mktemp_imagevector_overwrite github.com/gardener/gardener "$REPO_ROOT" "$REPO_ROOT"/charts)"

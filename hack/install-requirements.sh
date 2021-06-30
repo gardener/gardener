@@ -31,6 +31,12 @@ if [[ ${platform} == "Linux" ]]; then
     curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
     chmod +x /usr/local/bin/jq
   fi
+
+  if ! which yq &>/dev/null; then
+    echo "Installing yq ..."
+    curl -L -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_linux_amd64
+    chmod +x /usr/local/bin/yq
+  fi
 fi
 
 if [[ ${platform} == *"Darwin"* ]]; then
