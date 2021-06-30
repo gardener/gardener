@@ -155,6 +155,7 @@ global:
       #       labels:
       #         istio: ingressgateway-handler-2
 
+    # seedSelector: {}
     # seedConfig: {}
     # logging:
     #   fluentBit:
