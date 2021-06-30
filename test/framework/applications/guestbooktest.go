@@ -130,6 +130,11 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	ginkgo.By("Applying redis chart")
 	// redis-slaves are not required for test success
 	chartOverrides := map[string]interface{}{
+		"image": map[string]interface{}{
+			"registry":   "eu.gcr.io",
+			"repository": "gardener-project/3rd/bitnami/redis",
+			"tag":        "5.0.7-debian-9-r12",
+		},
 		"cluster": map[string]interface{}{
 			"enabled": false,
 		},
