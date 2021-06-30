@@ -116,5 +116,5 @@ deployExecutions:
             kind: Imports
       {{ toYaml .imports | indent 6 }}
 
-          {{ $resource := getResource .cd "name" "gardenlet-landscaper" }}
+          {{ $resource := getResource .cd "name" "landscaper-gardenlet" }}
           image: {{ $resource.access.imageReference }}
