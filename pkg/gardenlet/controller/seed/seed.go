@@ -22,7 +22,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -110,7 +109,7 @@ func NewSeedController(
 	}
 
 	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), config.SeedSelector),
+		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    seedController.seedAdd,
 			UpdateFunc: seedController.seedUpdate,
@@ -119,14 +118,14 @@ func NewSeedController(
 	})
 
 	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), config.SeedSelector),
+		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: seedController.seedLeaseAdd,
 		},
 	})
 
 	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
+		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    seedController.controllerInstallationOfSeedAdd,
 			UpdateFunc: seedController.controllerInstallationOfSeedUpdate,
@@ -189,48 +188,25 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 }
 
 func (c *Controller) startHealthManagement(ctx context.Context) {
-	var (
-		seedName              = confighelper.SeedNameFromSeedConfig(c.config.SeedConfig)
-		seedLabelSelector     labels.Selector
-		expectedHealthReports int
-		err                   error
-	)
-
-	if seedName != "" {
-		expectedHealthReports = 1
-	} else {
-		seedLabelSelector, err = metav1.LabelSelectorAsSelector(c.config.SeedSelector)
-		if err != nil {
-			panic(err)
-		}
-	}
+	seedName := confighelper.SeedNameFromSeedConfig(c.config.SeedConfig)
+	expectedHealthReports := 1 // TODO: Shouldn't this be reset for each loop iteration?
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(LeaseResyncGracePeriodSeconds / 2 * time.Second):
-
 			isHealthy := true
 
-			if len(seedName) > 0 {
-				if _, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(seedName); err != nil {
-					if apierrors.IsNotFound(err) {
-						// the Seed configured for the Gardenlet does not exist.
-						// Do not expect an existing lease
-						expectedHealthReports = 0
-					} else {
-						logger.Logger.Errorf("error when getting the seed %q for health management: %+v", seedName, err)
-						isHealthy = false
-					}
-				}
-			} else {
-				seedList, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().List(seedLabelSelector)
-				if err != nil {
-					logger.Logger.Errorf("error while listing seeds for health management: %+v", err)
+			if _, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(seedName); err != nil {
+				if apierrors.IsNotFound(err) {
+					// the Seed configured for the Gardenlet does not exist.
+					// Do not expect an existing lease
+					expectedHealthReports = 0
+				} else {
+					logger.Logger.Errorf("error when getting the seed %q for health management: %+v", seedName, err)
 					isHealthy = false
 				}
-				expectedHealthReports = len(seedList)
 			}
 
 			c.lock.Lock()
