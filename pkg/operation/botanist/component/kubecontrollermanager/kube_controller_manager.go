@@ -182,13 +182,14 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 		service.Spec.Selector = getLabels()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
 		service.Spec.ClusterIP = corev1.ClusterIPNone
-		service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, []corev1.ServicePort{
+		desiredPorts := []corev1.ServicePort{
 			{
 				Name:     portNameMetrics,
 				Protocol: corev1.ProtocolTCP,
 				Port:     port,
 			},
-		})
+		}
+		service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
 		return nil
 	}); err != nil {
 		return err
