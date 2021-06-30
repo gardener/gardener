@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("helper", func() {
@@ -38,5 +39,14 @@ var _ = Describe("helper", func() {
 			Minimum: 0,
 			Maximum: 1,
 		}}, true),
+	)
+
+	DescribeTable("#GetDNSRecordTTL",
+		func(ttl *int64, expected int64) {
+			Expect(GetDNSRecordTTL(ttl)).To(Equal(expected))
+		},
+
+		Entry("nil value", nil, int64(120)),
+		Entry("non-nil value", pointer.Int64Ptr(300), int64(300)),
 	)
 })
