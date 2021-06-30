@@ -1,10 +1,22 @@
 {
   "annotations": {
-    "list": []
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
   },
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
+  "id": 13,
+  "iteration": 1625052401183,
   "links": [],
   "panels": [
     {
@@ -18,6 +30,10 @@
       ],
       "datasource": "prometheus",
       "description": "The current number of nodes in the cluster.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -100,6 +116,10 @@
       "datasource": "prometheus",
       "description": "Current uptime status of the kube apiservers.",
       "editable": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -184,6 +204,10 @@
       "datasource": "prometheus",
       "description": "Current uptime status of the kube controller managers.",
       "editable": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -268,6 +292,10 @@
       "datasource": "prometheus",
       "description": "Current uptime status of the kube schedulers.",
       "editable": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -352,6 +380,10 @@
       "datasource": "prometheus",
       "description": "Current kube-apiservers error request rate.",
       "editable": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "format": "percent",
       "gauge": {
         "maxValue": 100,
@@ -427,6 +459,7 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -439,18 +472,46 @@
       "type": "row"
     },
     {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 6
+      },
+      "id": 54,
+      "options": {
+        "content": "# Connectivity\n\n## Shoot\n\nShoot connectivity checks if the API Server is available from the shoot cluster. This is done via the blackbox exporter running in the shoot.\n\n## Seed\n\nSeed connectivity checks if the API Server is available from the seed. Prometheus tries to access the API Server via loadbalancer.\n\nFor more information check the [documentation](https://github.com/gardener/gardener/blob/master/docs/monitoring/connectivity.md)",
+        "mode": "markdown"
+      },
+      "pluginVersion": "7.5.7",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "API Server Connectivity",
+      "type": "text"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 0,
-      "description": "Checks the connection to the API Server from the seed and from the shoot (via loadbalancer).\n\n0 = down; 1 = up",
+      "description": "Checks the connection to the API Server from the seed and from the shoot (via loadbalancer).\n\n0 = down; 1 = up\n\n[Documentation](https://github.com/gardener/gardener/blob/master/docs/monitoring/connectivity.md)",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
-        "h": 5,
-        "w": 24,
-        "x": 0,
+        "h": 6,
+        "w": 18,
+        "x": 6,
         "y": 6
       },
       "hiddenSeries": false,
@@ -468,7 +529,11 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.7",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -522,6 +587,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:104",
           "decimals": 0,
           "format": "none",
           "label": "Up",
@@ -531,6 +597,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:105",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -549,14 +616,19 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Shows the CPU usage of the Kube API Server and shows the requests and limits.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 11
+        "y": 12
       },
       "hiddenSeries": false,
       "id": 41,
@@ -573,7 +645,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -651,14 +727,19 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "description": "Shows the memory usage of the Kube API Server.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 11
+        "y": 12
       },
       "hiddenSeries": false,
       "id": 24,
@@ -675,7 +756,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -756,6 +841,10 @@
       "description": "Shows the rate of all API server requests and the error rate of API server requests. Requests are the average rate of requests received in the past 5 minutes.",
       "editable": false,
       "error": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {
@@ -766,7 +855,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 19
       },
       "hiddenSeries": false,
       "id": 6,
@@ -788,7 +877,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.7",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -861,6 +954,10 @@
       "description": "Shows the request latency of each verb for the API server.",
       "editable": false,
       "error": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {
@@ -871,7 +968,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 19
       },
       "hiddenSeries": false,
       "id": 7,
@@ -893,7 +990,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.7",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -959,6 +1060,10 @@
       "description": "Shows the size of the ETCD DB",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "grid": {},
@@ -966,7 +1071,7 @@
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 25
+        "y": 26
       },
       "hiddenSeries": false,
       "id": 32,
@@ -984,7 +1089,11 @@
       "linewidth": 2,
       "links": [],
       "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.7",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1051,15 +1160,20 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 0,
       "description": "Shows the number of API Resources that are in the cluster.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 6,
         "w": 16,
         "x": 8,
-        "y": 25
+        "y": 26
       },
       "hiddenSeries": false,
       "id": 44,
@@ -1081,7 +1195,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1151,15 +1269,20 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "decimals": 0,
       "description": "Count of registered API Server watches split by watched resources. \n\nHigh number of watches can lead to performance issues of the API Server and the underlying ETCD.\n\nNote: **group** is a reference for the default k8s api group.",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 32
       },
       "hiddenSeries": false,
       "id": 50,
@@ -1182,7 +1305,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1250,11 +1377,12 @@
     },
     {
       "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 38
       },
       "id": 20,
       "panels": [
@@ -1553,11 +1681,12 @@
     },
     {
       "collapsed": true,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 39
       },
       "id": 30,
       "panels": [
@@ -1952,7 +2081,7 @@
     }
   ],
   "refresh": "1m",
-  "schemaVersion": 25,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [
     "controlplane",
@@ -1966,6 +2095,8 @@
           "text": "",
           "value": ""
         },
+        "description": null,
+        "error": null,
         "hide": 0,
         "label": "Search",
         "name": "search",
