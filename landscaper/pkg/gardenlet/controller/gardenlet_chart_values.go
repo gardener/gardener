@@ -21,6 +21,7 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	"github.com/gardener/gardener/pkg/utils"
+	"sigs.k8s.io/yaml"
 )
 
 func (g Landscaper) computeGardenletChartValues(bootstrapKubeconfig []byte) (map[string]interface{}, error) {
@@ -67,11 +68,19 @@ func setImageVectorOverwrites(values map[string]interface{}, imageVectorOverwrit
 
 	// Set image vector
 	if imageVectorOverwrite != nil {
-		gardenletValues.(map[string]interface{})["imageVectorOverwrite"] = string(*imageVectorOverwrite)
+		yamlImageVector, err := yaml.JSONToYAML(*imageVectorOverwrite)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert image vector to yaml: %w", err)
+		}
+		gardenletValues.(map[string]interface{})["imageVectorOverwrite"] = string(yamlImageVector)
 	}
 
 	if componentImageVectorOverwrites != nil {
-		gardenletValues.(map[string]interface{})["componentImageVectorOverwrites"] = string(*componentImageVectorOverwrites)
+		yamlImageVector, err := yaml.JSONToYAML(*componentImageVectorOverwrites)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert component image vector to yaml: %w", err)
+		}
+		gardenletValues.(map[string]interface{})["componentImageVectorOverwrites"] = string(yamlImageVector)
 	}
 
 	return utils.SetToValuesMap(values, gardenletValues, "global", "gardenlet")
