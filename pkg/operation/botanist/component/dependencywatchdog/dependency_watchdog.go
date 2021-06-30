@@ -92,8 +92,9 @@ type dependencyWatchdog struct {
 
 func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 	var (
-		config string
-		err    error
+		config              string
+		vpaMinAllowedMemory string
+		err                 error
 	)
 
 	switch d.values.Role {
@@ -102,12 +103,14 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		vpaMinAllowedMemory = "25Mi"
 
 	case RoleProbe:
 		config, err = scalerapi.Encode(&d.values.ValuesProbe.ProbeDependantsList)
 		if err != nil {
 			return err
 		}
+		vpaMinAllowedMemory = "50Mi"
 	}
 
 	var (
@@ -262,7 +265,7 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 						ContainerName: autoscalingv1beta2.DefaultContainerResourcePolicy,
 						MinAllowed: corev1.ResourceList{
 							corev1.ResourceCPU:    resource.MustParse("25m"),
-							corev1.ResourceMemory: resource.MustParse("25Mi"),
+							corev1.ResourceMemory: resource.MustParse(vpaMinAllowedMemory),
 						},
 					}},
 				},

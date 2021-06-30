@@ -313,7 +313,8 @@ status: {}
 					return out
 				}
 
-				vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
+				vpaYAMLFor = func(role Role) string {
+					out := `apiVersion: autoscaling.k8s.io/v1beta2
 kind: VerticalPodAutoscaler
 metadata:
   creationTimestamp: null
@@ -325,7 +326,17 @@ spec:
     - containerName: '*'
       minAllowed:
         cpu: 25m
-        memory: 25Mi
+`
+
+					if role == RoleEndpoint {
+						out += `        memory: 25Mi`
+					}
+
+					if role == RoleProbe {
+						out += `        memory: 50Mi`
+					}
+
+					out += `
   targetRef:
     apiVersion: apps/v1
     kind: Deployment
@@ -334,6 +345,9 @@ spec:
     updateMode: Auto
 status: {}
 `
+
+					return out
+				}
 			)
 
 			BeforeEach(func() {
@@ -389,7 +403,7 @@ status: {}
 				Expect(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_"+dwdName+"_role.yaml"]).To(DeepEqual([]byte(roleYAML)))
 				Expect(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_"+dwdName+"_role-binding.yaml"]).To(DeepEqual([]byte(roleBindingYAML)))
 				Expect(managedResourceSecret.Data["serviceaccount__"+namespace+"__"+dwdName+".yaml"]).To(DeepEqual([]byte(serviceAccountYAML)))
-				Expect(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__"+dwdName+"-vpa.yaml"]).To(DeepEqual([]byte(vpaYAML)))
+				Expect(managedResourceSecret.Data["verticalpodautoscaler__"+namespace+"__"+dwdName+"-vpa.yaml"]).To(DeepEqual([]byte(vpaYAMLFor(values.Role))))
 			})
 
 			It("should successfully destroy all resources for role "+string(values.Role), func() {
