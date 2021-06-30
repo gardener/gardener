@@ -15,11 +15,8 @@
 package v1alpha1
 
 import (
-	"time"
-
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 )
@@ -44,19 +41,13 @@ func SetDefaults_SchedulerConfiguration(obj *SchedulerConfiguration) {
 	if obj.Schedulers.BackupBucket == nil {
 		obj.Schedulers.BackupBucket = &BackupBucketSchedulerConfiguration{
 			ConcurrentSyncs: 2,
-			RetrySyncPeriod: metav1.Duration{
-				Duration: 15 * time.Second,
-			},
 		}
 	}
 
 	if obj.Schedulers.Shoot == nil {
 		obj.Schedulers.Shoot = &ShootSchedulerConfiguration{
 			ConcurrentSyncs: 5,
-			RetrySyncPeriod: metav1.Duration{
-				Duration: 15 * time.Second,
-			},
-			Strategy: Default,
+			Strategy:        Default,
 		}
 	}
 	if len(obj.Schedulers.Shoot.Strategy) == 0 {

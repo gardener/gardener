@@ -45,12 +45,10 @@ data:
     schedulers:
       {{- if .Values.global.scheduler.config.schedulers.backupBucket }}
       backupBucket:
-        retrySyncPeriod: {{ .Values.global.scheduler.config.schedulers.backupBucket.retrySyncPeriod }}
         concurrentSyncs: {{ .Values.global.scheduler.config.schedulers.backupBucket.concurrentSyncs }}
       {{- end }}
       {{- if .Values.global.scheduler.config.schedulers.shoot }}
       shoot:
-        retrySyncPeriod: {{ .Values.global.scheduler.config.schedulers.shoot.retrySyncPeriod }}
         concurrentSyncs: {{ .Values.global.scheduler.config.schedulers.shoot.concurrentSyncs }}
         candidateDeterminationStrategy: {{ required ".Values.global.scheduler.config.schedulers.shoot.candidateDeterminationStrategy is required" .Values.global.scheduler.config.schedulers.shoot.candidateDeterminationStrategy }}
       {{- end }}
