@@ -171,7 +171,7 @@ func (s *service) Deploy(ctx context.Context) error {
 				TargetPort: intstr.FromInt(8132),
 			})
 		}
-		obj.Spec.Ports = kutil.ReconcileServicePorts(obj.Spec.Ports, desiredPorts)
+		obj.Spec.Ports = kutil.ReconcileServicePorts(obj.Spec.Ports, desiredPorts, s.values.serviceType)
 
 		return nil
 	}); err != nil {
