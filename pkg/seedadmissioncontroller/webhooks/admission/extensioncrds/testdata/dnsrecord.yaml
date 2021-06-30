@@ -1,0 +1,16 @@
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: DNSRecord
+metadata:
+  name: foo
+  namespace: shoot--foo--bar
+spec:
+  name: api.foo.example.com
+  recordType: A
+  region: eu-west-1
+  secretRef:
+    name: foo
+    namespace: shoot--foo--bar
+  type: aws-route53
+  values:
+  - 1.2.3.4
+  zone: ZFOO
