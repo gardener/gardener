@@ -24,21 +24,12 @@ export GO111MODULE=on
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0
 curl -s "https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3" | bash -s -- --version 'v3.5.4'
 
-localBin="$(dirname "$0")/tools/bin"
-[ -d "$localBin" ] || mkdir -p "$localBin"
-
 platform=$(uname -s)
 if [[ ${platform} == "Linux" ]]; then
   if ! which jq &>/dev/null; then
     echo "Installing jq ..."
     curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
     chmod +x /usr/local/bin/jq
-  fi
-
-  if ! [ -x "$localBin/yq" ]; then
-    echo "Installing yq ..."
-    curl -L -o "$localBin/yq" https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_linux_amd64
-    chmod +x "$localBin/yq"
   fi
 fi
 

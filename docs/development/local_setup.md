@@ -114,15 +114,15 @@ This will create symbolic links for the GNU utilities with `g` prefix in `/usr/l
 
 ## [Windows] WSL2
 
-Apart from Linux distributions and MacOS, the local gardener setup can also run on the Windows Subsystem for Linux 2. 
+Apart from Linux distributions and MacOS, the local gardener setup can also run on the Windows Subsystem for Linux 2.
 
 While WSL1, plain docker for windows and various Linux distributions and local Kubernetes environments may be supported, this setup was verified with:
-* [WSL2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-index) 
+* [WSL2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-index)
 * [Docker Desktop WSL2 Engine](https://docs.docker.com/docker-for-windows/wsl/)
-* [Ubuntu 18.04 LTS on WSL2](https://ubuntu.com/blog/ubuntu-on-wsl-2-is-generally-available)  
+* [Ubuntu 18.04 LTS on WSL2](https://ubuntu.com/blog/ubuntu-on-wsl-2-is-generally-available)
 * Nodeless local garden (see below)
 
-The Gardener repository and all the above-mentioned tools (git, golang, kubectl, ...) should be installed in your WSL2 distro, according to the distribution-specific Linux installation instructions. 
+The Gardener repository and all the above-mentioned tools (git, golang, kubectl, ...) should be installed in your WSL2 distro, according to the distribution-specific Linux installation instructions.
 
 ## [Optional] Installing gcloud SDK
 
@@ -189,7 +189,7 @@ make local-garden-down
   > Note: Gardener requires self-contained kubeconfig files because of a [security issue](https://banzaicloud.com/blog/kubeconfig-security/). You can configure your minikube to create self-contained kubeconfig files via:
   > ```bash
   > minikube config set embed-certs true
-  > ``` 
+  > ```
   > or when starting the local cluster
   > ```bash
   > minikube start --embed-certs
@@ -230,7 +230,7 @@ make remote-garden-down
 ℹ️ [Optional] If you want to use the remote Garden cluster setup with the `SeedAuthorization` feature you have to adapt the `kube-apiserver` process of your remote Garden cluster. To do this, perform the following steps after running `make remote-garden-up`:
 
 * Create an [authorization webhook configuration file](https://kubernetes.io/docs/reference/access-authn-authz/webhook/#configuration-file-format) using the IP of the `garden/quic-server` pod running in your remote Garden cluster and port 10444 that tunnels to your locally running `gardener-admission-controller` process.
-  
+
   ```yaml
   apiVersion: v1
   kind: Config
@@ -262,7 +262,7 @@ If your remote Garden cluster is a Gardener shoot, and you can access the seed o
 hack/local-development/remote-garden/enable-seed-authorizer <seed kubeconfig> <namespace>
 ```
 
-> Note: The configuration changes introduced by this script result in a working `SeedAuthorization` feature only on shoots for which the `ReversedVPN` feature is not enabled. If the corresponding feature gate is enabled in `gardenlet`, add the annotation `alpha.featuregates.shoot.gardener.cloud/reversed-vpn: 'false'` to the remote Garden shoot to disable it for that particular shoot. 
+> Note: The configuration changes introduced by this script result in a working `SeedAuthorization` feature only on shoots for which the `ReversedVPN` feature is not enabled. If the corresponding feature gate is enabled in `gardenlet`, add the annotation `alpha.featuregates.shoot.gardener.cloud/reversed-vpn: 'false'` to the remote Garden shoot to disable it for that particular shoot.
 
 To prevent Gardener from reconciling the shoot and overwriting your changes, add the annotation `shoot.gardener.cloud/ignore: 'true'` to the remote Garden shoot. Note that this annotation takes effect only if it is enabled via the `constollers.shoot.respectSyncPeriodOverwrite: true` option in the `gardenlet` configuration.
 
@@ -362,24 +362,6 @@ time="2019-05-02T16:31:50+02:00" level=info msg="Scheduler controller initialize
 [...]
 ```
 
-(Optional) Now you are ready to launch the Gardenlet.
-
-```bash
-make start-gardenlet
-time="2019-11-06T15:24:17+02:00" level=info msg="Starting Gardenlet..."
-time="2019-11-06T15:24:17+02:00" level=info msg="Feature Gates: HVPA=true, Logging=true"
-time="2019-11-06T15:24:17+02:00" level=info msg="Acquired leadership, starting controllers."
-time="2019-11-06T15:24:18+02:00" level=info msg="Found internal domain secret internal-domain-unmanaged for domain nip.io."
-time="2019-11-06T15:24:18+02:00" level=info msg="Gardenlet (version 1.0.0-dev) initialized."
-time="2019-11-06T15:24:18+02:00" level=info msg="ControllerInstallation controller initialized."
-time="2019-11-06T15:24:18+02:00" level=info msg="Shoot controller initialized."
-time="2019-11-06T15:24:18+02:00" level=info msg="Seed controller initialized."
-[...]
-```
-
-:warning: The Gardenlet will handle all your seeds for this development scenario, although, for productive usage it is recommended to run it once per seed, see [this document](../concepts/gardenlet.md) for more information.
-See the [Appendix](#appendix) on how to configure the Seed clusters for the local development scenario. 
-
 Please checkout the [Gardener Extensions Manager](https://github.com/gardener/gem) to install extension controllers - make sure that you install all of them required for your local development.
 Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
 
@@ -425,7 +407,7 @@ dev    garden-dev   Ready    john.doe@example.com   kubernetes-admin   6s
 
 #### 3. Create a CloudProfile
 
-The `CloudProfile` resource is provider specific and describes the underlying cloud provider (available machine types, regions, machine images, etc.). Check the corresponding example manifest `dev/30-cloudprofile.yaml`. Check also the documentation and example manifests of the provider extension. Adapt `dev/30-cloudprofile.yaml` and apply it. 
+The `CloudProfile` resource is provider specific and describes the underlying cloud provider (available machine types, regions, machine images, etc.). Check the corresponding example manifest `dev/30-cloudprofile.yaml`. Check also the documentation and example manifests of the provider extension. Adapt `dev/30-cloudprofile.yaml` and apply it.
 
 ```bash
 kubectl apply -f dev/30-cloudprofile.yaml
@@ -442,13 +424,7 @@ kubectl apply -f https://raw.githubusercontent.com/gardener/gardener-extension-p
 
 #### 5. Register a Seed
 
-When using the Gardenlet in a local development scenario with `make start-gardenlet` then the Gardenlet component configuration is setup with a [seed selector](../concepts/gardenlet.md#seed-config-vs-seed-selector) that targets all available Seed clusters.
-However, a `Seed` resource needs to be configured to allow being reconciled by a Gardenlet which such a configuration.
-
-When deploying the Gardenlet to reconcile only one Seed cluster (using component configuration `.seedConfig`), 
-the Gardenlet either needs to be supplied with a kubeconfig for the particular Seed cluster, or acquires one via bootstrapping.
-Having said that, if the Gardenlet is configured to manage multiple Seed clusters based on a label selector, it needs to fetch the kubeconfig of each Seed cluster at runtime from somewhere.
-That is why the `Seed` resource needs to be configured with an additional secret reference that contains the kubeconfig of the Seed cluster.
+Shoot controlplanes run in seed clusters, so we need to create our first Seed now.
 
 Check the corresponding example manifest `dev/40-secret-seed.yaml` and `dev/50-seed.yaml`. Update `dev/40-secret-seed.yaml` with base64 encoded kubeconfig of the cluster that will be used as Seed (the scope of the permissions should be identical to the kubeconfig that the Gardenlet creates during bootstrapping - for now, `cluster-admin` privileges are recommended).
 
@@ -462,7 +438,24 @@ Adapt `dev/50-seed.yaml` - adjust `.spec.secretRef` to refer the newly created S
 kubectl apply -f dev/50-seed.yaml
 ```
 
-Make sure that the Seed is successfully reconciled:
+### 6. Start Gardenlet
+
+Once the Seed is created, start the Gardenlet to reconcile it. The `make start-gardenlet` command will automatically configure the local Gardenlet process to use the Seed and its kubeconfig. If you have multiple Seeds, you have to specify which to use by setting the `SEED_NAME` environment variable like in `make start-gardenlet SEED_NAME=my-first-seed`.
+
+```bash
+make start-gardenlet
+time="2019-11-06T15:24:17+02:00" level=info msg="Starting Gardenlet..."
+time="2019-11-06T15:24:17+02:00" level=info msg="Feature Gates: HVPA=true, Logging=true"
+time="2019-11-06T15:24:17+02:00" level=info msg="Acquired leadership, starting controllers."
+time="2019-11-06T15:24:18+02:00" level=info msg="Found internal domain secret internal-domain-unmanaged for domain nip.io."
+time="2019-11-06T15:24:18+02:00" level=info msg="Gardenlet (version 1.0.0-dev) initialized."
+time="2019-11-06T15:24:18+02:00" level=info msg="ControllerInstallation controller initialized."
+time="2019-11-06T15:24:18+02:00" level=info msg="Shoot controller initialized."
+time="2019-11-06T15:24:18+02:00" level=info msg="Seed controller initialized."
+[...]
+```
+
+The Gardenlet will now reconcile the Seed. Check the progess from time to time until it's `Ready`:
 
 ```bash
 kubectl get seed
@@ -470,7 +463,7 @@ NAME       STATUS    PROVIDER    REGION      AGE    VERSION       K8S VERSION
 seed-aws   Ready     aws         eu-west-1   4m     v1.11.0-dev   v1.17.12
 ```
 
-### 6. Create a Shoot
+### 7. Create a Shoot
 
 A Shoot requires a SecretBinding. The SecretBinding refers to a Secret that contains the cloud provider credentials. The Secret data keys are provider specific and you need to check the documentation of the provider to find out which data keys are expected (for example for AWS the related documentation can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage-as-end-user.md#provider-secret-data)). Adapt `dev/70-secret-provider.yaml` and `dev/80-secretbinding.yaml` and apply them.
 
