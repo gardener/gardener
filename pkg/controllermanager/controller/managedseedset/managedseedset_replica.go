@@ -402,14 +402,14 @@ const placeholder = "replica-name"
 
 func replacePlaceholdersInShootSpec(spec *gardencorev1beta1.ShootSpec, name string) {
 	if spec.DNS != nil && spec.DNS.Domain != nil {
-		spec.DNS.Domain = pointer.StringPtr(strings.Replace(*spec.DNS.Domain, placeholder, name, -1))
+		spec.DNS.Domain = pointer.String(strings.Replace(*spec.DNS.Domain, placeholder, name, -1))
 	}
 }
 
 func replacePlaceholdersInSeedSpec(spec *gardencorev1beta1.SeedSpec, name string) {
 	switch {
 	case spec.DNS.IngressDomain != nil:
-		spec.DNS.IngressDomain = pointer.StringPtr(strings.Replace(*spec.DNS.IngressDomain, placeholder, name, -1))
+		spec.DNS.IngressDomain = pointer.String(strings.Replace(*spec.DNS.IngressDomain, placeholder, name, -1))
 	case spec.Ingress != nil:
 		spec.Ingress.Domain = strings.Replace(spec.Ingress.Domain, placeholder, name, -1)
 	}

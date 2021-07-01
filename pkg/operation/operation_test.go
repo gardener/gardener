@@ -273,7 +273,7 @@ var _ = Describe("operation", func() {
 			Expect(operation.ToAdvertisedAddresses()).To(BeNil())
 		})
 		It("returns external address", func() {
-			operation.Shoot.ExternalClusterDomain = pointer.StringPtr("foo.bar")
+			operation.Shoot.ExternalClusterDomain = pointer.String("foo.bar")
 
 			addresses := operation.ToAdvertisedAddresses()
 
@@ -309,7 +309,7 @@ var _ = Describe("operation", func() {
 		})
 
 		It("returns external and internal addresses in correct order", func() {
-			operation.Shoot.ExternalClusterDomain = pointer.StringPtr("foo.bar")
+			operation.Shoot.ExternalClusterDomain = pointer.String("foo.bar")
 			operation.Shoot.InternalClusterDomain = "baz.foo"
 			operation.APIServerAddress = "bar.foo"
 

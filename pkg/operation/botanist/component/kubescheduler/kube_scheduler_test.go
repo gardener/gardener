@@ -59,7 +59,7 @@ var _ = Describe("KubeScheduler", func() {
 		replicas         int32 = 1
 
 		configEmpty *gardencorev1beta1.KubeSchedulerConfig
-		configFull  = &gardencorev1beta1.KubeSchedulerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}, KubeMaxPDVols: pointer.StringPtr("23")}
+		configFull  = &gardencorev1beta1.KubeSchedulerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}, KubeMaxPDVols: pointer.String("23")}
 
 		secretNameKubeconfig     = "kubeconfig-secret"
 		secretChecksumKubeconfig = "1234"
@@ -157,7 +157,7 @@ var _ = Describe("KubeScheduler", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					RevisionHistoryLimit: pointer.Int32Ptr(1),
+					RevisionHistoryLimit: pointer.Int32(1),
 					Replicas:             &replicas,
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{

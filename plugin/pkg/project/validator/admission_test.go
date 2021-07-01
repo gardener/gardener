@@ -66,7 +66,7 @@ var _ = Describe("Admission", func() {
 		})
 
 		It("should prevent creating the project because namespace prefix is missing", func() {
-			project.Spec.Namespace = pointer.StringPtr("foo")
+			project.Spec.Namespace = pointer.String("foo")
 
 			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 

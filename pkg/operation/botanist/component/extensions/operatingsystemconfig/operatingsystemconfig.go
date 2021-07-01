@@ -548,7 +548,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			files = append(files, downloaderFiles...)
 			files = append(files, extensionsv1alpha1.File{
 				Path:        "/etc/systemd/system/" + downloader.UnitName,
-				Permissions: pointer.Int32Ptr(0644),
+				Permissions: pointer.Int32(0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -583,7 +583,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 		}
 
 		if d.purpose == extensionsv1alpha1.OperatingSystemConfigPurposeReconcile {
-			d.osc.Spec.ReloadConfigFilePath = pointer.StringPtr(downloader.PathDownloadedCloudConfig)
+			d.osc.Spec.ReloadConfigFilePath = pointer.String(downloader.PathDownloadedCloudConfig)
 		}
 
 		return nil

@@ -40,14 +40,14 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	}
 
 	cfg := resourcemanager.Values{
-		AlwaysUpdate:               pointer.BoolPtr(true),
+		AlwaysUpdate:               pointer.Bool(true),
 		ClusterIdentity:            b.Seed.Info.Status.ClusterIdentity,
-		ConcurrentSyncs:            pointer.Int32Ptr(20),
+		ConcurrentSyncs:            pointer.Int32(20),
 		HealthSyncPeriod:           utils.DurationPtr(time.Minute),
-		MaxConcurrentHealthWorkers: pointer.Int32Ptr(10),
+		MaxConcurrentHealthWorkers: pointer.Int32(10),
 		SyncPeriod:                 utils.DurationPtr(time.Minute),
-		TargetDisableCache:         pointer.BoolPtr(true),
-		WatchedNamespace:           pointer.StringPtr(b.Shoot.SeedNamespace),
+		TargetDisableCache:         pointer.Bool(true),
+		WatchedNamespace:           pointer.String(b.Shoot.SeedNamespace),
 	}
 
 	// ensure grm is present during hibernation (if the cluster is not hibernated yet) to reconcile any changes to

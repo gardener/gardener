@@ -72,7 +72,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			now     time.Time
 
 			apiServerURL            = "https://url-to-apiserver"
-			caBundle                = pointer.StringPtr("ca-bundle")
+			caBundle                = pointer.String("ca-bundle")
 			clusterDNSAddress       = "cluster-dns"
 			clusterDomain           = "cluster-domain"
 			images                  = map[string]*imagevector.Image{"foo": {}}
@@ -254,11 +254,11 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						Purpose:              extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 						CRIConfig:            criConfig,
-						ReloadConfigFilePath: pointer.StringPtr("/var/lib/cloud-config-downloader/downloads/cloud_config"),
+						ReloadConfigFilePath: pointer.String("/var/lib/cloud-config-downloader/downloads/cloud_config"),
 						Units:                originalUnits,
 						Files: append(append(originalFiles, downloaderFiles...), extensionsv1alpha1.File{
 							Path:        "/etc/systemd/system/cloud-config-downloader.service",
-							Permissions: pointer.Int32Ptr(0644),
+							Permissions: pointer.Int32(0644),
 							Content: extensionsv1alpha1.FileContent{
 								Inline: &extensionsv1alpha1.FileContentInline{
 									Encoding: "b64",
@@ -317,15 +317,15 @@ var _ = Describe("OperatingSystemConfig", func() {
 				for _, worker := range workers {
 					extensions = append(extensions,
 						gardencorev1alpha1.ExtensionResourceState{
-							Name:    pointer.StringPtr("cloud-config-" + worker.Name + "-77ac3-downloader"),
+							Name:    pointer.String("cloud-config-" + worker.Name + "-77ac3-downloader"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
-							Purpose: pointer.StringPtr(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
+							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
 							State:   &runtime.RawExtension{Raw: stateDownloader},
 						},
 						gardencorev1alpha1.ExtensionResourceState{
-							Name:    pointer.StringPtr("cloud-config-" + worker.Name + "-77ac3-original"),
+							Name:    pointer.String("cloud-config-" + worker.Name + "-77ac3-original"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
-							Purpose: pointer.StringPtr(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
+							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
 							State:   &runtime.RawExtension{Raw: stateOriginal},
 						},
 					)
@@ -452,7 +452,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 					}
 					// set other status fields
-					expected[i].Status.Command = pointer.StringPtr("foo-" + expected[i].Name)
+					expected[i].Status.Command = pointer.String("foo-" + expected[i].Name)
 					expected[i].Status.Units = []string{"bar-" + expected[i].Name, "baz-" + expected[i].Name}
 					Expect(c.Patch(ctx, expected[i], patch)).ToNot(HaveOccurred(), "patching operatingsystemconfig succeeds")
 
@@ -504,7 +504,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 					}
 					// set other status fields
-					expected[i].Status.Command = pointer.StringPtr("foo-" + expected[i].Name)
+					expected[i].Status.Command = pointer.String("foo-" + expected[i].Name)
 					expected[i].Status.Units = []string{"bar-" + expected[i].Name, "baz-" + expected[i].Name}
 					Expect(c.Patch(ctx, expected[i], patch)).ToNot(HaveOccurred(), "patching operatingsystemconfig succeeds")
 
@@ -543,7 +543,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 					}
 					// set other status fields
-					expected[i].Status.Command = pointer.StringPtr("foo-" + expected[i].Name)
+					expected[i].Status.Command = pointer.String("foo-" + expected[i].Name)
 					expected[i].Status.Units = []string{"bar-" + expected[i].Name, "baz-" + expected[i].Name}
 					Expect(c.Create(ctx, expected[i])).To(Succeed())
 
@@ -565,7 +565,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					worker1Name: {
 						Downloader: Data{
 							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-downloader",
-							Command: pointer.StringPtr("foo-cloud-config-" + worker1Name + "-77ac3-downloader"),
+							Command: pointer.String("foo-cloud-config-" + worker1Name + "-77ac3-downloader"),
 							Units: []string{
 								"bar-cloud-config-" + worker1Name + "-77ac3-downloader",
 								"baz-cloud-config-" + worker1Name + "-77ac3-downloader",
@@ -573,7 +573,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						Original: Data{
 							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-original",
-							Command: pointer.StringPtr("foo-cloud-config-" + worker1Name + "-77ac3-original"),
+							Command: pointer.String("foo-cloud-config-" + worker1Name + "-77ac3-original"),
 							Units: []string{
 								"bar-cloud-config-" + worker1Name + "-77ac3-original",
 								"baz-cloud-config-" + worker1Name + "-77ac3-original",
@@ -583,7 +583,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					worker2Name: {
 						Downloader: Data{
 							Content: "foobar-cloud-config-" + worker2Name + "-77ac3-downloader",
-							Command: pointer.StringPtr("foo-cloud-config-" + worker2Name + "-77ac3-downloader"),
+							Command: pointer.String("foo-cloud-config-" + worker2Name + "-77ac3-downloader"),
 							Units: []string{
 								"bar-cloud-config-" + worker2Name + "-77ac3-downloader",
 								"baz-cloud-config-" + worker2Name + "-77ac3-downloader",
@@ -591,7 +591,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 						},
 						Original: Data{
 							Content: "foobar-cloud-config-" + worker2Name + "-77ac3-original",
-							Command: pointer.StringPtr("foo-cloud-config-" + worker2Name + "-77ac3-original"),
+							Command: pointer.String("foo-cloud-config-" + worker2Name + "-77ac3-original"),
 							Units: []string{
 								"bar-cloud-config-" + worker2Name + "-77ac3-original",
 								"baz-cloud-config-" + worker2Name + "-77ac3-original",

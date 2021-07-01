@@ -900,8 +900,8 @@ func runCreateSeedFlow(
 		SNIEnabled:           gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI,
 		DenyAllTraffic:       false,
 		PrivateNetworkPeers:  privateNetworkPeers,
-		NodeLocalIPVSAddress: pointer.StringPtr(common.NodeLocalIPVSAddress),
-		DNSServerAddress:     pointer.StringPtr(seedDNSServerAddress.String()),
+		NodeLocalIPVSAddress: pointer.String(common.NodeLocalIPVSAddress),
+		DNSServerAddress:     pointer.String(seedDNSServerAddress.String()),
 	})
 
 	grmImage, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager, imagevector.RuntimeVersion(sc.Version()), imagevector.TargetVersion(sc.Version()))
@@ -909,9 +909,9 @@ func runCreateSeedFlow(
 		return err
 	}
 	resourceManager := resourcemanager.New(sc.Client(), v1beta1constants.GardenNamespace, grmImage.String(), 1, resourcemanager.Values{
-		ConcurrentSyncs:  pointer.Int32Ptr(20),
+		ConcurrentSyncs:  pointer.Int32(20),
 		HealthSyncPeriod: utils.DurationPtr(time.Minute),
-		ResourceClass:    pointer.StringPtr(v1beta1constants.SeedResourceManagerClass),
+		ResourceClass:    pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SyncPeriod:       utils.DurationPtr(time.Hour),
 	})
 

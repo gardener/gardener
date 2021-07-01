@@ -620,8 +620,8 @@ func ComputeExpectedGardenletConfiguration(
 				},
 			},
 			Shoot: &gardenletconfigv1alpha1.ShootControllerConfiguration{
-				ReconcileInMaintenanceOnly: pointer.BoolPtr(false),
-				RespectSyncPeriodOverwrite: pointer.BoolPtr(false),
+				ReconcileInMaintenanceOnly: pointer.Bool(false),
+				RespectSyncPeriodOverwrite: pointer.Bool(false),
 				ConcurrentSyncs:            &twenty,
 				SyncPeriod: &metav1.Duration{
 					Duration: time.Hour,
@@ -629,7 +629,7 @@ func ComputeExpectedGardenletConfiguration(
 				RetryDuration: &metav1.Duration{
 					Duration: 12 * time.Hour,
 				},
-				DNSEntryTTLSeconds: pointer.Int64Ptr(120),
+				DNSEntryTTLSeconds: pointer.Int64(120),
 			},
 			ManagedSeed: &gardenletconfigv1alpha1.ManagedSeedControllerConfiguration{
 				ConcurrentSyncs: &five,
@@ -701,7 +701,7 @@ func ComputeExpectedGardenletConfiguration(
 		},
 		LeaderElection: &gardenletconfigv1alpha1.LeaderElectionConfiguration{
 			LeaderElectionConfiguration: baseconfigv1alpha1.LeaderElectionConfiguration{
-				LeaderElect:   pointer.BoolPtr(true),
+				LeaderElect:   pointer.Bool(true),
 				LeaseDuration: metav1.Duration{Duration: 15 * time.Second},
 				RenewDeadline: metav1.Duration{Duration: 10 * time.Second},
 				RetryPeriod:   metav1.Duration{Duration: 2 * time.Second},
@@ -725,8 +725,8 @@ func ComputeExpectedGardenletConfiguration(
 			},
 		},
 		SNI: &gardenletconfigv1alpha1.SNI{Ingress: &gardenletconfigv1alpha1.SNIIngress{
-			ServiceName: pointer.StringPtr(gardenletconfigv1alpha1.DefaultSNIIngresServiceName),
-			Namespace:   pointer.StringPtr(gardenletconfigv1alpha1.DefaultSNIIngresNamespace),
+			ServiceName: pointer.String(gardenletconfigv1alpha1.DefaultSNIIngresServiceName),
+			Namespace:   pointer.String(gardenletconfigv1alpha1.DefaultSNIIngresNamespace),
 			Labels:      map[string]string{"istio": "ingressgateway"},
 		}},
 	}
@@ -795,8 +795,8 @@ func getEmptyGardenletConfigMap() *corev1.ConfigMap {
 // as a consequence, if non-optional changes to the helm chart are made, these tests will fail by design
 func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagement.GardenletDeployment, componentConfigUsesTlsServerConfig bool, gardenClientConnectionKubeconfig, seedClientConnectionKubeconfig *string, expectedLabels map[string]string, imageVectorOverwrite, componentImageVectorOverwrites *string) appsv1.DeploymentSpec {
 	deployment := appsv1.DeploymentSpec{
-		RevisionHistoryLimit: pointer.Int32Ptr(10),
-		Replicas:             pointer.Int32Ptr(1),
+		RevisionHistoryLimit: pointer.Int32(10),
+		Replicas:             pointer.Int32(1),
 		Selector: &metav1.LabelSelector{
 			MatchLabels: map[string]string{
 				"app":  "gardener",
@@ -994,7 +994,7 @@ func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagem
 			},
 		})
 		deployment.Template.Spec.ServiceAccountName = ""
-		deployment.Template.Spec.AutomountServiceAccountToken = pointer.BoolPtr(false)
+		deployment.Template.Spec.AutomountServiceAccountToken = pointer.Bool(false)
 	}
 
 	deployment.Template.Spec.Containers[0].VolumeMounts = append(deployment.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{

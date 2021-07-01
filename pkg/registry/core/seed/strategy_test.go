@@ -40,7 +40,7 @@ var _ = Describe("Strategy", func() {
 		})
 
 		It("should preserve the status", func() {
-			newSeed.Status = core.SeedStatus{KubernetesVersion: pointer.StringPtr("1.2.3")}
+			newSeed.Status = core.SeedStatus{KubernetesVersion: pointer.String("1.2.3")}
 			strategy.PrepareForUpdate(ctx, newSeed, oldSeed)
 			Expect(newSeed.Status).To(Equal(oldSeed.Status))
 		})

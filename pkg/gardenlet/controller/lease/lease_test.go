@@ -56,8 +56,8 @@ var _ = Describe("LeaseController", func() {
 				Namespace: testLeaseNamespace,
 			},
 			Spec: coordinationv1.LeaseSpec{
-				HolderIdentity:       pointer.StringPtr(holderName),
-				LeaseDurationSeconds: pointer.Int32Ptr(2),
+				HolderIdentity:       pointer.String(holderName),
+				LeaseDurationSeconds: pointer.Int32(2),
 			},
 		}
 

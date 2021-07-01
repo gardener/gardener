@@ -41,12 +41,12 @@ var _ = Describe("Values", func() {
 			Objects: []object{
 				{
 					Object: &object{
-						String: pointer.StringPtr("foo"),
+						String: pointer.String("foo"),
 					},
-					Int: pointer.Int32Ptr(42),
+					Int: pointer.Int32(42),
 				},
 			},
-			Bool: pointer.BoolPtr(true),
+			Bool: pointer.Bool(true),
 		}
 		values = map[string]interface{}{
 			"objects": []interface{}{

@@ -71,7 +71,7 @@ var _ = Describe("ShootClientMap", func() {
 				Name:      "forbidden-fruit",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: pointer.StringPtr("apple-seed"),
+				SeedName: pointer.String("apple-seed"),
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				TechnicalID: "shoot--eden--forbidden-fruit",
@@ -84,7 +84,7 @@ var _ = Describe("ShootClientMap", func() {
 					Name: "eden",
 				},
 				Spec: gardencorev1beta1.ProjectSpec{
-					Namespace: pointer.StringPtr("garden-eden"),
+					Namespace: pointer.String("garden-eden"),
 				}}, nil
 		}
 		internal.LookupHost = func(host string) ([]string, error) {

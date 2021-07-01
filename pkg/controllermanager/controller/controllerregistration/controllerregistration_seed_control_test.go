@@ -280,13 +280,13 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 					},
 					{
 						Kind:            extensionsv1alpha1.ExtensionResource,
-						GloballyEnabled: pointer.BoolPtr(true),
+						GloballyEnabled: pointer.Bool(true),
 						Type:            type10,
 					},
 					{
 						Kind:    extensionsv1alpha1.NetworkResource,
 						Type:    type2,
-						Primary: pointer.BoolPtr(false),
+						Primary: pointer.Bool(false),
 					},
 				},
 			},
@@ -600,7 +600,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 						Name: "s4",
 					},
 					Spec: gardencorev1beta1.ShootSpec{
-						SeedName: pointer.StringPtr("anotherSeed"),
+						SeedName: pointer.String("anotherSeed"),
 						Provider: gardencorev1beta1.Provider{
 							Type: type2,
 							Workers: []gardencorev1beta1.Worker{

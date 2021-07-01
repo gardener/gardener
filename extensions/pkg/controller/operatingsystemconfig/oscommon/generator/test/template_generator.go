@@ -49,7 +49,7 @@ var DescribeTest = func(g generator.Generator, files embed.FS) func() {
 					{
 						Path:              "/foo2",
 						Content:           []byte("bar"),
-						TransmitUnencoded: pointer.BoolPtr(true),
+						TransmitUnencoded: pointer.Bool(true),
 					},
 				},
 

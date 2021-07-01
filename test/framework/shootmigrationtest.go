@@ -100,7 +100,7 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 	return t.GardenerFramework.MigrateShoot(ctx, &t.Shoot, t.TargetSeed, func(shoot *gardencorev1beta1.Shoot) error {
 		t := gardencorev1beta1.Toleration{}
 		t.Key = SeedTaintTestRun
-		t.Value = pointer.StringPtr(GetTestRunID())
+		t.Value = pointer.String(GetTestRunID())
 
 		if shoot.Spec.Tolerations == nil {
 			shoot.Spec.Tolerations = make([]gardencorev1beta1.Toleration, 0)

@@ -57,8 +57,8 @@ var _ = Describe("Component", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    "updatecacerts.service",
-					Command: pointer.StringPtr("start"),
-					Content: pointer.StringPtr(`[Unit]
+					Command: pointer.String("start"),
+					Content: pointer.String(`[Unit]
 Description=Update CA bundle at /etc/ssl/certs/ca-certificates.crt
 # Since other services depend on the certificate store run this early
 DefaultDependencies=no
@@ -78,7 +78,7 @@ WantedBy=multi-user.target`),
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/etc/ssl/certs/ROOTcerts.pem",
-					Permissions: pointer.Int32Ptr(0644),
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -88,7 +88,7 @@ WantedBy=multi-user.target`),
 				},
 				extensionsv1alpha1.File{
 					Path:        "/etc/pki/trust/anchors/ROOTcerts.pem",
-					Permissions: pointer.Int32Ptr(0644),
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",

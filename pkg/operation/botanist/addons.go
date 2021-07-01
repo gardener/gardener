@@ -144,7 +144,7 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
 				Name:    common.ShootDNSIngressName,
-				Active:  pointer.BoolPtr(true),
+				Active:  pointer.Bool(true),
 				OwnerID: ownerID,
 			},
 		)

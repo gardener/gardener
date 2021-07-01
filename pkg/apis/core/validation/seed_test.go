@@ -55,7 +55,7 @@ var _ = Describe("Seed Validation Tests", func() {
 					Region: "eu-west-1",
 				},
 				DNS: core.SeedDNS{
-					IngressDomain: pointer.StringPtr("ingress.my-seed-1.example.com"),
+					IngressDomain: pointer.String("ingress.my-seed-1.example.com"),
 				},
 				SecretRef: &corev1.SecretReference{
 					Name:      "seed-foo",
@@ -142,7 +142,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should forbid Seed specification with empty or invalid keys", func() {
 			invalidCIDR := "invalid-cidr"
 			seed.Spec.Provider = core.SeedProvider{}
-			seed.Spec.DNS.IngressDomain = pointer.StringPtr("invalid_dns1123-subdomain")
+			seed.Spec.DNS.IngressDomain = pointer.String("invalid_dns1123-subdomain")
 			seed.Spec.SecretRef = &corev1.SecretReference{}
 			seed.Spec.Networks = core.SeedNetworks{
 				Nodes:    &invalidCIDR,
@@ -607,7 +607,7 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			It("should succeed if ingress domain stays the same when migrating from dns.ingressDomain to ingress.domain", func() {
 				newSeed := prepareSeedForUpdate(seed)
-				seed.Spec.DNS.IngressDomain = pointer.StringPtr(seed.Spec.Ingress.Domain)
+				seed.Spec.DNS.IngressDomain = pointer.String(seed.Spec.Ingress.Domain)
 				seed.Spec.Ingress = nil
 
 				Expect(ValidateSeedUpdate(newSeed, seed)).To(BeEmpty())
@@ -668,7 +668,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			})
 
 			It("both set", func() {
-				seed.Spec.DNS.IngressDomain = pointer.StringPtr("foo")
+				seed.Spec.DNS.IngressDomain = pointer.String("foo")
 
 				errorList := ValidateSeed(seed)
 
@@ -748,13 +748,13 @@ var _ = Describe("Seed Validation Tests", func() {
 		Context("validate .status.clusterIdentity updates", func() {
 			newSeed := &core.Seed{
 				Status: core.SeedStatus{
-					ClusterIdentity: pointer.StringPtr("newClusterIdentity"),
+					ClusterIdentity: pointer.String("newClusterIdentity"),
 				},
 			}
 
 			It("should fail to update seed status cluster identity if it already exists", func() {
 				oldSeed := &core.Seed{Status: core.SeedStatus{
-					ClusterIdentity: pointer.StringPtr("clusterIdentityExists"),
+					ClusterIdentity: pointer.String("clusterIdentityExists"),
 				}}
 				allErrs := ValidateSeedStatusUpdate(newSeed, oldSeed)
 				Expect(allErrs).To(ConsistOfFields(Fields{
@@ -782,7 +782,7 @@ var _ = Describe("Seed Validation Tests", func() {
 		It("should forbid invalid metadata or spec fields", func() {
 			seedTemplate.Labels = map[string]string{"foo!": "bar"}
 			seedTemplate.Annotations = map[string]string{"foo!": "bar"}
-			seedTemplate.Spec.Networks.Nodes = pointer.StringPtr("")
+			seedTemplate.Spec.Networks.Nodes = pointer.String("")
 
 			errorList := ValidateSeedTemplate(seedTemplate, nil)
 

@@ -105,9 +105,9 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 			{
 				Name:    UnitName,
-				Command: pointer.StringPtr("start"),
-				Enable:  pointer.BoolPtr(true),
-				Content: pointer.StringPtr(`[Unit]
+				Command: pointer.String("start"),
+				Enable:  pointer.Bool(true),
+				Content: pointer.String(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
 ` + unitConfigAfterCRI(ctx.CRIName) + `
@@ -124,9 +124,9 @@ ExecStart=` + PathKubernetesBinaries + `/kubelet \
 			},
 			{
 				Name:    "kubelet-monitor.service",
-				Command: pointer.StringPtr("start"),
-				Enable:  pointer.BoolPtr(true),
-				Content: pointer.StringPtr(`[Unit]
+				Command: pointer.String("start"),
+				Enable:  pointer.Bool(true),
+				Content: pointer.String(`[Unit]
 Description=Kubelet-monitor daemon
 After=` + UnitName + `
 [Install]
@@ -141,7 +141,7 @@ ExecStart=` + pathHealthMonitor),
 		[]extensionsv1alpha1.File{
 			{
 				Path:        PathKubeletCACert,
-				Permissions: pointer.Int32Ptr(0644),
+				Permissions: pointer.Int32(0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -151,14 +151,14 @@ ExecStart=` + pathHealthMonitor),
 			},
 			{
 				Path:        PathKubeletConfig,
-				Permissions: pointer.Int32Ptr(0644),
+				Permissions: pointer.Int32(0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: fileContentKubeletConfig,
 				},
 			},
 			{
 				Path:        pathHealthMonitor,
-				Permissions: pointer.Int32Ptr(0755),
+				Permissions: pointer.Int32(0755),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

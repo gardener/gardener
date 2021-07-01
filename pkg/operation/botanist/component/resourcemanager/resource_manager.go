@@ -363,7 +363,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 		deployment.Labels = r.getLabels()
 
 		deployment.Spec.Replicas = &r.replicas
-		deployment.Spec.RevisionHistoryLimit = pointer.Int32Ptr(1)
+		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: appLabel()}
 
 		deployment.Spec.Template = corev1.PodTemplateSpec{
@@ -429,7 +429,7 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName:  r.values.Kubeconfig.Name,
-							DefaultMode: pointer.Int32Ptr(420),
+							DefaultMode: pointer.Int32(420),
 						},
 					},
 				},

@@ -89,7 +89,7 @@ var _ = Describe("ManagedSeed", func() {
 				},
 				Spec: core.ShootSpec{
 					DNS: &core.DNS{
-						Domain: pointer.StringPtr(domain),
+						Domain: pointer.String(domain),
 					},
 					Kubernetes: core.Kubernetes{
 						VerticalPodAutoscaler: &core.VerticalPodAutoscaler{
@@ -97,9 +97,9 @@ var _ = Describe("ManagedSeed", func() {
 						},
 					},
 					Networking: core.Networking{
-						Pods:     pointer.StringPtr("100.96.0.0/11"),
-						Nodes:    pointer.StringPtr("10.250.0.0/16"),
-						Services: pointer.StringPtr("100.64.0.0/13"),
+						Pods:     pointer.String("100.96.0.0/11"),
+						Nodes:    pointer.String("10.250.0.0/16"),
+						Services: pointer.String("100.64.0.0/13"),
 					},
 					Provider: core.Provider{
 						Type: provider,
@@ -149,7 +149,7 @@ var _ = Describe("ManagedSeed", func() {
 					}
 				} else {
 					dns = core.SeedDNS{
-						IngressDomain: pointer.StringPtr("ingress." + domain),
+						IngressDomain: pointer.String("ingress." + domain),
 					}
 				}
 
@@ -160,7 +160,7 @@ var _ = Describe("ManagedSeed", func() {
 						},
 						DNS: dns,
 						Networks: core.SeedNetworks{
-							Nodes:    pointer.StringPtr("10.250.0.0/16"),
+							Nodes:    pointer.String("10.250.0.0/16"),
 							Pods:     "100.96.0.0/11",
 							Services: "100.64.0.0/13",
 						},
@@ -324,10 +324,10 @@ var _ = Describe("ManagedSeed", func() {
 			It("should forbid the ManagedSeed creation if the seed spec contains invalid values (w/o ingress)", func() {
 				managedSeed.Spec.SeedTemplate.Spec = core.SeedSpec{
 					DNS: core.SeedDNS{
-						IngressDomain: pointer.StringPtr("bar.example.com"),
+						IngressDomain: pointer.String("bar.example.com"),
 					},
 					Networks: core.SeedNetworks{
-						Nodes:    pointer.StringPtr("10.251.0.0/16"),
+						Nodes:    pointer.String("10.251.0.0/16"),
 						Pods:     "100.97.0.0/11",
 						Services: "100.65.0.0/13",
 					},

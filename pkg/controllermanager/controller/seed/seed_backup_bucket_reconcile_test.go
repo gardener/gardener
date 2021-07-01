@@ -264,7 +264,7 @@ func createBackupBucket(name, seedName string, lastErr *gardencorev1beta1.LastEr
 			Name: name,
 		},
 		Spec: gardencorev1beta1.BackupBucketSpec{
-			SeedName: pointer.StringPtr(seedName),
+			SeedName: pointer.String(seedName),
 		},
 		Status: gardencorev1beta1.BackupBucketStatus{
 			LastError: lastErr,

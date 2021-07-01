@@ -233,7 +233,7 @@ rules:
 
 		It("should ignore subresources", func() {
 			newShoot := shootv1beta1.DeepCopy()
-			newShoot.Status.SeedName = pointer.StringPtr("foo")
+			newShoot.Status.SeedName = pointer.String("foo")
 			request.SubResource = "status"
 			test(admissionv1.Update, shootv1beta1, nil, true, statusCodeAllowed, "subresource", "")
 		})

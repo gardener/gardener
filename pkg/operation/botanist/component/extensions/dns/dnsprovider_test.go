@@ -262,7 +262,7 @@ var _ = Describe("#DNSProvider", func() {
 
 		It("should return error when it's not ready", func() {
 			expected.Status.State = "dummy-not-ready"
-			expected.Status.Message = pointer.StringPtr("some-error-message")
+			expected.Status.Message = pointer.String("some-error-message")
 
 			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing emptyProvider succeeds")
 

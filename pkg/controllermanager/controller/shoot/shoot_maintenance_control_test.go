@@ -50,7 +50,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			var (
 				shootCurrentImage = &gardencorev1beta1.ShootMachineImage{
 					Name:    "CoreOs",
-					Version: pointer.StringPtr("1.0.0"),
+					Version: pointer.String("1.0.0"),
 				}
 			)
 
@@ -113,7 +113,7 @@ var _ = Describe("Shoot Maintenance", func() {
 		BeforeEach(func() {
 			shootCurrentImage = &gardencorev1beta1.ShootMachineImage{
 				Name:    "CoreOs",
-				Version: pointer.StringPtr("1.0.0"),
+				Version: pointer.String("1.0.0"),
 			}
 
 			cloudProfile = &gardencorev1beta1.CloudProfile{
@@ -200,7 +200,7 @@ var _ = Describe("Shoot Maintenance", func() {
 				Name: "cpu-glinux",
 				Machine: gardencorev1beta1.Machine{Image: &gardencorev1beta1.ShootMachineImage{
 					Name:    "gardenlinux",
-					Version: pointer.StringPtr("1.0.0"),
+					Version: pointer.String("1.0.0"),
 				}},
 			}
 

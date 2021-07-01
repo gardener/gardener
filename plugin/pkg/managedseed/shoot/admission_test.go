@@ -63,7 +63,7 @@ var _ = Describe("Shoot", func() {
 					Namespace: namespace,
 				},
 				Spec: core.ShootSpec{
-					SeedName: pointer.StringPtr(name),
+					SeedName: pointer.String(name),
 				},
 			}
 

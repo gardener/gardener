@@ -274,7 +274,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 			})
 
 			It("should forbid ca bundles with unsupported format", func() {
-				cloudProfile.Spec.CABundle = pointer.StringPtr("unsupported")
+				cloudProfile.Spec.CABundle = pointer.String("unsupported")
 
 				errorList := ValidateCloudProfile(cloudProfile)
 

@@ -103,7 +103,7 @@ var _ = Describe("Gardenlet Landscaper deletion testing", func() {
 					Items: []gardencorev1beta1.Shoot{
 						{
 							Spec: gardencorev1beta1.ShootSpec{
-								SeedName: pointer.StringPtr(seed.Name),
+								SeedName: pointer.String(seed.Name),
 							},
 						},
 					},
@@ -112,7 +112,7 @@ var _ = Describe("Gardenlet Landscaper deletion testing", func() {
 					Items: []gardencorev1beta1.Shoot{
 						{
 							Spec: gardencorev1beta1.ShootSpec{
-								SeedName: pointer.StringPtr("other-seed"),
+								SeedName: pointer.String("other-seed"),
 							},
 						},
 					},
@@ -231,7 +231,7 @@ var _ = Describe("Gardenlet Landscaper deletion testing", func() {
 					Expect(err).ToNot(HaveOccurred())
 				},
 				Entry("should successfully delete the Gardenlet resources from the Seed cluster", nil, nil),
-				Entry("should successfully delete the Gardenlet resources from the Seed cluster - with image vectors", pointer.StringPtr("abc"), pointer.StringPtr("dxy")),
+				Entry("should successfully delete the Gardenlet resources from the Seed cluster - with image vectors", pointer.String("abc"), pointer.String("dxy")),
 			)
 		})
 
@@ -313,7 +313,7 @@ var _ = Describe("Gardenlet Landscaper deletion testing", func() {
 				Namespace: "garden-pr1",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: pointer.StringPtr("seed1"),
+				SeedName: pointer.String("seed1"),
 			},
 		}
 
@@ -323,10 +323,10 @@ var _ = Describe("Gardenlet Landscaper deletion testing", func() {
 				Namespace: "garden-pr1",
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: pointer.StringPtr("seed1"),
+				SeedName: pointer.String("seed1"),
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				SeedName: pointer.StringPtr("seed2"),
+				SeedName: pointer.String("seed2"),
 			},
 		}
 

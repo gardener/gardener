@@ -40,9 +40,9 @@ var _ = Describe("validation", func() {
 				{
 					Name:           name,
 					Repository:     repository,
-					Tag:            pointer.StringPtr(tag),
-					RuntimeVersion: pointer.StringPtr(runtimeVersion),
-					TargetVersion:  pointer.StringPtr(targetVersion),
+					Tag:            pointer.String(tag),
+					RuntimeVersion: pointer.String(runtimeVersion),
+					TargetVersion:  pointer.String(targetVersion),
 				},
 			}
 		}

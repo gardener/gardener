@@ -43,7 +43,7 @@ var _ = Describe("Validation", func() {
 		It("should allow valid tolerations", func() {
 			tolerations := []core.Toleration{
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.StringPtr("baz")},
+				{Key: "bar", Value: pointer.String("baz")},
 			}
 			config.Defaults = tolerations
 			config.Whitelist = tolerations
@@ -58,8 +58,8 @@ var _ = Describe("Validation", func() {
 				{},
 				{Key: "foo"},
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.StringPtr("baz")},
-				{Key: "bar", Value: pointer.StringPtr("baz")},
+				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: pointer.String("baz")},
 			}
 			config.Defaults = tolerations
 			config.Whitelist = tolerations

@@ -46,12 +46,12 @@ func SetDefaults_ManagedSeed(obj *ManagedSeed) {
 func SetDefaults_GardenletDeployment(obj *GardenletDeployment) {
 	// Set default replica count
 	if obj.ReplicaCount == nil {
-		obj.ReplicaCount = pointer.Int32Ptr(1)
+		obj.ReplicaCount = pointer.Int32(1)
 	}
 
 	// Set default revision history limit
 	if obj.RevisionHistoryLimit == nil {
-		obj.RevisionHistoryLimit = pointer.Int32Ptr(1)
+		obj.RevisionHistoryLimit = pointer.Int32(1)
 	}
 
 	// Set default image
@@ -61,7 +61,7 @@ func SetDefaults_GardenletDeployment(obj *GardenletDeployment) {
 
 	// Set default VPA
 	if obj.VPA == nil {
-		obj.VPA = pointer.BoolPtr(true)
+		obj.VPA = pointer.Bool(true)
 	}
 }
 
@@ -118,7 +118,7 @@ func setDefaultsGardenlet(obj *Gardenlet, name, namespace string) {
 
 	// Set default merge with parent
 	if obj.MergeWithParent == nil {
-		obj.MergeWithParent = pointer.BoolPtr(true)
+		obj.MergeWithParent = pointer.Bool(true)
 	}
 }
 

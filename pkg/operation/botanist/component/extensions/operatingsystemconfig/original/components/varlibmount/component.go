@@ -46,7 +46,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 		{
 			Name: "var-lib.mount",
-			Content: pointer.StringPtr(`[Unit]
+			Content: pointer.String(`[Unit]
 Description=mount ` + pathVarLib + ` on kubelet data device
 Before=` + kubelet.UnitName + `
 [Mount]

@@ -276,7 +276,7 @@ var _ = Describe("Mutator", func() {
 						Units: []extensionsv1alpha1.Unit{
 							{
 								Name:    v1beta1constants.OperatingSystemConfigUnitNameKubeletService,
-								Content: pointer.StringPtr(newServiceContent),
+								Content: pointer.String(newServiceContent),
 							},
 						},
 						Files: []extensionsv1alpha1.File{
@@ -341,7 +341,7 @@ var _ = Describe("Mutator", func() {
 			)
 
 			oldOSC := newOSC.DeepCopy()
-			oldOSC.Spec.Units[0].Content = pointer.StringPtr(oldServiceContent)
+			oldOSC.Spec.Units[0].Content = pointer.String(oldServiceContent)
 			oldOSC.Spec.Files[0].Content.Inline.Data = oldKubeletConfigData
 			oldOSC.Spec.Files[1].Content.Inline.Data = oldKubernetesGeneralConfigData
 
@@ -353,7 +353,7 @@ var _ = Describe("Mutator", func() {
 					return nil
 				},
 			)
-			ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.TODO(), gomock.Any(), pointer.StringPtr(newKubernetesGeneralConfigData), pointer.StringPtr(oldKubernetesGeneralConfigData)).DoAndReturn(
+			ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.TODO(), gomock.Any(), pointer.String(newKubernetesGeneralConfigData), pointer.String(oldKubernetesGeneralConfigData)).DoAndReturn(
 				func(ctx context.Context, gctx gcontext.GardenContext, data, newData *string) error {
 					*data = mutatedKubernetesGeneralConfigData
 					return nil
@@ -403,7 +403,7 @@ var _ = Describe("Mutator", func() {
 func checkOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig) {
 	kubeletUnit := extensionswebhook.UnitWithName(osc.Spec.Units, v1beta1constants.OperatingSystemConfigUnitNameKubeletService)
 	Expect(kubeletUnit).To(Not(BeNil()))
-	Expect(kubeletUnit.Content).To(Equal(pointer.StringPtr(mutatedServiceContent)))
+	Expect(kubeletUnit.Content).To(Equal(pointer.String(mutatedServiceContent)))
 
 	customMTU := extensionswebhook.UnitWithName(osc.Spec.Units, "custom-mtu.service")
 	Expect(customMTU).To(Not(BeNil()))
@@ -422,7 +422,7 @@ func checkOperatingSystemConfig(osc *extensionsv1alpha1.OperatingSystemConfig) {
 	cloudProvider := extensionswebhook.FileWithPath(osc.Spec.Files, genericmutator.CloudProviderConfigPath)
 	Expect(cloudProvider).To(Not(BeNil()))
 	Expect(cloudProvider.Path).To(Equal(genericmutator.CloudProviderConfigPath))
-	Expect(cloudProvider.Permissions).To(Equal(pointer.Int32Ptr(0644)))
+	Expect(cloudProvider.Permissions).To(Equal(pointer.Int32(0644)))
 	Expect(cloudProvider.Content.Inline).To(Equal(&extensionsv1alpha1.FileContentInline{Data: cloudproviderconfEncoded, Encoding: encoding}))
 }
 

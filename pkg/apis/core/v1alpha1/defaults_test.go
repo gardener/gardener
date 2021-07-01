@@ -131,7 +131,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not add the 'protected' toleration if the namespace is not 'garden' (w/o existing project tolerations)", func() {
-			obj.Spec.Namespace = pointer.StringPtr("foo")
+			obj.Spec.Namespace = pointer.String("foo")
 
 			SetDefaults_Project(obj)
 
@@ -139,7 +139,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not add the 'protected' toleration if the namespace is not 'garden' (w/ existing project tolerations)", func() {
-			obj.Spec.Namespace = pointer.StringPtr("foo")
+			obj.Spec.Namespace = pointer.String("foo")
 			obj.Spec.Tolerations = &ProjectTolerations{
 				Defaults:  []Toleration{{Key: "foo"}},
 				Whitelist: []Toleration{{Key: "bar"}},
@@ -152,7 +152,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should add the 'protected' toleration if the namespace is 'garden' (w/o existing project tolerations)", func() {
-			obj.Spec.Namespace = pointer.StringPtr(v1beta1constants.GardenNamespace)
+			obj.Spec.Namespace = pointer.String(v1beta1constants.GardenNamespace)
 			obj.Spec.Tolerations = nil
 
 			SetDefaults_Project(obj)
@@ -162,7 +162,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should add the 'protected' toleration if the namespace is 'garden' (w/ existing project tolerations)", func() {
-			obj.Spec.Namespace = pointer.StringPtr(v1beta1constants.GardenNamespace)
+			obj.Spec.Namespace = pointer.String(v1beta1constants.GardenNamespace)
 			obj.Spec.Tolerations = &ProjectTolerations{
 				Defaults:  []Toleration{{Key: "foo"}},
 				Whitelist: []Toleration{{Key: "bar"}},
@@ -185,7 +185,7 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should not default the primary field", func() {
-			resource := ControllerResource{Primary: pointer.BoolPtr(false)}
+			resource := ControllerResource{Primary: pointer.Bool(false)}
 			resourceCopy := resource.DeepCopy()
 
 			SetDefaults_ControllerResource(&resource)
@@ -414,8 +414,8 @@ var _ = Describe("Defaults", func() {
 
 		It("should default the max inflight requests fields", func() {
 			SetDefaults_Shoot(obj)
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight).To(Equal(pointer.Int32Ptr(400)))
-			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(Equal(pointer.Int32Ptr(200)))
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight).To(Equal(pointer.Int32(400)))
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(Equal(pointer.Int32(200)))
 		})
 
 		It("should not default the max inflight requests fields", func() {

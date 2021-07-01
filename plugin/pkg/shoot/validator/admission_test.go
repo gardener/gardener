@@ -191,7 +191,7 @@ var _ = Describe("validator", func() {
 					SecretBindingName: "my-secret",
 					SeedName:          &seedName,
 					DNS: &core.DNS{
-						Domain: pointer.StringPtr(fmt.Sprintf("shoot.%s", baseDomain)),
+						Domain: pointer.String(fmt.Sprintf("shoot.%s", baseDomain)),
 						Providers: []core.DNSProvider{
 							{
 								Type: &unmanagedDNSProvider,
@@ -337,7 +337,7 @@ var _ = Describe("validator", func() {
 
 			It("update should pass because shoot tolerates all taints of the seed", func() {
 				seed.Spec.Taints = []core.SeedTaint{{Key: "foo"}}
-				shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.StringPtr("bar")}}
+				shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.String("bar")}}
 
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -350,7 +350,7 @@ var _ = Describe("validator", func() {
 
 			It("update should pass because validation of network disjointedness should not be executed", func() {
 				// set shoot pod cidr to overlap with vpn pod cidr
-				shoot.Spec.Networking.Pods = pointer.StringPtr(v1beta1constants.DefaultVpnRange)
+				shoot.Spec.Networking.Pods = pointer.String(v1beta1constants.DefaultVpnRange)
 				oldShoot.Spec.SeedName = shoot.Spec.SeedName
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -362,7 +362,7 @@ var _ = Describe("validator", func() {
 
 			It("update should fail because validation of network disjointedness is executed", func() {
 				// set shoot pod cidr to overlap with vpn pod cidr
-				shoot.Spec.Networking.Pods = pointer.StringPtr(v1beta1constants.DefaultVpnRange)
+				shoot.Spec.Networking.Pods = pointer.String(v1beta1constants.DefaultVpnRange)
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -553,9 +553,9 @@ var _ = Describe("validator", func() {
 			BeforeEach(func() {
 				shoot = *shootBase.DeepCopy()
 				oldShoot = shoot.DeepCopy()
-				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.BoolPtr(false)}
+				oldShoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(false)}
 
-				shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.BoolPtr(true)}
+				shoot.Spec.Hibernation = &core.Hibernation{Enabled: pointer.Bool(true)}
 			})
 
 			DescribeTable("should allow/deny hibernating the Shoot according to HibernationPossible constraint",
@@ -615,12 +615,12 @@ var _ = Describe("validator", func() {
 
 			DescribeTable("confine spec roll-out checks",
 				func(specChange, oldConfine, confine bool, oldOperation, operation *core.LastOperation, matcher types.GomegaMatcher) {
-					oldShoot.Spec.Maintenance.ConfineSpecUpdateRollout = pointer.BoolPtr(oldConfine)
+					oldShoot.Spec.Maintenance.ConfineSpecUpdateRollout = pointer.Bool(oldConfine)
 					oldShoot.Status.LastOperation = oldOperation
-					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = pointer.BoolPtr(confine)
+					shoot.Spec.Maintenance.ConfineSpecUpdateRollout = pointer.Bool(confine)
 					shoot.Status.LastOperation = operation
 					if specChange {
-						shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.BoolPtr(
+						shoot.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(
 							oldShoot.Spec.Kubernetes.AllowPrivilegedContainers == nil ||
 								!(*oldShoot.Spec.Kubernetes.AllowPrivilegedContainers))
 					}
@@ -807,10 +807,10 @@ var _ = Describe("validator", func() {
 
 			It("should add deploy infrastructure task because shoot is waking up from hibernation", func() {
 				oldShoot.Spec.Hibernation = &core.Hibernation{
-					Enabled: pointer.BoolPtr(true),
+					Enabled: pointer.Bool(true),
 				}
 				shoot.Spec.Hibernation = &core.Hibernation{
-					Enabled: pointer.BoolPtr(false),
+					Enabled: pointer.Bool(false),
 				}
 
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
@@ -1895,7 +1895,7 @@ var _ = Describe("validator", func() {
 		Context("control plane migration", func() {
 			It("should fail to change Seed name, because Seed doesn't have configuration for backup", func() {
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.SeedName = pointer.StringPtr("oldSeedName")
+				oldShoot.Spec.SeedName = pointer.String("oldSeedName")
 				seed.Spec.Backup = nil
 
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())

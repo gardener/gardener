@@ -34,7 +34,7 @@ func (b *Botanist) DefaultMetricsServer() (metricsserver.Interface, error) {
 
 	var kubeAPIServerHost *string
 	if b.APIServerSNIEnabled() {
-		kubeAPIServerHost = pointer.StringPtr(b.outOfClusterAPIServerFQDN())
+		kubeAPIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
 	}
 
 	return metricsserver.New(

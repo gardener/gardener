@@ -54,7 +54,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					ProgressReportPeriod: &metav1.Duration{Duration: time.Hour},
 					SyncPeriod:           &metav1.Duration{Duration: time.Hour},
 					RetryDuration:        &metav1.Duration{Duration: time.Hour},
-					DNSEntryTTLSeconds:   pointer.Int64Ptr(120),
+					DNSEntryTTLSeconds:   pointer.Int64(120),
 				},
 				ManagedSeed: &config.ManagedSeedControllerConfiguration{
 					ConcurrentSyncs:  &concurrentSyncs,
@@ -72,7 +72,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					},
 					Spec: gardencore.SeedSpec{
 						DNS: gardencore.SeedDNS{
-							IngressDomain: pointer.StringPtr("ingress.test.example.com"),
+							IngressDomain: pointer.String("ingress.test.example.com"),
 						},
 						Networks: gardencore.SeedNetworks{
 							Pods:     "100.96.0.0/11",
@@ -136,7 +136,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should forbid too low values for the DNS TTL", func() {
-				cfg.Controllers.Shoot.DNSEntryTTLSeconds = pointer.Int64Ptr(-1)
+				cfg.Controllers.Shoot.DNSEntryTTLSeconds = pointer.Int64(-1)
 
 				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
@@ -147,7 +147,7 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			It("should forbid too high values for the DNS TTL", func() {
-				cfg.Controllers.Shoot.DNSEntryTTLSeconds = pointer.Int64Ptr(601)
+				cfg.Controllers.Shoot.DNSEntryTTLSeconds = pointer.Int64(601)
 
 				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
@@ -269,7 +269,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 		Context("seed template", func() {
 			It("should forbid invalid fields in seed template", func() {
-				cfg.SeedConfig.Spec.Networks.Nodes = pointer.StringPtr("")
+				cfg.SeedConfig.Spec.Networks.Nodes = pointer.String("")
 
 				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 

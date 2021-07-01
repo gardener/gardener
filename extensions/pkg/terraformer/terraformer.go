@@ -403,7 +403,7 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 			}},
 			RestartPolicy:                 corev1.RestartPolicyNever,
 			ServiceAccountName:            name,
-			TerminationGracePeriodSeconds: pointer.Int64Ptr(t.terminationGracePeriodSeconds),
+			TerminationGracePeriodSeconds: pointer.Int64(t.terminationGracePeriodSeconds),
 		},
 	}
 

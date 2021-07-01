@@ -170,7 +170,7 @@ var _ = Describe("KubeControllerManager", func() {
 					var replicas int32 = 4
 					kubernetesClient.EXPECT().Client().Return(c)
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
-						obj.Spec.Replicas = pointer.Int32Ptr(replicas)
+						obj.Spec.Replicas = pointer.Int32(replicas)
 						return nil
 					})
 					kubeControllerManager.EXPECT().SetReplicaCount(replicas)
@@ -185,7 +185,7 @@ var _ = Describe("KubeControllerManager", func() {
 					var replicas int32 = 4
 					kubernetesClient.EXPECT().Client().Return(c)
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
-						obj.Spec.Replicas = pointer.Int32Ptr(replicas)
+						obj.Spec.Replicas = pointer.Int32(replicas)
 						return nil
 					})
 					kubeControllerManager.EXPECT().SetReplicaCount(replicas)

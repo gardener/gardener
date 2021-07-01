@@ -397,7 +397,7 @@ var _ = Describe("ControlPlane", func() {
 						{
 							Name:    &name,
 							Kind:    extensionsv1alpha1.ControlPlaneResource,
-							Purpose: pointer.StringPtr(string(purpose)),
+							Purpose: pointer.String(string(purpose)),
 							State:   state,
 						},
 					},
@@ -472,7 +472,7 @@ var _ = Describe("ControlPlane", func() {
 
 			// restore state
 			shootState.Spec.Extensions[0].Name = &obj.Name
-			shootState.Spec.Extensions[0].Purpose = pointer.StringPtr(string(values.Purpose))
+			shootState.Spec.Extensions[0].Purpose = pointer.String(string(values.Purpose))
 			expectedWithState := obj.DeepCopy()
 			expectedWithState.Status.State = state
 			test.EXPECTPatch(ctx, mc, expectedWithState, obj, types.MergePatchType)

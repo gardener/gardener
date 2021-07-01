@@ -56,7 +56,7 @@ var _ = Describe("Strategy", func() {
 					Spec: core.ShootSpec{
 						Region: "foo",
 						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.BoolPtr(false),
+							ConfineSpecUpdateRollout: pointer.Bool(false),
 						},
 					},
 				}
@@ -69,7 +69,7 @@ var _ = Describe("Strategy", func() {
 				oldShoot := &core.Shoot{
 					Spec: core.ShootSpec{
 						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.BoolPtr(true),
+							ConfineSpecUpdateRollout: pointer.Bool(true),
 						},
 					},
 				}
@@ -77,7 +77,7 @@ var _ = Describe("Strategy", func() {
 					Spec: core.ShootSpec{
 						Region: "foo",
 						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.BoolPtr(true),
+							ConfineSpecUpdateRollout: pointer.Bool(true),
 						},
 					},
 				}
@@ -96,7 +96,7 @@ var _ = Describe("Strategy", func() {
 					oldShoot = &core.Shoot{
 						Spec: core.ShootSpec{
 							Maintenance: &core.Maintenance{
-								ConfineSpecUpdateRollout: pointer.BoolPtr(true),
+								ConfineSpecUpdateRollout: pointer.Bool(true),
 							},
 						},
 					}
@@ -110,7 +110,7 @@ var _ = Describe("Strategy", func() {
 
 				It("old hibernation=nil, new hibernation.enabled=false", func() {
 					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(false),
+						Enabled: pointer.Bool(false),
 					}
 
 					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
@@ -120,7 +120,7 @@ var _ = Describe("Strategy", func() {
 				It("old hibernation.enabled=nil, new hibernation.enabled=false", func() {
 					oldShoot.Spec.Hibernation = &core.Hibernation{}
 					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(false),
+						Enabled: pointer.Bool(false),
 					}
 
 					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
@@ -129,7 +129,7 @@ var _ = Describe("Strategy", func() {
 
 				It("old hibernation=nil, new hibernation.enabled=true", func() {
 					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(true),
+						Enabled: pointer.Bool(true),
 					}
 
 					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
@@ -139,7 +139,7 @@ var _ = Describe("Strategy", func() {
 				It("old hibernation.enabled=nil, new hibernation.enabled=true", func() {
 					oldShoot.Spec.Hibernation = &core.Hibernation{}
 					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(true),
+						Enabled: pointer.Bool(true),
 					}
 
 					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
@@ -148,10 +148,10 @@ var _ = Describe("Strategy", func() {
 
 				It("old hibernation.enabled=true, new hibernation.enabled=false", func() {
 					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(true),
+						Enabled: pointer.Bool(true),
 					}
 					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(false),
+						Enabled: pointer.Bool(false),
 					}
 
 					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
@@ -160,7 +160,7 @@ var _ = Describe("Strategy", func() {
 
 				It("old hibernation.enabled=true, new hibernation.enabled=nil", func() {
 					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(true),
+						Enabled: pointer.Bool(true),
 					}
 					newShoot.Spec.Hibernation = &core.Hibernation{}
 
@@ -170,7 +170,7 @@ var _ = Describe("Strategy", func() {
 
 				It("old hibernation.enabled=true, new hibernation=nil", func() {
 					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(true),
+						Enabled: pointer.Bool(true),
 					}
 					newShoot.Spec.Hibernation = nil
 
@@ -180,7 +180,7 @@ var _ = Describe("Strategy", func() {
 
 				It("old hibernation.enabled=true, new hibernation.enabled=nil", func() {
 					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(true),
+						Enabled: pointer.Bool(true),
 					}
 					newShoot.Spec.Hibernation = &core.Hibernation{}
 
@@ -190,10 +190,10 @@ var _ = Describe("Strategy", func() {
 
 				It("old hibernation.enabled=false, new hibernation.enabled=true", func() {
 					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(false),
+						Enabled: pointer.Bool(false),
 					}
 					newShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(true),
+						Enabled: pointer.Bool(true),
 					}
 
 					shootregistry.Strategy.PrepareForUpdate(context.TODO(), newShoot, oldShoot)
@@ -202,7 +202,7 @@ var _ = Describe("Strategy", func() {
 
 				It("old hibernation.enabled=false, new hibernation.enabled=nil", func() {
 					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(false),
+						Enabled: pointer.Bool(false),
 					}
 					newShoot.Spec.Hibernation = &core.Hibernation{}
 
@@ -212,7 +212,7 @@ var _ = Describe("Strategy", func() {
 
 				It("old hibernation.enabled=false, new hibernation=nil", func() {
 					oldShoot.Spec.Hibernation = &core.Hibernation{
-						Enabled: pointer.BoolPtr(false),
+						Enabled: pointer.Bool(false),
 					}
 					newShoot.Spec.Hibernation = nil
 
@@ -233,14 +233,14 @@ var _ = Describe("Strategy", func() {
 				oldShoot := &core.Shoot{
 					Spec: core.ShootSpec{
 						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.BoolPtr(true),
+							ConfineSpecUpdateRollout: pointer.Bool(true),
 						},
 					},
 				}
 				newShoot := &core.Shoot{
 					Spec: core.ShootSpec{
 						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.BoolPtr(false),
+							ConfineSpecUpdateRollout: pointer.Bool(false),
 						},
 					},
 				}
@@ -253,14 +253,14 @@ var _ = Describe("Strategy", func() {
 				oldShoot := &core.Shoot{
 					Spec: core.ShootSpec{
 						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.BoolPtr(false),
+							ConfineSpecUpdateRollout: pointer.Bool(false),
 						},
 					},
 				}
 				newShoot := &core.Shoot{
 					Spec: core.ShootSpec{
 						Maintenance: &core.Maintenance{
-							ConfineSpecUpdateRollout: pointer.BoolPtr(true),
+							ConfineSpecUpdateRollout: pointer.Bool(true),
 						},
 					},
 				}

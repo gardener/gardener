@@ -62,7 +62,7 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 			Name:              fmt.Sprintf("%s.%s.extensions.gardener.cloud", webhook.Name, strings.TrimPrefix(providerName, "provider-")),
 			NamespaceSelector: webhook.Selector,
 			Rules:             rules,
-			TimeoutSeconds:    pointer.Int32Ptr(10),
+			TimeoutSeconds:    pointer.Int32(10),
 		}
 
 		switch webhook.Target {
@@ -92,7 +92,7 @@ func RegisterWebhooks(ctx context.Context, mgr manager.Manager, namespace, provi
 				return nil, nil, err
 			}
 			ownerReference = metav1.NewControllerRef(ns, corev1.SchemeGroupVersion.WithKind("Namespace"))
-			ownerReference.BlockOwnerDeletion = pointer.BoolPtr(false)
+			ownerReference.BlockOwnerDeletion = pointer.Bool(false)
 		}
 
 		if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, c, mutatingWebhookConfigurationSeed, func() error {

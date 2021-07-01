@@ -50,22 +50,22 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			Spec: core.SeedSpec{
 				Backup: &core.SeedBackup{
 					Provider: "foo",
-					Region:   pointer.StringPtr("some-region"),
+					Region:   pointer.String("some-region"),
 					SecretRef: corev1.SecretReference{
 						Name:      "backup-test",
 						Namespace: "garden",
 					},
 				},
 				DNS: core.SeedDNS{
-					IngressDomain: pointer.StringPtr("ingress.test.example.com"),
+					IngressDomain: pointer.String("ingress.test.example.com"),
 				},
 				Networks: core.SeedNetworks{
-					Nodes:    pointer.StringPtr("10.250.0.0/16"),
+					Nodes:    pointer.String("10.250.0.0/16"),
 					Pods:     "100.96.0.0/11",
 					Services: "100.64.0.0/13",
 					ShootDefaults: &core.ShootNetworks{
-						Pods:     pointer.StringPtr("10.240.0.0/16"),
-						Services: pointer.StringPtr("10.241.0.0/16"),
+						Pods:     pointer.String("10.240.0.0/16"),
+						Services: pointer.String("10.241.0.0/16"),
 					},
 				},
 				Provider: core.SeedProvider{
@@ -213,7 +213,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 			It("should forbid empty or invalid fields in seed template", func() {
 				managedSeed.Spec.SeedTemplate.Name = "foo"
 				seedCopy := seed.DeepCopy()
-				seedCopy.Spec.Networks.Nodes = pointer.StringPtr("")
+				seedCopy.Spec.Networks.Nodes = pointer.String("")
 				managedSeed.Spec.SeedTemplate.Spec = seedCopy.Spec
 
 				errorList := ValidateManagedSeed(managedSeed)
@@ -250,7 +250,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 					},
 					Config:          gardenletConfiguration(seedx, nil),
 					Bootstrap:       bootstrapPtr(seedmanagement.BootstrapToken),
-					MergeWithParent: pointer.BoolPtr(true),
+					MergeWithParent: pointer.Bool(true),
 				}
 			})
 
@@ -262,15 +262,15 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 
 			It("should forbid empty or invalid fields in gardenlet", func() {
 				seedx.Name = "foo"
-				seedx.Spec.Networks.Nodes = pointer.StringPtr("")
+				seedx.Spec.Networks.Nodes = pointer.String("")
 
 				managedSeed.Spec.Gardenlet.Deployment = &seedmanagement.GardenletDeployment{
-					ReplicaCount:         pointer.Int32Ptr(-1),
-					RevisionHistoryLimit: pointer.Int32Ptr(-1),
-					ServiceAccountName:   pointer.StringPtr(""),
+					ReplicaCount:         pointer.Int32(-1),
+					RevisionHistoryLimit: pointer.Int32(-1),
+					ServiceAccountName:   pointer.String(""),
 					Image: &seedmanagement.Image{
-						Repository: pointer.StringPtr(""),
-						Tag:        pointer.StringPtr(""),
+						Repository: pointer.String(""),
+						Tag:        pointer.String(""),
 						PullPolicy: pullPolicyPtr("foo"),
 					},
 					PodLabels:      map[string]string{"foo!": "bar"},
@@ -360,7 +360,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 						},
 					})
 				managedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr(seedmanagement.BootstrapNone)
-				managedSeed.Spec.Gardenlet.MergeWithParent = pointer.BoolPtr(false)
+				managedSeed.Spec.Gardenlet.MergeWithParent = pointer.Bool(false)
 
 				errorList := ValidateManagedSeed(managedSeed)
 
@@ -473,7 +473,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 				managedSeed.Spec.Gardenlet = &seedmanagement.Gardenlet{
 					Config:          gardenletConfiguration(seedx, nil),
 					Bootstrap:       bootstrapPtr(seedmanagement.BootstrapToken),
-					MergeWithParent: pointer.BoolPtr(true),
+					MergeWithParent: pointer.Bool(true),
 				}
 
 				newManagedSeed = managedSeed.DeepCopy()
@@ -492,7 +492,7 @@ var _ = Describe("ManagedSeed Validation Tests", func() {
 
 				newManagedSeed.Spec.Gardenlet.Config = gardenletConfiguration(seedxCopy, nil)
 				newManagedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr(seedmanagement.BootstrapServiceAccount)
-				newManagedSeed.Spec.Gardenlet.MergeWithParent = pointer.BoolPtr(false)
+				newManagedSeed.Spec.Gardenlet.MergeWithParent = pointer.Bool(false)
 
 				errorList := ValidateManagedSeedUpdate(newManagedSeed, managedSeed)
 

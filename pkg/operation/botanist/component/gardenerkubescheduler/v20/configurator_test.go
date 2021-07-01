@@ -46,7 +46,7 @@ var _ = Describe("Config", func() {
 		c, err := v20.NewConfigurator("baz", "test", &v1beta1.KubeSchedulerConfiguration{
 			Profiles: []v1beta1.KubeSchedulerProfile{
 				{
-					SchedulerName: pointer.StringPtr("test"),
+					SchedulerName: pointer.String("test"),
 				},
 			},
 		})

@@ -54,7 +54,7 @@ var _ = Describe("Helper", func() {
 					APIVersion: configv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "GardenletConfiguration",
 				},
-				LogLevel: pointer.StringPtr("1234"),
+				LogLevel: pointer.String("1234"),
 			}
 		)
 

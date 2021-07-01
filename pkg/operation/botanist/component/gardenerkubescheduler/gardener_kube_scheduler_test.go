@@ -391,7 +391,7 @@ var _ = Describe("New", func() {
 									Scope:       &scope,
 								},
 							}},
-							TimeoutSeconds: pointer.Int32Ptr(2),
+							TimeoutSeconds: pointer.Int32(2),
 						}},
 					}
 				)
@@ -413,8 +413,8 @@ var _ = Describe("New", func() {
 						Labels:    expectedLabels,
 					},
 					Spec: appsv1.DeploymentSpec{
-						Replicas:             pointer.Int32Ptr(2),
-						RevisionHistoryLimit: pointer.Int32Ptr(1),
+						Replicas:             pointer.Int32(2),
+						RevisionHistoryLimit: pointer.Int32(1),
 						Selector:             &metav1.LabelSelector{MatchLabels: expectedLabels},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{

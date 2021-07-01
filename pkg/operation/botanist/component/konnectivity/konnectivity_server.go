@@ -185,8 +185,8 @@ func (k *konnectivityServer) Deploy(ctx context.Context) error {
 				Labels:    getLabels(),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32Ptr(k.Replicas),
-				RevisionHistoryLimit: pointer.Int32Ptr(1),
+				Replicas:             pointer.Int32(k.Replicas),
+				RevisionHistoryLimit: pointer.Int32(1),
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,

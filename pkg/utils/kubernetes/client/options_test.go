@@ -55,7 +55,7 @@ var _ = Describe("CleanOptions", func() {
 		(&CleanOptions{
 			ListOptions:                []client.ListOption{client.InNamespace("ns"), client.MatchingLabels{"key": "value"}},
 			DeleteOptions:              []client.DeleteOption{client.GracePeriodSeconds(42), client.DryRunAll},
-			FinalizeGracePeriodSeconds: pointer.Int64Ptr(42),
+			FinalizeGracePeriodSeconds: pointer.Int64(42),
 			ErrorToleration:            []TolerateErrorFunc{apierrors.IsConflict},
 		}).ApplyToClean(co)
 		Expect(co.ListOptions).To(Equal([]client.ListOption{client.InNamespace("ns"), client.MatchingLabels{"key": "value"}}))

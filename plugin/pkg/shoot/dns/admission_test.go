@@ -190,7 +190,7 @@ var _ = Describe("dns", func() {
 
 		It("should set the 'unmanaged' dns provider as the primary one", func() {
 			shootBefore := shoot.DeepCopy()
-			shootBefore.Spec.DNS.Providers[0].Primary = pointer.BoolPtr(true)
+			shootBefore.Spec.DNS.Providers[0].Primary = pointer.Bool(true)
 
 			Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 			attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
@@ -233,8 +233,8 @@ var _ = Describe("dns", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Type":    Equal(pointer.StringPtr(providerType)),
-					"Primary": Equal(pointer.BoolPtr(true)),
+					"Type":    Equal(pointer.String(providerType)),
+					"Primary": Equal(pointer.Bool(true)),
 				})))
 			})
 
@@ -263,13 +263,13 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.StringPtr(providerType)),
-						"Primary": Equal(pointer.BoolPtr(true)),
+						"Type":    Equal(pointer.String(providerType)),
+						"Primary": Equal(pointer.Bool(true)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(pointer.StringPtr(providerType)),
+						"Type":       Equal(pointer.String(providerType)),
 						"Primary":    BeNil(),
-						"SecretName": Equal(pointer.StringPtr(secretName)),
+						"SecretName": Equal(pointer.String(secretName)),
 					}),
 				))
 			})
@@ -292,7 +292,7 @@ var _ = Describe("dns", func() {
 				}
 
 				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.DNS.Providers[1].Primary = pointer.BoolPtr(true)
+				oldShoot.Spec.DNS.Providers[1].Primary = pointer.Bool(true)
 
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
@@ -304,12 +304,12 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(pointer.StringPtr(providerType)),
+						"Type": Equal(pointer.String(providerType)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(pointer.StringPtr(providerType)),
-						"Primary":    Equal(pointer.BoolPtr(true)),
-						"SecretName": Equal(pointer.StringPtr(secretName)),
+						"Type":       Equal(pointer.String(providerType)),
+						"Primary":    Equal(pointer.Bool(true)),
+						"SecretName": Equal(pointer.String(secretName)),
 					}),
 				))
 			})
@@ -375,16 +375,16 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.StringPtr(providerType)),
+						"Type":    Equal(pointer.String(providerType)),
 						"Primary": BeNil(),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":       Equal(pointer.StringPtr(providerType)),
+						"Type":       Equal(pointer.String(providerType)),
 						"Primary":    BeNil(),
-						"SecretName": Equal(pointer.StringPtr(secretName)),
+						"SecretName": Equal(pointer.String(secretName)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.StringPtr(providerType)),
+						"Type":    Equal(pointer.String(providerType)),
 						"Primary": BeNil(),
 					}),
 				))
@@ -403,7 +403,7 @@ var _ = Describe("dns", func() {
 					},
 					{
 						Type:    &providerType,
-						Primary: pointer.BoolPtr(true),
+						Primary: pointer.Bool(true),
 					},
 					{
 						Type: &providerType,
@@ -441,7 +441,7 @@ var _ = Describe("dns", func() {
 					},
 					{
 						Type:    &providerType,
-						Primary: pointer.BoolPtr(true),
+						Primary: pointer.Bool(true),
 					},
 					{
 						Type: &providerType,
@@ -461,14 +461,14 @@ var _ = Describe("dns", func() {
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(
 					MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(pointer.StringPtr(providerType)),
+						"Type": Equal(pointer.String(providerType)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type":    Equal(pointer.StringPtr(providerType)),
-						"Primary": Equal(pointer.BoolPtr(true)),
+						"Type":    Equal(pointer.String(providerType)),
+						"Primary": Equal(pointer.Bool(true)),
 					}),
 					MatchFields(IgnoreExtras, Fields{
-						"Type": Equal(pointer.StringPtr(providerType)),
+						"Type": Equal(pointer.String(providerType)),
 					}),
 				))
 			})
@@ -504,9 +504,9 @@ var _ = Describe("dns", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
 				Expect(shoot.Spec.DNS.Providers).To(ConsistOf(MatchFields(IgnoreExtras, Fields{
-					"Type":       Equal(pointer.StringPtr(providerType)),
+					"Type":       Equal(pointer.String(providerType)),
 					"Primary":    BeNil(),
-					"SecretName": Equal(pointer.StringPtr(secretName)),
+					"SecretName": Equal(pointer.String(secretName)),
 				})))
 			})
 
@@ -515,7 +515,7 @@ var _ = Describe("dns", func() {
 					{
 						Type:       &providerType,
 						SecretName: &secretName,
-						Primary:    pointer.BoolPtr(true),
+						Primary:    pointer.Bool(true),
 					},
 				}
 
@@ -541,7 +541,7 @@ var _ = Describe("dns", func() {
 					{
 						Type:       &providerType,
 						SecretName: &secretName,
-						Primary:    pointer.BoolPtr(true),
+						Primary:    pointer.Bool(true),
 					},
 				}
 

@@ -200,7 +200,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
 		deployment.Spec.Replicas = &k.replicas
-		deployment.Spec.RevisionHistoryLimit = pointer.Int32Ptr(1)
+		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -321,12 +321,12 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 
 		scaleDownUpdateMode := k.hvpaConfig.ScaleDownUpdateMode
 		if scaleDownUpdateMode == nil {
-			scaleDownUpdateMode = pointer.StringPtr(hvpav1alpha1.UpdateModeAuto)
+			scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeAuto)
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.seedClient, hvpa, func() error {
 			hvpa.Labels = getLabels()
-			hvpa.Spec.Replicas = pointer.Int32Ptr(1)
+			hvpa.Spec.Replicas = pointer.Int32(1)
 			hvpa.Spec.Hpa = hvpav1alpha1.HpaSpec{
 				Deploy:   false,
 				Selector: &metav1.LabelSelector{MatchLabels: getLabels()},
@@ -335,7 +335,7 @@ func (k *kubeControllerManager) Deploy(ctx context.Context) error {
 						Labels: getLabels(),
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: pointer.Int32Ptr(int32(1)),
+						MinReplicas: pointer.Int32(int32(1)),
 						MaxReplicas: int32(1),
 					},
 				},

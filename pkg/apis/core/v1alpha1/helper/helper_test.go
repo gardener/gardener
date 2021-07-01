@@ -589,7 +589,7 @@ var _ = Describe("helper", func() {
 
 			shootMachineImage = gardencorev1alpha1.ShootMachineImage{
 				Name:    "coreos",
-				Version: pointer.StringPtr("0.0.2"),
+				Version: pointer.String("0.0.2"),
 			}
 		})
 
@@ -606,7 +606,7 @@ var _ = Describe("helper", func() {
 		})
 
 		It("should determine that the version does not exist", func() {
-			shootMachineImage.Version = pointer.StringPtr("0.0.4")
+			shootMachineImage.Version = pointer.String("0.0.4")
 			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
 			Expect(exists).To(Equal(false))
 		})
@@ -897,7 +897,7 @@ var _ = Describe("helper", func() {
 
 			shootMachineImage = gardencorev1alpha1.ShootMachineImage{
 				Name:    "coreos",
-				Version: pointer.StringPtr("0.0.2"),
+				Version: pointer.String("0.0.2"),
 			}
 		})
 		It("should determine that the version exists", func() {
@@ -911,7 +911,7 @@ var _ = Describe("helper", func() {
 			Expect(exists).To(Equal(false))
 		})
 		It("should determine that the version does not exist", func() {
-			shootMachineImage.Version = pointer.StringPtr("0.0.4")
+			shootMachineImage.Version = pointer.String("0.0.4")
 			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
 			Expect(exists).To(Equal(false))
 		})

@@ -22,7 +22,7 @@ import (
 func SetDefaults_ManagedSeedSet(obj *ManagedSeedSet) {
 	// Set default replicas
 	if obj.Spec.Replicas == nil {
-		obj.Spec.Replicas = pointer.Int32Ptr(1)
+		obj.Spec.Replicas = pointer.Int32(1)
 	}
 
 	// Set update strategy defaults
@@ -32,7 +32,7 @@ func SetDefaults_ManagedSeedSet(obj *ManagedSeedSet) {
 
 	// Set default revision history limit
 	if obj.Spec.RevisionHistoryLimit == nil {
-		obj.Spec.RevisionHistoryLimit = pointer.Int32Ptr(10)
+		obj.Spec.RevisionHistoryLimit = pointer.Int32(10)
 	}
 }
 
@@ -49,6 +49,6 @@ func SetDefaults_UpdateStrategy(obj *UpdateStrategy) {
 func SetDefaults_RollingUpdateStrategy(obj *RollingUpdateStrategy) {
 	// Set default partition
 	if obj.Partition == nil {
-		obj.Partition = pointer.Int32Ptr(0)
+		obj.Partition = pointer.Int32(0)
 	}
 }

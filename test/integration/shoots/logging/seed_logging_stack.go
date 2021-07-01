@@ -149,7 +149,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		ginkgo.By("Deploy the cluster CRD")
 		clusterCRD.Spec.PreserveUnknownFields = false
 		for version := range clusterCRD.Spec.Versions {
-			clusterCRD.Spec.Versions[version].Schema.OpenAPIV3Schema.XPreserveUnknownFields = pointer.BoolPtr(true)
+			clusterCRD.Spec.Versions[version].Schema.OpenAPIV3Schema.XPreserveUnknownFields = pointer.Bool(true)
 		}
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), clusterCRD))
 

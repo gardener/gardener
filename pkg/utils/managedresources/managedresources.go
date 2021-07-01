@@ -108,7 +108,7 @@ func CreateFromUnstructured(ctx context.Context, client client.Client, namespace
 		data = append(data, []byte("\n---\n")...)
 		data = append(data, bytes...)
 	}
-	return Create(ctx, client, namespace, name, secretNameWithPrefix, class, map[string][]byte{name: data}, &keepObjects, injectedLabels, pointer.BoolPtr(false))
+	return Create(ctx, client, namespace, name, secretNameWithPrefix, class, map[string][]byte{name: data}, &keepObjects, injectedLabels, pointer.Bool(false))
 }
 
 // Create creates a managed resource and its secret with the given name, class, key, and data in the given namespace.
@@ -253,5 +253,5 @@ func RenderChartAndCreate(ctx context.Context, namespace string, name string, se
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
 	}
 
-	return Create(ctx, client, namespace, name, secretNameWithPrefix, "", map[string][]byte{chartName: data}, pointer.BoolPtr(false), injectedLabels, &forceOverwriteAnnotations)
+	return Create(ctx, client, namespace, name, secretNameWithPrefix, "", map[string][]byte{chartName: data}, pointer.Bool(false), injectedLabels, &forceOverwriteAnnotations)
 }

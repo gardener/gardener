@@ -57,7 +57,7 @@ var _ = Describe("#roleBindingDelete", func() {
 		proj = &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{Name: "project-1"},
 			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: pointer.StringPtr(ns),
+				Namespace: pointer.String(ns),
 			},
 		}
 		rolebinding = &rbacv1.RoleBinding{

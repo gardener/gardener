@@ -73,8 +73,8 @@ var _ = Describe("graph", func() {
 		seed1LeaseNamespace       = "gardener-system-seed-lease"
 
 		shoot1                        *gardencorev1beta1.Shoot
-		shoot1DNSProvider1            = gardencorev1beta1.DNSProvider{SecretName: pointer.StringPtr("dnssecret1")}
-		shoot1DNSProvider2            = gardencorev1beta1.DNSProvider{SecretName: pointer.StringPtr("dnssecret2")}
+		shoot1DNSProvider1            = gardencorev1beta1.DNSProvider{SecretName: pointer.String("dnssecret1")}
+		shoot1DNSProvider2            = gardencorev1beta1.DNSProvider{SecretName: pointer.String("dnssecret2")}
 		shoot1AuditPolicyConfigMapRef = corev1.ObjectReference{Name: "auditpolicy1"}
 		shoot1Resource1               = autoscalingv1.CrossVersionObjectReference{APIVersion: "foo", Kind: "bar", Name: "resource1"}
 		shoot1Resource2               = autoscalingv1.CrossVersionObjectReference{APIVersion: "v1", Kind: "Secret", Name: "resource2"}
@@ -193,7 +193,7 @@ var _ = Describe("graph", func() {
 		project1 = &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{Name: "project1"},
 			Spec: gardencorev1beta1.ProjectSpec{
-				Namespace: pointer.StringPtr("projectnamespace1"),
+				Namespace: pointer.String("projectnamespace1"),
 			},
 		}
 
@@ -508,7 +508,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("update (new seed name)")
 		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Spec.SeedName = pointer.StringPtr("newseed")
+		shoot1.Spec.SeedName = pointer.String("newseed")
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(9))
 		Expect(graph.graph.Edges().Len()).To(Equal(8))
@@ -528,7 +528,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("update (new seed name in status)")
 		shoot1Copy = shoot1.DeepCopy()
-		shoot1.Status.SeedName = pointer.StringPtr("seed-in-status")
+		shoot1.Status.SeedName = pointer.String("seed-in-status")
 		fakeInformerShoot.Update(shoot1Copy, shoot1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(10))
 		Expect(graph.graph.Edges().Len()).To(Equal(9))
@@ -575,7 +575,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("update (irrelevant change)")
 		project1Copy := project1.DeepCopy()
-		project1.Spec.Purpose = pointer.StringPtr("purpose")
+		project1.Spec.Purpose = pointer.String("purpose")
 		fakeInformerProject.Update(project1Copy, project1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))
 		Expect(graph.graph.Edges().Len()).To(Equal(1))
@@ -583,7 +583,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("update (namespace)")
 		project1Copy = project1.DeepCopy()
-		project1.Spec.Namespace = pointer.StringPtr("newnamespace")
+		project1.Spec.Namespace = pointer.String("newnamespace")
 		fakeInformerProject.Update(project1Copy, project1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))
 		Expect(graph.graph.Edges().Len()).To(Equal(1))
@@ -619,7 +619,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("update (seed name)")
 		backupBucket1Copy = backupBucket1.DeepCopy()
-		backupBucket1.Spec.SeedName = pointer.StringPtr("newbbseed")
+		backupBucket1.Spec.SeedName = pointer.String("newbbseed")
 		fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(4))
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
@@ -678,7 +678,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("update (seed name)")
 		backupEntry1Copy = backupEntry1.DeepCopy()
-		backupEntry1.Spec.SeedName = pointer.StringPtr("newbbseed")
+		backupEntry1.Spec.SeedName = pointer.String("newbbseed")
 		fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(3))
 		Expect(graph.graph.Edges().Len()).To(Equal(2))
@@ -688,7 +688,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("update (new seed name in status)")
 		backupEntry1Copy = backupEntry1.DeepCopy()
-		backupEntry1.Status.SeedName = pointer.StringPtr("newbbseedinstatus")
+		backupEntry1.Status.SeedName = pointer.String("newbbseedinstatus")
 		fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(4))
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
@@ -732,7 +732,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 		By("update (seed name)")
 		bastion1Copy = bastion1.DeepCopy()
-		bastion1.Spec.SeedName = pointer.StringPtr("newseed")
+		bastion1.Spec.SeedName = pointer.String("newseed")
 		fakeInformerBastion.Update(bastion1Copy, bastion1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))
 		Expect(graph.graph.Edges().Len()).To(Equal(1))
@@ -1158,7 +1158,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		go func() {
 			defer wg.Done()
 			project1Copy := project1.DeepCopy()
-			project1.Spec.Namespace = pointer.StringPtr("newnamespace")
+			project1.Spec.Namespace = pointer.String("newnamespace")
 			fakeInformerProject.Update(project1Copy, project1)
 			lock.Lock()
 			defer lock.Unlock()
@@ -1182,7 +1182,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		go func() {
 			defer wg.Done()
 			backupEntry1Copy := backupEntry1.DeepCopy()
-			backupEntry1.Spec.SeedName = pointer.StringPtr("newbbseed")
+			backupEntry1.Spec.SeedName = pointer.String("newbbseed")
 			fakeInformerBackupEntry.Update(backupEntry1Copy, backupEntry1)
 			lock.Lock()
 			defer lock.Unlock()
@@ -1308,7 +1308,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		go func() {
 			defer wg.Done()
 			project1Copy := project1.DeepCopy()
-			project1.Spec.Purpose = pointer.StringPtr("purpose")
+			project1.Spec.Purpose = pointer.String("purpose")
 			fakeInformerProject.Update(project1Copy, project1)
 			lock.Lock()
 			defer lock.Unlock()
@@ -1318,7 +1318,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		go func() {
 			defer wg.Done()
 			backupBucket1Copy := backupBucket1.DeepCopy()
-			backupBucket1.Spec.SeedName = pointer.StringPtr("newbbseed")
+			backupBucket1.Spec.SeedName = pointer.String("newbbseed")
 			fakeInformerBackupBucket.Update(backupBucket1Copy, backupBucket1)
 			lock.Lock()
 			defer lock.Unlock()

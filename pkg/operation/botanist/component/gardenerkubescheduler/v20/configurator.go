@@ -49,7 +49,7 @@ func NewConfigurator(resourceName, namespace string, config *schedulerv20v1beta1
 		RetryPeriod:       metav1.Duration{Duration: 2 * time.Second},
 		ResourceLock:      "leases",
 		ResourceName:      resourceName,
-		LeaderElect:       pointer.BoolPtr(true),
+		LeaderElect:       pointer.Bool(true),
 		ResourceNamespace: namespace,
 	}
 

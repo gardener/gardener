@@ -79,10 +79,10 @@ var _ = Describe("seedfilter", func() {
 				Namespace: namespace,
 			},
 			Spec: gardencorev1beta1.ShootSpec{
-				SeedName: pointer.StringPtr(seedName),
+				SeedName: pointer.String(seedName),
 			},
 			Status: gardencorev1beta1.ShootStatus{
-				SeedName: pointer.StringPtr(seedName),
+				SeedName: pointer.String(seedName),
 			},
 		}
 		seed = &gardencorev1beta1.Seed{
@@ -175,7 +175,7 @@ var _ = Describe("seedfilter", func() {
 		})
 
 		It("should return true with a shoot that is scheduled on the specified seed (status different from spec)", func() {
-			shoot.Spec.SeedName = pointer.StringPtr("foo")
+			shoot.Spec.SeedName = pointer.String("foo")
 			expectGetShoot()
 			f := controllerutils.ManagedSeedFilterFunc(ctx, c, seedName, nil)
 			Expect(f(managedSeed)).To(BeTrue())
@@ -199,7 +199,7 @@ var _ = Describe("seedfilter", func() {
 		})
 
 		It("should return true with a shoot that is scheduled on a seed selected by the specified label selector (status different from spec)", func() {
-			shoot.Spec.SeedName = pointer.StringPtr("foo")
+			shoot.Spec.SeedName = pointer.String("foo")
 			expectGetShoot()
 			expectGetSeed()
 			f := controllerutils.ManagedSeedFilterFunc(ctx, c, "", &metav1.LabelSelector{
@@ -258,7 +258,7 @@ var _ = Describe("seedfilter", func() {
 
 		It("should return true with a shoot that is scheduled on the specified seed (status different from spec)", func() {
 			expectGetManagedSeed()
-			shoot.Spec.SeedName = pointer.StringPtr("foo")
+			shoot.Spec.SeedName = pointer.String("foo")
 			expectGetShoot()
 			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, seedName, nil)
 			Expect(f(seedOfManagedSeed)).To(BeTrue())
@@ -285,7 +285,7 @@ var _ = Describe("seedfilter", func() {
 
 		It("should return true with a shoot that is scheduled on a seed selected by the specified label selector (status different from spec)", func() {
 			expectGetManagedSeed()
-			shoot.Spec.SeedName = pointer.StringPtr("foo")
+			shoot.Spec.SeedName = pointer.String("foo")
 			expectGetShoot()
 			expectGetSeed()
 			f := controllerutils.SeedOfManagedSeedFilterFunc(ctx, c, "", &metav1.LabelSelector{
@@ -348,11 +348,11 @@ var _ = Describe("seedfilter", func() {
 				},
 
 				Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName are nil", nil, nil, seedName, BeFalse()),
-				Entry("BackupEntry.Spec.SeedName does not match and BackupEntry.Status.SeedName is nil", pointer.StringPtr(otherSeed), nil, seedName, BeFalse()),
-				Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName do not match", pointer.StringPtr(otherSeed), pointer.StringPtr(otherSeed), seedName, BeFalse()),
-				Entry("BackupEntry.Spec.SeedName is nil but BackupEntry.Status.SeedName matches", nil, pointer.StringPtr(seedName), seedName, BeFalse()),
-				Entry("BackupEntry.Spec.SeedName matches and BackupEntry.Status.SeedName is nil", pointer.StringPtr(seedName), nil, seedName, BeTrue()),
-				Entry("BackupEntry.Spec.SeedName does not match but BackupEntry.Status.SeedName matches", pointer.StringPtr(otherSeed), pointer.StringPtr(seedName), seedName, BeTrue()),
+				Entry("BackupEntry.Spec.SeedName does not match and BackupEntry.Status.SeedName is nil", pointer.String(otherSeed), nil, seedName, BeFalse()),
+				Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName do not match", pointer.String(otherSeed), pointer.String(otherSeed), seedName, BeFalse()),
+				Entry("BackupEntry.Spec.SeedName is nil but BackupEntry.Status.SeedName matches", nil, pointer.String(seedName), seedName, BeFalse()),
+				Entry("BackupEntry.Spec.SeedName matches and BackupEntry.Status.SeedName is nil", pointer.String(seedName), nil, seedName, BeTrue()),
+				Entry("BackupEntry.Spec.SeedName does not match but BackupEntry.Status.SeedName matches", pointer.String(otherSeed), pointer.String(seedName), seedName, BeTrue()),
 			)
 
 			DescribeTable("filter BackupEntry by Seed label selector",
@@ -363,17 +363,17 @@ var _ = Describe("seedfilter", func() {
 					backupEntry.Status.SeedName = statusSeedName
 					Expect(f(backupEntry)).To(match)
 				},
-				Entry("BackupEntry.Spec.SeedName does not match and BackupEntry.Status.SeedName is nil", pointer.StringPtr(seedName), nil, otherSeedLabelSelector, BeFalse()),
-				Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName do not match", pointer.StringPtr(seedName), pointer.StringPtr(seedName), otherSeedLabelSelector, BeFalse()),
-				Entry("BackupEntry.Spec.SeedName matches and BackupEntry.Status.SeedName is nil", pointer.StringPtr(seedName), nil, seedLabelSelector, BeTrue()),
-				Entry("BackupEntry.Spec.SeedName does not match but BackupEntry.Status.SeedName matches", pointer.StringPtr(otherSeed), pointer.StringPtr(seedName), seedLabelSelector, BeTrue()),
+				Entry("BackupEntry.Spec.SeedName does not match and BackupEntry.Status.SeedName is nil", pointer.String(seedName), nil, otherSeedLabelSelector, BeFalse()),
+				Entry("BackupEntry.Spec.SeedName and BackupEntry.Status.SeedName do not match", pointer.String(seedName), pointer.String(seedName), otherSeedLabelSelector, BeFalse()),
+				Entry("BackupEntry.Spec.SeedName matches and BackupEntry.Status.SeedName is nil", pointer.String(seedName), nil, seedLabelSelector, BeTrue()),
+				Entry("BackupEntry.Spec.SeedName does not match but BackupEntry.Status.SeedName matches", pointer.String(otherSeed), pointer.String(seedName), seedLabelSelector, BeTrue()),
 			)
 		})
 
 		Describe("#BackupEntryIsManagedByThisGardenlet", func() {
 			DescribeTable("check BackupEntry by seedName",
 				func(bucketSeedName string, match gomegatypes.GomegaMatcher) {
-					backupEntry.Spec.SeedName = pointer.StringPtr(bucketSeedName)
+					backupEntry.Spec.SeedName = pointer.String(bucketSeedName)
 					gc := &config.GardenletConfiguration{
 						SeedConfig: &config.SeedConfig{
 							SeedTemplate: gardencore.SeedTemplate{
@@ -391,7 +391,7 @@ var _ = Describe("seedfilter", func() {
 
 			DescribeTable("check BackupEntry by seed label selector",
 				func(labelSelector *metav1.LabelSelector, match gomegatypes.GomegaMatcher) {
-					backupEntry.Spec.SeedName = pointer.StringPtr(seedName)
+					backupEntry.Spec.SeedName = pointer.String(seedName)
 					gc := &config.GardenletConfiguration{
 						SeedSelector: labelSelector,
 					}

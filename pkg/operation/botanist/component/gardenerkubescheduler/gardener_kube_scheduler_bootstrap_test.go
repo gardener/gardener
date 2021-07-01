@@ -51,7 +51,7 @@ var _ = Describe("Bootstrap", func() {
 
 	BeforeEach(func() {
 		ctx = context.TODO()
-		image = &imagevector.Image{Name: "foo", Repository: "example.com", Tag: pointer.StringPtr("v1.2.3")}
+		image = &imagevector.Image{Name: "foo", Repository: "example.com", Tag: pointer.String("v1.2.3")}
 
 		s := runtime.NewScheme()
 		Expect(appsv1.AddToScheme(s)).NotTo(HaveOccurred())
@@ -141,7 +141,7 @@ var _ = Describe("Bootstrap", func() {
 								Service: &admissionregistrationv1beta1.ServiceReference{
 									Namespace: "foo",
 									Name:      "gardener-seed-admission-controller",
-									Path:      pointer.StringPtr("/webhooks/default-pod-scheduler-name/gardener-shoot-controlplane-scheduler"),
+									Path:      pointer.String("/webhooks/default-pod-scheduler-name/gardener-shoot-controlplane-scheduler"),
 								},
 								CABundle: []byte(seedadmissioncontroller.TLSCACert),
 							},

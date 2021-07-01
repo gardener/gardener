@@ -71,8 +71,8 @@ var _ = Describe("Utils", func() {
 					Kind:               "test-owner-kind",
 					Name:               "test-owner",
 					UID:                types.UID("test-owner-UID"),
-					Controller:         pointer.BoolPtr(true),
-					BlockOwnerDeletion: pointer.BoolPtr(true),
+					Controller:         pointer.Bool(true),
+					BlockOwnerDeletion: pointer.Bool(true),
 				},
 			}
 
@@ -106,7 +106,7 @@ var _ = Describe("Utils", func() {
 					Generation:                 int64(1),
 					CreationTimestamp:          creationTimestamp,
 					DeletionTimestamp:          &deletionTimestamp,
-					DeletionGracePeriodSeconds: pointer.Int64Ptr(10),
+					DeletionGracePeriodSeconds: pointer.Int64(10),
 					Labels:                     labels,
 					Annotations:                annotation,
 					OwnerReferences:            owner,

@@ -64,7 +64,7 @@ var _ = Describe("#DNSOwner", func() {
 
 		vals = &OwnerValues{
 			Name:    "test-deploy",
-			Active:  pointer.BoolPtr(true),
+			Active:  pointer.Bool(true),
 			OwnerID: ownerID,
 		}
 
@@ -74,7 +74,7 @@ var _ = Describe("#DNSOwner", func() {
 			},
 			Spec: dnsv1alpha1.DNSOwnerSpec{
 				OwnerId: ownerID,
-				Active:  pointer.BoolPtr(true),
+				Active:  pointer.Bool(true),
 			},
 		}
 

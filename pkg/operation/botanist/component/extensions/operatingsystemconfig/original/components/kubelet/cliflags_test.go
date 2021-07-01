@@ -35,7 +35,7 @@ var _ = Describe("CLIFlags", func() {
 	image := &imagevector.Image{
 		Name:       "hyperkube",
 		Repository: "foo.io/hyperkube",
-		Tag:        pointer.StringPtr("version"),
+		Tag:        pointer.String("version"),
 	}
 
 	DescribeTable("#CLIFlags",

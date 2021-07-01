@@ -130,7 +130,7 @@ func getValidatingWebhookConfig() *admissionregistrationv1beta1.ValidatingWebhoo
 			}},
 			ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
 				Service: &admissionregistrationv1beta1.ServiceReference{
-					Path: pointer.StringPtr(extensioncrds.WebhookPath),
+					Path: pointer.String(extensioncrds.WebhookPath),
 				},
 			},
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version},
@@ -157,7 +157,7 @@ func getValidatingWebhookConfig() *admissionregistrationv1beta1.ValidatingWebhoo
 			}},
 			ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
 				Service: &admissionregistrationv1beta1.ServiceReference{
-					Path: pointer.StringPtr(extensioncrds.WebhookPath),
+					Path: pointer.String(extensioncrds.WebhookPath),
 				},
 			},
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version},
@@ -194,7 +194,7 @@ func getMutatingWebhookConfig() *admissionregistrationv1beta1.MutatingWebhookCon
 			},
 			ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
 				Service: &admissionregistrationv1beta1.ServiceReference{
-					Path: pointer.StringPtr(podschedulername.WebhookPath),
+					Path: pointer.String(podschedulername.WebhookPath),
 				},
 			},
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version},

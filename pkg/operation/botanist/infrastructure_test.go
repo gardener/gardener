@@ -119,7 +119,7 @@ var _ = Describe("Infrastructure", func() {
 
 			namespace = "namespace"
 			name      = "name"
-			nodesCIDR = pointer.StringPtr("1.2.3.4/5")
+			nodesCIDR = pointer.String("1.2.3.4/5")
 			shoot     = &gardencorev1beta1.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,

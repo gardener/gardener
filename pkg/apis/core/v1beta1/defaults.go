@@ -129,7 +129,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 	// k8sVersionLessThan116 and k8sVersionGreaterOrEqualThan122 will default to `false`.
 
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
-		obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.BoolPtr(true)
+		obj.Spec.Kubernetes.AllowPrivilegedContainers = pointer.Bool(true)
 	}
 
 	if obj.Spec.Kubernetes.KubeAPIServer == nil {
@@ -137,19 +137,19 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication == nil {
 		if k8sVersionLessThan116 {
-			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(true)
+			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
 		} else {
-			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(false)
+			obj.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
 		}
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.Requests == nil {
 		obj.Spec.Kubernetes.KubeAPIServer.Requests = &KubeAPIServerRequests{}
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight == nil {
-		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight = pointer.Int32Ptr(400)
+		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxNonMutatingInflight = pointer.Int32(400)
 	}
 	if obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight == nil {
-		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight = pointer.Int32Ptr(200)
+		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight = pointer.Int32(200)
 	}
 
 	if obj.Spec.Kubernetes.KubeControllerManager == nil {
@@ -173,7 +173,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
 	}
 	if obj.Spec.Kubernetes.KubeProxy.Enabled == nil {
-		obj.Spec.Kubernetes.KubeProxy.Enabled = pointer.BoolPtr(true)
+		obj.Spec.Kubernetes.KubeProxy.Enabled = pointer.Bool(true)
 	}
 
 	if obj.Spec.Addons == nil {
@@ -208,7 +208,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
 	}
 	if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
-		obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.BoolPtr(true)
+		obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
 	}
 
 	var (
@@ -237,7 +237,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 
 	if obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication == nil {
-		obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = pointer.BoolPtr(false)
+		obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication = pointer.Bool(false)
 	}
 
 	if k8sVersionGreaterOrEqualThan122 {
@@ -326,7 +326,7 @@ func SetDefaults_NginxIngress(obj *NginxIngress) {
 // SetDefaults_ControllerResource sets default values for ControllerResource objects.
 func SetDefaults_ControllerResource(obj *ControllerResource) {
 	if obj.Primary == nil {
-		obj.Primary = pointer.BoolPtr(true)
+		obj.Primary = pointer.Bool(true)
 	}
 }
 

@@ -140,7 +140,7 @@ var _ = Describe("ClusterIdentity", func() {
 			shoot.Status.ClusterIdentity = nil
 		}),
 		Entry("cluster idenitty already exists", func() {
-			shoot.Status.ClusterIdentity = pointer.StringPtr(expectedShootClusterIdentity)
+			shoot.Status.ClusterIdentity = pointer.String(expectedShootClusterIdentity)
 		}),
 	)
 

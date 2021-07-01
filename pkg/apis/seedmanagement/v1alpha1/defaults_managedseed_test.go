@@ -134,7 +134,7 @@ var _ = Describe("Defaults", func() {
 							},
 						},
 						Bootstrap:       bootstrapPtr(BootstrapToken),
-						MergeWithParent: pointer.BoolPtr(true),
+						MergeWithParent: pointer.Bool(true),
 					},
 				},
 			}))
@@ -195,7 +195,7 @@ var _ = Describe("Defaults", func() {
 							},
 						},
 						Bootstrap:       bootstrapPtr(BootstrapToken),
-						MergeWithParent: pointer.BoolPtr(true),
+						MergeWithParent: pointer.Bool(true),
 					},
 				},
 			}))
@@ -213,10 +213,10 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_GardenletDeployment(obj)
 
 			Expect(obj).To(Equal(&GardenletDeployment{
-				ReplicaCount:         pointer.Int32Ptr(1),
-				RevisionHistoryLimit: pointer.Int32Ptr(1),
+				ReplicaCount:         pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(1),
 				Image:                &Image{},
-				VPA:                  pointer.BoolPtr(true),
+				VPA:                  pointer.Bool(true),
 			}))
 		})
 	})
@@ -237,12 +237,12 @@ var _ = Describe("Defaults", func() {
 		})
 
 		It("should default pull policy to Always if tag is latest", func() {
-			obj.Tag = pointer.StringPtr("latest")
+			obj.Tag = pointer.String("latest")
 
 			SetDefaults_Image(obj)
 
 			Expect(obj).To(Equal(&Image{
-				Tag:        pointer.StringPtr("latest"),
+				Tag:        pointer.String("latest"),
 				PullPolicy: pullPolicyPtr(corev1.PullAlways),
 			}))
 		})

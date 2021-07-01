@@ -82,7 +82,7 @@ var _ = Describe("#Wait", func() {
 			&retry.UntilTimeout, waiter.UntilTimeout,
 		)
 
-		etcd = New(c, log, testNamespace, testRole, ClassNormal, false, "12Gi", pointer.StringPtr("abcd"))
+		etcd = New(c, log, testNamespace, testRole, ClassNormal, false, "12Gi", pointer.String("abcd"))
 		etcd.SetSecrets(Secrets{
 			CA:     component.Secret{Name: "ca", Checksum: "abcdef"},
 			Server: component.Secret{Name: "server", Checksum: "abcdef"},
@@ -94,7 +94,7 @@ var _ = Describe("#Wait", func() {
 				Begin: "1234",
 				End:   "5678",
 			},
-			ScaleDownUpdateMode: pointer.StringPtr(hvpav1alpha1.UpdateModeMaintenanceWindow),
+			ScaleDownUpdateMode: pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow),
 		})
 
 		expected = &druidv1alpha1.Etcd{
@@ -128,7 +128,7 @@ var _ = Describe("#Wait", func() {
 			&TimeNow, mockNow.Do,
 		)()
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
-		expected.Status.LastError = pointer.StringPtr("some error")
+		expected.Status.LastError = pointer.String("some error")
 
 		Expect(c.Create(ctx, expected)).To(Succeed(), "creating etcd succeeds")
 		Expect(etcd.Wait(ctx)).To(MatchError(ContainSubstring("some error")))
@@ -151,7 +151,7 @@ var _ = Describe("#Wait", func() {
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.Add(-time.Millisecond).UTC().String(),
 		}
-		expected.Status.Ready = pointer.BoolPtr(true)
+		expected.Status.Ready = pointer.Bool(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("wait")
@@ -171,13 +171,13 @@ var _ = Describe("#Wait", func() {
 		By("patch object")
 		delete(expected.Annotations, v1beta1constants.GardenerTimestamp)
 		patch := client.MergeFrom(expected.DeepCopy())
-		expected.Status.ObservedGeneration = pointer.Int64Ptr(0)
+		expected.Status.ObservedGeneration = pointer.Int64(0)
 		expected.Status.LastError = nil
 		// remove operation annotation, add up-to-date timestamp annotation
 		expected.ObjectMeta.Annotations = map[string]string{
 			v1beta1constants.GardenerTimestamp: now.UTC().String(),
 		}
-		expected.Status.Ready = pointer.BoolPtr(true)
+		expected.Status.Ready = pointer.Bool(true)
 		Expect(c.Patch(ctx, expected, patch)).To(Succeed(), "patching etcd succeeds")
 
 		By("wait")
@@ -199,7 +199,7 @@ var _ = Describe("#CheckEtcdObject", func() {
 	})
 
 	It("should return error if reconciliation failed", func() {
-		obj.Status.LastError = pointer.StringPtr("foo")
+		obj.Status.LastError = pointer.String("foo")
 		err := CheckEtcdObject(obj)
 		Expect(err).To(MatchError("foo"))
 		Expect(retry.IsRetriable(err)).To(BeTrue())
@@ -217,34 +217,34 @@ var _ = Describe("#CheckEtcdObject", func() {
 
 	It("should return error if observedGeneration is outdated", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = pointer.Int64Ptr(0)
+		obj.Status.ObservedGeneration = pointer.Int64(0)
 		Expect(CheckEtcdObject(obj)).To(MatchError("observed generation outdated (0/1)"))
 	})
 
 	It("should return error if operation annotation is not removed yet", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = pointer.Int64Ptr(1)
+		obj.Status.ObservedGeneration = pointer.Int64(1)
 		metav1.SetMetaDataAnnotation(&obj.ObjectMeta, v1beta1constants.GardenerOperation, "reconcile")
 		Expect(CheckEtcdObject(obj)).To(MatchError("gardener operation \"reconcile\" is not yet picked up by etcd-druid"))
 	})
 
 	It("should return error if status.ready==nil", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = pointer.Int64Ptr(1)
+		obj.Status.ObservedGeneration = pointer.Int64(1)
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
 
 	It("should return error if status.ready==false", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = pointer.Int64Ptr(1)
-		obj.Status.Ready = pointer.BoolPtr(false)
+		obj.Status.ObservedGeneration = pointer.Int64(1)
+		obj.Status.Ready = pointer.Bool(false)
 		Expect(CheckEtcdObject(obj)).To(MatchError("is not ready yet"))
 	})
 
 	It("should not return error if object is ready", func() {
 		obj.SetGeneration(1)
-		obj.Status.ObservedGeneration = pointer.Int64Ptr(1)
-		obj.Status.Ready = pointer.BoolPtr(true)
+		obj.Status.ObservedGeneration = pointer.Int64(1)
+		obj.Status.Ready = pointer.Bool(true)
 		Expect(CheckEtcdObject(obj)).To(Succeed())
 	})
 })

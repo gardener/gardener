@@ -240,7 +240,7 @@ func SetDefaults_ShootControllerConfiguration(obj *ShootControllerConfiguration)
 	}
 
 	if obj.DNSEntryTTLSeconds == nil {
-		obj.DNSEntryTTLSeconds = pointer.Int64Ptr(120)
+		obj.DNSEntryTTLSeconds = pointer.Int64(120)
 	}
 }
 

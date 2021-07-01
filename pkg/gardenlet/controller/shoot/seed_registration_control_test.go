@@ -198,12 +198,12 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 										Spec: gardencorev1beta1.SeedSpec{
 											Backup: &gardencorev1beta1.SeedBackup{
 												Provider: "gcp",
-												Region:   pointer.StringPtr("europe-north1"),
+												Region:   pointer.String("europe-north1"),
 											},
 											Networks: gardencorev1beta1.SeedNetworks{
 												ShootDefaults: &gardencorev1beta1.ShootNetworks{
-													Pods:     pointer.StringPtr("100.96.0.0/11"),
-													Services: pointer.StringPtr("100.64.0.0/13"),
+													Pods:     pointer.String("100.96.0.0/11"),
+													Services: pointer.String("100.64.0.0/13"),
 												},
 												BlockCIDRs: []string{"169.254.169.254/32"},
 											},
@@ -311,7 +311,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 											},
 										}),
 										Bootstrap:       bootstrapPtr(seedmanagementv1alpha1.BootstrapToken),
-										MergeWithParent: pointer.BoolPtr(true),
+										MergeWithParent: pointer.Bool(true),
 									},
 								},
 							}))
@@ -370,12 +370,12 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 													Spec: gardencorev1beta1.SeedSpec{
 														Backup: &gardencorev1beta1.SeedBackup{
 															Provider: "gcp",
-															Region:   pointer.StringPtr("europe-north1"),
+															Region:   pointer.String("europe-north1"),
 														},
 														Networks: gardencorev1beta1.SeedNetworks{
 															ShootDefaults: &gardencorev1beta1.ShootNetworks{
-																Pods:     pointer.StringPtr("100.96.0.0/11"),
-																Services: pointer.StringPtr("100.64.0.0/13"),
+																Pods:     pointer.String("100.96.0.0/11"),
+																Services: pointer.String("100.64.0.0/13"),
 															},
 															BlockCIDRs: []string{"169.254.169.254/32"},
 														},
@@ -415,7 +415,7 @@ var _ = Describe("DefaultSeedRegistrationControl", func() {
 											},
 										}),
 										Bootstrap:       bootstrapPtr(seedmanagementv1alpha1.BootstrapServiceAccount),
-										MergeWithParent: pointer.BoolPtr(true),
+										MergeWithParent: pointer.Bool(true),
 									},
 								},
 							}))

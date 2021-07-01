@@ -77,7 +77,7 @@ func (e *entry) Deploy(ctx context.Context) error {
 
 		e.dnsEntry.Spec = dnsv1alpha1.DNSEntrySpec{
 			DNSName: e.values.DNSName,
-			TTL:     pointer.Int64Ptr(120),
+			TTL:     pointer.Int64(120),
 			Targets: e.values.Targets,
 		}
 

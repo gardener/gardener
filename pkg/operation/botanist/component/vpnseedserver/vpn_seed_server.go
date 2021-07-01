@@ -266,8 +266,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 			v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 		}
 		deployment.Spec = appsv1.DeploymentSpec{
-			Replicas:             pointer.Int32Ptr(v.replicas),
-			RevisionHistoryLimit: pointer.Int32Ptr(1),
+			Replicas:             pointer.Int32(v.replicas),
+			RevisionHistoryLimit: pointer.Int32(1),
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 				v1beta1constants.LabelApp: DeploymentName,
 			}},
@@ -294,7 +294,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 					},
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken: pointer.BoolPtr(false),
+					AutomountServiceAccountToken: pointer.Bool(false),
 					PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane,
 					DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 					Containers: []corev1.Container{
@@ -315,7 +315,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 										"NET_ADMIN",
 									},
 								},
-								Privileged: pointer.BoolPtr(true),
+								Privileged: pointer.Bool(true),
 							},
 							Env: []corev1.EnvVar{
 								{
@@ -392,7 +392,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							},
 						},
 					},
-					TerminationGracePeriodSeconds: pointer.Int64Ptr(30),
+					TerminationGracePeriodSeconds: pointer.Int64(30),
 					Volumes: []corev1.Volume{
 						{
 							Name: DeploymentName,
@@ -591,8 +591,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 				Kind:               "Namespace",
 				Name:               v.namespace,
 				UID:                v.namespaceUID,
-				Controller:         pointer.BoolPtr(false),
-				BlockOwnerDeletion: pointer.BoolPtr(false),
+				Controller:         pointer.Bool(false),
+				BlockOwnerDeletion: pointer.Bool(false),
 			},
 		}
 		envoyFilter.Spec.WorkloadSelector = &istionetworkingv1alpha3.WorkloadSelector{

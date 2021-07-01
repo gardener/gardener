@@ -177,8 +177,8 @@ var _ = Describe("VpnSeedServer", func() {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas:             pointer.Int32Ptr(replicas),
-					RevisionHistoryLimit: pointer.Int32Ptr(1),
+					Replicas:             pointer.Int32(replicas),
+					RevisionHistoryLimit: pointer.Int32(1),
 					Selector: &metav1.LabelSelector{MatchLabels: map[string]string{
 						v1beta1constants.LabelApp: DeploymentName,
 					}},
@@ -205,7 +205,7 @@ var _ = Describe("VpnSeedServer", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
-							AutomountServiceAccountToken: pointer.BoolPtr(false),
+							AutomountServiceAccountToken: pointer.Bool(false),
 							PriorityClassName:            v1beta1constants.PriorityClassNameShootControlPlane,
 							DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 							Containers: []corev1.Container{
@@ -226,7 +226,7 @@ var _ = Describe("VpnSeedServer", func() {
 												"NET_ADMIN",
 											},
 										},
-										Privileged: pointer.BoolPtr(true),
+										Privileged: pointer.Bool(true),
 									},
 									Env: []corev1.EnvVar{
 										{
@@ -303,7 +303,7 @@ var _ = Describe("VpnSeedServer", func() {
 									},
 								},
 							},
-							TerminationGracePeriodSeconds: pointer.Int64Ptr(30),
+							TerminationGracePeriodSeconds: pointer.Int64(30),
 							Volumes: []corev1.Volume{
 								{
 									Name: DeploymentName,
@@ -570,8 +570,8 @@ var _ = Describe("VpnSeedServer", func() {
 					Kind:               "Namespace",
 					Name:               namespace,
 					UID:                namespaceUID,
-					BlockOwnerDeletion: pointer.BoolPtr(false),
-					Controller:         pointer.BoolPtr(false),
+					BlockOwnerDeletion: pointer.Bool(false),
+					Controller:         pointer.Bool(false),
 				}},
 			},
 			Spec: istionetworkingv1alpha3.EnvoyFilter{

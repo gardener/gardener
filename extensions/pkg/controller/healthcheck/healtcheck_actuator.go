@@ -221,7 +221,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 			checkResults = append(checkResults, Result{
 				HealthConditionType: conditionType,
 				Status:              gardencorev1beta1.ConditionFalse,
-				Detail:              pointer.StringPtr(trimTrailingWhitespace(details.String())),
+				Detail:              pointer.String(trimTrailingWhitespace(details.String())),
 				SuccessfulChecks:    result.successfulChecks,
 				UnsuccessfulChecks:  len(result.unsuccessfulChecks),
 				FailedChecks:        len(result.failedChecks),
@@ -252,7 +252,7 @@ func (a *Actuator) ExecuteHealthCheckFunctions(ctx context.Context, request type
 				HealthConditionType:  conditionType,
 				Status:               gardencorev1beta1.ConditionProgressing,
 				ProgressingThreshold: threshold,
-				Detail:               pointer.StringPtr(trimTrailingWhitespace(details.String())),
+				Detail:               pointer.String(trimTrailingWhitespace(details.String())),
 				SuccessfulChecks:     result.successfulChecks,
 				ProgressingChecks:    len(result.progressingChecks),
 				Codes:                result.codes,

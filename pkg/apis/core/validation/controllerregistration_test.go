@@ -181,7 +181,7 @@ var _ = Describe("validation", func() {
 			resource := core.ControllerResource{
 				Kind:             extensionsv1alpha1.ExtensionResource,
 				Type:             "arbitrary",
-				GloballyEnabled:  pointer.BoolPtr(true),
+				GloballyEnabled:  pointer.Bool(true),
 				ReconcileTimeout: makeDurationPointer(10 * time.Second),
 			}
 
@@ -192,7 +192,7 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid to set certain fields for kind != Extension", func() {
-			ctrlResource.GloballyEnabled = pointer.BoolPtr(true)
+			ctrlResource.GloballyEnabled = pointer.Bool(true)
 			ctrlResource.ReconcileTimeout = makeDurationPointer(10 * time.Second)
 			controllerRegistration.Spec.Resources = []core.ControllerResource{ctrlResource}
 
@@ -262,7 +262,7 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid to set unsupported seed selectors", func() {
-			controllerRegistration.Spec.Resources[0].Primary = pointer.BoolPtr(false)
+			controllerRegistration.Spec.Resources[0].Primary = pointer.Bool(false)
 			controllerRegistration.Spec.Deployment.SeedSelector = &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"foo": "no/slash/allowed",
@@ -278,7 +278,7 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid to set an empty deployment type", func() {
-			controllerRegistration.Spec.Deployment.Type = pointer.StringPtr("")
+			controllerRegistration.Spec.Deployment.Type = pointer.String("")
 
 			errorList := ValidateControllerRegistration(controllerRegistration)
 
@@ -347,7 +347,7 @@ var _ = Describe("validation", func() {
 
 		It("should prevent changing the primary field of a resource", func() {
 			newControllerRegistration := prepareControllerRegistrationForUpdate(controllerRegistration)
-			newControllerRegistration.Spec.Resources[0].Primary = pointer.BoolPtr(false)
+			newControllerRegistration.Spec.Resources[0].Primary = pointer.Bool(false)
 
 			errorList := ValidateControllerRegistrationUpdate(newControllerRegistration, controllerRegistration)
 

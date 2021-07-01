@@ -161,7 +161,7 @@ var _ = Describe("Strategy", func() {
 				}
 
 				newObj := obj.DeepCopy()
-				newObj.Spec.Description = pointer.StringPtr("new description")
+				newObj.Spec.Description = pointer.String("new description")
 				newObj.Status = core.ProjectStatus{}
 
 				Strategy.PrepareForUpdate(ctx, newObj, obj)

@@ -124,9 +124,9 @@ func newEtcd(namespace, name, role string, healthy bool, lastError *string) *dru
 		},
 	}
 	if healthy {
-		etcd.Status.Ready = pointer.BoolPtr(true)
+		etcd.Status.Ready = pointer.Bool(true)
 	} else {
-		etcd.Status.Ready = pointer.BoolPtr(false)
+		etcd.Status.Ready = pointer.Bool(false)
 		etcd.Status.LastError = lastError
 	}
 
@@ -379,7 +379,7 @@ var _ = Describe("health check", func() {
 			shoot,
 			requiredControlPlaneDeployments,
 			[]*druidv1alpha1.Etcd{
-				newEtcd(etcdMain.Namespace, etcdMain.Name, roleOf(etcdMain), false, pointer.StringPtr("some error that maps to an error code, e.g. unauthorized")),
+				newEtcd(etcdMain.Namespace, etcdMain.Name, roleOf(etcdMain), false, pointer.String("some error that maps to an error code, e.g. unauthorized")),
 				etcdEvents,
 			},
 			nil,

@@ -280,8 +280,8 @@ var _ = Describe("ResourceManager", func() {
 				Labels:    defaultLabels,
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32Ptr(1),
-				RevisionHistoryLimit: pointer.Int32Ptr(1),
+				Replicas:             pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"app": "gardener-resource-manager",
@@ -360,7 +360,7 @@ var _ = Describe("ResourceManager", func() {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  secretNameKubeconfig,
-										DefaultMode: pointer.Int32Ptr(420),
+										DefaultMode: pointer.Int32(420),
 									},
 								},
 							},

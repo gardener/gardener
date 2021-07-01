@@ -328,7 +328,7 @@ func getParentImageVectorOverwrite() (*string, error) {
 		if err != nil {
 			return nil, err
 		}
-		imageVectorOverwrite = pointer.StringPtr(string(data))
+		imageVectorOverwrite = pointer.String(string(data))
 	}
 	return imageVectorOverwrite, nil
 }
@@ -340,7 +340,7 @@ func getParentComponentImageVectorOverwrites() (*string, error) {
 		if err != nil {
 			return nil, err
 		}
-		componentImageVectorOverwrites = pointer.StringPtr(string(data))
+		componentImageVectorOverwrites = pointer.String(string(data))
 	}
 	return componentImageVectorOverwrites, nil
 }

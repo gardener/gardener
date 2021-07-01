@@ -360,8 +360,8 @@ status: {}
 				SecretRefs: []corev1.LocalObjectReference{
 					{Name: managedResourceSecretName},
 				},
-				KeepObjects: pointer.BoolPtr(false),
-				Class:       pointer.StringPtr("seed"),
+				KeepObjects: pointer.Bool(false),
+				Class:       pointer.String("seed"),
 			},
 		}
 	})

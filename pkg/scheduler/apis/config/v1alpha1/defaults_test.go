@@ -95,7 +95,7 @@ var _ = Describe("Defaults", func() {
 			It("should not overwrite custom settings", func() {
 				expectedLeaderElection := &configv1alpha1.LeaderElectionConfiguration{
 					LeaderElectionConfiguration: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-						LeaderElect:   pointer.BoolPtr(true),
+						LeaderElect:   pointer.Bool(true),
 						ResourceLock:  "foo",
 						RetryPeriod:   metav1.Duration{Duration: 40 * time.Second},
 						RenewDeadline: metav1.Duration{Duration: 41 * time.Second},

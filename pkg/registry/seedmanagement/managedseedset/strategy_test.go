@@ -44,7 +44,7 @@ var _ = Describe("Strategy", func() {
 		})
 
 		It("should increase the generation if the spec has changed", func() {
-			newManagedSeedSet.Spec.Replicas = pointer.Int32Ptr(1)
+			newManagedSeedSet.Spec.Replicas = pointer.Int32(1)
 
 			strategy.PrepareForUpdate(ctx, newManagedSeedSet, oldManagedSeedSet)
 			Expect(newManagedSeedSet.Generation).To(Equal(oldManagedSeedSet.Generation + 1))
