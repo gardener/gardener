@@ -111,7 +111,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_BackupBucketSchedulerConfiguration_To_config_BackupBucketSchedulerConfiguration(in *BackupBucketSchedulerConfiguration, out *config.BackupBucketSchedulerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.RetrySyncPeriod = in.RetrySyncPeriod
 	return nil
 }
 
@@ -122,7 +121,6 @@ func Convert_v1alpha1_BackupBucketSchedulerConfiguration_To_config_BackupBucketS
 
 func autoConvert_config_BackupBucketSchedulerConfiguration_To_v1alpha1_BackupBucketSchedulerConfiguration(in *config.BackupBucketSchedulerConfiguration, out *BackupBucketSchedulerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.RetrySyncPeriod = in.RetrySyncPeriod
 	return nil
 }
 
@@ -275,7 +273,6 @@ func Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *conf
 
 func autoConvert_v1alpha1_ShootSchedulerConfiguration_To_config_ShootSchedulerConfiguration(in *ShootSchedulerConfiguration, out *config.ShootSchedulerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.RetrySyncPeriod = in.RetrySyncPeriod
 	out.Strategy = config.CandidateDeterminationStrategy(in.Strategy)
 	return nil
 }
@@ -287,7 +284,6 @@ func Convert_v1alpha1_ShootSchedulerConfiguration_To_config_ShootSchedulerConfig
 
 func autoConvert_config_ShootSchedulerConfiguration_To_v1alpha1_ShootSchedulerConfiguration(in *config.ShootSchedulerConfiguration, out *ShootSchedulerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.RetrySyncPeriod = in.RetrySyncPeriod
 	out.Strategy = CandidateDeterminationStrategy(in.Strategy)
 	return nil
 }

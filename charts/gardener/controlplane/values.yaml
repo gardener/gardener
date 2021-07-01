@@ -461,10 +461,8 @@ global:
           port: 10251
 #     schedulers:
 #       backupBucket:
-#         retrySyncPeriod: 15s
 #         concurrentSyncs: 5
 #       shoot:
-#         retrySyncPeriod: 15s
 #         concurrentSyncs: 5
 #         candidateDeterminationStrategy: SameRegion # either {SameRegion,MinimalDistance}
       featureGates: {}

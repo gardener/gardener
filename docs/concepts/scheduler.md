@@ -104,7 +104,7 @@ This mechanism works as follows:
 
 ## Failure to determine a suitable seed
 
-In case the scheduler fails to find a suitable seed, the operation is being retried with an exponential backoff - starting with the `retrySyncPeriod` (default of `15s`).
+In case the scheduler fails to find a suitable seed, the operation is being retried with exponential backoff.
 
 ## Current Limitation / Future Plans
 

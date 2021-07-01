@@ -45,16 +45,10 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.Schedulers).To(Equal(configv1alpha1.SchedulerControllerConfiguration{
 					BackupBucket: &configv1alpha1.BackupBucketSchedulerConfiguration{
 						ConcurrentSyncs: 2,
-						RetrySyncPeriod: metav1.Duration{
-							Duration: 15 * time.Second,
-						},
 					},
 					Shoot: &configv1alpha1.ShootSchedulerConfiguration{
 						ConcurrentSyncs: 5,
-						RetrySyncPeriod: metav1.Duration{
-							Duration: 15 * time.Second,
-						},
-						Strategy: configv1alpha1.Default,
+						Strategy:        configv1alpha1.Default,
 					},
 				}))
 			})

@@ -86,10 +86,6 @@ type BackupBucketSchedulerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
-	// RetrySyncPeriod is the duration how fast BackupBuckets with an errornous operation are
-	// re-added to the queue so that the operation can be retried. Defaults to 15s.
-	// +optional
-	RetrySyncPeriod metav1.Duration `json:"retrySyncPeriod,omitempty"`
 }
 
 // ShootSchedulerConfiguration defines the configuration of the Shoot to Seed
@@ -98,10 +94,6 @@ type ShootSchedulerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
-	// RetrySyncPeriod is the duration how fast Shoots with an errornous operation are
-	// re-added to the queue so that the operation can be retried. Defaults to 15s.
-	// +optional
-	RetrySyncPeriod metav1.Duration `json:"retrySyncPeriod,omitempty"`
 	// Strategy defines how seeds for shoots, that do not specify a seed explicitly, are being determined
 	Strategy CandidateDeterminationStrategy `json:"candidateDeterminationStrategy"`
 }
