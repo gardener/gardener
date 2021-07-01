@@ -51,5 +51,12 @@ if [ $use_cache = yes ] ; then
     mv "$cache" "$concourse_cache_dir/$cache_name"
   done
 else
-  make verify-extended
+  if [ -n "${TEST_COV}" ] ; then
+    # supposed to be run in release jobs
+    make verify-extended
+  else
+    make install-requirements
+    # run test instead of test-cov to speed-up jobs, as coverage slows down tests significantly
+    make check-generate verify
+  fi
 fi
