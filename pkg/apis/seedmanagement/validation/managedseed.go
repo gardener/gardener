@@ -293,11 +293,6 @@ func validateImage(image *seedmanagement.Image, fldPath *field.Path) field.Error
 func validateGardenletConfiguration(gardenletConfig *config.GardenletConfiguration, bootstrap seedmanagement.Bootstrap, mergeWithParent bool, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// Ensure seed selector is not specified
-	if gardenletConfig.SeedSelector != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedSelector"), "seed selector is forbidden"))
-	}
-
 	// Ensure name is not specified since it will be set by the controller
 	if gardenletConfig.SeedConfig != nil && gardenletConfig.SeedConfig.Name != "" {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedConfig", "metadata", "name"), "seed name is forbidden"))

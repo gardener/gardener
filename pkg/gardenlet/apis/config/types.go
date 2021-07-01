@@ -55,10 +55,7 @@ type GardenletConfiguration struct {
 	// Default: nil
 	FeatureGates map[string]bool
 	// SeedConfig contains configuration for the seed cluster.
-	// In this case the gardenlet creates the `Seed` object itself based on the provided config.
 	SeedConfig *SeedConfig
-	// SeedSelector is not supported anymore and must not be set. Use an explicit SeedConfig instead.
-	SeedSelector *metav1.LabelSelector
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
 	Logging *Logging

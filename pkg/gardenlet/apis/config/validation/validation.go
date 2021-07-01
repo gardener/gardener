@@ -46,10 +46,6 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 	}
 
-	if !inTemplate && cfg.SeedSelector != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("SeedSelector"), "seedSelector must not be set"))
-	}
-
 	if !inTemplate && cfg.SeedConfig == nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seedConfig"), cfg, "seed config must be set"))
 	}

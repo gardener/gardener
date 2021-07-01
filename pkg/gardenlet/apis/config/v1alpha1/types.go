@@ -67,12 +67,7 @@ type GardenletConfiguration struct {
 	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 	// SeedConfig contains configuration for the seed cluster.
-	// In this case the gardenlet creates the `Seed` object itself based on the provided config.
-	// +optional
 	SeedConfig *SeedConfig `json:"seedConfig,omitempty"`
-	// SeedSelector is not supported anymore and must not be set. Use an explicit SeedConfig instead.
-	// +optional
-	SeedSelector *metav1.LabelSelector `json:"seedSelector,omitempty"`
 	// Logging contains an optional configurations for the logging stack deployed
 	// by the Gardenlet in the seed clusters.
 	// +optional
