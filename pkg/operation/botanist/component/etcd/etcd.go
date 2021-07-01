@@ -313,7 +313,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}
 		e.etcd.Spec.Replicas = replicas
-		e.etcd.Spec.PriorityClassName = pointer.StringPtr(v1beta1constants.PriorityClassNameShootControlPlane)
+		e.etcd.Spec.PriorityClassName = pointer.String(v1beta1constants.PriorityClassNameShootControlPlane)
 		e.etcd.Spec.Annotations = annotations
 		e.etcd.Spec.Labels = utils.MergeStringMaps(e.getLabels(), map[string]string{
 			v1beta1constants.LabelApp:                            LabelAppValue,
@@ -391,14 +391,14 @@ func (e *etcd) Deploy(ctx context.Context) error {
 
 		scaleDownUpdateMode := e.hvpaConfig.ScaleDownUpdateMode
 		if scaleDownUpdateMode == nil {
-			scaleDownUpdateMode = pointer.StringPtr(hvpav1alpha1.UpdateModeMaintenanceWindow)
+			scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow)
 		}
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, e.client, hvpa, func() error {
 			hvpa.Labels = utils.MergeStringMaps(e.getLabels(), map[string]string{
 				v1beta1constants.LabelApp: LabelAppValue,
 			})
-			hvpa.Spec.Replicas = pointer.Int32Ptr(1)
+			hvpa.Spec.Replicas = pointer.Int32(1)
 			hvpa.Spec.MaintenanceTimeWindow = &hvpav1alpha1.MaintenanceTimeWindow{
 				Begin: e.hvpaConfig.MaintenanceTimeWindow.Begin,
 				End:   e.hvpaConfig.MaintenanceTimeWindow.End,
@@ -411,21 +411,21 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						Labels: hpaLabels,
 					},
 					Spec: hvpav1alpha1.HpaTemplateSpec{
-						MinReplicas: pointer.Int32Ptr(int32(replicas)),
+						MinReplicas: pointer.Int32(int32(replicas)),
 						MaxReplicas: int32(replicas),
 						Metrics: []autoscalingv2beta1.MetricSpec{
 							{
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceCPU,
-									TargetAverageUtilization: pointer.Int32Ptr(80),
+									TargetAverageUtilization: pointer.Int32(80),
 								},
 							},
 							{
 								Type: autoscalingv2beta1.ResourceMetricSourceType,
 								Resource: &autoscalingv2beta1.ResourceMetricSource{
 									Name:                     corev1.ResourceMemory,
-									TargetAverageUtilization: pointer.Int32Ptr(80),
+									TargetAverageUtilization: pointer.Int32(80),
 								},
 							},
 						},
@@ -439,15 +439,15 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 						UpdateMode: &updateModeAuto,
 					},
-					StabilizationDuration: pointer.StringPtr("5m"),
+					StabilizationDuration: pointer.String("5m"),
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.StringPtr("1"),
-							Percentage: pointer.Int32Ptr(80),
+							Value:      pointer.String("1"),
+							Percentage: pointer.Int32(80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.StringPtr("2G"),
-							Percentage: pointer.Int32Ptr(80),
+							Value:      pointer.String("2G"),
+							Percentage: pointer.Int32(80),
 						},
 					},
 				},
@@ -455,26 +455,26 @@ func (e *etcd) Deploy(ctx context.Context) error {
 					UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 						UpdateMode: scaleDownUpdateMode,
 					},
-					StabilizationDuration: pointer.StringPtr("15m"),
+					StabilizationDuration: pointer.String("15m"),
 					MinChange: hvpav1alpha1.ScaleParams{
 						CPU: hvpav1alpha1.ChangeParams{
-							Value:      pointer.StringPtr("1"),
-							Percentage: pointer.Int32Ptr(80),
+							Value:      pointer.String("1"),
+							Percentage: pointer.Int32(80),
 						},
 						Memory: hvpav1alpha1.ChangeParams{
-							Value:      pointer.StringPtr("2G"),
-							Percentage: pointer.Int32Ptr(80),
+							Value:      pointer.String("2G"),
+							Percentage: pointer.Int32(80),
 						},
 					},
 				},
 				LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 					CPU: hvpav1alpha1.ChangeParams{
-						Value:      pointer.StringPtr("2"),
-						Percentage: pointer.Int32Ptr(40),
+						Value:      pointer.String("2"),
+						Percentage: pointer.Int32(40),
 					},
 					Memory: hvpav1alpha1.ChangeParams{
-						Value:      pointer.StringPtr("5G"),
-						Percentage: pointer.Int32Ptr(40),
+						Value:      pointer.String("5G"),
+						Percentage: pointer.Int32(40),
 					},
 				},
 				Template: hvpav1alpha1.VpaTemplate{

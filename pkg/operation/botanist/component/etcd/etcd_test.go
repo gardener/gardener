@@ -223,7 +223,7 @@ var _ = Describe("Etcd", func() {
 				},
 				Spec: druidv1alpha1.EtcdSpec{
 					Replicas:          replicas,
-					PriorityClassName: pointer.StringPtr("gardener-shoot-controlplane"),
+					PriorityClassName: pointer.String("gardener-shoot-controlplane"),
 					Annotations: map[string]string{
 						"checksum/secret-etcd-ca":          secretChecksumCA,
 						"checksum/secret-etcd-server-cert": secretChecksumServer,
@@ -274,14 +274,14 @@ var _ = Describe("Etcd", func() {
 						SnapshotCompression:     &compressionSpec,
 					},
 					StorageCapacity:     &storageCapacityQuantity,
-					VolumeClaimTemplate: pointer.StringPtr(etcdName),
+					VolumeClaimTemplate: pointer.String(etcdName),
 				},
 			}
 
 			if class == ClassImportant {
 				obj.Spec.Annotations["cluster-autoscaler.kubernetes.io/safe-to-evict"] = "false"
 				obj.Spec.Etcd.Metrics = &metricsExtensive
-				obj.Spec.VolumeClaimTemplate = pointer.StringPtr(testRole + "-etcd")
+				obj.Spec.VolumeClaimTemplate = pointer.String(testRole + "-etcd")
 			}
 
 			if backupConfig != nil {
@@ -319,7 +319,7 @@ var _ = Describe("Etcd", func() {
 					},
 				},
 				Spec: hvpav1alpha1.HvpaSpec{
-					Replicas: pointer.Int32Ptr(1),
+					Replicas: pointer.Int32(1),
 					MaintenanceTimeWindow: &hvpav1alpha1.MaintenanceTimeWindow{
 						Begin: maintenanceTimeWindow.Begin,
 						End:   maintenanceTimeWindow.End,
@@ -345,14 +345,14 @@ var _ = Describe("Etcd", func() {
 										Type: autoscalingv2beta1.ResourceMetricSourceType,
 										Resource: &autoscalingv2beta1.ResourceMetricSource{
 											Name:                     corev1.ResourceCPU,
-											TargetAverageUtilization: pointer.Int32Ptr(80),
+											TargetAverageUtilization: pointer.Int32(80),
 										},
 									},
 									{
 										Type: autoscalingv2beta1.ResourceMetricSourceType,
 										Resource: &autoscalingv2beta1.ResourceMetricSource{
 											Name:                     corev1.ResourceMemory,
-											TargetAverageUtilization: pointer.Int32Ptr(80),
+											TargetAverageUtilization: pointer.Int32(80),
 										},
 									},
 								},
@@ -370,15 +370,15 @@ var _ = Describe("Etcd", func() {
 							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 								UpdateMode: &updateModeAuto,
 							},
-							StabilizationDuration: pointer.StringPtr("5m"),
+							StabilizationDuration: pointer.String("5m"),
 							MinChange: hvpav1alpha1.ScaleParams{
 								CPU: hvpav1alpha1.ChangeParams{
-									Value:      pointer.StringPtr("1"),
-									Percentage: pointer.Int32Ptr(80),
+									Value:      pointer.String("1"),
+									Percentage: pointer.Int32(80),
 								},
 								Memory: hvpav1alpha1.ChangeParams{
-									Value:      pointer.StringPtr("2G"),
-									Percentage: pointer.Int32Ptr(80),
+									Value:      pointer.String("2G"),
+									Percentage: pointer.Int32(80),
 								},
 							},
 						},
@@ -386,26 +386,26 @@ var _ = Describe("Etcd", func() {
 							UpdatePolicy: hvpav1alpha1.UpdatePolicy{
 								UpdateMode: &scaleDownUpdateMode,
 							},
-							StabilizationDuration: pointer.StringPtr("15m"),
+							StabilizationDuration: pointer.String("15m"),
 							MinChange: hvpav1alpha1.ScaleParams{
 								CPU: hvpav1alpha1.ChangeParams{
-									Value:      pointer.StringPtr("1"),
-									Percentage: pointer.Int32Ptr(80),
+									Value:      pointer.String("1"),
+									Percentage: pointer.Int32(80),
 								},
 								Memory: hvpav1alpha1.ChangeParams{
-									Value:      pointer.StringPtr("2G"),
-									Percentage: pointer.Int32Ptr(80),
+									Value:      pointer.String("2G"),
+									Percentage: pointer.Int32(80),
 								},
 							},
 						},
 						LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
 							CPU: hvpav1alpha1.ChangeParams{
-								Value:      pointer.StringPtr("2"),
-								Percentage: pointer.Int32Ptr(40),
+								Value:      pointer.String("2"),
+								Percentage: pointer.Int32(40),
 							},
 							Memory: hvpav1alpha1.ChangeParams{
-								Value:      pointer.StringPtr("5G"),
-								Percentage: pointer.Int32Ptr(40),
+								Value:      pointer.String("5G"),
+								Percentage: pointer.Int32(40),
 							},
 						},
 						Template: hvpav1alpha1.VpaTemplate{
@@ -499,7 +499,7 @@ var _ = Describe("Etcd", func() {
 					etcd.SetHVPAConfig(&HVPAConfig{
 						Enabled:               true,
 						MaintenanceTimeWindow: maintenanceTimeWindow,
-						ScaleDownUpdateMode:   pointer.StringPtr(updateMode),
+						ScaleDownUpdateMode:   pointer.String(updateMode),
 					})
 				}
 			}

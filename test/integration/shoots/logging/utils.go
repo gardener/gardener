@@ -138,9 +138,9 @@ func getCluster(number int) *extensionsv1alpha1.Cluster {
 	shoot := &gardencorev1beta1.Shoot{
 		Spec: gardencorev1beta1.ShootSpec{
 			Hibernation: &gardencorev1beta1.Hibernation{
-				Enabled: pointer.BoolPtr(false),
+				Enabled: pointer.Bool(false),
 			},
-			Purpose: (*gardencorev1beta1.ShootPurpose)(pointer.StringPtr("evaluation")),
+			Purpose: (*gardencorev1beta1.ShootPurpose)(pointer.String("evaluation")),
 		},
 	}
 

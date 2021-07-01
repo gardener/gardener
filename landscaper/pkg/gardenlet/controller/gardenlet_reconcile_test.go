@@ -121,8 +121,8 @@ var _ = Describe("Gardenlet Landscaper reconciliation testing", func() {
 			// the repository and tag are required values in the gardenlet chart
 			// use default values from the gardenlet helm chart
 			Image: &seedmanagement.Image{
-				Repository: pointer.StringPtr("eu.gcr.io/gardener-project/gardener/gardenlet"),
-				Tag:        pointer.StringPtr("latest"),
+				Repository: pointer.String("eu.gcr.io/gardener-project/gardener/gardenlet"),
+				Tag:        pointer.String("latest"),
 			},
 		}
 
@@ -457,7 +457,7 @@ var _ = Describe("Gardenlet Landscaper reconciliation testing", func() {
 			},
 			Entry("should successfully reconcile with bootstrap kubeconfig", true, nil, nil),
 			Entry("should successfully reconcile with bootstrap kubeconfig", false, nil, nil),
-			Entry("should successfully reconcile with image vectors", false, pointer.StringPtr("abc"), pointer.StringPtr("dxy")),
+			Entry("should successfully reconcile with image vectors", false, pointer.String("abc"), pointer.String("dxy")),
 		)
 
 	})

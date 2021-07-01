@@ -30,7 +30,7 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 	var (
 		exposureClass          *core.ExposureClass
 		defaultTestTolerations = []core.Toleration{
-			{Key: "test", Value: pointer.StringPtr("foo")},
+			{Key: "test", Value: pointer.String("foo")},
 		}
 	)
 
@@ -71,8 +71,8 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 				{},
 				{Key: "foo"},
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.StringPtr("baz")},
-				{Key: "bar", Value: pointer.StringPtr("baz")},
+				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: pointer.String("baz")},
 			}
 			errorList := ValidateExposureClass(exposureClass)
 

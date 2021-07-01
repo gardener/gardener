@@ -189,8 +189,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				Labels:    getLabels(),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas:             pointer.Int32Ptr(2),
-				RevisionHistoryLimit: pointer.Int32Ptr(1),
+				Replicas:             pointer.Int32(2),
+				RevisionHistoryLimit: pointer.Int32(1),
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{

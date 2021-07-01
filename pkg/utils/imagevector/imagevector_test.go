@@ -380,7 +380,7 @@ images:
 					}
 				)
 
-				image := source.ToImage(pointer.StringPtr("1.8.0"))
+				image := source.ToImage(pointer.String("1.8.0"))
 
 				Expect(image).To(Equal(&Image{
 					Name:       name,
@@ -406,7 +406,7 @@ images:
 				Expect(image).To(Equal(&Image{
 					Name:       name,
 					Repository: repository,
-					Tag:        pointer.StringPtr(fmt.Sprintf("v%s", version)),
+					Tag:        pointer.String(fmt.Sprintf("v%s", version)),
 				}))
 			})
 		})

@@ -69,8 +69,8 @@ var _ = Describe("shoot", func() {
 				shoot = &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Networking: gardencorev1beta1.Networking{
-							Pods:     pointer.StringPtr("10.0.0.0/24"),
-							Services: pointer.StringPtr("20.0.0.0/24"),
+							Pods:     pointer.String("10.0.0.0/24"),
+							Services: pointer.String("20.0.0.0/24"),
 						},
 					},
 				}
@@ -105,14 +105,14 @@ var _ = Describe("shoot", func() {
 				Entry("services is nil", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Services = nil }),
 				Entry("pods is nil", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Pods = nil }),
 				Entry("services is invalid", func(s *gardencorev1beta1.Shoot) {
-					s.Spec.Networking.Services = pointer.StringPtr("foo")
+					s.Spec.Networking.Services = pointer.String("foo")
 				}),
-				Entry("pods is invalid", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Pods = pointer.StringPtr("foo") }),
+				Entry("pods is invalid", func(s *gardencorev1beta1.Shoot) { s.Spec.Networking.Pods = pointer.String("foo") }),
 				Entry("apiserver cannot be calculated", func(s *gardencorev1beta1.Shoot) {
-					s.Spec.Networking.Services = pointer.StringPtr("10.0.0.0/32")
+					s.Spec.Networking.Services = pointer.String("10.0.0.0/32")
 				}),
 				Entry("coreDNS cannot be calculated", func(s *gardencorev1beta1.Shoot) {
-					s.Spec.Networking.Services = pointer.StringPtr("10.0.0.0/29")
+					s.Spec.Networking.Services = pointer.String("10.0.0.0/29")
 				}),
 			)
 		})
@@ -223,7 +223,7 @@ var _ = Describe("shoot", func() {
 									{
 										Type:       &provider,
 										SecretName: &dnsSecretName,
-										Primary:    pointer.BoolPtr(true),
+										Primary:    pointer.Bool(true),
 									},
 								},
 							},
@@ -287,7 +287,7 @@ var _ = Describe("shoot", func() {
 								Providers: []gardencorev1beta1.DNSProvider{
 									{
 										Type:    &provider,
-										Primary: pointer.BoolPtr(true),
+										Primary: pointer.Bool(true),
 									},
 								},
 							},
@@ -421,7 +421,7 @@ var _ = Describe("shoot", func() {
 								{
 									Kind:            extensionsv1alpha1.ExtensionResource,
 									Type:            extensionType2,
-									GloballyEnabled: pointer.BoolPtr(true),
+									GloballyEnabled: pointer.Bool(true),
 								},
 							},
 						},
@@ -472,7 +472,7 @@ var _ = Describe("shoot", func() {
 					},
 					DNS: &gardencorev1beta1.DNS{
 						Providers: []gardencorev1beta1.DNSProvider{
-							{Type: pointer.StringPtr(dnsProviderType3)},
+							{Type: pointer.String(dnsProviderType3)},
 						},
 					},
 				},
@@ -544,7 +544,7 @@ var _ = Describe("shoot", func() {
 		It("should compute the correct list of required extensions (shoot explicitly disables globally enabled extension)", func() {
 			shoot.Spec.Extensions = append(shoot.Spec.Extensions, gardencorev1beta1.Extension{
 				Type:     extensionType2,
-				Disabled: pointer.BoolPtr(true),
+				Disabled: pointer.Bool(true),
 			})
 
 			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)

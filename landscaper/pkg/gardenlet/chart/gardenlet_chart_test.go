@@ -211,8 +211,8 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			}
 
 			deploymentConfiguration.Image = &seedmanagement.Image{
-				Repository: pointer.StringPtr("eu.gcr.io/gardener-project/gardener/gardenlet"),
-				Tag:        pointer.StringPtr("latest"),
+				Repository: pointer.String("eu.gcr.io/gardener-project/gardener/gardenlet"),
+				Tag:        pointer.String("latest"),
 			}
 
 			if deploymentConfiguration.ReplicaCount != nil {
@@ -353,16 +353,16 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			}
 		},
 		Entry("verify the default values for the Gardenlet chart & the Gardenlet component config", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
-		Entry("verify Gardenlet with component config with TLS server configuration", pointer.StringPtr("dummy cert content"), pointer.StringPtr("dummy key content"), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
-		Entry("verify Gardenlet with component config having the Garden client connection kubeconfig set", nil, nil, pointer.StringPtr("dummy garden kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, nil),
-		Entry("verify Gardenlet with component config having the Seed client connection kubeconfig set", nil, nil, nil, pointer.StringPtr("dummy seed kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil),
+		Entry("verify Gardenlet with component config with TLS server configuration", pointer.String("dummy cert content"), pointer.String("dummy key content"), nil, nil, nil, nil, nil, nil, nil, nil, nil, nil),
+		Entry("verify Gardenlet with component config having the Garden client connection kubeconfig set", nil, nil, pointer.String("dummy garden kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil, nil),
+		Entry("verify Gardenlet with component config having the Seed client connection kubeconfig set", nil, nil, nil, pointer.String("dummy seed kubeconfig"), nil, nil, nil, nil, nil, nil, nil, nil),
 		Entry("verify Gardenlet with component config having a Bootstrap kubeconfig set", nil, nil, nil, nil, &corev1.SecretReference{
 			Name:      "gardenlet-kubeconfig-bootstrap",
 			Namespace: "garden",
 		}, &corev1.SecretReference{
 			Name:      "gardenlet-kubeconfig",
 			Namespace: gardencorev1beta1constants.GardenNamespace,
-		}, pointer.StringPtr("dummy bootstrap kubeconfig"), nil, nil, nil, nil, nil),
+		}, pointer.String("dummy bootstrap kubeconfig"), nil, nil, nil, nil, nil),
 		Entry("verify that the SeedConfig is set in the component config Config Map", nil, nil, nil, nil, nil, nil, nil,
 			&gardenletconfigv1alpha1.SeedConfig{
 				SeedTemplate: gardencorev1beta1.SeedTemplate{
@@ -372,16 +372,16 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 				},
 			}, nil, nil, nil, nil),
 
-		Entry("verify deployment with image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.StringPtr("dummy-override-content"), nil),
+		Entry("verify deployment with image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.String("dummy-override-content"), nil),
 
-		Entry("verify deployment with component image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.StringPtr("dummy-override-content"), nil),
+		Entry("verify deployment with component image vector override", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, pointer.String("dummy-override-content"), nil),
 
 		Entry("verify deployment with replica count", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
-			ReplicaCount: pointer.Int32Ptr(2),
+			ReplicaCount: pointer.Int32(2),
 		}, nil, nil, nil),
 
 		Entry("verify deployment with service account", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
-			ServiceAccountName: pointer.StringPtr("ax"),
+			ServiceAccountName: pointer.String("ax"),
 		}, nil, nil, nil),
 
 		Entry("verify deployment with resources", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
@@ -436,7 +436,7 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 		}, nil, nil, nil),
 
 		Entry("verify deployment with VPA enabled", nil, nil, nil, nil, nil, nil, nil, nil, &seedmanagement.GardenletDeployment{
-			VPA: pointer.BoolPtr(true),
+			VPA: pointer.Bool(true),
 		}, nil, nil, nil),
 		Entry("verify Gardenlet RBACs when ManagedIstio is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.ManagedIstio): true}),
 	)

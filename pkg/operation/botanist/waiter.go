@@ -120,7 +120,7 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 		var (
 			retryError *retry.Error
 			headBytes  *int64
-			tailLines  = pointer.Int64Ptr(10)
+			tailLines  = pointer.Int64(10)
 		)
 
 		if !errors.As(err, &retryError) {
@@ -136,7 +136,7 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 		}
 
 		if versionConstraintK8sLess119.Check(semver.MustParse(b.ShootVersion())) {
-			headBytes = pointer.Int64Ptr(1024)
+			headBytes = pointer.Int64(1024)
 		}
 
 		logs, err2 := kutil.MostRecentCompleteLogs(ctx, b.K8sSeedClient.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, "kube-apiserver", tailLines, headBytes)

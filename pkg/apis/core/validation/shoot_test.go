@@ -174,7 +174,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Providers: []core.DNSProvider{
 							{
 								Type:    &dnsProviderType,
-								Primary: pointer.BoolPtr(true),
+								Primary: pointer.Bool(true),
 							},
 						},
 						Domain: &domain,
@@ -183,13 +183,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 						Version: "1.15.2",
 						KubeAPIServer: &core.KubeAPIServerConfig{
 							OIDCConfig: &core.OIDCConfig{
-								CABundle:       pointer.StringPtr("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
-								ClientID:       pointer.StringPtr("client-id"),
-								GroupsClaim:    pointer.StringPtr("groups-claim"),
-								GroupsPrefix:   pointer.StringPtr("groups-prefix"),
-								IssuerURL:      pointer.StringPtr("https://some-endpoint.com"),
-								UsernameClaim:  pointer.StringPtr("user-claim"),
-								UsernamePrefix: pointer.StringPtr("user-prefix"),
+								CABundle:       pointer.String("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
+								ClientID:       pointer.String("client-id"),
+								GroupsClaim:    pointer.String("groups-claim"),
+								GroupsPrefix:   pointer.String("groups-prefix"),
+								IssuerURL:      pointer.String("https://some-endpoint.com"),
+								UsernameClaim:  pointer.String("user-claim"),
+								UsernamePrefix: pointer.String("user-prefix"),
 								RequiredClaims: map[string]string{"foo": "bar"},
 							},
 							AdmissionPlugins: []core.AdmissionPlugin{
@@ -210,13 +210,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 									},
 								},
 							},
-							EnableBasicAuthentication: pointer.BoolPtr(true),
+							EnableBasicAuthentication: pointer.Bool(true),
 						},
 						KubeControllerManager: &core.KubeControllerManagerConfig{
-							NodeCIDRMaskSize: pointer.Int32Ptr(22),
+							NodeCIDRMaskSize: pointer.Int32(22),
 							HorizontalPodAutoscalerConfig: &core.HorizontalPodAutoscalerConfig{
 								SyncPeriod: makeDurationPointer(30 * time.Second),
-								Tolerance:  pointer.Float64Ptr(0.1),
+								Tolerance:  pointer.Float64(0.1),
 							},
 						},
 					},
@@ -352,7 +352,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("exposure class", func() {
 			It("should pass as exposure class is not changed", func() {
-				shoot.Spec.ExposureClassName = pointer.StringPtr("exposure-class-1")
+				shoot.Spec.ExposureClassName = pointer.String("exposure-class-1")
 				newShoot := prepareShootForUpdate(shoot)
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -367,9 +367,9 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should forbid to change the exposure class", func() {
-				shoot.Spec.ExposureClassName = pointer.StringPtr("exposure-class-1")
+				shoot.Spec.ExposureClassName = pointer.String("exposure-class-1")
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.ExposureClassName = pointer.StringPtr("exposure-class-2")
+				newShoot.Spec.ExposureClassName = pointer.String("exposure-class-2")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -388,7 +388,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			// TODO(dkistner) This can be removed once the exposureclass implementation has been completed.
 			It("should forbid referencing an exposure class", func() {
-				shoot.Spec.ExposureClassName = pointer.StringPtr("some-exposure-class")
+				shoot.Spec.ExposureClassName = pointer.String("some-exposure-class")
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -427,7 +427,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shootCopy := shoot.DeepCopy()
 				shootCopy.Spec.Purpose = &purpose
 				shootCopy.Spec.Kubernetes.Version = version
-				shootCopy.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(false)
+				shootCopy.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
 
 				errorList := ValidateShoot(shootCopy)
 
@@ -455,7 +455,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 		)
 
 		It("should forbid unsupported addon configuration", func() {
-			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.StringPtr("does-not-exist")
+			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.String("does-not-exist")
 
 			errorList := ValidateShoot(shoot)
 
@@ -518,8 +518,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should forbid using basic auth mode for kubernetes dashboard when it's disabled in kube-apiserver config", func() {
-			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.StringPtr(core.KubernetesDashboardAuthModeBasic)
-			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(false)
+			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.String(core.KubernetesDashboardAuthModeBasic)
+			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
 
 			errorList := ValidateShoot(shoot)
 
@@ -530,8 +530,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		It("should allow using basic auth mode for kubernetes dashboard when it's enabled in kube-apiserver config", func() {
-			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.StringPtr(core.KubernetesDashboardAuthModeBasic)
-			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(true)
+			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = pointer.String(core.KubernetesDashboardAuthModeBasic)
+			shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
 
 			errorList := ValidateShoot(shoot)
 
@@ -542,7 +542,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			shoot.Spec.CloudProfileName = ""
 			shoot.Spec.Region = ""
 			shoot.Spec.SecretBindingName = ""
-			shoot.Spec.SeedName = pointer.StringPtr("")
+			shoot.Spec.SeedName = pointer.String("")
 			shoot.Spec.SeedSelector = &core.SeedSelector{
 				LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
 			}
@@ -605,8 +605,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				{},
 				{Key: "foo"},
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.StringPtr("baz")},
-				{Key: "bar", Value: pointer.StringPtr("baz")},
+				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: pointer.String("baz")},
 			}
 
 			errorList := ValidateShoot(shoot)
@@ -660,8 +660,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, false)()
 
 			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.SeedName = pointer.StringPtr("another-seed")
-			shoot.Spec.SeedName = pointer.StringPtr("first-seed")
+			newShoot.Spec.SeedName = pointer.String("another-seed")
+			shoot.Spec.SeedName = pointer.String("first-seed")
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -677,8 +677,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SeedChange, true)()
 
 			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.SeedName = pointer.StringPtr("another-seed")
-			shoot.Spec.SeedName = pointer.StringPtr("first-seed")
+			newShoot.Spec.SeedName = pointer.String("another-seed")
+			shoot.Spec.SeedName = pointer.String("first-seed")
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -774,7 +774,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should allow updating the seed if it has not been set previously", func() {
 			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.SeedName = pointer.StringPtr("another-seed")
+			newShoot.Spec.SeedName = pointer.String("another-seed")
 			shoot.Spec.SeedName = nil
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
@@ -1094,8 +1094,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 				shoot.Spec.DNS.Domain = nil
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type:    pointer.StringPtr(core.DNSUnmanaged),
-						Primary: pointer.BoolPtr(true),
+						Type:    pointer.String(core.DNSUnmanaged),
+						Primary: pointer.Bool(true),
 					},
 				}
 
@@ -1106,7 +1106,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid specifying invalid domain", func() {
 				shoot.Spec.DNS.Providers = nil
-				shoot.Spec.DNS.Domain = pointer.StringPtr("foo/bar.baz")
+				shoot.Spec.DNS.Domain = pointer.String("foo/bar.baz")
 
 				errorList := ValidateShoot(shoot)
 
@@ -1119,8 +1119,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should forbid specifying a secret name when provider equals 'unmanaged'", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						Type:       pointer.StringPtr(core.DNSUnmanaged),
-						SecretName: pointer.StringPtr(""),
+						Type:       pointer.String(core.DNSUnmanaged),
+						SecretName: pointer.String(""),
 					},
 				}
 
@@ -1135,7 +1135,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should require a provider if a secret name is given", func() {
 				shoot.Spec.DNS.Providers = []core.DNSProvider{
 					{
-						SecretName: pointer.StringPtr(""),
+						SecretName: pointer.String(""),
 					},
 				}
 
@@ -1152,7 +1152,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				oldShoot.Spec.DNS = nil
 				newShoot := prepareShootForUpdate(oldShoot)
 				newShoot.Spec.DNS = &core.DNS{
-					Domain: pointer.StringPtr("some-domain.com"),
+					Domain: pointer.String("some-domain.com"),
 				}
 
 				errorList := ValidateShootUpdate(newShoot, oldShoot)
@@ -1164,7 +1164,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				oldShoot := prepareShootForUpdate(shoot)
 				oldShoot.Spec.DNS = &core.DNS{}
 				newShoot := prepareShootForUpdate(oldShoot)
-				newShoot.Spec.DNS.Domain = pointer.StringPtr("some-domain.com")
+				newShoot.Spec.DNS.Domain = pointer.String("some-domain.com")
 
 				errorList := ValidateShootUpdate(newShoot, oldShoot)
 
@@ -1185,7 +1185,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid updating the dns domain", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.DNS.Domain = pointer.StringPtr("another-domain.com")
+				newShoot.Spec.DNS.Domain = pointer.String("another-domain.com")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -1198,10 +1198,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should allow updating the dns providers if seed is assigned", func() {
 				oldShoot := shoot.DeepCopy()
 				oldShoot.Spec.SeedName = nil
-				oldShoot.Spec.DNS.Providers[0].Type = pointer.StringPtr("some-dns-provider")
+				oldShoot.Spec.DNS.Providers[0].Type = pointer.String("some-dns-provider")
 
 				newShoot := prepareShootForUpdate(oldShoot)
-				newShoot.Spec.SeedName = pointer.StringPtr("seed")
+				newShoot.Spec.SeedName = pointer.String("seed")
 				newShoot.Spec.DNS.Providers = nil
 
 				errorList := ValidateShootUpdate(newShoot, oldShoot)
@@ -1211,7 +1211,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid updating the primary dns provider type", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				shoot.Spec.DNS.Providers[0].Type = pointer.StringPtr("some-other-provider")
+				shoot.Spec.DNS.Providers[0].Type = pointer.String("some-other-provider")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -1235,7 +1235,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid to remove the primary DNS provider", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.DNS.Providers[0].Primary = pointer.BoolPtr(false)
+				newShoot.Spec.DNS.Providers[0].Primary = pointer.Bool(false)
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -1248,7 +1248,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			It("should forbid adding another primary provider", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.DNS.Providers = append(newShoot.Spec.DNS.Providers, core.DNSProvider{
-					Primary: pointer.BoolPtr(true),
+					Primary: pointer.Bool(true),
 				})
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -1303,7 +1303,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow updating the dns secret name", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.DNS.Providers[0].SecretName = pointer.StringPtr("my-dns-secret")
+				newShoot.Spec.DNS.Providers[0].SecretName = pointer.String("my-dns-secret")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -1312,7 +1312,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid having more than one primary provider", func() {
 				shoot.Spec.DNS.Providers = append(shoot.Spec.DNS.Providers, core.DNSProvider{
-					Primary: pointer.BoolPtr(true),
+					Primary: pointer.Bool(true),
 				})
 
 				errorList := ValidateShoot(shoot)
@@ -1326,13 +1326,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		Context("OIDC validation", func() {
 			It("should forbid unsupported OIDC configuration", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.CABundle = pointer.StringPtr("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsClaim = pointer.StringPtr("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsPrefix = pointer.StringPtr("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.StringPtr("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernameClaim = pointer.StringPtr("")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernamePrefix = pointer.StringPtr("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.CABundle = pointer.String("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsClaim = pointer.String("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsPrefix = pointer.String("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernameClaim = pointer.String("")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernamePrefix = pointer.String("")
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.RequiredClaims = map[string]string{}
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.SigningAlgs = []string{"foo"}
 
@@ -1367,7 +1367,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			DescribeTable("should forbid issuerURL to be empty string or nil, if clientID exists ", func(errorListSize int, issuerURL *string) {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("someClientID")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("someClientID")
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = issuerURL
 
 				errorList := ValidateShoot(shoot)
@@ -1378,12 +1378,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))
 			},
 				Entry("should add error if clientID is set but issuerURL is nil ", 1, nil),
-				Entry("should add error if clientID is set but issuerURL is empty string", 2, pointer.StringPtr("")),
+				Entry("should add error if clientID is set but issuerURL is empty string", 2, pointer.String("")),
 			)
 
 			It("should forbid issuerURL which is not HTTPS schema", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.StringPtr("http://issuer.com")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("someClientID")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("http://issuer.com")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("someClientID")
 
 				errorList := ValidateShoot(shoot)
 
@@ -1395,8 +1395,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should not fail if both clientID and issuerURL are set", func() {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.StringPtr("https://issuer.com")
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.StringPtr("someClientID")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("https://issuer.com")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = pointer.String("someClientID")
 
 				errorList := ValidateShoot(shoot)
 
@@ -1404,7 +1404,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			DescribeTable("should forbid clientID to be empty string or nil, if issuerURL exists ", func(errorListSize int, clientID *string) {
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.StringPtr("https://issuer.com")
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = pointer.String("https://issuer.com")
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = clientID
 
 				errorList := ValidateShoot(shoot)
@@ -1415,14 +1415,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 				}))
 			},
 				Entry("should add error if issuerURL is set but clientID is nil", 1, nil),
-				Entry("should add error if issuerURL is set but clientID is empty string ", 2, pointer.StringPtr("")),
+				Entry("should add error if issuerURL is set but clientID is empty string ", 2, pointer.String("")),
 			)
 		})
 
 		Context("basic authentication", func() {
 			It("should allow basic authentication when kubernetes <= 1.18", func() {
 				shoot.Spec.Kubernetes.Version = "1.18.1"
-				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(true)
+				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
 
 				errorList := ValidateShoot(shoot)
 
@@ -1431,7 +1431,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should forbid basic authentication when kubernetes >= 1.19", func() {
 				shoot.Spec.Kubernetes.Version = "1.19.1"
-				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(true)
+				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(true)
 
 				errorList := ValidateShoot(shoot)
 
@@ -1443,7 +1443,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should allow disabling basic authentication when kubernetes >= 1.19", func() {
 				shoot.Spec.Kubernetes.Version = "1.19.1"
-				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.BoolPtr(false)
+				shoot.Spec.Kubernetes.KubeAPIServer.EnableBasicAuthentication = pointer.Bool(false)
 
 				errorList := ValidateShoot(shoot)
 
@@ -1503,13 +1503,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("valid (unset)", nil, BeEmpty()),
 				Entry("valid (fields unset)", &core.WatchCacheSizes{}, BeEmpty()),
 				Entry("valid (default=0)", &core.WatchCacheSizes{
-					Default: pointer.Int32Ptr(0),
+					Default: pointer.Int32(0),
 				}, BeEmpty()),
 				Entry("valid (default>0)", &core.WatchCacheSizes{
-					Default: pointer.Int32Ptr(42),
+					Default: pointer.Int32(42),
 				}, BeEmpty()),
 				Entry("invalid (default<0)", &core.WatchCacheSizes{
-					Default: pointer.Int32Ptr(negativeSize),
+					Default: pointer.Int32(negativeSize),
 				}, ConsistOf(
 					field.Invalid(field.NewPath("default"), int64(negativeSize), apivalidation.IsNegativeErrorMsg),
 				)),
@@ -1547,21 +1547,21 @@ var _ = Describe("Shoot Validation Tests", func() {
 				// APIGroup set
 				Entry("valid (apps/deployments=0)", &core.WatchCacheSizes{
 					Resources: []core.ResourceWatchCacheSize{{
-						APIGroup:  pointer.StringPtr("apps"),
+						APIGroup:  pointer.String("apps"),
 						Resource:  "deployments",
 						CacheSize: 0,
 					}},
 				}, BeEmpty()),
 				Entry("valid (apps/deployments=>0)", &core.WatchCacheSizes{
 					Resources: []core.ResourceWatchCacheSize{{
-						APIGroup:  pointer.StringPtr("apps"),
+						APIGroup:  pointer.String("apps"),
 						Resource:  "deployments",
 						CacheSize: 42,
 					}},
 				}, BeEmpty()),
 				Entry("invalid (apps/deployments=<0)", &core.WatchCacheSizes{
 					Resources: []core.ResourceWatchCacheSize{{
-						APIGroup:  pointer.StringPtr("apps"),
+						APIGroup:  pointer.String("apps"),
 						Resource:  "deployments",
 						CacheSize: negativeSize,
 					}},
@@ -1581,8 +1581,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should not allow too high values for max inflight requests fields", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.KubeAPIServerRequests{
-				MaxNonMutatingInflight: pointer.Int32Ptr(123123123),
-				MaxMutatingInflight:    pointer.Int32Ptr(412412412),
+				MaxNonMutatingInflight: pointer.Int32(123123123),
+				MaxMutatingInflight:    pointer.Int32(412412412),
 			}
 
 			errorList := ValidateShoot(shoot)
@@ -1598,8 +1598,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 		It("should not allow negative values for max inflight requests fields", func() {
 			shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.KubeAPIServerRequests{
-				MaxNonMutatingInflight: pointer.Int32Ptr(-1),
-				MaxMutatingInflight:    pointer.Int32Ptr(-1),
+				MaxNonMutatingInflight: pointer.Int32(-1),
+				MaxMutatingInflight:    pointer.Int32(-1),
 			}
 
 			errorList := ValidateShoot(shoot)
@@ -1643,10 +1643,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should fail updating immutable fields", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(24)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(22)
+				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(22)
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -1658,10 +1658,10 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should succeed not changing immutable fields", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(24)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
 
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(24)
+				newShoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(24)
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -1669,7 +1669,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should fail when nodeCIDRMaskSize is out of upper boundary", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(32)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(32)
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1683,7 +1683,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should fail when nodeCIDRMaskSize is out of lower boundary", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(0)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(0)
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -1698,7 +1698,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 
 			It("should succeed when nodeCIDRMaskSize is within boundaries", func() {
-				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32Ptr(22)
+				shoot.Spec.Kubernetes.KubeControllerManager.NodeCIDRMaskSize = pointer.Int32(22)
 
 				errorList := ValidateShoot(shoot)
 				Expect(errorList).To(BeEmpty())
@@ -1870,13 +1870,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 				},
 				Entry("valid", core.ClusterAutoscaler{}, BeEmpty()),
 				Entry("valid with threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: pointer.Float64Ptr(0.5),
+					ScaleDownUtilizationThreshold: pointer.Float64(0.5),
 				}, BeEmpty()),
 				Entry("invalid negative threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: pointer.Float64Ptr(-0.5),
+					ScaleDownUtilizationThreshold: pointer.Float64(-0.5),
 				}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
 				Entry("invalid > 1 threshold", core.ClusterAutoscaler{
-					ScaleDownUtilizationThreshold: pointer.Float64Ptr(1.5),
+					ScaleDownUtilizationThreshold: pointer.Float64(1.5),
 				}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
 			)
 		})
@@ -2227,7 +2227,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 			It("should fail to set the cluster identity if it is already set", func() {
 				newShoot.Status.ClusterIdentity = &clusterIdentity
-				shoot.Status.ClusterIdentity = pointer.StringPtr("oldClusterIdentity")
+				shoot.Status.ClusterIdentity = pointer.String("oldClusterIdentity")
 				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
 				Expect(errorList).To(HaveLen(1))
 				Expect(errorList).To(ConsistOfFields(Fields{
@@ -3317,20 +3317,20 @@ var _ = Describe("Shoot Validation Tests", func() {
 			func(schedules []core.HibernationSchedule, matcher gomegatypes.GomegaMatcher) {
 				Expect(ValidateHibernationSchedules(schedules, nil)).To(matcher)
 			},
-			Entry("valid schedules", []core.HibernationSchedule{{Start: pointer.StringPtr("1 * * * *"), End: pointer.StringPtr("2 * * * *")}}, BeEmpty()),
+			Entry("valid schedules", []core.HibernationSchedule{{Start: pointer.String("1 * * * *"), End: pointer.String("2 * * * *")}}, BeEmpty()),
 			Entry("nil schedules", nil, BeEmpty()),
 			Entry("duplicate start and end value in same schedule",
-				[]core.HibernationSchedule{{Start: pointer.StringPtr("* * * * *"), End: pointer.StringPtr("* * * * *")}},
+				[]core.HibernationSchedule{{Start: pointer.String("* * * * *"), End: pointer.String("* * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeDuplicate),
 				})))),
 			Entry("duplicate start and end value in different schedules",
-				[]core.HibernationSchedule{{Start: pointer.StringPtr("1 * * * *"), End: pointer.StringPtr("2 * * * *")}, {Start: pointer.StringPtr("1 * * * *"), End: pointer.StringPtr("3 * * * *")}},
+				[]core.HibernationSchedule{{Start: pointer.String("1 * * * *"), End: pointer.String("2 * * * *")}, {Start: pointer.String("1 * * * *"), End: pointer.String("3 * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeDuplicate),
 				})))),
 			Entry("invalid schedule",
-				[]core.HibernationSchedule{{Start: pointer.StringPtr("foo"), End: pointer.StringPtr("* * * * *")}},
+				[]core.HibernationSchedule{{Start: pointer.String("foo"), End: pointer.String("* * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeInvalid),
 				})))),
@@ -3389,30 +3389,30 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid schedule", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr("1 * * * *"), End: pointer.StringPtr("2 * * * *")}, BeEmpty()),
-			Entry("invalid start value", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr(""), End: pointer.StringPtr("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("valid schedule", sets.NewString(), &core.HibernationSchedule{Start: pointer.String("1 * * * *"), End: pointer.String("2 * * * *")}, BeEmpty()),
+			Entry("invalid start value", sets.NewString(), &core.HibernationSchedule{Start: pointer.String(""), End: pointer.String("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("start").String()),
 			})))),
-			Entry("invalid end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr("* * * * *"), End: pointer.StringPtr("")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("invalid end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.String("* * * * *"), End: pointer.String("")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("end").String()),
 			})))),
-			Entry("invalid location", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr("1 * * * *"), End: pointer.StringPtr("2 * * * *"), Location: pointer.StringPtr("foo")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("invalid location", sets.NewString(), &core.HibernationSchedule{Start: pointer.String("1 * * * *"), End: pointer.String("2 * * * *"), Location: pointer.String("foo")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("location").String()),
 			})))),
-			Entry("equal start and end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr("* * * * *"), End: pointer.StringPtr("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("equal start and end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.String("* * * * *"), End: pointer.String("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeDuplicate),
 				"Field": Equal(field.NewPath("end").String()),
 			})))),
-			Entry("nil start", sets.NewString(), &core.HibernationSchedule{End: pointer.StringPtr("* * * * *")}, BeEmpty()),
-			Entry("nil end", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr("* * * * *")}, BeEmpty()),
+			Entry("nil start", sets.NewString(), &core.HibernationSchedule{End: pointer.String("* * * * *")}, BeEmpty()),
+			Entry("nil end", sets.NewString(), &core.HibernationSchedule{Start: pointer.String("* * * * *")}, BeEmpty()),
 			Entry("start and end nil", sets.NewString(), &core.HibernationSchedule{},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeRequired),
 				})))),
-			Entry("invalid start and end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.StringPtr(""), End: pointer.StringPtr("")},
+			Entry("invalid start and end value", sets.NewString(), &core.HibernationSchedule{Start: pointer.String(""), End: pointer.String("")},
 				ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),

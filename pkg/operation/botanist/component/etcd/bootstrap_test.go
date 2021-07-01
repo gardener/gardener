@@ -54,7 +54,7 @@ var _ = Describe("Etcd", func() {
 		seedVersion               = semver.MustParse("1.17.0")
 		etcdDruidImage            = "etcd/druid:1.2.3"
 		imageVectorOverwriteEmpty *string
-		imageVectorOverwriteFull  = pointer.StringPtr("some overwrite")
+		imageVectorOverwriteFull  = pointer.String("some overwrite")
 
 		managedResourceName       = "etcd-druid"
 		managedResourceSecretName = "managedresource-" + managedResourceName
@@ -357,8 +357,8 @@ status: {}
 					SecretRefs: []corev1.LocalObjectReference{
 						{Name: managedResourceSecretName},
 					},
-					Class:       pointer.StringPtr("seed"),
-					KeepObjects: pointer.BoolPtr(false),
+					Class:       pointer.String("seed"),
+					KeepObjects: pointer.Bool(false),
 				},
 			}
 		})

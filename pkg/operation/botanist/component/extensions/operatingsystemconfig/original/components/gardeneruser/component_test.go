@@ -47,8 +47,8 @@ var _ = Describe("Component", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:   "gardener-user.service",
-					Enable: pointer.BoolPtr(true),
-					Content: pointer.StringPtr(`[Unit]
+					Enable: pointer.Bool(true),
+					Content: pointer.String(`[Unit]
 Description=Configure gardener user
 After=sshd.service
 [Service]
@@ -61,7 +61,7 @@ ExecStart=/var/lib/gardener-user/run.sh
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-user-ssh.key",
-					Permissions: pointer.Int32Ptr(0644),
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -71,7 +71,7 @@ ExecStart=/var/lib/gardener-user/run.sh
 				},
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/gardener-user/run.sh",
-					Permissions: pointer.Int32Ptr(0755),
+					Permissions: pointer.Int32(0755),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",

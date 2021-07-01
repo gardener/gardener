@@ -88,8 +88,8 @@ func (c *leaseController) newLease(base *coordinationv1.Lease, holderIdentity st
 			Namespace: c.namespace,
 		},
 		Spec: coordinationv1.LeaseSpec{
-			HolderIdentity:       pointer.StringPtr(holderIdentity),
-			LeaseDurationSeconds: pointer.Int32Ptr(c.leaseDurationSeconds),
+			HolderIdentity:       pointer.String(holderIdentity),
+			LeaseDurationSeconds: pointer.Int32(c.leaseDurationSeconds),
 		},
 	}
 

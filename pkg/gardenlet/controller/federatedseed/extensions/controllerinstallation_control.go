@@ -164,7 +164,7 @@ func (c *controllerInstallationControl) reconcileControllerInstallationRequired(
 		}
 
 		if requiredTypes.Has(resource.Type) {
-			required = pointer.BoolPtr(true)
+			required = pointer.Bool(true)
 			requiredKindTypes.Insert(fmt.Sprintf("%s/%s", resource.Kind, resource.Type))
 		}
 	}
@@ -178,7 +178,7 @@ func (c *controllerInstallationControl) reconcileControllerInstallationRequired(
 		}
 
 		// if required wasn't set yet then but all kinds were calculated then the installation is no longer required
-		required = pointer.BoolPtr(false)
+		required = pointer.Bool(false)
 		message = "no extension objects exist in the seed having the kind/type combinations the controller is responsible for"
 	} else if *required {
 		message = fmt.Sprintf("extension objects still exist in the seed: %+v", requiredKindTypes.UnsortedList())

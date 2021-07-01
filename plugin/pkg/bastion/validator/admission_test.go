@@ -68,7 +68,7 @@ var _ = Describe("Bastion", func() {
 					UID:       "shoot-uid",
 				},
 				Spec: gardencore.ShootSpec{
-					SeedName: pointer.StringPtr(seedName),
+					SeedName: pointer.String(seedName),
 					Provider: gardencore.Provider{
 						Type: provider,
 					},

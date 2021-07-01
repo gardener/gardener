@@ -127,7 +127,7 @@ var _ = Describe("reconciler", func() {
 		})
 
 		It("should do nothing if the shoot is hibernated", func() {
-			shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: pointer.BoolPtr(true)}
+			shoot.Spec.Hibernation = &gardencorev1beta1.Hibernation{Enabled: pointer.Bool(true)}
 
 			c.EXPECT().Get(ctx, kutil.Key(cluster.Name, shoot.Name), gomock.AssignableToTypeOf(&extensionsv1alpha1.ControlPlane{}))
 

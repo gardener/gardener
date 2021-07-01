@@ -109,7 +109,7 @@ func TestHealthCheckWithManagedResource(ctx context.Context, timeout time.Durati
 		err                                              error
 		resourceManagerDeploymentReplicasBeforeScaledown *int32
 	)
-	resourceManagerDeploymentReplicasBeforeScaledown, err = operation.ScaleGardenerResourceManager(timeout, f.ShootSeedNamespace(), f.SeedClient.Client(), pointer.Int32Ptr(0))
+	resourceManagerDeploymentReplicasBeforeScaledown, err = operation.ScaleGardenerResourceManager(timeout, f.ShootSeedNamespace(), f.SeedClient.Client(), pointer.Int32(0))
 	if err != nil {
 		return err
 	}

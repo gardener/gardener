@@ -101,7 +101,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			})
 
 			It("should deploy successfully (only cluster CA)", func() {
-				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
@@ -118,14 +118,14 @@ var _ = Describe("operatingsystemconfig", func() {
 
 			It("should deploy successfully (both cluster and CloudProfile CA)", func() {
 				botanist.Shoot.CloudProfile.Spec.CABundle = &caCloudProfile
-				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr(caCloudProfile + "\n" + string(ca)))
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.String(caCloudProfile + "\n" + string(ca)))
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
 			})
 
 			It("should return the error during deployment", func() {
-				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
 
 				operatingSystemConfig.EXPECT().Deploy(ctx).Return(fakeErr)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(MatchError(fakeErr))
@@ -142,7 +142,7 @@ var _ = Describe("operatingsystemconfig", func() {
 					},
 				}
 
-				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
 			})
 
 			It("should restore successfully", func() {
@@ -375,7 +375,7 @@ metadata:
 											corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-rbac"},
 										))
 										Expect(obj.Spec.InjectLabels).To(Equal(map[string]string{"shoot.gardener.cloud/no-cleanup": "true"}))
-										Expect(obj.Spec.KeepObjects).To(Equal(pointer.BoolPtr(false)))
+										Expect(obj.Spec.KeepObjects).To(Equal(pointer.Bool(false)))
 										return nil
 									})
 

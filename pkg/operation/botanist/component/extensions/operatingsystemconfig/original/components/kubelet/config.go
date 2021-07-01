@@ -33,13 +33,13 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 	config := &kubeletconfigv1beta1.KubeletConfiguration{
 		Authentication: kubeletconfigv1beta1.KubeletAuthentication{
 			Anonymous: kubeletconfigv1beta1.KubeletAnonymousAuthentication{
-				Enabled: pointer.BoolPtr(false),
+				Enabled: pointer.Bool(false),
 			},
 			X509: kubeletconfigv1beta1.KubeletX509Authentication{
 				ClientCAFile: PathKubeletCACert,
 			},
 			Webhook: kubeletconfigv1beta1.KubeletWebhookAuthentication{
-				Enabled:  pointer.BoolPtr(true),
+				Enabled:  pointer.Bool(true),
 				CacheTTL: metav1.Duration{Duration: 2 * time.Minute},
 			},
 		},
@@ -52,18 +52,18 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		},
 		CgroupDriver:                     "cgroupfs",
 		CgroupRoot:                       "/",
-		CgroupsPerQOS:                    pointer.BoolPtr(true),
+		CgroupsPerQOS:                    pointer.Bool(true),
 		ClusterDNS:                       []string{clusterDNSAddress},
 		ClusterDomain:                    clusterDomain,
 		CPUCFSQuota:                      params.CpuCFSQuota,
 		CPUManagerPolicy:                 *params.CpuManagerPolicy,
 		CPUManagerReconcilePeriod:        metav1.Duration{Duration: 10 * time.Second},
-		EnableControllerAttachDetach:     pointer.BoolPtr(true),
-		EnableDebuggingHandlers:          pointer.BoolPtr(true),
-		EnableServer:                     pointer.BoolPtr(true),
+		EnableControllerAttachDetach:     pointer.Bool(true),
+		EnableDebuggingHandlers:          pointer.Bool(true),
+		EnableServer:                     pointer.Bool(true),
 		EnforceNodeAllocatable:           []string{"pods"},
 		EventBurst:                       50,
-		EventRecordQPS:                   pointer.Int32Ptr(50),
+		EventRecordQPS:                   pointer.Int32(50),
 		EvictionHard:                     params.EvictionHard,
 		EvictionMinimumReclaim:           params.EvictionMinimumReclaim,
 		EvictionSoft:                     params.EvictionSoft,
@@ -75,11 +75,11 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		FileCheckFrequency:               metav1.Duration{Duration: 20 * time.Second},
 		HairpinMode:                      kubeletconfigv1beta1.PromiscuousBridge,
 		HTTPCheckFrequency:               metav1.Duration{Duration: 20 * time.Second},
-		ImageGCHighThresholdPercent:      pointer.Int32Ptr(50),
-		ImageGCLowThresholdPercent:       pointer.Int32Ptr(40),
+		ImageGCHighThresholdPercent:      pointer.Int32(50),
+		ImageGCLowThresholdPercent:       pointer.Int32(40),
 		ImageMinimumGCAge:                metav1.Duration{Duration: 2 * time.Minute},
 		KubeAPIBurst:                     50,
-		KubeAPIQPS:                       pointer.Int32Ptr(50),
+		KubeAPIQPS:                       pointer.Int32(50),
 		KubeReserved:                     params.KubeReserved,
 		MaxOpenFiles:                     1000000,
 		MaxPods:                          *params.MaxPods,
@@ -88,11 +88,11 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		PodPidsLimit:                     params.PodPidsLimit,
 		ReadOnlyPort:                     0,
 		RegistryBurst:                    10,
-		RegistryPullQPS:                  pointer.Int32Ptr(5),
+		RegistryPullQPS:                  pointer.Int32(5),
 		ResolverConfig:                   "/etc/resolv.conf",
 		RotateCertificates:               true,
 		RuntimeRequestTimeout:            metav1.Duration{Duration: 2 * time.Minute},
-		SerializeImagePulls:              pointer.BoolPtr(true),
+		SerializeImagePulls:              pointer.Bool(true),
 		SyncFrequency:                    metav1.Duration{Duration: time.Minute},
 		SystemReserved:                   params.SystemReserved,
 		VolumeStatsAggPeriod:             metav1.Duration{Duration: time.Minute},
@@ -142,11 +142,11 @@ var (
 
 func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	if c.CpuCFSQuota == nil {
-		c.CpuCFSQuota = pointer.BoolPtr(true)
+		c.CpuCFSQuota = pointer.Bool(true)
 	}
 
 	if c.CpuManagerPolicy == nil {
-		c.CpuManagerPolicy = pointer.StringPtr(kubeletconfigv1beta1.NoneTopologyManagerPolicy)
+		c.CpuManagerPolicy = pointer.String(kubeletconfigv1beta1.NoneTopologyManagerPolicy)
 	}
 
 	if c.EvictionHard == nil {
@@ -190,11 +190,11 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	}
 
 	if c.EvictionMaxPodGracePeriod == nil {
-		c.EvictionMaxPodGracePeriod = pointer.Int32Ptr(90)
+		c.EvictionMaxPodGracePeriod = pointer.Int32(90)
 	}
 
 	if c.FailSwapOn == nil {
-		c.FailSwapOn = pointer.BoolPtr(true)
+		c.FailSwapOn = pointer.Bool(true)
 	}
 
 	if c.KubeReserved == nil {
@@ -207,6 +207,6 @@ func setConfigDefaults(c *components.ConfigurableKubeletConfigParameters) {
 	}
 
 	if c.MaxPods == nil {
-		c.MaxPods = pointer.Int32Ptr(110)
+		c.MaxPods = pointer.Int32(110)
 	}
 }

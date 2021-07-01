@@ -153,7 +153,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		ControllerTypes: []kutils.ControllerType{
 			{
 				Type:      &seedmanagementv1alpha1.ManagedSeed{},
-				Namespace: pointer.StringPtr(gardencorev1beta1constants.GardenNamespace),
+				Namespace: pointer.String(gardencorev1beta1constants.GardenNamespace),
 				NameFunc:  func(obj client.Object) string { return obj.GetName() },
 			},
 			{Type: &seedmanagementv1alpha1.ManagedSeedSet{}},

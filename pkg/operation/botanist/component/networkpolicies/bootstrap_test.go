@@ -88,8 +88,8 @@ var _ = Describe("Bootstrap", func() {
 					SecretRefs: []corev1.LocalObjectReference{
 						{Name: managedResourceSecretName},
 					},
-					Class:       pointer.StringPtr("seed"),
-					KeepObjects: pointer.BoolPtr(false),
+					Class:       pointer.String("seed"),
+					KeepObjects: pointer.Bool(false),
 				},
 			}
 		})
@@ -148,8 +148,8 @@ var _ = Describe("Bootstrap", func() {
 					{IPBlock: &networkingv1.IPBlock{CIDR: "6.7.8.9/10"}},
 				},
 				DenyAllTraffic:       true,
-				NodeLocalIPVSAddress: pointer.StringPtr("node-local-ipvs-address"),
-				DNSServerAddress:     pointer.StringPtr("dns-server-address"),
+				NodeLocalIPVSAddress: pointer.String("node-local-ipvs-address"),
+				DNSServerAddress:     pointer.String("dns-server-address"),
 			}
 			deployer = NewBootstrapper(c, namespace, values)
 

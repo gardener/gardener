@@ -168,9 +168,9 @@ var _ = Describe("Shoot References", func() {
 
 		It("should not add finalizers because shoot does not refer to any secret", func() {
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{
-				Domain: pointer.StringPtr("shoot.example.com"),
+				Domain: pointer.String("shoot.example.com"),
 				Providers: []gardencorev1beta1.DNSProvider{
-					{Type: pointer.StringPtr("managed-dns")},
+					{Type: pointer.String("managed-dns")},
 				},
 			}
 
@@ -205,10 +205,10 @@ var _ = Describe("Shoot References", func() {
 			secretName := secrets[0].Name
 			secretName2 := secrets[1].Name
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{
-				Domain: pointer.StringPtr("shoot.example.com"),
+				Domain: pointer.String("shoot.example.com"),
 				Providers: []gardencorev1beta1.DNSProvider{
-					{Type: pointer.StringPtr("managed-dns"), SecretName: pointer.StringPtr(secretName)},
-					{Type: pointer.StringPtr("managed-dns2"), SecretName: pointer.StringPtr(secretName2)},
+					{Type: pointer.String("managed-dns"), SecretName: pointer.String(secretName)},
+					{Type: pointer.String("managed-dns2"), SecretName: pointer.String(secretName2)},
 				},
 			}
 
@@ -298,9 +298,9 @@ var _ = Describe("Shoot References", func() {
 			shoot.Finalizers = []string{FinalizerName}
 
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{
-				Domain: pointer.StringPtr("shoot.example.com"),
+				Domain: pointer.String("shoot.example.com"),
 				Providers: []gardencorev1beta1.DNSProvider{
-					{Type: pointer.StringPtr("managed-dns"), SecretName: pointer.StringPtr(secretName)},
+					{Type: pointer.String("managed-dns"), SecretName: pointer.String(secretName)},
 				},
 			}
 
@@ -360,10 +360,10 @@ var _ = Describe("Shoot References", func() {
 			shoot.ObjectMeta.DeletionTimestamp = &now
 			shoot.Finalizers = []string{FinalizerName}
 
-			dnsProvider := gardencorev1beta1.DNSProvider{Type: pointer.StringPtr("managed-dns"), SecretName: pointer.StringPtr(secretName)}
+			dnsProvider := gardencorev1beta1.DNSProvider{Type: pointer.String("managed-dns"), SecretName: pointer.String(secretName)}
 
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{
-				Domain:    pointer.StringPtr("shoot.example.com"),
+				Domain:    pointer.String("shoot.example.com"),
 				Providers: []gardencorev1beta1.DNSProvider{dnsProvider},
 			}
 
@@ -422,9 +422,9 @@ var _ = Describe("Shoot References", func() {
 			shoot.Finalizers = []string{FinalizerName}
 
 			shoot.Spec.DNS = &gardencorev1beta1.DNS{
-				Domain: pointer.StringPtr("shoot.example.com"),
+				Domain: pointer.String("shoot.example.com"),
 				Providers: []gardencorev1beta1.DNSProvider{
-					{Type: pointer.StringPtr("managed-dns"), SecretName: pointer.StringPtr(secrets[1].Name)},
+					{Type: pointer.String("managed-dns"), SecretName: pointer.String(secrets[1].Name)},
 				},
 			}
 
@@ -474,7 +474,7 @@ var _ = Describe("Shoot References", func() {
 		var configMaps []corev1.ConfigMap
 
 		BeforeEach(func() {
-			cfg.ProtectAuditPolicyConfigMaps = pointer.BoolPtr(true)
+			cfg.ProtectAuditPolicyConfigMaps = pointer.Bool(true)
 			reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), gardenClient, cfg)
 
 			configMaps = []corev1.ConfigMap{

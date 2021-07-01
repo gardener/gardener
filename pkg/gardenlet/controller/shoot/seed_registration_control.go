@@ -283,7 +283,7 @@ func getManagedSeedSpec(shoot *gardencorev1beta1.Shoot, shootedSeed *gardencorev
 		gardenlet = &seedmanagementv1alpha1.Gardenlet{
 			Config:          *re,
 			Bootstrap:       &bootstrap,
-			MergeWithParent: pointer.BoolPtr(true),
+			MergeWithParent: pointer.Bool(true),
 		}
 	}
 

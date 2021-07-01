@@ -289,7 +289,7 @@ var _ = Describe("Extension", func() {
 			extensions := make([]gardencorev1alpha1.ExtensionResourceState, 0, len(extensionTypes))
 			for _, ext := range extensionsMap {
 				extensions = append(extensions, gardencorev1alpha1.ExtensionResourceState{
-					Name:  pointer.StringPtr(ext.Name),
+					Name:  pointer.String(ext.Name),
 					Kind:  extensionsv1alpha1.ExtensionResource,
 					State: &runtime.RawExtension{Raw: state},
 				})

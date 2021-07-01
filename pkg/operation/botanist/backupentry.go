@@ -29,7 +29,7 @@ import (
 // DefaultCoreBackupEntry creates the default deployer for the core.gardener.cloud/v1beta1.BackupEntry resource.
 func (b *Botanist) DefaultCoreBackupEntry() component.DeployMigrateWaiter {
 	ownerRef := metav1.NewControllerRef(b.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"))
-	ownerRef.BlockOwnerDeletion = pointer.BoolPtr(false)
+	ownerRef.BlockOwnerDeletion = pointer.Bool(false)
 
 	return corebackupentry.New(
 		b.Logger,

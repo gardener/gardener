@@ -42,9 +42,9 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj).To(Equal(&Imports{
 				DeploymentConfiguration: &seedmanagementv1alpha1.GardenletDeployment{
-					ReplicaCount:         pointer.Int32Ptr(1),
-					RevisionHistoryLimit: pointer.Int32Ptr(1),
-					VPA:                  pointer.BoolPtr(false),
+					ReplicaCount:         pointer.Int32(1),
+					RevisionHistoryLimit: pointer.Int32(1),
+					VPA:                  pointer.Bool(false),
 				},
 				ComponentConfiguration: runtime.RawExtension{Object: &configv1alpha1.GardenletConfiguration{
 					TypeMeta: metav1.TypeMeta{
@@ -76,9 +76,9 @@ var _ = Describe("Defaults", func() {
 			SetDefaultsDeploymentConfiguration(config)
 
 			Expect(config).To(Equal(&seedmanagementv1alpha1.GardenletDeployment{
-				ReplicaCount:         pointer.Int32Ptr(1),
-				RevisionHistoryLimit: pointer.Int32Ptr(1),
-				VPA:                  pointer.BoolPtr(false),
+				ReplicaCount:         pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(1),
+				VPA:                  pointer.Bool(false),
 			}))
 		})
 	})

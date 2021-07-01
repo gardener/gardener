@@ -42,7 +42,7 @@ var _ = Describe("Miscellaneous", func() {
 				Namespace: "garden-pr1",
 			},
 			Spec: gardenercore.ShootSpec{
-				SeedName: pointer.StringPtr("seed1"),
+				SeedName: pointer.String("seed1"),
 			},
 		}
 
@@ -52,10 +52,10 @@ var _ = Describe("Miscellaneous", func() {
 				Namespace: "garden-pr1",
 			},
 			Spec: gardenercore.ShootSpec{
-				SeedName: pointer.StringPtr("seed1"),
+				SeedName: pointer.String("seed1"),
 			},
 			Status: gardenercore.ShootStatus{
-				SeedName: pointer.StringPtr("seed2"),
+				SeedName: pointer.String("seed2"),
 			},
 		}
 

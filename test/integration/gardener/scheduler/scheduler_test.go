@@ -138,7 +138,7 @@ var _ = Describe("Scheduler testing", func() {
 
 		if testMachineryRun != nil && *testMachineryRun {
 			f.Logger.Info("Running in test Machinery")
-			replicas, err := framework.ScaleGardenerControllerManager(setupContextTimeout, f.GardenClient.Client(), pointer.Int32Ptr(0))
+			replicas, err := framework.ScaleGardenerControllerManager(setupContextTimeout, f.GardenClient.Client(), pointer.Int32(0))
 			Expect(err).To(BeNil())
 			gardenerSchedulerReplicaCount = replicas
 			f.Logger.Info("Environment for test-machinery run is prepared")

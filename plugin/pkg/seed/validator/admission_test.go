@@ -109,7 +109,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should disallow seed deletion because shoot migration is yet not finished", func() {
-				shoot.Spec.SeedName = pointer.StringPtr(seedName + "-1")
+				shoot.Spec.SeedName = pointer.String(seedName + "-1")
 				shoot.Status.SeedName = &seedName
 
 				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
@@ -122,7 +122,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should allow deletion of empty seed", func() {
-				shoot.Spec.SeedName = pointer.StringPtr(seedName + "-1")
+				shoot.Spec.SeedName = pointer.String(seedName + "-1")
 
 				Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(&shoot)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&seed, nil, core.Kind("Seed").WithVersion("version"), "", seed.Name, core.Resource("seeds").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)

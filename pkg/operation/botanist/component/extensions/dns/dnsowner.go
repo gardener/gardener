@@ -61,7 +61,7 @@ type owner struct {
 func (o *owner) Deploy(ctx context.Context) error {
 	active := o.values.Active
 	if active == nil {
-		active = pointer.BoolPtr(true)
+		active = pointer.Bool(true)
 	}
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, o.client, o.dnsOwner, func() error {

@@ -41,13 +41,13 @@ var _ = Describe("Component", func() {
 		})
 
 		It("should return the expected units and files", func() {
-			units, files, err := component.Config(components.Context{KubeletDataVolumeName: pointer.StringPtr("foo")})
+			units, files, err := component.Config(components.Context{KubeletDataVolumeName: pointer.String("foo")})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name: "var-lib.mount",
-					Content: pointer.StringPtr(`[Unit]
+					Content: pointer.String(`[Unit]
 Description=mount /var/lib on kubelet data device
 Before=kubelet.service
 [Mount]

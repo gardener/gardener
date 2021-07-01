@@ -150,12 +150,12 @@ var _ = Describe("KonnectivityServer", func() {
 				botanist.Shoot.KonnectivityTunnelEnabled = true
 				botanist.Shoot.Info = &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
-						DNS: &gardencorev1beta1.DNS{Domain: pointer.StringPtr("foo")},
+						DNS: &gardencorev1beta1.DNS{Domain: pointer.String("foo")},
 					},
 				}
 				botanist.Shoot.DisableDNS = false
 				botanist.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
-				botanist.Shoot.ExternalClusterDomain = pointer.StringPtr("foo.bar")
+				botanist.Shoot.ExternalClusterDomain = pointer.String("foo.bar")
 				botanist.Shoot.InternalClusterDomain = "baz.bar"
 				botanist.Garden = &garden.Garden{
 					InternalDomain: &garden.Domain{Provider: "valid-provider"},

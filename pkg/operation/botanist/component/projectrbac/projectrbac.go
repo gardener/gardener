@@ -158,7 +158,7 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 				ctx,
 				NamePrefixSpecificProjectMember+p.project.Name,
 				true,
-				pointer.StringPtr(NameProjectMember),
+				pointer.String(NameProjectMember),
 				nil,
 				members,
 				nil,
@@ -185,7 +185,7 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 				ctx,
 				NamePrefixSpecificProjectViewer+p.project.Name,
 				true,
-				pointer.StringPtr(NameProjectViewer),
+				pointer.String(NameProjectViewer),
 				nil,
 				viewers,
 				nil,
@@ -249,7 +249,7 @@ func (p *projectRBAC) reconcileResources(
 	subjectsUnique := removeDuplicateSubjects(subjects)
 
 	ownerRef := metav1.NewControllerRef(&p.project.ObjectMeta, gardencorev1beta1.SchemeGroupVersion.WithKind("Project"))
-	ownerRef.BlockOwnerDeletion = pointer.BoolPtr(false)
+	ownerRef.BlockOwnerDeletion = pointer.Bool(false)
 
 	clusterRole := emptyClusterRole(clusterRoleName)
 	if _, err := controllerutils.GetAndCreateOrStrategicMergePatch(ctx, p.client, clusterRole, func() error {

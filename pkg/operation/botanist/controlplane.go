@@ -860,7 +860,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
 				Name:    DNSInternalName,
-				Active:  pointer.BoolPtr(true),
+				Active:  pointer.Bool(true),
 				OwnerID: ownerID,
 			},
 		)
@@ -885,7 +885,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 			b.Shoot.SeedNamespace,
 			&dns.OwnerValues{
 				Name:    DNSExternalName,
-				Active:  pointer.BoolPtr(true),
+				Active:  pointer.Bool(true),
 				OwnerID: ownerID,
 			},
 		)

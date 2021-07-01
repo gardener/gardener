@@ -67,8 +67,8 @@ var _ = Describe("utils", func() {
 			Expect(IsTrue(value)).To(matcher)
 		},
 		Entry("nil", nil, BeFalse()),
-		Entry("false", pointer.BoolPtr(false), BeFalse()),
-		Entry("true", pointer.BoolPtr(true), BeTrue()),
+		Entry("false", pointer.Bool(false), BeFalse()),
+		Entry("true", pointer.Bool(true), BeTrue()),
 	)
 
 	DescribeTable("#IDForKeyWithOptionalValue",
@@ -76,7 +76,7 @@ var _ = Describe("utils", func() {
 			Expect(IDForKeyWithOptionalValue(key, value)).To(Equal(expectation))
 		},
 		Entry("only key", "foo", nil, "foo"),
-		Entry("key and value", "foo", pointer.StringPtr("bar"), "foo=bar"),
+		Entry("key and value", "foo", pointer.String("bar"), "foo=bar"),
 	)
 
 	Describe("#Indent", func() {

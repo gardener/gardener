@@ -303,7 +303,7 @@ func setShootTolerations(shoot *gardencorev1beta1.Shoot) {
 	shoot.Spec.Tolerations = []gardencorev1beta1.Toleration{
 		{
 			Key:   SeedTaintTestRun,
-			Value: pointer.StringPtr(GetTestRunID()),
+			Value: pointer.String(GetTestRunID()),
 		},
 	}
 }

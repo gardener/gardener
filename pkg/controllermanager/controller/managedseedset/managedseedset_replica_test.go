@@ -78,7 +78,7 @@ var _ = Describe("Replica", func() {
 										SeedTemplate: gardencorev1beta1.SeedTemplate{
 											Spec: gardencorev1beta1.SeedSpec{
 												DNS: gardencorev1beta1.SeedDNS{
-													IngressDomain: pointer.StringPtr("ingress.replica-name.example.com"),
+													IngressDomain: pointer.String("ingress.replica-name.example.com"),
 												},
 											},
 										},
@@ -96,7 +96,7 @@ var _ = Describe("Replica", func() {
 					},
 					Spec: gardencorev1beta1.ShootSpec{
 						DNS: &gardencorev1beta1.DNS{
-							Domain: pointer.StringPtr("replica-name.example.com"),
+							Domain: pointer.String("replica-name.example.com"),
 						},
 					},
 				},
@@ -317,7 +317,7 @@ var _ = Describe("Replica", func() {
 						},
 						Spec: gardencorev1beta1.ShootSpec{
 							DNS: &gardencorev1beta1.DNS{
-								Domain: pointer.StringPtr(replicaName + ".example.com"),
+								Domain: pointer.String(replicaName + ".example.com"),
 							},
 						},
 					}))
@@ -358,7 +358,7 @@ var _ = Describe("Replica", func() {
 											SeedTemplate: gardencorev1beta1.SeedTemplate{
 												Spec: gardencorev1beta1.SeedSpec{
 													DNS: gardencorev1beta1.SeedDNS{
-														IngressDomain: pointer.StringPtr("ingress." + replicaName + ".example.com"),
+														IngressDomain: pointer.String("ingress." + replicaName + ".example.com"),
 													},
 												},
 											},

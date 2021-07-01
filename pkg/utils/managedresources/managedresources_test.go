@@ -109,7 +109,7 @@ var _ = Describe("managedresources", func() {
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						SecretRefs:   []corev1.LocalObjectReference{{Name: "managedresource-" + name}},
-						KeepObjects:  pointer.BoolPtr(keepObjects),
+						KeepObjects:  pointer.Bool(keepObjects),
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
 					},
 				}),
@@ -197,8 +197,8 @@ var _ = Describe("managedresources", func() {
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						SecretRefs:  []corev1.LocalObjectReference{{Name: "managedresource-" + name}},
-						KeepObjects: pointer.BoolPtr(keepObjects),
-						Class:       pointer.StringPtr("seed"),
+						KeepObjects: pointer.Bool(keepObjects),
+						Class:       pointer.String("seed"),
 					},
 				}),
 			)

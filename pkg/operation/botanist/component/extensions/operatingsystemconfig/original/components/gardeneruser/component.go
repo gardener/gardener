@@ -70,8 +70,8 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 	return []extensionsv1alpha1.Unit{
 			{
 				Name:   "gardener-user.service",
-				Enable: pointer.BoolPtr(true),
-				Content: pointer.StringPtr(`[Unit]
+				Enable: pointer.Bool(true),
+				Content: pointer.String(`[Unit]
 Description=Configure gardener user
 After=sshd.service
 [Service]
@@ -84,7 +84,7 @@ ExecStart=` + pathScript + `
 		[]extensionsv1alpha1.File{
 			{
 				Path:        pathPublicSSHKey,
-				Permissions: pointer.Int32Ptr(0644),
+				Permissions: pointer.Int32(0644),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",
@@ -94,7 +94,7 @@ ExecStart=` + pathScript + `
 			},
 			{
 				Path:        pathScript,
-				Permissions: pointer.Int32Ptr(0755),
+				Permissions: pointer.Int32(0755),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

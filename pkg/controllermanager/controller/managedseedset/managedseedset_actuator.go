@@ -218,7 +218,7 @@ func (a *actuator) reconcileReplica(
 			if err := r.RetryShoot(ctx, a.gardenClient.Client()); err != nil {
 				return false, err
 			}
-			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32Ptr(retries+1))
+			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32(retries+1))
 		} else {
 			a.infoEventf(set, EventNotRetryingShootReconciliation, "Not retrying shoot %s reconciliation since max retries has been reached", r.GetFullName())
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcileFailedReason, &retries)
@@ -233,7 +233,7 @@ func (a *actuator) reconcileReplica(
 			if err := r.RetryShoot(ctx, a.gardenClient.Client()); err != nil {
 				return false, err
 			}
-			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32Ptr(retries+1))
+			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32(retries+1))
 		} else {
 			a.infoEventf(set, EventNotRetryingShootDeletion, "Not retrying shoot %s deletion since max retries has been reached", r.GetFullName())
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeleteFailedReason, &retries)

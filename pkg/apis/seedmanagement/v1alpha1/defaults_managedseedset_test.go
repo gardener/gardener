@@ -35,9 +35,9 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj).To(Equal(&ManagedSeedSet{
 				Spec: ManagedSeedSetSpec{
-					Replicas:             pointer.Int32Ptr(1),
+					Replicas:             pointer.Int32(1),
 					UpdateStrategy:       &UpdateStrategy{},
-					RevisionHistoryLimit: pointer.Int32Ptr(10),
+					RevisionHistoryLimit: pointer.Int32(10),
 				},
 			}))
 		})
@@ -70,7 +70,7 @@ var _ = Describe("Defaults", func() {
 			SetDefaults_RollingUpdateStrategy(obj)
 
 			Expect(obj).To(Equal(&RollingUpdateStrategy{
-				Partition: pointer.Int32Ptr(0),
+				Partition: pointer.Int32(0),
 			}))
 		})
 	})

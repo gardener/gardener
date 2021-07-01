@@ -175,7 +175,7 @@ func (d *DNS) Admit(ctx context.Context, a admission.Attributes, o admission.Obj
 				// Since it was possible to apply shoots w/o a primary provider before, we have to re-add it here.
 				for i, provider := range shoot.Spec.DNS.Providers {
 					if reflect.DeepEqual(provider.Type, oldPrimaryProvider.Type) && reflect.DeepEqual(provider.SecretName, oldPrimaryProvider.SecretName) {
-						shoot.Spec.DNS.Providers[i].Primary = pointer.BoolPtr(true)
+						shoot.Spec.DNS.Providers[i].Primary = pointer.Bool(true)
 						break
 					}
 				}
@@ -299,7 +299,7 @@ func setPrimaryDNSProvider(dns *core.DNS, defaultDomains []string) error {
 
 	primary := helper.FindPrimaryDNSProvider(dns.Providers)
 	if primary == nil && len(dns.Providers) > 0 {
-		dns.Providers[0].Primary = pointer.BoolPtr(true)
+		dns.Providers[0].Primary = pointer.Bool(true)
 	}
 	return nil
 }

@@ -96,7 +96,7 @@ var _ = Describe("#Interface", func() {
 		sshPublicKey = []byte("secure")
 		providerConfig = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific"}`)}
 		providerStatus = &runtime.RawExtension{Raw: []byte(`{"very":"provider-specific-status"}`)}
-		nodesCIDR = pointer.StringPtr("1.2.3.4/5")
+		nodesCIDR = pointer.String("1.2.3.4/5")
 
 		values = &infrastructure.Values{
 			Namespace:      namespace,
@@ -338,7 +338,7 @@ var _ = Describe("#Interface", func() {
 				Spec: gardencorev1alpha1.ShootStateSpec{
 					Extensions: []gardencorev1alpha1.ExtensionResourceState{
 						{
-							Name:  pointer.StringPtr(name),
+							Name:  pointer.String(name),
 							Kind:  extensionsv1alpha1.InfrastructureResource,
 							State: state,
 						},
@@ -458,7 +458,7 @@ var _ = Describe("#Interface", func() {
 
 			var (
 				providerStatus = &runtime.RawExtension{Raw: []byte(`{"some":"status"}`)}
-				nodesCIDR      = pointer.StringPtr("1.2.3.4")
+				nodesCIDR      = pointer.String("1.2.3.4")
 			)
 
 			infra := empty.DeepCopy()

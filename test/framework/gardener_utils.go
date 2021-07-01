@@ -730,7 +730,7 @@ func BuildSeedSpecForTestrun(name string, backupProvider *string) *gardencorev1b
 		Taints: []gardencorev1beta1.SeedTaint{
 			{
 				Key:   SeedTaintTestRun,
-				Value: pointer.StringPtr(GetTestRunID()),
+				Value: pointer.String(GetTestRunID()),
 			},
 		},
 		Settings: &gardencorev1beta1.SeedSettings{

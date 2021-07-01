@@ -40,7 +40,7 @@ var _ = Describe("Component", func() {
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/etc/systemd/journald.conf",
-					Permissions: pointer.Int32Ptr(0644),
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Data: data,

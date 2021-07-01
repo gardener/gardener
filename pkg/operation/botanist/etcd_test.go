@@ -135,11 +135,11 @@ var _ = Describe("Etcd", func() {
 							expectedClass:                   Equal(class),
 							expectedRetainReplicas:          BeFalse(),
 							expectedStorageCapacity:         Equal("10Gi"),
-							expectedDefragmentationSchedule: Equal(pointer.StringPtr("34 12 */3 * *")),
+							expectedDefragmentationSchedule: Equal(pointer.String("34 12 */3 * *")),
 							expectedHVPAConfig: Equal(&etcd.HVPAConfig{
 								Enabled:               hvpaEnabled,
 								MaintenanceTimeWindow: maintenanceTimeWindow,
-								ScaleDownUpdateMode:   pointer.StringPtr(computeUpdateMode(class, purpose)),
+								ScaleDownUpdateMode:   pointer.String(computeUpdateMode(class, purpose)),
 							}),
 						}
 
@@ -173,11 +173,11 @@ var _ = Describe("Etcd", func() {
 					expectedClass:                   Equal(class),
 					expectedRetainReplicas:          BeFalse(),
 					expectedStorageCapacity:         Equal("10Gi"),
-					expectedDefragmentationSchedule: Equal(pointer.StringPtr("34 12 * * *")),
+					expectedDefragmentationSchedule: Equal(pointer.String("34 12 * * *")),
 					expectedHVPAConfig: Equal(&etcd.HVPAConfig{
 						Enabled:               hvpaForShootedSeedEnabled,
 						MaintenanceTimeWindow: maintenanceTimeWindow,
-						ScaleDownUpdateMode:   pointer.StringPtr(hvpav1alpha1.UpdateModeMaintenanceWindow),
+						ScaleDownUpdateMode:   pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow),
 					}),
 				}
 
@@ -203,11 +203,11 @@ var _ = Describe("Etcd", func() {
 					expectedClass:                   Equal(class),
 					expectedRetainReplicas:          BeFalse(),
 					expectedStorageCapacity:         Equal("10Gi"),
-					expectedDefragmentationSchedule: Equal(pointer.StringPtr("34 12 * * *")),
+					expectedDefragmentationSchedule: Equal(pointer.String("34 12 * * *")),
 					expectedHVPAConfig: Equal(&etcd.HVPAConfig{
 						Enabled:               hvpaForShootedSeedEnabled,
 						MaintenanceTimeWindow: maintenanceTimeWindow,
-						ScaleDownUpdateMode:   pointer.StringPtr(hvpav1alpha1.UpdateModeMaintenanceWindow),
+						ScaleDownUpdateMode:   pointer.String(hvpav1alpha1.UpdateModeMaintenanceWindow),
 					}),
 				}
 

@@ -83,9 +83,9 @@ func (component) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []exte
 	return append([]extensionsv1alpha1.Unit{
 			{
 				Name:    UnitNameMonitor,
-				Command: pointer.StringPtr("start"),
-				Enable:  pointer.BoolPtr(true),
-				Content: pointer.StringPtr(`[Unit]
+				Command: pointer.String("start"),
+				Enable:  pointer.Bool(true),
+				Content: pointer.String(`[Unit]
 Description=Docker-monitor daemon
 After=` + UnitName + `
 [Install]
@@ -99,7 +99,7 @@ ExecStart=` + pathHealthMonitor),
 		append([]extensionsv1alpha1.File{
 			{
 				Path:        pathHealthMonitor,
-				Permissions: pointer.Int32Ptr(0755),
+				Permissions: pointer.Int32(0755),
 				Content: extensionsv1alpha1.FileContent{
 					Inline: &extensionsv1alpha1.FileContentInline{
 						Encoding: "b64",

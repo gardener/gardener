@@ -264,7 +264,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 				}),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: pointer.Int32Ptr(1),
+				RevisionHistoryLimit: pointer.Int32(1),
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Strategy: appsv1.DeploymentStrategy{
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
@@ -296,8 +296,8 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 							v1beta1constants.LabelWorkerPoolSystemComponents: "true",
 						},
 						SecurityContext: &corev1.PodSecurityContext{
-							RunAsUser: pointer.Int64Ptr(65534),
-							FSGroup:   pointer.Int64Ptr(65534),
+							RunAsUser: pointer.Int64(65534),
+							FSGroup:   pointer.Int64(65534),
 						},
 						DNSPolicy:          corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 						ServiceAccountName: serviceAccount.Name,

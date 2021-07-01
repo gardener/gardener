@@ -70,14 +70,14 @@ var _ = Describe("KubeControllerManager", func() {
 		image                         = "k8s.gcr.io/kube-controller-manager:v1.17.2"
 		hvpaConfigDisabled            = &HVPAConfig{Enabled: false}
 		hvpaConfigEnabled             = &HVPAConfig{Enabled: true}
-		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: pointer.StringPtr(hvpav1alpha1.UpdateModeOff)}
+		hvpaConfigEnabledScaleDownOff = &HVPAConfig{Enabled: true, ScaleDownUpdateMode: pointer.String(hvpav1alpha1.UpdateModeOff)}
 
 		hpaConfig = gardencorev1beta1.HorizontalPodAutoscalerConfig{
 			CPUInitializationPeriod: &metav1.Duration{Duration: 5 * time.Minute},
 			DownscaleStabilization:  &metav1.Duration{Duration: 5 * time.Minute},
 			InitialReadinessDelay:   &metav1.Duration{Duration: 30 * time.Second},
 			SyncPeriod:              &metav1.Duration{Duration: 30 * time.Second},
-			Tolerance:               pointer.Float64Ptr(0.1),
+			Tolerance:               pointer.Float64(0.1),
 		}
 
 		nodeCIDRMask           int32 = 24
@@ -273,7 +273,7 @@ var _ = Describe("KubeControllerManager", func() {
 				hvpaFor            = func(config *HVPAConfig) *hvpav1alpha1.Hvpa {
 					scaleDownUpdateMode := config.ScaleDownUpdateMode
 					if scaleDownUpdateMode == nil {
-						scaleDownUpdateMode = pointer.StringPtr(hvpav1alpha1.UpdateModeAuto)
+						scaleDownUpdateMode = pointer.String(hvpav1alpha1.UpdateModeAuto)
 					}
 
 					return &hvpav1alpha1.Hvpa{
@@ -286,7 +286,7 @@ var _ = Describe("KubeControllerManager", func() {
 							},
 						},
 						Spec: hvpav1alpha1.HvpaSpec{
-							Replicas: pointer.Int32Ptr(1),
+							Replicas: pointer.Int32(1),
 							Hpa: hvpav1alpha1.HpaSpec{
 								Deploy: false,
 								Selector: &metav1.LabelSelector{
@@ -303,7 +303,7 @@ var _ = Describe("KubeControllerManager", func() {
 										},
 									},
 									Spec: hvpav1alpha1.HpaTemplateSpec{
-										MinReplicas: pointer.Int32Ptr(int32(1)),
+										MinReplicas: pointer.Int32(int32(1)),
 										MaxReplicas: int32(1),
 									},
 								},
@@ -399,7 +399,7 @@ var _ = Describe("KubeControllerManager", func() {
 							},
 						},
 						Spec: appsv1.DeploymentSpec{
-							RevisionHistoryLimit: pointer.Int32Ptr(1),
+							RevisionHistoryLimit: pointer.Int32(1),
 							Replicas:             &replicas,
 							Selector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
@@ -532,12 +532,12 @@ var _ = Describe("KubeControllerManager", func() {
 						DownscaleStabilization:  &metav1.Duration{Duration: 10 * time.Minute},
 						InitialReadinessDelay:   &metav1.Duration{Duration: 20 * time.Second},
 						SyncPeriod:              &metav1.Duration{Duration: 20 * time.Second},
-						Tolerance:               pointer.Float64Ptr(0.3),
+						Tolerance:               pointer.Float64(0.3),
 					},
 					NodeCIDRMaskSize: nil,
 				}
 				configWithFeatureFlags           = &gardencorev1beta1.KubeControllerManagerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}}
-				configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: pointer.Int32Ptr(26)}
+				configWithNodeCIDRMaskSize       = &gardencorev1beta1.KubeControllerManagerConfig{NodeCIDRMaskSize: pointer.Int32(26)}
 				configWithPodEvictionTimeout     = &gardencorev1beta1.KubeControllerManagerConfig{PodEvictionTimeout: &podEvictionTimeout}
 				configWithNodeMonitorGracePeriod = &gardencorev1beta1.KubeControllerManagerConfig{NodeMonitorGracePeriod: &nodeMonitorGracePeriod}
 			)

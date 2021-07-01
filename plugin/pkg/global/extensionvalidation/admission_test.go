@@ -264,8 +264,8 @@ var _ = Describe("ExtensionValidator", func() {
 			Spec: core.ShootSpec{
 				DNS: &core.DNS{
 					Providers: []core.DNSProvider{
-						{Type: pointer.StringPtr("foo-1")},
-						{Type: pointer.StringPtr("foo0")},
+						{Type: pointer.String("foo-1")},
+						{Type: pointer.String("foo0")},
 					},
 				},
 				Extensions: []core.Extension{

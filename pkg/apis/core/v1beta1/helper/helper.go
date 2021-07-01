@@ -342,10 +342,10 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 		shootedSeed.MinimumVolumeSize = &size
 	}
 	if _, ok := flags["disable-dns"]; ok {
-		shootedSeed.DisableDNS = pointer.BoolPtr(true)
+		shootedSeed.DisableDNS = pointer.Bool(true)
 	}
 	if _, ok := flags["disable-capacity-reservation"]; ok {
-		shootedSeed.DisableCapacityReservation = pointer.BoolPtr(true)
+		shootedSeed.DisableCapacityReservation = pointer.Bool(true)
 	}
 	if _, ok := flags["no-gardenlet"]; ok {
 		shootedSeed.NoGardenlet = true
@@ -357,16 +357,16 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 		shootedSeed.WithSecretRef = true
 	}
 	if _, ok := flags["protected"]; ok {
-		shootedSeed.Protected = pointer.BoolPtr(true)
+		shootedSeed.Protected = pointer.Bool(true)
 	}
 	if _, ok := flags["unprotected"]; ok {
-		shootedSeed.Protected = pointer.BoolPtr(false)
+		shootedSeed.Protected = pointer.Bool(false)
 	}
 	if _, ok := flags["visible"]; ok {
-		shootedSeed.Visible = pointer.BoolPtr(true)
+		shootedSeed.Visible = pointer.Bool(true)
 	}
 	if _, ok := flags["invisible"]; ok {
-		shootedSeed.Visible = pointer.BoolPtr(false)
+		shootedSeed.Visible = pointer.Bool(false)
 	}
 
 	return &shootedSeed, nil

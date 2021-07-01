@@ -109,8 +109,8 @@ var _ = Describe("dns", func() {
 	Context("DefaultExternalDNSProvider", func() {
 		It("should create when calling Deploy and dns is enabled", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 
 			Expect(b.DefaultExternalDNSProvider().Deploy(ctx)).ToNot(HaveOccurred())
@@ -320,7 +320,7 @@ var _ = Describe("dns", func() {
 			b.Shoot.DisableDNS = false
 			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{
 				Providers: []v1beta1.DNSProvider{{
-					Type: pointer.StringPtr("foo"),
+					Type: pointer.String("foo"),
 				}},
 			}
 
@@ -333,8 +333,8 @@ var _ = Describe("dns", func() {
 			b.Shoot.DisableDNS = false
 			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{
 				Providers: []v1beta1.DNSProvider{{
-					Type:       pointer.StringPtr("foo"),
-					SecretName: pointer.StringPtr("not-existing-secret"),
+					Type:       pointer.String("foo"),
+					SecretName: pointer.String("not-existing-secret"),
 				}},
 			}
 
@@ -348,15 +348,15 @@ var _ = Describe("dns", func() {
 			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{
 				Providers: []v1beta1.DNSProvider{
 					{
-						Type:    pointer.StringPtr("primary-skip"),
-						Primary: pointer.BoolPtr(true),
+						Type:    pointer.String("primary-skip"),
+						Primary: pointer.Bool(true),
 					},
 					{
-						Type: pointer.StringPtr("unmanaged"),
+						Type: pointer.String("unmanaged"),
 					},
 					{
-						Type:       pointer.StringPtr("provider-one"),
-						SecretName: pointer.StringPtr("secret-one"),
+						Type:       pointer.String("provider-one"),
+						SecretName: pointer.String("secret-one"),
 						Domains: &v1beta1.DNSIncludeExclude{
 							Include: []string{"domain-1-include"},
 							Exclude: []string{"domain-2-exclude"},
@@ -367,8 +367,8 @@ var _ = Describe("dns", func() {
 						},
 					},
 					{
-						Type:       pointer.StringPtr("provider-two"),
-						SecretName: pointer.StringPtr("secret-two"),
+						Type:       pointer.String("provider-two"),
+						SecretName: pointer.String("secret-two"),
 					},
 				},
 			}
@@ -457,22 +457,22 @@ var _ = Describe("dns", func() {
 
 		It("should be false when Shoot ExternalClusterDomain is nil", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = nil
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot ExternalClusterDomain is in nip.io", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.StringPtr("foo.nip.io")
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.ExternalClusterDomain = pointer.String("foo.nip.io")
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot ExternalDomain is nil", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = nil
 
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
@@ -480,8 +480,8 @@ var _ = Describe("dns", func() {
 
 		It("should be false when Shoot ExternalDomain provider is unamanaged", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "unmanaged"}
 
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
@@ -489,8 +489,8 @@ var _ = Describe("dns", func() {
 
 		It("should be true when Shoot ExternalDomain provider is valid", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 
 			Expect(b.NeedsExternalDNS()).To(BeTrue())
@@ -544,8 +544,8 @@ var _ = Describe("dns", func() {
 			b.Shoot.DisableDNS = false
 			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{
 				Providers: []v1beta1.DNSProvider{
-					{Type: pointer.StringPtr("foo")},
-					{Type: pointer.StringPtr("bar")},
+					{Type: pointer.String("foo")},
+					{Type: pointer.String("bar")},
 				},
 			}
 			Expect(b.NeedsAdditionalDNSProviders()).To(BeTrue())
@@ -566,8 +566,8 @@ var _ = Describe("dns", func() {
 		It("returns true when feature gate is enabled", func() {
 			Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
 			b.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
-			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 
 			Expect(b.APIServerSNIEnabled()).To(BeTrue())
@@ -589,8 +589,8 @@ var _ = Describe("dns", func() {
 			BeforeEach(func() {
 				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
 				b.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
-				b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
-				b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+				b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.String("foo")}
+				b.Shoot.ExternalClusterDomain = pointer.String("baz")
 				b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 			})
 

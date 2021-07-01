@@ -150,8 +150,8 @@ var _ = Describe("dns", func() {
 
 		It("does nothing when hibernated", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 			b.Shoot.HibernationEnabled = true
 
@@ -163,8 +163,8 @@ var _ = Describe("dns", func() {
 
 		It("does nothing when nginx is disabled", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 			b.Shoot.HibernationEnabled = false
 			b.Shoot.Info.Spec.Addons.NginxIngress = &v1beta1.NginxIngress{Addon: v1beta1.Addon{Enabled: false}}
@@ -176,10 +176,10 @@ var _ = Describe("dns", func() {
 		})
 
 		It("sets an owner and entry which create DNSOwner and DNSEntry", func() {
-			b.Shoot.Info.Status.ClusterIdentity = pointer.StringPtr("shoot-cluster-identity")
+			b.Shoot.Info.Status.ClusterIdentity = pointer.String("shoot-cluster-identity")
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.StringPtr("foo")}
-			b.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 			b.Shoot.HibernationEnabled = false
 			b.Shoot.Info.Spec.Addons.NginxIngress = &v1beta1.NginxIngress{Addon: v1beta1.Addon{Enabled: true}}
@@ -205,7 +205,7 @@ var _ = Describe("dns", func() {
 				},
 				Spec: dnsv1alpha1.DNSOwnerSpec{
 					OwnerId: "shoot-cluster-identity-ingress",
-					Active:  pointer.BoolPtr(true),
+					Active:  pointer.Bool(true),
 				},
 			}))
 			Expect(entry).To(DeepDerivativeEqual(&dnsv1alpha1.DNSEntry{

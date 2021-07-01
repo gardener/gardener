@@ -191,7 +191,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 				Labels:    getLabels(),
 			},
 			Spec: appsv1.DeploymentSpec{
-				RevisionHistoryLimit: pointer.Int32Ptr(1),
+				RevisionHistoryLimit: pointer.Int32(1),
 				Replicas:             &replicas,
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
@@ -318,11 +318,11 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						Service: &admissionregistrationv1beta1.ServiceReference{
 							Name:      service.Name,
 							Namespace: service.Namespace,
-							Path:      pointer.StringPtr(extensioncrds.WebhookPath),
+							Path:      pointer.String(extensioncrds.WebhookPath),
 						},
 					},
 					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-					TimeoutSeconds:          pointer.Int32Ptr(10),
+					TimeoutSeconds:          pointer.Int32(10),
 				},
 				{
 					Name: "crs.seed.admission.core.gardener.cloud",
@@ -352,11 +352,11 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						Service: &admissionregistrationv1beta1.ServiceReference{
 							Name:      service.Name,
 							Namespace: service.Namespace,
-							Path:      pointer.StringPtr(extensioncrds.WebhookPath),
+							Path:      pointer.String(extensioncrds.WebhookPath),
 						},
 					},
 					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-					TimeoutSeconds:          pointer.Int32Ptr(10),
+					TimeoutSeconds:          pointer.Int32(10),
 				},
 			},
 		}

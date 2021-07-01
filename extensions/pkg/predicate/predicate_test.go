@@ -228,7 +228,7 @@ var _ = Describe("Predicate", func() {
 		It("should not match minimum kubernetes version due to overwrite", func() {
 			var (
 				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder, version)
-				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17", pointer.StringPtr("1.17"))
+				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17", pointer.String("1.17"))
 			)
 
 			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())

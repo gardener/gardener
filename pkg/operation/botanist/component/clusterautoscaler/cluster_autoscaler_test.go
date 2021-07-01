@@ -71,7 +71,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configScaleDownDelayAfterDelete     = &metav1.Duration{Duration: time.Second}
 		configScaleDownDelayAfterFailure    = &metav1.Duration{Duration: time.Second}
 		configScaleDownUnneededTime         = &metav1.Duration{Duration: time.Second}
-		configScaleDownUtilizationThreshold = pointer.Float64Ptr(1.2345)
+		configScaleDownUtilizationThreshold = pointer.Float64(1.2345)
 		configScanInterval                  = &metav1.Duration{Duration: time.Second}
 		configFull                          = &gardencorev1beta1.ClusterAutoscaler{
 			ScaleDownDelayAfterAdd:        configScaleDownDelayAfterAdd,
@@ -127,8 +127,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 					Kind:               "Namespace",
 					Name:               namespace,
 					UID:                namespaceUID,
-					Controller:         pointer.BoolPtr(true),
-					BlockOwnerDeletion: pointer.BoolPtr(true),
+					Controller:         pointer.Bool(true),
+					BlockOwnerDeletion: pointer.Bool(true),
 				}},
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -221,7 +221,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 				},
 				Spec: appsv1.DeploymentSpec{
 					Replicas:             &replicas,
-					RevisionHistoryLimit: pointer.Int32Ptr(1),
+					RevisionHistoryLimit: pointer.Int32(1),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app":  "kubernetes",
@@ -246,7 +246,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 						},
 						Spec: corev1.PodSpec{
 							ServiceAccountName:            serviceAccountName,
-							TerminationGracePeriodSeconds: pointer.Int64Ptr(5),
+							TerminationGracePeriodSeconds: pointer.Int64(5),
 							Containers: []corev1.Container{
 								{
 									Name:            "cluster-autoscaler",
@@ -469,7 +469,7 @@ subjects:
 					{Name: managedResourceSecretName},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.BoolPtr(false),
+				KeepObjects:  pointer.Bool(false),
 			},
 		}
 	)

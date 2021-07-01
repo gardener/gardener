@@ -103,8 +103,8 @@ rules:
 					SecretRefs: []corev1.LocalObjectReference{
 						{Name: managedResourceSecretName},
 					},
-					Class:       pointer.StringPtr("seed"),
-					KeepObjects: pointer.BoolPtr(false),
+					Class:       pointer.String("seed"),
+					KeepObjects: pointer.Bool(false),
 				},
 			}
 		)

@@ -146,7 +146,7 @@ var _ = Describe("Actuator", func() {
 			},
 			Spec: gardencorev1beta1.ShootSpec{
 				SecretBindingName: secretBindingName,
-				SeedName:          pointer.StringPtr(seedName),
+				SeedName:          pointer.String(seedName),
 			},
 			Status: gardencorev1beta1.ShootStatus{
 				LastOperation: &gardencorev1beta1.LastOperation{
@@ -215,12 +215,12 @@ var _ = Describe("Actuator", func() {
 		}
 		gardenlet = &seedmanagementv1alpha1.Gardenlet{
 			Deployment: &seedmanagementv1alpha1.GardenletDeployment{
-				ReplicaCount:         pointer.Int32Ptr(1),
-				RevisionHistoryLimit: pointer.Int32Ptr(1),
+				ReplicaCount:         pointer.Int32(1),
+				RevisionHistoryLimit: pointer.Int32(1),
 				Image: &seedmanagementv1alpha1.Image{
 					PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
 				},
-				VPA: pointer.BoolPtr(true),
+				VPA: pointer.Bool(true),
 			},
 			Config: runtime.RawExtension{
 				Object: &configv1alpha1.GardenletConfiguration{
@@ -234,7 +234,7 @@ var _ = Describe("Actuator", func() {
 				},
 			},
 			Bootstrap:       bootstrapPtr(seedmanagementv1alpha1.BootstrapToken),
-			MergeWithParent: pointer.BoolPtr(true),
+			MergeWithParent: pointer.Bool(true),
 		}
 
 		gardenNamespace = &corev1.Namespace{
@@ -479,8 +479,8 @@ var _ = Describe("Actuator", func() {
 		expectMergeWithParent = func() {
 			mergedDeployment = managedSeed.Spec.Gardenlet.Deployment.DeepCopy()
 			mergedDeployment.Image = &seedmanagementv1alpha1.Image{
-				Repository: pointer.StringPtr("repository"),
-				Tag:        pointer.StringPtr("tag"),
+				Repository: pointer.String("repository"),
+				Tag:        pointer.String("tag"),
 				PullPolicy: pullPolicyPtr(corev1.PullIfNotPresent),
 			}
 
@@ -926,7 +926,7 @@ var _ = Describe("Utils", func() {
 			}
 
 			dnsWithDomain = &gardencorev1beta1.DNS{
-				Domain: pointer.StringPtr("my-shoot.example.com"),
+				Domain: pointer.String("my-shoot.example.com"),
 			}
 			dnsWithoutDomain = &gardencorev1beta1.DNS{
 				Domain: nil,

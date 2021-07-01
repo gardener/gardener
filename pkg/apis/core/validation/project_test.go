@@ -137,7 +137,7 @@ var _ = Describe("Project Validation Tests", func() {
 		)
 
 		It("should forbid Project specification with empty or invalid key for description", func() {
-			project.Spec.Description = pointer.StringPtr("")
+			project.Spec.Description = pointer.String("")
 
 			errorList := ValidateProject(project)
 
@@ -148,7 +148,7 @@ var _ = Describe("Project Validation Tests", func() {
 		})
 
 		It("should forbid Project specification with empty or invalid key for purpose", func() {
-			project.Spec.Purpose = pointer.StringPtr("")
+			project.Spec.Purpose = pointer.String("")
 
 			errorList := ValidateProject(project)
 
@@ -340,10 +340,10 @@ var _ = Describe("Project Validation Tests", func() {
 				{},
 				{Key: "foo"},
 				{Key: "foo"},
-				{Key: "bar", Value: pointer.StringPtr("baz")},
-				{Key: "bar", Value: pointer.StringPtr("baz")},
+				{Key: "bar", Value: pointer.String("baz")},
+				{Key: "bar", Value: pointer.String("baz")},
 				{Key: "baz"},
-				{Key: "baz", Value: pointer.StringPtr("baz")},
+				{Key: "baz", Value: pointer.String("baz")},
 			}
 			project.Spec.Tolerations = &core.ProjectTolerations{
 				Defaults:  tolerations,
@@ -414,13 +414,13 @@ var _ = Describe("Project Validation Tests", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("namespace change w/ preset namespace", pointer.StringPtr("garden-dev"), pointer.StringPtr("garden-core"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("namespace change w/ preset namespace", pointer.String("garden-dev"), pointer.String("garden-core"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.namespace"),
 			})))),
-			Entry("namespace change w/o preset namespace", nil, pointer.StringPtr("garden-core"), BeEmpty()),
+			Entry("namespace change w/o preset namespace", nil, pointer.String("garden-core"), BeEmpty()),
 			Entry("no change (both unset)", nil, nil, BeEmpty()),
-			Entry("no change (same value)", pointer.StringPtr("garden-dev"), pointer.StringPtr("garden-dev"), BeEmpty()),
+			Entry("no change (same value)", pointer.String("garden-dev"), pointer.String("garden-dev"), BeEmpty()),
 		)
 
 		It("should forbid Project updates trying to change the createdBy field", func() {

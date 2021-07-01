@@ -385,7 +385,7 @@ func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx gco
 	// Ensure the cloud provider config file is part of the OperatingSystemConfig
 	osc.Spec.Files = extensionswebhook.EnsureFileWithPath(osc.Spec.Files, extensionsv1alpha1.File{
 		Path:        CloudProviderConfigPath,
-		Permissions: pointer.Int32Ptr(0644),
+		Permissions: pointer.Int32(0644),
 		Content: extensionsv1alpha1.FileContent{
 			Inline: fci,
 		},

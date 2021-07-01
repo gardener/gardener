@@ -40,9 +40,9 @@ var _ = Describe("Component", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    "containerd-monitor.service",
-					Command: pointer.StringPtr("start"),
-					Enable:  pointer.BoolPtr(true),
-					Content: pointer.StringPtr(`[Unit]
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
 Description=Containerd-monitor daemon
 After=containerd.service
 [Install]
@@ -54,8 +54,8 @@ ExecStart=/opt/bin/health-monitor-containerd`),
 				},
 				extensionsv1alpha1.Unit{
 					Name:   "containerd-logrotate.service",
-					Enable: pointer.BoolPtr(true),
-					Content: pointer.StringPtr(`[Unit]
+					Enable: pointer.Bool(true),
+					Content: pointer.String(`[Unit]
 Description=Rotate and Compress System Logs
 [Service]
 ExecStart=/usr/sbin/logrotate /etc/systemd/containerd.conf
@@ -64,9 +64,9 @@ WantedBy=multi-user.target`),
 				},
 				extensionsv1alpha1.Unit{
 					Name:    "containerd-logrotate.timer",
-					Command: pointer.StringPtr("start"),
-					Enable:  pointer.BoolPtr(true),
-					Content: pointer.StringPtr(`[Unit]
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
 Description=Log Rotation at each 10 minutes
 [Timer]
 OnCalendar=*:0/10
@@ -79,7 +79,7 @@ WantedBy=multi-user.target`),
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/opt/bin/health-monitor-containerd",
-					Permissions: pointer.Int32Ptr(0755),
+					Permissions: pointer.Int32(0755),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -89,7 +89,7 @@ WantedBy=multi-user.target`),
 				},
 				extensionsv1alpha1.File{
 					Path:        "/etc/systemd/containerd.conf",
-					Permissions: pointer.Int32Ptr(0644),
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Data: logRotateData,

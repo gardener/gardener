@@ -128,8 +128,8 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			Kind:               "Namespace",
 			Name:               c.namespace,
 			UID:                c.namespaceUID,
-			Controller:         pointer.BoolPtr(true),
-			BlockOwnerDeletion: pointer.BoolPtr(true),
+			Controller:         pointer.Bool(true),
+			BlockOwnerDeletion: pointer.Bool(true),
 		}}
 		clusterRoleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
@@ -169,7 +169,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
 		deployment.Spec.Replicas = &c.replicas
-		deployment.Spec.RevisionHistoryLimit = pointer.Int32Ptr(1)
+		deployment.Spec.RevisionHistoryLimit = pointer.Int32(1)
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
@@ -187,7 +187,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 			},
 			Spec: corev1.PodSpec{
 				ServiceAccountName:            serviceAccount.Name,
-				TerminationGracePeriodSeconds: pointer.Int64Ptr(5),
+				TerminationGracePeriodSeconds: pointer.Int64(5),
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,

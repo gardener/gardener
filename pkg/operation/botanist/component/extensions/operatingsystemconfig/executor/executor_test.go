@@ -69,7 +69,7 @@ var _ = Describe("Executor", func() {
 
 			script, err := executor.Script(bootstrapToken, cloudConfigUserData, images, kubeletDataVolume, reloadConfigCommand, units)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(string(script)).To(matchers.DeepEqual(scriptFor(bootstrapToken, cloudConfigUserData, images, pointer.StringPtr("68719476736"), reloadConfigCommand, units)))
+			Expect(string(script)).To(matchers.DeepEqual(scriptFor(bootstrapToken, cloudConfigUserData, images, pointer.String("68719476736"), reloadConfigCommand, units)))
 		})
 
 		It("should return an error because the data volume size cannot be parsed", func() {

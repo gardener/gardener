@@ -132,9 +132,9 @@ func Config(cloudConfigUserDataSecretName, apiServerURL string) ([]extensionsv1a
 	units := []extensionsv1alpha1.Unit{
 		{
 			Name:    Name + ".service",
-			Command: pointer.StringPtr("start"),
-			Enable:  pointer.BoolPtr(true),
-			Content: pointer.StringPtr(`[Unit]
+			Command: pointer.String("start"),
+			Enable:  pointer.Bool(true),
+			Content: pointer.String(`[Unit]
 Description=Downloads the actual cloud config from the Shoot API server and executes it
 After=` + docker.UnitName + ` docker.socket
 Wants=docker.socket
@@ -152,7 +152,7 @@ WantedBy=multi-user.target`),
 	files := []extensionsv1alpha1.File{
 		{
 			Path:        PathCredentialsServer,
-			Permissions: pointer.Int32Ptr(0644),
+			Permissions: pointer.Int32(0644),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -162,7 +162,7 @@ WantedBy=multi-user.target`),
 		},
 		{
 			Path:        PathCredentialsCACert,
-			Permissions: pointer.Int32Ptr(0644),
+			Permissions: pointer.Int32(0644),
 			Content: extensionsv1alpha1.FileContent{
 				SecretRef: &extensionsv1alpha1.FileContentSecretRef{
 					Name:    SecretName,
@@ -172,7 +172,7 @@ WantedBy=multi-user.target`),
 		},
 		{
 			Path:        PathCredentialsClientCert,
-			Permissions: pointer.Int32Ptr(0644),
+			Permissions: pointer.Int32(0644),
 			Content: extensionsv1alpha1.FileContent{
 				SecretRef: &extensionsv1alpha1.FileContentSecretRef{
 					Name:    SecretName,
@@ -182,7 +182,7 @@ WantedBy=multi-user.target`),
 		},
 		{
 			Path:        PathCredentialsClientKey,
-			Permissions: pointer.Int32Ptr(0644),
+			Permissions: pointer.Int32(0644),
 			Content: extensionsv1alpha1.FileContent{
 				SecretRef: &extensionsv1alpha1.FileContentSecretRef{
 					Name:    SecretName,
@@ -192,7 +192,7 @@ WantedBy=multi-user.target`),
 		},
 		{
 			Path:        PathCCDScript,
-			Permissions: pointer.Int32Ptr(0744),
+			Permissions: pointer.Int32(0744),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Encoding: "b64",
@@ -202,12 +202,12 @@ WantedBy=multi-user.target`),
 		},
 		{
 			Path:        PathBootstrapToken,
-			Permissions: pointer.Int32Ptr(0644),
+			Permissions: pointer.Int32(0644),
 			Content: extensionsv1alpha1.FileContent{
 				Inline: &extensionsv1alpha1.FileContentInline{
 					Data: BootstrapTokenPlaceholder,
 				},
-				TransmitUnencoded: pointer.BoolPtr(true),
+				TransmitUnencoded: pointer.Bool(true),
 			},
 		},
 	}

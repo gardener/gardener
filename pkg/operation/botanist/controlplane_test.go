@@ -176,11 +176,11 @@ var _ = Describe("controlplane", func() {
 		})
 
 		It("sets owners and entries which create DNSOwner and DNSEntry", func() {
-			botanist.Shoot.Info.Status.ClusterIdentity = pointer.StringPtr("shoot-cluster-identity")
+			botanist.Shoot.Info.Status.ClusterIdentity = pointer.String("shoot-cluster-identity")
 			botanist.Shoot.DisableDNS = false
-			botanist.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.StringPtr("foo")}
+			botanist.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			botanist.Shoot.InternalClusterDomain = "bar"
-			botanist.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+			botanist.Shoot.ExternalClusterDomain = pointer.String("baz")
 			botanist.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 			botanist.Garden.InternalDomain = &garden.Domain{Provider: "valid-provider"}
 
@@ -214,7 +214,7 @@ var _ = Describe("controlplane", func() {
 				},
 				Spec: dnsv1alpha1.DNSOwnerSpec{
 					OwnerId: "shoot-cluster-identity-internal",
-					Active:  pointer.BoolPtr(true),
+					Active:  pointer.Bool(true),
 				},
 			}))
 			Expect(internalEntry).To(DeepDerivativeEqual(&dnsv1alpha1.DNSEntry{
@@ -236,7 +236,7 @@ var _ = Describe("controlplane", func() {
 				},
 				Spec: dnsv1alpha1.DNSOwnerSpec{
 					OwnerId: "shoot-cluster-identity-external",
-					Active:  pointer.BoolPtr(true),
+					Active:  pointer.Bool(true),
 				},
 			}))
 			Expect(externalEntry).To(DeepDerivativeEqual(&dnsv1alpha1.DNSEntry{
@@ -289,8 +289,8 @@ var _ = Describe("controlplane", func() {
 			BeforeEach(func() {
 				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
 				botanist.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
-				botanist.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.StringPtr("foo")}
-				botanist.Shoot.ExternalClusterDomain = pointer.StringPtr("baz")
+				botanist.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+				botanist.Shoot.ExternalClusterDomain = pointer.String("baz")
 				botanist.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 			})
 

@@ -116,7 +116,7 @@ var _ = Describe("Extensions", func() {
 						{
 							Kind:            extensionKind,
 							Type:            barExtensionType,
-							GloballyEnabled: pointer.BoolPtr(true),
+							GloballyEnabled: pointer.Bool(true),
 						},
 					},
 				},
@@ -128,7 +128,7 @@ var _ = Describe("Extensions", func() {
 			barExtensionDisabled = gardencorev1beta1.Extension{
 				Type:           barExtensionType,
 				ProviderConfig: &providerConfig,
-				Disabled:       pointer.BoolPtr(true),
+				Disabled:       pointer.Bool(true),
 			}
 		)
 

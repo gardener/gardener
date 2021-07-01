@@ -123,8 +123,8 @@ var _ = Describe("#SNI", func() {
 				Kind:               "Namespace",
 				Name:               namespace,
 				UID:                namespaceUID,
-				BlockOwnerDeletion: pointer.BoolPtr(false),
-				Controller:         pointer.BoolPtr(false),
+				BlockOwnerDeletion: pointer.Bool(false),
+				Controller:         pointer.Bool(false),
 			}},
 			ResourceVersion: "1",
 		}

@@ -89,7 +89,7 @@ status: {}
 					{Name: managedResourceSecretName},
 				},
 				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-				KeepObjects:  pointer.BoolPtr(true),
+				KeepObjects:  pointer.Bool(true),
 			},
 		}
 	})

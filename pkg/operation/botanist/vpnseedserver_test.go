@@ -71,7 +71,7 @@ var _ = Describe("VPNSeedServer", func() {
 				Info: &gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{
 						Networking: gardencorev1beta1.Networking{
-							Nodes: pointer.StringPtr("10.0.0.0/24"),
+							Nodes: pointer.String("10.0.0.0/24"),
 						},
 					},
 				},

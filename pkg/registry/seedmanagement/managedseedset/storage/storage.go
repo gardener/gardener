@@ -269,7 +269,7 @@ func (i *scaleUpdatedObjectInfo) UpdatedObject(ctx context.Context, oldObj runti
 	}
 
 	// Move replicas/resourceVersion fields to object and return
-	mss.Spec.Replicas = pointer.Int32Ptr(scale.Spec.Replicas)
+	mss.Spec.Replicas = pointer.Int32(scale.Spec.Replicas)
 	mss.ResourceVersion = scale.ResourceVersion
 	return mss, nil
 }

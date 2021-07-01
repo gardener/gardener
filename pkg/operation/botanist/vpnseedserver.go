@@ -60,7 +60,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 
 	var kubeAPIServerHost *string
 	if b.APIServerSNIEnabled() {
-		kubeAPIServerHost = pointer.StringPtr(b.outOfClusterAPIServerFQDN())
+		kubeAPIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
 	}
 
 	return vpnseedserver.New(

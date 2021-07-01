@@ -51,12 +51,12 @@ var _ = Describe("Component", func() {
 				"hyperkube": {
 					Name:       "pause-container",
 					Repository: hyperkubeImageRepo,
-					Tag:        pointer.StringPtr(hyperkubeImageTag),
+					Tag:        pointer.String(hyperkubeImageTag),
 				},
 				"pause-container": {
 					Name:       "pause-container",
 					Repository: pauseContainerImageRepo,
-					Tag:        pointer.StringPtr(pauseContainerImageTag),
+					Tag:        pointer.String(pauseContainerImageTag),
 				},
 			}
 
@@ -66,9 +66,9 @@ var _ = Describe("Component", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    "kubelet.service",
-					Command: pointer.StringPtr("start"),
-					Enable:  pointer.BoolPtr(true),
-					Content: pointer.StringPtr(`[Unit]
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
 Description=kubelet daemon
 Documentation=https://kubernetes.io/docs/admin/kubelet
 ` + unitConfigAfterCRI(criName) + `
@@ -84,9 +84,9 @@ ExecStart=/opt/bin/kubelet \` + kubeletFlags),
 				},
 				extensionsv1alpha1.Unit{
 					Name:    "kubelet-monitor.service",
-					Command: pointer.StringPtr("start"),
-					Enable:  pointer.BoolPtr(true),
-					Content: pointer.StringPtr(`[Unit]
+					Command: pointer.String("start"),
+					Enable:  pointer.Bool(true),
+					Content: pointer.String(`[Unit]
 Description=Kubelet-monitor daemon
 After=kubelet.service
 [Install]
@@ -101,7 +101,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/kubelet/ca.crt",
-					Permissions: pointer.Int32Ptr(0644),
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -111,7 +111,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 				},
 				extensionsv1alpha1.File{
 					Path:        "/var/lib/kubelet/config/kubelet",
-					Permissions: pointer.Int32Ptr(0644),
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",
@@ -121,7 +121,7 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 				},
 				extensionsv1alpha1.File{
 					Path:        "/opt/bin/health-monitor-kubelet",
-					Permissions: pointer.Int32Ptr(0755),
+					Permissions: pointer.Int32(0755),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Encoding: "b64",

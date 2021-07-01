@@ -61,7 +61,7 @@ var _ = Describe("resources", func() {
 						{
 							Kind:    resourceKind,
 							Type:    resourceType,
-							Primary: pointer.BoolPtr(true),
+							Primary: pointer.Bool(true),
 						},
 					},
 				},
@@ -120,7 +120,7 @@ var _ = Describe("resources", func() {
 
 			controllerRegistration2 := controllerRegistration.DeepCopy()
 			controllerRegistration2.Name = "another-name"
-			controllerRegistration2.Spec.Resources[0].Primary = pointer.BoolPtr(false)
+			controllerRegistration2.Spec.Resources[0].Primary = pointer.Bool(false)
 
 			coreClient.AddReactor("list", "controllerregistrations", func(action testing.Action) (bool, runtime.Object, error) {
 				return true, &core.ControllerRegistrationList{

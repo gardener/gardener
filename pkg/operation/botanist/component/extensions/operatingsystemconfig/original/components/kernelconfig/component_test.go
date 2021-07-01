@@ -39,14 +39,14 @@ var _ = Describe("Component", func() {
 			Expect(units).To(ConsistOf(
 				extensionsv1alpha1.Unit{
 					Name:    "systemd-sysctl.service",
-					Command: pointer.StringPtr("restart"),
-					Enable:  pointer.BoolPtr(true),
+					Command: pointer.String("restart"),
+					Enable:  pointer.Bool(true),
 				},
 			))
 			Expect(files).To(ConsistOf(
 				extensionsv1alpha1.File{
 					Path:        "/etc/sysctl.d/99-k8s-general.conf",
-					Permissions: pointer.Int32Ptr(0644),
+					Permissions: pointer.Int32(0644),
 					Content: extensionsv1alpha1.FileContent{
 						Inline: &extensionsv1alpha1.FileContentInline{
 							Data: data,
