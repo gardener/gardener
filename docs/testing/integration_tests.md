@@ -48,14 +48,14 @@ is divided into the following major subdirectories:
 A suite can be executed by running the suite definition with ginkgo's `focus` and `skip` flags 
 to control the execution of specific labeled test. See example below:
 ```console
-go test -timeout=0 -mod=vendor ./test/suites/shoot
-      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
-      --report-file=/tmp/report.json                       # write elasticsearch formatted output to a file
-      --disable-dump=false                                 # disables dumping of teh current state if a test fails
-      -kubecfg=/path/to/gardener/kubeconfig
-      -shoot-name=<shoot-name>                             # Name of the shoot to test
-      -project-namespace=<gardener project namespace>      # Name of the gardener project the test shoot resides
-      -ginkgo.focus="\[RELEASE\]"                          # Run all tests that are tagged as release
+go test -timeout=0 -mod=vendor ./test/suites/shoot \
+      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
+      --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
+      --disable-dump=false \                               # disables dumping of teh current state if a test fails
+      -kubecfg=/path/to/gardener/kubeconfig \
+      -shoot-name=<shoot-name> \                           # Name of the shoot to test
+      -project-namespace=<gardener project namespace> \    # Name of the gardener project the test shoot resides
+      -ginkgo.focus="\[RELEASE\]" \                        # Run all tests that are tagged as release
       -ginkgo.skip="\[SERIAL\]|\[DISRUPTIVE\]"             # Exclude all tests that are tagged SERIAL or DISRUPTIVE
 ```
 
@@ -81,22 +81,22 @@ var _ = ginkgo.Describe("my suite", func(){
 The newly created test can be tested by focusing the test with the default ginkgo focus `f.Beta().FCIt("my first test", func(ctx context.Context)`
 and run the shoot test suite with:
 ```
-go test -timeout=0 -mod=vendor ./test/suites/shoot
-      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
-      --report-file=/tmp/report.json                       # write elasticsearch formatted output to a file
-      --disable-dump=false                                 # disables dumping of the current state if a test fails
-      -kubecfg=/path/to/gardener/kubeconfig
-      -shoot-name=<shoot-name>                             # Name of the shoot to test
-      -project-namespace=<gardener project namespace>
+go test -timeout=0 -mod=vendor ./test/suites/shoot \
+      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
+      --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
+      --disable-dump=false \                               # disables dumping of the current state if a test fails
+      -kubecfg=/path/to/gardener/kubeconfig \
+      -shoot-name=<shoot-name> \                           # Name of the shoot to test
+      -project-namespace=<gardener project namespace> \
       -fenced=<true|false>                                 # Tested shoot is running in a fenced environment and cannot be reached by gardener
 ```
 or for the gardener suite with:
 ```
-go test -timeout=0 -mod=vendor ./test/suites/gardener
-      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
-      --report-file=/tmp/report.json                       # write elasticsearch formatted output to a file
-      --disable-dump=false                                 # disables dumping of the current state if a test fails
-      -kubecfg=/path/to/gardener/kubeconfig
+go test -timeout=0 -mod=vendor ./test/suites/gardener \
+      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
+      --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
+      --disable-dump=false \                               # disables dumping of the current state if a test fails
+      -kubecfg=/path/to/gardener/kubeconfig \
       -project-namespace=<gardener project namespace>
 ```
 
@@ -104,12 +104,12 @@ go test -timeout=0 -mod=vendor ./test/suites/gardener
 
 Alternatively, a test can be triggered by specifying a ginkgo focus regex with the name of the test e.g.
 ```
-go test -timeout=0 -mod=vendor ./test/suites/gardener
-      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
-      --report-file=/tmp/report.json                       # write elasticsearch formatted output to a file
-      -kubecfg=/path/to/gardener/kubeconfig
-      -project-namespace=<gardener project namespace>
-      -ginkgo.focus="my first test" // regex to match test cases
+go test -timeout=0 -mod=vendor ./test/suites/gardener \
+      --v -ginkgo.v -ginkgo.progress -ginkgo.noColor \
+      --report-file=/tmp/report.json \                     # write elasticsearch formatted output to a file
+      -kubecfg=/path/to/gardener/kubeconfig \
+      -project-namespace=<gardener project namespace> \
+      -ginkgo.focus="my first test"                        # regex to match test cases
 ```
 
 
