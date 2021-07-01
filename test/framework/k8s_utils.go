@@ -353,7 +353,7 @@ func PatchSecret(ctx context.Context, c client.Client, secret *corev1.Secret) er
 	if err := c.Get(ctx, client.ObjectKey{Namespace: secret.Namespace, Name: secret.Name}, existingSecret); err != nil {
 		return err
 	}
-	patch := client.MergeFrom(secret.DeepCopy())
+	patch := client.MergeFrom(existingSecret.DeepCopy())
 
 	existingSecret.Data = secret.Data
 	return c.Patch(ctx, existingSecret, patch)
