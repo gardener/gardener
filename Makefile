@@ -27,10 +27,16 @@ REPO_ROOT                              := $(shell dirname $(realpath $(lastword 
 LOCAL_GARDEN_LABEL                     := local-garden
 REMOTE_GARDEN_LABEL                    := remote-garden
 ACTIVATE_SEEDAUTHORIZER                := false
+SEED_NAME                              := ""
 TOOLS_DIR                              := hack/tools
 TOOLS_BIN_DIR                          := $(TOOLS_DIR)/bin
 YQ                                     := $(TOOLS_BIN_DIR)/yq
-SEED_NAME                              := ""
+OS                                     := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+ARCH                                   := $(shell uname -m)
+
+ifeq ($(ARCH),x86_64)
+	ARCH := amd64
+endif
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -41,7 +47,7 @@ endif
 #########################################
 
 $(YQ):
-	curl -L -o "$(YQ)" https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_linux_amd64
+	curl -L -o "$(YQ)" https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_$(OS)_$(ARCH)
 	chmod +x "$(YQ)"
 
 #########################################
