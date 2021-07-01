@@ -901,11 +901,11 @@ func runCreateSeedFlow(
 		return err
 	}
 
-	if err := updateDNSProviderSecret(ctx, sc, gc, seed); err != nil {
-		return err
-	}
 	secretData, err := getDNSProviderSecretData(ctx, gc.Client(), seed)
 	if err != nil {
+		return err
+	}
+	if err := updateDNSProviderSecret(ctx, sc.Client(), emptyDNSProviderSecret(), secretData, seed); err != nil {
 		return err
 	}
 
@@ -1023,11 +1023,11 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 		return err
 	}
 
-	if err := updateDNSProviderSecret(ctx, sc, gc, seed); err != nil {
-		return err
-	}
 	secretData, err := getDNSProviderSecretData(ctx, gc.Client(), seed)
 	if err != nil {
+		return err
+	}
+	if err := updateDNSProviderSecret(ctx, sc.Client(), emptyDNSProviderSecret(), secretData, seed); err != nil {
 		return err
 	}
 
@@ -1182,20 +1182,6 @@ func destroyDNSResources(ctx context.Context, dnsEntry, dnsRecord component.Depl
 	return dnsRecord.WaitCleanup(ctx)
 }
 
-func copySecretToSeed(ctx context.Context, gardenClient, seedClient client.Client, sourceSecret types.NamespacedName, targetSecret *corev1.Secret) error {
-	gardenSecret := &corev1.Secret{}
-	if err := gardenClient.Get(ctx, sourceSecret, gardenSecret); err != nil {
-		return err
-	}
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, targetSecret, func() error {
-		targetSecret.Type = gardenSecret.Type
-		targetSecret.Data = gardenSecret.Data
-		return nil
-	})
-	return err
-}
-
 func ensureNoControllerInstallations(gc kubernetes.Interface, seedName string) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		associatedControllerInstallations, err := controllerutils.DetermineControllerInstallationAssociations(ctx, gc.Client(), seedName)
@@ -1209,9 +1195,16 @@ func ensureNoControllerInstallations(gc kubernetes.Interface, seedName string) f
 	}
 }
 
-func updateDNSProviderSecret(ctx context.Context, sc kubernetes.Interface, gc kubernetes.Interface, seed *Seed) error {
-	if dnsConfig := seed.Info.Spec.DNS; dnsConfig.Provider != nil {
-		return copySecretToSeed(ctx, gc.Client(), sc.Client(), kutil.Key(dnsConfig.Provider.SecretRef.Namespace, dnsConfig.Provider.SecretRef.Name), emptyDNSProviderSecret())
+// updateDNSProviderSecret updates the DNSProvider secret in the garden namespace of the seed. This is only needed
+// if the `UseDNSRecords` feature gate is not enabled.
+func updateDNSProviderSecret(ctx context.Context, seedClient client.Client, secret *corev1.Secret, secretData map[string][]byte, seed *Seed) error {
+	if dnsConfig := seed.Info.Spec.DNS; dnsConfig.Provider != nil && !gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, secret, func() error {
+			secret.Type = corev1.SecretTypeOpaque
+			secret.Data = secretData
+			return nil
+		})
+		return err
 	}
 	return nil
 }
@@ -1276,6 +1269,12 @@ func emptyDNSProviderSecret() *corev1.Secret {
 	}
 }
 
+// createOrUpdateClusterResource creates a "fake" cluster resource to allow DNSRecord resources in the garden
+// namespace to be reconciled by an extension controller that adheres to the usual contract and therefore requires
+// a cluster resource.
+// TODO This is considered a hack and should be removed in the future. We should rather make the contract between
+// gardenlet and extension controllers for reconciling resources related to the seed more explicit, e.g. by not
+// requiring a cluster resources for extension resources in the garden namespace.
 func createOrUpdateClusterResource(ctx context.Context, seedClient client.Client) error {
 	cluster := &extensionsv1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1303,6 +1302,7 @@ func createOrUpdateClusterResource(ctx context.Context, seedClient client.Client
 	return err
 }
 
+// deleteClusterResource deletes the previously created "fake" cluster resource.
 func deleteClusterResource(ctx context.Context, seedClient client.Client) error {
 	cluster := &extensionsv1alpha1.Cluster{
 		ObjectMeta: metav1.ObjectMeta{

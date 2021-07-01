@@ -25,6 +25,7 @@ import (
 var featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	features.SeedChange:             {Default: false, PreRelease: featuregate.Alpha},
 	features.AdminKubeconfigRequest: {Default: false, PreRelease: featuregate.Alpha},
+	features.UseDNSRecords:          {Default: false, PreRelease: featuregate.Alpha},
 }
 
 // RegisterFeatureGates registers the feature gates of the Gardener API Server.

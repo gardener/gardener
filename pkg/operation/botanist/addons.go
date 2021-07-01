@@ -138,7 +138,7 @@ func (b *Botanist) NeedsIngressDNS() bool {
 	return b.NeedsExternalDNS() && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.Info.Spec.Addons)
 }
 
-// DefaultDNSRecord creates the default deployer for the ingress DNSRecord resource.
+// DefaultIngressDNSRecord creates the default deployer for the ingress DNSRecord resource.
 func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
 		Name:       b.Shoot.Info.Name + "-" + common.ShootDNSIngressName,
