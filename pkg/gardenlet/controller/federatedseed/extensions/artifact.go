@@ -84,6 +84,12 @@ func newControllerArtifacts() controllerArtifacts {
 		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.BackupEntry{} }, extensionStateOrResourcesChanged),
 	)
 
+	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.BastionResource)
+	a.registerExtensionControllerArtifacts(
+		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.BastionList{} }, extensionTypeChanged),
+		disabledArtifact(),
+	)
+
 	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.ContainerRuntimeResource)
 	a.registerExtensionControllerArtifacts(
 		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.ContainerRuntimeList{} }, extensionTypeChanged),
