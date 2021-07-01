@@ -18,16 +18,17 @@ import (
 	"context"
 	"errors"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/golang/mock/gomock"
@@ -35,6 +36,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -496,7 +498,17 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				*controllerInstallation7,
 			},
 		}
+
+		cleanup func()
 	)
+
+	BeforeEach(func() {
+		cleanup = test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, false)
+	})
+
+	AfterEach(func() {
+		cleanup()
+	})
 
 	Describe("#computeKindTypesForBackupBuckets", func() {
 		It("should return empty results for empty input", func() {

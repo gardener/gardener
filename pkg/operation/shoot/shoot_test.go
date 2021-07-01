@@ -480,7 +480,7 @@ var _ = Describe("shoot", func() {
 		})
 
 		It("should compute the correct list of required extensions", func() {
-			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain, false)
 
 			Expect(result).To(Equal(sets.NewString(
 				extensions.Id(extensionsv1alpha1.BackupBucketResource, backupProvider),
@@ -503,7 +503,7 @@ var _ = Describe("shoot", func() {
 		It("should compute the correct list of required extensions (no seed backup)", func() {
 			seed.Spec.Backup = nil
 
-			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain, false)
 
 			Expect(result).To(Equal(sets.NewString(
 				extensions.Id(extensionsv1alpha1.ControlPlaneResource, seedProvider),
@@ -524,7 +524,7 @@ var _ = Describe("shoot", func() {
 		It("should compute the correct list of required extensions (seed disables DNS)", func() {
 			seed.Spec.Settings.ShootDNS.Enabled = false
 
-			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain, false)
 
 			Expect(result).To(Equal(sets.NewString(
 				extensions.Id(extensionsv1alpha1.BackupBucketResource, backupProvider),
@@ -547,7 +547,7 @@ var _ = Describe("shoot", func() {
 				Disabled: pointer.Bool(true),
 			})
 
-			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain)
+			result := ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain, false)
 
 			Expect(result).To(Equal(sets.NewString(
 				extensions.Id(extensionsv1alpha1.BackupBucketResource, backupProvider),

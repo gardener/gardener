@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
@@ -114,6 +115,9 @@ type Extensions struct {
 	ControlPlane          controlplane.Interface
 	ControlPlaneExposure  controlplane.Interface
 	DNS                   *DNS
+	ExternalDNSRecord     dnsrecord.Interface
+	InternalDNSRecord     dnsrecord.Interface
+	IngressDNSRecord      dnsrecord.Interface
 	Extension             extension.Interface
 	Infrastructure        infrastructure.Interface
 	Network               component.DeployMigrateWaiter

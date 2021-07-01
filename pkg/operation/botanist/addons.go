@@ -30,6 +30,7 @@ import (
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
+	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -69,9 +70,9 @@ func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, 
 	return common.GenerateAddonConfig(values, enabled), nil
 }
 
-// EnsureIngressDNSRecord deploys the nginx ingress DNSEntry and DNSOwner resources.
-func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
-	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.Info.Spec.Addons) {
+// DeployIngressDNS deploys the nginx ingress DNSEntry and DNSOwner resources.
+func (b *Botanist) DeployIngressDNS(ctx context.Context) error {
+	if b.NeedsIngressDNS() {
 		if b.isRestorePhase() {
 			return dnsRestoreDeployer{
 				entry: b.Shoot.Components.Extensions.DNS.NginxEntry,
@@ -91,17 +92,17 @@ func (b *Botanist) EnsureIngressDNSRecord(ctx context.Context) error {
 	).Deploy(ctx)
 }
 
-// DestroyIngressDNSRecord destroys the nginx ingress DNSEntry and DNSOwner resources.
-func (b *Botanist) DestroyIngressDNSRecord(ctx context.Context) error {
+// DestroyIngressDNS destroys the nginx ingress DNSEntry and DNSOwner resources.
+func (b *Botanist) DestroyIngressDNS(ctx context.Context) error {
 	return component.OpDestroyAndWait(
 		b.Shoot.Components.Extensions.DNS.NginxEntry,
 		b.Shoot.Components.Extensions.DNS.NginxOwner,
 	).Destroy(ctx)
 }
 
-// MigrateIngressDNSRecord destroys the nginx ingress DNSEntry and DNSOwner resources,
+// MigrateIngressDNS destroys the nginx ingress DNSEntry and DNSOwner resources,
 // without removing the entry from the DNS provider.
-func (b *Botanist) MigrateIngressDNSRecord(ctx context.Context) error {
+func (b *Botanist) MigrateIngressDNS(ctx context.Context) error {
 	return component.OpDestroy(
 		b.Shoot.Components.Extensions.DNS.NginxOwner,
 		b.Shoot.Components.Extensions.DNS.NginxEntry,
@@ -132,9 +133,68 @@ func (b *Botanist) DefaultNginxIngressDNSOwner() component.DeployWaiter {
 	))
 }
 
+func (b *Botanist) NeedsIngressDNS() bool {
+	return b.NeedsExternalDNS() && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.Info.Spec.Addons)
+}
+
+// DefaultDNSRecord creates the default deployer for the ingress DNSRecord resource.
+func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
+	values := &extensionsdnsrecord.Values{
+		Name:       b.Shoot.Info.Name + "-" + common.ShootDNSIngressName,
+		SecretName: b.Shoot.Info.Name + "-" + DNSExternalName,
+		Namespace:  b.Shoot.SeedNamespace,
+		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+	}
+	if b.NeedsIngressDNS() {
+		values.Type = b.Shoot.ExternalDomain.Provider
+		values.SecretData = b.Shoot.ExternalDomain.SecretData
+		values.DNSName = b.Shoot.GetIngressFQDN("*")
+	}
+	return extensionsdnsrecord.New(
+		b.Logger,
+		b.K8sSeedClient.Client(),
+		values,
+		extensionsdnsrecord.DefaultInterval,
+		extensionsdnsrecord.DefaultSevereThreshold,
+		extensionsdnsrecord.DefaultTimeout,
+	)
+}
+
+// DeployOrDestroyIngressDNSRecord deploys, restores, or destroys the ingress DNSRecord and waits for the operation to complete.
+func (b *Botanist) DeployOrDestroyIngressDNSRecord(ctx context.Context) error {
+	if b.NeedsIngressDNS() {
+		return b.DeployIngressDNSRecord(ctx)
+	}
+	return b.DestroyIngressDNSRecord(ctx)
+}
+
+// DeployIngressDNSRecord deploys or restores the ingress DNSRecord and waits for the operation to complete.
+func (b *Botanist) DeployIngressDNSRecord(ctx context.Context) error {
+	if err := b.deployOrRestoreDNSRecord(ctx, b.Shoot.Components.Extensions.IngressDNSRecord); err != nil {
+		return err
+	}
+	return b.Shoot.Components.Extensions.IngressDNSRecord.Wait(ctx)
+}
+
+// DestroyIngressDNSRecord destroys the ingress DNSRecord and waits for the operation to complete.
+func (b *Botanist) DestroyIngressDNSRecord(ctx context.Context) error {
+	if err := b.Shoot.Components.Extensions.IngressDNSRecord.Destroy(ctx); err != nil {
+		return err
+	}
+	return b.Shoot.Components.Extensions.IngressDNSRecord.WaitCleanup(ctx)
+}
+
+// MigrateIngressDNSRecord migrates the ingress DNSRecord and waits for the operation to complete.
+func (b *Botanist) MigrateIngressDNSRecord(ctx context.Context) error {
+	if err := b.Shoot.Components.Extensions.IngressDNSRecord.Migrate(ctx); err != nil {
+		return err
+	}
+	return b.Shoot.Components.Extensions.IngressDNSRecord.WaitMigrate(ctx)
+}
+
 // SetNginxIngressAddress sets the IP address of the API server's LoadBalancer.
 func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Client) {
-	if b.NeedsExternalDNS() && !b.Shoot.HibernationEnabled && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.Info.Spec.Addons) {
+	if b.NeedsIngressDNS() {
 		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + common.ShootDNSIngressName
 		b.Shoot.Components.Extensions.DNS.NginxOwner = dns.NewOwner(
 			seedClient,
@@ -157,6 +217,9 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
 		)
+
+		b.Shoot.Components.Extensions.IngressDNSRecord.SetRecordType(dnsRecordType(address))
+		b.Shoot.Components.Extensions.IngressDNSRecord.SetValues([]string{address})
 	}
 }
 

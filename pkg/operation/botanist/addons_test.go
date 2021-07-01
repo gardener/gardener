@@ -18,6 +18,7 @@ import (
 	"context"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
@@ -33,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -40,6 +42,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mockdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord/mock"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
@@ -52,16 +55,24 @@ var _ = Describe("dns", func() {
 	)
 
 	var (
+		ctrl       *gomock.Controller
 		b          *Botanist
 		seedClient client.Client
 		s          *runtime.Scheme
 		ctx        context.Context
 
+		ingressDNSRecord *mockdnsrecord.MockInterface
+
 		dnsEntryTTL int64 = 1234
 	)
 
 	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+
 		ctx = context.TODO()
+
+		ingressDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
+
 		b = &Botanist{
 			Operation: &operation.Operation{
 				Config: &config.GardenletConfiguration{
@@ -81,7 +92,8 @@ var _ = Describe("dns", func() {
 					SeedNamespace: seedNS,
 					Components: &shoot.Components{
 						Extensions: &shoot.Extensions{
-							DNS: &shoot.DNS{},
+							DNS:              &shoot.DNS{},
+							IngressDNSRecord: ingressDNSRecord,
 						},
 					},
 				},
@@ -108,6 +120,10 @@ var _ = Describe("dns", func() {
 			Build()
 
 		b.K8sSeedClient = fakeClientSet
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
 	})
 
 	Context("DefaultNginxIngressDNSEntry", func() {
@@ -183,6 +199,9 @@ var _ = Describe("dns", func() {
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 			b.Shoot.HibernationEnabled = false
 			b.Shoot.Info.Spec.Addons.NginxIngress = &v1beta1.NginxIngress{Addon: v1beta1.Addon{Enabled: true}}
+
+			ingressDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			ingressDNSRecord.EXPECT().SetValues([]string{"1.2.3.4"})
 
 			b.SetNginxIngressAddress("1.2.3.4", seedClient)
 

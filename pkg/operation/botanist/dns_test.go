@@ -39,6 +39,7 @@ import (
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -46,6 +47,7 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
@@ -62,6 +64,8 @@ var _ = Describe("dns", func() {
 		ctx                      context.Context
 
 		dnsEntryTTL int64 = 1234
+
+		cleanup func()
 	)
 
 	BeforeEach(func() {
@@ -104,6 +108,12 @@ var _ = Describe("dns", func() {
 			WithClient(seedClient).
 			WithChartApplier(chartApplier).
 			Build()
+
+		cleanup = test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, false)
+	})
+
+	AfterEach(func() {
+		cleanup()
 	})
 
 	Context("DefaultExternalDNSProvider", func() {

@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"net"
 	"path/filepath"
 	"time"
 
@@ -856,6 +857,9 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
 		)
+
+		b.Shoot.Components.Extensions.InternalDNSRecord.SetRecordType(dnsRecordType(address))
+		b.Shoot.Components.Extensions.InternalDNSRecord.SetValues([]string{address})
 	}
 
 	if b.NeedsExternalDNS() {
@@ -881,6 +885,9 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
 		)
+
+		b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(dnsRecordType(address))
+		b.Shoot.Components.Extensions.ExternalDNSRecord.SetValues([]string{address})
 	}
 }
 
@@ -906,4 +913,12 @@ func (b *Botanist) getIngressGatewayConfig() kubeapiserverexposure.IstioIngressG
 	}
 
 	return ingressGatewayConfig
+}
+
+func dnsRecordType(address string) extensionsv1alpha1.DNSRecordType {
+	if ip := net.ParseIP(address); ip != nil {
+		return extensionsv1alpha1.DNSRecordTypeA
+	} else {
+		return extensionsv1alpha1.DNSRecordTypeCNAME
+	}
 }

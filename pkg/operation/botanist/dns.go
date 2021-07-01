@@ -232,7 +232,7 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]compo
 	if b.NeedsAdditionalDNSProviders() {
 		for i, provider := range b.Shoot.Info.Spec.DNS.Providers {
 			p := provider
-			if p.Primary != nil && *p.Primary {
+			if p.Primary != nil && *p.Primary && !gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
 				continue
 			}
 
@@ -257,20 +257,20 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]compo
 				continue
 			}
 
-			secretName := p.SecretName
-			if secretName == nil {
-				return nil, fmt.Errorf("dns provider[%d] doesn't specify a secretName", i)
+			var secret *corev1.Secret
+			if p.SecretName == nil {
+				if p.Primary == nil || !*p.Primary {
+					return nil, fmt.Errorf("dns provider[%d] doesn't specify a secretName", i)
+				}
+				secret = b.Shoot.Secret
+			} else {
+				secret = &corev1.Secret{}
+				if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, *p.SecretName), secret); err != nil {
+					return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *p.SecretName, err)
+				}
 			}
 
-			secret := &corev1.Secret{}
-			if err := b.K8sGardenClient.Client().Get(
-				ctx,
-				kutil.Key(b.Shoot.Info.Namespace, *secretName),
-				secret,
-			); err != nil {
-				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *secretName, err)
-			}
-			providerName := gutil.GenerateDNSProviderName(*secretName, *providerType)
+			providerName := gutil.GenerateDNSProviderName(secret.Name, *providerType)
 
 			additionalProviders[providerName] = dns.NewProvider(
 				b.Logger,

@@ -232,17 +232,17 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		})
 		migrateIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating nginx ingress DNS record",
-			Fn:           flow.TaskFn(botanist.MigrateIngressDNSRecord),
+			Fn:           flow.TaskFn(botanist.MigrateIngressDNSResources),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		migrateExternalDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating external domain DNS record",
-			Fn:           flow.TaskFn(botanist.MigrateExternalDNS),
+			Fn:           flow.TaskFn(botanist.MigrateExternalDNSResources),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		migrateInternalDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.MigrateInternalDNS),
+			Fn:           flow.TaskFn(botanist.MigrateInternalDNSResources),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		destroyDNSProviders = g.Add(flow.Task{

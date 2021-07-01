@@ -215,7 +215,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployInternalDNS).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.DeployInternalDNSResources).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
 		})
 		deployAdditionalDNSProviders = g.Add(flow.Task{
@@ -505,9 +505,9 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Dependencies: flow.NewTaskIDs(destroyControlPlaneExposure),
 		})
 
-		destroyNginxIngressDNSRecord = g.Add(flow.Task{
+		destroyIngressDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying nginx ingress DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord),
+			Fn:           flow.TaskFn(botanist.DestroyIngressDNSResources),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		destroyInfrastructure = g.Add(flow.Task{
@@ -522,7 +522,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyExternalDNS),
+			Fn:           flow.TaskFn(botanist.DestroyExternalDNSResources),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, deleteKubeAPIServer),
 		})
 		deleteGrafana = g.Add(flow.Task{
@@ -537,14 +537,14 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			deleteKubeAPIServer,
 			waitUntilControlPlaneDeleted,
 			waitUntilControlPlaneExposureDeleted,
-			destroyNginxIngressDNSRecord,
+			destroyIngressDomainDNSRecord,
 			destroyExternalDomainDNSRecord,
 			waitUntilInfrastructureDeleted,
 		)
 
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyInternalDNS),
+			Fn:           flow.TaskFn(botanist.DestroyInternalDNSResources),
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		deleteDNSProviders = g.Add(flow.Task{

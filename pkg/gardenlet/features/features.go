@@ -34,6 +34,7 @@ var (
 		features.MountHostCADirectories: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // TODO (ialidzhikov): remove MountHostCADirectories in v1.29.
 		features.SeedKubeScheduler:      {Default: false, PreRelease: featuregate.Alpha},
 		features.ReversedVPN:            {Default: false, PreRelease: featuregate.Alpha},
+		features.UseDNSRecords:          {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
 
