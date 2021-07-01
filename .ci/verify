@@ -51,7 +51,7 @@ if [ $use_cache = yes ] ; then
     mv "$cache" "$concourse_cache_dir/$cache_name"
   done
 else
-  if [ -n "${TEST_COV}" ] ; then
+  if [ "${TEST_COV+yes}" = yes ] ; then
     # supposed to be run in release jobs
     make verify-extended
   else
