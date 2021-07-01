@@ -101,6 +101,7 @@
     * [`BackupEntry` resource](extensions/backupentry.md)
   * DNS providers
     * [`DNSProvider` and `DNSEntry` resources](extensions/dns.md)
+    * [`DNSRecord` resources](extensions/dnsrecord.md)
   * IaaS/Cloud providers
     * [Control plane customization webhooks](extensions/controlplane-webhooks.md)
     * [`Bastion` resource](extensions/bastion.md)
