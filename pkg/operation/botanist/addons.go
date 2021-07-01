@@ -25,6 +25,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
@@ -221,7 +222,7 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 			},
 		)
 
-		b.Shoot.Components.Extensions.IngressDNSRecord.SetRecordType(dnsRecordType(address))
+		b.Shoot.Components.Extensions.IngressDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(address))
 		b.Shoot.Components.Extensions.IngressDNSRecord.SetValues([]string{address})
 	}
 }

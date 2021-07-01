@@ -24,6 +24,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -46,7 +47,7 @@ func NewEntry(
 	client client.Client,
 	namespace string,
 	values *EntryValues,
-) component.DeployWaiter {
+) component.DeployMigrateWaiter {
 	return &entry{
 		logger:    logger,
 		client:    client,
@@ -111,6 +112,18 @@ func (e *entry) Wait(ctx context.Context) error {
 		2*time.Minute,
 		nil,
 	)
+}
+
+func (e *entry) Restore(ctx context.Context, shootState *v1alpha1.ShootState) error {
+	return nil
+}
+
+func (e *entry) Migrate(ctx context.Context) error {
+	return client.IgnoreNotFound(controllerutils.RemoveAllFinalizers(ctx, e.client, e.client, e.dnsEntry))
+}
+
+func (e *entry) WaitMigrate(ctx context.Context) error {
+	return nil
 }
 
 func (e *entry) WaitCleanup(ctx context.Context) error {

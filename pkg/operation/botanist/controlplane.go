@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 	"fmt"
-	"net"
 	"path/filepath"
 	"time"
 
@@ -26,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
@@ -858,7 +858,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 			},
 		)
 
-		b.Shoot.Components.Extensions.InternalDNSRecord.SetRecordType(dnsRecordType(address))
+		b.Shoot.Components.Extensions.InternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(address))
 		b.Shoot.Components.Extensions.InternalDNSRecord.SetValues([]string{address})
 	}
 
@@ -886,7 +886,7 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 			},
 		)
 
-		b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(dnsRecordType(address))
+		b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(address))
 		b.Shoot.Components.Extensions.ExternalDNSRecord.SetValues([]string{address})
 	}
 }
@@ -913,12 +913,4 @@ func (b *Botanist) getIngressGatewayConfig() kubeapiserverexposure.IstioIngressG
 	}
 
 	return ingressGatewayConfig
-}
-
-func dnsRecordType(address string) extensionsv1alpha1.DNSRecordType {
-	if ip := net.ParseIP(address); ip != nil {
-		return extensionsv1alpha1.DNSRecordTypeA
-	} else {
-		return extensionsv1alpha1.DNSRecordTypeCNAME
-	}
 }

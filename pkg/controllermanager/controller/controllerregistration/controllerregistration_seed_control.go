@@ -275,7 +275,11 @@ func computeKindTypesForSeed(
 	}
 
 	if seed.Spec.DNS.Provider != nil {
-		wantedKindTypeCombinations.Insert(extensions.Id(dnsv1alpha1.DNSProviderKind, seed.Spec.DNS.Provider.Type))
+		if controllermanagerfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
+			wantedKindTypeCombinations.Insert(extensions.Id(extensionsv1alpha1.DNSRecordResource, seed.Spec.DNS.Provider.Type))
+		} else {
+			wantedKindTypeCombinations.Insert(extensions.Id(dnsv1alpha1.DNSProviderKind, seed.Spec.DNS.Provider.Type))
+		}
 	}
 
 	return wantedKindTypeCombinations

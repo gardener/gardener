@@ -131,6 +131,12 @@ func newControllerArtifacts() controllerArtifacts {
 		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.Worker{} }, extensionStateOrResourcesChanged),
 	)
 
+	gvk = extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.DNSRecordResource)
+	a.registerExtensionControllerArtifacts(
+		newControllerInstallationArtifact(gvk, func() client.ObjectList { return &extensionsv1alpha1.DNSRecordList{} }, extensionTypeChanged),
+		newStateArtifact(gvk, func() client.Object { return &extensionsv1alpha1.DNSRecord{} }, extensionStateOrResourcesChanged),
+	)
+
 	return a
 }
 
