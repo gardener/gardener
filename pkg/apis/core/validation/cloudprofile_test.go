@@ -185,7 +185,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					Spec: core.CloudProfileSpec{
 						Type: "unknown",
 						SeedSelector: &core.SeedSelector{
-							LabelSelector: &metav1.LabelSelector{
+							LabelSelector: metav1.LabelSelector{
 								MatchLabels: map[string]string{"foo": "bar"},
 							},
 						},

@@ -246,7 +246,6 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should succeed because it cannot find a seed cluster 1) 'MinimalDistance' seed determination strategy 2) cross provider", func() {
 			cloudProfile.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
-				LabelSelector: nil,
 				ProviderTypes: []string{providerType},
 			}
 			shoot.Spec.Region = anotherRegion
@@ -268,7 +267,6 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should succeed because it cannot find a seed cluster 1) 'MinimalDistance' seed determination strategy 2) any provider", func() {
 			cloudProfile.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
-				LabelSelector: nil,
 				ProviderTypes: []string{"*"},
 			}
 			shoot.Spec.Region = anotherRegion
@@ -290,11 +288,10 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should succeed because it cannot find a seed cluster 1) 'MinimalDistance' seed determination strategy 2) matching labels", func() {
 			cloudProfile.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
-				LabelSelector: &metav1.LabelSelector{
+				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"select": "true",
 					},
-					MatchExpressions: nil,
 				},
 				ProviderTypes: []string{"*"},
 			}
@@ -336,11 +333,10 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should fail because it cannot find a seed cluster 1) 'MinimalDistance' seed determination strategy 2) no matching labels", func() {
 			cloudProfile.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
-				LabelSelector: &metav1.LabelSelector{
+				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"select": "true",
 					},
-					MatchExpressions: nil,
 				},
 				ProviderTypes: []string{providerType},
 			}
@@ -361,11 +357,10 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should fail because it cannot find a seed cluster 1) 'MinimalDistance' seed determination strategy 2) matching labels but not type", func() {
 			cloudProfile.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
-				LabelSelector: &metav1.LabelSelector{
+				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"select": "true",
 					},
-					MatchExpressions: nil,
 				},
 			}
 			seed.Labels = map[string]string{"select": "true"}
@@ -498,7 +493,7 @@ var _ = Describe("Scheduler_Control", func() {
 			newCloudProfile := cloudProfile
 			newCloudProfile.Name = "cloudprofile2"
 			newCloudProfile.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
-				LabelSelector: &metav1.LabelSelector{
+				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"environment": "two",
 					},
@@ -544,7 +539,7 @@ var _ = Describe("Scheduler_Control", func() {
 			newCloudProfile := cloudProfile
 			newCloudProfile.Name = "cloudprofile2"
 			newCloudProfile.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
-				LabelSelector: &metav1.LabelSelector{
+				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"environment": "two",
 					},
@@ -577,7 +572,7 @@ var _ = Describe("Scheduler_Control", func() {
 			testShoot.Spec.CloudProfileName = "cloudprofile2"
 			testShoot.Spec.Provider.Type = "some-type"
 			testShoot.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
-				LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"my-preferred": "seed"}},
+				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"my-preferred": "seed"}},
 			}
 
 			reader.EXPECT().Get(ctx, kutil.Key(newCloudProfile.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.CloudProfile{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, actual *gardencorev1beta1.CloudProfile) error {
@@ -817,7 +812,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should fail because the cloudprofile used by the shoot doesn't select any seed candidate", func() {
 			cloudProfile.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
-				LabelSelector: &metav1.LabelSelector{
+				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"foo": "bar",
 					},
@@ -840,7 +835,7 @@ var _ = Describe("Scheduler_Control", func() {
 
 		It("should fail because the shoot doesn't select any seed candidate", func() {
 			shoot.Spec.SeedSelector = &gardencorev1beta1.SeedSelector{
-				LabelSelector: &metav1.LabelSelector{
+				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"foo": "bar",
 					},

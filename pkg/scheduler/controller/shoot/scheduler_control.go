@@ -212,12 +212,12 @@ func filterUsableSeeds(seedList []gardencorev1beta1.Seed) ([]gardencorev1beta1.S
 }
 
 func filterSeedsMatchingLabelSelector(seedList []gardencorev1beta1.Seed, seedSelector *gardencorev1beta1.SeedSelector, kind string) ([]gardencorev1beta1.Seed, error) {
-	if seedSelector == nil || seedSelector.LabelSelector == nil {
+	if seedSelector == nil {
 		return seedList, nil
 	}
-	selector, err := metav1.LabelSelectorAsSelector(seedSelector.LabelSelector)
+	selector, err := metav1.LabelSelectorAsSelector(&seedSelector.LabelSelector)
 	if err != nil {
-		return nil, fmt.Errorf("label selector conversion failed: %v for seedSelector: %v", *seedSelector.LabelSelector, err)
+		return nil, fmt.Errorf("label selector conversion failed: %v for seedSelector: %v", seedSelector.LabelSelector, err)
 	}
 
 	var matchingSeeds []gardencorev1beta1.Seed
