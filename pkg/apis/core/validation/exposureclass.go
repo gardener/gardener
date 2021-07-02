@@ -31,8 +31,8 @@ func ValidateExposureClass(exposureClass *core.ExposureClass) field.ErrorList {
 	}
 
 	if exposureClass.Scheduling != nil {
-		if exposureClass.Scheduling.SeedSelector != nil && exposureClass.Scheduling.SeedSelector.LabelSelector != nil {
-			allErrs = append(allErrs, metav1validation.ValidateLabelSelector(exposureClass.Scheduling.SeedSelector.LabelSelector, field.NewPath("scheduling", "seedSelector"))...)
+		if exposureClass.Scheduling.SeedSelector != nil {
+			allErrs = append(allErrs, metav1validation.ValidateLabelSelector(&exposureClass.Scheduling.SeedSelector.LabelSelector, field.NewPath("scheduling", "seedSelector"))...)
 		}
 		allErrs = append(allErrs, ValidateTolerations(exposureClass.Scheduling.Tolerations, field.NewPath("scheduling", "tolerations"))...)
 	}

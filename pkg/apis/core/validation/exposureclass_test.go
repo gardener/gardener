@@ -56,7 +56,7 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 
 		It("should fail as exposure class has an invalid seed selector", func() {
 			exposureClass.Scheduling.SeedSelector = &core.SeedSelector{
-				LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
+				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
 			}
 			errorList := ValidateExposureClass(exposureClass)
 
@@ -138,7 +138,7 @@ func makeDefaultExposureClass() *core.ExposureClass {
 		Handler: "test-exposure-class-handler-name",
 		Scheduling: &core.ExposureClassScheduling{
 			SeedSelector: &core.SeedSelector{
-				LabelSelector: &metav1.LabelSelector{
+				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
 						"test": "foo",
 					},

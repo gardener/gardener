@@ -544,7 +544,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 			shoot.Spec.SecretBindingName = ""
 			shoot.Spec.SeedName = pointer.String("")
 			shoot.Spec.SeedSelector = &core.SeedSelector{
-				LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
+				LabelSelector: metav1.LabelSelector{MatchLabels: map[string]string{"foo": "no/slash/allowed"}},
 			}
 			shoot.Spec.Provider.Type = ""
 
