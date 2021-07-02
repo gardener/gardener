@@ -498,17 +498,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				*controllerInstallation7,
 			},
 		}
-
-		cleanup func()
 	)
-
-	BeforeEach(func() {
-		cleanup = test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, false)
-	})
-
-	AfterEach(func() {
-		cleanup()
-	})
 
 	Describe("#computeKindTypesForBackupBuckets", func() {
 		It("should return empty results for empty input", func() {
@@ -547,7 +537,9 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 	})
 
 	Describe("#computeKindTypesForShoots", func() {
-		It("should correctly compute the result for a seed without DNS taint", func() {
+		It("should correctly compute the result for a seed without DNS taint if the feature gate is disabled", func() {
+			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, false)()
+
 			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seedWithShootDNSEnabled, controllerRegistrationList, internalDomain, nil)
 
 			Expect(kindTypes).To(Equal(sets.NewString(
@@ -574,6 +566,38 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				// internal domain + globally enabled extensions
 				extensionsv1alpha1.ExtensionResource+"/"+type10,
 				dnsv1alpha1.DNSProviderKind+"/"+type9,
+			)))
+		})
+
+		It("should correctly compute the result for a seed without DNS taint if the feature gate is enabled", func() {
+			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, true)()
+
+			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seedWithShootDNSEnabled, controllerRegistrationList, internalDomain, nil)
+
+			Expect(kindTypes).To(Equal(sets.NewString(
+				// seedWithShootDNSEnabled types
+				extensionsv1alpha1.BackupBucketResource+"/"+type8,
+				extensionsv1alpha1.BackupEntryResource+"/"+type8,
+				extensionsv1alpha1.ControlPlaneResource+"/"+type11,
+
+				// shoot2 types
+				extensionsv1alpha1.ControlPlaneResource+"/"+type2,
+				extensionsv1alpha1.InfrastructureResource+"/"+type2,
+				extensionsv1alpha1.WorkerResource+"/"+type2,
+				extensionsv1alpha1.OperatingSystemConfigResource+"/"+type5,
+				extensionsv1alpha1.NetworkResource+"/"+type3,
+				extensionsv1alpha1.ExtensionResource+"/"+type4,
+
+				// shoot3 types
+				extensionsv1alpha1.ControlPlaneResource+"/"+type6,
+				extensionsv1alpha1.InfrastructureResource+"/"+type6,
+				extensionsv1alpha1.WorkerResource+"/"+type6,
+				dnsv1alpha1.DNSProviderKind+"/"+type7,
+				extensionsv1alpha1.ContainerRuntimeResource+"/"+type12,
+
+				// internal domain + globally enabled extensions
+				extensionsv1alpha1.ExtensionResource+"/"+type10,
+				extensionsv1alpha1.DNSRecordResource+"/"+type9,
 			)))
 		})
 
@@ -663,7 +687,9 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 	Describe("#computeKindTypesForSeed", func() {
 		var providerType = "fake-provider-type"
 
-		It("should add the DNSProvider extension", func() {
+		It("should add the DNSProvider extension if the feature gate is disabled", func() {
+			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, false)()
+
 			seed := &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
 					DNS: gardencorev1beta1.SeedDNS{
@@ -675,6 +701,24 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 			}
 
 			expected := sets.NewString(extensions.Id(dnsv1alpha1.DNSProviderKind, providerType))
+			actual := computeKindTypesForSeed(seed)
+			Expect(actual).To(Equal(expected))
+		})
+
+		It("should add the DNSRecord extension if the feature gate is enabled", func() {
+			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, true)()
+
+			seed := &gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					DNS: gardencorev1beta1.SeedDNS{
+						Provider: &gardencorev1beta1.SeedDNSProvider{
+							Type: providerType,
+						},
+					},
+				},
+			}
+
+			expected := sets.NewString(extensions.Id(extensionsv1alpha1.DNSRecordResource, providerType))
 			actual := computeKindTypesForSeed(seed)
 			Expect(actual).To(Equal(expected))
 		})

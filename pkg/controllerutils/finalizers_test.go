@@ -238,6 +238,61 @@ var _ = Describe("Finalizers", func() {
 				test("should succeed if a conflict occurs", `["bar"]`, []string{"foo", "bar"}, "foo")
 			})
 		})
+
+		Describe("RemoveAllFinalizers", func() {
+			Context("no conflict", func() {
+				test := func(description string, expectedPatchFinalizers string, existingFinalizers []string) {
+					It(description+fmt.Sprintf(" %v", existingFinalizers), func() {
+						gomock.InOrder(
+							mockReader.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o client.Object) error {
+								o.SetFinalizers(append(existingFinalizers[:0:0], existingFinalizers...))
+								return nil
+							}),
+							mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+								Expect(patch.Type()).To(Equal(types.MergePatchType))
+								Expect(patch.Data(o)).To(BeEquivalentTo(expectedJSONPatch(expectedPatchFinalizers)))
+								return nil
+							}),
+						)
+
+						Expect(RemoveAllFinalizers(ctx, mockReader, mockWriter, obj)).To(Succeed())
+					})
+				}
+
+				test("should succeed if no conflict occurs", ``, nil)
+				test("should succeed if no conflict occurs", `null`, []string{"foo"})
+				test("should succeed if no conflict occurs", `null`, []string{"foo", "bar"})
+			})
+
+			Context("conflict", func() {
+				test := func(description string, expectedPatchFinalizers string, existingFinalizers []string) {
+					It(description+fmt.Sprintf(" %v", existingFinalizers), func() {
+						gomock.InOrder(
+							mockReader.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o client.Object) error {
+								o.SetFinalizers(append(existingFinalizers[:0:0], existingFinalizers...))
+								return nil
+							}),
+							mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).Return(apierrors.NewConflict(schema.GroupResource{}, obj.GetName(), fmt.Errorf("conflict"))),
+							mockReader.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, o client.Object) error {
+								o.SetFinalizers(append(existingFinalizers[:0:0], existingFinalizers...))
+								return nil
+							}),
+							mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+								Expect(patch.Type()).To(Equal(types.MergePatchType))
+								Expect(patch.Data(o)).To(BeEquivalentTo(expectedJSONPatch(expectedPatchFinalizers)))
+								return nil
+							}),
+						)
+
+						Expect(RemoveAllFinalizers(ctx, mockReader, mockWriter, obj)).To(Succeed())
+					})
+				}
+
+				test("should succeed if a conflict occurs", ``, nil)
+				test("should succeed if a conflict occurs", `null`, []string{"foo"})
+				test("should succeed if a conflict occurs", `null`, []string{"foo", "bar"})
+			})
+		})
 	})
 })
 

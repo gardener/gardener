@@ -167,13 +167,13 @@ func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 // DeployOrDestroyIngressDNSRecord deploys, restores, or destroys the ingress DNSRecord and waits for the operation to complete.
 func (b *Botanist) DeployOrDestroyIngressDNSRecord(ctx context.Context) error {
 	if b.NeedsIngressDNS() {
-		return b.DeployIngressDNSRecord(ctx)
+		return b.deployIngressDNSRecord(ctx)
 	}
 	return b.DestroyIngressDNSRecord(ctx)
 }
 
-// DeployIngressDNSRecord deploys or restores the ingress DNSRecord and waits for the operation to complete.
-func (b *Botanist) DeployIngressDNSRecord(ctx context.Context) error {
+// deployIngressDNSRecord deploys or restores the ingress DNSRecord and waits for the operation to complete.
+func (b *Botanist) deployIngressDNSRecord(ctx context.Context) error {
 	if err := b.deployOrRestoreDNSRecord(ctx, b.Shoot.Components.Extensions.IngressDNSRecord); err != nil {
 		return err
 	}

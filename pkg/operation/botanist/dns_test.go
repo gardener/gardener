@@ -64,8 +64,6 @@ var _ = Describe("dns", func() {
 		ctx                      context.Context
 
 		dnsEntryTTL int64 = 1234
-
-		cleanup func()
 	)
 
 	BeforeEach(func() {
@@ -82,6 +80,12 @@ var _ = Describe("dns", func() {
 				Shoot: &shoot.Shoot{
 					Info: &v1beta1.Shoot{
 						ObjectMeta: metav1.ObjectMeta{Namespace: shootNS},
+					},
+					Secret: &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "secret",
+							Namespace: shootNS,
+						},
 					},
 					SeedNamespace: seedNS,
 				},
@@ -108,12 +112,6 @@ var _ = Describe("dns", func() {
 			WithClient(seedClient).
 			WithChartApplier(chartApplier).
 			Build()
-
-		cleanup = test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, false)
-	})
-
-	AfterEach(func() {
-		cleanup()
 	})
 
 	Context("DefaultExternalDNSProvider", func() {
@@ -353,34 +351,38 @@ var _ = Describe("dns", func() {
 			Expect(ap).To(HaveLen(0))
 		})
 
-		It("should add providers", func() {
+		var providers = []v1beta1.DNSProvider{
+			{
+				Type:    pointer.String("primary"),
+				Primary: pointer.Bool(true),
+			},
+			{
+				Type: pointer.String("unmanaged"),
+			},
+			{
+				Type:       pointer.String("provider-one"),
+				SecretName: pointer.String("secret-one"),
+				Domains: &v1beta1.DNSIncludeExclude{
+					Include: []string{"domain-1-include"},
+					Exclude: []string{"domain-2-exclude"},
+				},
+				Zones: &v1beta1.DNSIncludeExclude{
+					Include: []string{"zone-1-include"},
+					Exclude: []string{"zone-1-exclude"},
+				},
+			},
+			{
+				Type:       pointer.String("provider-two"),
+				SecretName: pointer.String("secret-two"),
+			},
+		}
+
+		It("should add providers (with the feature gate disabled)", func() {
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, false)()
+
 			b.Shoot.DisableDNS = false
 			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{
-				Providers: []v1beta1.DNSProvider{
-					{
-						Type:    pointer.String("primary-skip"),
-						Primary: pointer.Bool(true),
-					},
-					{
-						Type: pointer.String("unmanaged"),
-					},
-					{
-						Type:       pointer.String("provider-one"),
-						SecretName: pointer.String("secret-one"),
-						Domains: &v1beta1.DNSIncludeExclude{
-							Include: []string{"domain-1-include"},
-							Exclude: []string{"domain-2-exclude"},
-						},
-						Zones: &v1beta1.DNSIncludeExclude{
-							Include: []string{"zone-1-include"},
-							Exclude: []string{"zone-1-exclude"},
-						},
-					},
-					{
-						Type:       pointer.String("provider-two"),
-						SecretName: pointer.String("secret-two"),
-					},
-				},
+				Providers: providers,
 			}
 
 			Expect(seedClient.Create(ctx, &dnsv1alpha1.DNSProvider{
@@ -422,6 +424,84 @@ var _ = Describe("dns", func() {
 				types.NamespacedName{Namespace: seedNS, Name: "to-remove"},
 				&dnsv1alpha1.DNSProvider{},
 			)).To(BeNotFoundError())
+
+			providerOne := &dnsv1alpha1.DNSProvider{}
+			Expect(seedClient.Get(
+				ctx,
+				types.NamespacedName{Namespace: seedNS, Name: "provider-one-secret-one"},
+				providerOne,
+			)).ToNot(HaveOccurred())
+
+			Expect(providerOne.Spec.Domains).To(Equal(&dnsv1alpha1.DNSSelection{
+				Include: []string{"domain-1-include"},
+				Exclude: []string{"domain-2-exclude"},
+			}))
+			Expect(providerOne.Spec.Zones).To(Equal(&dnsv1alpha1.DNSSelection{
+				Include: []string{"zone-1-include"},
+				Exclude: []string{"zone-1-exclude"},
+			}))
+
+			Expect(seedClient.Get(
+				ctx,
+				types.NamespacedName{Namespace: seedNS, Name: "provider-two-secret-two"},
+				&dnsv1alpha1.DNSProvider{},
+			)).ToNot(HaveOccurred())
+		})
+
+		It("should add providers (with the feature gate enabled)", func() {
+			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
+
+			b.Shoot.DisableDNS = false
+			b.Shoot.Info.Spec.DNS = &v1beta1.DNS{
+				Providers: providers,
+			}
+
+			Expect(seedClient.Create(ctx, &dnsv1alpha1.DNSProvider{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "to-remove",
+					Namespace: seedNS,
+					Labels: map[string]string{
+						"gardener.cloud/role": "managed-dns-provider",
+					},
+				},
+			})).ToNot(HaveOccurred())
+
+			secretOne := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "secret-one",
+					Namespace: shootNS,
+				},
+			}
+			secretTwo := secretOne.DeepCopy()
+			secretTwo.Name = "secret-two"
+
+			Expect(gardenClient.Create(ctx, secretOne)).NotTo(HaveOccurred())
+			Expect(gardenClient.Create(ctx, secretTwo)).NotTo(HaveOccurred())
+
+			ap, err := b.AdditionalDNSProviders(ctx)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ap).To(HaveLen(4))
+			Expect(ap).To(HaveKey("to-remove"))
+			Expect(ap).To(HaveKey("primary-secret"))
+			Expect(ap).To(HaveKey("provider-one-secret-one"))
+			Expect(ap).To(HaveKey("provider-two-secret-two"))
+
+			for k, p := range ap {
+				Expect(p.Deploy(ctx)).NotTo(HaveOccurred(), fmt.Sprintf("deploy of %s succeeds", k))
+			}
+
+			Expect(seedClient.Get(
+				ctx,
+				types.NamespacedName{Namespace: seedNS, Name: "to-remove"},
+				&dnsv1alpha1.DNSProvider{},
+			)).To(BeNotFoundError())
+
+			primaryProvider := &dnsv1alpha1.DNSProvider{}
+			Expect(seedClient.Get(
+				ctx,
+				types.NamespacedName{Namespace: seedNS, Name: "primary-secret"},
+				primaryProvider,
+			)).ToNot(HaveOccurred())
 
 			providerOne := &dnsv1alpha1.DNSProvider{}
 			Expect(seedClient.Get(

@@ -41,6 +41,15 @@ var _ = Describe("helper", func() {
 		}}, true),
 	)
 
+	DescribeTable("#GetDNSRecordType",
+		func(address string, expected extensionsv1alpha1.DNSRecordType) {
+			Expect(GetDNSRecordType(address)).To(Equal(expected))
+		},
+
+		Entry("valid IPv4 address", "1.2.3.4", extensionsv1alpha1.DNSRecordTypeA),
+		Entry("anything else", "foo", extensionsv1alpha1.DNSRecordTypeCNAME),
+	)
+
 	DescribeTable("#GetDNSRecordTTL",
 		func(ttl *int64, expected int64) {
 			Expect(GetDNSRecordTTL(ttl)).To(Equal(expected))

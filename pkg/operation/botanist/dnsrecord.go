@@ -77,7 +77,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 // DeployOrDestroyExternalDNSRecord deploys, restores, or destroys the external DNSRecord and waits for the operation to complete.
 func (b *Botanist) DeployOrDestroyExternalDNSRecord(ctx context.Context) error {
 	if b.NeedsExternalDNS() {
-		return b.DeployExternalDNSRecord(ctx)
+		return b.deployExternalDNSRecord(ctx)
 	}
 	return b.DestroyExternalDNSRecord(ctx)
 }
@@ -85,21 +85,21 @@ func (b *Botanist) DeployOrDestroyExternalDNSRecord(ctx context.Context) error {
 // DeployOrDestroyInternalDNSRecord deploys, restores, or destroys the internal DNSRecord and waits for the operation to complete.
 func (b *Botanist) DeployOrDestroyInternalDNSRecord(ctx context.Context) error {
 	if b.NeedsInternalDNS() {
-		return b.DeployInternalDNSRecord(ctx)
+		return b.deployInternalDNSRecord(ctx)
 	}
 	return b.DestroyInternalDNSRecord(ctx)
 }
 
-// DeployExternalDNSRecord deploys or restores the external DNSRecord and waits for the operation to complete.
-func (b *Botanist) DeployExternalDNSRecord(ctx context.Context) error {
+// deployExternalDNSRecord deploys or restores the external DNSRecord and waits for the operation to complete.
+func (b *Botanist) deployExternalDNSRecord(ctx context.Context) error {
 	if err := b.deployOrRestoreDNSRecord(ctx, b.Shoot.Components.Extensions.ExternalDNSRecord); err != nil {
 		return err
 	}
 	return b.Shoot.Components.Extensions.ExternalDNSRecord.Wait(ctx)
 }
 
-// DeployInternalDNSRecord deploys or restores the internal DNSRecord and waits for the operation to complete.
-func (b *Botanist) DeployInternalDNSRecord(ctx context.Context) error {
+// deployInternalDNSRecord deploys or restores the internal DNSRecord and waits for the operation to complete.
+func (b *Botanist) deployInternalDNSRecord(ctx context.Context) error {
 	if err := b.deployOrRestoreDNSRecord(ctx, b.Shoot.Components.Extensions.InternalDNSRecord); err != nil {
 		return err
 	}
