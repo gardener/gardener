@@ -47,6 +47,7 @@ endif
 #########################################
 
 $(YQ):
+	mkdir -p "$(TOOLS_BIN_DIR)"
 	curl -L -o "$(YQ)" https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_$(OS)_$(ARCH)
 	chmod +x "$(YQ)"
 

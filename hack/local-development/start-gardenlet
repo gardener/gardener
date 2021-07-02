@@ -76,7 +76,7 @@ echo "$seedConfig" | $YQ eval 'del(
 configFile="$DEV_DIR/20-componentconfig-gardenlet-seed-$SEED_NAME.yaml"
 
 if [ ! -f "$configFile" ]; then
-  cp "$DEV_DIR/20-componentconfig-gardenlet.yaml" "$configFile"
+  cp "$EXAMPLE_DIR/20-componentconfig-gardenlet.yaml" "$configFile"
 fi
 
 # update gardenlet config
