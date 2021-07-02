@@ -17,7 +17,9 @@
 source $(dirname "${0}")/common/helpers
 source $(dirname "${0}")/common/local-imagevector-overwrite
 
-REPO_ROOT=$(dirname $0)/../..
+REPO_ROOT=$(dirname "${0}")/../..
+DEV_DIR=$REPO_ROOT/dev
+EXAMPLE_DIR=$REPO_ROOT/example
 
 kubeconfig="$KUBECONFIG"
 
@@ -29,19 +31,90 @@ else
   trap cleanup_kubeconfig EXIT
 fi
 
+YQ="$REPO_ROOT/hack/tools/bin/yq"
+GARDEN_KUBECONFIG="${GARDEN_KUBECONFIG:-$kubeconfig}"
+
+# determine the seed to manage; if multiple seeds exist on the
+# garden, the SEED_NAME env variable must be set
+if [ -n "${SEED_NAME:-}" ]; then
+  seedConfig="$(kubectl --kubeconfig="$GARDEN_KUBECONFIG" get seed "$SEED_NAME" -o yaml)"
+else
+  seeds="$(kubectl --kubeconfig="$GARDEN_KUBECONFIG" get seeds -o yaml | $YQ eval '.items' -)"
+  case $(echo "$seeds" | $YQ eval 'length' -) in
+    0)
+      echo "No seed found in garden cluster."
+      exit 1
+      ;;
+    1)
+      seedConfig="$(echo "$seeds" | $YQ eval '.[0]' -)"
+      SEED_NAME="$(echo "$seedConfig" | $YQ eval '.metadata.name' -)"
+      ;;
+    *)
+      names="$(echo "$seeds" | $YQ eval --tojson --indent 0 '[.[].metadata.name]' -)"
+      echo "Multiple seeds exist in the garden, please specify \$SEED_NAME to select one of $names"
+      exit 1
+      ;;
+  esac
+fi
+
+# cleanup a bit to make the generated configuration file look a bit neater
+tmpFile="$DEV_DIR/seed-$SEED_NAME.yaml"
+echo "$seedConfig" | $YQ eval 'del(
+  .apiVersion,
+  .kind,
+  .status,
+  .metadata.annotations,
+  .metadata.managedFields,
+  .metadata.creationTimestamp,
+  .metadata.finalizers,
+  .metadata.generation,
+  .metadata.resourceVersion,
+  .metadata.uid
+)' - > "$tmpFile"
+
+# create seed-specific configuration file if it doesn't exist yet
+configFile="$DEV_DIR/20-componentconfig-gardenlet-seed-$SEED_NAME.yaml"
+
+if [ ! -f "$configFile" ]; then
+  cp "$EXAMPLE_DIR/20-componentconfig-gardenlet.yaml" "$configFile"
+fi
+
+# update gardenlet config
+$YQ eval-all --inplace 'select(fileIndex==0).seedConfig = select(fileIndex==1) | select(fileIndex==0)' "$configFile" "$tmpFile"
+
+# fetch seed kubeconfig
+if [ -z "${SEED_KUBECONFIG:-}" ]; then
+  seedKubeconfigName="$($YQ eval '.spec.secretRef.name' "$tmpFile")"
+  seedKubeconfigNamespace="$($YQ eval '.spec.secretRef.namespace' "$tmpFile")"
+  SEED_KUBECONFIG="$DEV_DIR/gardenlet-seed-$SEED_NAME.conf"
+
+  if [ -z "$seedKubeconfigName" ] || [ -z "$seedKubeconfigNamespace" ]; then
+    echo "Seed $SEED_NAME does not have a .spec.secretRef with name and namespace set, pointing to a Secret"
+    echo "containing the kubeconfig for that seed. Please either update your seed (see docs/development/local_setup.md)"
+    echo "or provide the kuebconfig explicitly via the SEED_KUBECONFIG environment variable."
+    exit 1
+  fi
+
+  kubectl --kubeconfig="$GARDEN_KUBECONFIG" --namespace "$seedKubeconfigNamespace" get secret "$seedKubeconfigName" -o yaml |
+    $YQ eval '.data.kubeconfig' - |
+    base64 -d > "$SEED_KUBECONFIG"
+fi
+
 file_imagevector_overwrite="$(mktemp_imagevector_overwrite github.com/gardener/gardener "$REPO_ROOT" "$REPO_ROOT"/charts)"
 if [ ! -f "$file_imagevector_overwrite" ]; then
-    echo "failed to generate local image vector override: $file_imagevector_overwrite"
+  echo "failed to generate local image vector override: $file_imagevector_overwrite"
 else
   trap cleanup_imagevector_overwrite EXIT
 
-  KUBECONFIG="$kubeconfig" \
-  GARDEN_KUBECONFIG="${GARDEN_KUBECONFIG:-$kubeconfig}" \
+  echo "Starting gardenlet for seed $SEED_NAME..."
+
+  KUBECONFIG="$SEED_KUBECONFIG" \
+  GARDEN_KUBECONFIG="$GARDEN_KUBECONFIG" \
   IMAGEVECTOR_OVERWRITE="$file_imagevector_overwrite" \
   GO111MODULE=on \
       go run \
         -mod=vendor \
         -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
-        "$(dirname $0)"/../../cmd/gardenlet/main.go \
-        --config="$(dirname $0)"/../../dev/20-componentconfig-gardenlet.yaml
+        "$REPO_ROOT/cmd/gardenlet/main.go" \
+        --config="$configFile"
 fi
