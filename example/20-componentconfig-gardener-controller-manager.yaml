@@ -74,3 +74,4 @@ server:
     port: 2718
 featureGates:
   CachedRuntimeClients: true
+  UseDNSRecords: false

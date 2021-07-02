@@ -97,6 +97,7 @@ featureGates:
   MountHostCADirectories: true
   SeedKubeScheduler: false
   ReversedVPN: false
+  UseDNSRecords: false
 # seedConfig:
 #   metadata:
 #     name: my-seed
