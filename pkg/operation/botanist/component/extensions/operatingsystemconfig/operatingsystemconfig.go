@@ -600,7 +600,7 @@ func Key(workerName string, kubernetesVersion *semver.Version, criConfig *garden
 	kubernetesMajorMinorVersion := fmt.Sprintf("%d.%d", kubernetesVersion.Major(), kubernetesVersion.Minor())
 
 	var criName gardencorev1beta1.CRIName
-	if criConfig != nil {
+	if criConfig != nil && criConfig.Name != gardencorev1beta1.CRINameDocker {
 		criName = criConfig.Name
 	}
 	return fmt.Sprintf("cloud-config-%s-%s", workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion + string(criName)))[:5])
