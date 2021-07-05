@@ -39,6 +39,13 @@ It validates that the respective resource is annotated with a deletion confirmat
 Only if this annotation is present it allows the `DELETE` operation to pass.
 This prevents users from accidental/undesired deletions.
 
+## `ExposureClass`
+
+_(enabled by default)_
+
+This admission controller reacts on `Create` operations for `Shoots`s.
+It mutates `Shoot` resources which has an `ExposureClass` referenced by merging their both `shootSelectors` and/or `tolerations` into the `Shoot` resource.
+
 ## `ExtensionValidator`
 
 _(enabled by default)_
