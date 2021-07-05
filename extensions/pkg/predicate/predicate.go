@@ -58,6 +58,11 @@ type shootNotFailedMapper struct {
 }
 
 func (s *shootNotFailedMapper) Map(e event.GenericEvent) bool {
+	// Return true for resources in the garden namespace, as they are not associated with a shoot
+	if e.Object.GetNamespace() == v1beta1constants.GardenNamespace {
+		return true
+	}
+
 	// Wait for cache sync because of backing client cache.
 	if !s.Cache.WaitForCacheSync(s.Context) {
 		err := errors.New("failed to wait for caches to sync")
