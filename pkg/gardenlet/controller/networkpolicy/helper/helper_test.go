@@ -20,7 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	. "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/helper"
+	. "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 

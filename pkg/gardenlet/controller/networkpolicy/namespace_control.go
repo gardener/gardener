@@ -19,8 +19,8 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/hostnameresolver"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
@@ -36,7 +36,7 @@ import (
 
 // namespaceReconciler implements the reconcile.Reconcile interface for namespace reconciliation.
 type namespaceReconciler struct {
-	log                    *logrus.Entry
+	log                    *logrus.Logger
 	seedClient             client.Client
 	seedName               string
 	endpointsLister        kubecorev1listers.EndpointsLister
@@ -46,7 +46,7 @@ type namespaceReconciler struct {
 
 // newNamespaceReconciler returns the new namespace reconciler.
 func newNamespaceReconciler(
-	seedLogger *logrus.Entry,
+	seedLogger *logrus.Logger,
 	seedClient client.Client,
 	endpointsLister kubecorev1listers.EndpointsLister,
 	seedName string,
