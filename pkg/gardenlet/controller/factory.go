@@ -37,8 +37,8 @@ import (
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	controllerinstallationcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
-	federatedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed"
 	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
+	networkpolicycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/shoot"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -156,10 +156,15 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	federatedSeedController, err := federatedseedcontroller.NewFederatedSeedController(ctx, f.clientMap, f.cfg, f.recorder)
+	networkpolicyController, err := networkpolicycontroller.NewController(ctx, f.clientMap, logger.Logger, f.recorder, f.cfg.SeedConfig.Name)
 	if err != nil {
-		return fmt.Errorf("failed initializing federated seed controller: %w", err)
+		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
+
+	// federatedSeedController, err := federatedseedcontroller.NewFederatedSeedController(ctx, f.clientMap, f.cfg, f.recorder)
+	// if err != nil {
+	// 	return fmt.Errorf("failed initializing federated seed controller: %w", err)
+	// }
 
 	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, f.clientMap, f.cfg, imageVector, f.recorder, logger.Logger)
 	if err != nil {
@@ -177,9 +182,11 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		seedController,
 		shootController,
 		managedSeedController,
+		// networkpolicyController,
 	)
 
-	go federatedSeedController.Run(ctx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
+	// go federatedSeedController.Run(ctx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
+	go networkpolicyController.Run(ctx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go backupBucketController.Run(ctx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
 	go backupEntryController.Run(ctx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs)
 	go bastionController.Run(ctx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)

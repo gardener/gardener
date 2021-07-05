@@ -21,10 +21,11 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/hostnameresolver"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -43,7 +44,7 @@ import (
 // to keep the NetworkPolicy "allow-to-seed-apiserver" in sync.
 type Controller struct {
 	ctx                     context.Context
-	log                     *logrus.Entry
+	log                     *logrus.Logger
 	recorder                record.EventRecorder
 	seedClient              client.Client
 	namespaceReconciler     reconcile.Reconciler
@@ -58,8 +59,18 @@ type Controller struct {
 	waitGroup               sync.WaitGroup
 }
 
-// NewController instantiates a new controller.
-func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDefaultNamespaceKubeInformer kubeinformers.SharedInformerFactory, seedLogger *logrus.Entry, recorder record.EventRecorder, seedName string) (*Controller, error) {
+// NewController instantiates a new networkpolicy controller.
+func NewController(ctx context.Context, clientMap clientmap.ClientMap, logger *logrus.Logger, recorder record.EventRecorder, seedName string) (*Controller, error) {
+	seedClient, err := clientMap.GetClient(ctx, keys.ForSeedWithName(seedName))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	// if another controller also needs to work with endpoint resources in the Seed cluster, consider replacing this informer factory with a reusable informer factory.
+	// if this informer factory is not bound to the default namespace, make sure that the endpoint event handlers FilterFunc() also filters for the default namespace.
+	seedDefaultNamespaceKubeInformer := kubeinformers.NewSharedInformerFactoryWithOptions(seedClient.Kubernetes(), 0, kubeinformers.WithNamespace(corev1.NamespaceDefault))
+	endpointsInformer := seedDefaultNamespaceKubeInformer.Core().V1().Endpoints()
+
 	networkPoliciesInformer, err := seedClient.Cache().GetInformer(ctx, &networkingv1.NetworkPolicy{})
 	if err != nil {
 		return nil, err
@@ -69,15 +80,10 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 		return nil, err
 	}
 
-	provider, err := hostnameresolver.CreateForCluster(seedClient, seedLogger)
+	provider, err := hostnameresolver.CreateForCluster(seedClient, logger)
 	if err != nil {
 		return nil, err
 	}
-
-	var (
-		endpointsInformer = seedDefaultNamespaceKubeInformer.Core().V1().Endpoints()
-		namespaceQueue    = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "namespace")
-	)
 
 	shootNamespaceSelector := labels.SelectorFromSet(labels.Set{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
@@ -85,9 +91,9 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 
 	controller := &Controller{
 		ctx: ctx,
-		log: seedLogger,
+		log: logger,
 		namespaceReconciler: newNamespaceReconciler(
-			seedLogger,
+			logger,
 			seedClient.Client(),
 			endpointsInformer.Lister(),
 			seedName,
@@ -99,7 +105,7 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 		endpointsInformer:       endpointsInformer.Informer(),
 		namespaceInformer:       namespaceInformer,
 		networkPoliciesInformer: networkPoliciesInformer,
-		namespaceQueue:          namespaceQueue,
+		namespaceQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "namespace"),
 		shootNamespaceSelector:  shootNamespaceSelector,
 		workerCh:                make(chan int),
 		hostnameProvider:        provider,
