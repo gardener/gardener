@@ -26,7 +26,6 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -75,7 +74,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -909,10 +907,6 @@ func runCreateSeedFlow(
 		return err
 	}
 
-	if err := createOrUpdateClusterResource(ctx, sc.Client()); err != nil {
-		return err
-	}
-
 	// setup for flow graph
 	var ingressLoadBalancerAddress string
 	if managedIngress(seed) {
@@ -1115,10 +1109,6 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 		return flow.Errors(err)
 	}
 
-	if err := deleteClusterResource(ctx, sc.Client()); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -1267,49 +1257,6 @@ func emptyDNSProviderSecret() *corev1.Secret {
 			Name:      "dnsprovider-seed",
 		},
 	}
-}
-
-// createOrUpdateClusterResource creates a "fake" cluster resource to allow DNSRecord resources in the garden
-// namespace to be reconciled by an extension controller that adheres to the usual contract and therefore requires
-// a cluster resource.
-// TODO This is considered a hack and should be removed in the future. We should rather make the contract between
-// gardenlet and extension controllers for reconciling resources related to the seed more explicit, e.g. by not
-// requiring a cluster resources for extension resources in the garden namespace.
-func createOrUpdateClusterResource(ctx context.Context, seedClient client.Client) error {
-	cluster := &extensionsv1alpha1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: v1beta1constants.GardenNamespace,
-		},
-	}
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, cluster, func() error {
-		cluster.Spec.CloudProfile = runtime.RawExtension{
-			Object: &gardencorev1beta1.CloudProfile{},
-		}
-		cluster.Spec.Seed = runtime.RawExtension{
-			Object: &gardencorev1beta1.Seed{},
-		}
-		cluster.Spec.Shoot = runtime.RawExtension{
-			Object: &gardencorev1beta1.Shoot{
-				Status: gardencorev1beta1.ShootStatus{
-					LastOperation: &gardencorev1beta1.LastOperation{
-						State: gardencorev1beta1.LastOperationStateSucceeded,
-					},
-				},
-			},
-		}
-		return nil
-	})
-	return err
-}
-
-// deleteClusterResource deletes the previously created "fake" cluster resource.
-func deleteClusterResource(ctx context.Context, seedClient client.Client) error {
-	cluster := &extensionsv1alpha1.Cluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: v1beta1constants.GardenNamespace,
-		},
-	}
-	return client.IgnoreNotFound(seedClient.Delete(ctx, cluster))
 }
 
 func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *Seed) (map[string][]byte, error) {
