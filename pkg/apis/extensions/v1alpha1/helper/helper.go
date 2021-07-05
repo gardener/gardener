@@ -26,3 +26,11 @@ func ClusterAutoscalerRequired(pools []extensionsv1alpha1.WorkerPool) bool {
 	}
 	return false
 }
+
+// GetDNSRecordTTL returns the value of the given ttl, or 120 if nil.
+func GetDNSRecordTTL(ttl *int64) int64 {
+	if ttl != nil {
+		return *ttl
+	}
+	return 120
+}

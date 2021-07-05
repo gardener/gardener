@@ -36,6 +36,8 @@ type Interface interface {
 	ContainerRuntimes() ContainerRuntimeInformer
 	// ControlPlanes returns a ControlPlaneInformer.
 	ControlPlanes() ControlPlaneInformer
+	// DNSRecords returns a DNSRecordInformer.
+	DNSRecords() DNSRecordInformer
 	// Extensions returns a ExtensionInformer.
 	Extensions() ExtensionInformer
 	// Infrastructures returns a InfrastructureInformer.
@@ -87,6 +89,11 @@ func (v *version) ContainerRuntimes() ContainerRuntimeInformer {
 // ControlPlanes returns a ControlPlaneInformer.
 func (v *version) ControlPlanes() ControlPlaneInformer {
 	return &controlPlaneInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// DNSRecords returns a DNSRecordInformer.
+func (v *version) DNSRecords() DNSRecordInformer {
+	return &dNSRecordInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Extensions returns a ExtensionInformer.
