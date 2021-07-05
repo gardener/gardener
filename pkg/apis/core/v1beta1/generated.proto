@@ -225,7 +225,7 @@ message BackupEntryStatus {
 
 // CRI contains information about the Container Runtimes.
 message CRI {
-  // The name of the CRI library
+  // The name of the CRI library. Supported values are `docker` and `containerd`.
   optional string name = 1;
 
   // ContainerRuntimes is the list of the required container runtimes supported for a worker pool.
