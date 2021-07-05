@@ -46,13 +46,13 @@ import (
 type ShootStateControl struct {
 	k8sGardenClient kubernetes.Interface
 	seedClient      kubernetes.Interface
-	log             *logrus.Entry
+	log             *logrus.Logger
 	recorder        record.EventRecorder
 	decoder         runtime.Decoder
 }
 
 // NewShootStateControl creates a new instance of ShootStateControl.
-func NewShootStateControl(k8sGardenClient, seedClient kubernetes.Interface, log *logrus.Entry, recorder record.EventRecorder) *ShootStateControl {
+func NewShootStateControl(k8sGardenClient, seedClient kubernetes.Interface, log *logrus.Logger, recorder record.EventRecorder) *ShootStateControl {
 	return &ShootStateControl{
 		k8sGardenClient: k8sGardenClient,
 		seedClient:      seedClient,

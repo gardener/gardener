@@ -37,6 +37,7 @@ import (
 	backupentrycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupentry"
 	bastioncontroller "github.com/gardener/gardener/pkg/gardenlet/controller/bastion"
 	controllerinstallationcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/controllerinstallation"
+	extensionscontroller "github.com/gardener/gardener/pkg/gardenlet/controller/extensions"
 	managedseedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/managedseed"
 	networkpolicycontroller "github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy"
 	seedcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/seed"
@@ -135,6 +136,11 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	// Initialize the workqueue metrics collection.
 	gardenmetrics.RegisterWorkqueMetrics()
 
+	seedClient, err := f.clientMap.GetClient(ctx, keys.ForSeedWithName(f.cfg.SeedConfig.Name))
+	if err != nil {
+		return fmt.Errorf("failed to get seed client: %w", err)
+	}
+
 	var (
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace, f.gardenClusterIdentity)
 		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.healthManager, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
@@ -161,10 +167,10 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
 
-	// federatedSeedController, err := federatedseedcontroller.NewFederatedSeedController(ctx, f.clientMap, f.cfg, f.recorder)
-	// if err != nil {
-	// 	return fmt.Errorf("failed initializing federated seed controller: %w", err)
-	// }
+	extensionsController, err := extensionscontroller.NewController(ctx, k8sGardenClient, seedClient, f.cfg.SeedConfig.Name, logger.Logger, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
+	}
 
 	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, f.clientMap, f.cfg, imageVector, f.recorder, logger.Logger)
 	if err != nil {
@@ -182,11 +188,12 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		seedController,
 		shootController,
 		managedSeedController,
-		// networkpolicyController,
+		networkpolicyController,
+		extensionsController,
 	)
 
-	// go federatedSeedController.Run(ctx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go networkpolicyController.Run(ctx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
+	go extensionsController.Run(ctx, *f.cfg.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *f.cfg.Controllers.ShootStateSync.ConcurrentSyncs)
 	go backupBucketController.Run(ctx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
 	go backupEntryController.Run(ctx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs)
 	go bastionController.Run(ctx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)
