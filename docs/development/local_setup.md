@@ -427,15 +427,14 @@ The [Known Extension Implementations](../../extensions/README.md#known-extension
 * at least one operating system extension
 * at least one network plugin extension
 
-As a convention, example ControllerRegistration manifest for an extension is located under `example/controller-registration.yaml` in the corresponding repository (for example for AWS the ControllerRegistration can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/controller-registration.yaml)). An example creation of ControllerRegistration for provider-aws (make sure to replace `<version>` with the newest released version tag):
+As a convention, the example ControllerRegistration manifest for an extension is located under `example/controller-registration.yaml` in the corresponding repository (for example for AWS the ControllerRegistration can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/controller-registration.yaml)). An example creation of ControllerRegistration for provider-aws (make sure to replace `<version>` with the newest released version tag):
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-aws/<version>/example/controller-registration.yaml
 ```
 
-Please checkout the [Gardener Extensions Manager](https://github.com/gardener/gem) to install extension controllers - make sure that you install all of them required for your local development.
+Instead of updating extensions manually you can use [Gardener Extensions Manager](https://github.com/gardener/gem) to install and update extension controllers. This is especially useful if you want to keep and maintain your development setup for a longer time.
 Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
-
 
 ## Register a Seed
 
