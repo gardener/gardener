@@ -371,9 +371,6 @@ time="2019-05-02T16:31:50+02:00" level=info msg="Scheduler controller initialize
 [...]
 ```
 
-Please checkout the [Gardener Extensions Manager](https://github.com/gardener/gem) to install extension controllers - make sure that you install all of them required for your local development.
-Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
-
 The Gardener should now be ready to operate on Shoot resources. You can use
 
 ```bash
@@ -422,14 +419,23 @@ The `CloudProfile` resource is provider specific and describes the underlying cl
 kubectl apply -f dev/30-cloudprofile.yaml
 ```
 
-## Create the required ControllerRegistrations
+## Install necessary Gardener Extensions
 
-The [Known Extension Implementations](../../extensions/README.md#known-extension-implementations) section contains a list of available extension implementations. You need to create a ControllerRegistration for at least one infrastructure provider, dns provider (if the DNS for the Seed is not disabled), at least one operating system extension and at least one network plugin extension.
+The [Known Extension Implementations](../../extensions/README.md#known-extension-implementations) section contains a list of available extension implementations. You need to create a ControllerRegistration for 
+* at least one infrastructure provider
+* a dns provider (if the DNS for the Seed is not disabled),
+* at least one operating system extension
+* at least one network plugin extension
+
 As a convention, example ControllerRegistration manifest for an extension is located under `example/controller-registration.yaml` in the corresponding repository (for example for AWS the ControllerRegistration can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/controller-registration.yaml)). An example creation of ControllerRegistration for provider-aws:
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-aws/master/example/controller-registration.yaml
 ```
+
+Please checkout the [Gardener Extensions Manager](https://github.com/gardener/gem) to install extension controllers - make sure that you install all of them required for your local development.
+Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
+
 
 ## Register a Seed
 
