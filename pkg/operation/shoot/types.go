@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
@@ -76,7 +75,6 @@ type Shoot struct {
 	WantsAlertmanager          bool
 	IgnoreAlerts               bool
 	HibernationEnabled         bool
-	KonnectivityTunnelEnabled  bool
 	ReversedVPNEnabled         bool
 	NodeLocalDNSEnabled        bool
 	Networks                   *Networks
@@ -106,7 +104,6 @@ type ControlPlane struct {
 	KubeControllerManager kubecontrollermanager.Interface
 	ClusterAutoscaler     clusterautoscaler.Interface
 	ResourceManager       resourcemanager.Interface
-	KonnectivityServer    konnectivity.Interface
 	VPNSeedServer         vpnseedserver.Interface
 }
 

@@ -32,16 +32,9 @@ data:
 {{ toString $bytes | indent 4}}
 {{ end }}
 {{ range $name, $bytes := .Files.Glob "dashboards/operators/**.json" }}
-  {{ if eq $name "dashboards/operators/vpn-dashboard.json" }}
-  {{ if not $.Values.konnectivityTunnel.enabled }}
   {{ base $name }}: |-
 {{ toString $bytes | indent 4}}
   {{ end }}
-  {{ else }}
-  {{ base $name }}: |-
-{{ toString $bytes | indent 4}}
-  {{ end }}
-{{ end }}
 {{ end }}
 {{- if .Values.extensions.dashboards }}
 {{- toString .Values.extensions.dashboards | indent 2 }}

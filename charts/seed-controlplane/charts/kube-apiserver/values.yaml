@@ -2,13 +2,6 @@ replicas: 1
 kubernetesVersion: 1.15.2
 priorityClassName: foo
 securePort: 443
-konnectivityTunnel:
-  enabled: false
-  serverPort: 0
-  agentPort: 8132
-  adminPort: 8133
-  healthPort: 8134
-  agentNamespace: kube-system
 probeCredentials: base64(user:pass)
 shootNetworks:
   services: 10.0.1.0/24
@@ -62,7 +55,6 @@ admissionPlugins:
 images:
   kube-apiserver: image-repository
   vpn-seed: image-repository:image-tag
-  konnectivity-server: image-repository:image-tag
   apiserver-proxy-pod-webhook: image-repository:image-tag
 
 blackboxExporterPort: 9115
@@ -83,14 +75,6 @@ apiServerResources:
   limits:
     cpu: 800m
     memory: 900M
-
-konnectivityTunnelResources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 500M
 
 podMutatorResources:
   requests:

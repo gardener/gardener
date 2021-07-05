@@ -481,7 +481,7 @@ data:
         action: drop
 {{- end }}
 
-    # Fetch logs of the tunnel pod (vpn-shoot or konnectivity-agent) via the kube-apiserver, which requires a functional tunnel connection.
+    # Fetch logs of the tunnel pod (vpn-shoot) via the kube-apiserver, which requires a functional tunnel connection.
     - job_name: tunnel-probe-apiserver-proxy
       honor_labels: false
       metrics_path: /probe
@@ -498,15 +498,9 @@ data:
       relabel_configs:
       - target_label: type
         replacement: seed
-    {{- if .Values.konnectivityTunnel.enabled }}
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        action: keep
-        regex: konnectivity-agent-(.+)
-    {{- else }}
       - source_labels: [ __meta_kubernetes_pod_name ]
         action: keep
         regex: vpn-shoot-(.+)
-    {{- end }}
       - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: __param_target
         regex: (.+)

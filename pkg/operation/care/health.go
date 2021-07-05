@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -319,12 +318,7 @@ func (h *Health) checkSystemComponents(
 		return &c, nil
 	}
 
-	tunnelName := common.VPNTunnel
-	if podsList.Items[0].Labels["app"] == konnectivity.AgentName {
-		tunnelName = konnectivity.AgentName
-	}
-
-	if established, err := botanist.CheckTunnelConnection(ctx, h.shootClient, logrus.NewEntry(logger.NewNopLogger()), tunnelName); err != nil || !established {
+	if established, err := botanist.CheckTunnelConnection(ctx, h.shootClient, logrus.NewEntry(logger.NewNopLogger()), common.VPNTunnel); err != nil || !established {
 		msg := "Tunnel connection has not been established"
 		if err != nil {
 			msg += fmt.Sprintf(" (%+v)", err)

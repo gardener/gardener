@@ -15,11 +15,6 @@ apiserver-proxy:
     port: 8443
 coredns:
   enabled: true
-konnectivity-agent:
-  enabled: false
-  podAnnotations: {}
-  images:
-    konnectivity-agent: image-repository:image-tag
 kube-apiserver-kubelet:
   enabled: true
 kube-proxy:

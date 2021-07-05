@@ -149,8 +149,7 @@ var _ = Describe("VPNSeedServer", func() {
 						VPNSeedServer: vpnSeedServer,
 					},
 				},
-				KonnectivityTunnelEnabled: false,
-				ReversedVPNEnabled:        true,
+				ReversedVPNEnabled: true,
 			}
 			botanist.Config = &config.GardenletConfiguration{
 				SNI: &config.SNI{

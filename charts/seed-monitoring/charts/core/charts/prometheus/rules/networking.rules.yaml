@@ -12,9 +12,3 @@ groups:
 
   - record: shoot:container_network_receive_bytes_total_vpn:sum
     expr: sum(rate(container_network_receive_bytes_total{pod=~"vpn-shoot(.+)"}[10m]))
-
-  - record: shoot:container_network_transmit_bytes_total_konnectivity:sum
-    expr: sum(rate(container_network_transmit_bytes_total{pod=~"konnectivity-agent(.+)"}[10m]))
-
-  - record: shoot:container_network_receive_bytes_total_konnectivity:sum
-    expr: sum(rate(container_network_receive_bytes_total{pod=~"konnectivity-agent(.+)"}[10m]))

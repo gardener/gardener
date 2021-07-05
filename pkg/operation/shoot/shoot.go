@@ -256,20 +256,11 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.GardenerVersion = gardenerVersion
 
 	kubernetesVersionGeq118 := versionConstraintK8sGreaterEqual118.Check(kubernetesVersion)
-	shoot.KonnectivityTunnelEnabled = gardenletfeatures.FeatureGate.Enabled(features.KonnectivityTunnel) && kubernetesVersionGeq118
-	if konnectivityTunnelEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationShootKonnectivityTunnel]); err == nil && kubernetesVersionGeq118 {
-		shoot.KonnectivityTunnelEnabled = konnectivityTunnelEnabled
-	}
-
 	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN) && kubernetesVersionGeq118
 	if reversedVPNEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil && kubernetesVersionGeq118 {
 		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 			shoot.ReversedVPNEnabled = reversedVPNEnabled
 		}
-	}
-
-	if shoot.ReversedVPNEnabled {
-		shoot.KonnectivityTunnelEnabled = false
 	}
 
 	needsClusterAutoscaler, err := gardencorev1beta1helper.ShootWantsClusterAutoscaler(shootObject)

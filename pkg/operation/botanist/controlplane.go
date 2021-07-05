@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/gardener/gardener/charts"
@@ -34,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -447,7 +445,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"checksum/secret-etcd-ca":                b.CheckSums[etcd.SecretNameCA],
 			"checksum/secret-etcd-client-tls":        b.CheckSums[etcd.SecretNameClient],
 			"checksum/secret-etcd-encryption":        b.CheckSums[common.EtcdEncryptionSecretName],
-			"networkpolicy/konnectivity-enabled":     strconv.FormatBool(b.Shoot.KonnectivityTunnelEnabled),
 		}
 		defaultValues = map[string]interface{}{
 			"minReplicas":               minReplicas,
@@ -460,11 +457,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"securePort":                443,
 			"enableEtcdEncryption":      true,
 			"podAnnotations":            podAnnotations,
-			"konnectivityTunnel": map[string]interface{}{
-				"enabled":    b.Shoot.KonnectivityTunnelEnabled,
-				"name":       konnectivity.ServerName,
-				"serverPort": konnectivity.ServerHTTPSPort,
-			},
 			"reversedVPN": map[string]interface{}{
 				"enabled": b.Shoot.ReversedVPNEnabled,
 			},
@@ -484,13 +476,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		}
 	)
 
-	if b.Shoot.KonnectivityTunnelEnabled {
-		if b.APIServerSNIEnabled() {
-			podAnnotations["checksum/secret-"+konnectivity.SecretNameServerTLSClient] = b.CheckSums[konnectivity.SecretNameServerTLSClient]
-		} else {
-			podAnnotations["checksum/secret-konnectivity-server"] = b.CheckSums[konnectivity.ServerName]
-		}
-	} else if b.Shoot.ReversedVPNEnabled {
+	if b.Shoot.ReversedVPNEnabled {
 		podAnnotations["checksum/secret-"+vpnseedserver.VpnSeedServerTLSAuth] = b.CheckSums[vpnseedserver.VpnSeedServerTLSAuth]
 	} else {
 		podAnnotations["checksum/secret-vpn-seed"] = b.CheckSums["vpn-seed"]
@@ -672,13 +658,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		"enabled": mountHostCADirectories,
 	}
 
-	tunnelComponentImageName := charts.ImageNameVpnSeed
-	if b.Shoot.KonnectivityTunnelEnabled {
-		tunnelComponentImageName = charts.ImageNameKonnectivityServer
-	}
-
 	values, err := b.InjectSeedShootImages(defaultValues,
-		tunnelComponentImageName,
+		charts.ImageNameVpnSeed,
 		charts.ImageNameKubeApiserver,
 		charts.ImageNameAlpineIptables,
 		charts.ImageNameApiserverProxyPodWebhook,
@@ -752,9 +733,8 @@ func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.Dep
 		b.Logger,
 		b.K8sSeedClient.Client(),
 		&kubeapiserverexposure.ServiceValues{
-			Annotations:               b.getKubeApiServerServiceAnnotations(sniPhase),
-			KonnectivityTunnelEnabled: b.Shoot.KonnectivityTunnelEnabled,
-			SNIPhase:                  sniPhase,
+			Annotations: b.getKubeApiServerServiceAnnotations(sniPhase),
+			SNIPhase:    sniPhase,
 		},
 		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
 		client.ObjectKey{Name: *b.Config.SNI.Ingress.ServiceName, Namespace: *b.Config.SNI.Ingress.Namespace},

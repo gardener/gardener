@@ -21,7 +21,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	istio "github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	protobuftypes "github.com/gogo/protobuf/types"
 	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
@@ -42,6 +41,8 @@ import (
 )
 
 const (
+	// GatewayPort is the port exposed by the istio ingress gateway
+	GatewayPort = 8132
 	// VpnSeedServerTLSAuth is the name of seed server tlsauth Secret.
 	VpnSeedServerTLSAuth = "vpn-seed-server-tlsauth"
 	// vpnSeedServerDH is the name of seed server DH Secret.
@@ -462,7 +463,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 					Hosts: []string{*v.kubeAPIServerHost},
 					Port: &istionetworkingv1beta1.Port{
 						Name:     "tls-tunnel",
-						Number:   istio.GatewayPort,
+						Number:   GatewayPort,
 						Protocol: "HTTP",
 					},
 				},
@@ -605,8 +606,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 					Context: istionetworkingv1alpha3.EnvoyFilter_GATEWAY,
 					ObjectTypes: &istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
 						Listener: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch{
-							Name:       fmt.Sprintf("0.0.0.0_%d", istio.GatewayPort),
-							PortNumber: istio.GatewayPort,
+							Name:       fmt.Sprintf("0.0.0.0_%d", GatewayPort),
+							PortNumber: GatewayPort,
 							FilterChain: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterChainMatch{
 								Filter: &istionetworkingv1alpha3.EnvoyFilter_ListenerMatch_FilterMatch{
 									Name: "envoy.filters.network.http_connection_manager",
@@ -656,7 +657,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 																										Values: []*protobuftypes.Value{
 																											{
 																												Kind: &protobuftypes.Value_StringValue{
-																													StringValue: fmt.Sprintf("%s:%d", *v.kubeAPIServerHost, istio.GatewayPort),
+																													StringValue: fmt.Sprintf("%s:%d", *v.kubeAPIServerHost, GatewayPort),
 																												},
 																											},
 																										},

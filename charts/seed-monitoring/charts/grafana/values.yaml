@@ -22,9 +22,6 @@ extensions:
   - PodPrefix: example-pod
     IsExposedToUser: true
 
-konnectivityTunnel:
-  enabled: false
-
 sni:
   enabled: false
 

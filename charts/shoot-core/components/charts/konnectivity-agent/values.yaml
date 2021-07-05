@@ -1,4 +1,0 @@
-images:
-  konnectivity-agent: image-repository:image-tag
-
-proxyHost: api.my-shoot.dev.internal.dev.k8s.ondemand.com

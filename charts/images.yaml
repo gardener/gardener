@@ -90,10 +90,6 @@ images:
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed-server
   tag: "0.4.0"
-- name: konnectivity-server
-  sourceRepository: github.com/gardener/replica-reloader
-  repository: eu.gcr.io/gardener-project/gardener/replica-reloader
-  tag: "v0.2.0-konnectivity-server-v0.0.15"
 
 # Monitoring
 - name: alertmanager
@@ -138,10 +134,6 @@ images:
   sourceRepository: github.com/gardener/vpn2
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot-client
   tag: "0.4.0"
-- name: konnectivity-agent
-  sourceRepository: github.com/kubernetes-sigs/apiserver-network-proxy
-  repository: k8s.gcr.io/kas-network-proxy/proxy-agent
-  tag: "v0.0.15"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns

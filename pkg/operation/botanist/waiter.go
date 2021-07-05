@@ -22,7 +22,6 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/konnectivity"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -151,26 +150,20 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 	return nil
 }
 
-// WaitUntilTunnelConnectionExists waits until a port forward connection to the tunnel pod (vpn-shoot or konnectivity-agent) in the kube-system
+// WaitUntilTunnelConnectionExists waits until a port forward connection to the tunnel pod (vpn-shoot) in the kube-system
 // namespace of the Shoot cluster can be established.
 func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
-	tunnelName := common.VPNTunnel
-	if b.Shoot.KonnectivityTunnelEnabled {
-		tunnelName = konnectivity.AgentName
-	}
-
 	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 
 	return retry.Until(timeoutCtx, 5*time.Second, func(ctx context.Context) (bool, error) {
-		done, err := CheckTunnelConnection(ctx, b.K8sShootClient, b.Logger, tunnelName)
+		done, err := CheckTunnelConnection(ctx, b.K8sShootClient, b.Logger, common.VPNTunnel)
 
 		// If the tunnel connection check failed but is not yet "done" (i.e., will be retried, hence, it didn't fail
 		// with a severe error), and if the classic VPN solution is used for the shoot cluster then let's try to fetch
 		// the last events of the vpn-shoot service (potentially indicating an error with the load balancer service).
 		if err != nil &&
 			!done &&
-			!b.Shoot.KonnectivityTunnelEnabled &&
 			!b.Shoot.ReversedVPNEnabled {
 
 			b.Logger.Errorf("error %v occurred while checking the tunnel connection", err)

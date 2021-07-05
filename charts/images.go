@@ -67,10 +67,6 @@ const (
 	ImageNameIstioIstiod = "istio-istiod"
 	// ImageNameIstioProxy is a constant for an image in the image vector with name 'istio-proxy'.
 	ImageNameIstioProxy = "istio-proxy"
-	// ImageNameKonnectivityAgent is a constant for an image in the image vector with name 'konnectivity-agent'.
-	ImageNameKonnectivityAgent = "konnectivity-agent"
-	// ImageNameKonnectivityServer is a constant for an image in the image vector with name 'konnectivity-server'.
-	ImageNameKonnectivityServer = "konnectivity-server"
 	// ImageNameKubeApiserver is a constant for an image in the image vector with name 'kube-apiserver'.
 	ImageNameKubeApiserver = "kube-apiserver"
 	// ImageNameKubeControllerManager is a constant for an image in the image vector with name 'kube-controller-manager'.

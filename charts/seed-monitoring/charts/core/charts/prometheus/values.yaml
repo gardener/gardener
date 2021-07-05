@@ -21,9 +21,6 @@ ingress:
 
 kubernetesVersion: 1.15.1
 
-konnectivityTunnel:
-  enabled: false
-
 nodeLocalDNS:
   enabled: false
 
@@ -309,8 +306,6 @@ rules:
     hvpa:
       enabled: false
       rules: false
-    vpn:
-      enabled: false
     loki:
       enabled: true
 
