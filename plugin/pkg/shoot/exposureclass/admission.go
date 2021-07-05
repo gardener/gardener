@@ -27,7 +27,6 @@ import (
 	corev1alphalisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
@@ -172,9 +171,6 @@ func uniteSeedSelectors(shootSeedSelector *core.SeedSelector, exposureClassSeedS
 
 	if shootSeedSelector == nil {
 		shootSeedSelector = &core.SeedSelector{}
-	}
-	if shootSeedSelector.LabelSelector == nil {
-		shootSeedSelector.LabelSelector = &v1.LabelSelector{}
 	}
 
 	// Unite matching labels.

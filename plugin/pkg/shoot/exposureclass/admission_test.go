@@ -103,13 +103,9 @@ var _ = Describe("exposureclass", func() {
 
 		Context("SeedSelector", func() {
 			BeforeEach(func() {
-				exposureClass.Scheduling.SeedSelector = &corev1alpha1.SeedSelector{
-					LabelSelector: &metav1.LabelSelector{},
-				}
+				exposureClass.Scheduling.SeedSelector = &corev1alpha1.SeedSelector{}
 
-				shoot.Spec.SeedSelector = &core.SeedSelector{
-					LabelSelector: &metav1.LabelSelector{},
-				}
+				shoot.Spec.SeedSelector = &core.SeedSelector{}
 			})
 
 			It("should do nothing as ExposureClass has no seed selector", func() {
