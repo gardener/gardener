@@ -79,8 +79,8 @@ var _ = Describe("DNSRecord validation tests", func() {
 		})
 
 		It("should forbid non-nil but empty region or zone", func() {
-			dns.Spec.Region = pointer.StringPtr("")
-			dns.Spec.Zone = pointer.StringPtr("")
+			dns.Spec.Region = pointer.String("")
+			dns.Spec.Zone = pointer.String("")
 
 			errorList := ValidateDNSRecord(dns)
 
@@ -134,7 +134,7 @@ var _ = Describe("DNSRecord validation tests", func() {
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.values"),
+				"Field": Equal("spec.values[0]"),
 			}))))
 		})
 
@@ -146,12 +146,12 @@ var _ = Describe("DNSRecord validation tests", func() {
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.values"),
+				"Field": Equal("spec.values[0]"),
 			}))))
 		})
 
 		It("should forbid negative ttl", func() {
-			dns.Spec.TTL = pointer.Int64Ptr(-1)
+			dns.Spec.TTL = pointer.Int64(-1)
 
 			errorList := ValidateDNSRecord(dns)
 
@@ -225,10 +225,10 @@ var _ = Describe("DNSRecord validation tests", func() {
 		It("should allow updating everything else", func() {
 			newDNSRecord := prepareDNSRecordForUpdate(dns)
 			newDNSRecord.Spec.SecretRef.Name = "changed-secretref-name"
-			newDNSRecord.Spec.Region = pointer.StringPtr("region")
-			newDNSRecord.Spec.Zone = pointer.StringPtr("zone")
+			newDNSRecord.Spec.Region = pointer.String("region")
+			newDNSRecord.Spec.Zone = pointer.String("zone")
 			newDNSRecord.Spec.Values = []string{"5.6.7.8"}
-			newDNSRecord.Spec.TTL = pointer.Int64Ptr(300)
+			newDNSRecord.Spec.TTL = pointer.Int64(300)
 
 			errorList := ValidateDNSRecordUpdate(newDNSRecord, dns)
 

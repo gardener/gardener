@@ -50,6 +50,8 @@ Optionally, the `DNSRecord` resource may contain also the following information:
 * The DNS hosted zone of the DNS record. If not specified, it shall be determined automatically by the extension controller by getting all hosted zones of the account and searching for the longest zone name that is a suffix of the fully qualified domain name (FQDN) mentioned above. 
 * The TTL of the DNS record in seconds. If not specified, it shall be set by the extension controller to 120.
 
+**Example `DNSRecord`**:
+
 ```yaml
 ---
 apiVersion: v1

@@ -78,8 +78,8 @@ func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *fiel
 	if spec.RecordType == extensionsv1alpha1.DNSRecordTypeCNAME && len(spec.Values) > 1 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("values"), spec.Values, "CNAME records must have a single value"))
 	}
-	for _, value := range spec.Values {
-		allErrs = append(allErrs, validateValue(spec.RecordType, value, fldPath.Child("values"))...)
+	for i, value := range spec.Values {
+		allErrs = append(allErrs, validateValue(spec.RecordType, value, fldPath.Child("values").Index(i))...)
 	}
 
 	if spec.TTL != nil {
