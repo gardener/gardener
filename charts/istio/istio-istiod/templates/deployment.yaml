@@ -34,7 +34,6 @@ spec:
         - "discovery"
         - --monitoringAddr=:15014
         - --grpcAddr=
-        - --httpAddr=localhost:8080
         - --httpsAddr=:{{ .Values.ports.https }}
         - --log_output_level=all:warn,ads:error
         - --domain={{ .Values.trustDomain }}
@@ -45,14 +44,14 @@ spec:
           protocol: TCP
         - containerPort: {{ .Values.ports.https }}
           protocol: TCP
+        - containerPort: 8080
+          protocol: TCP
         readinessProbe:
-          exec:
-            command:
-            - curl
-            - -s
-            - http://localhost:8080/ready
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 1
+          periodSeconds: 3
           timeoutSeconds: 5
         env:
         - name: JWT_POLICY

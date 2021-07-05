@@ -254,11 +254,11 @@ images:
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/proxyv2
-  tag: "1.10.1"
+  tag: "1.10.2-distroless"
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/pilot
-  tag: "1.10.1"
+  tag: "1.10.2-distroless"
 
 # API Server SNI
 - name: apiserver-proxy
