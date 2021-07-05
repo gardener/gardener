@@ -729,6 +729,7 @@ func RunReconcileSeedFlow(
 					IstiodNamespace: common.IstioNamespace,
 					Annotations:     utils.MergeStringMaps(seed.LoadBalancerServiceAnnotations, handler.LoadBalancerService.Annotations),
 					Ports:           defaultIngressGatewayConfig.Ports,
+					LoadBalancerIP:  handler.LoadBalancerService.LoadBalancerIP,
 					Labels:          gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
 				},
 				*handler.SNI.Ingress.Namespace,

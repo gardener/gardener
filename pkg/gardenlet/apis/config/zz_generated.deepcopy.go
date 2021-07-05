@@ -536,6 +536,11 @@ func (in *LoadBalancerServiceConfig) DeepCopyInto(out *LoadBalancerServiceConfig
 			(*out)[key] = val
 		}
 	}
+	if in.LoadBalancerIP != nil {
+		in, out := &in.LoadBalancerIP, &out.LoadBalancerIP
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

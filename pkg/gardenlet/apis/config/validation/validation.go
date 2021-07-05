@@ -16,9 +16,11 @@ package validation
 
 import (
 	"fmt"
+	"net"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -84,6 +86,16 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 
 		for _, errorMessage := range validation.IsDNS1123Label(handler.Name) {
 			allErrs = append(allErrs, field.Invalid(handlerPath.Child("name"), handler.Name, errorMessage))
+		}
+
+		if handler.LoadBalancerService.LoadBalancerIP != nil {
+			if !cfg.FeatureGates[string(features.APIServerSNI)] {
+				allErrs = append(allErrs, field.Invalid(handlerPath.Child("loadBalancerService", "loadBalancerIP"), handler.LoadBalancerService.LoadBalancerIP, "cannot use loadbalacer ip when APIServerSNI feature gate is disabled"))
+			}
+
+			if ip := net.ParseIP(*handler.LoadBalancerService.LoadBalancerIP); ip == nil {
+				allErrs = append(allErrs, field.Invalid(handlerPath.Child("loadBalancerService", "loadBalancerIP"), handler.LoadBalancerService.LoadBalancerIP, "loadbalancer ip is invalid"))
+			}
 		}
 	}
 

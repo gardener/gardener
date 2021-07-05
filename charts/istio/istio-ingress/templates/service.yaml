@@ -26,3 +26,6 @@ spec:
 {{- if .Values.ports }}
 {{ toYaml .Values.ports | indent 2 }}
 {{- end }}
+{{- if .Values.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.loadBalancerIP }}
+{{- end }}

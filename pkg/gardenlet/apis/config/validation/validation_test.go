@@ -63,6 +63,9 @@ var _ = Describe("GardenletConfiguration", func() {
 					SyncJitterPeriod: &metav1.Duration{Duration: 5 * time.Minute},
 				},
 			},
+			FeatureGates: map[string]bool{
+				"APIServerSNI": true,
+			},
 			SeedConfig: &config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
@@ -375,6 +378,49 @@ var _ = Describe("GardenletConfiguration", func() {
 				}))))
 			})
 
+			Context("loadbalancer ip", func() {
+				It("should allow to use a loadbalancer ip as APIServerSNI feature gate is enabled and loadbalancer ip is valid", func() {
+					cfg.ExposureClassHandlers[0].LoadBalancerService.LoadBalancerIP = pointer.StringPtr("1.1.1.1")
+
+					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid to use a loadbalancer ip when APIServerSNI feature gate is disabled", func() {
+					cfg.ExposureClassHandlers[0].LoadBalancerService.LoadBalancerIP = pointer.StringPtr("1.1.1.1")
+					cfg.FeatureGates["APIServerSNI"] = false
+
+					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("exposureClassHandlers[0].loadBalancerService.loadBalancerIP"),
+					}))))
+				})
+
+				It("should forbid to use an empty loadbalancer ip", func() {
+					cfg.ExposureClassHandlers[0].LoadBalancerService.LoadBalancerIP = pointer.StringPtr("")
+
+					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("exposureClassHandlers[0].loadBalancerService.loadBalancerIP"),
+					}))))
+				})
+
+				It("should forbid to use an invalid loadbalancer ip", func() {
+					cfg.ExposureClassHandlers[0].LoadBalancerService.LoadBalancerIP = pointer.StringPtr("a.b.c.d")
+
+					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("exposureClassHandlers[0].loadBalancerService.loadBalancerIP"),
+					}))))
+				})
+			})
 		})
 	})
 

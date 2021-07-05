@@ -412,4 +412,8 @@ type ExposureClassHandler struct {
 type LoadBalancerServiceConfig struct {
 	// Annotations is a key value map to annotate the underlying load balancer services.
 	Annotations map[string]string
+	// LoadBalancerIP is the external ip which should be assigned to the loadbalancer service.
+	// This is only compatible with the APIServerSNI (default) feature gate and
+	// depending on the respective infrastructure cloud-controller-manager compatibility.
+	LoadBalancerIP *string
 }

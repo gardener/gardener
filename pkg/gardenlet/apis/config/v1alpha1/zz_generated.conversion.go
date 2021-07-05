@@ -900,6 +900,7 @@ func Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfig
 
 func autoConvert_v1alpha1_LoadBalancerServiceConfig_To_config_LoadBalancerServiceConfig(in *LoadBalancerServiceConfig, out *config.LoadBalancerServiceConfig, s conversion.Scope) error {
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
+	out.LoadBalancerIP = (*string)(unsafe.Pointer(in.LoadBalancerIP))
 	return nil
 }
 
@@ -910,6 +911,7 @@ func Convert_v1alpha1_LoadBalancerServiceConfig_To_config_LoadBalancerServiceCon
 
 func autoConvert_config_LoadBalancerServiceConfig_To_v1alpha1_LoadBalancerServiceConfig(in *config.LoadBalancerServiceConfig, out *LoadBalancerServiceConfig, s conversion.Scope) error {
 	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
+	out.LoadBalancerIP = (*string)(unsafe.Pointer(in.LoadBalancerIP))
 	return nil
 }
 
