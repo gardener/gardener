@@ -86,7 +86,7 @@ var _ = ginkgo.Describe("Shoot application metrics testing", func() {
 			retry.Until(ctx, 30*time.Second, func(ctx context.Context) (bool, error) {
 				podMetrics := &metricsv1beta1.PodMetrics{}
 				if err := f.ShootClient.Client().Get(ctx, kutil.Key(f.Namespace, podName), podMetrics); err != nil {
-					if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
+					if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) || apierrors.IsServiceUnavailable(err) {
 						f.Logger.Infof("No metrics for pod %s/%s available yet: %v", f.Namespace, podName, err)
 						return retry.MinorError(err)
 					}
