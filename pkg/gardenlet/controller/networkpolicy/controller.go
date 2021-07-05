@@ -24,8 +24,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -206,4 +208,14 @@ func (c *Controller) Stop() {
 // RunningWorkers returns the number of running workers.
 func (c *Controller) RunningWorkers() int {
 	return c.numberOfRunningWorkers
+}
+
+// CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
+func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
+	metric, err := prometheus.NewConstMetric(gardenlet.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "extensions")
+	if err != nil {
+		gardenlet.ScrapeFailures.With(prometheus.Labels{"kind": "extensions-controller"}).Inc()
+		return
+	}
+	ch <- metric
 }
