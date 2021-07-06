@@ -10,20 +10,11 @@ PATH_CCD_SCRIPT_CHECKSUM="{{ .pathCCDScriptChecksum }}"
 PATH_CCD_SCRIPT_CHECKSUM_OLD="${PATH_CCD_SCRIPT_CHECKSUM}.old"
 PATH_EXECUTION_DELAY_SECONDS="{{ .pathExecutionDelaySeconds }}"
 PATH_EXECUTION_LAST_DATE="{{ .pathExecutionLastDate }}"
+PATH_HYPERKUBE_DOWNLOADS="{{ .pathHyperkubeDownloads }}"
+PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE="$PATH_HYPERKUBE_DOWNLOADS/last_downloaded_hyperkube_image"
+PATH_LAST_COPIED_HYPERKUBE_IMAGE="{{ .pathBinaries }}/last_copied_hyperkube_image"
 
-mkdir -p "{{ .pathDownloadsDirectory }}" "{{ .pathKubeletDirectory }}"
-
-function docker-preload() {
-  name="$1"
-  image="$2"
-  echo "Checking whether to preload $name from $image"
-  if [ -z $(docker images -q "$image") ]; then
-    echo "Preloading $name from $image"
-    docker pull "$image"
-  else
-    echo "No need to preload $name from $image"
-  fi
-}
+mkdir -p "{{ .pathDownloadsDirectory }}" "{{ .pathKubeletDirectory }}" "$PATH_HYPERKUBE_DOWNLOADS"
 
 {{ if .kubeletDataVolume -}}
 function format-data-device() {
@@ -50,7 +41,60 @@ function format-data-device() {
 format-data-device
 {{- end }}
 
-docker-preload "hyperkube" "{{ .hyperkubeImage }}"
+LAST_DOWNLOADED_HYPERKUBE_IMAGE=""
+if [[ -f "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
+  LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
+fi
+
+LAST_COPIED_HYPERKUBE_IMAGE=""
+if [[ -f "$PATH_LAST_COPIED_HYPERKUBE_IMAGE" ]]; then
+  LAST_COPIED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_COPIED_HYPERKUBE_IMAGE")"
+fi
+
+echo "Checking whether we need to preload a new hyperkube image..."
+if [[ "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" != "{{ .hyperkubeImage }}" ]]; then
+  echo "Preloading hyperkube image ({{ .hyperkubeImage }}) because last downloaded image ($LAST_DOWNLOADED_HYPERKUBE_IMAGE) is outdated"
+  {{ .pathDockerBinary }} pull "{{ .hyperkubeImage }}"
+
+  echo "Starting temporary hyperkube container to copy binaries to host"
+
+{{- if semverCompare "< 1.17" .kubernetesVersion }}
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}" /bin/sh -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS"
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}" /bin/sh -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS"
+{{- else if semverCompare "< 1.19" .kubernetesVersion }}
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS"
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS"
+{{- else }}
+  HYPERKUBE_CONTAINER_ID="$({{ .pathDockerBinary }} run --rm -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}")"
+  {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS"
+  {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS"
+  {{ .pathDockerBinary }} stop "$HYPERKUBE_CONTAINER_ID"
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet"
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl"
+{{- end }}
+
+  echo "{{ .hyperkubeImage }}" > "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE"
+  LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
+else
+  echo "No need to preload new hyperkube image because binaries for $LAST_DOWNLOADED_HYPERKUBE_IMAGE were found in $PATH_HYPERKUBE_DOWNLOADS"
+fi
+
+cat <<EOF > "{{ .pathScriptCopyKubernetesBinaries }}"
+#!/bin/bash -eu
+
+BINARY="\$1"
+
+echo "Checking whether to copy new hyperkube image to {{ .pathBinaries }} folder..."
+if [[ "$LAST_COPIED_HYPERKUBE_IMAGE" != "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
+  echo "Binaries in {{ .pathBinaries }} are outdated (last copied image: $LAST_COPIED_HYPERKUBE_IMAGE). Need to update them to $LAST_DOWNLOADED_HYPERKUBE_IMAGE".
+  rm -f "{{ .pathBinaries }}/\$BINARY" &&
+    cp "$PATH_HYPERKUBE_DOWNLOADS/\$BINARY" "{{ .pathBinaries }}" &&
+    echo "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" > "$PATH_LAST_COPIED_HYPERKUBE_IMAGE"
+else
+  echo "No need to copy new hyperkube image because latest binaries were found in $PATH_HYPERKUBE_DOWNLOADS"
+fi
+EOF
+chmod +x "{{ .pathScriptCopyKubernetesBinaries }}"
 
 cat << 'EOF' | base64 -d > "$PATH_CLOUDCONFIG"
 {{ .cloudConfigUserData }}
@@ -152,7 +196,7 @@ fi
 
 # Apply most recent cloud-config user-data, reload the systemd daemon and restart the units to make the changes
 # effective.
-if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || ! diff "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD" >/dev/null; then
+if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || ! diff "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD" >/dev/null || [[ "$LAST_COPIED_HYPERKUBE_IMAGE" != "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
   echo "Seen newer cloud config or cloud config downloader version"
   if {{ .reloadConfigCommand }}; then
     echo "Successfully applied new cloud config version"

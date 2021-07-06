@@ -22,9 +22,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,16 +37,17 @@ var _ = Describe("Executor", func() {
 			bootstrapToken      string
 			cloudConfigUserData []byte
 			hyperkubeImage      *imagevector.Image
-			kubeletDataVolume   *gardencorev1beta1.DataVolume
 			reloadConfigCommand string
 			units               []string
+
+			defaultKubeletDataVolume     = &gardencorev1beta1.DataVolume{VolumeSize: "64Gi"}
+			defaultKubeletDataVolumeSize = pointer.String("68719476736")
 		)
 
 		BeforeEach(func() {
 			bootstrapToken = "token"
 			cloudConfigUserData = []byte("user-data")
 			hyperkubeImage = &imagevector.Image{Repository: "bar", Tag: pointer.String("v1.0")}
-			kubeletDataVolume = nil
 			reloadConfigCommand = "/var/bin/reload"
 			units = []string{
 				docker.UnitName,
@@ -59,24 +60,39 @@ var _ = Describe("Executor", func() {
 			}
 		})
 
-		It("should correctly render the executor script (w/o kubelet data volume)", func() {
-			script, err := executor.Script(bootstrapToken, cloudConfigUserData, hyperkubeImage, kubeletDataVolume, reloadConfigCommand, units)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(script)).To(matchers.DeepEqual(scriptFor(bootstrapToken, cloudConfigUserData, hyperkubeImage, nil, reloadConfigCommand, units)))
-		})
+		DescribeTable("should correctly render the executor script",
+			func(kubernetesVersion string, copyKubernetesBinariesFn func(*imagevector.Image) string, kubeletDataVol *gardencorev1beta1.DataVolume, kubeletDataVolSize *string) {
+				script, err := executor.Script(bootstrapToken, cloudConfigUserData, hyperkubeImage, kubernetesVersion, kubeletDataVol, reloadConfigCommand, units)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(script)).To(Equal(scriptFor(bootstrapToken, cloudConfigUserData, hyperkubeImage, copyKubernetesBinariesFn, kubeletDataVolSize, reloadConfigCommand, units)))
+			},
 
-		It("should correctly render the executor script (w/ kubelet data volume)", func() {
-			kubeletDataVolume = &gardencorev1beta1.DataVolume{VolumeSize: "64Gi"}
+			Entry("k8s 1.15, w/o kubelet data volume", "1.15.1", copyKubernetesBinariesFromHyperkubeImageForVersionsLess117, nil, nil),
+			Entry("k8s 1.15, w/ kubelet data volume", "1.15.1", copyKubernetesBinariesFromHyperkubeImageForVersionsLess117, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
 
-			script, err := executor.Script(bootstrapToken, cloudConfigUserData, hyperkubeImage, kubeletDataVolume, reloadConfigCommand, units)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(script)).To(matchers.DeepEqual(scriptFor(bootstrapToken, cloudConfigUserData, hyperkubeImage, pointer.String("68719476736"), reloadConfigCommand, units)))
-		})
+			Entry("k8s 1.16, w/o kubelet data volume", "1.16.2", copyKubernetesBinariesFromHyperkubeImageForVersionsLess117, nil, nil),
+			Entry("k8s 1.16, w/ kubelet data volume", "1.16.2", copyKubernetesBinariesFromHyperkubeImageForVersionsLess117, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
+
+			Entry("k8s 1.17, w/o kubelet data volume", "1.17.3", copyKubernetesBinariesFromHyperkubeImageForVersionsLess119, nil, nil),
+			Entry("k8s 1.17, w/ kubelet data volume", "1.17.3", copyKubernetesBinariesFromHyperkubeImageForVersionsLess119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
+
+			Entry("k8s 1.18, w/o kubelet data volume", "1.18.4", copyKubernetesBinariesFromHyperkubeImageForVersionsLess119, nil, nil),
+			Entry("k8s 1.18, w/ kubelet data volume", "1.18.4", copyKubernetesBinariesFromHyperkubeImageForVersionsLess119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
+
+			Entry("k8s 1.19, w/o kubelet data volume", "1.19.5", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, nil, nil),
+			Entry("k8s 1.19, w/ kubelet data volume", "1.19.5", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
+
+			Entry("k8s 1.20, w/o kubelet data volume", "1.20.6", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, nil, nil),
+			Entry("k8s 1.20, w/ kubelet data volume", "1.20.6", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
+
+			Entry("k8s 1.21, w/o kubelet data volume", "1.21.7", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, nil, nil),
+			Entry("k8s 1.21, w/ kubelet data volume", "1.21.7", copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119, defaultKubeletDataVolume, defaultKubeletDataVolumeSize),
+		)
 
 		It("should return an error because the data volume size cannot be parsed", func() {
-			kubeletDataVolume = &gardencorev1beta1.DataVolume{VolumeSize: "not-parsable"}
+			kubeletDataVolume := &gardencorev1beta1.DataVolume{VolumeSize: "not-parsable"}
 
-			script, err := executor.Script(bootstrapToken, cloudConfigUserData, hyperkubeImage, kubeletDataVolume, reloadConfigCommand, units)
+			script, err := executor.Script(bootstrapToken, cloudConfigUserData, hyperkubeImage, "1.2.3", kubeletDataVolume, reloadConfigCommand, units)
 			Expect(script).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("quantities must match the regular expression")))
 		})
@@ -115,6 +131,7 @@ func scriptFor(
 	bootstrapToken string,
 	cloudConfigUserData []byte,
 	hyperkubeImage *imagevector.Image,
+	copyKubernetesBinariesFn func(*imagevector.Image) string,
 	kubeletDataVolumeSize *string,
 	reloadConfigCommand string,
 	units []string,
@@ -131,20 +148,11 @@ PATH_CCD_SCRIPT_CHECKSUM="/var/lib/cloud-config-downloader/download-cloud-config
 PATH_CCD_SCRIPT_CHECKSUM_OLD="${PATH_CCD_SCRIPT_CHECKSUM}.old"
 PATH_EXECUTION_DELAY_SECONDS="/var/lib/cloud-config-downloader/execution_delay_seconds"
 PATH_EXECUTION_LAST_DATE="/var/lib/cloud-config-downloader/execution_last_date"
+PATH_HYPERKUBE_DOWNLOADS="/var/lib/cloud-config-downloader/downloads/hyperkube"
+PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE="$PATH_HYPERKUBE_DOWNLOADS/last_downloaded_hyperkube_image"
+PATH_LAST_COPIED_HYPERKUBE_IMAGE="/opt/bin/last_copied_hyperkube_image"
 
-mkdir -p "/var/lib/cloud-config-downloader/downloads" "/var/lib/kubelet"
-
-function docker-preload() {
-  name="$1"
-  image="$2"
-  echo "Checking whether to preload $name from $image"
-  if [ -z $(docker images -q "$image") ]; then
-    echo "Preloading $name from $image"
-    docker pull "$image"
-  else
-    echo "No need to preload $name from $image"
-  fi
-}
+mkdir -p "/var/lib/cloud-config-downloader/downloads" "/var/lib/kubelet" "$PATH_HYPERKUBE_DOWNLOADS"
 
 `
 
@@ -176,7 +184,46 @@ format-data-device`
 
 	imagesPreloadingPart := `
 
-docker-preload "hyperkube" "` + hyperkubeImage.String() + `"
+LAST_DOWNLOADED_HYPERKUBE_IMAGE=""
+if [[ -f "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
+  LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
+fi
+
+LAST_COPIED_HYPERKUBE_IMAGE=""
+if [[ -f "$PATH_LAST_COPIED_HYPERKUBE_IMAGE" ]]; then
+  LAST_COPIED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_COPIED_HYPERKUBE_IMAGE")"
+fi
+
+echo "Checking whether we need to preload a new hyperkube image..."
+if [[ "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" != "` + hyperkubeImage.String() + `" ]]; then
+  echo "Preloading hyperkube image (` + hyperkubeImage.String() + `) because last downloaded image ($LAST_DOWNLOADED_HYPERKUBE_IMAGE) is outdated"
+  /usr/bin/docker pull "` + hyperkubeImage.String() + `"
+
+  echo "Starting temporary hyperkube container to copy binaries to host"` +
+		copyKubernetesBinariesFn(hyperkubeImage) + `
+
+  echo "` + hyperkubeImage.String() + `" > "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE"
+  LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
+else
+  echo "No need to preload new hyperkube image because binaries for $LAST_DOWNLOADED_HYPERKUBE_IMAGE were found in $PATH_HYPERKUBE_DOWNLOADS"
+fi
+
+cat <<EOF > "/var/lib/kubelet/copy-kubernetes-binary.sh"
+#!/bin/bash -eu
+
+BINARY="\$1"
+
+echo "Checking whether to copy new hyperkube image to /opt/bin folder..."
+if [[ "$LAST_COPIED_HYPERKUBE_IMAGE" != "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
+  echo "Binaries in /opt/bin are outdated (last copied image: $LAST_COPIED_HYPERKUBE_IMAGE). Need to update them to $LAST_DOWNLOADED_HYPERKUBE_IMAGE".
+  rm -f "/opt/bin/\$BINARY" &&
+    cp "$PATH_HYPERKUBE_DOWNLOADS/\$BINARY" "/opt/bin" &&
+    echo "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" > "$PATH_LAST_COPIED_HYPERKUBE_IMAGE"
+else
+  echo "No need to copy new hyperkube image because latest binaries were found in $PATH_HYPERKUBE_DOWNLOADS"
+fi
+EOF
+chmod +x "/var/lib/kubelet/copy-kubernetes-binary.sh"
 `
 
 	footerPart := `
@@ -280,7 +327,7 @@ fi
 
 # Apply most recent cloud-config user-data, reload the systemd daemon and restart the units to make the changes
 # effective.
-if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || ! diff "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD" >/dev/null; then
+if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || ! diff "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD" >/dev/null || [[ "$LAST_COPIED_HYPERKUBE_IMAGE" != "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
   echo "Seen newer cloud config or cloud config downloader version"
   if ` + reloadConfigCommand + `; then
     echo "Successfully applied new cloud config version"
@@ -311,4 +358,26 @@ date +%s > "$PATH_EXECUTION_LAST_DATE"
 `
 
 	return headerPart + kubeletDataVolumePart + imagesPreloadingPart + footerPart
+}
+
+func copyKubernetesBinariesFromHyperkubeImageForVersionsLess117(hyperkubeImage *imagevector.Image) string {
+	return `
+  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `" /bin/sh -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS"
+  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `" /bin/sh -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS"`
+}
+
+func copyKubernetesBinariesFromHyperkubeImageForVersionsLess119(hyperkubeImage *imagevector.Image) string {
+	return `
+  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "` + hyperkubeImage.String() + `" -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS"
+  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "` + hyperkubeImage.String() + `" -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS"`
+}
+
+func copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119(hyperkubeImage *imagevector.Image) string {
+	return `
+  HYPERKUBE_CONTAINER_ID="$(/usr/bin/docker run --rm -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `")"
+  /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS"
+  /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS"
+  /usr/bin/docker stop "$HYPERKUBE_CONTAINER_ID"
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet"
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl"`
 }

@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
 	oscutils "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var (
@@ -69,6 +68,8 @@ const (
 	PathKubeletConfig = v1beta1constants.OperatingSystemConfigFilePathKubeletConfig
 	// PathKubeletDirectory is the path for the kubelet's directory.
 	PathKubeletDirectory = "/var/lib/kubelet"
+	// PathScriptCopyKubernetesBinaries is the path for the script copying downloaded Kubernetes binaries.
+	PathScriptCopyKubernetesBinaries = PathKubeletDirectory + "/copy-kubernetes-binary.sh"
 
 	pathVolumePluginDirectory = "/var/lib/kubelet/volumeplugins"
 )
@@ -118,7 +119,7 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args
-ExecStartPre=` + execStartPreCopyBinaryFromContainer("kubelet", ctx.Images[charts.ImageNameHyperkube], ctx.KubernetesVersion) + `
+ExecStartPre=` + PathScriptCopyKubernetesBinaries + ` kubelet
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet \
     ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
 			},
@@ -134,7 +135,7 @@ WantedBy=multi-user.target
 [Service]
 Restart=always
 EnvironmentFile=/etc/environment
-ExecStartPre=` + execStartPreCopyBinaryFromContainer("kubectl", ctx.Images[charts.ImageNameHyperkube], ctx.KubernetesVersion) + `
+ExecStartPre=` + PathScriptCopyKubernetesBinaries + ` kubectl
 ExecStart=` + pathHealthMonitor),
 			},
 		},
@@ -180,16 +181,6 @@ func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAd
 	return kcCodec.Encode(kubeletConfig, configFCI.Encoding)
 }
 
-func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevector.Image, kubernetesVersion *semver.Version) string {
-	switch {
-	case versionConstraintK8sLess117.Check(kubernetesVersion):
-		return docker.PathBinary + ` run --rm -v /opt/bin:/opt/bin:rw ` + image.String() + ` /bin/sh -c "cp /usr/local/bin/` + binaryName + ` /opt/bin"`
-	case versionConstraintK8sLess119.Check(kubernetesVersion):
-		return docker.PathBinary + ` run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + image.String() + ` -c "cp /usr/local/bin/` + binaryName + ` /opt/bin"`
-	}
-	return `/usr/bin/env sh -c "ID=\"$(` + docker.PathBinary + ` run --rm -d -v /opt/bin:/opt/bin:rw ` + image.String() + `)\"; ` + docker.PathBinary + ` cp \"$ID\":/` + binaryName + ` /opt/bin; ` + docker.PathBinary + ` stop \"$ID\"; chmod +x /opt/bin/` + binaryName + `"`
-}
-
 func unitConfigAfterCRI(criName extensionsv1alpha1.CRIName) string {
 	if criName == extensionsv1alpha1.CRINameContainerD {
 		return `After=` + containerd.UnitName
@@ -198,19 +189,11 @@ func unitConfigAfterCRI(criName extensionsv1alpha1.CRIName) string {
 Wants=docker.socket rpc-statd.service`
 }
 
-var (
-	versionConstraintK8sLess117         *semver.Constraints
-	versionConstraintK8sLess119         *semver.Constraints
-	versionConstraintK8sGreaterEqual119 *semver.Constraints
-)
+var versionConstraintK8sLess119 *semver.Constraints
 
 func init() {
 	var err error
 
-	versionConstraintK8sLess117, err = semver.NewConstraint("< 1.17")
-	utilruntime.Must(err)
 	versionConstraintK8sLess119, err = semver.NewConstraint("< 1.19")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual119, err = semver.NewConstraint(">= 1.19")
 	utilruntime.Must(err)
 }
