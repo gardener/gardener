@@ -25,8 +25,6 @@ import (
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
@@ -40,7 +38,7 @@ import (
 
 	"github.com/gardener/gardener/cmd/utils"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/test/framework"
@@ -112,60 +110,17 @@ var _ = AfterSuite(func() {
 })
 
 func getValidatingWebhookConfig() *admissionregistrationv1beta1.ValidatingWebhookConfiguration {
-	return &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "admissionregistration.k8s.io/v1beta1",
-			Kind:       "ValidatingWebhookConfiguration",
+	clientConfig := admissionregistrationv1beta1.WebhookClientConfig{
+		Service: &admissionregistrationv1beta1.ServiceReference{
+			Path: pointer.String(extensioncrds.WebhookPath),
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener-seed-admission-controller",
-		},
-		Webhooks: []admissionregistrationv1beta1.ValidatingWebhook{{
-			Name: "crds.seed.admission.core.gardener.cloud",
-			Rules: []admissionregistrationv1beta1.RuleWithOperations{{
-				Rule: admissionregistrationv1beta1.Rule{
-					APIGroups:   []string{apiextensionsv1.GroupName},
-					APIVersions: []string{apiextensionsv1beta1.SchemeGroupVersion.Version, apiextensionsv1.SchemeGroupVersion.Version},
-					Resources:   []string{"customresourcedefinitions"},
-				},
-				Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Delete},
-			}},
-			ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
-				Service: &admissionregistrationv1beta1.ServiceReference{
-					Path: pointer.String(extensioncrds.WebhookPath),
-				},
-			},
-			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version},
-		}, {
-			Name: "crs.seed.admission.core.gardener.cloud",
-			Rules: []admissionregistrationv1beta1.RuleWithOperations{{
-				Rule: admissionregistrationv1beta1.Rule{
-					APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
-					APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
-					Resources: []string{
-						"backupbuckets",
-						"backupentries",
-						"bastions",
-						"containerruntimes",
-						"controlplanes",
-						"dnsrecords",
-						"extensions",
-						"infrastructures",
-						"networks",
-						"operatingsystemconfigs",
-						"workers",
-					},
-				},
-				Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Delete},
-			}},
-			ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
-				Service: &admissionregistrationv1beta1.ServiceReference{
-					Path: pointer.String(extensioncrds.WebhookPath),
-				},
-			},
-			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version},
-		}},
 	}
+
+	webhookConfig := seedadmissioncontroller.GetValidatingWebhookConfig(clientConfig)
+	// envtest doesn't default the webhook config's GVK, so set it explicitly
+	webhookConfig.SetGroupVersionKind(admissionregistrationv1beta1.SchemeGroupVersion.WithKind("ValidatingWebhookConfiguration"))
+
+	return webhookConfig
 }
 
 func getMutatingWebhookConfig() *admissionregistrationv1beta1.MutatingWebhookConfiguration {
