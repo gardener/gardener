@@ -221,13 +221,15 @@ format:
 
 .PHONY: test
 test:
-	@./hack/test.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/...
-	$(MAKE) test-prometheus
+	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./extensions/test/e2e/framework/... ./pkg/... ./plugin/... ./landscaper/...
+
+.PHONY: test-integration
+test-integration:
+	@./hack/test-integration.sh ./extensions/test/integration/envtest/... ./test/integration/envtest/...
 
 .PHONY: test-cov
 test-cov:
 	@./hack/test-cover.sh ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/...
-	$(MAKE) test-prometheus
 
 .PHONY: test-cov-clean
 test-cov-clean:
@@ -238,7 +240,7 @@ test-prometheus:
 	@./hack/test-prometheus.sh
 
 .PHONY: verify
-verify: check format test
+verify: check format test test-integration test-prometheus
 
 .PHONY: verify-extended
-verify-extended: install-requirements check-generate check format test-cov test-cov-clean
+verify-extended: install-requirements check-generate check format test-cov test-cov-clean test-integration test-prometheus

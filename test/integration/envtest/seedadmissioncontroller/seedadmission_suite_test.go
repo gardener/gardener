@@ -48,7 +48,7 @@ import (
 
 func TestSeedAdmissionController(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "SeedAdmissionController Suite")
+	RunSpecs(t, "SeedAdmissionController Integration Test Suite")
 }
 
 var (
@@ -85,6 +85,8 @@ var _ = BeforeSuite(func() {
 		Port:    testEnv.WebhookInstallOptions.LocalServingPort,
 		Host:    testEnv.WebhookInstallOptions.LocalServingHost,
 		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+
+		MetricsBindAddress: "0",
 	})
 	Expect(err).NotTo(HaveOccurred())
 

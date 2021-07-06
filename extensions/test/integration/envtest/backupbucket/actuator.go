@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package backupbucket
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupbucket"
-	"github.com/gardener/gardener/extensions/pkg/controller/test"
+	"github.com/gardener/gardener/extensions/test/integration"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -30,14 +30,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// AddToManagerWithOptions adds a controller with the given Options to the given manager.
+// addTestControllerToManagerWithOptions adds a controller with the given Options to the given manager.
 // The opts.Reconciler is being set with a newly instantiated actuator.
-func AddToManagerWithOptions(mgr manager.Manager, ignoreOperationAnnotation bool) error {
+func addTestControllerToManagerWithOptions(mgr manager.Manager, ignoreOperationAnnotation bool) error {
 	return backupbucket.Add(mgr, backupbucket.AddArgs{
 		Actuator:                  &actuator{},
 		ControllerOptions:         controller.Options{},
 		Predicates:                backupbucket.DefaultPredicates(ignoreOperationAnnotation),
-		Type:                      test.Type,
+		Type:                      integration.Type,
 		IgnoreOperationAnnotation: ignoreOperationAnnotation,
 	})
 }
@@ -54,11 +54,11 @@ func (a *actuator) InjectClient(client client.Client) error {
 // Reconcile updates the time-out annotation on the `BackupBucket` with the value of the `time-in` annotation. This is
 // to enable integration tests to ensure that the `Reconcile` function of the actuator was called.
 func (a *actuator) Reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) error {
-	if bb.Annotations[test.AnnotationKeyDesiredOperationState] == test.AnnotationValueDesiredOperationStateError {
-		return fmt.Errorf("error as requested by %s=%s annotation", test.AnnotationKeyDesiredOperationState, test.AnnotationValueDesiredOperationStateError)
+	if bb.Annotations[integration.AnnotationKeyDesiredOperationState] == integration.AnnotationValueDesiredOperationStateError {
+		return fmt.Errorf("error as requested by %s=%s annotation", integration.AnnotationKeyDesiredOperationState, integration.AnnotationValueDesiredOperationStateError)
 	}
 
-	metav1.SetMetaDataAnnotation(&bb.ObjectMeta, test.AnnotationKeyTimeOut, bb.Annotations[test.AnnotationKeyTimeIn])
+	metav1.SetMetaDataAnnotation(&bb.ObjectMeta, integration.AnnotationKeyTimeOut, bb.Annotations[integration.AnnotationKeyTimeIn])
 	return a.client.Update(ctx, bb)
 }
 
@@ -68,8 +68,8 @@ func (a *actuator) Reconcile(ctx context.Context, bb *extensionsv1alpha1.BackupB
 // directly to the `BackupBucket` resource because tests wouldn't be able to read it (the object would have already been
 // deleted).
 func (a *actuator) Delete(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) error {
-	if bb.Annotations[test.AnnotationKeyDesiredOperationState] == test.AnnotationValueDesiredOperationStateError {
-		return fmt.Errorf("error as requested by %s=%s annotation", test.AnnotationKeyDesiredOperationState, test.AnnotationValueDesiredOperationStateError)
+	if bb.Annotations[integration.AnnotationKeyDesiredOperationState] == integration.AnnotationValueDesiredOperationStateError {
+		return fmt.Errorf("error as requested by %s=%s annotation", integration.AnnotationKeyDesiredOperationState, integration.AnnotationValueDesiredOperationStateError)
 	}
 
 	namespace := &corev1.Namespace{}
@@ -77,6 +77,6 @@ func (a *actuator) Delete(ctx context.Context, bb *extensionsv1alpha1.BackupBuck
 		return err
 	}
 
-	metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, test.AnnotationKeyDesiredOperation, test.AnnotationValueOperationDelete)
+	metav1.SetMetaDataAnnotation(&namespace.ObjectMeta, integration.AnnotationKeyDesiredOperation, integration.AnnotationValueOperationDelete)
 	return a.client.Update(ctx, namespace)
 }
