@@ -294,6 +294,7 @@ webhooks:
     - bastions
     - containerruntimes
     - controlplanes
+    - dnsrecords
     - extensions
     - infrastructures
     - networks

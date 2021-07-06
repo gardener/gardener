@@ -364,6 +364,7 @@ func GetValidatingWebhookConfig(clientConfig admissionregistrationv1beta1.Webhoo
 						"bastions",
 						"containerruntimes",
 						"controlplanes",
+						"dnsrecords",
 						"extensions",
 						"infrastructures",
 						"networks",
