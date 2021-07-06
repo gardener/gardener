@@ -22,10 +22,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/gardener/gardener/cmd/utils"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
@@ -124,38 +121,15 @@ func getValidatingWebhookConfig() *admissionregistrationv1beta1.ValidatingWebhoo
 }
 
 func getMutatingWebhookConfig() *admissionregistrationv1beta1.MutatingWebhookConfiguration {
-	scope := admissionregistrationv1beta1.NamespacedScope
-
-	return &admissionregistrationv1beta1.MutatingWebhookConfiguration{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "admissionregistration.k8s.io/v1beta1",
-			Kind:       "MutatingWebhookConfiguration",
+	clientConfig := admissionregistrationv1beta1.WebhookClientConfig{
+		Service: &admissionregistrationv1beta1.ServiceReference{
+			Path: pointer.String(podschedulername.WebhookPath),
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "gardener-seed-admission-controller",
-		},
-		Webhooks: []admissionregistrationv1beta1.MutatingWebhook{{
-			Name: "kube-scheduler.scheduling.gardener.cloud",
-			Rules: []admissionregistrationv1beta1.RuleWithOperations{{
-				Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Create},
-				Rule: admissionregistrationv1beta1.Rule{
-					APIGroups:   []string{corev1.GroupName},
-					APIVersions: []string{corev1.SchemeGroupVersion.Version},
-					Scope:       &scope,
-					Resources:   []string{"pods"},
-				},
-			}},
-			NamespaceSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
-				},
-			},
-			ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
-				Service: &admissionregistrationv1beta1.ServiceReference{
-					Path: pointer.String(podschedulername.WebhookPath),
-				},
-			},
-			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version},
-		}},
 	}
+
+	webhookConfig := gardenerkubescheduler.GetMutatingWebhookConfig(clientConfig)
+	// envtest doesn't default the webhook config's GVK, so set it explicitly
+	webhookConfig.SetGroupVersionKind(admissionregistrationv1beta1.SchemeGroupVersion.WithKind("MutatingWebhookConfiguration"))
+
+	return webhookConfig
 }
