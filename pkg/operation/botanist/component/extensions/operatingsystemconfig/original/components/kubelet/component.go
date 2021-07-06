@@ -26,7 +26,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/charts"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd"
@@ -56,12 +56,7 @@ func init() {
 
 const (
 	// UnitName is the name of the kubelet service.
-	UnitName = gardencorev1beta1constants.OperatingSystemConfigUnitNameKubeletService
-
-	// PathKubeletDirectory is the path for the kubelet's directory.
-	PathKubeletDirectory = "/var/lib/kubelet"
-	// PathKubernetesBinaries is the path for the kubelet and kubectl binaries.
-	PathKubernetesBinaries = "/opt/bin"
+	UnitName = v1beta1constants.OperatingSystemConfigUnitNameKubeletService
 
 	// PathKubeconfigBootstrap is the path for the kubelet's bootstrap kubeconfig.
 	PathKubeconfigBootstrap = PathKubeletDirectory + "/kubeconfig-bootstrap"
@@ -71,7 +66,9 @@ const (
 	// PathKubeletCACert is the path for the kubelet's certificate authority.
 	PathKubeletCACert = PathKubeletDirectory + "/ca.crt"
 	// PathKubeletConfig is the path for the kubelet's config file.
-	PathKubeletConfig = gardencorev1beta1constants.OperatingSystemConfigFilePathKubeletConfig
+	PathKubeletConfig = v1beta1constants.OperatingSystemConfigFilePathKubeletConfig
+	// PathKubeletDirectory is the path for the kubelet's directory.
+	PathKubeletDirectory = "/var/lib/kubelet"
 
 	pathVolumePluginDirectory = "/var/lib/kubelet/volumeplugins"
 )
@@ -88,10 +85,13 @@ func (component) Name() string {
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	const pathHealthMonitor = "/opt/bin/health-monitor-kubelet"
+	const pathHealthMonitor = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/health-monitor-kubelet"
 
 	var healthMonitorScript bytes.Buffer
-	if err := tplHealthMonitor.Execute(&healthMonitorScript, map[string]string{"pathKubeletKubeconfigReal": PathKubeconfigReal}); err != nil {
+	if err := tplHealthMonitor.Execute(&healthMonitorScript, map[string]string{
+		"pathBinaries":              v1beta1constants.OperatingSystemConfigFilePathBinaries,
+		"pathKubeletKubeconfigReal": PathKubeconfigReal,
+	}); err != nil {
 		return nil, nil, err
 	}
 
@@ -119,7 +119,7 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args
 ExecStartPre=` + execStartPreCopyBinaryFromContainer("kubelet", ctx.Images[charts.ImageNameHyperkube], ctx.KubernetesVersion) + `
-ExecStart=` + PathKubernetesBinaries + `/kubelet \
+ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet \
     ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
 			},
 			{

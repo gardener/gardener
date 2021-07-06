@@ -20,6 +20,7 @@ import (
 	"text/template"
 
 	"github.com/gardener/gardener/charts"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/utils"
@@ -48,7 +49,7 @@ func init() {
 
 type initializer struct{}
 
-// New returns a new containerd initializer component.
+// NewInitializer returns a new containerd initializer component.
 func NewInitializer() *initializer {
 	return &initializer{}
 }
@@ -59,7 +60,7 @@ func (initializer) Name() string {
 
 func (initializer) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	const (
-		pathScript          = "/opt/bin/init-containerd"
+		pathScript          = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/init-containerd"
 		unitNameInitializer = "containerd-initializer.service"
 	)
 

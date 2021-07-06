@@ -86,6 +86,7 @@ func Script(
 		"pathKubeletDirectory":           kubelet.PathKubeletDirectory,
 		"pathDownloadsDirectory":         downloader.PathDownloadsDirectory,
 		"bootstrapToken":                 bootstrapToken,
+		"pathBinaries":                   v1beta1constants.OperatingSystemConfigFilePathBinaries,
 		"pathBootstrapToken":             downloader.PathBootstrapToken,
 		"pathCCDScript":                  downloader.PathCCDScript,
 		"pathCCDScriptChecksum":          downloader.PathCCDScriptChecksum,
