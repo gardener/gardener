@@ -444,33 +444,47 @@ var _ = Describe("helper", func() {
 	)
 
 	classificationPreview := core.ClassificationPreview
+	classificationDeprecated := core.ClassificationDeprecated
+	classificationSupported := core.ClassificationSupported
 	previewVersion := core.MachineImageVersion{
 		ExpirableVersion: core.ExpirableVersion{
-			Version:        "1.1.1",
+			Version:        "1.1.2",
 			Classification: &classificationPreview,
 		},
 	}
+	deprecatedVersion := core.MachineImageVersion{
+		ExpirableVersion: core.ExpirableVersion{
+			Version:        "1.1.1",
+			Classification: &classificationDeprecated,
+		},
+	}
+
 	var versions = []core.MachineImageVersion{
 		{
 			ExpirableVersion: core.ExpirableVersion{
-				Version: "1.0.0",
+				Version:        "1.0.0",
+				Classification: &classificationDeprecated,
 			},
 		},
 		{
 			ExpirableVersion: core.ExpirableVersion{
-				Version: "1.0.1",
+				Version:        "1.0.1",
+				Classification: &classificationDeprecated,
 			},
 		},
 		{
 			ExpirableVersion: core.ExpirableVersion{
-				Version: "1.0.2",
+				Version:        "1.0.2",
+				Classification: &classificationDeprecated,
 			},
 		},
 		{
 			ExpirableVersion: core.ExpirableVersion{
-				Version: "1.1.0",
+				Version:        "1.1.0",
+				Classification: &classificationSupported,
 			},
 		},
+		deprecatedVersion,
 		previewVersion,
 	}
 
@@ -484,8 +498,9 @@ var _ = Describe("helper", func() {
 			Expect(result).To(Equal(expectation))
 		},
 
-		Entry("should determine latest expirable version", versions, false, previewVersion, false),
-		Entry("should determine latest expirable version - without preview versions", versions, true, core.MachineImageVersion{ExpirableVersion: core.ExpirableVersion{Version: "1.1.0"}}, false),
+		Entry("should determine latest expirable version - do not ignore preview version", versions, false, previewVersion, false),
+		Entry("should determine latest expirable version - prefer older supported version over newer deprecated one", versions, true, core.MachineImageVersion{ExpirableVersion: core.ExpirableVersion{Version: "1.1.0", Classification: &classificationSupported}}, false),
+		Entry("should determine latest expirable version - select deprecated version when there is no supported one", []core.MachineImageVersion{previewVersion, deprecatedVersion}, true, core.MachineImageVersion{ExpirableVersion: core.ExpirableVersion{Version: "1.1.1", Classification: &classificationDeprecated}}, false),
 		Entry("should return an error - only preview versions", []core.MachineImageVersion{previewVersion}, true, nil, true),
 		Entry("should return an error - empty version slice", []core.MachineImageVersion{}, true, nil, true),
 	)
