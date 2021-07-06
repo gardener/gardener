@@ -20,6 +20,7 @@ import (
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -258,11 +259,11 @@ var _ = Describe("Predicate", func() {
 			e = event.GenericEvent{
 				Object: infrastructure,
 			}
-
-			cache.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
 		})
 
 		It("should return true because shoot has no last operation", func() {
+			cache.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
+
 			meta := &metav1.ObjectMeta{Generation: 1}
 			status := &gardencorev1beta1.ShootStatus{
 				ObservedGeneration: 1,
@@ -278,6 +279,8 @@ var _ = Describe("Predicate", func() {
 		})
 
 		It("should return true because shoot last operation state is not failed", func() {
+			cache.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
+
 			meta := &metav1.ObjectMeta{Generation: 1}
 			status := &gardencorev1beta1.ShootStatus{
 				ObservedGeneration: 1,
@@ -294,6 +297,8 @@ var _ = Describe("Predicate", func() {
 		})
 
 		It("should return false because shoot is failed", func() {
+			cache.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
+
 			meta := &metav1.ObjectMeta{Generation: 1}
 			status := &gardencorev1beta1.ShootStatus{
 				ObservedGeneration: 1,
@@ -310,6 +315,8 @@ var _ = Describe("Predicate", func() {
 		})
 
 		It("should return true because shoot is failed but observed generation is outdated", func() {
+			cache.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
+
 			meta := &metav1.ObjectMeta{Generation: 2}
 			status := &gardencorev1beta1.ShootStatus{
 				ObservedGeneration: 1,
@@ -321,6 +328,14 @@ var _ = Describe("Predicate", func() {
 				cluster.DeepCopyInto(actual)
 				return nil
 			})
+
+			gomega.Expect(mapper.Map(e)).To(gomega.BeTrue())
+		})
+
+		It("should return true because the resource is in the garden namespace", func() {
+			e = event.GenericEvent{
+				Object: &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace}},
+			}
 
 			gomega.Expect(mapper.Map(e)).To(gomega.BeTrue())
 		})
