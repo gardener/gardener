@@ -58,6 +58,8 @@ controllers:
     concurrentSyncs: 5
   controllerRegistration:
     concurrentSyncs: 5
+  exposureClass:
+    concurrentSyncs: 5
 leaderElection:
   leaderElect: true
   leaseDuration: 15s

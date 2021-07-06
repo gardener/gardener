@@ -323,3 +323,4 @@ spec:
 #     apiVersion: v1
 #     kind: Secret
 #     name: my-foobar-secret
+# exposureClassName: <exposure-class-name>
