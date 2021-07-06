@@ -19,6 +19,7 @@ import (
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -26,8 +27,17 @@ import (
 func ValidateExposureClass(exposureClass *core.ExposureClass) field.ErrorList {
 	var allErrs = field.ErrorList{}
 
-	if len(exposureClass.Handler) == 0 {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("handler"), exposureClass.Name, "exposure class handler cannot be empty"))
+	handlerNameLength := len(exposureClass.Handler)
+
+	for _, errorMessage := range validation.IsDNS1123Label(exposureClass.Handler) {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("handler"), exposureClass.Name, errorMessage))
+	}
+
+	// Restrict the max length of handler names to 41 characters to ensure that the exposureclass
+	// handler default namespace scheme (istio-ingress-handler-{handler-name}, see GardenletConfiguration)
+	// does not exceed the max amount of characters for namespaces.
+	if handlerNameLength > 41 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("handler"), exposureClass.Name, "exposure class handler is restricted to 41 characters"))
 	}
 
 	if exposureClass.Scheduling != nil {

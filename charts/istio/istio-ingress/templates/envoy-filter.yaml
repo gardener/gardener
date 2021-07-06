@@ -207,8 +207,7 @@ metadata:
 spec:
   workloadSelector:
     labels:
-      app: istio-ingressgateway
-      istio: ingressgateway
+{{ .Values.labels | toYaml | indent 6 }}
   configPatches:
   - applyTo: NETWORK_FILTER
     match:

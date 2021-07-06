@@ -529,6 +529,9 @@ const (
 
 	// DefaultSNIIngresServiceName is the default sni ingress service name.
 	DefaultSNIIngresServiceName = "istio-ingressgateway"
+
+	// DefaultIngressGatewayAppLabelValue is the ingress gateway value for the app label.
+	DefaultIngressGatewayAppLabelValue = "istio-ingressgateway"
 )
 
 // DefaultControllerSyncPeriod is a default value for sync period for controllers.

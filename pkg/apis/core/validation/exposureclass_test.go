@@ -44,8 +44,28 @@ var _ = Describe("ExposureClass Validation Tests ", func() {
 			Expect(errorList).To(HaveLen(0))
 		})
 
-		It("should fail as exposure class handler is empty", func() {
+		It("should fail as exposure class handler is no DNS1123 label with zero length", func() {
 			exposureClass.Handler = ""
+			errorList := ValidateExposureClass(exposureClass)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("handler"),
+			}))))
+		})
+
+		It("should fail as exposure class handler is no DNS1123 label", func() {
+			exposureClass.Handler = "TES:T"
+			errorList := ValidateExposureClass(exposureClass)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("handler"),
+			}))))
+		})
+
+		It("should fail as exposure class handler contains more than 41 characters", func() {
+			exposureClass.Handler = "izqissuczonxfeq346ce5exr9rhkcmb398tlloo2tb"
 			errorList := ValidateExposureClass(exposureClass)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{

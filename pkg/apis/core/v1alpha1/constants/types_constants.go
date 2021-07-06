@@ -127,6 +127,8 @@ const (
 	GardenRoleMonitoring = "monitoring"
 	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
 	GardenRoleOptionalAddon = "optional-addon"
+	// GardenRoleExposureClassHandler is the value of the GardenRole key indicating type 'exposureclass-handler'.
+	GardenRoleExposureClassHandler = "exposureclass-handler"
 
 	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
 	// which value will be the value of `shoot.status.uid`
@@ -247,6 +249,9 @@ const (
 
 	// LabelControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
 	LabelControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
+
+	// LabelExposureClassHandlerName is the label key for exposure class handler names.
+	LabelExposureClassHandlerName = "handler.exposureclass.gardener.cloud/name"
 
 	// EventResourceReferenced indicates that the resource deletion is in waiting mode because the resource is still
 	// being referenced by at least one other resource (e.g. a SecretBinding is still referenced by a Shoot)

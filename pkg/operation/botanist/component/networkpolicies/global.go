@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -126,7 +127,7 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 							NamespaceSelector: &metav1.LabelSelector{},
 							PodSelector: &metav1.LabelSelector{
 								MatchLabels: map[string]string{
-									v1beta1constants.LabelApp: "istio-ingressgateway",
+									v1beta1constants.LabelApp: gardenletconfigv1alpha1.DefaultIngressGatewayAppLabelValue,
 								},
 							},
 						})

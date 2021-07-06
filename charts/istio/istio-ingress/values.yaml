@@ -1,6 +1,5 @@
 labels:
   app: istio-ingressgateway
-  istio: ingressgateway
 annotations: {}
 image: to-be-injected-by-imagevector
 trustDomain: cluster.local

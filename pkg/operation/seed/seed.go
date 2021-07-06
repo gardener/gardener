@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/charts"
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
@@ -50,6 +51,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
@@ -58,6 +60,7 @@ import (
 	"github.com/Masterminds/semver"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/sirupsen/logrus"
+	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -679,7 +682,7 @@ func RunReconcileSeedFlow(
 		istioCRDs := istio.NewIstioCRD(chartApplier, charts.Path, k8sSeedClient.Client())
 		istiod := istio.NewIstiod(
 			&istio.IstiodValues{
-				TrustDomain: "cluster.local",
+				TrustDomain: gardencorev1beta1.DefaultDomain,
 				Image:       istiodImage.String(),
 			},
 			common.IstioNamespace,
@@ -687,49 +690,97 @@ func RunReconcileSeedFlow(
 			charts.Path,
 			k8sSeedClient.Client(),
 		)
+		istioDeployers := []component.DeployWaiter{istioCRDs, istiod}
 
-		igwConfig := &istio.IngressValues{
-			TrustDomain:     "cluster.local",
+		defaultIngressGatewayConfig := &istio.IngressValues{
+			TrustDomain:     gardencorev1beta1.DefaultDomain,
 			Image:           igwImage.String(),
 			IstiodNamespace: common.IstioNamespace,
 			Annotations:     seed.LoadBalancerServiceAnnotations,
 			Ports:           []corev1.ServicePort{},
+			Labels:          conf.SNI.Ingress.Labels,
 		}
 
 		// even if SNI is being disabled, the existing ports must stay the same
 		// until all APIServer SNI resources are removed.
 		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) || anySNI {
-			igwConfig.Ports = append(
-				igwConfig.Ports,
+			defaultIngressGatewayConfig.Ports = append(
+				defaultIngressGatewayConfig.Ports,
 				corev1.ServicePort{Name: "proxy", Port: 8443, TargetPort: intstr.FromInt(8443)},
 				corev1.ServicePort{Name: "tcp", Port: 443, TargetPort: intstr.FromInt(9443)},
 				corev1.ServicePort{Name: "tls-tunnel", Port: vpnseedserver.GatewayPort, TargetPort: intstr.FromInt(vpnseedserver.GatewayPort)},
 			)
 		}
 
-		igw := istio.NewIngressGateway(
-			igwConfig,
+		istioDeployers = append(istioDeployers, istio.NewIngressGateway(
+			defaultIngressGatewayConfig,
 			*conf.SNI.Ingress.Namespace,
 			chartApplier,
 			charts.Path,
 			k8sSeedClient.Client(),
-		)
+		))
 
-		if err := component.OpWaiter(istioCRDs, istiod, igw).Deploy(ctx); err != nil {
+		// Add for each ExposureClass handler in the config an own Ingress Gateway.
+		for _, handler := range conf.ExposureClassHandlers {
+			istioDeployers = append(istioDeployers, istio.NewIngressGateway(
+				&istio.IngressValues{
+					TrustDomain:     gardencorev1beta1.DefaultDomain,
+					Image:           igwImage.String(),
+					IstiodNamespace: common.IstioNamespace,
+					Annotations:     utils.MergeStringMaps(seed.LoadBalancerServiceAnnotations, handler.LoadBalancerService.Annotations),
+					Ports:           defaultIngressGatewayConfig.Ports,
+					Labels:          gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
+				},
+				*handler.SNI.Ingress.Namespace,
+				chartApplier,
+				charts.Path,
+				k8sSeedClient.Client(),
+			))
+		}
+
+		if err := component.OpWaiter(istioDeployers...).Deploy(ctx); err != nil {
 			return err
 		}
 	}
 
-	proxy := istio.NewProxyProtocolGateway(*conf.SNI.Ingress.Namespace, chartApplier, charts.Path)
+	var proxyGatewayDeployers = []component.DeployWaiter{
+		istio.NewProxyProtocolGateway(
+			&istio.ProxyValues{
+				Labels: conf.SNI.Ingress.Labels,
+			},
+			*conf.SNI.Ingress.Namespace,
+			chartApplier,
+			charts.Path,
+		),
+	}
+
+	for _, handler := range conf.ExposureClassHandlers {
+		proxyGatewayDeployers = append(proxyGatewayDeployers, istio.NewProxyProtocolGateway(
+			&istio.ProxyValues{
+				Labels: gutil.GetMandatoryExposureClassHandlerSNILabels(handler.SNI.Ingress.Labels, handler.Name),
+			},
+			*handler.SNI.Ingress.Namespace,
+			chartApplier,
+			charts.Path,
+		))
+	}
 
 	if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
-		if err := proxy.Deploy(ctx); err != nil {
-			return err
+		for _, proxyDeployer := range proxyGatewayDeployers {
+			if err := proxyDeployer.Deploy(ctx); err != nil {
+				return err
+			}
 		}
 	} else {
-		if err := proxy.Destroy(ctx); err != nil {
-			return err
+		for _, proxyDeployer := range proxyGatewayDeployers {
+			if err := proxyDeployer.Destroy(ctx); err != nil {
+				return err
+			}
 		}
+	}
+
+	if err := cleanupOrphanExposureClassHandlerResources(ctx, k8sSeedClient.Client(), conf.ExposureClassHandlers, seedLogger); err != nil {
+		return err
 	}
 
 	if seed.Info.Status.ClusterIdentity == nil {
@@ -1384,4 +1435,63 @@ func deletePriorityClassIfValueNotTheSame(ctx context.Context, k8sClient client.
 	}
 
 	return client.IgnoreNotFound(k8sClient.Delete(ctx, pc))
+}
+
+func cleanupOrphanExposureClassHandlerResources(ctx context.Context, c client.Client, exposureClassHandlers []config.ExposureClassHandler, logger *logrus.Entry) error {
+	exposureClassHandlerNamespaces := &corev1.NamespaceList{}
+
+	if err := c.List(ctx, exposureClassHandlerNamespaces, client.MatchingLabels{v1alpha1constants.GardenRole: v1alpha1constants.GardenRoleExposureClassHandler}); err != nil {
+		return err
+	}
+
+	for _, namespace := range exposureClassHandlerNamespaces.Items {
+		var exposureClassHandlerExists bool
+		for _, handler := range exposureClassHandlers {
+			if *handler.SNI.Ingress.Namespace == namespace.Name {
+				exposureClassHandlerExists = true
+				break
+			}
+		}
+		if exposureClassHandlerExists {
+			continue
+		}
+		logger.Infof("Namespace %q is orphan as there is no ExposureClass handler in the gardenlet configuration anymore", namespace.Name)
+
+		// Determine the corresponding handler name to the ExposureClass handler resources.
+		handlerName, ok := namespace.Labels[v1alpha1constants.LabelExposureClassHandlerName]
+		if !ok {
+			logger.Info("Cannot delete ExposureClass handler resources as the corresponging handler is unknown and it is not save to remove them")
+			continue
+		}
+
+		gatewayList := istiov1beta1.GatewayList{}
+		if err := c.List(ctx, &gatewayList); err != nil {
+			return err
+		}
+
+		var exposureClassHandlerInUse bool
+		for _, gateway := range gatewayList.Items {
+			if gateway.Name != v1beta1constants.DeploymentNameKubeAPIServer && gateway.Name != v1beta1constants.DeploymentNameVPNSeedServer {
+				continue
+			}
+			// Check if the gateway still selects the ExposureClass handler ingress gateway.
+			if value, ok := gateway.Spec.Selector[v1alpha1constants.LabelExposureClassHandlerName]; ok && value == handlerName {
+				exposureClassHandlerInUse = true
+				break
+			}
+		}
+		if exposureClassHandlerInUse {
+			logger.Infof("Resources of ExposureClass handler %q in namespace %q cannot be deleted as they are still in use", handlerName, namespace.Name)
+			continue
+		}
+
+		// ExposureClass handler is orphan and not used by any Shoots anymore
+		// therefore it is save to clean it up.
+		logger.Infof("Delete orphan ExposureClass handler namespace %q", namespace.Name)
+		if err := c.Delete(ctx, &namespace); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+
+	return nil
 }

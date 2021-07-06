@@ -17,6 +17,9 @@ package istio_test
 import (
 	"bytes"
 	"context"
+	"fmt"
+
+	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 
 	"github.com/gogo/protobuf/jsonpb"
 
@@ -68,27 +71,10 @@ var _ = Describe("ingress", func() {
 		Expect(appsv1.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(networkingv1alpha3.AddToScheme(s)).ToNot(HaveOccurred())
 		Expect(policyv1beta1.AddToScheme(s)).ToNot(HaveOccurred())
+
 		c = fake.NewClientBuilder().WithScheme(s).Build()
-		renderer := cr.NewWithServerVersion(&version.Info{})
 
-		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
-		Expect(ca).NotTo(BeNil(), "should return chart applier")
-
-		igw = NewIngressGateway(
-			&IngressValues{
-				Image:           "foo/bar",
-				TrustDomain:     "foo.bar",
-				IstiodNamespace: "istio-test-system",
-				Annotations:     igwAnnotations,
-				Ports: []corev1.ServicePort{
-					{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
-				},
-			},
-			deployNS,
-			ca,
-			chartsRootPath,
-			c,
-		)
+		igw = makeIngressGateway(c, deployNS, igwAnnotations, nil)
 		Expect(igw.Deploy(ctx)).ToNot(HaveOccurred(), "ingress gateway deploy succeeds")
 	})
 
@@ -146,6 +132,34 @@ var _ = Describe("ingress", func() {
 		// TODO (mvladev): remove the deprecated annotations in v1.17.0
 		Expect(svc.Annotations).To(HaveKeyWithValue("service.alpha.kubernetes.io/aws-load-balancer-type", "nlb"), "DEPRECATED - SHOULD BE REMOVED IN 1.17.0")
 		Expect(svc.Annotations).To(HaveKeyWithValue("service.beta.kubernetes.io/aws-load-balancer-type", "nlb"), "DEPRECATED - SHOULD BE REMOVED IN 1.17.0")
+	})
+
+	Context("ExposureClass handlers", func() {
+		var (
+			exposureClassHandlerName      = "test"
+			exposureClassHandlerNamespace = fmt.Sprintf("test-ingress-handler-%s", exposureClassHandlerName)
+		)
+
+		JustBeforeEach(func() {
+			var labels = map[string]string{
+				v1alpha1constants.GardenRole:                    v1alpha1constants.GardenRoleExposureClassHandler,
+				v1alpha1constants.LabelExposureClassHandlerName: exposureClassHandlerName,
+			}
+
+			igw = makeIngressGateway(c, exposureClassHandlerNamespace, igwAnnotations, labels)
+			Expect(igw.Deploy(ctx)).ToNot(HaveOccurred(), "ingress gateway deploy succeeds")
+		})
+
+		It("deploys ExposureClass handler ingress gateway namespace", func() {
+			actualNS := &corev1.Namespace{}
+
+			Expect(c.Get(ctx, client.ObjectKey{Name: exposureClassHandlerNamespace}, actualNS)).To(Succeed())
+
+			Expect(actualNS.Labels).To(HaveKeyWithValue("istio-operator-managed", "Reconcile"))
+			Expect(actualNS.Labels).To(HaveKeyWithValue("istio-injection", "disabled"))
+			Expect(actualNS.Labels).To(HaveKeyWithValue(v1alpha1constants.GardenRole, v1alpha1constants.GardenRoleExposureClassHandler))
+			Expect(actualNS.Labels).To(HaveKeyWithValue(v1alpha1constants.LabelExposureClassHandlerName, exposureClassHandlerName))
+		})
 	})
 
 	Context("DEPRECATED aws loadbalancer annotations", func() {
@@ -232,3 +246,31 @@ var _ = Describe("ingress", func() {
 		})
 	})
 })
+
+func makeIngressGateway(c client.Client, namespace string, annotations, labels map[string]string) component.DeployWaiter {
+	renderer := cr.NewWithServerVersion(&version.Info{})
+	ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
+	Expect(ca).NotTo(BeNil(), "should return chart applier")
+
+	values := IngressValues{
+		Image:           "foo/bar",
+		TrustDomain:     "foo.bar",
+		IstiodNamespace: "istio-test-system",
+		Annotations:     annotations,
+		Ports: []corev1.ServicePort{
+			{Name: "foo", Port: 999, TargetPort: intstr.FromInt(999)},
+		},
+	}
+
+	if labels != nil {
+		values.Labels = labels
+	}
+
+	return NewIngressGateway(
+		&values,
+		namespace,
+		ca,
+		chartsRootPath,
+		c,
+	)
+}

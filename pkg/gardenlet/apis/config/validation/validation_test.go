@@ -353,7 +353,7 @@ var _ = Describe("GardenletConfiguration", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should fail as exposureClassHandler name is empty", func() {
+			It("should fail as exposureClassHandler name is no DNS1123 label with zero length", func() {
 				cfg.ExposureClassHandlers[0].Name = ""
 
 				errorList := ValidateGardenletConfiguration(cfg, nil, false)
@@ -363,6 +363,18 @@ var _ = Describe("GardenletConfiguration", func() {
 					"Field": Equal("exposureClassHandlers[0].name"),
 				}))))
 			})
+
+			It("should fail as exposureClassHandler name is no DNS1123 label", func() {
+				cfg.ExposureClassHandlers[0].Name = "TE:ST"
+
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("exposureClassHandlers[0].name"),
+				}))))
+			})
+
 		})
 	})
 

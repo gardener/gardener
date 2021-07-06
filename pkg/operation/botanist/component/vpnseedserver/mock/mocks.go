@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	config "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	vpnseedserver "github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	gomock "github.com/golang/mock/gomock"
 	types "k8s.io/apimachinery/pkg/types"
@@ -62,6 +63,30 @@ func (m *MockInterface) Destroy(arg0 context.Context) error {
 func (mr *MockInterfaceMockRecorder) Destroy(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Destroy", reflect.TypeOf((*MockInterface)(nil).Destroy), arg0)
+}
+
+// SetExposureClassHandlerName mocks base method.
+func (m *MockInterface) SetExposureClassHandlerName(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetExposureClassHandlerName", arg0)
+}
+
+// SetExposureClassHandlerName indicates an expected call of SetExposureClassHandlerName.
+func (mr *MockInterfaceMockRecorder) SetExposureClassHandlerName(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetExposureClassHandlerName", reflect.TypeOf((*MockInterface)(nil).SetExposureClassHandlerName), arg0)
+}
+
+// SetSNIConfig mocks base method.
+func (m *MockInterface) SetSNIConfig(arg0 *config.SNI) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetSNIConfig", arg0)
+}
+
+// SetSNIConfig indicates an expected call of SetSNIConfig.
+func (mr *MockInterfaceMockRecorder) SetSNIConfig(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSNIConfig", reflect.TypeOf((*MockInterface)(nil).SetSNIConfig), arg0)
 }
 
 // SetSecrets mocks base method.
