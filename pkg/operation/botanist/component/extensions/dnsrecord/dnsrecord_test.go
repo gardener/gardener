@@ -29,6 +29,8 @@ import (
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -60,8 +62,6 @@ var _ = Describe("DNSRecord", func() {
 	var (
 		ctrl *gomock.Controller
 
-		mockNow *mocktime.MockNow
-
 		c client.Client
 
 		values    *dnsrecord.Values
@@ -75,6 +75,8 @@ var _ = Describe("DNSRecord", func() {
 		log     = logger.NewNopLogger()
 		testErr = fmt.Errorf("test")
 
+		fakeOps *retryfake.Ops
+		mockNow *mocktime.MockNow
 		cleanup func()
 	)
 
@@ -100,7 +102,7 @@ var _ = Describe("DNSRecord", func() {
 			Values:     []string{address},
 			TTL:        pointer.Int64(ttl),
 		}
-		dnsRecord = dnsrecord.New(log, c, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+		dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 
 		dns = &extensionsv1alpha1.DNSRecord{
 			ObjectMeta: metav1.ObjectMeta{
@@ -137,9 +139,12 @@ var _ = Describe("DNSRecord", func() {
 			},
 		}
 
+		fakeOps = &retryfake.Ops{MaxAttempts: 1}
 		mockNow = mocktime.NewMockNow(ctrl)
 		mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 		cleanup = test.WithVars(
+			&retry.Until, fakeOps.Until,
+			&retry.UntilTimeout, fakeOps.UntilTimeout,
 			&dnsrecord.TimeNow, mockNow.Do,
 			&extensions.TimeNow, mockNow.Do,
 			&gutil.TimeNow, mockNow.Do,
@@ -210,7 +215,7 @@ var _ = Describe("DNSRecord", func() {
 					return testErr
 				})
 
-			dnsRecord := dnsrecord.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			dnsRecord := dnsrecord.New(log, mc, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 			Expect(dnsRecord.Deploy(ctx)).To(MatchError(testErr))
 		})
 	})
@@ -292,7 +297,7 @@ var _ = Describe("DNSRecord", func() {
 			mc.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&extensionsv1alpha1.DNSRecord{}), gomock.Any())
 			mc.EXPECT().Delete(ctx, dns).Return(testErr)
 
-			dnsRecord := dnsrecord.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			dnsRecord := dnsrecord.New(log, mc, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 			Expect(dnsRecord.Destroy(ctx)).To(MatchError(testErr))
 		})
 	})
@@ -362,7 +367,7 @@ var _ = Describe("DNSRecord", func() {
 			metav1.SetMetaDataAnnotation(&dnsWithRestore.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore)
 			test.EXPECTPatch(ctx, mc, dnsWithRestore, dnsWithState, types.MergePatchType)
 
-			dnsRecord := dnsrecord.New(log, mc, values, time.Millisecond, 250*time.Millisecond, 500*time.Millisecond)
+			dnsRecord := dnsrecord.New(log, mc, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 			Expect(dnsRecord.Restore(ctx, shootState)).To(Succeed())
 		})
 	})
