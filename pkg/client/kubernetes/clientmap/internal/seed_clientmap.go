@@ -46,9 +46,6 @@ type SeedClientSetFactory struct {
 	// GetGardenClient is a func that will be used to get a client to the garden cluster to retrieve the Seed's
 	// kubeconfig secret (if InCluster=false).
 	GetGardenClient func(ctx context.Context) (kubernetes.Interface, error)
-	// If InCluster is set to true, the created ClientSets will use in-cluster communication
-	// (using ClientConnectionConfig.Kubeconfig or fallback to mounted ServiceAccount if unset).
-	InCluster bool
 	// ClientConnectionConfiguration is the configuration that will be used by created ClientSets.
 	ClientConnectionConfig baseconfig.ClientConnectionConfiguration
 }
@@ -59,10 +56,6 @@ func (f *SeedClientSetFactory) CalculateClientSetHash(ctx context.Context, k cli
 	key, ok := k.(SeedClientSetKey)
 	if !ok {
 		return "", fmt.Errorf("unsupported ClientSetKey: expected %T got %T", SeedClientSetKey(""), k)
-	}
-
-	if f.InCluster {
-		return "", nil
 	}
 
 	secretRef, gardenClient, err := f.getSeedSecretRef(ctx, key)
@@ -83,19 +76,6 @@ func (f *SeedClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cli
 	key, ok := k.(SeedClientSetKey)
 	if !ok {
 		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T got %T", SeedClientSetKey(""), k)
-	}
-
-	if f.InCluster {
-		return NewClientFromFile(
-			"",
-			f.ClientConnectionConfig.Kubeconfig,
-			kubernetes.WithClientConnectionOptions(f.ClientConnectionConfig),
-			kubernetes.WithClientOptions(
-				client.Options{
-					Scheme: kubernetes.SeedScheme,
-				},
-			),
-		)
 	}
 
 	secretRef, gardenClient, err := f.getSeedSecretRef(ctx, key)

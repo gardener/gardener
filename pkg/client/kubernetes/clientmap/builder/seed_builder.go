@@ -31,7 +31,6 @@ import (
 // clients for Seed clusters.
 type SeedClientMapBuilder struct {
 	gardenClientFunc       func(ctx context.Context) (kubernetes.Interface, error)
-	inCluster              bool
 	clientConnectionConfig *baseconfig.ClientConnectionConfiguration
 
 	logger logrus.FieldLogger
@@ -64,13 +63,6 @@ func (b *SeedClientMapBuilder) WithGardenClientSet(clientSet kubernetes.Interfac
 	return b
 }
 
-// WithInCluster sets the inCluster attribute of the builder. If true, the created ClientSets will use in-cluster communication
-// (using the provided ClientConnectionConfig.Kubeconfig or fallback to mounted ServiceAccount if unset).
-func (b *SeedClientMapBuilder) WithInCluster(inCluster bool) *SeedClientMapBuilder {
-	b.inCluster = inCluster
-	return b
-}
-
 // WithClientConnectionConfig sets the ClientConnectionConfiguration that should be used by ClientSets created by this ClientMap.
 func (b *SeedClientMapBuilder) WithClientConnectionConfig(cfg *baseconfig.ClientConnectionConfiguration) *SeedClientMapBuilder {
 	b.clientConnectionConfig = cfg
@@ -91,7 +83,6 @@ func (b *SeedClientMapBuilder) Build() (clientmap.ClientMap, error) {
 
 	return internal.NewSeedClientMap(&internal.SeedClientSetFactory{
 		GetGardenClient:        b.gardenClientFunc,
-		InCluster:              b.inCluster,
 		ClientConnectionConfig: *b.clientConnectionConfig,
 	}, b.logger), nil
 }

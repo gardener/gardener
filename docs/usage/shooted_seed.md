@@ -56,7 +56,7 @@ It is strongly recommended to use such resources directly to register shoots as 
 Option | Description
 --- | ---
 `true` | Registers the cluster as a seed cluster. Automatically deploys the gardenlet into the shoot cluster, unless specified otherwise (e.g. setting the `no-gardenlet` flag).
-`no-gardenlet` | Prevents the automatic deployment of the gardenlet into the shoot cluster. Instead, the `Seed` object will be created with the assumption that another gardenlet will be responsible for managing it (according to its `seedSelector` configuration).
+`no-gardenlet` | Prevents the automatic deployment of the gardenlet into the shoot cluster. Instead, the `Seed` object will be created with the assumption that another gardenlet will be responsible for managing it (according to its `seedConfig` configuration).
 `disable-capacity-reservation` | Set `spec.settings.excessCapacity.enabled` in the seed cluster to false (see [/example/50-seed.yaml](../../example/50-seed.yaml)).
 `invisible` | Set `spec.settings.scheduling.visible` in the seed cluster to false  (see [/example/50-seed.yaml](../../example/50-seed.yaml))
 `visible` | Set `spec.settings.scheduling.visible` in the seed cluster to true  (see [/example/50-seed.yaml](../../example/50-seed.yaml)) (**default**).

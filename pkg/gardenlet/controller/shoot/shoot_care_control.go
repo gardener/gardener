@@ -198,7 +198,7 @@ func (s *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 	}
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue
-	if !controllerutils.ShootIsManagedByThisGardenlet(shootObj, s.config, s.k8sGardenCoreInformers.Seeds().Lister()) {
+	if !controllerutils.ShootIsManagedByThisGardenlet(shootObj, s.config) {
 		return reconcile.Result{}, nil
 	}
 

@@ -115,11 +115,9 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("timed out waiting for Garden core caches to sync")
 	}
 
-	// Register Seed object if desired
-	if f.cfg.SeedConfig != nil {
-		if err := f.registerSeed(ctx, k8sGardenClient); err != nil {
-			return fmt.Errorf("failed to register the seed: %+v", err)
-		}
+	// Register Seed object
+	if err := f.registerSeed(ctx, k8sGardenClient); err != nil {
+		return fmt.Errorf("failed to register the seed: %+v", err)
 	}
 
 	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(filepath.Join(charts.Path, DefaultImageVector))

@@ -345,25 +345,6 @@ users:
 			})
 		})
 
-		Describe("#getTargetedSeed", func() {
-			It("should return a single Seed", func() {
-				mockSeedClient.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, seed *gardencorev1beta1.Seed) error {
-					seed.ObjectMeta = metav1.ObjectMeta{
-						Name: seedName,
-					}
-					return nil
-				})
-
-				seed, err := getTargetedSeed(ctx, mockSeedClient, seedName)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(seed).To(Equal(&gardencorev1beta1.Seed{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: seedName,
-					},
-				}))
-			})
-		})
-
 		Describe("#waitForCertificateRotation", func() {
 			var (
 				testKubeconfig string

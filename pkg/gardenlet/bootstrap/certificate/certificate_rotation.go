@@ -102,7 +102,7 @@ func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCan
 			cr.logger.Error(msg)
 			seed, err := cr.getTargetedSeed(ctx)
 			if err != nil {
-				cr.logger.Warnf("failed to record event on seeds announcing the failed certificate rotation: %v", err)
+				cr.logger.Warnf("failed to record event on seed announcing the failed certificate rotation: %v", err)
 				return
 			}
 			recorder.Event(seed, corev1.EventTypeWarning, EventGardenletCertificateRotationFailed, msg)
@@ -112,6 +112,21 @@ func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCan
 		cr.logger.Info("Terminating Gardenlet after successful certificate rotation.")
 		gardenletCancel()
 	}, time.Second, ctx.Done())
+}
+
+// getTargetedSeed returns the Seed that this Gardenlet is reconciling
+func (cr *Manager) getTargetedSeed(ctx context.Context) (*gardencorev1beta1.Seed, error) {
+	gardenClient, err := cr.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
+	}
+
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: cr.seedName}, seed); err != nil {
+		return nil, err
+	}
+
+	return seed, nil
 }
 
 // waitForCertificateRotation determines and waits for the certificate rotation deadline.
@@ -216,23 +231,4 @@ func rotateCertificate(ctx context.Context, logger logrus.FieldLogger, clientMap
 	}
 
 	return nil
-}
-
-// getTargetedSeed returns the Seed that this Gardenlet is reconciling
-func getTargetedSeed(ctx context.Context, gardenClient client.Client, seedName string) (*gardencorev1beta1.Seed, error) {
-	seed := &gardencorev1beta1.Seed{}
-	if err := gardenClient.Get(ctx, client.ObjectKey{Name: seedName}, seed); err != nil {
-		return nil, err
-	}
-
-	return seed, nil
-}
-
-func (cr *Manager) getTargetedSeed(ctx context.Context) (*gardencorev1beta1.Seed, error) {
-	gardenClient, err := cr.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
-
-	return getTargetedSeed(ctx, gardenClient.Client(), cr.seedName)
 }

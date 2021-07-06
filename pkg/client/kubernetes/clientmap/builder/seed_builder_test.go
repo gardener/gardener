@@ -69,13 +69,6 @@ var _ = Describe("SeedClientMapBuilder", func() {
 		})
 	})
 
-	Context("#inCluster", func() {
-		It("should be correctly set by WithInCluster", func() {
-			builder := NewSeedClientMapBuilder().WithInCluster(true)
-			Expect(builder.inCluster).To(BeTrue())
-		})
-	})
-
 	Context("#clientConnectionConfig", func() {
 		It("should be correctly set by WithClientConnectionConfig", func() {
 			builder := NewSeedClientMapBuilder().WithClientConnectionConfig(clientConnectionConfig)

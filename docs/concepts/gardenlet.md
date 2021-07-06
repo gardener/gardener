@@ -111,6 +111,36 @@ for example, using command  `kubectl certificate approve  seed-csr-<...>`).
 If that doesn’t happen within 15 minutes,
 the gardenlet repeats the process and creates another CSR.
 
+## Configuring the Seed to work with
+
+The Gardenlet works with a single seed, which must be configured in the
+`GardenletConfiguration` under `.seedConfig`. This must be a copy of the
+`Seed` resource, for example (see `example/20-componentconfig-gardenlet.yaml`
+for a more complete example):
+
+```yaml
+apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+kind: GardenletConfiguration
+seedConfig:
+  metadata:
+    name: my-seed
+  spec:
+    provider:
+      type: aws
+    # ...
+    secretRef:
+      name: my-seed-secret
+      namespace: garden
+```
+
+When using `make start-gardenlet`, the corresponding script will automatically
+fetch the seed cluster's `kubeconfig` based on the `seedConfig.spec.secretRef`
+and set the environment accordingly.
+
+When running the Gardenlet without the help of the Makefile, set the
+environment variable `KUBECONFIG` to the seed cluster's kubeconfig and
+`GARDEN_KUBECONFIG` to the garden cluster's kubeconfig.
+
 ## Component Configuration
 
 In the component configuration for the gardenlet, it’s possible to define:

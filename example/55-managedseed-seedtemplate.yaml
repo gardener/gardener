@@ -8,10 +8,7 @@ spec:
     name: crazy-botany
   # seedTemplate is a template for a Seed object, that should be used to register a given cluster as a Seed.
   # When seedTemplate is specified, the ManagedSeed controller will not deploy a gardenlet into the cluster
-  # and an existing gardenlet reconciling the new Seed is required.    
+  # and an existing gardenlet reconciling the new Seed is required.
   seedTemplate:
-#   metadata:
-#     labels:
-#       seed.gardener.cloud/gardenlet: local # Label to use in seedSelector of the existing gardenlet 
     spec: # Seed spec
 #     <See `spec` in `50-seed.yaml` for more details>

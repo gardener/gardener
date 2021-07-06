@@ -101,36 +101,6 @@ var _ = Describe("SeedClientMap", func() {
 			Expect(err).To(MatchError(ContainSubstring("unsupported ClientSetKey")))
 		})
 
-		It("should fail if NewClientFromFile fails (in-cluster)", func() {
-			factory.InCluster = true
-			fakeErr := fmt.Errorf("fake")
-			internal.NewClientFromFile = func(masterURL, kubeconfigPath string, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-				return nil, fakeErr
-			}
-
-			cs, err := cm.GetClient(ctx, key)
-			Expect(cs).To(BeNil())
-			Expect(err).To(MatchError(fmt.Sprintf("error creating new ClientSet for key %q: fake", key.Key())))
-		})
-
-		It("should correctly construct a new ClientSet (in-cluster)", func() {
-			factory.InCluster = true
-			fakeCS := fakeclientset.NewClientSet()
-			internal.NewClientFromFile = func(masterURL, kubeconfigPath string, fns ...kubernetes.ConfigFunc) (kubernetes.Interface, error) {
-				Expect(masterURL).To(BeEmpty())
-				Expect(kubeconfigPath).To(Equal(clientConnectionConfig.Kubeconfig))
-				Expect(fns).To(ConsistOfConfigFuncs(
-					kubernetes.WithClientConnectionOptions(clientConnectionConfig),
-					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
-				))
-				return fakeCS, nil
-			}
-
-			cs, err := cm.GetClient(ctx, key)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cs).To(BeIdenticalTo(fakeCS))
-		})
-
 		It("should fail if GetGardenClient fails", func() {
 			fakeErr := fmt.Errorf("fake")
 			factory.GetGardenClient = func(ctx context.Context) (kubernetes.Interface, error) {

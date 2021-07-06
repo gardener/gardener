@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -63,9 +62,6 @@ type Controller struct {
 
 	workerCh               chan int
 	numberOfRunningWorkers int
-
-	lock     sync.Mutex
-	leaseMap map[string]bool
 }
 
 // NewSeedController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
@@ -105,7 +101,6 @@ func NewSeedController(
 		seedLeaseQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),
 		seedExtensionCheckQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-extension-check"),
 		workerCh:                make(chan int),
-		leaseMap:                make(map[string]bool),
 	}
 
 	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
@@ -166,9 +161,6 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		controllerutils.DeprecatedCreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.reconcileSeedExtensionCheckKey, &waitGroup, c.workerCh)
 	}
 
-	// health management
-	go c.startHealthManagement(ctx)
-
 	// Shutdown handling
 	<-ctx.Done()
 	c.seedQueue.ShutDown()
@@ -185,48 +177,6 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	}
 
 	waitGroup.Wait()
-}
-
-func (c *Controller) startHealthManagement(ctx context.Context) {
-	seedName := confighelper.SeedNameFromSeedConfig(c.config.SeedConfig)
-	expectedHealthReports := 1 // TODO: Shouldn't this be reset for each loop iteration?
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(LeaseResyncGracePeriodSeconds / 2 * time.Second):
-			isHealthy := true
-
-			if _, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(seedName); err != nil {
-				if apierrors.IsNotFound(err) {
-					// the Seed configured for the Gardenlet does not exist.
-					// Do not expect an existing lease
-					expectedHealthReports = 0
-				} else {
-					logger.Logger.Errorf("error when getting the seed %q for health management: %+v", seedName, err)
-					isHealthy = false
-				}
-			}
-
-			c.lock.Lock()
-
-			if len(c.leaseMap) != expectedHealthReports {
-				isHealthy = false
-			} else {
-				for _, status := range c.leaseMap {
-					if !status {
-						isHealthy = false
-						break
-					}
-				}
-			}
-
-			c.leaseMap = make(map[string]bool)
-			c.lock.Unlock()
-			c.healthManager.Set(isHealthy)
-		}
-	}
 }
 
 // RunningWorkers returns the number of running workers.
