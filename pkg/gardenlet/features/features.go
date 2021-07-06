@@ -31,7 +31,7 @@ var (
 		features.ManagedIstio:           {Default: true, PreRelease: featuregate.Beta},
 		features.APIServerSNI:           {Default: true, PreRelease: featuregate.Beta},
 		features.CachedRuntimeClients:   {Default: false, PreRelease: featuregate.Alpha},
-		features.MountHostCADirectories: {Default: true, PreRelease: featuregate.Beta},
+		features.MountHostCADirectories: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // TODO (ialidzhikov): remove MountHostCADirectories in v1.29.
 		features.SeedKubeScheduler:      {Default: false, PreRelease: featuregate.Alpha},
 		features.ReversedVPN:            {Default: false, PreRelease: featuregate.Alpha},
 	}
