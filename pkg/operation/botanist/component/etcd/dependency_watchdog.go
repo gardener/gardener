@@ -16,23 +16,35 @@ package etcd
 
 import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+
+	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DependencyWatchdogConfiguration returns the configuration for the dependency watchdog ensuring that its dependant
+// DependencyWatchdogEndpointConfiguration returns the configuration for the dependency watchdog ensuring that its dependant
 // pods are restarted as soon as it recovers from a crash loop.
-func DependencyWatchdogConfiguration(role string) (string, error) {
-	return ServiceName(role) + `:
-  dependantPods:
-  - name: ` + v1beta1constants.GardenRoleControlPlane + `
-    selector:
-      matchExpressions:
-      - key: ` + v1beta1constants.GardenRole + `
-        operator: In
-        values:
-        - ` + v1beta1constants.GardenRoleControlPlane + `
-      - key: ` + v1beta1constants.LabelRole + `
-        operator: In
-        values:
-        - ` + v1beta1constants.LabelAPIServer + `
-`, nil
+func DependencyWatchdogEndpointConfiguration(role string) (map[string]restarterapi.Service, error) {
+	return map[string]restarterapi.Service{
+		ServiceName(role): {
+			Dependants: []restarterapi.DependantPods{
+				{
+					Name: v1beta1constants.GardenRoleControlPlane,
+					Selector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      v1beta1constants.GardenRole,
+								Operator: metav1.LabelSelectorOpIn,
+								Values:   []string{v1beta1constants.GardenRoleControlPlane},
+							},
+							{
+								Key:      v1beta1constants.LabelRole,
+								Operator: metav1.LabelSelectorOpIn,
+								Values:   []string{v1beta1constants.LabelAPIServer},
+							},
+						},
+					},
+				},
+			},
+		},
+	}, nil
 }

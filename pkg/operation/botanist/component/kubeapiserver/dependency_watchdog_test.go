@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,23 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package etcd_test
+package kubeapiserver_test
 
 import (
-	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
+	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("DependencyWatchdog", func() {
 	Describe("#DependencyWatchdogEndpointConfiguration", func() {
 		It("should compute the correct configuration", func() {
-			config, err := etcd.DependencyWatchdogEndpointConfiguration(testRole)
+			config, err := DependencyWatchdogEndpointConfiguration()
 			Expect(config).To(Equal(map[string]restarterapi.Service{
-				"etcd-" + testRole + "-client": {
+				"kube-apiserver": {
 					Dependants: []restarterapi.DependantPods{
 						{
 							Name: "controlplane",
@@ -41,14 +44,36 @@ var _ = Describe("DependencyWatchdog", func() {
 									},
 									{
 										Key:      "role",
-										Operator: "In",
-										Values:   []string{"apiserver"},
+										Operator: "NotIn",
+										Values:   []string{"main", "apiserver"},
 									},
 								},
 							},
 						},
 					},
 				},
+			}))
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("#DependencyWatchdogProbeConfiguration", func() {
+		It("should compute the correct configuration", func() {
+			config, err := DependencyWatchdogProbeConfiguration()
+			Expect(config).To(ConsistOf(scalerapi.ProbeDependants{
+				Name: "shoot-kube-apiserver",
+				Probe: &scalerapi.ProbeConfig{
+					External:      &scalerapi.ProbeDetails{KubeconfigSecretName: "dependency-watchdog-external-probe"},
+					Internal:      &scalerapi.ProbeDetails{KubeconfigSecretName: "dependency-watchdog-internal-probe"},
+					PeriodSeconds: pointer.Int32(30),
+				},
+				DependantScales: []*scalerapi.DependantScaleDetails{{
+					ScaleRef: autoscalingv1.CrossVersionObjectReference{
+						APIVersion: "apps/v1",
+						Kind:       "Deployment",
+						Name:       "kube-controller-manager",
+					},
+				}},
 			}))
 			Expect(err).NotTo(HaveOccurred())
 		})

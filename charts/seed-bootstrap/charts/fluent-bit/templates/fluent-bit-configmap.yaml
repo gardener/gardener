@@ -173,13 +173,6 @@ data:
         Parser              kubeapiserverParser
         Reserve_Data        True
 
-    [FILTER]
-        Name                parser
-        Match               kubernetes.*dependency-watchdog*dependency-watchdog*
-        Key_Name            log
-        Parser              kubeapiserverParser
-        Reserve_Data        True
-
     # Extension filters
     [FILTER]
         Name                parser

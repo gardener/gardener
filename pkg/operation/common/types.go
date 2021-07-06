@@ -84,15 +84,6 @@ const (
 	// KubecfgSecretName is the name of the kubecfg secret.
 	KubecfgSecretName = "kubecfg"
 
-	// DependencyWatchdogExternalProbeSecretName is the name of the kubecfg secret with internal DNS for external access.
-	DependencyWatchdogExternalProbeSecretName = "dependency-watchdog-external-probe"
-
-	// DependencyWatchdogInternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
-	DependencyWatchdogInternalProbeSecretName = "dependency-watchdog-internal-probe"
-
-	// DependencyWatchdogUserName is the user name of the dependency-watchdog.
-	DependencyWatchdogUserName = "gardener.cloud:system:dependency-watchdog"
-
 	// KubeAPIServerHealthCheck is a key for the kube-apiserver-health-check user.
 	KubeAPIServerHealthCheck = "kube-apiserver-health-check"
 
