@@ -831,11 +831,12 @@ func validateMachineImagesConstraints(constraints []core.MachineImage, image, ol
 }
 
 func validateContainerRuntimeConstraints(constraints []core.MachineImage, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
-	if apiequality.Semantic.DeepEqual(worker.CRI, oldWorker.CRI) {
+	if worker.CRI == nil || worker.Machine.Image == nil {
 		return nil
 	}
 
-	if worker.CRI == nil || worker.Machine.Image == nil {
+	if apiequality.Semantic.DeepEqual(worker.CRI, oldWorker.CRI) &&
+		apiequality.Semantic.DeepEqual(worker.Machine.Image, oldWorker.Machine.Image) {
 		return nil
 	}
 

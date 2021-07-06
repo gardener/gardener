@@ -1523,6 +1523,91 @@ var _ = Describe("validator", func() {
 						}
 					})
 
+					It("should deny updating to an MachineImage which does not support the selected container runtime", func() {
+						cloudProfile.Spec.MachineImages = append(
+							cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "cr-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										CRI: []core.CRI{
+											{
+												Name: core.CRINameContainerD,
+											},
+										},
+									},
+								},
+							})
+
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    "cr-image-name",
+							Version: "1.2.3",
+						}
+						shoot.Spec.Provider.Workers[0].CRI = &core.CRI{Name: core.CRINameContainerD}
+						newShoot := shoot.DeepCopy()
+						newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    imageName1,
+							Version: latestNonExpiredVersion,
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).To(HaveOccurred())
+					})
+
+					It("should deny updating to an MachineImageVersion which does not support the selected container runtime", func() {
+						cloudProfile.Spec.MachineImages = append(
+							cloudProfile.Spec.MachineImages,
+							core.MachineImage{
+								Name: "cr-image-name",
+								Versions: []core.MachineImageVersion{
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "1.2.3",
+										},
+										CRI: []core.CRI{
+											{
+												Name: core.CRINameContainerD,
+											},
+										},
+									},
+									{
+										ExpirableVersion: core.ExpirableVersion{
+											Version: "2.3.4",
+										},
+									},
+								},
+							})
+
+						shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    "cr-image-name",
+							Version: "1.2.3",
+						}
+						shoot.Spec.Provider.Workers[0].CRI = &core.CRI{Name: core.CRINameContainerD}
+						newShoot := shoot.DeepCopy()
+						newShoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+							Name:    "cr-image-name",
+							Version: "2.3.4",
+						}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(newShoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+						Expect(err).To(HaveOccurred())
+					})
+
 					It("should keep machine image of the old shoot (unset in new shoot)", func() {
 						newShoot := shoot.DeepCopy()
 						newShoot.Spec.Provider.Workers[0].Machine.Image = nil
