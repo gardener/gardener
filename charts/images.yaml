@@ -255,8 +255,8 @@ images:
 # API Server SNI
 - name: apiserver-proxy
   sourceRepository: github.com/envoyproxy/envoy
-  repository: envoyproxy/envoy
-  tag: "v1.16.0"
+  repository: envoyproxy/envoy-alpine
+  tag: "v1.18.3"
 - name: apiserver-proxy-sidecar
   sourceRepository: github.com/gardener/apiserver-proxy
   repository: eu.gcr.io/gardener-project/gardener/apiserver-proxy
