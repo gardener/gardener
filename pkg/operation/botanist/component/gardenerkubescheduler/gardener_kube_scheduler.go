@@ -129,14 +129,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	)
 
 	var (
-		failPolicy             = admissionregistrationv1beta1.Ignore
-		matchPolicy            = admissionregistrationv1beta1.Exact
-		revocationPolicy       = admissionregistrationv1beta1.NeverReinvocationPolicy
-		timeout          int32 = 2
-		sideEffects            = admissionregistrationv1beta1.SideEffectClassNone
-		scope                  = admissionregistrationv1beta1.NamespacedScope
-		updateMode             = autoscalingv1beta2.UpdateModeAuto
-		minAvailable           = intstr.FromInt(1)
+		updateMode   = autoscalingv1beta2.UpdateModeAuto
+		minAvailable = intstr.FromInt(1)
 
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
 			Name:   k.namespace,
@@ -329,38 +323,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				Namespace: k.namespace,
 			}},
 		}
-		webhook = &admissionregistrationv1beta1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   webhookName,
-				Labels: getLabels(),
-			},
-			Webhooks: []admissionregistrationv1beta1.MutatingWebhook{{
-				Name:         webhookName,
-				ClientConfig: *k.webhookClientConfig,
-				Rules: []admissionregistrationv1beta1.RuleWithOperations{{
-					Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Create},
-					Rule: admissionregistrationv1beta1.Rule{
-						APIGroups:   []string{corev1.GroupName},
-						APIVersions: []string{corev1.SchemeGroupVersion.Version},
-						Scope:       &scope,
-						Resources:   []string{"pods"},
-					},
-				}},
-				FailurePolicy: &failPolicy,
-				MatchPolicy:   &matchPolicy,
-				NamespaceSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
-					},
-				},
-				ObjectSelector:          &metav1.LabelSelector{},
-				SideEffects:             &sideEffects,
-				TimeoutSeconds:          &timeout,
-				AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-				ReinvocationPolicy:      &revocationPolicy,
-			}},
-		}
-		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
+		webhook = GetMutatingWebhookConfig(*k.webhookClientConfig)
+		vpa     = &autoscalingv1beta2.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      Name,
 				Namespace: k.namespace,
@@ -419,6 +383,51 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	}
 
 	return managedresources.CreateForSeed(ctx, k.client, k.namespace, "gardener-kube-scheduler", false, resources)
+}
+
+// GetMutatingWebhookConfig returns the MutatingWebhookConfiguration for the seedadmissioncontroller component for
+// reuse between the component and integration tests.
+func GetMutatingWebhookConfig(clientConfig admissionregistrationv1beta1.WebhookClientConfig) *admissionregistrationv1beta1.MutatingWebhookConfiguration {
+	var (
+		failPolicy         = admissionregistrationv1beta1.Ignore
+		matchPolicy        = admissionregistrationv1beta1.Exact
+		reinvocationPolicy = admissionregistrationv1beta1.NeverReinvocationPolicy
+		timeout            = int32(2)
+		sideEffects        = admissionregistrationv1beta1.SideEffectClassNone
+		scope              = admissionregistrationv1beta1.NamespacedScope
+	)
+
+	return &admissionregistrationv1beta1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   webhookName,
+			Labels: getLabels(),
+		},
+		Webhooks: []admissionregistrationv1beta1.MutatingWebhook{{
+			Name:         webhookName,
+			ClientConfig: clientConfig,
+			Rules: []admissionregistrationv1beta1.RuleWithOperations{{
+				Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Create},
+				Rule: admissionregistrationv1beta1.Rule{
+					APIGroups:   []string{corev1.GroupName},
+					APIVersions: []string{corev1.SchemeGroupVersion.Version},
+					Scope:       &scope,
+					Resources:   []string{"pods"},
+				},
+			}},
+			FailurePolicy: &failPolicy,
+			MatchPolicy:   &matchPolicy,
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
+				},
+			},
+			ObjectSelector:          &metav1.LabelSelector{},
+			SideEffects:             &sideEffects,
+			TimeoutSeconds:          &timeout,
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			ReinvocationPolicy:      &reinvocationPolicy,
+		}},
+	}
 }
 
 func getLabels() map[string]string {

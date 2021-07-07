@@ -291,75 +291,15 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 		}
 
-		failurePolicy                  = admissionregistrationv1beta1.Fail
-		validatingWebhookConfiguration = &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:   Name,
-				Labels: getLabels(),
-			},
-			Webhooks: []admissionregistrationv1beta1.ValidatingWebhook{
-				{
-					Name: "crds.seed.admission.core.gardener.cloud",
-					Rules: []admissionregistrationv1beta1.RuleWithOperations{{
-						Rule: admissionregistrationv1beta1.Rule{
-							APIGroups:   []string{apiextensionsv1.GroupName},
-							APIVersions: []string{apiextensionsv1beta1.SchemeGroupVersion.Version, apiextensionsv1.SchemeGroupVersion.Version},
-							Resources:   []string{"customresourcedefinitions"},
-						},
-						Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Delete},
-					}},
-					FailurePolicy:     &failurePolicy,
-					NamespaceSelector: &metav1.LabelSelector{},
-					ObjectSelector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{gutil.DeletionProtected: "true"},
-					},
-					ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
-						CABundle: []byte(TLSCACert),
-						Service: &admissionregistrationv1beta1.ServiceReference{
-							Name:      service.Name,
-							Namespace: service.Namespace,
-							Path:      pointer.String(extensioncrds.WebhookPath),
-						},
-					},
-					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-					TimeoutSeconds:          pointer.Int32(10),
-				},
-				{
-					Name: "crs.seed.admission.core.gardener.cloud",
-					Rules: []admissionregistrationv1beta1.RuleWithOperations{{
-						Rule: admissionregistrationv1beta1.Rule{
-							APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
-							APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
-							Resources: []string{
-								"backupbuckets",
-								"backupentries",
-								"bastions",
-								"containerruntimes",
-								"controlplanes",
-								"extensions",
-								"infrastructures",
-								"networks",
-								"operatingsystemconfigs",
-								"workers",
-							},
-						},
-						Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Delete},
-					}},
-					FailurePolicy:     &failurePolicy,
-					NamespaceSelector: &metav1.LabelSelector{},
-					ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
-						CABundle: []byte(TLSCACert),
-						Service: &admissionregistrationv1beta1.ServiceReference{
-							Name:      service.Name,
-							Namespace: service.Namespace,
-							Path:      pointer.String(extensioncrds.WebhookPath),
-						},
-					},
-					AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
-					TimeoutSeconds:          pointer.Int32(10),
-				},
+		webhookClientConfig = admissionregistrationv1beta1.WebhookClientConfig{
+			CABundle: []byte(TLSCACert),
+			Service: &admissionregistrationv1beta1.ServiceReference{
+				Name:      service.Name,
+				Namespace: service.Namespace,
+				Path:      pointer.String(extensioncrds.WebhookPath),
 			},
 		}
+		validatingWebhookConfiguration = GetValidatingWebhookConfig(webhookClientConfig)
 	)
 
 	resources, err := registry.AddAllAndSerialize(
@@ -382,6 +322,65 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 
 func (g *gardenerSeedAdmissionController) Destroy(ctx context.Context) error {
 	return managedresources.DeleteForSeed(ctx, g.client, g.namespace, managedResourceName)
+}
+
+// GetValidatingWebhookConfig returns the ValidatingWebhookConfiguration for the seedadmissioncontroller component for
+// reuse between the component and integration tests.
+func GetValidatingWebhookConfig(clientConfig admissionregistrationv1beta1.WebhookClientConfig) *admissionregistrationv1beta1.ValidatingWebhookConfiguration {
+	failurePolicy := admissionregistrationv1beta1.Fail
+
+	return &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   Name,
+			Labels: getLabels(),
+		},
+		Webhooks: []admissionregistrationv1beta1.ValidatingWebhook{{
+			Name: "crds.seed.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1beta1.RuleWithOperations{{
+				Rule: admissionregistrationv1beta1.Rule{
+					APIGroups:   []string{apiextensionsv1.GroupName},
+					APIVersions: []string{apiextensionsv1beta1.SchemeGroupVersion.Version, apiextensionsv1.SchemeGroupVersion.Version},
+					Resources:   []string{"customresourcedefinitions"},
+				},
+				Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Delete},
+			}},
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ObjectSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{gutil.DeletionProtected: "true"},
+			},
+			ClientConfig:            clientConfig,
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "crs.seed.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1beta1.RuleWithOperations{{
+				Rule: admissionregistrationv1beta1.Rule{
+					APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+					APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+					Resources: []string{
+						"backupbuckets",
+						"backupentries",
+						"bastions",
+						"containerruntimes",
+						"controlplanes",
+						"dnsrecords",
+						"extensions",
+						"infrastructures",
+						"networks",
+						"operatingsystemconfigs",
+						"workers",
+					},
+				},
+				Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Delete},
+			}},
+			FailurePolicy:           &failurePolicy,
+			NamespaceSelector:       &metav1.LabelSelector{},
+			ClientConfig:            clientConfig,
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			TimeoutSeconds:          pointer.Int32(10),
+		}},
+	}
 }
 
 func getLabels() map[string]string {
