@@ -16,6 +16,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"

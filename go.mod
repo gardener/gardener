@@ -25,7 +25,6 @@ require (
 	github.com/googleapis/gnostic v0.5.5
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/huandu/xstrings v1.3.2
-	github.com/json-iterator/go v1.1.11
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0

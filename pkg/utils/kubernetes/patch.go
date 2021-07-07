@@ -18,13 +18,10 @@ import (
 	"context"
 	"reflect"
 
-	jsoniter "github.com/json-iterator/go"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-var json = jsoniter.ConfigFastest
 
 // TryPatch tries to apply the given transformation function onto the given object, and to patch it afterwards with optimistic locking.
 // It retries the patch with an exponential backoff.
