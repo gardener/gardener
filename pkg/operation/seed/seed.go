@@ -79,7 +79,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -282,22 +281,19 @@ func RunReconcileSeedFlow(
 		}
 	)
 
-	if err := k8sSeedClient.Client().Create(ctx, gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
-		return err
-	}
-
-	if err := kutil.TryUpdate(ctx, retry.DefaultRetry, k8sSeedClient.Client(), gardenNamespace, func() error {
+	// create + label garden namespace
+	if _, err := controllerutils.CreateOrGetAndMergePatch(ctx, k8sSeedClient.Client(), gardenNamespace, func() error {
 		kutil.SetMetaDataLabel(&gardenNamespace.ObjectMeta, "role", v1beta1constants.GardenNamespace)
 		return nil
 	}); err != nil {
 		return err
 	}
 
+	// label kube-system namespace
 	namespaceKubeSystem := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: metav1.NamespaceSystem}}
-	if err := kutil.TryUpdate(ctx, retry.DefaultRetry, k8sSeedClient.Client(), namespaceKubeSystem, func() error {
-		kutil.SetMetaDataLabel(&namespaceKubeSystem.ObjectMeta, "role", metav1.NamespaceSystem)
-		return nil
-	}); err != nil {
+	patch := client.MergeFrom(namespaceKubeSystem.DeepCopy())
+	kutil.SetMetaDataLabel(&namespaceKubeSystem.ObjectMeta, "role", metav1.NamespaceSystem)
+	if err := k8sSeedClient.Client().Patch(ctx, namespaceKubeSystem, patch); err != nil {
 		return err
 	}
 
