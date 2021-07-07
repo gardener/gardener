@@ -20,7 +20,6 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -65,9 +64,4 @@ func tryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj cl
 		}
 		return true, nil
 	})
-}
-
-// SubmitEmptyPatch submits an empty patch to the given `obj` with the given `client` instance.
-func SubmitEmptyPatch(ctx context.Context, c client.Client, obj client.Object) error {
-	return c.Patch(ctx, obj, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
 }
