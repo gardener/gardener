@@ -17,7 +17,6 @@ package kubernetes
 import (
 	"context"
 	"reflect"
-	"strings"
 
 	jsoniter "github.com/json-iterator/go"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -66,21 +65,6 @@ func tryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj cl
 		}
 		return true, nil
 	})
-}
-
-// IsEmptyPatch checks if the given patch is empty. A patch is considered empty if it is
-// the empty string or if it json-decodes to an empty json map.
-func IsEmptyPatch(patch []byte) bool {
-	if len(strings.TrimSpace(string(patch))) == 0 {
-		return true
-	}
-
-	var m map[string]interface{}
-	if err := json.Unmarshal(patch, &m); err != nil {
-		return false
-	}
-
-	return len(m) == 0
 }
 
 // SubmitEmptyPatch submits an empty patch to the given `obj` with the given `client` instance.
