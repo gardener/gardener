@@ -1648,6 +1648,16 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(KubeletConfigReserved)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ImageGCHighThresholdPercent != nil {
+		in, out := &in.ImageGCHighThresholdPercent, &out.ImageGCHighThresholdPercent
+		*out = new(int32)
+		**out = **in
+	}
+	if in.ImageGCLowThresholdPercent != nil {
+		in, out := &in.ImageGCLowThresholdPercent, &out.ImageGCLowThresholdPercent
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 

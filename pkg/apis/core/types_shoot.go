@@ -617,6 +617,10 @@ type KubeletConfig struct {
 	// SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald).
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
 	SystemReserved *KubeletConfigReserved
+	// ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
+	ImageGCHighThresholdPercent *int32
+	// ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free.
+	ImageGCLowThresholdPercent *int32
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

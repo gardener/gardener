@@ -938,6 +938,16 @@ message KubeletConfig {
   // When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
   // +optional
   optional KubeletConfigReserved systemReserved = 15;
+
+  // ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
+  // +optional
+  // Default: 50
+  optional int32 imageGCHighThresholdPercent = 16;
+
+  // ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free.
+  // +optional
+  // Default: 40
+  optional int32 imageGCLowThresholdPercent = 17;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

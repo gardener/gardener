@@ -310,6 +310,39 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeTrue()))
 		})
 
+		It("should not default the failSwapOn field", func() {
+			falseVar := false
+			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+			obj.Spec.Kubernetes.Kubelet.FailSwapOn = &falseVar
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeFalse()))
+		})
+
+		It("should default the imageGCThreshold fields", func() {
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent).To(PointTo(Equal(int32(50))))
+			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent).To(PointTo(Equal(int32(40))))
+		})
+
+		It("should not default the imageGCThreshold fields", func() {
+			var (
+				high int32 = 12
+				low  int32 = 34
+			)
+
+			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+			obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = &high
+			obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = &low
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent).To(PointTo(Equal(high)))
+			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent).To(PointTo(Equal(low)))
+		})
+
 		Context("default kubeReserved", func() {
 			var (
 				defaultKubeReservedMemory = resource.MustParse("1Gi")
@@ -346,16 +379,6 @@ var _ = Describe("Defaults", func() {
 					PID:    &kubeReservedPID,
 				})))
 			})
-		})
-
-		It("should not default the failSwapOn field", func() {
-			falseVar := false
-			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
-			obj.Spec.Kubernetes.Kubelet.FailSwapOn = &falseVar
-
-			SetDefaults_Shoot(obj)
-
-			Expect(obj.Spec.Kubernetes.Kubelet.FailSwapOn).To(PointTo(BeFalse()))
 		})
 
 		It("should not default the kube-controller-manager's pod eviction timeout field", func() {

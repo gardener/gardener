@@ -49,6 +49,8 @@ type ConfigurableKubeletConfigParameters struct {
 	EvictionMaxPodGracePeriod        *int32
 	FailSwapOn                       *bool
 	FeatureGates                     map[string]bool
+	ImageGCHighThresholdPercent      *int32
+	ImageGCLowThresholdPercent       *int32
 	KubeReserved                     map[string]string
 	MaxPods                          *int32
 	PodPidsLimit                     *int64
@@ -79,6 +81,8 @@ func KubeletConfigParametersFromCoreV1beta1KubeletConfig(kubeletConfig *gardenco
 		out.EvictionMaxPodGracePeriod = kubeletConfig.EvictionMaxPodGracePeriod
 		out.EvictionPressureTransitionPeriod = kubeletConfig.EvictionPressureTransitionPeriod
 		out.FailSwapOn = kubeletConfig.FailSwapOn
+		out.ImageGCHighThresholdPercent = kubeletConfig.ImageGCHighThresholdPercent
+		out.ImageGCLowThresholdPercent = kubeletConfig.ImageGCLowThresholdPercent
 		out.FeatureGates = kubeletConfig.FeatureGates
 		out.KubeReserved = reservedFromKubeletConfig(kubeletConfig.KubeReserved)
 		out.MaxPods = kubeletConfig.MaxPods

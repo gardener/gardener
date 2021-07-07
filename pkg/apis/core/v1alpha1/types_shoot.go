@@ -780,6 +780,14 @@ type KubeletConfig struct {
 	// When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.
 	// +optional
 	SystemReserved *KubeletConfigReserved `json:"systemReserved,omitempty" protobuf:"bytes,15,opt,name=systemReserved"`
+	// ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection.
+	// +optional
+	// Default: 50
+	ImageGCHighThresholdPercent *int32 `json:"imageGCHighThresholdPercent,omitempty" protobuf:"bytes,16,opt,name=imageGCHighThresholdPercent"`
+	// ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free.
+	// +optional
+	// Default: 40
+	ImageGCLowThresholdPercent *int32 `json:"imageGCLowThresholdPercent,omitempty" protobuf:"bytes,17,opt,name=imageGCLowThresholdPercent"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

@@ -72,6 +72,8 @@ spec:
     #     failSwapOn: true
     #     cpuManagerPolicy: none
     #     podPidsLimit: 10
+    #     imageGCHighThresholdPercent: 50
+    #     imageGCLowThresholdPercent: 40
     #     imagePullProgressDeadline: 1m
     #     maxPods: 110
     #     evictionPressureTransitionPeriod: 4m0s
@@ -196,6 +198,8 @@ spec:
   #   failSwapOn: true
   #   cpuManagerPolicy: none
   #   podPidsLimit: 10
+  #   imageGCHighThresholdPercent: 50
+  #   imageGCLowThresholdPercent: 40
   #   imagePullProgressDeadline: 1m
   #   maxPods: 110
   #   evictionPressureTransitionPeriod: 4m0s

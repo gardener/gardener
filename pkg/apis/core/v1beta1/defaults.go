@@ -210,6 +210,12 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.Kubelet.FailSwapOn == nil {
 		obj.Spec.Kubernetes.Kubelet.FailSwapOn = pointer.Bool(true)
 	}
+	if obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent == nil {
+		obj.Spec.Kubernetes.Kubelet.ImageGCHighThresholdPercent = pointer.Int32(50)
+	}
+	if obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent == nil {
+		obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = pointer.Int32(40)
+	}
 
 	var (
 		kubeReservedMemory = resource.MustParse("1Gi")

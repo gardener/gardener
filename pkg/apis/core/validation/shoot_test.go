@@ -3249,6 +3249,74 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)),
 		)
 
+		DescribeTable("validate the kubelet configuration - ImageGCHighThresholdPercent",
+			func(imageGCHighThresholdPercent int, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					ImageGCHighThresholdPercent: pointer.Int32(int32(imageGCHighThresholdPercent)),
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("0 <= value <= 100", 1, BeEmpty()),
+			Entry("value < 0", -1, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("imageGCHighThresholdPercent").String()),
+				})),
+			)),
+			Entry("value > 100", 101, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("imageGCHighThresholdPercent").String()),
+				})),
+			)),
+		)
+
+		DescribeTable("validate the kubelet configuration - ImageGCLowThresholdPercent",
+			func(imageGCLowThresholdPercent int, matcher gomegatypes.GomegaMatcher) {
+				kubeletConfig := core.KubeletConfig{
+					ImageGCLowThresholdPercent: pointer.Int32(int32(imageGCLowThresholdPercent)),
+				}
+
+				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("0 <= value <= 100", 1, BeEmpty()),
+			Entry("value < 0", -1, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("imageGCLowThresholdPercent").String()),
+				})),
+			)),
+			Entry("value > 100", 101, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("imageGCLowThresholdPercent").String()),
+				})),
+			)),
+		)
+
+		It("should prevent that imageGCLowThresholdPercent is not less than imageGCHighThresholdPercent", func() {
+			kubeletConfig := core.KubeletConfig{
+				ImageGCLowThresholdPercent:  pointer.Int32(2),
+				ImageGCHighThresholdPercent: pointer.Int32(1),
+			}
+
+			errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+
+			Expect(errList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(field.NewPath("imageGCLowThresholdPercent").String()),
+				})),
+			))
+		})
+
 		DescribeTable("validate the kubelet configuration - EvictionMaxPodGracePeriod",
 			func(evictionMaxPodGracePeriod int32, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{

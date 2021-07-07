@@ -3575,6 +3575,20 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfigReserved"),
 						},
 					},
+					"imageGCHighThresholdPercent": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection. Default: 50",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"imageGCLowThresholdPercent": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free. Default: 40",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},
@@ -10249,6 +10263,20 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 						SchemaProps: spec.SchemaProps{
 							Description: "SystemReserved is the configuration for resources reserved for system processes not managed by kubernetes (e.g. journald). When updating these values, be aware that cgroup resizes may not succeed on active worker nodes. Look for the NodeAllocatableEnforced event to determine if the configuration was applied.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfigReserved"),
+						},
+					},
+					"imageGCHighThresholdPercent": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImageGCHighThresholdPercent describes the percent of the disk usage which triggers image garbage collection. Default: 50",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"imageGCLowThresholdPercent": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free. Default: 40",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 				},
