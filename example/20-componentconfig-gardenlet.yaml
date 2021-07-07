@@ -111,6 +111,7 @@ featureGates:
 #   ingress:
 #     serviceName: istio-ingress
 #     namespace: istio-ingress
+#     serviceExternalIP: 10.8.10.10 # Optional external ip for the ingress gateway load balancer.
 #     labels:
 #       istio: ingressgateway
 # exposureClassHandlers:
@@ -125,5 +126,6 @@ featureGates:
 #   sni:
 #     ingress:
 #       namespace: ingress-internal
+#       serviceExternalIP: 10.8.10.11 # Optional external ip for the ingress gateway load balancer.
 #       labels:
 #         network: internal

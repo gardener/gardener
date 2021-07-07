@@ -80,6 +80,13 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 	}
 
+	sniPath := fldPath.Child("sni", "ingress")
+	if cfg.SNI != nil && cfg.SNI.Ingress != nil && cfg.SNI.Ingress.ServiceExternalIP != nil {
+		if ip := net.ParseIP(*cfg.SNI.Ingress.ServiceExternalIP); ip == nil {
+			allErrs = append(allErrs, field.Invalid(sniPath.Child("serviceExternalIP"), cfg.SNI.Ingress.ServiceExternalIP, "external service ip is invalid"))
+		}
+	}
+
 	exposureClassHandlersPath := fldPath.Child("exposureClassHandlers")
 	for i, handler := range cfg.ExposureClassHandlers {
 		handlerPath := exposureClassHandlersPath.Index(i)
@@ -88,13 +95,12 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 			allErrs = append(allErrs, field.Invalid(handlerPath.Child("name"), handler.Name, errorMessage))
 		}
 
-		if handler.LoadBalancerService.LoadBalancerIP != nil {
+		if handler.SNI != nil && handler.SNI.Ingress != nil && handler.SNI.Ingress.ServiceExternalIP != nil {
 			if !cfg.FeatureGates[string(features.APIServerSNI)] {
-				allErrs = append(allErrs, field.Invalid(handlerPath.Child("loadBalancerService", "loadBalancerIP"), handler.LoadBalancerService.LoadBalancerIP, "cannot use loadbalacer ip when APIServerSNI feature gate is disabled"))
+				allErrs = append(allErrs, field.Invalid(handlerPath.Child("sni", "ingress", "serviceExternalIP"), handler.SNI.Ingress.ServiceExternalIP, "cannot use an external service ip when APIServerSNI feature gate is disabled"))
 			}
-
-			if ip := net.ParseIP(*handler.LoadBalancerService.LoadBalancerIP); ip == nil {
-				allErrs = append(allErrs, field.Invalid(handlerPath.Child("loadBalancerService", "loadBalancerIP"), handler.LoadBalancerService.LoadBalancerIP, "loadbalancer ip is invalid"))
+			if ip := net.ParseIP(*handler.SNI.Ingress.ServiceExternalIP); ip == nil {
+				allErrs = append(allErrs, field.Invalid(handlerPath.Child("sni", "ingress", "serviceExternalIP"), handler.SNI.Ingress.ServiceExternalIP, "external service ip is invalid"))
 			}
 		}
 	}

@@ -536,11 +536,6 @@ func (in *LoadBalancerServiceConfig) DeepCopyInto(out *LoadBalancerServiceConfig
 			(*out)[key] = val
 		}
 	}
-	if in.LoadBalancerIP != nil {
-		in, out := &in.LoadBalancerIP, &out.LoadBalancerIP
-		*out = new(string)
-		**out = **in
-	}
 	return
 }
 
@@ -693,6 +688,11 @@ func (in *SNIIngress) DeepCopyInto(out *SNIIngress) {
 	*out = *in
 	if in.ServiceName != nil {
 		in, out := &in.ServiceName, &out.ServiceName
+		*out = new(string)
+		**out = **in
+	}
+	if in.ServiceExternalIP != nil {
+		in, out := &in.ServiceExternalIP, &out.ServiceExternalIP
 		*out = new(string)
 		**out = **in
 	}

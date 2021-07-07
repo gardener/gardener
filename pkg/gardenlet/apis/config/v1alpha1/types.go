@@ -462,6 +462,10 @@ type SNIIngress struct {
 	// Defaults to "istio-ingressgateway".
 	// +optional
 	ServiceName *string `json:"serviceName,omitempty"`
+	// ServiceExternalIP is the external ip which should be assigned to the
+	// load balancer service of the ingress gateway.
+	// Compability is depending on the respecitve provider cloud-controller-manager.
+	ServiceExternalIP *string `json:"serviceExternalIP,omitempty"`
 	// Namespace is the namespace in which the ingressgateway is deployed in.
 	// Defaults to "istio-ingress".
 	// +optional
@@ -490,10 +494,6 @@ type ExposureClassHandler struct {
 type LoadBalancerServiceConfig struct {
 	// Annotations is a key value map to annotate the underlying load balancer services.
 	Annotations map[string]string `json:"annotations"`
-	// LoadBalancerIP is the external ip which should be assigned to the loadbalancer service.
-	// This is only compatible with the APIServerSNI (default) feature gate and
-	// depending on the respective infrastructure cloud-controller-manager compatibility.
-	LoadBalancerIP *string `json:"loadBalancerIP,omitempty"`
 }
 
 const (
