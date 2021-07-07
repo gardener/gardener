@@ -40,7 +40,7 @@ import (
 
 const (
 	deploymentName = "logging-pod"
-	namespace      = "default"
+	namespace      = metav1.NamespaceDefault
 	logsCount      = 100000
 	logsDuration   = "1s"
 	loggerAppLabel = "vpnTunnelTesting"
@@ -177,7 +177,7 @@ var _ = ginkgo.Describe("Shoot vpn tunnel testing", func() {
 		podExecutor := framework.NewPodExecutor(f.ShootClient)
 		for _, pod := range pods.Items {
 			ginkgo.By(fmt.Sprintf("Copy data to target-container in pod %s", pod.Name))
-			reader, err := podExecutor.Execute(ctx, pod.Namespace, pod.Name, "hyperkube", fmt.Sprintf("kubectl cp /data/data %s/%s:/data/data -c target-container", pod.Namespace, pod.Name))
+			reader, err := podExecutor.Execute(ctx, pod.Namespace, pod.Name, "source-container", fmt.Sprintf("/data/kubectl cp /data/data %s/%s:/data/data -c target-container", pod.Namespace, pod.Name))
 			if apierrors.IsNotFound(err) {
 				f.Logger.Infof("Aborting as pod %s was not found anymore: %s", pod.Name, err)
 				break

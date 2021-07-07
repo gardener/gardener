@@ -27,7 +27,7 @@ spec:
               sleep 3600;
             done
       - name: logger
-        image: eu.gcr.io/gardener-project/3rd/k8s_gcr_io/logs-generator:v0.1.1
+        image: k8s.gcr.io/logs-generator:v0.1.1
         args:
           - /bin/sh
           - -c

@@ -28,9 +28,20 @@ spec:
         volumeMounts:
         - name: source-data
           mountPath: /data
+      - image: eu.gcr.io/gardener-project/3rd/alpine:3.13.5
+        name: install-kubectl
+        command:
+        - /bin/sh
+        - -c
+        - |-
+          wget https://storage.googleapis.com/kubernetes-release/release/v{{ .KubeVersion }}/bin/linux/amd64/kubectl -O /data/kubectl;
+          chmod +x /data/kubectl;
+        volumeMounts:
+        - name: source-data
+          mountPath: /data
       containers:
-      - image: bitnami/kubectl:{{ .KubeVersion }}
-        name: hyperkube
+      - image: eu.gcr.io/gardener-project/3rd/busybox:1.29.2
+        name: source-container
         command:
         - sleep
         - "3600"
@@ -42,7 +53,7 @@ spec:
           mountPath: /data
         - name: kubecfg
           mountPath: /secret
-      - image: bitnami/kubectl:{{ .KubeVersion }}
+      - image: eu.gcr.io/gardener-project/3rd/busybox:1.29.2
         name: target-container
         command:
         - sleep
