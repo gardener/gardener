@@ -25,19 +25,8 @@ import (
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// LabelsMatchFor checks whether the given label selector matches for the given set of labels.
-func LabelsMatchFor(l map[string]string, labelSelector *metav1.LabelSelector) bool {
-	selector, err := metav1.LabelSelectorAsSelector(labelSelector)
-	if err != nil {
-		return false
-	}
-	return selector.Matches(labels.Set(l))
-}
 
 // SeedFilterFunc returns a filtering func for the seeds.
 func SeedFilterFunc(seedName string) func(obj interface{}) bool {
@@ -72,7 +61,7 @@ func ShootFilterFunc(seedName string) func(obj interface{}) bool {
 
 // ShootIsManagedByThisGardenlet checks if the given shoot is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
 func ShootIsManagedByThisGardenlet(shoot *gardencorev1beta1.Shoot, gc *config.GardenletConfiguration) bool {
-	return *shoot.Spec.SeedName == confighelper.SeedNameFromSeedConfig(&gc.SeedConfig)
+	return *shoot.Spec.SeedName == confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
 }
 
 // ControllerInstallationFilterFunc returns a filtering func for the seeds.
@@ -88,7 +77,7 @@ func ControllerInstallationFilterFunc(seedName string) func(obj interface{}) boo
 }
 
 // BackupBucketFilterFunc returns a filtering func for the seeds.
-func BackupBucketFilterFunc(ctx context.Context, c client.Reader, seedName string) func(obj interface{}) bool {
+func BackupBucketFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 		if !ok {
@@ -103,7 +92,7 @@ func BackupBucketFilterFunc(ctx context.Context, c client.Reader, seedName strin
 }
 
 // BackupEntryFilterFunc returns a filtering func for the seeds.
-func BackupEntryFilterFunc(ctx context.Context, c client.Reader, seedName string) func(obj interface{}) bool {
+func BackupEntryFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 		if !ok {
@@ -122,14 +111,14 @@ func BackupEntryFilterFunc(ctx context.Context, c client.Reader, seedName string
 }
 
 // BackupEntryIsManagedByThisGardenlet checks if the given BackupEntry is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
-func BackupEntryIsManagedByThisGardenlet(ctx context.Context, c client.Reader, backupEntry *gardencorev1beta1.BackupEntry, gc *config.GardenletConfiguration) bool {
-	seedName := confighelper.SeedNameFromSeedConfig(&gc.SeedConfig)
+func BackupEntryIsManagedByThisGardenlet(backupEntry *gardencorev1beta1.BackupEntry, gc *config.GardenletConfiguration) bool {
+	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
 
 	return backupEntry.Spec.SeedName != nil && *backupEntry.Spec.SeedName == seedName
 }
 
 // BastionFilterFunc returns a filtering func for the seeds.
-func BastionFilterFunc(ctx context.Context, c client.Reader, seedName string) func(obj interface{}) bool {
+func BastionFilterFunc(seedName string) func(obj interface{}) bool {
 	return func(obj interface{}) bool {
 		bastion, ok := obj.(*operationsv1alpha1.Bastion)
 		if !ok {
@@ -144,8 +133,8 @@ func BastionFilterFunc(ctx context.Context, c client.Reader, seedName string) fu
 }
 
 // BastionIsManagedByThisGardenlet checks if the given Bastion is managed by this gardenlet by comparing it with the seed name from the GardenletConfiguration.
-func BastionIsManagedByThisGardenlet(ctx context.Context, c client.Reader, bastion *operationsv1alpha1.Bastion, gc *config.GardenletConfiguration) bool {
-	seedName := confighelper.SeedNameFromSeedConfig(&gc.SeedConfig)
+func BastionIsManagedByThisGardenlet(bastion *operationsv1alpha1.Bastion, gc *config.GardenletConfiguration) bool {
+	seedName := confighelper.SeedNameFromSeedConfig(gc.SeedConfig)
 
 	return bastion.Spec.SeedName != nil && *bastion.Spec.SeedName == seedName
 }

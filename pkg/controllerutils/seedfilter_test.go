@@ -234,13 +234,13 @@ var _ = Describe("seedfilter", func() {
 
 		Describe("#BackupEntryFilterFunc", func() {
 			It("should return false if the specified object is not a BackupEntry", func() {
-				f := controllerutils.BackupEntryFilterFunc(ctx, c, seedName)
+				f := controllerutils.BackupEntryFilterFunc(seedName)
 				Expect(f(shoot)).To(BeFalse())
 			})
 
 			DescribeTable("filter BackupEntry by seedName",
 				func(specSeedName, statusSeedName *string, filterSeedName string, match gomegatypes.GomegaMatcher) {
-					f := controllerutils.BackupEntryFilterFunc(ctx, c, filterSeedName)
+					f := controllerutils.BackupEntryFilterFunc(filterSeedName)
 					backupEntry.Spec.SeedName = specSeedName
 					backupEntry.Status.SeedName = statusSeedName
 					Expect(f(backupEntry)).To(match)
@@ -268,7 +268,7 @@ var _ = Describe("seedfilter", func() {
 							},
 						},
 					}
-					Expect(controllerutils.BackupEntryIsManagedByThisGardenlet(ctx, c, backupEntry, gc)).To(match)
+					Expect(controllerutils.BackupEntryIsManagedByThisGardenlet(backupEntry, gc)).To(match)
 				},
 				Entry("BackupEntry is not managed by this seed", otherSeed, BeFalse()),
 				Entry("BackupEntry is managed by this seed", seedName, BeTrue()),

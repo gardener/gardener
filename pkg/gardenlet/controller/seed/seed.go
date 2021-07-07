@@ -120,7 +120,7 @@ func NewSeedController(
 	})
 
 	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister),
+		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    seedController.controllerInstallationOfSeedAdd,
 			UpdateFunc: seedController.controllerInstallationOfSeedUpdate,

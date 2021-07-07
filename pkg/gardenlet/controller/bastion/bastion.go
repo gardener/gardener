@@ -76,7 +76,7 @@ func NewBastionController(ctx context.Context, clientMap clientmap.ClientMap, co
 	}
 
 	bastionInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.BastionFilterFunc(ctx, gardenClient.Client(), confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
+		FilterFunc: controllerutils.BastionFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    controller.bastionAdd,
 			UpdateFunc: controller.bastionUpdate,

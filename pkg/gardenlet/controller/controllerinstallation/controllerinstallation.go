@@ -99,7 +99,7 @@ func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gard
 	}
 
 	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(&config.SeedConfig)),
+		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    controller.controllerInstallationAdd,
 			UpdateFunc: controller.controllerInstallationUpdate,
@@ -108,7 +108,7 @@ func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gard
 	})
 
 	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(&config.SeedConfig)),
+		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: controller.controllerInstallationCareAdd,
 		},

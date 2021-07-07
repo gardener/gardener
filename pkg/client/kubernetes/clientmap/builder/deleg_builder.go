@@ -27,7 +27,7 @@ import (
 // based on the type of the key (e.g. a call with keys.ForShoot() will be delegated to the ShootClientMap).
 type DelegatingClientMapBuilder struct {
 	gardenClientMapFunc func(logger logrus.FieldLogger) (clientmap.ClientMap, error)
-	seedClientMapFunc   func(gardenClients clientmap.ClientMap, logger logrus.FieldLogger) (clientmap.ClientMap, error)
+	seedClientMapFunc   func(logger logrus.FieldLogger) (clientmap.ClientMap, error)
 	shootClientMapFunc  func(gardenClients, seedClients clientmap.ClientMap, logger logrus.FieldLogger) (clientmap.ClientMap, error)
 	plantClientMapFunc  func(gardenClients clientmap.ClientMap, logger logrus.FieldLogger) (clientmap.ClientMap, error)
 
@@ -69,7 +69,7 @@ func (b *DelegatingClientMapBuilder) WithGardenClientMapBuilder(builder *GardenC
 
 // WithSeedClientMap sets the ClientMap that should be used for Seed clients.
 func (b *DelegatingClientMapBuilder) WithSeedClientMap(clientMap clientmap.ClientMap) *DelegatingClientMapBuilder {
-	b.seedClientMapFunc = func(_ clientmap.ClientMap, _ logrus.FieldLogger) (clientmap.ClientMap, error) {
+	b.seedClientMapFunc = func(_ logrus.FieldLogger) (clientmap.ClientMap, error) {
 		return clientMap, nil
 	}
 	return b
@@ -77,10 +77,9 @@ func (b *DelegatingClientMapBuilder) WithSeedClientMap(clientMap clientmap.Clien
 
 // WithSeedClientMapBuilder sets a ClientMap builder that should be used to build a ClientMap for Seed clients.
 func (b *DelegatingClientMapBuilder) WithSeedClientMapBuilder(builder *SeedClientMapBuilder) *DelegatingClientMapBuilder {
-	b.seedClientMapFunc = func(gardenClients clientmap.ClientMap, logger logrus.FieldLogger) (clientmap.ClientMap, error) {
+	b.seedClientMapFunc = func(logger logrus.FieldLogger) (clientmap.ClientMap, error) {
 		return builder.
 			WithLogger(logger.WithField("ClientMap", "SeedClientMap")).
-			WithGardenClientMap(gardenClients).
 			Build()
 	}
 	return b
@@ -139,7 +138,7 @@ func (b *DelegatingClientMapBuilder) Build() (clientmap.ClientMap, error) {
 	var seedClients, shootClients, plantClients clientmap.ClientMap
 
 	if b.seedClientMapFunc != nil {
-		seedClients, err = b.seedClientMapFunc(gardenClients, b.logger)
+		seedClients, err = b.seedClientMapFunc(b.logger)
 		if err != nil {
 			return nil, fmt.Errorf("failed to construct seed ClientMap: %w", err)
 		}

@@ -137,9 +137,8 @@ When using `make start-gardenlet`, the corresponding script will automatically
 fetch the seed cluster's `kubeconfig` based on the `seedConfig.spec.secretRef`
 and set the environment accordingly.
 
-When running the Gardenlet without the help of the Makefile, set the
-environment variable `KUBECONFIG` to the seed cluster's kubeconfig and
-`GARDEN_KUBECONFIG` to the garden cluster's kubeconfig.
+On startup, gardenlet registers a `Seed` resource using the given template
+in `seedConfig` if it's not present already.
 
 ## Component Configuration
 

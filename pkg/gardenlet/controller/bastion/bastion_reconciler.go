@@ -88,7 +88,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	if !controllerutils.BastionIsManagedByThisGardenlet(ctx, gardenClient.Client(), bastion, r.config) {
+	if !controllerutils.BastionIsManagedByThisGardenlet(bastion, r.config) {
 		logger.WithField("bastion-seed", *bastion.Spec.SeedName).Debug("Skipping because Bastion is not managed by this gardenlet")
 		return reconcile.Result{}, nil
 	}
