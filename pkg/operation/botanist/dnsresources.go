@@ -56,7 +56,7 @@ func (b *Botanist) DeployInternalDNSResources(ctx context.Context) error {
 // and DNSOwner resources are deployed in the appropriate order for the operation (reconcile or restore).
 func (b *Botanist) DeployExternalDNSResources(ctx context.Context) error {
 	if gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
-		if err := b.MigrateExternalDNS(ctx); err != nil {
+		if err := b.MigrateExternalDNS(ctx, true); err != nil {
 			return err
 		}
 		return b.DeployOrDestroyExternalDNSRecord(ctx)
@@ -135,7 +135,7 @@ func (b *Botanist) MigrateInternalDNSResources(ctx context.Context) error {
 // MigrateExternalDNSResources migrates or deletes all external DNS resources (DNSProvider, DNSEntry, DNSOwner, and DNSRecord)
 // that currently exist, in the appropriate order to ensure that the DNS record is not deleted.
 func (b *Botanist) MigrateExternalDNSResources(ctx context.Context) error {
-	if err := b.MigrateExternalDNS(ctx); err != nil {
+	if err := b.MigrateExternalDNS(ctx, false); err != nil {
 		return err
 	}
 	return b.MigrateExternalDNSRecord(ctx)

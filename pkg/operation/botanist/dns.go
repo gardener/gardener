@@ -232,7 +232,7 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]compo
 	if b.NeedsAdditionalDNSProviders() {
 		for i, provider := range b.Shoot.Info.Spec.DNS.Providers {
 			p := provider
-			if p.Primary != nil && *p.Primary && !gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
+			if p.Primary != nil && *p.Primary {
 				continue
 			}
 
@@ -257,20 +257,20 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]compo
 				continue
 			}
 
-			var secret *corev1.Secret
-			if p.SecretName == nil {
-				if p.Primary == nil || !*p.Primary {
-					return nil, fmt.Errorf("dns provider[%d] doesn't specify a secretName", i)
-				}
-				secret = b.Shoot.Secret
-			} else {
-				secret = &corev1.Secret{}
-				if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, *p.SecretName), secret); err != nil {
-					return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *p.SecretName, err)
-				}
+			secretName := p.SecretName
+			if secretName == nil {
+				return nil, fmt.Errorf("dns provider[%d] doesn't specify a secretName", i)
 			}
 
-			providerName := gutil.GenerateDNSProviderName(secret.Name, *providerType)
+			secret := &corev1.Secret{}
+			if err := b.K8sGardenClient.Client().Get(
+				ctx,
+				kutil.Key(b.Shoot.Info.Namespace, *secretName),
+				secret,
+			); err != nil {
+				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *secretName, err)
+			}
+			providerName := gutil.GenerateDNSProviderName(*secretName, *providerType)
 
 			additionalProviders[providerName] = dns.NewProvider(
 				b.Logger,
@@ -428,7 +428,7 @@ func (b *Botanist) DestroyExternalDNS(ctx context.Context) error {
 // MigrateInternalDNS destroys the internal DNSEntry, DNSOwner, and DNSProvider resources,
 // without removing the entry from the DNS provider.
 func (b *Botanist) MigrateInternalDNS(ctx context.Context) error {
-	return component.OpDestroy(
+	return component.OpDestroyAndWait(
 		b.Shoot.Components.Extensions.DNS.InternalOwner,
 		b.Shoot.Components.Extensions.DNS.InternalProvider,
 		b.Shoot.Components.Extensions.DNS.InternalEntry,
@@ -437,8 +437,20 @@ func (b *Botanist) MigrateInternalDNS(ctx context.Context) error {
 
 // MigrateExternalDNS destroys the external DNSEntry, DNSOwner, and DNSProvider resources,
 // without removing the entry from the DNS provider.
-func (b *Botanist) MigrateExternalDNS(ctx context.Context) error {
-	return component.OpDestroy(
+func (b *Botanist) MigrateExternalDNS(ctx context.Context, keepProvider bool) error {
+	if keepProvider {
+		// Delete the DNSOwner and DNSEntry resources in this order to make sure that the actual DNS record is preserved
+		if err := component.OpDestroyAndWait(
+			b.Shoot.Components.Extensions.DNS.ExternalOwner,
+			b.Shoot.Components.Extensions.DNS.ExternalEntry,
+		).Destroy(ctx); err != nil {
+			return err
+		}
+
+		// Deploy the DNSProvider resource
+		return component.OpWaiter(b.Shoot.Components.Extensions.DNS.ExternalProvider).Deploy(ctx)
+	}
+	return component.OpDestroyAndWait(
 		b.Shoot.Components.Extensions.DNS.ExternalOwner,
 		b.Shoot.Components.Extensions.DNS.ExternalProvider,
 		b.Shoot.Components.Extensions.DNS.ExternalEntry,

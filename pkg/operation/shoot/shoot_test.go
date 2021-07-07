@@ -585,6 +585,7 @@ var _ = Describe("shoot", func() {
 					extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
 					extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
 					extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
+					extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
 					extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
 					extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType2),
 				)))
@@ -606,6 +607,7 @@ var _ = Describe("shoot", func() {
 					extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
 					extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
 					extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
+					extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
 					extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
 					extensions.Id(extensionsv1alpha1.ExtensionResource, extensionType2),
 				)))
@@ -652,6 +654,7 @@ var _ = Describe("shoot", func() {
 					extensions.Id(extensionsv1alpha1.ContainerRuntimeResource, containerRuntimeType),
 					extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType1),
 					extensions.Id(extensionsv1alpha1.DNSRecordResource, dnsProviderType2),
+					extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType2),
 					extensions.Id(dnsv1alpha1.DNSProviderKind, dnsProviderType3),
 				)))
 			})

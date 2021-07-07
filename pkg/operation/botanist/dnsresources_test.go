@@ -130,8 +130,11 @@ var _ = Describe("dnsrecord", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
 			gomock.InOrder(
 				internalDNSOwner.EXPECT().Destroy(ctx),
+				internalDNSOwner.EXPECT().WaitCleanup(ctx),
 				internalDNSProvider.EXPECT().Destroy(ctx),
+				internalDNSProvider.EXPECT().WaitCleanup(ctx),
 				internalDNSEntry.EXPECT().Destroy(ctx),
+				internalDNSEntry.EXPECT().WaitCleanup(ctx),
 				internalDNSRecord.EXPECT().Deploy(ctx),
 				internalDNSRecord.EXPECT().Wait(ctx),
 			)
@@ -157,12 +160,15 @@ var _ = Describe("dnsrecord", func() {
 	})
 
 	Describe("#DeployExternalDNSResources", func() {
-		It("should delete the DNSOwner, DNSProvider, and DNSEntry resources, and then deploy the DNSRecord resource if the feature gate is enabled", func() {
+		It("should delete the DNSOwner and DNSEntry resources, and then deploy the DNSProvider and DNSRecord resources if the feature gate is enabled", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
 			gomock.InOrder(
 				externalDNSOwner.EXPECT().Destroy(ctx),
-				externalDNSProvider.EXPECT().Destroy(ctx),
+				externalDNSOwner.EXPECT().WaitCleanup(ctx),
 				externalDNSEntry.EXPECT().Destroy(ctx),
+				externalDNSEntry.EXPECT().WaitCleanup(ctx),
+				externalDNSProvider.EXPECT().Deploy(ctx),
+				externalDNSProvider.EXPECT().Wait(ctx),
 				externalDNSRecord.EXPECT().Deploy(ctx),
 				externalDNSRecord.EXPECT().Wait(ctx),
 			)
@@ -192,7 +198,9 @@ var _ = Describe("dnsrecord", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
 			gomock.InOrder(
 				ingressDNSOwner.EXPECT().Destroy(ctx),
+				ingressDNSOwner.EXPECT().WaitCleanup(ctx),
 				ingressDNSEntry.EXPECT().Destroy(ctx),
+				ingressDNSEntry.EXPECT().WaitCleanup(ctx),
 				ingressDNSRecord.EXPECT().Deploy(ctx),
 				ingressDNSRecord.EXPECT().Wait(ctx),
 			)
@@ -265,8 +273,11 @@ var _ = Describe("dnsrecord", func() {
 		It("should migrate or delete all internal DNS resources so that the DNS record is not deleted", func() {
 			gomock.InOrder(
 				internalDNSOwner.EXPECT().Destroy(ctx),
+				internalDNSOwner.EXPECT().WaitCleanup(ctx),
 				internalDNSProvider.EXPECT().Destroy(ctx),
+				internalDNSProvider.EXPECT().WaitCleanup(ctx),
 				internalDNSEntry.EXPECT().Destroy(ctx),
+				internalDNSEntry.EXPECT().WaitCleanup(ctx),
 				internalDNSRecord.EXPECT().Migrate(ctx),
 				internalDNSRecord.EXPECT().WaitMigrate(ctx),
 			)
@@ -278,8 +289,11 @@ var _ = Describe("dnsrecord", func() {
 		It("should migrate or delete all external DNS resources so that the DNS record is not deleted", func() {
 			gomock.InOrder(
 				externalDNSOwner.EXPECT().Destroy(ctx),
+				externalDNSOwner.EXPECT().WaitCleanup(ctx),
 				externalDNSProvider.EXPECT().Destroy(ctx),
+				externalDNSProvider.EXPECT().WaitCleanup(ctx),
 				externalDNSEntry.EXPECT().Destroy(ctx),
+				externalDNSEntry.EXPECT().WaitCleanup(ctx),
 				externalDNSRecord.EXPECT().Migrate(ctx),
 				externalDNSRecord.EXPECT().WaitMigrate(ctx),
 			)
@@ -291,7 +305,9 @@ var _ = Describe("dnsrecord", func() {
 		It("should migrate or delete all ingress DNS resources so that the DNS record is not deleted", func() {
 			gomock.InOrder(
 				ingressDNSOwner.EXPECT().Destroy(ctx),
+				ingressDNSOwner.EXPECT().WaitCleanup(ctx),
 				ingressDNSEntry.EXPECT().Destroy(ctx),
+				ingressDNSEntry.EXPECT().WaitCleanup(ctx),
 				ingressDNSRecord.EXPECT().Migrate(ctx),
 				ingressDNSRecord.EXPECT().WaitMigrate(ctx),
 			)

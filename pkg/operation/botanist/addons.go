@@ -104,7 +104,7 @@ func (b *Botanist) DestroyIngressDNS(ctx context.Context) error {
 // MigrateIngressDNS destroys the nginx ingress DNSEntry and DNSOwner resources,
 // without removing the entry from the DNS provider.
 func (b *Botanist) MigrateIngressDNS(ctx context.Context) error {
-	return component.OpDestroy(
+	return component.OpDestroyAndWait(
 		b.Shoot.Components.Extensions.DNS.NginxOwner,
 		b.Shoot.Components.Extensions.DNS.NginxEntry,
 	).Destroy(ctx)
