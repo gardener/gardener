@@ -217,7 +217,7 @@ func filterSeedsMatchingLabelSelector(seedList []gardencorev1beta1.Seed, seedSel
 	}
 	selector, err := metav1.LabelSelectorAsSelector(&seedSelector.LabelSelector)
 	if err != nil {
-		return nil, fmt.Errorf("label selector conversion failed: %v for seedSelector: %v", seedSelector.LabelSelector, err)
+		return nil, fmt.Errorf("label selector conversion failed: %v for seedSelector: %w", seedSelector.LabelSelector, err)
 	}
 
 	var matchingSeeds []gardencorev1beta1.Seed

@@ -130,7 +130,7 @@ func (c *Controller) checkSeedAndSyncClusterResource(ctx context.Context, shoot 
 
 	seed, err := c.seedLister.Get(*seedName)
 	if err != nil {
-		return fmt.Errorf("could not find seed %s: %v", *seedName, err)
+		return fmt.Errorf("could not find seed %s: %w", *seedName, err)
 	}
 
 	// Don't wait for the Seed to be ready if it is already marked for deletion. In this case
@@ -138,12 +138,12 @@ func (c *Controller) checkSeedAndSyncClusterResource(ctx context.Context, shoot 
 	// Don't block the Shoot deletion flow in this case to allow proper cleanup.
 	if seed.DeletionTimestamp == nil {
 		if err := health.CheckSeed(seed, c.identity); err != nil {
-			return fmt.Errorf("seed is not yet ready: %v", err)
+			return fmt.Errorf("seed is not yet ready: %w", err)
 		}
 	}
 
 	if err := c.syncClusterResourceToSeed(ctx, shoot, project, cloudProfile, seed); err != nil {
-		return fmt.Errorf("could not sync cluster resource to seed: %v", err)
+		return fmt.Errorf("could not sync cluster resource to seed: %w", err)
 	}
 
 	return nil
@@ -214,12 +214,12 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 		c.shootReconciliationDueTracker.off(key)
 
 		if err := c.isSeedReadyForMigration(seed); err != nil {
-			return reconcile.Result{}, fmt.Errorf("target Seed is not available to host the Control Plane of Shoot %s: %v", shoot.GetName(), err)
+			return reconcile.Result{}, fmt.Errorf("target Seed is not available to host the Control Plane of Shoot %s: %w", shoot.GetName(), err)
 		}
 
 		hasBastions, err := c.shootHasBastions(ctx, shoot, gardenClient)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %v", err)
+			return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %w", err)
 		}
 		if hasBastions {
 			return reconcile.Result{}, errors.New("Shoot has still Bastions")
@@ -328,7 +328,7 @@ func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, gard
 
 	hasBastions, err := c.shootHasBastions(ctx, shoot, gardenClient)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %v", err)
+		return reconcile.Result{}, fmt.Errorf("failed to check for related Bastions: %w", err)
 	}
 	if hasBastions {
 		return reconcile.Result{}, errors.New("Shoot has still Bastions")
@@ -407,7 +407,7 @@ func (c *Controller) shootHasBastions(ctx context.Context, shoot *gardencorev1be
 	listOptions := client.ListOptions{Namespace: shoot.Namespace, Limit: 1}
 
 	if err := gardenClient.Client().List(ctx, &bastionList, &listOptions); err != nil {
-		return false, fmt.Errorf("failed to list related Bastions: %v", err)
+		return false, fmt.Errorf("failed to list related Bastions: %w", err)
 	}
 
 	return len(bastionList.Items) > 0, nil
@@ -651,7 +651,7 @@ func (c *Controller) patchShootStatusOperationSuccess(
 	if len(shootSeedNamespace) > 0 {
 		isHibernated, err = c.isHibernationActive(ctx, shootSeedNamespace, seedName)
 		if err != nil {
-			return fmt.Errorf("error updating Shoot (%s/%s) after successful reconciliation when checking for active hibernation: %v", shoot.Namespace, shoot.Name, err)
+			return fmt.Errorf("error updating Shoot (%s/%s) after successful reconciliation when checking for active hibernation: %w", shoot.Namespace, shoot.Name, err)
 		}
 	}
 
@@ -783,7 +783,7 @@ func (c *Controller) isHibernationActive(ctx context.Context, shootSeedNamespace
 
 	shoot := cluster.Shoot
 	if shoot == nil {
-		return false, fmt.Errorf("shoot is missing in cluster resource: %v", err)
+		return false, fmt.Errorf("shoot is missing in cluster resource: %w", err)
 	}
 
 	return v1beta1helper.HibernationIsEnabled(shoot), nil

@@ -50,14 +50,14 @@ func RequestBootstrapKubeconfig(ctx context.Context, logger logrus.FieldLogger, 
 
 	certData, privateKeyData, csrName, err := certificate.RequestCertificate(ctx, logger, boostrapClientSet.Kubernetes(), certificateSubject, []string{}, []net.IP{})
 	if err != nil {
-		return nil, "", "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %v", err)
+		return nil, "", "", fmt.Errorf("unable to bootstrap the kubeconfig for the Garden cluster: %w", err)
 	}
 
 	logger.Infof("Storing kubeconfig with bootstrapped certificate into secret (%s/%s) on target cluster '%s'", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name, bootstrapTargetCluster)
 
 	kubeconfig, err := bootstraputil.UpdateGardenKubeconfigSecret(ctx, boostrapClientSet.RESTConfig(), certData, privateKeyData, seedClient, gardenClientConnection)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("unable to update secret (%s/%s) with bootstrapped kubeconfig: %v", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name, err)
+		return nil, "", "", fmt.Errorf("unable to update secret (%s/%s) with bootstrapped kubeconfig: %w", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name, err)
 	}
 
 	logger.Infof("Deleting secret (%s/%s) containing the bootstrap kubeconfig from target cluster '%s')", gardenClientConnection.BootstrapKubeconfig.Namespace, gardenClientConnection.BootstrapKubeconfig.Name, bootstrapTargetCluster)

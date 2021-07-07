@@ -17,24 +17,25 @@ package framework
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
 	"html/template"
 	"os"
 	"path/filepath"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/pkg/errors"
 )
 
 // RenderAndDeployTemplate renders a template from the resource template directory and deploys it to the cluster
 func (f *CommonFramework) RenderAndDeployTemplate(ctx context.Context, k8sClient kubernetes.Interface, templateName string, values interface{}) error {
 	templateFilepath := filepath.Join(f.TemplatesDir, templateName)
 	if _, err := os.Stat(templateFilepath); err != nil {
-		return errors.Errorf("could not find template in '%s'", templateFilepath)
+		return errors.New(fmt.Sprintf("could not find template in %q", templateFilepath))
 	}
 
 	tpl, err := template.ParseFiles(templateFilepath)
 	if err != nil {
-		return errors.Wrapf(err, "unable to parse template in %s", templateFilepath)
+		return fmt.Errorf("unable to parse template in %s: %w", templateFilepath, err)
 	}
 
 	var writer bytes.Buffer

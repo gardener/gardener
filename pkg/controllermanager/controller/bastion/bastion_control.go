@@ -144,7 +144,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 		}
 
-		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %v", shootKey, err)
+		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %w", shootKey, err)
 	}
 
 	// delete the bastion if the shoot is marked for deletion

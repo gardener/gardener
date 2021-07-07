@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/Masterminds/semver"
-	errorspkg "github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -128,7 +127,7 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 
 		newestPod, err2 := kutil.NewestPodForDeployment(ctx, b.K8sSeedClient.APIReader(), deployment)
 		if err2 != nil {
-			return errorspkg.Wrapf(err, "failure to find the newest pod for deployment to read the logs: %s", err2.Error())
+			return fmt.Errorf("failure to find the newest pod for deployment to read the logs: %s: %w", err2.Error(), err)
 		}
 		if newestPod == nil {
 			return err
@@ -140,7 +139,7 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 
 		logs, err2 := kutil.MostRecentCompleteLogs(ctx, b.K8sSeedClient.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, "kube-apiserver", tailLines, headBytes)
 		if err2 != nil {
-			return errorspkg.Wrapf(err, "failure to read the logs: %s", err2.Error())
+			return fmt.Errorf("failure to read the logs: %s: %w", err2.Error(), err)
 		}
 
 		errWithLogs := fmt.Errorf("%s, logs of newest pod:\n%s", err.Error(), logs)

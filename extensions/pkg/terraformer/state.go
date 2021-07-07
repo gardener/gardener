@@ -177,7 +177,7 @@ func sniffJSONStateVersion(stateConfigMap []byte) (uint64, error) {
 	}
 	var sniff VersionSniff
 	if err := json.Unmarshal(stateConfigMap, &sniff); err != nil {
-		return 0, fmt.Errorf("the state file could not be parsed as JSON: %v", err)
+		return 0, fmt.Errorf("the state file could not be parsed as JSON: %w", err)
 	}
 
 	if sniff.Version == nil {

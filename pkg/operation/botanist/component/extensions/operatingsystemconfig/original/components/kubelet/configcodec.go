@@ -15,10 +15,11 @@
 package kubelet
 
 import (
+	"fmt"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	oscutils "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
 
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -67,12 +68,12 @@ func (c *configCodec) Encode(kubeletConfig *kubeletconfigv1beta1.KubeletConfigur
 	// Encode kubelet configuration to YAML
 	data, err := runtime.Encode(c.codec, kubeletConfig)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not encode kubelet configuration to YAML")
+		return nil, fmt.Errorf("could not encode kubelet configuration to YAML: %w", err)
 	}
 
 	fci, err := c.fciCodec.Encode(data, encoding)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not encode kubelet config file content data")
+		return nil, fmt.Errorf("could not encode kubelet config file content data: %w", err)
 	}
 
 	return fci, nil
@@ -82,13 +83,13 @@ func (c *configCodec) Encode(kubeletConfig *kubeletconfigv1beta1.KubeletConfigur
 func (c *configCodec) Decode(fci *extensionsv1alpha1.FileContentInline) (*kubeletconfigv1beta1.KubeletConfiguration, error) {
 	data, err := c.fciCodec.Decode(fci)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode kubelet config file content data")
+		return nil, fmt.Errorf("could not decode kubelet config file content data: %w", err)
 	}
 
 	// Decode kubelet configuration from YAML
 	kubeletConfig := &kubeletconfigv1beta1.KubeletConfiguration{}
 	if err := runtime.DecodeInto(c.codec, data, kubeletConfig); err != nil {
-		return nil, errors.Wrap(err, "could not decode kubelet configuration from YAML")
+		return nil, fmt.Errorf("could not decode kubelet configuration from YAML: %w", err)
 	}
 
 	return kubeletConfig, nil

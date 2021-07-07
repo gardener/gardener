@@ -16,10 +16,10 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/pkg/errors"
 	"github.com/spf13/viper"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -62,7 +62,7 @@ func applyConfig(fs *flag.FlagSet) error {
 		}
 
 		if err := f.Value.Set(viper.GetString(f.Name)); err != nil {
-			allErrs = multierror.Append(allErrs, errors.Errorf("unable to set configuration for flag %s: %s", f.Name, err.Error()))
+			allErrs = multierror.Append(allErrs, fmt.Errorf("unable to set configuration for flag %s: %w", f.Name, err))
 		}
 	})
 

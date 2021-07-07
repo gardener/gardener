@@ -16,10 +16,10 @@ package context
 
 import (
 	"context"
+	"fmt"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 
-	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -54,7 +54,7 @@ func (c *gardenContext) GetCluster(ctx context.Context) (*extensionscontroller.C
 	if c.cluster == nil {
 		cluster, err := extensionscontroller.GetCluster(ctx, c.client, c.object.GetNamespace())
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get cluster for namespace '%s'", c.object.GetNamespace())
+			return nil, fmt.Errorf("could not get cluster for namespace '%s': %w", c.object.GetNamespace(), err)
 		}
 		c.cluster = cluster
 	}

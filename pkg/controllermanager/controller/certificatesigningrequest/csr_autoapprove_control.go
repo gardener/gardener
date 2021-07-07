@@ -91,7 +91,7 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 
 	x509cr, err := utils.DecodeCertificateRequest(csr.Spec.Request)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("unable to parse csr %q: %v", csr.Name, err)
+		return reconcile.Result{}, fmt.Errorf("unable to parse csr %q: %w", csr.Name, err)
 	}
 
 	if !gutil.IsSeedClientCert(x509cr, csr.Spec.Usages) {

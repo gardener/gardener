@@ -149,7 +149,7 @@ func filterOIDCs(oidcs []*settingsv1alpha1.OpenIDConnectPreset, shoot *core.Shoo
 		spec := oidc.Spec
 		selector, err := metav1.LabelSelectorAsSelector(spec.ShootSelector)
 		if err != nil {
-			return nil, fmt.Errorf("label selector conversion failed: %v for shootSelector: %v", *spec.ShootSelector, err)
+			return nil, fmt.Errorf("label selector conversion failed: %v for shootSelector: %w", *spec.ShootSelector, err)
 		}
 
 		// check if the Shoot labels match the selector

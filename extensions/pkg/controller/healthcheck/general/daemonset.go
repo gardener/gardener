@@ -101,7 +101,7 @@ func (healthChecker *DaemonSetHealthChecker) Check(ctx context.Context, request 
 			}, nil
 		}
 
-		err := fmt.Errorf("failed to retrieve DaemonSet %q in namespace %q: %v", healthChecker.name, request.Namespace, err)
+		err := fmt.Errorf("failed to retrieve DaemonSet %q in namespace %q: %w", healthChecker.name, request.Namespace, err)
 		healthChecker.logger.Error(err, "Health check failed")
 		return nil, err
 	}
@@ -122,7 +122,7 @@ func (healthChecker *DaemonSetHealthChecker) Check(ctx context.Context, request 
 // if it is healthy or not or an error
 func DaemonSetIsHealthy(daemonSet *appsv1.DaemonSet) (bool, error) {
 	if err := health.CheckDaemonSet(daemonSet); err != nil {
-		err := fmt.Errorf("daemonSet %q in namespace %q is unhealthy: %v", daemonSet.Name, daemonSet.Namespace, err)
+		err := fmt.Errorf("daemonSet %q in namespace %q is unhealthy: %w", daemonSet.Name, daemonSet.Namespace, err)
 		return false, err
 	}
 	return true, nil

@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,7 +46,7 @@ func (f *GardenerFramework) GetSeeds(ctx context.Context) ([]gardencorev1beta1.S
 	seeds := &gardencorev1beta1.SeedList{}
 	err := f.GardenClient.Client().List(ctx, seeds)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get Seeds from Garden cluster")
+		return nil, fmt.Errorf("could not get Seeds from Garden cluster: %w", err)
 	}
 
 	return seeds.Items, nil
@@ -58,7 +57,7 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 	seed := &gardencorev1beta1.Seed{}
 	err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: seedName}, seed)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not get Seed from Shoot in Garden cluster")
+		return nil, nil, fmt.Errorf("could not get Seed from Shoot in Garden cluster: %w", err)
 	}
 
 	seedSecretRef := seed.Spec.SecretRef
@@ -66,7 +65,7 @@ func (f *GardenerFramework) GetSeed(ctx context.Context, seedName string) (*gard
 		Scheme: kubernetes.SeedScheme,
 	}))
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not construct Seed client")
+		return nil, nil, fmt.Errorf("could not construct Seed client: %w", err)
 	}
 	return seed, seedClient, nil
 }
@@ -83,7 +82,7 @@ func (f *GardenerFramework) GetShootProject(ctx context.Context, shootNamespace 
 		ns      = &corev1.Namespace{}
 	)
 	if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: shootNamespace}, ns); err != nil {
-		return nil, errors.Wrap(err, "could not get the Shoot namespace in Garden cluster")
+		return nil, fmt.Errorf("could not get the Shoot namespace in Garden cluster: %w", err)
 	}
 
 	if ns.Labels == nil {
@@ -95,7 +94,7 @@ func (f *GardenerFramework) GetShootProject(ctx context.Context, shootNamespace 
 	}
 
 	if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: projectName}, project); err != nil {
-		return nil, errors.Wrap(err, "could not get Project in Garden cluster")
+		return nil, fmt.Errorf("could not get Project in Garden cluster: %w", err)
 	}
 	return project, nil
 }
@@ -473,7 +472,7 @@ func shootIsUnschedulable(events []corev1.Event) bool {
 func (f *GardenerFramework) GetCloudProfile(ctx context.Context, name string) (*gardencorev1beta1.CloudProfile, error) {
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
 	if err := f.GardenClient.Client().Get(ctx, client.ObjectKey{Name: name}, cloudProfile); err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not get CloudProfile '%s' in Garden cluster", name))
+		return nil, fmt.Errorf("could not get CloudProfile '%s' in Garden cluster: %w", name, err)
 	}
 	return cloudProfile, nil
 }

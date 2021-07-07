@@ -72,7 +72,7 @@ func (c *Controller) reconcileSeedLeaseKey(key string) error {
 
 	if err := c.checkSeedConnection(ctx, seed); err != nil {
 		c.healthManager.Set(false)
-		return fmt.Errorf("[SEED LEASE] cannot establish connection with Seed %s: %v", key, err)
+		return fmt.Errorf("[SEED LEASE] cannot establish connection with Seed %s: %w", key, err)
 	}
 
 	var (

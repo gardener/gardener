@@ -29,7 +29,6 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener-resource-manager/pkg/manager"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
@@ -103,7 +102,7 @@ func CreateFromUnstructured(ctx context.Context, client client.Client, namespace
 	for _, obj := range objs {
 		bytes, err := obj.MarshalJSON()
 		if err != nil {
-			return errors.Wrapf(err, "marshal failed for '%s/%s' for secret '%s/%s'", obj.GetNamespace(), obj.GetName(), namespace, name)
+			return fmt.Errorf("marshal failed for '%s/%s' for secret '%s/%s': %w", obj.GetNamespace(), obj.GetName(), namespace, name, err)
 		}
 		data = append(data, []byte("\n---\n")...)
 		data = append(data, bytes...)
@@ -143,11 +142,11 @@ func CreateForShoot(ctx context.Context, client client.Client, namespace, name s
 
 func deployManagedResource(ctx context.Context, secret *manager.Secret, managedResource *manager.ManagedResource) error {
 	if err := secret.Reconcile(ctx); err != nil {
-		return errors.Wrapf(err, "could not create or update secret of managed resources")
+		return fmt.Errorf("could not create or update secret of managed resources: %w", err)
 	}
 
 	if err := managedResource.Reconcile(ctx); err != nil {
-		return errors.Wrapf(err, "could not create or update managed resource")
+		return fmt.Errorf("could not create or update managed resource: %w", err)
 	}
 
 	return nil
@@ -161,14 +160,14 @@ func Delete(ctx context.Context, client client.Client, namespace string, name st
 		NewManagedResource(client).
 		WithNamespacedName(namespace, name).
 		Delete(ctx); err != nil {
-		return errors.Wrapf(err, "could not delete managed resource '%s/%s'", namespace, name)
+		return fmt.Errorf("could not delete managed resource '%s/%s': %w", namespace, name, err)
 	}
 
 	if err := manager.
 		NewSecret(client).
 		WithNamespacedName(namespace, secretName).
 		Delete(ctx); err != nil {
-		return errors.Wrapf(err, "could not delete secret '%s/%s' of managed resource", namespace, secretName)
+		return fmt.Errorf("could not delete secret '%s/%s' of managed resource: %w", namespace, secretName, err)
 	}
 
 	return nil
@@ -233,7 +232,7 @@ func SetKeepObjects(ctx context.Context, c client.Writer, namespace, name string
 	patch := client.MergeFrom(resource.DeepCopy())
 	resource.Spec.KeepObjects = &keepObjects
 	if err := c.Patch(ctx, resource, patch); client.IgnoreNotFound(err) != nil {
-		return errors.Wrapf(err, "could not update managed resource '%s/%s'", namespace, name)
+		return fmt.Errorf("could not update managed resource '%s/%s': %w", namespace, name, err)
 	}
 
 	return nil
@@ -244,7 +243,7 @@ func SetKeepObjects(ctx context.Context, c client.Writer, namespace, name string
 func RenderChartAndCreate(ctx context.Context, namespace string, name string, secretNameWithPrefix bool, client client.Client, chartRenderer chartrenderer.Interface, chart chart.Interface, values map[string]interface{}, imageVector imagevector.ImageVector, chartNamespace string, version string, withNoCleanupLabel bool, forceOverwriteAnnotations bool) error {
 	chartName, data, err := chart.Render(chartRenderer, chartNamespace, imageVector, version, version, values)
 	if err != nil {
-		return errors.Wrapf(err, "could not render chart")
+		return fmt.Errorf("could not render chart: %w", err)
 	}
 
 	// Create or update managed resource referencing the previously created secret

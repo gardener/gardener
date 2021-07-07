@@ -17,11 +17,10 @@ package framework
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 // HTTPGet performs an HTTP GET request with context
@@ -80,7 +79,7 @@ func testHTTPEndpointWith(ctx context.Context, url string, mutator func(*http.Re
 		return err
 	}
 	if r.StatusCode != http.StatusOK {
-		return errors.Errorf("http request should return %d but returned %d instead", http.StatusOK, r.StatusCode)
+		return errors.New(fmt.Sprintf("http request should return %d but returned %d instead", http.StatusOK, r.StatusCode))
 	}
 	return nil
 }

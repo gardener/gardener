@@ -101,7 +101,7 @@ func (healthChecker *StatefulSetHealthChecker) Check(ctx context.Context, reques
 				Detail: fmt.Sprintf("StatefulSet %q in namespace %q not found", healthChecker.name, request.Namespace),
 			}, nil
 		}
-		err := fmt.Errorf("failed to retrieve StatefulSet %q in namespace %q: %v", healthChecker.name, request.Namespace, err)
+		err := fmt.Errorf("failed to retrieve StatefulSet %q in namespace %q: %w", healthChecker.name, request.Namespace, err)
 		healthChecker.logger.Error(err, "Health check failed")
 		return nil, err
 	}
@@ -120,7 +120,7 @@ func (healthChecker *StatefulSetHealthChecker) Check(ctx context.Context, reques
 
 func statefulSetIsHealthy(statefulSet *appsv1.StatefulSet) (bool, error) {
 	if err := health.CheckStatefulSet(statefulSet); err != nil {
-		err := fmt.Errorf("statefulSet %q in namespace %q is unhealthy: %v", statefulSet.Name, statefulSet.Namespace, err)
+		err := fmt.Errorf("statefulSet %q in namespace %q is unhealthy: %w", statefulSet.Name, statefulSet.Namespace, err)
 		return false, err
 	}
 	return true, nil
