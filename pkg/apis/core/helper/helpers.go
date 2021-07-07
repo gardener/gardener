@@ -97,8 +97,8 @@ func DetermineLatestMachineImageVersion(versions []core.MachineImageVersion, fil
 	return core.MachineImageVersion{}, fmt.Errorf("the latest machine version has been removed")
 }
 
-// DetermineLatestExpirableVersion determines the latest and latest non-deprecated version from a slice of ExpirableVersions.
-// When filterPreviewVersions is set, versions with classification preview are not considered.l
+// DetermineLatestExpirableVersion determines the latest expirable version and the latest non-deprecated version from a slice of ExpirableVersions.
+// When filterPreviewVersions is set, versions with classification preview are not considered.
 func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPreviewVersions bool) (core.ExpirableVersion, core.ExpirableVersion, error) {
 
 	var (
