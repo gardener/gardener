@@ -58,16 +58,20 @@ import (
 	"flag"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/test/framework"
-
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/test/framework"
 )
+
+// TODO: this test is currently not executed, because it has to manipulate the CloudProfile. It should be refactor into
+// an envtest-style integration test, so that we can enable it again.
 
 var (
 	testMachineryRun      = flag.Bool("test-machinery-run", false, "indicates whether the test is being executed by the test machinery or locally")
@@ -218,9 +222,9 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 
 		f.Beta().Serial().CIt("Shoot machine image must be updated in maintenance time: AutoUpdate.MachineImageVersion == true && expirationDate does not apply", func(ctx context.Context) {
 			// set test specific shoot settings
+			patch := client.MergeFrom(f.Shoot.DeepCopy())
 			f.Shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = true
-			err = TryUpdateShootForMachineImageMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
-			gomega.Expect(err).To(gomega.BeNil())
+			framework.ExpectNoError(f.GardenClient.Client().Patch(ctx, f.Shoot, patch))
 
 			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
@@ -232,12 +236,12 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 		f.Beta().Serial().CIt("Shoot machine image must be updated in maintenance time: AutoUpdate.MachineImageVersion == false && expirationDate applies", func(ctx context.Context) {
 			defer func() {
 				// make sure to remove expiration date from cloud profile after test
-				err = TryUpdateCloudProfileForMachineImageMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testMachineImage, nil, &deprecatedClassification)
+				err = PatchCloudProfileForMachineImageMaintenance(ctx, f.GardenClient.Client(), f.Shoot.Spec.CloudProfileName, testMachineImage, nil, &deprecatedClassification)
 				gomega.Expect(err).To(gomega.BeNil())
 				f.Logger.Infof("Cleaned expiration date on machine image from Cloud Profile '%s'", testShootCloudProfile.Name)
 			}()
 			// expire the Shoot's machine image
-			err = TryUpdateCloudProfileForMachineImageMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testMachineImage, &expirationDateInThePast, &deprecatedClassification)
+			err = PatchCloudProfileForMachineImageMaintenance(ctx, f.GardenClient.Client(), f.Shoot.Spec.CloudProfileName, testMachineImage, &expirationDateInThePast, &deprecatedClassification)
 			gomega.Expect(err).To(gomega.BeNil())
 
 			// give controller caches time to sync
@@ -263,9 +267,9 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 
 		f.Beta().Serial().CIt("Kubernetes version should be updated: auto update enabled", func(ctx context.Context) {
 			// set test specific shoot settings
+			patch := client.MergeFrom(f.Shoot.DeepCopy())
 			f.Shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = true
-			err = TryUpdateShootForKubernetesMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
-			gomega.Expect(err).To(gomega.BeNil())
+			framework.ExpectNoError(f.GardenClient.Client().Patch(ctx, f.Shoot, patch))
 
 			err = StartShootMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
 			gomega.Expect(err).To(gomega.BeNil())
@@ -277,13 +281,13 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 		f.Beta().Serial().CIt("Kubernetes version should be updated: force update patch version", func(ctx context.Context) {
 			defer func() {
 				// make sure to remove expiration date from cloud profile after test
-				err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testKubernetesVersionLowPatchLowMinor.Version, nil, &deprecatedClassification)
+				err = PatchCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot.Spec.CloudProfileName, testKubernetesVersionLowPatchLowMinor.Version, nil, &deprecatedClassification)
 				gomega.Expect(err).To(gomega.BeNil())
 				f.Logger.Infof("Cleaned expiration date on kubernetes version from Cloud Profile '%s'", testShootCloudProfile.Name)
 			}()
 
 			// expire the Shoot's Kubernetes version
-			err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testKubernetesVersionLowPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
+			err = PatchCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot.Spec.CloudProfileName, testKubernetesVersionLowPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
 			gomega.Expect(err).To(gomega.BeNil())
 
 			// give controller caches time to sync
@@ -299,18 +303,18 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 		f.Beta().Serial().CIt("Kubernetes version should be updated: force update minor version", func(ctx context.Context) {
 			defer func() {
 				// make sure to remove expiration date from cloud profile after test
-				err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
+				err = PatchCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
 				gomega.Expect(err).To(gomega.BeNil())
 				f.Logger.Infof("Cleaned expiration date on kubernetes version from Cloud Profile '%s'", testShootCloudProfile.Name)
 			}()
 
 			// set the shoots Kubernetes version to be the highest patch version of the minor version
+			patch := client.MergeFrom(f.Shoot.DeepCopy())
 			f.Shoot.Spec.Kubernetes.Version = testKubernetesVersionHighestPatchLowMinor.Version
-			err = TryUpdateShootForKubernetesMaintenance(ctx, f.GardenClient.Client(), f.Shoot)
-			gomega.Expect(err).To(gomega.BeNil())
+			framework.ExpectNoError(f.GardenClient.Client().Patch(ctx, f.Shoot, patch))
 
 			// let Shoot's Kubernetes version expire
-			err = TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
+			err = PatchCloudProfileForKubernetesVersionMaintenance(ctx, f.GardenClient.Client(), f.Shoot.Spec.CloudProfileName, testKubernetesVersionHighestPatchLowMinor.Version, &expirationDateInThePast, &deprecatedClassification)
 			gomega.Expect(err).To(gomega.BeNil())
 
 			// give controller caches time to sync
