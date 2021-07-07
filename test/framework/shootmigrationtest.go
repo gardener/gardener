@@ -196,6 +196,7 @@ func (t *ShootMigrationTest) CompareElementsAfterMigration() error {
 	}
 	if !reflect.DeepEqual(t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames) {
 		return fmt.Errorf("machine Nodes (label) %s, do not match after-migrate Nodes %s", t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames)
+
 	}
 	return nil
 }
