@@ -30,7 +30,7 @@ const DNSRecordResource = "DNSRecord"
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name=Type,JSONPath=".spec.type",type=string,description="The DNS record provider type."
 // +kubebuilder:printcolumn:name="Domain Name",JSONPath=".spec.name",type=string,description="The DNS record domain name."
-// +kubebuilder:printcolumn:name="Record Type",JSONPath=".spec.name",type=string,description="The DNS record type (A, CNAME, or TXT)."
+// +kubebuilder:printcolumn:name="Record Type",JSONPath=".spec.recordType",type=string,description="The DNS record type (A, CNAME, or TXT)."
 // +kubebuilder:printcolumn:name=Status,JSONPath=".status.lastOperation.state",type=string,description=""
 // +kubebuilder:printcolumn:name=Age,JSONPath=".metadata.creationTimestamp",type=date,description=""
 
