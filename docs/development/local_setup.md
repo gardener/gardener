@@ -153,7 +153,7 @@ Clone the repository from GitHub into your `$GOPATH`.
 ```bash
 mkdir -p $GOPATH/src/github.com/gardener
 cd $GOPATH/src/github.com/gardener
-git clone https://github.com/gardener/gardener.git
+git clone git@github.com:gardener/gardener.git
 cd gardener
 ```
 
