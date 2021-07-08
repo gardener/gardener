@@ -82,12 +82,14 @@ func DetermineLatestMachineImageVersion(versions []core.MachineImageVersion, fil
 		return core.MachineImageVersion{}, err
 	}
 
+	// Try to find non-deprecated version first.
 	for _, version := range versions {
 		if version.Version == latestNonDeprecatedVersion.Version {
 			return version, nil
 		}
 	}
 
+	// It looks like there is no non-deprecated version, now look also into the deprecated versions
 	for _, version := range versions {
 		if version.Version == latestVersion.Version {
 			return version, nil
