@@ -101,6 +101,9 @@ deployExecutions:
       deployItems:
       - name: deploy
         type: landscaper.gardener.cloud/container
+        target:
+          name: {{ .imports.seedCluster.metadata.name }}
+          namespace: {{ .imports.seedCluster.metadata.namespace }}
         config:
           apiVersion: container.deployer.landscaper.gardener.cloud/v1alpha1
           kind: ProviderConfiguration
