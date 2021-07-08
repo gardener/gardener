@@ -76,6 +76,10 @@ spec:
                 cpu: "{{ .Values.hvpa.minAllowed.cpu }}"
             - containerName: curator
               mode: "Off"
+            - containerName: kube-rbac-proxy
+              mode: "Off"
+            - containerName: telegraf
+              mode: "Off"
   weightBasedScalingIntervals:
     - vpaWeight: 100
       startReplicaCount: {{ .Values.replicas }}

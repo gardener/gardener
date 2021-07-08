@@ -217,6 +217,18 @@ images:
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
   tag: "v0.35.0"
+- name: kube-rbac-proxy
+  sourceRepository: https://github.com/brancz/kube-rbac-proxy
+  repository: quay.io/brancz/kube-rbac-proxy
+  tag: v0.8.0
+- name: promtail
+  sourceRepository: github.com/grafana/loki
+  repository: "docker.io/grafana/promtail"
+  tag: "2.1.0"
+- name: telegraf
+  sourceRepository: https://github.com/influxdata/telegraf
+  repository: eu.gcr.io/gardener-project/3rd/telegraf
+  tag: 1.18.0-alpine-iptables
 
 # VPA
 - name: vpa-admission-controller

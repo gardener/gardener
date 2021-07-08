@@ -2,6 +2,8 @@ global:
   images:
     loki: image-repository:image-tag
     loki-curator: image-repository:image-tag
+    kube-rbac-proxy: image-repository:image-tag
+    telegraf: image-repository:image-tag
   fluentbit:
     labels:
       gardener.cloud/role: logging
@@ -11,6 +13,9 @@ global:
 authEnabled: true
 
 annotations: {}
+
+rbacSidecarEnabled: false
+kubeRBACProxyKubeconfigCheckSum: bed9a4ef5410793c023b3551308661a1a1acafe9f93c9393714ce4f2c0134ac3
 
 labels:
   # deprecated label
@@ -59,7 +64,21 @@ resources:
       memory: 200Mi
     requests:
       cpu: 10m
-      memory: 12Mi 
+      memory: 12Mi
+  kubeRBACproxy:
+    limits:
+      cpu: 20m
+      memory: 30Mi
+    requests:
+      cpu: 5m
+      memory: 15Mi 
+  telegraf:
+    limits:
+      cpu: 5m
+      memory: 50Mi
+    requests:
+      cpu: 2m
+      memory: 24Mi
 
 securityContext:
   fsGroup: 10001
@@ -77,6 +96,21 @@ service:
 
 curator:
   port: 2718
+
+kubeRBACProxy:
+  port: 8080
+
+telegraf:
+  port: 9273
+
+ingress:
+  class: nginx
+  hosts: 
+  - hostName: loki.ingress.example.com 
+    secretName: loki-tls
+    serviceName: loki
+    servicePort: 8080
+    backendPath: "/loki/api/v1/push"
 
 hvpa:
   enabled: false

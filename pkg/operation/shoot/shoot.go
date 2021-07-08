@@ -233,6 +233,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 		},
 		ControlPlane:     &ControlPlane{},
 		SystemComponents: &SystemComponents{},
+		Logging:          &Logging{},
 	}
 
 	// Determine information about external domain for shoot cluster.
@@ -387,6 +388,11 @@ func (s *Shoot) IPVSEnabled() bool {
 	return s.Info.Spec.Kubernetes.KubeProxy != nil &&
 		s.Info.Spec.Kubernetes.KubeProxy.Mode != nil &&
 		*s.Info.Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS
+}
+
+// IsLoggingEnabled return true if the Shoot controlplane logging is enabled
+func (s *Shoot) IsLoggingEnabled() bool {
+	return s.Purpose != gardencorev1beta1.ShootPurposeTesting && gardenletfeatures.FeatureGate.Enabled(features.Logging)
 }
 
 // TechnicalIDPrefix is a prefix used for a shoot's technical id.

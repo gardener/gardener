@@ -30,6 +30,36 @@ spec:
     ports:
     - protocol: TCP
       port: {{ .Values.service.port }}
+{{- if .Values.rbacSidecarEnabled }}
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          role: garden
+      podSelector:
+        matchLabels:
+          app: nginx-ingress
+          component: controller
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system
+      podSelector:
+        matchLabels:
+          app: nginx-ingress
+          component: controller
+    ports:
+    - protocol: TCP
+      port: {{ .Values.kubeRBACProxy.port }}
+  - from:
+    - podSelector:
+        matchLabels:
+{{ toYaml .Values.prometheus.labels | indent 10 }}
+      namespaceSelector:
+        matchLabels:
+          role: garden
+    ports:
+    - protocol: TCP
+      port: {{ .Values.telegraf.port }}
+{{- end }}
   policyTypes:
   - Ingress
   egress: []

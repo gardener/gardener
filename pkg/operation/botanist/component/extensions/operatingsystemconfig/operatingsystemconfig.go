@@ -70,6 +70,10 @@ type Interface interface {
 	SetKubeletCACertificate(string)
 	// SetSSHPublicKey sets the SSHPublicKey value.
 	SetSSHPublicKey(string)
+	// SetPromtailRBACAuthToken set the auth token used by Promtail to authenticate agains the loki sidecar proxy
+	SetPromtailRBACAuthToken(string)
+	// SetLokiIngressHostName sets the ingress host name of the shoot's Loki
+	SetLokiIngressHostName(string)
 	// WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
 	// containing both the downloader as well as the original operating system config data.
 	WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs
@@ -119,6 +123,10 @@ type OriginalValues struct {
 	MachineTypes []gardencorev1beta1.MachineType
 	// SSHPublicKey is a public SSH key.
 	SSHPublicKey string
+	// PromtailRBACAuthToken is the token needed by Promtial to auth agains Loki sidecar proxy
+	PromtailRBACAuthToken string
+	// LokiIngressHostName is the ingress host name of the shoot's Loki
+	LokiIngressHostName string
 }
 
 // New creates a new instance of Interface.
@@ -378,6 +386,16 @@ func (o *operatingSystemConfig) SetSSHPublicKey(key string) {
 	o.values.SSHPublicKey = key
 }
 
+// SetPromtailRBACAuthToken set the auth token used by Promtail to authenticate agains the loki sidecar proxy
+func (o *operatingSystemConfig) SetPromtailRBACAuthToken(token string) {
+	o.values.PromtailRBACAuthToken = token
+}
+
+// SetLokiIngressHostName sets the ingress host name of the shoot's Loki
+func (o *operatingSystemConfig) SetLokiIngressHostName(hostName string) {
+	o.values.LokiIngressHostName = hostName
+}
+
 // WorkerNameToOperatingSystemConfigsMap returns a map whose key is a worker name and whose value is a structure
 // containing both the downloader as well as the original operating system config data.
 func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigsMap() map[string]*OperatingSystemConfigs {
@@ -425,6 +443,8 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
 		kubernetesVersion:       o.values.KubernetesVersion,
 		sshPublicKey:            o.values.SSHPublicKey,
+		lokiIngressHostName:     o.values.LokiIngressHostName,
+		promtailRBACAuthToken:   o.values.PromtailRBACAuthToken,
 	}
 }
 
@@ -481,6 +501,8 @@ type deployer struct {
 	kubeletDataVolumeName   *string
 	kubernetesVersion       *semver.Version
 	sshPublicKey            string
+	lokiIngressHostName     string
+	promtailRBACAuthToken   string
 }
 
 // exposed for testing
@@ -526,6 +548,8 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 			KubeletDataVolumeName:   d.kubeletDataVolumeName,
 			KubernetesVersion:       d.kubernetesVersion,
 			SSHPublicKey:            d.sshPublicKey,
+			PromtailRBACAuthToken:   d.promtailRBACAuthToken,
+			LokiIngress:             d.lokiIngressHostName,
 		})
 		if err != nil {
 			return nil, err

@@ -18,14 +18,19 @@ import (
 	"context"
 	"fmt"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/mock"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -58,6 +63,9 @@ var _ = Describe("operatingsystemconfig", func() {
 		caKubelet      = []byte("ca-kubelet")
 		caCloudProfile = "ca-cloud-profile"
 		sshPublicKey   = []byte("ssh-public-key")
+
+		promtailRBACAuthToken = "supersecrettoken"
+		IngressDomain         = "seed-test.ingress.domain.com"
 	)
 
 	BeforeEach(func() {
@@ -74,6 +82,21 @@ var _ = Describe("operatingsystemconfig", func() {
 				Components: &shootpkg.Components{
 					Extensions: &shootpkg.Extensions{
 						OperatingSystemConfig: operatingSystemConfig,
+					},
+				},
+				Purpose: "development",
+				Info: &gardencorev1beta1.Shoot{
+					Status: gardencorev1beta1.ShootStatus{
+						TechnicalID: "shoot--garden-testing",
+					},
+				},
+			},
+			Seed: &seedpkg.Seed{
+				Info: &gardencorev1beta1.Seed{
+					Spec: gardencorev1beta1.SeedSpec{
+						DNS: gardencorev1beta1.SeedDNS{
+							IngressDomain: &IngressDomain,
+						},
 					},
 				},
 			},
@@ -111,6 +134,25 @@ var _ = Describe("operatingsystemconfig", func() {
 				botanist.Shoot.CloudProfile.Spec.CABundle = &caCloudProfile
 				botanist.Secrets["ca"].Data["ca.crt"] = nil
 				operatingSystemConfig.EXPECT().SetCABundle(&caCloudProfile)
+
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
+
+			It("should deploy successfully shoot logging components with non testing purpose", func() {
+				botanist.Shoot.Purpose = "development"
+				botanist.PromtailRBACAuthToken = promtailRBACAuthToken
+				botanist.Config = &config.GardenletConfiguration{
+					Logging: &config.Logging{
+						ShootNodeLogging: &config.ShootNodeLogging{
+							ShootPurposes: []gardencore.ShootPurpose{"evaluation", "development"},
+						},
+					},
+				}
+				Expect(gardenletfeatures.FeatureGate.SetFromMap(map[string]bool{string(features.Logging): true})).To(Succeed())
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.StringPtr("\n" + string(ca)))
+				operatingSystemConfig.EXPECT().SetPromtailRBACAuthToken(promtailRBACAuthToken)
+				operatingSystemConfig.EXPECT().SetLokiIngressHostName(botanist.ComputeLokiHost())
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
 				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())

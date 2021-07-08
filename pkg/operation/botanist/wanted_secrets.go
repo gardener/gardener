@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -106,6 +107,17 @@ func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig 
 				Username: username,
 				UserID:   secretName,
 			}
+		}
+	}
+
+	if b.isShootNodeLoggingEnabled() {
+		staticTokenConfig.Tokens[logging.LokiKubeRBACProxyName] = secrets.TokenConfig{
+			Username: logging.KubeRBACProxyUserName,
+			UserID:   logging.KubeRBACProxyUserName,
+		}
+		staticTokenConfig.Tokens[logging.PromtailName] = secrets.TokenConfig{
+			Username: logging.PromtailRBACName,
+			UserID:   logging.PromtailRBACName,
 		}
 	}
 
@@ -576,6 +588,46 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, false),
 		}},
 	})
+
+	// Secret definition for lokiKubeRBACProxy
+	if b.isShootNodeLoggingEnabled() {
+
+		var kubeRBACToken *secrets.Token
+		if staticToken != nil {
+			var err error
+			kubeRBACToken, err = staticToken.GetTokenForUsername(logging.KubeRBACProxyUserName)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name:      logging.SecretNameLokiKubeRBACProxyKubeconfig,
+				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			},
+			Token: kubeRBACToken,
+
+			KubeConfigRequests: []secrets.KubeConfigRequest{
+				{
+					ClusterName:   b.Shoot.SeedNamespace,
+					APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
+				},
+			}},
+			// Secret definition for loki (ingress)
+			&secrets.CertificateSecretConfig{
+				Name: common.LokiTLS,
+
+				CommonName:   b.ComputeLokiHost(),
+				Organization: []string{"gardener.cloud:monitoring:ingress"},
+				DNSNames:     b.ComputeLokiHosts(),
+				IPAddresses:  nil,
+
+				CertType:  secrets.ServerCert,
+				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
+				Validity:  &endUserCrtValidity,
+			})
+	}
 
 	// Secret definitions for dependency-watchdog-internal and external probes
 	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{

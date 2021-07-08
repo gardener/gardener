@@ -15,6 +15,7 @@
 package config
 
 import (
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 
 	corev1 "k8s.io/api/core/v1"
@@ -336,12 +337,20 @@ type GardenLoki struct {
 	Priority *int32
 }
 
+// ShootNodeLogging contains configuration for the shoot node logging.
+type ShootNodeLogging struct {
+	// ShootPurposes determines which shoots can have node logging by their purpose
+	ShootPurposes []core.ShootPurpose
+}
+
 // Logging contains configuration for the logging stack.
 type Logging struct {
 	// FluentBit contains configurations for the fluent-bit
 	FluentBit *FluentBit
 	// Loki contains configuration for the Loki
 	Loki *Loki
+	// ShootNodeLogging contains configurations for the shoot node logging
+	ShootNodeLogging *ShootNodeLogging
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

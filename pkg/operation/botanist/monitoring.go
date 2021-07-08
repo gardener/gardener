@@ -201,6 +201,9 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 					"loki": map[string]interface{}{
 						"enabled": gardenletfeatures.FeatureGate.Enabled(features.Logging),
 					},
+					"lokiTelegraf": map[string]interface{}{
+						"enabled": b.isShootNodeLoggingEnabled(),
+					},
 					"hvpa": map[string]interface{}{
 						"enabled": gardenletfeatures.FeatureGate.Enabled(features.HVPA),
 					},

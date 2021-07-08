@@ -20,23 +20,26 @@ import (
 	"path/filepath"
 
 	"github.com/gardener/gardener/charts"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/loki" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
-	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeTesting || !gardenletfeatures.FeatureGate.Enabled(features.Logging) {
+	if !b.Shoot.IsLoggingEnabled() {
 		return common.DeleteShootLoggingStack(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 	}
 
 	images, err := b.InjectSeedSeedImages(map[string]interface{}{},
 		charts.ImageNameLoki,
 		charts.ImageNameLokiCurator,
+		charts.ImageNameKubeRBACKProxy,
+		charts.ImageNameTelegraf,
 	)
 	if err != nil {
 		return err
@@ -51,6 +54,28 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	hvpaEnabled := gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 	if b.ManagedSeed != nil {
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
+	}
+
+	if b.isShootNodeLoggingEnabled() {
+		lokiValues["rbacSidecarEnabled"] = true
+		lokiValues["kubeRBACProxyKubeconfigCheckSum"] = b.CheckSums[logging.SecretNameLokiKubeRBACProxyKubeconfig]
+		lokiValues["ingress"] = map[string]interface{}{
+			"class": getIngressClass(b.Seed.Info.Spec.Ingress),
+			"hosts": []map[string]interface{}{
+				{
+					"hostName":    b.ComputeLokiHost(),
+					"secretName":  common.LokiTLS,
+					"serviceName": "loki",
+					"servicePort": 8080,
+					"backendPath": "/loki/api/v1/push",
+				},
+			},
+		}
+	} else {
+		err := common.DeleteShootNodeLoggingStack(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+		if err != nil {
+			return err
+		}
 	}
 
 	hvpaValues["enabled"] = hvpaEnabled
@@ -69,4 +94,17 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	}
 
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "loki"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), kubernetes.Values(lokiValues))
+}
+
+func (b *Botanist) isShootNodeLoggingEnabled() bool {
+	if b.Shoot != nil && b.Shoot.IsLoggingEnabled() && b.Config != nil &&
+		b.Config.Logging != nil && b.Config.Logging.ShootNodeLogging != nil {
+
+		for _, purpose := range b.Config.Logging.ShootNodeLogging.ShootPurposes {
+			if gardencore.ShootPurpose(b.Shoot.Purpose) == purpose {
+				return true
+			}
+		}
+	}
+	return false
 }

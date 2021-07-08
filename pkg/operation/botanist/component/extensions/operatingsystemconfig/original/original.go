@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/journald"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kernelconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/promtail"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/rootcertificates"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/varlibmount"
 )
@@ -54,6 +55,7 @@ func Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1al
 // Components computes the original operating system config components.
 func Components(criName extensionsv1alpha1.CRIName) []components.Component {
 	components := []components.Component{
+		promtail.New(),
 		varlibmount.New(),
 		rootcertificates.New(),
 		getContainerRuntimeComponent(criName),

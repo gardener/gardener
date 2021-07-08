@@ -71,6 +71,7 @@ type Operation struct {
 	APIServerAddress          string
 	APIServerClusterIP        string
 	APIServerHealthCheckToken string
+	PromtailRBACAuthToken     string
 	SeedNamespaceObject       *corev1.Namespace
 	MonitoringClient          prometheusclient.API
 	ExposureClassHandler      *config.ExposureClassHandler

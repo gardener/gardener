@@ -16,15 +16,72 @@ spec:
     metadata:
       labels:
         networking.gardener.cloud/from-prometheus: allowed
+{{- if .Values.rbacSidecarEnabled }}
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
+{{- end}}
 {{ toYaml .Values.labels | indent 8 }}
       annotations:
         checksum/configmap-loki-config: {{ include (print $.Template.BasePath "/loki-configmap.yaml") . | sha256sum }}
+{{- if .Values.rbacSidecarEnabled }}
+        checksum/kube-rbac-proxy-kubeconfig: {{ .Values.kubeRBACProxyKubeconfigCheckSum }}
+        checksum/configmap-telegraf-config: {{ include (print $.Template.BasePath "/telegraf-config.yaml") . | sha256sum }}
+{{- end}}
     spec:
       serviceAccountName: loki
       securityContext:
-        {{- toYaml .Values.securityContext | nindent 8 }}
+        fsGroup: 10001
       priorityClassName: {{ .Values.priorityClass.name }}
       containers:
+{{- if .Values.rbacSidecarEnabled }}
+        - name: kube-rbac-proxy
+          image: {{ index .Values.global.images "kube-rbac-proxy" }}
+          args:
+          - --insecure-listen-address=0.0.0.0:{{ .Values.kubeRBACProxy.port }}
+          - --upstream=http://127.0.0.1:3100/
+          - --kubeconfig=/kubeconfig/kubeconfig
+          - --logtostderr=true
+          - --v=6
+          resources:
+{{- toYaml .Values.resources.kubeRBACproxy | nindent 12 }}
+          ports:
+          - name: kube-rbac-proxy
+            containerPort: {{ .Values.kubeRBACProxy.port }}
+            protocol: TCP
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: /kubeconfig
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65534
+        - image: {{ index .Values.global.images "telegraf" }}
+          name: telegraf
+          command:
+            - "/bin/bash"
+          args:
+            - /etc/telegraf/start.sh
+          resources:
+{{- toYaml .Values.resources.telegraf | nindent 12 }}
+          securityContext:
+            capabilities:
+              add:
+              - NET_ADMIN
+            privileged: true
+          ports:
+          - name: telegraf
+            containerPort: {{ .Values.telegraf.port }}
+            protocol: TCP
+          volumeMounts:
+            - name: telegraf-config-volume
+              mountPath: /etc/telegraf/telegraf.conf
+              subPath: telegraf.conf
+              readOnly: true
+            - name: telegraf-config-volume
+              mountPath: /etc/telegraf/start.sh
+              subPath: start.sh
+              readOnly: true
+{{- end}}
         - name: loki
           image: {{ index .Values.global.images "loki" }}
           args:
@@ -48,6 +105,7 @@ spec:
           resources:
             {{- toYaml .Values.resources.loki | nindent 12 }}
           securityContext:
+{{- toYaml .Values.securityContext | nindent 12 }}
             readOnlyRootFilesystem: true
           env:
             {{- if .Values.env }}
@@ -72,11 +130,21 @@ spec:
               mountPath: /etc/loki
             - name: loki
               mountPath: "/data"
+          securityContext:
+{{- toYaml .Values.securityContext | nindent 12 }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       volumes:
         - name: config
           configMap:
             name: loki-config
+{{- if .Values.rbacSidecarEnabled }}
+        - name: kubeconfig
+          secret:
+            secretName: kube-rbac-proxy-kubeconfig
+        - name: telegraf-config-volume
+          configMap:
+            name: telegraf-config
+{{- end }}
   volumeClaimTemplates:
     - metadata:
         name: loki

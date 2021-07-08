@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/seed"
@@ -117,6 +118,12 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 
 	if err := b.storeAPIServerHealthCheckToken(secretsManager.StaticToken); err != nil {
 		return err
+	}
+
+	if b.isShootNodeLoggingEnabled() {
+		if err := b.storePromtailRBACAuthToken(secretsManager.StaticToken); err != nil {
+			return err
+		}
 	}
 
 	if b.Shoot.WantsVerticalPodAutoscaler {
@@ -218,6 +225,10 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 		common.KubecfgSecretName,
 	}
 
+	if b.isShootNodeLoggingEnabled() {
+		secrets = append(secrets, logging.SecretNameLokiKubeRBACProxyKubeconfig)
+	}
+
 	for _, secretName := range secrets {
 		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
 			return err
@@ -247,6 +258,16 @@ func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secrets.StaticTok
 	}
 
 	b.APIServerHealthCheckToken = kubeAPIServerHealthCheckToken.Token
+	return nil
+}
+
+func (b *Botanist) storePromtailRBACAuthToken(staticToken *secrets.StaticToken) error {
+	promtailRBACAuthToken, err := staticToken.GetTokenForUsername(logging.PromtailRBACName)
+	if err != nil {
+		return err
+	}
+
+	b.PromtailRBACAuthToken = promtailRBACAuthToken.Token
 	return nil
 }
 
