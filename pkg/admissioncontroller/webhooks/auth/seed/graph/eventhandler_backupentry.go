@@ -19,6 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -48,6 +49,7 @@ func (g *graph) setupBackupEntryWatch(_ context.Context, informer cache.Informer
 
 			if !apiequality.Semantic.DeepEqual(oldBackupEntry.Spec.SeedName, newBackupEntry.Spec.SeedName) ||
 				!apiequality.Semantic.DeepEqual(oldBackupEntry.Status.SeedName, newBackupEntry.Status.SeedName) ||
+				!apiequality.Semantic.DeepEqual(oldBackupEntry.OwnerReferences, newBackupEntry.OwnerReferences) ||
 				oldBackupEntry.Spec.BucketName != newBackupEntry.Spec.BucketName {
 				g.handleBackupEntryCreateOrUpdate(newBackupEntry)
 			}
@@ -74,7 +76,9 @@ func (g *graph) handleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.B
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	g.deleteVertex(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name)
+	g.deleteAllIncomingEdges(VertexTypeBackupBucket, VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name)
+	g.deleteAllOutgoingEdges(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name, VertexTypeShoot)
+	g.deleteAllOutgoingEdges(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name, VertexTypeSeed)
 
 	var (
 		backupEntryVertex  = g.getOrCreateVertex(VertexTypeBackupEntry, backupEntry.Namespace, backupEntry.Name)
@@ -91,6 +95,11 @@ func (g *graph) handleBackupEntryCreateOrUpdate(backupEntry *gardencorev1beta1.B
 	if backupEntry.Status.SeedName != nil {
 		seedVertex := g.getOrCreateVertex(VertexTypeSeed, "", *backupEntry.Status.SeedName)
 		g.addEdge(backupEntryVertex, seedVertex)
+	}
+
+	if shootName := gutil.GetShootNameFromOwnerReferences(backupEntry); shootName != "" {
+		shootVertex := g.getOrCreateVertex(VertexTypeShoot, backupEntry.Namespace, shootName)
+		g.addEdge(backupEntryVertex, shootVertex)
 	}
 }
 

@@ -128,9 +128,13 @@ With the `Seed` name at hand, the authorizer checks for an **existing path** fro
 Internally, the `SeedAuthorizer` uses a directed, acyclic graph data structure in order to efficiently respond to authorization requests for gardenlets:
 
 * A vertex in this graph represents a Kubernetes resource with its kind, namespace, and name (e.g., `Shoot:garden-my-project/my-shoot`).
-* An edge from vertex `u` to vertex `v` in this graph exists when (1) `v` is referred by `u` and `v` is a `Seed`, or when (2) `u` is referred by `v`.
+* An edge from vertex `u` to vertex `v` in this graph exists when
+  * (1) `v` is referred by `u` and `v` is a `Seed`, or when
+  * (2) `u` is referred by `v`, or when
+  * (3) `u` is strictly associated with `v`.
 
 For example, a `Shoot` refers to a `Seed`, a `CloudProfile`, a `SecretBinding`, etc., so it has an outgoing edge to the `Seed` (1) and incoming edges from the `CloudProfile` and `SecretBinding` vertices (2).
+However, there might also be a `ShootState` or a `BackupEntry` resource strictly associated with this `Shoot`, hence, it has incoming edges from these vertices (3).
 
 ![Resource Dependency Graph](gardenlet_api_access_graph.png)
 
