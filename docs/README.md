@@ -142,5 +142,6 @@
 ## Monitoring
 
 * [Alerting](monitoring/alerting.md)
+* [Connectivity](monitoring/connectivity.md)
 * [User Alerts](monitoring/user_alerts.md)
 * [Operator Alerts](monitoring/operator_alerts.md)
