@@ -903,6 +903,7 @@ func toExpirableVersions(versions []gardencorev1beta1.MachineImageVersion) []gar
 func GetLatestQualifyingShootMachineImage(image gardencorev1beta1.MachineImage, predicates ...VersionPredicate) (bool, *gardencorev1beta1.ShootMachineImage, error) {
 	predicates = append(predicates, FilterExpiredVersion())
 
+	// Try to find non-deprecated version first
 	qualifyingVersionFound, latestNonDeprecatedImageVersion, err := GetLatestQualifyingVersion(toExpirableVersions(image.Versions), append(predicates, FilterDeprecatedVersion())...)
 	if err != nil {
 		return false, nil, err
@@ -911,6 +912,7 @@ func GetLatestQualifyingShootMachineImage(image gardencorev1beta1.MachineImage, 
 		return true, &gardencorev1beta1.ShootMachineImage{Name: image.Name, Version: &latestNonDeprecatedImageVersion.Version}, nil
 	}
 
+	// It looks like there is no non-deprecated version, now look also into the deprecated versions
 	qualifyingVersionFound, latestImageVersion, err := GetLatestQualifyingVersion(toExpirableVersions(image.Versions), predicates...)
 	if err != nil {
 		return false, nil, err
