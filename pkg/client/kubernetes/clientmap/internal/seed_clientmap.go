@@ -16,6 +16,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sirupsen/logrus"
 	baseconfig "k8s.io/component-base/config"
@@ -50,6 +51,11 @@ func (f *SeedClientSetFactory) CalculateClientSetHash(ctx context.Context, k cli
 
 // NewClientSet creates a new ClientSet for a Seed cluster.
 func (f *SeedClientSetFactory) NewClientSet(ctx context.Context, k clientmap.ClientSetKey) (kubernetes.Interface, error) {
+	_, ok := k.(SeedClientSetKey)
+	if !ok {
+		return nil, fmt.Errorf("unsupported ClientSetKey: expected %T, but got %T", SeedClientSetKey(""), k)
+	}
+
 	return NewClientFromFile(
 		"",
 		f.ClientConnectionConfig.Kubeconfig,
