@@ -104,8 +104,6 @@ Please note that you should activate the [`SeedRestriction`](#seedrestriction-ad
 
 > [1] The reason for the fact that `Webhook` authorization plugin should appear after `RBAC` is that the `kube-apiserver` will be depending on the `gardener-admission-controller` (serving the webhook). However, the `gardener-admission-controller` can only start when `gardener-apiserver` runs, but `gardener-apiserver` itself can only start when `kube-apiserver` runs. If `Webhook` is before `RBAC` then `gardener-apiserver` might not be able to start, leading to a deadlock.
 
-⚠️ This authorization plugin is still in development and should only be used for experimental or testing purposes.
-
 ### Authorizer Decisions
 
 As mentioned earlier, it's the authorizer's job to evaluate API requests and return one of the following decisions:
@@ -223,8 +221,6 @@ The `SeedRestriction` is implemented as [Kubernetes admission webhook](https://k
 🎛 In order to activate it, you have to set `.global.admission.seedRestriction.enabled=true` when using the [Gardener `controlplane` Helm chart](../../charts/gardener/controlplane).
 This will add an additional webhook in the existing `ValidatingWebhookConfiguration` of the `gardener-admission-controller` which contains the configuration for the `SeedRestriction` handler.
 Please note that it should only be activated when the `SeedAuthorizer` is active as well.
-
-⚠️ This admission plugin is still in development and should only be used for experimental or testing purposes.
 
 ### Admission Decisions
 
