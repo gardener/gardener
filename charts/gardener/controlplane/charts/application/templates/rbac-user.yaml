@@ -99,6 +99,7 @@ rules:
   - core.gardener.cloud
   resources:
   - cloudprofiles
+  - exposureclasses
   - seeds
   verbs:
   - get
