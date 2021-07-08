@@ -78,19 +78,19 @@ Depending on the complexity of the controller's lifecycle management, configurat
 
 In many cases the extension controllers are easy to deploy and configure.
 It is sufficient to simply create a Helm chart (standardized way of packaging software in the Kubernetes context) and deploy it together with some static configuration values.
-Gardener supports this scenario and allows to provide arbitrary deployment information in the `ControllerDeployment` resource's `.spec` section:
+Gardener supports this scenario and allows to provide arbitrary deployment information in the `ControllerDeployment` resource's `.providerConfig` section:
 
 ```yaml
 ...
-spec:
-  providerConfig:
-    chart: H4sIFAAAAAAA/yk...
-    values:
-      foo: bar
+type: helm
+providerConfig:
+  chart: H4sIFAAAAAAA/yk...
+  values:
+    foo: bar
 ```
 
-If `.spec.deployment.type=helm` then Gardener itself will take over the responsibility the deployment.
-It base64-decodes the provided Helm chart (`.spec.providerConfig.chart`) and deploys it with the provided static configuration (`.spec.providerConfig.values`).
+If `.type=helm` then Gardener itself will take over the responsibility the deployment.
+It base64-decodes the provided Helm chart (`.providerConfig.chart`) and deploys it with the provided static configuration (`.providerConfig.values`).
 The chart and the values can be updated at any time - Gardener will recognize and re-trigger the deployment process.
 
 In order to allow extensions to get information about the garden and the seed cluster Gardener does mix-in certain properties into the values (root level) of every deployed Helm chart:
@@ -114,7 +114,7 @@ The list might be extended in the future.
 
 Some extension controllers might be more complex and require additional domain-specific knowledge wrt. lifecycle or configuration.
 In this case, we encourage to follow the Kubernetes operator pattern and deploy a dedicated operator for this extension into the garden cluster.
-The `ControllerDeployments`'s `.spec.type` field would then not be `helm`, and no Helm chart or values need to be provided there.
+The `ControllerDeployments`'s `.type` field would then not be `helm`, and no Helm chart or values need to be provided there.
 Instead, the operator itself knows how to deploy the extension into the seed.
 It must watch `ControllerInstallation` resources and act one those referencing a `ControllerRegistration` the operator is responsible for.
 
