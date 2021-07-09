@@ -123,11 +123,11 @@ featureGates:
 # - name: internet-config
 #   loadBalancerService:
 #     annotations:
-#       loadbalancer/nework: internet
+#       loadbalancer/network: internet
 # - name: internal-config
 #   loadBalancerService:
 #     annotations:
-#       loadbalancer/nework: internal
+#       loadbalancer/network: internal
 #   sni:
 #     ingress:
 #       namespace: ingress-internal
