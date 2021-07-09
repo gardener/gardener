@@ -4,7 +4,7 @@ apiVersion: core.gardener.cloud/v1alpha1
 kind: ExposureClass
 metadata:
   name: internet
-handler: internetconfig # Gardenlet need to have configuration for a handler in its configuration.
+handler: internet-config # Gardenlet need to have configuration for a handler in its configuration.
 scheduling:
   seedSelector:
     matchLabels:
