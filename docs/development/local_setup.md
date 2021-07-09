@@ -421,13 +421,13 @@ kubectl apply -f dev/30-cloudprofile.yaml
 
 ## Install necessary Gardener Extensions
 
-The [Known Extension Implementations](../../extensions/README.md#known-extension-implementations) section contains a list of available extension implementations. You need to create a ControllerRegistration for 
+The [Known Extension Implementations](../../extensions/README.md#known-extension-implementations) section contains a list of available extension implementations. You need to create a ControllerRegistration and ControllerDeployment for
 * at least one infrastructure provider
 * a dns provider (if the DNS for the Seed is not disabled)
 * at least one operating system extension
 * at least one network plugin extension
 
-As a convention, the example ControllerRegistration manifest for an extension is located under `example/controller-registration.yaml` in the corresponding repository (for example for AWS the ControllerRegistration can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/controller-registration.yaml)). An example creation of ControllerRegistration for provider-aws (make sure to replace `<version>` with the newest released version tag):
+As a convention, the example ControllerRegistration manifest (containing also the necessary ControllerDeployment) for an extension is located under `example/controller-registration.yaml` in the corresponding repository (for example for AWS the ControllerRegistration can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/controller-registration.yaml)). An example creation for provider-aws (make sure to replace `<version>` with the newest released version tag):
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-aws/<version>/example/controller-registration.yaml
