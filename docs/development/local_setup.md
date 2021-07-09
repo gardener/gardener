@@ -423,7 +423,7 @@ kubectl apply -f dev/30-cloudprofile.yaml
 
 The [Known Extension Implementations](../../extensions/README.md#known-extension-implementations) section contains a list of available extension implementations. You need to create a ControllerRegistration for 
 * at least one infrastructure provider
-* a dns provider (if the DNS for the Seed is not disabled),
+* a dns provider (if the DNS for the Seed is not disabled)
 * at least one operating system extension
 * at least one network plugin extension
 
