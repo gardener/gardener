@@ -346,7 +346,6 @@ github.com/pelletier/go-toml
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
 # github.com/pkg/errors v0.9.1
-## explicit
 github.com/pkg/errors
 # github.com/prometheus/client_golang v1.11.0 => github.com/prometheus/client_golang v1.11.0
 ## explicit

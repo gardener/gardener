@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,24 +17,57 @@ package errors
 import "errors"
 
 // Unwrap and returns the root error.
+//
+// It will try to get Cause error (if err implements the 'causer'
+// interface) and will unwrap again; it will iterate through again
+// until gets the root error.
 func Unwrap(err error) error {
-	type causer interface {
-		Cause() error
+	var (
+		cdone      bool
+		res, udone = unwrapErr(err)
+	)
+
+	for !(udone && cdone) {
+		res, cdone = unwrapCauser(res)
+		res, udone = unwrapErr(res)
 	}
 
-	cause, ok := err.(causer)
-	if ok {
-		return unwraperr(cause.Cause())
-	}
-
-	return unwraperr(err)
+	return res
 }
 
-func unwraperr(err error) error {
-	unwerr := errors.Unwrap(err)
-	if unwerr == nil {
-		return err
+func unwrapErr(err error) (error, bool) {
+	if err == nil || errors.Unwrap(err) == nil {
+		// this most likely is the root error
+		return err, true
 	}
 
-	return unwraperr(errors.Unwrap(err))
+	for err != nil {
+		var e = errors.Unwrap(err)
+		if e == nil {
+			break
+		}
+		err = e
+	}
+	return err, false
+}
+
+type causer interface {
+	Cause() error
+}
+
+func unwrapCauser(err error) (error, bool) {
+	if _, ok := err.(causer); !ok {
+		// this most likely is the root cause error
+		return err, true
+	}
+
+	for err != nil {
+		cause, ok := err.(causer)
+		if !ok {
+			break
+		}
+		err = cause.Cause()
+	}
+
+	return err, false
 }
