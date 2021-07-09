@@ -201,6 +201,8 @@ if [[ "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" != "` + hyperkubeImage.String() + `" ]]
 
   echo "Starting temporary hyperkube container to copy binaries to host"` +
 		copyKubernetesBinariesFn(hyperkubeImage) + `
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet"
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl"
 
   echo "` + hyperkubeImage.String() + `" > "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE"
   LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
@@ -377,7 +379,5 @@ func copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119(hyperkub
   HYPERKUBE_CONTAINER_ID="$(/usr/bin/docker run --rm -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `")"
   /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS"
   /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS"
-  /usr/bin/docker stop "$HYPERKUBE_CONTAINER_ID"
-  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet"
-  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl"`
+  /usr/bin/docker stop "$HYPERKUBE_CONTAINER_ID"`
 }

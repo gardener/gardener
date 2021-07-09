@@ -69,9 +69,9 @@ if [[ "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" != "{{ .hyperkubeImage }}" ]]; then
   {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS"
   {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS"
   {{ .pathDockerBinary }} stop "$HYPERKUBE_CONTAINER_ID"
+{{- end }}
   chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet"
   chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl"
-{{- end }}
 
   echo "{{ .hyperkubeImage }}" > "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE"
   LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
