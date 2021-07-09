@@ -242,21 +242,9 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 		})
 
-		Context("seed selector/config", func() {
-			It("should forbid specifying neither a seed selector nor a seed config", func() {
-				cfg.SeedSelector = nil
+		Context("seed config", func() {
+			It("should require a seedConfig", func() {
 				cfg.SeedConfig = nil
-
-				errorList := ValidateGardenletConfiguration(cfg, nil, false)
-
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("seedConfig"),
-				}))))
-			})
-
-			It("should forbid specifying both a seed selector and a seed config", func() {
-				cfg.SeedSelector = &metav1.LabelSelector{}
 
 				errorList := ValidateGardenletConfiguration(cfg, nil, false)
 

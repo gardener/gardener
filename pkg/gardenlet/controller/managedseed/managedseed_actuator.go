@@ -633,9 +633,6 @@ func (a *actuator) prepareGardenletChartValues(
 	// Set the seed name
 	gardenletConfig.SeedConfig.SeedTemplate.Name = objectMeta.Name
 
-	// Ensure seed selector is not set
-	gardenletConfig.SeedSelector = nil
-
 	// Get gardenlet chart values
 	return a.vp.GetGardenletChartValues(
 		ensureGardenletEnvironment(deployment, shoot.Spec.DNS),

@@ -234,7 +234,7 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 	}
 
 	// if shoot is no longer managed by this gardenlet (e.g., due to migration to another seed) then don't requeue
-	if !controllerutils.ShootIsManagedByThisGardenlet(shoot, c.config, c.seedLister) {
+	if !controllerutils.ShootIsManagedByThisGardenlet(shoot, c.config) {
 		log.Debugf("Skipping because Shoot is not managed by this gardenlet in seed %s", *shoot.Spec.SeedName)
 		return reconcile.Result{}, nil
 	}

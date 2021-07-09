@@ -138,7 +138,7 @@ func (c *Controller) seedDelete(obj interface{}) {
 // Run starts the FederatedSeed Controller
 func (c *Controller) Run(ctx context.Context, workers int) {
 	c.seedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.config.SeedSelector),
+		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(c.config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    c.seedAdd,
 			UpdateFunc: c.seedUpdate,

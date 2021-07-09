@@ -20,9 +20,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -64,9 +62,6 @@ type Controller struct {
 
 	workerCh               chan int
 	numberOfRunningWorkers int
-
-	lock     sync.Mutex
-	leaseMap map[string]bool
 }
 
 // NewSeedController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
@@ -106,11 +101,10 @@ func NewSeedController(
 		seedLeaseQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),
 		seedExtensionCheckQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-extension-check"),
 		workerCh:                make(chan int),
-		leaseMap:                make(map[string]bool),
 	}
 
 	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), config.SeedSelector),
+		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    seedController.seedAdd,
 			UpdateFunc: seedController.seedUpdate,
@@ -119,14 +113,14 @@ func NewSeedController(
 	})
 
 	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), config.SeedSelector),
+		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: seedController.seedLeaseAdd,
 		},
 	})
 
 	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
+		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    seedController.controllerInstallationOfSeedAdd,
 			UpdateFunc: seedController.controllerInstallationOfSeedUpdate,
@@ -167,9 +161,6 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 		controllerutils.DeprecatedCreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.reconcileSeedExtensionCheckKey, &waitGroup, c.workerCh)
 	}
 
-	// health management
-	go c.startHealthManagement(ctx)
-
 	// Shutdown handling
 	<-ctx.Done()
 	c.seedQueue.ShutDown()
@@ -186,71 +177,6 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	}
 
 	waitGroup.Wait()
-}
-
-func (c *Controller) startHealthManagement(ctx context.Context) {
-	var (
-		seedName              = confighelper.SeedNameFromSeedConfig(c.config.SeedConfig)
-		seedLabelSelector     labels.Selector
-		expectedHealthReports int
-		err                   error
-	)
-
-	if seedName != "" {
-		expectedHealthReports = 1
-	} else {
-		seedLabelSelector, err = metav1.LabelSelectorAsSelector(c.config.SeedSelector)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(LeaseResyncGracePeriodSeconds / 2 * time.Second):
-
-			isHealthy := true
-
-			if len(seedName) > 0 {
-				if _, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(seedName); err != nil {
-					if apierrors.IsNotFound(err) {
-						// the Seed configured for the Gardenlet does not exist.
-						// Do not expect an existing lease
-						expectedHealthReports = 0
-					} else {
-						logger.Logger.Errorf("error when getting the seed %q for health management: %+v", seedName, err)
-						isHealthy = false
-					}
-				}
-			} else {
-				seedList, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().List(seedLabelSelector)
-				if err != nil {
-					logger.Logger.Errorf("error while listing seeds for health management: %+v", err)
-					isHealthy = false
-				}
-				expectedHealthReports = len(seedList)
-			}
-
-			c.lock.Lock()
-
-			if len(c.leaseMap) != expectedHealthReports {
-				isHealthy = false
-			} else {
-				for _, status := range c.leaseMap {
-					if !status {
-						isHealthy = false
-						break
-					}
-				}
-			}
-
-			c.leaseMap = make(map[string]bool)
-			c.lock.Unlock()
-			c.healthManager.Set(isHealthy)
-		}
-	}
 }
 
 // RunningWorkers returns the number of running workers.

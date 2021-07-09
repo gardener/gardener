@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	mock "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	mockrest "github.com/gardener/gardener/pkg/mock/client-go/rest"
 	mockio "github.com/gardener/gardener/pkg/mock/go/io"
@@ -111,6 +112,9 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 			err: syncFail,
 		}
 
+		healthManager := healthz.NewDefaultHealthz()
+		healthManager.Start()
+
 		clientMap := fakeclientmap.NewClientMap().
 			AddClient(keys.ForGarden(), k8sGardenClient).
 			AddClient(keys.ForSeed(seed), k8sGardenClient)
@@ -120,7 +124,7 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 			seedLeaseQueue:   seedLeaseQueue,
 			config:           gardenletConfig,
 			seedLeaseControl: seedLeaseControl,
-			leaseMap:         make(map[string]bool),
+			healthManager:    healthManager,
 		}
 		Expect(indexer.Add(seed)).NotTo(HaveOccurred())
 	})
@@ -149,7 +153,7 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 		It("returns error if connection to Seed is unsuccessful", func() {
 			err := controller.reconcileSeedLeaseKey(seedName)
 			Expect(err).To(HaveOccurred())
-			Expect(controller.leaseMap).To(HaveKeyWithValue(seedName, false))
+			Expect(controller.healthManager.Get()).To(BeFalse())
 		})
 	})
 
@@ -161,7 +165,7 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 		It("propagates the error when lease fails to update", func() {
 			err := controller.reconcileSeedLeaseKey(seedName)
 			Expect(err).To(HaveOccurred())
-			Expect(controller.leaseMap).To(HaveKeyWithValue(seedName, false))
+			Expect(controller.healthManager.Get()).To(BeFalse())
 		})
 	})
 
@@ -169,7 +173,7 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 		It("updates the lease without error", func() {
 			err := controller.reconcileSeedLeaseKey(seedName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(controller.leaseMap).To(HaveKeyWithValue(seedName, true))
+			Expect(controller.healthManager.Get()).To(BeTrue())
 		})
 	})
 
@@ -186,7 +190,7 @@ var _ = Describe("SeedLeaseControlReconcile", func() {
 		It("updated seed Condition if already exists", func() {
 			err := controller.reconcileSeedLeaseKey(seedName)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(controller.leaseMap).To(HaveKeyWithValue(seedName, true))
+			Expect(controller.healthManager.Get()).To(BeTrue())
 		})
 	})
 })

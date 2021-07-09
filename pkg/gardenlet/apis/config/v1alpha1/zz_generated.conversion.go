@@ -720,7 +720,6 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 	} else {
 		out.SeedConfig = nil
 	}
-	out.SeedSelector = (*v1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
 	if in.Logging != nil {
 		in, out := &in.Logging, &out.Logging
 		*out = new(config.Logging)
@@ -792,7 +791,6 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 	} else {
 		out.SeedConfig = nil
 	}
-	out.SeedSelector = (*v1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
 	if in.Logging != nil {
 		in, out := &in.Logging, &out.Logging
 		*out = new(Logging)

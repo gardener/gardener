@@ -71,9 +71,7 @@ func (c *Controller) reconcileSeedLeaseKey(key string) error {
 	}
 
 	if err := c.checkSeedConnection(ctx, seed); err != nil {
-		c.lock.Lock()
-		c.leaseMap[seed.Name] = false
-		c.lock.Unlock()
+		c.healthManager.Set(false)
 		return fmt.Errorf("[SEED LEASE] cannot establish connection with Seed %s: %v", key, err)
 	}
 
@@ -83,9 +81,7 @@ func (c *Controller) reconcileSeedLeaseKey(key string) error {
 	)
 
 	if err := c.seedLeaseControl.Sync(seedCopy.Name, *seedOwnerReference); err != nil {
-		c.lock.Lock()
-		c.leaseMap[seed.Name] = false
-		c.lock.Unlock()
+		c.healthManager.Set(false)
 		return err
 	}
 
@@ -94,9 +90,7 @@ func (c *Controller) reconcileSeedLeaseKey(key string) error {
 		return fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	c.lock.Lock()
-	c.leaseMap[seed.Name] = true
-	c.lock.Unlock()
+	c.healthManager.Set(true)
 
 	bldr, err := helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
 	if err != nil {

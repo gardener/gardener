@@ -71,10 +71,6 @@ func ValidateLandscaperImports(imports *imports.Imports) field.ErrorList {
 func validateGardenletConfiguration(gardenletConfig *gardenletconfig.GardenletConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if gardenletConfig.SeedSelector != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("seedSelector"), "seed selector is forbidden, provide a seedConfig instead."))
-	}
-
 	if gardenletConfig.SeedConfig == nil {
 		return append(allErrs, field.Required(fldPath.Child("seedConfig"), "the seed configuration has to be provided. This is used to automatically register the seed."))
 	}

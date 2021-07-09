@@ -323,7 +323,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}
 
 	seedClientMapBuilder := clientmapbuilder.NewSeedClientMapBuilder().
-		WithInCluster(cfg.SeedSelector == nil).
 		WithClientConnectionConfig(&cfg.SeedClientConnection.ClientConnectionConfiguration)
 	shootClientMapBuilder := clientmapbuilder.NewShootClientMapBuilder().
 		WithClientConnectionConfig(&cfg.ShootClientConnection.ClientConnectionConfiguration)

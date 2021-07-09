@@ -73,7 +73,7 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 	Context("#seedClientMapFunc", func() {
 		It("should be set correctly by WithSeedClientMap", func() {
 			builder := NewDelegatingClientMapBuilder().WithSeedClientMap(fakeSeedClientMap)
-			Expect(builder.seedClientMapFunc(nil, nil)).To(BeIdenticalTo(fakeSeedClientMap))
+			Expect(builder.seedClientMapFunc(nil)).To(BeIdenticalTo(fakeSeedClientMap))
 		})
 
 		It("should be set correctly by WithSeedClientMapBuilder", func() {
@@ -154,7 +154,7 @@ var _ = Describe("DelegatingClientMapBuilder", func() {
 			builder := NewDelegatingClientMapBuilder().
 				WithLogger(fakeLogger).
 				WithGardenClientMap(fakeGardenClientMap)
-			builder.seedClientMapFunc = func(clientmap.ClientMap, logrus.FieldLogger) (clientmap.ClientMap, error) {
+			builder.seedClientMapFunc = func(logrus.FieldLogger) (clientmap.ClientMap, error) {
 				return nil, fakeErr
 			}
 			clientMap, err := builder.Build()

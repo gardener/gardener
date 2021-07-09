@@ -111,7 +111,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 	}
 
 	shootInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
+		FilterFunc: controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				shootController.shootAdd(obj, false)
@@ -122,7 +122,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 	})
 
 	shootInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
+		FilterFunc: controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    shootController.shootCareAdd,
 			UpdateFunc: shootController.shootCareUpdate,
@@ -130,7 +130,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 	})
 
 	shootInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig), seedLister, config.SeedSelector),
+		FilterFunc: controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    shootController.seedRegistrationAdd,
 			UpdateFunc: shootController.seedRegistrationUpdate,
@@ -168,7 +168,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int
 	}
 
 	// Update Shoots before starting the workers.
-	shootFilterFunc := controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(c.config.SeedConfig), c.seedLister, c.config.SeedSelector)
+	shootFilterFunc := controllerutils.ShootFilterFunc(confighelper.SeedNameFromSeedConfig(c.config.SeedConfig))
 	shoots, err := c.shootLister.List(labels.Everything())
 	if err != nil {
 		logger.Logger.Errorf("Failed to fetch shoots resources: %v", err.Error())

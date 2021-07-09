@@ -77,7 +77,7 @@ func NewBackupEntryController(ctx context.Context, clientMap clientmap.ClientMap
 	}
 
 	controller.backupEntryInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.BackupEntryFilterFunc(ctx, controller.gardenClient, confighelper.SeedNameFromSeedConfig(controller.config.SeedConfig), controller.config.SeedSelector),
+		FilterFunc: controllerutils.BackupEntryFilterFunc(confighelper.SeedNameFromSeedConfig(controller.config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    controller.backupEntryAdd,
 			UpdateFunc: controller.backupEntryUpdate,

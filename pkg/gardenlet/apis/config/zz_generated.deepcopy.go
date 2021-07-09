@@ -358,11 +358,6 @@ func (in *GardenletConfiguration) DeepCopyInto(out *GardenletConfiguration) {
 		*out = new(SeedConfig)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.SeedSelector != nil {
-		in, out := &in.SeedSelector, &out.SeedSelector
-		*out = new(v1.LabelSelector)
-		(*in).DeepCopyInto(*out)
-	}
 	if in.Logging != nil {
 		in, out := &in.Logging, &out.Logging
 		*out = new(Logging)

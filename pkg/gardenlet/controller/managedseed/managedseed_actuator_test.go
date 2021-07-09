@@ -490,7 +490,6 @@ var _ = Describe("Actuator", func() {
 					Kubeconfig: "kubeconfig",
 				},
 			}
-			mergedGardenletConfig.SeedSelector = &metav1.LabelSelector{}
 
 			vh.EXPECT().MergeGardenletDeployment(managedSeed.Spec.Gardenlet.Deployment, shoot).Return(mergedDeployment, nil)
 			vh.EXPECT().MergeGardenletConfiguration(managedSeed.Spec.Gardenlet.Config.Object).Return(mergedGardenletConfig, nil)
@@ -552,7 +551,7 @@ var _ = Describe("Actuator", func() {
 						},
 						Spec: seedTemplate.Spec,
 					}))
-					Expect(gc.SeedSelector).To(BeNil())
+
 					return gardenletChartValues, nil
 				},
 			)

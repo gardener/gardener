@@ -111,28 +111,34 @@ for example, using command  `kubectl certificate approve  seed-csr-<...>`).
 If that doesn’t happen within 15 minutes,
 the gardenlet repeats the process and creates another CSR.
 
-## Seed Config versus Seed Selector
+## Configuring the Seed to work with
 
-The usage of the gardenlet is flexible:
+The Gardenlet works with a single seed, which must be configured in the
+`GardenletConfiguration` under `.seedConfig`. This must be a copy of the
+`Seed` resource, for example (see `example/20-componentconfig-gardenlet.yaml`
+for a more complete example):
 
-| Usage | Description |
-|:---|:---|
-| `seedConfig` | Run one gardenlet per seed cluster inside the seed cluster itself.|
-| `seedSelector` | Use one gardenlet to manage multiple seed clusters. The gardenlet can run outside of the seed cluster.|
+```yaml
+apiVersion: gardenlet.config.gardener.cloud/v1alpha1
+kind: GardenletConfiguration
+seedConfig:
+  metadata:
+    name: my-seed
+  spec:
+    provider:
+      type: aws
+    # ...
+    secretRef:
+      name: my-seed-secret
+      namespace: garden
+```
 
-> For production use it’s recommended to go for the `seedConfig` option,
-> because it makes scaling easier and leads to a better distribution of responsibilities.
+When using `make start-gardenlet`, the corresponding script will automatically
+fetch the seed cluster's `kubeconfig` based on the `seedConfig.spec.secretRef`
+and set the environment accordingly.
 
-* Provide a `seedConfig` that contains information about the seed cluster itself
-  if you want the gardenlet in the standard way,
-  see [the example gardenlet configuration](../../example/20-componentconfig-gardenlet.yaml).
-  Once bootstrapped, the gardenlet creates and updates its `Seed` object itself.
-
-* Provide a `seedSelector` that incorporates a label selector for the
-  targeted seed clusters if you want the gardenlet to manage multiple seeds,
-  see [the example gardenlet configuration](../../example/20-componentconfig-gardenlet.yaml).
-  In this case, you have to create the `Seed` objects
-  together with a `kubeconfig` pointing to the cluster yourself.
+On startup, gardenlet registers a `Seed` resource using the given template
+in `seedConfig` if it's not present already.
 
 ## Component Configuration
 
@@ -166,13 +172,7 @@ It’s used as a liveness probe in the `Deployment` of the gardenlet.
 If the gardenlet fails to renew its lease
 then the endpoint returns `500 Internal Server Error`, otherwise it returns `200 OK`.
 
-> ⚠️<br> In case the gardenlet is managing multiple seeds
-> (that is, a seed selector is used) then the `/healthz`
-> reports `500 Internal Server Error` if there is at least one seed
-> for which it couldn’t renew its lease. Only if it can renew the lease
-> for all seeds it reports `200 OK`.
-
-Please note, that the `/healthz` only indicates whether the gardenlet
+Please note that the `/healthz` only indicates whether the gardenlet
 could successfully probe the Seed's API server and renew the lease with
 the Garden cluster.
 It does *not* show that the Gardener extension API server (with the Gardener resource groups)

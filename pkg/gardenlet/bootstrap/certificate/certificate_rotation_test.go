@@ -345,57 +345,6 @@ users:
 			})
 		})
 
-		Describe("#getTargetedSeeds", func() {
-			It("should return a single Seed", func() {
-				mockSeedClient.EXPECT().Get(ctx, kutil.Key(seedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, seed *gardencorev1beta1.Seed) error {
-					seed.ObjectMeta = metav1.ObjectMeta{
-						Name: seedName,
-					}
-					return nil
-				})
-
-				seeds, err := getTargetedSeeds(ctx, mockSeedClient, nil, seedName)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(seeds).To(HaveLen(1))
-				Expect(seeds[0]).To(Equal(gardencorev1beta1.Seed{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: seedName,
-					},
-				}))
-			})
-
-			It("should return all Seed matched by seedSelector", func() {
-				items := []gardencorev1beta1.Seed{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "seed-one",
-						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "seed-two",
-						},
-					},
-				}
-
-				seedSelector := &metav1.LabelSelector{MatchLabels: map[string]string{
-					"seed-kind": "promiscuous",
-				}}
-
-				seedLabelSelector, err := metav1.LabelSelectorAsSelector(seedSelector)
-				Expect(err).To(BeNil())
-				mockSeedClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.SeedList{}), client.MatchingLabelsSelector{Selector: seedLabelSelector}).DoAndReturn(func(_ context.Context, list *gardencorev1beta1.SeedList, _ ...client.ListOption) error {
-					*list = gardencorev1beta1.SeedList{Items: items}
-					return nil
-				})
-
-				seeds, err := getTargetedSeeds(ctx, mockSeedClient, seedSelector, seedName)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(seeds).To(HaveLen(2))
-				Expect(seeds).To(Equal(items))
-			})
-		})
-
 		Describe("#waitForCertificateRotation", func() {
 			var (
 				testKubeconfig string

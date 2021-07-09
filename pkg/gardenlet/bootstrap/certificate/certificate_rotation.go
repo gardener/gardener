@@ -24,7 +24,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -58,7 +57,6 @@ type Manager struct {
 	gardenClientConnection *config.GardenClientConnection
 	targetClusterName      string
 	seedName               string
-	seedSelector           *metav1.LabelSelector
 }
 
 // NewCertificateRotation creates a certificate manager that can be used to rotate gardenlet's client certificate for the Garden cluster
@@ -73,7 +71,6 @@ func NewCertificateManager(clientMap clientmap.ClientMap, seedClient client.Clie
 		gardenClientConnection: config.GardenClientConnection,
 		seedName:               seedName,
 		targetClusterName:      gardenletTargetClusterName,
-		seedSelector:           config.SeedSelector,
 	}
 }
 
@@ -103,20 +100,33 @@ func (cr *Manager) ScheduleCertificateRotation(ctx context.Context, gardenletCan
 		if err != nil {
 			msg := fmt.Sprintf("Failed to rotate the kubeconfig for the Garden API Server. Certificate expires in %s (%s): %v", certificateExpirationTime.UTC().Sub(time.Now().UTC()).Round(time.Second).String(), certificateExpirationTime.Round(time.Second).String(), err)
 			cr.logger.Error(msg)
-			seeds, err := cr.getTargetedSeeds(ctx)
+			seed, err := cr.getTargetedSeed(ctx)
 			if err != nil {
-				cr.logger.Warnf("failed to record event on seeds announcing the failed certificate rotation: %v", err)
+				cr.logger.Warnf("failed to record event on seed announcing the failed certificate rotation: %v", err)
 				return
 			}
-			for _, seed := range seeds {
-				recorder.Event(&seed, corev1.EventTypeWarning, EventGardenletCertificateRotationFailed, msg)
-			}
+			recorder.Event(seed, corev1.EventTypeWarning, EventGardenletCertificateRotationFailed, msg)
 			return
 		}
 
 		cr.logger.Info("Terminating Gardenlet after successful certificate rotation.")
 		gardenletCancel()
 	}, time.Second, ctx.Done())
+}
+
+// getTargetedSeed returns the Seed that this Gardenlet is reconciling
+func (cr *Manager) getTargetedSeed(ctx context.Context) (*gardencorev1beta1.Seed, error) {
+	gardenClient, err := cr.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
+	}
+
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: cr.seedName}, seed); err != nil {
+		return nil, err
+	}
+
+	return seed, nil
 }
 
 // waitForCertificateRotation determines and waits for the certificate rotation deadline.
@@ -221,35 +231,4 @@ func rotateCertificate(ctx context.Context, logger logrus.FieldLogger, clientMap
 	}
 
 	return nil
-}
-
-// getTargetedSeeds returns the Seeds that this Gardenlet is reconciling
-func getTargetedSeeds(ctx context.Context, gardenClient client.Client, seedSelector *metav1.LabelSelector, seedName string) ([]gardencorev1beta1.Seed, error) {
-	if seedSelector != nil {
-		seedLabelSelector, err := metav1.LabelSelectorAsSelector(seedSelector)
-		if err != nil {
-			return nil, err
-		}
-
-		seeds := &gardencorev1beta1.SeedList{}
-		err = gardenClient.List(ctx, seeds, client.MatchingLabelsSelector{Selector: seedLabelSelector})
-		if err != nil {
-			return nil, err
-		}
-		return seeds.Items, nil
-	}
-
-	seed := &gardencorev1beta1.Seed{}
-	if err := gardenClient.Get(ctx, client.ObjectKey{Name: seedName}, seed); err != nil {
-		return nil, err
-	}
-	return []gardencorev1beta1.Seed{*seed}, nil
-}
-
-func (cr *Manager) getTargetedSeeds(ctx context.Context) ([]gardencorev1beta1.Seed, error) {
-	gardenClient, err := cr.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
-	}
-	return getTargetedSeeds(ctx, gardenClient.Client(), cr.seedSelector, cr.seedName)
 }

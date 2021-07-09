@@ -8,8 +8,8 @@ An existing shoot can be registered as a seed by creating a `ManagedSeed` resour
     * `gardenlet` deployment parameters, such as the number of replicas, the image, etc.
     * The `GardenletConfiguration` resource that contains controllers configuration, feature gates, and a `seedConfig` section that contains the `Seed` spec and parts of its metadata.
     * Additional configuration parameters, such as the garden connection bootstrap mechanism (see [TLS Bootstrapping](../concepts/gardenlet.md#tls-bootstrapping)), and whether to merge the provided configuration with the configuration of the parent `gardenlet`.
-    
-Either the `seedTemplate` or the `gardenlet` section must be specified, but not both: 
+
+Either the `seedTemplate` or the `gardenlet` section must be specified, but not both:
 
 * If the `seedTemplate` section is specified, `gardenlet` is not deployed to the shoot, and a new `Seed` resource is created based on the template.
 * If the `gardenlet` section is specified, `gardenlet` is deployed to the shoot, and it registers a new seed upon startup based on the `seedConfig` section of the `GardenletConfiguration` resource.
@@ -17,9 +17,9 @@ Either the `seedTemplate` or the `gardenlet` section must be specified, but not 
 Note the following important aspects:
 
 * Unlike the `Seed` resource, the `ManagedSeed` resource is namespaced. Currently, managed seeds are restricted to the `garden` namespace.
-* The newly created `Seed` resource always has the same name as the `ManagedSeed` resource. Attempting to specify a different name in `seedTemplate` or `seedConfig` will fail. 
+* The newly created `Seed` resource always has the same name as the `ManagedSeed` resource. Attempting to specify a different name in `seedTemplate` or `seedConfig` will fail.
 * The `ManagedSeed` resource must always refer to an existing shoot. Attempting to create a `ManagedSeed` referring to a non-existing shoot will fail.
-* A shoot that is being referred to by a `ManagedSeed` cannot be deleted. Attempting to delete such a shoot will fail.  
+* A shoot that is being referred to by a `ManagedSeed` cannot be deleted. Attempting to delete such a shoot will fail.
 * You can omit practically everything from the `seedTemplate` or `gardenlet` section, including all or most of the `Seed` spec fields. Proper defaults will be supplied in all cases, based either on the most common use cases or the information already available in the `Shoot` resource.
 * Some `Seed` spec fields, for example the provider type and region, networking CIDRs for pods, services, and nodes, etc., must be the same as the corresponding `Shoot` spec fields of the shoot that is being registered as seed. Attempting to use different values (except empty ones, so that they are supplied by the defaulting mechanims) will fail.
 
@@ -55,9 +55,6 @@ spec:
   shoot:
     name: crazy-botany
   seedTemplate:
-    metadata:
-      labels:
-        seed.gardener.cloud/gardenlet: local
     spec:
       dns:
         ingressDomain: ""
@@ -68,8 +65,6 @@ spec:
         type: ""
         region: ""
 ```
-
-Note the `seed.gardener.cloud/gardenlet: local` label above. It stands for the label that is used in a `seedSelector` field of a `gardenlet` that takes care of multiple seeds. This label can be omitted if the `seedSelector` field selects all seeds. If there is no gardenlet running outside the cluster and selecting the seed, it won't be reconciled and no shoots will be scheduled on it.
 
 For an example that uses non-default configuration, see [55-managed-seed-seedtemplate.yaml](../../example/55-managedseed-seedtemplate.yaml)
 
@@ -97,6 +92,6 @@ Option | Description
 `apiServer.autoscaler.maxReplicas` | Controls the maximum number of `kube-apiserver` replicas for the shooted seed cluster.
 `apiServer.replicas` | Controls how many `kube-apiserver` replicas the shooted seed cluster gets by default.
 
-For backward compatibility, it is still possible to specify these options via the `shoot.gardener.cloud/managed-seed-api-server` annotation, using exactly the same syntax as before. 
+For backward compatibility, it is still possible to specify these options via the `shoot.gardener.cloud/managed-seed-api-server` annotation, using exactly the same syntax as before.
 
 If you use any of these fields in any or your `use-as-seed` annotations, instead of removing the annotation completely as mentioned above, simply rename it to `managed-seed-api-server`, keeping these fields, and removing everything else.

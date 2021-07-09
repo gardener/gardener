@@ -82,7 +82,7 @@ func NewBackupBucketController(ctx context.Context, clientMap clientmap.ClientMa
 	}
 
 	controller.backupBucketInformer.AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: controllerutils.BackupBucketFilterFunc(ctx, controller.gardenClient, confighelper.SeedNameFromSeedConfig(controller.config.SeedConfig), controller.config.SeedSelector),
+		FilterFunc: controllerutils.BackupBucketFilterFunc(confighelper.SeedNameFromSeedConfig(controller.config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    controller.backupBucketAdd,
 			UpdateFunc: controller.backupBucketUpdate,
