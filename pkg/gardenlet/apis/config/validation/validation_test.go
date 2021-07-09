@@ -427,7 +427,7 @@ var _ = Describe("GardenletConfiguration", func() {
 
 					errorList := ValidateGardenletConfiguration(cfg, nil, false)
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
+						"Type":  Equal(field.ErrorTypeForbidden),
 						"Field": Equal("exposureClassHandlers[0].sni.ingress.serviceExternalIP"),
 					}))))
 				})
