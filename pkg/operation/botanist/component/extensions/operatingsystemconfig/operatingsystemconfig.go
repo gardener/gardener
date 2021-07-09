@@ -591,7 +591,7 @@ func (d *deployer) deploy(ctx context.Context, operation string) (extensionsv1al
 	return d.osc, err
 }
 
-// Key returns the key that can be used as secret name based on the provided worker name and Kubernetes version.
+// Key returns the key that can be used as secret name based on the provided worker name, Kubernetes version and CRI configuration.
 func Key(workerName string, kubernetesVersion *semver.Version, criConfig *gardencorev1beta1.CRI) string {
 	if kubernetesVersion == nil {
 		return ""
