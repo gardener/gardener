@@ -1,16 +1,16 @@
 # ExposureClasses
 
 The Gardener API server provides a cluster-scoped `ExposureClass` resource.
-This resource is used to allow exposing the control plane of a Shoot cluster in various network enviroments like restricted corporate networks, dmzs etc.
+This resource is used to allow exposing the control plane of a Shoot cluster in various network environments like restricted corporate networks, DMZ etc.
 
 ## Background
 
 The `ExposureClass` resource is based on the concept for the `RuntimeClass` resource in Kubernetes.
 
-A `RuntimeClass` abstracts the installation of a certain container runtime (e.g. gVisor, kata containers) on all nodes or a subset of the nodes in a Kubernetes cluster.
+A `RuntimeClass` abstracts the installation of a certain container runtime (e.g. gVisor, Kata Containers) on all nodes or a subset of the nodes in a Kubernetes cluster.
 See [here](https://kubernetes.io/docs/concepts/containers/runtime-class/).
 
-In contrast, an `ExposureClass` abstracts the ability to expose a Shoot clusters control plane in certain network environments (e.g. corporate networks, dmz, internet) on all Seeds or a subset of the Seeds.
+In contrast, an `ExposureClass` abstracts the ability to expose a Shoot clusters control plane in certain network environments (e.g. corporate networks, DMZ, internet) on all Seeds or a subset of the Seeds.
 
 Example: `RuntimeClass` and `ExposureClass`
 
@@ -27,7 +27,7 @@ handler: gvisorconfig
 kind: ExposureClass
 metadata:
   name: internet
-handler: internetconfig
+handler: internet-config
 # scheduling:
 #   seedSelector:
 #     matchLabels:
@@ -117,14 +117,14 @@ Example of the `GardenletConfiguration`:
 
 ```yaml
 exposureClassHandlers:
-- name: internetconfig
+- name: internet-config
   loadBalancerService:
     annotations:
-      loadbalancer/nework: internet
-- name: internalconfig
+      loadbalancer/network: internet
+- name: internal-config
   loadBalancerService:
     annotations:
-      loadbalancer/nework: internal
+      loadbalancer/network: internal
   sni:
     ingress:
       namespace: ingress-internal
@@ -140,8 +140,8 @@ All control planes on a `Seed` are exposed via a load balancer.
 Either a dedicated one or a central shared one.
 The load balancer service needs to be configured in a way that it is reachable from the target network environment.
 Therefore, the configuration of load balancer service need to be specified which can be done via the `.loadBalancerService` section.
-The common way to influence load balancer service behaviour is via annotations where the respective cloud-controller-manager will react on and configure the infrastucture load balancer accordingly.
+The common way to influence load balancer service behaviour is via annotations where the respective cloud-controller-manager will react on and configure the infrastructure load balancer accordingly.
 
-In case the Gardenlet runs with activated `APIServerSNI` feature flag (default), the control planes on a `Seed` will be exposed via a central load balancer and with Envoy via TLS SNI passthrough.
+In case the Gardenlet runs with activated `APIServerSNI` feature flag (default), the control planes on a `Seed` will be exposed via a central load balancer and with Envoy via TLS SNI passthrough proxy.
 In this case, the Gardenlet will install a dedicated ingress gateway (Envoy + load balancer + respective configuration) for each handler on the `Seed`.
 The configuration of the ingress gateways can be controlled via the `.sni` section in the same way like for the default ingress gateways.

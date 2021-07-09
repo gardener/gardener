@@ -120,11 +120,11 @@ featureGates:
 #     labels:
 #       istio: ingressgateway
 # exposureClassHandlers:
-# - name: internetconfig
+# - name: internet-config
 #   loadBalancerService:
 #     annotations:
 #       loadbalancer/nework: internet
-# - name: internalconfig
+# - name: internal-config
 #   loadBalancerService:
 #     annotations:
 #       loadbalancer/nework: internal
