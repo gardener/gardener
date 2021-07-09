@@ -50,7 +50,7 @@ const (
 	serviceName        = "metrics-server"
 	serviceAccountName = "metrics-server"
 	containerName      = "metrics-server"
-	sideCarName        = "metrics-server-nanny"
+	addonResizerName   = "metrics-server-nanny"
 
 	servicePort   int32 = 443
 	containerPort int32 = 8443
