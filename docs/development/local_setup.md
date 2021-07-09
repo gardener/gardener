@@ -108,7 +108,7 @@ go get -u github.com/bronze1man/yaml2json
 brew install jq
 ```
 
-And make sure the yaml2json binary is on your `PATH` (you might want to do this in your `~/.zshrc`)
+And make sure the yaml2json binary is on your `PATH`
 ```bash
 export PATH=$PATH:$(go env GOPATH)/bin
 ```
