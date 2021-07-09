@@ -369,7 +369,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 							}},
 						}, {
 							Name:            sideCarName,
-							Image:           m.sideCar,
+							Image:           m.addonResizerImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command: []string{
 								"/pod_nanny",
