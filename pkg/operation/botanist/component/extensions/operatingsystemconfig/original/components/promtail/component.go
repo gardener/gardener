@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/charts"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
@@ -27,16 +27,14 @@ import (
 
 const (
 	// UnitName is the name of the promtail service.
-	UnitName = gardencorev1beta1constants.OperatingSystemConfigUnitNamePromtailService
+	UnitName = v1beta1constants.OperatingSystemConfigUnitNamePromtailService
 	// PathPromtailDirectory is the path for the promtail's directory.
 	PathPromtailDirectory = "/var/lib/promtail"
-	// PathPromtailBinary is the path for the promtail binary.
-	PathPromtailBinary = "/opt/bin"
 	// PathPromtailAuthToken is the path for the promtail authentication token,
 	// which is used to auth agains the Loki sidecar proxy.
 	PathPromtailAuthToken = PathPromtailDirectory + "/auth-token"
 	// PathPromtailConfig is the path for the promtail's configuration file
-	PathPromtailConfig = gardencorev1beta1constants.OperatingSystemConfigFilePathPromtailConfig
+	PathPromtailConfig = v1beta1constants.OperatingSystemConfigFilePathPromtailConfig
 	// PathPromtailCACert is the path for the loki-tls certificate authority.
 	PathPromtailCACert = PathPromtailDirectory + "/ca.crt"
 	// PromtailServerPort is the promtail listening port
@@ -59,7 +57,7 @@ func (component) Name() string {
 }
 
 func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevector.Image) string {
-	return docker.PathBinary + ` run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + image.String() + ` -c "cp /usr/bin/` + binaryName + ` /opt/bin"`
+	return docker.PathBinary + ` run --rm -v ` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `:` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `:rw --entrypoint /bin/sh ` + image.String() + ` -c "cp /usr/bin/` + binaryName + ` ` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `"`
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
@@ -86,7 +84,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 			*getPromtailUnit(
 				execStartPreCopyBinaryFromContainer("promtail", ctx.Images[charts.PromtailImageName]),
 				"/bin/sh "+PathSetActiveJournalFileScript,
-				PathPromtailBinary+`/promtail -config.file=`+PathPromtailConfig),
+				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/promtail -config.file=`+PathPromtailConfig),
 		},
 		[]extensionsv1alpha1.File{
 			*promtailConfigFile,
