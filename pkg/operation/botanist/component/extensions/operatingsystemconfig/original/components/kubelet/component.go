@@ -68,8 +68,8 @@ const (
 	PathKubeletConfig = v1beta1constants.OperatingSystemConfigFilePathKubeletConfig
 	// PathKubeletDirectory is the path for the kubelet's directory.
 	PathKubeletDirectory = "/var/lib/kubelet"
-	// PathScriptCopyKubernetesBinaries is the path for the script copying downloaded Kubernetes binaries.
-	PathScriptCopyKubernetesBinaries = PathKubeletDirectory + "/copy-kubernetes-binary.sh"
+	// PathScriptCopyKubernetesBinary is the path for the script copying downloaded Kubernetes binaries.
+	PathScriptCopyKubernetesBinary = PathKubeletDirectory + "/copy-kubernetes-binary.sh"
 
 	pathVolumePluginDirectory = "/var/lib/kubelet/volumeplugins"
 )
@@ -119,7 +119,7 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args
-ExecStartPre=` + PathScriptCopyKubernetesBinaries + ` kubelet
+ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubelet
 ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet \
     ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
 			},
@@ -135,7 +135,7 @@ WantedBy=multi-user.target
 [Service]
 Restart=always
 EnvironmentFile=/etc/environment
-ExecStartPre=` + PathScriptCopyKubernetesBinaries + ` kubectl
+ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl
 ExecStart=` + pathHealthMonitor),
 			},
 		},

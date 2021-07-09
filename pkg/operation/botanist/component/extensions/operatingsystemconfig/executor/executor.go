@@ -40,6 +40,11 @@ var (
 	//go:embed templates/scripts/execute-cloud-config.tpl.sh
 	tplContent string
 	tpl        *template.Template
+
+	tplNameCopyBinary = "copy-kubernetes-binary"
+	//go:embed templates/scripts/copy-kubernetes-binary.tpl.sh
+	tplContentCopyBinary string
+	tplCopyBinary        *template.Template
 )
 
 func init() {
@@ -48,6 +53,14 @@ func init() {
 		New(tplName).
 		Funcs(sprig.TxtFuncMap()).
 		Parse(tplContent)
+	if err != nil {
+		panic(err)
+	}
+
+	tplCopyBinary, err = template.
+		New(tplNameCopyBinary).
+		Funcs(sprig.TxtFuncMap()).
+		Parse(tplContentCopyBinary)
 	if err != nil {
 		panic(err)
 	}
@@ -70,6 +83,15 @@ const (
 	// PathHyperkubeDownloads is the path on the shoot worker nodes to which the binaries will be extracted from the
 	// hyperkube image.
 	PathHyperkubeDownloads = downloader.PathDownloadsDirectory + "/hyperkube"
+	// PathLastDownloadedHyperkubeImage is the path on the shoot worker nodes at which the last downloaded hyperkube image
+	// name will be stored.
+	PathLastDownloadedHyperkubeImage = PathHyperkubeDownloads + "/last_downloaded_hyperkube_image"
+	// PathHyperKubeImageUsedForLastCopyKubelet is the path on the shoot worker at which the last downloaded hyperkube image
+	// name will be stored from which the kubelet binary was extracted.
+	PathHyperKubeImageUsedForLastCopyKubelet = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/hyperkube_image_used_for_last_copy_of_kubelet"
+	// PathHyperKubeImageUsedForLastCopyKubectl is the path on the shoot worker at which the last downloaded hyperkube image
+	// name will be stored from which the kubectl binary was extracted.
+	PathHyperKubeImageUsedForLastCopyKubectl = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/hyperkube_image_used_for_last_copy_of_kubectl"
 )
 
 // Script returns the executor script that applies the downloaded cloud-config user-data.
@@ -85,39 +107,54 @@ func Script(
 	[]byte,
 	error,
 ) {
+	var scriptCopyKubernetesBinary bytes.Buffer
+	if err := tplCopyBinary.Execute(&scriptCopyKubernetesBinary, map[string]interface{}{
+		"pathBinaries":                             v1beta1constants.OperatingSystemConfigFilePathBinaries,
+		"pathLastDownloadedHyperkubeImage":         PathLastDownloadedHyperkubeImage,
+		"pathHyperkubeDownloads":                   PathHyperkubeDownloads,
+		"pathHyperKubeImageUsedForLastCopyKubelet": PathHyperKubeImageUsedForLastCopyKubelet,
+		"pathHyperKubeImageUsedForLastCopyKubectl": PathHyperKubeImageUsedForLastCopyKubectl,
+	}); err != nil {
+		return nil, err
+	}
+
 	values := map[string]interface{}{
-		"annotationKeyChecksum":            AnnotationKeyChecksum,
-		"pathKubeletDirectory":             kubelet.PathKubeletDirectory,
-		"pathDownloadsDirectory":           downloader.PathDownloadsDirectory,
-		"bootstrapToken":                   bootstrapToken,
-		"pathBinaries":                     v1beta1constants.OperatingSystemConfigFilePathBinaries,
-		"pathBootstrapToken":               downloader.PathBootstrapToken,
-		"pathCCDScript":                    downloader.PathCCDScript,
-		"pathCCDScriptChecksum":            downloader.PathCCDScriptChecksum,
-		"pathCredentialsServer":            downloader.PathCredentialsServer,
-		"pathCredentialsCACert":            downloader.PathCredentialsCACert,
-		"pathDockerBinary":                 docker.PathBinary,
-		"pathDownloadedCloudConfig":        downloader.PathDownloadedCloudConfig,
-		"pathDownloadedChecksum":           downloader.PathDownloadedCloudConfigChecksum,
-		"pathExecutionDelaySeconds":        PathExecutionDelaySeconds,
-		"pathExecutionLastDate":            PathExecutionLastDate,
-		"pathKubeletKubeconfigBootstrap":   kubelet.PathKubeconfigBootstrap,
-		"pathKubeletKubeconfigReal":        kubelet.PathKubeconfigReal,
-		"pathHyperkubeDownloads":           PathHyperkubeDownloads,
-		"pathScriptCopyKubernetesBinaries": kubelet.PathScriptCopyKubernetesBinaries,
-		"bootstrapTokenPlaceholder":        downloader.BootstrapTokenPlaceholder,
-		"bootstrapTokenPlaceholderB64":     utils.EncodeBase64([]byte(downloader.BootstrapTokenPlaceholder)),
-		"cloudConfigUserData":              utils.EncodeBase64(cloudConfigUserData),
-		"cloudConfigDownloaderName":        downloader.Name,
-		"executionMinDelaySeconds":         downloader.UnitRestartSeconds,
-		"executionMaxDelaySeconds":         ExecutionMaxDelaySeconds,
-		"hyperkubeImage":                   hyperkubeImage.String(),
-		"kubernetesVersion":                kubernetesVersion,
-		"reloadConfigCommand":              reloadConfigCommand,
-		"units":                            units,
-		"unitNameCloudConfigDownloader":    downloader.UnitName,
-		"unitNameDocker":                   docker.UnitName,
-		"unitNameVarLibMount":              varlibmount.UnitName,
+		"annotationKeyChecksum":                    AnnotationKeyChecksum,
+		"pathKubeletDirectory":                     kubelet.PathKubeletDirectory,
+		"pathDownloadsDirectory":                   downloader.PathDownloadsDirectory,
+		"bootstrapToken":                           bootstrapToken,
+		"pathBinaries":                             v1beta1constants.OperatingSystemConfigFilePathBinaries,
+		"pathBootstrapToken":                       downloader.PathBootstrapToken,
+		"pathCCDScript":                            downloader.PathCCDScript,
+		"pathCCDScriptChecksum":                    downloader.PathCCDScriptChecksum,
+		"pathCredentialsServer":                    downloader.PathCredentialsServer,
+		"pathCredentialsCACert":                    downloader.PathCredentialsCACert,
+		"pathDockerBinary":                         docker.PathBinary,
+		"pathDownloadedCloudConfig":                downloader.PathDownloadedCloudConfig,
+		"pathDownloadedChecksum":                   downloader.PathDownloadedCloudConfigChecksum,
+		"pathExecutionDelaySeconds":                PathExecutionDelaySeconds,
+		"pathExecutionLastDate":                    PathExecutionLastDate,
+		"pathHyperkubeDownloads":                   PathHyperkubeDownloads,
+		"pathHyperKubeImageUsedForLastCopyKubelet": PathHyperKubeImageUsedForLastCopyKubelet,
+		"pathHyperKubeImageUsedForLastCopyKubectl": PathHyperKubeImageUsedForLastCopyKubectl,
+		"pathKubeletKubeconfigBootstrap":           kubelet.PathKubeconfigBootstrap,
+		"pathKubeletKubeconfigReal":                kubelet.PathKubeconfigReal,
+		"pathLastDownloadedHyperkubeImage":         PathLastDownloadedHyperkubeImage,
+		"pathScriptCopyKubernetesBinary":           kubelet.PathScriptCopyKubernetesBinary,
+		"bootstrapTokenPlaceholder":                downloader.BootstrapTokenPlaceholder,
+		"bootstrapTokenPlaceholderB64":             utils.EncodeBase64([]byte(downloader.BootstrapTokenPlaceholder)),
+		"cloudConfigUserData":                      utils.EncodeBase64(cloudConfigUserData),
+		"cloudConfigDownloaderName":                downloader.Name,
+		"executionMinDelaySeconds":                 downloader.UnitRestartSeconds,
+		"executionMaxDelaySeconds":                 ExecutionMaxDelaySeconds,
+		"hyperkubeImage":                           hyperkubeImage.String(),
+		"kubernetesVersion":                        kubernetesVersion,
+		"reloadConfigCommand":                      reloadConfigCommand,
+		"scriptCopyKubernetesBinary":               utils.EncodeBase64(scriptCopyKubernetesBinary.Bytes()),
+		"units":                                    units,
+		"unitNameCloudConfigDownloader":            downloader.UnitName,
+		"unitNameDocker":                           docker.UnitName,
+		"unitNameVarLibMount":                      varlibmount.UnitName,
 	}
 
 	if kubeletDataVolume != nil {

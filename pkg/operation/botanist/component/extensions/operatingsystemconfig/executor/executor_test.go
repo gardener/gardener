@@ -149,8 +149,9 @@ PATH_CCD_SCRIPT_CHECKSUM_OLD="${PATH_CCD_SCRIPT_CHECKSUM}.old"
 PATH_EXECUTION_DELAY_SECONDS="/var/lib/cloud-config-downloader/execution_delay_seconds"
 PATH_EXECUTION_LAST_DATE="/var/lib/cloud-config-downloader/execution_last_date"
 PATH_HYPERKUBE_DOWNLOADS="/var/lib/cloud-config-downloader/downloads/hyperkube"
-PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE="$PATH_HYPERKUBE_DOWNLOADS/last_downloaded_hyperkube_image"
-PATH_LAST_COPIED_HYPERKUBE_IMAGE="/opt/bin/last_copied_hyperkube_image"
+PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE="/var/lib/cloud-config-downloader/downloads/hyperkube/last_downloaded_hyperkube_image"
+PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET="/opt/bin/hyperkube_image_used_for_last_copy_of_kubelet"
+PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL="/opt/bin/hyperkube_image_used_for_last_copy_of_kubectl"
 
 mkdir -p "/var/lib/cloud-config-downloader/downloads" "/var/lib/kubelet" "$PATH_HYPERKUBE_DOWNLOADS"
 
@@ -189,9 +190,14 @@ if [[ -f "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
   LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
 fi
 
-LAST_COPIED_HYPERKUBE_IMAGE=""
-if [[ -f "$PATH_LAST_COPIED_HYPERKUBE_IMAGE" ]]; then
-  LAST_COPIED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_COPIED_HYPERKUBE_IMAGE")"
+HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET=""
+if [[ -f "$PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET" ]]; then
+  HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET="$(cat "$PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET")"
+fi
+
+HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL=""
+if [[ -f "$PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL" ]]; then
+  HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL="$(cat "$PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL")"
 fi
 
 echo "Checking whether we need to preload a new hyperkube image..."
@@ -210,20 +216,8 @@ else
   echo "No need to preload new hyperkube image because binaries for $LAST_DOWNLOADED_HYPERKUBE_IMAGE were found in $PATH_HYPERKUBE_DOWNLOADS"
 fi
 
-cat <<EOF > "/var/lib/kubelet/copy-kubernetes-binary.sh"
-#!/bin/bash -eu
-
-BINARY="\$1"
-
-echo "Checking whether to copy new hyperkube image to /opt/bin folder..."
-if [[ "$LAST_COPIED_HYPERKUBE_IMAGE" != "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
-  echo "Binaries in /opt/bin are outdated (last copied image: $LAST_COPIED_HYPERKUBE_IMAGE). Need to update them to $LAST_DOWNLOADED_HYPERKUBE_IMAGE".
-  rm -f "/opt/bin/\$BINARY" &&
-    cp "$PATH_HYPERKUBE_DOWNLOADS/\$BINARY" "/opt/bin" &&
-    echo "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" > "$PATH_LAST_COPIED_HYPERKUBE_IMAGE"
-else
-  echo "No need to copy new hyperkube image because latest binaries were found in $PATH_HYPERKUBE_DOWNLOADS"
-fi
+cat << 'EOF' | base64 -d > "/var/lib/kubelet/copy-kubernetes-binary.sh"
+` + utils.EncodeBase64([]byte(scriptCopyKubernetesBinary)) + `
 EOF
 chmod +x "/var/lib/kubelet/copy-kubernetes-binary.sh"
 `
@@ -329,8 +323,12 @@ fi
 
 # Apply most recent cloud-config user-data, reload the systemd daemon and restart the units to make the changes
 # effective.
-if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || ! diff "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD" >/dev/null || [[ "$LAST_COPIED_HYPERKUBE_IMAGE" != "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
-  echo "Seen newer cloud config or cloud config downloader version"
+if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || \
+   ! diff "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD" >/dev/null || \
+   [[ "$HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET" != "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]] || \; then
+   [[ "$HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL" != "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
+
+  echo "Seen newer cloud config or cloud config downloader version or hyperkube image"
   if ` + reloadConfigCommand + `; then
     echo "Successfully applied new cloud config version"
     systemctl daemon-reload
@@ -381,3 +379,39 @@ func copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119(hyperkub
   /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS"
   /usr/bin/docker stop "$HYPERKUBE_CONTAINER_ID"`
 }
+
+const scriptCopyKubernetesBinary = `#!/bin/bash -eu
+
+BINARY="$1"
+
+PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE="/var/lib/cloud-config-downloader/downloads/hyperkube/last_downloaded_hyperkube_image"
+PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY=""
+
+if [[ "$1" == "kubelet" ]]; then
+  BINARY="kubelet"
+  PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY="/opt/bin/hyperkube_image_used_for_last_copy_of_kubelet"
+elif [[ "$1" == "kubectl" ]]; then
+  BINARY="kubectl"
+  PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY="/opt/bin/hyperkube_image_used_for_last_copy_of_kubectl"
+fi
+
+LAST_DOWNLOADED_HYPERKUBE_IMAGE=""
+if [[ -f "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
+  LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
+fi
+
+HYPERKUBE_IMAGE_USED_FOR_LAST_COPY=""
+if [[ -f "$PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY" ]]; then
+  HYPERKUBE_IMAGE_USED_FOR_LAST_COPY="$(cat "$PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY")"
+fi
+
+echo "Checking whether to copy new $BINARY binary from hyperkube image to /opt/bin folder..."
+if [[ "$HYPERKUBE_IMAGE_USED_FOR_LAST_COPY" != "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
+  echo "$BINARY binary in /opt/bin is outdated (image used for last copy: $HYPERKUBE_IMAGE_USED_FOR_LAST_COPY). Need to update it to $LAST_DOWNLOADED_HYPERKUBE_IMAGE".
+  rm -f "/opt/bin/$BINARY" &&
+    cp "$PATH_HYPERKUBE_DOWNLOADS/$BINARY" "/opt/bin" &&
+    echo "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" > "$PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY"
+else
+  echo "No need to copy $BINARY binary from a new hyperkube image because binary found in $PATH_HYPERKUBE_DOWNLOADS is up-to-date."
+fi
+`
