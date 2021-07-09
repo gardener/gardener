@@ -433,7 +433,7 @@ status: {}
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
-		metricsServer = New(c, namespace, image, false, nil, sideCar)
+		metricsServer = New(c, namespace, image, nil, sideCar)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -526,7 +526,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
-				metricsServer = New(c, namespace, image, true, &kubeAPIServerHost, sideCar)
+				metricsServer = New(c, namespace, image, &kubeAPIServerHost, sideCar)
 				metricsServer.SetSecrets(secrets)
 
 				managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"] = []byte(deploymentYAMLWithHostEnv)

@@ -73,7 +73,6 @@ func New(
 	client client.Client,
 	namespace string,
 	image string,
-	vpaEnabled bool,
 	kubeAPIServerHost *string,
 	addonResizerImage string,
 ) Interface {
@@ -81,9 +80,8 @@ func New(
 		client:            client,
 		namespace:         namespace,
 		image:             image,
-		vpaEnabled:        vpaEnabled,
 		kubeAPIServerHost: kubeAPIServerHost,
-		sideCar:           sideCar,
+		addonResizerImage: addonResizerImage,
 	}
 }
 
@@ -91,9 +89,8 @@ type metricsServer struct {
 	client            client.Client
 	namespace         string
 	image             string
-	vpaEnabled        bool
 	kubeAPIServerHost *string
-	sideCar           string
+	addonResizerImage string
 	secrets           Secrets
 }
 
@@ -368,7 +365,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 								MountPath: volumeMountPathServer,
 							}},
 						}, {
-							Name:            sideCarName,
+							Name:            addonResizerName,
 							Image:           m.addonResizerImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command: []string{
