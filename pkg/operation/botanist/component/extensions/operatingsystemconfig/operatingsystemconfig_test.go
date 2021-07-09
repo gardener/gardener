@@ -213,6 +213,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					criName   = extensionsv1alpha1.CRINameDocker
 					criConfig *extensionsv1alpha1.CRIConfig
 				)
+
 				if worker.CRI != nil {
 					criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
 					criConfig = &extensionsv1alpha1.CRIConfig{Name: extensionsv1alpha1.CRIName(worker.CRI.Name)}
@@ -223,7 +224,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
 				}
 
-				key := Key(worker.Name, k8sVersion)
+				key := Key(worker.Name, k8sVersion, worker.CRI)
 
 				downloaderUnits, downloaderFiles, _ := downloaderConfigFn(
 					key,
@@ -407,7 +408,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 					if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
 						k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
 					}
-					key := Key(worker.Name, k8sVersion)
+					key := Key(worker.Name, k8sVersion, worker.CRI)
 
 					extensions = append(extensions,
 						gardencorev1alpha1.ExtensionResourceState{
@@ -695,19 +696,19 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					worker2Name: {
 						Downloader: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-32209-type2-downloader",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-32209-type2-downloader"),
+							Content: "foobar-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
+							Command: pointer.String("foo-cloud-config-" + worker2Name + "-d9e53-type2-downloader"),
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-32209-type2-downloader",
-								"baz-cloud-config-" + worker2Name + "-32209-type2-downloader",
+								"bar-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
+								"baz-cloud-config-" + worker2Name + "-d9e53-type2-downloader",
 							},
 						},
 						Original: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-32209-type2-original",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-32209-type2-original"),
+							Content: "foobar-cloud-config-" + worker2Name + "-d9e53-type2-original",
+							Command: pointer.String("foo-cloud-config-" + worker2Name + "-d9e53-type2-original"),
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-32209-type2-original",
-								"baz-cloud-config-" + worker2Name + "-32209-type2-original",
+								"bar-cloud-config-" + worker2Name + "-d9e53-type2-original",
+								"baz-cloud-config-" + worker2Name + "-d9e53-type2-original",
 							},
 						},
 					},
@@ -884,11 +885,23 @@ var _ = Describe("OperatingSystemConfig", func() {
 		)
 
 		It("should return an empty string", func() {
-			Expect(Key(workerName, nil)).To(BeEmpty())
+			Expect(Key(workerName, nil, nil)).To(BeEmpty())
 		})
 
 		It("should return the expected key", func() {
-			Expect(Key(workerName, semver.MustParse(kubernetesVersion))).To(Equal("cloud-config-" + workerName + "-77ac3"))
+			Expect(Key(workerName, semver.MustParse(kubernetesVersion), nil)).To(Equal("cloud-config-" + workerName + "-77ac3"))
+		})
+
+		It("is different for different worker.cri configurations", func() {
+			containerDKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD})
+			dockerKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
+			Expect(containerDKey).NotTo(Equal(dockerKey))
+		})
+
+		It("is the same for `cri=nil` and `cri.name=docker`", func() {
+			dockerKey := Key(workerName, semver.MustParse("1.2.3"), &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
+			nilKey := Key(workerName, semver.MustParse("1.2.3"), nil)
+			Expect(dockerKey).To(Equal(nilKey))
 		})
 	})
 })
