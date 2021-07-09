@@ -39,11 +39,14 @@ var _ = Describe("Unwrap", func() {
 				fmt.Errorf("error 1:%w", singleErr)),
 		)
 
-		fatalErr   = errors.New("fatal")
-		err1       = utilerrors.WithSuppressed(singleErr, fatalErr)
-		wrErr1     = fmt.Errorf("err 1: %w", err1)
-		causedErr1 = utilerrors.WithSuppressed(wrErr1, singleErr)
-		wrErr2     = fmt.Errorf("err 2: %w", causedErr1)
+		fatalErr       = errors.New("fatal")
+		suppressedErr1 = utilerrors.WithSuppressed(singleErr, fatalErr)
+		wrappedErr1    = fmt.Errorf("err 1: %w", suppressedErr1)
+		seppressedErr2 = utilerrors.WithSuppressed(wrappedErr1, singleErr)
+		wrappedErr2    = fmt.Errorf("err 2: %w", seppressedErr2)
+
+		wrappedErr3 = fmt.Errorf("err 3: %w", wrappedErr2)
+		supperssed3 = utilerrors.WithSuppressed(wrappedErr3, singleErr)
 	)
 
 	DescribeTable("#Wrapped Errors",
@@ -53,7 +56,8 @@ var _ = Describe("Unwrap", func() {
 		Entry("return root error", wrappedErr, BeIdenticalTo(singleErr)),
 		Entry("return nil error", nilErr, BeNil()),
 		Entry("return root err from nested err", mulWrappedErr, BeIdenticalTo(singleErr)),
-		Entry("return cause error", err1, BeIdenticalTo(singleErr)),
-		Entry("return nested cause error", wrErr2, BeIdenticalTo(singleErr)),
+		Entry("return cause error", suppressedErr1, BeIdenticalTo(singleErr)),
+		Entry("return nested cause error", wrappedErr2, BeIdenticalTo(singleErr)),
+		Entry("return deeper nested cause error", supperssed3, BeIdenticalTo(singleErr)),
 	)
 })

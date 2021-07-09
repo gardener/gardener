@@ -16,11 +16,7 @@ package errors
 
 import "errors"
 
-// Unwrap and returns the root error.
-//
-// It will try to get Cause error (if err implements the 'causer'
-// interface) and will unwrap again; it will iterate through again
-// until gets the root error.
+// Unwraps and returns the root error. Multiple wrappings either via `fmt.Errorf` or via `causer` implementations are properly taken into account.
 func Unwrap(err error) error {
 	var (
 		cdone      bool
