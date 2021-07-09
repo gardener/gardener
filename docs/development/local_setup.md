@@ -40,7 +40,7 @@ We use `git` as VCS which you need to install. On macOS run
 brew install git
 ```
 
-On other OS, please check the [Git installation documentation](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+For other OS, please check the [Git installation documentation](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
 
 ## Installing Go
 
@@ -60,7 +60,7 @@ Install `kubectl`. Please make sure that the version of `kubectl` is at least `v
 brew install kubernetes-cli
 ```
 
-Please check the [kubectl installation documentation](https://kubernetes.io/docs/tasks/tools/install-kubectl/) for other OS.
+For other OS, please check the [kubectl installation documentation](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
 
 ## Installing helm
 You also need the [Helm](https://github.com/kubernetes/helm) CLI. On macOS run
@@ -69,7 +69,7 @@ You also need the [Helm](https://github.com/kubernetes/helm) CLI. On macOS run
 brew install helm
 ```
 
-On other OS please check the [Helm installation documentation](https://helm.sh/docs/intro/install/).
+For other OS please check the [Helm installation documentation](https://helm.sh/docs/intro/install/).
 
 ## Installing openvpn
 
@@ -82,7 +82,7 @@ brew install openvpn
 export PATH=$(brew --prefix openvpn)/sbin:$PATH
 ```
 
-On other OS, please check the [OpenVPN downloads page](https://openvpn.net/index.php/open-source/downloads.html).
+For other OS, please check the [OpenVPN downloads page](https://openvpn.net/index.php/open-source/downloads.html).
 
 ## Installing Docker
 
@@ -91,7 +91,7 @@ You need to have docker installed and running. On macOS run
 brew install --cask docker
 ```
 
-On other OS please check the [docker installation documentation](https://docs.docker.com/get-docker/)
+For other OS please check the [docker installation documentation](https://docs.docker.com/get-docker/).
 
 ## Installing iproute2
 
