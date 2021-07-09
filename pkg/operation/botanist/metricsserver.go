@@ -46,7 +46,6 @@ func (b *Botanist) DefaultMetricsServer() (metricsserver.Interface, error) {
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		image.String(),
-		b.Shoot.WantsVerticalPodAutoscaler,
 		kubeAPIServerHost,
 		sideCar.String(),
 	), nil
