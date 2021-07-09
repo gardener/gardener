@@ -33,7 +33,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -68,11 +67,10 @@ func NewController(ctx context.Context, clientMap clientmap.ClientMap, logger *l
 		return nil, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	// if another controller also needs to work with endpoint resources in the Seed cluster, consider replacing this informer factory with a reusable informer factory.
-	// if this informer factory is not bound to the default namespace, make sure that the endpoint event handlers FilterFunc() also filters for the default namespace.
-	seedDefaultNamespaceKubeInformer := kubeinformers.NewSharedInformerFactoryWithOptions(seedClient.Kubernetes(), 0, kubeinformers.WithNamespace(corev1.NamespaceDefault))
-	endpointsInformer := seedDefaultNamespaceKubeInformer.Core().V1().Endpoints()
-
+	endpointsInformer, err := seedClient.Cache().GetInformer(ctx, &corev1.Endpoints{})
+	if err != nil {
+		return nil, err
+	}
 	networkPoliciesInformer, err := seedClient.Cache().GetInformer(ctx, &networkingv1.NetworkPolicy{})
 	if err != nil {
 		return nil, err
@@ -147,7 +145,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			if !ok {
 				return false
 			}
-			return endpoints.Name == "kubernetes"
+			return endpoints.Namespace == corev1.NamespaceDefault && endpoints.Name == "kubernetes"
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    c.endpointAdd,
