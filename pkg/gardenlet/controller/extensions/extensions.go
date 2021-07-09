@@ -75,12 +75,13 @@ func NewController(ctx context.Context, gardenClient, seedClient kubernetes.Inte
 }
 
 // Run creates workers that reconciles extension resources.
-func (s *Controller) Run(ctx context.Context, controllerInstallationWorkers, shootStateWorkers int) error {
+func (s *Controller) Run(ctx context.Context, controllerInstallationWorkers, shootStateWorkers int) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*2)
 	defer cancel()
 
 	if !cache.WaitForCacheSync(timeoutCtx.Done(), s.controllerArtifacts.hasSyncedFuncs...) {
-		return fmt.Errorf("timeout waiting for extension informers to sync")
+		s.log.Fatal("timeout waiting for caches to sync")
+		return
 	}
 
 	// Count number of running workers.
@@ -100,7 +101,6 @@ func (s *Controller) Run(ctx context.Context, controllerInstallationWorkers, sho
 	}
 
 	s.log.Info("Extension controller initialized.")
-	return nil
 }
 
 func (s *Controller) createControllerInstallationWorkers(ctx context.Context, control *controllerInstallationControl) {

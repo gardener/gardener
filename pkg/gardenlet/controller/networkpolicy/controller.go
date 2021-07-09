@@ -122,7 +122,7 @@ func NewController(ctx context.Context, clientMap clientmap.ClientMap, logger *l
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, workers int) error {
+func (c *Controller) Run(ctx context.Context, workers int) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*2)
 	defer cancel()
 
@@ -133,7 +133,8 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 		c.networkPoliciesInformer.HasSynced,
 		c.hostnameProvider.HasSynced,
 	) {
-		return fmt.Errorf("timeout waiting for informers to sync")
+		c.log.Fatal("timeout waiting for caches to sync")
+		return
 	}
 
 	c.hostnameProvider.WithCallback(func() {
@@ -185,8 +186,6 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 	}
 
 	c.log.Info("Seed API server network policy controller initialized.")
-
-	return nil
 }
 
 // Stop the controller
