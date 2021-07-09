@@ -17,7 +17,6 @@ package framework
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -79,7 +78,7 @@ func testHTTPEndpointWith(ctx context.Context, url string, mutator func(*http.Re
 		return err
 	}
 	if r.StatusCode != http.StatusOK {
-		return errors.New(fmt.Sprintf("http request should return %d but returned %d instead", http.StatusOK, r.StatusCode))
+		return fmt.Errorf("http request should return %d but returned %d instead", http.StatusOK, r.StatusCode)
 	}
 	return nil
 }

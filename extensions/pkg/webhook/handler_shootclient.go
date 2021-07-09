@@ -16,7 +16,6 @@ package webhook
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -134,7 +133,7 @@ func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) 
 	// Decode object
 	t, ok := h.typesMap[req.AdmissionRequest.Kind]
 	if !ok {
-		return admission.Errored(http.StatusBadRequest, errors.New(fmt.Sprintf("unexpected request kind %s", req.AdmissionRequest.Kind)))
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected request kind %s", req.AdmissionRequest.Kind))
 	}
 
 	return handle(ctx, req, mut, t, h.decoder, h.logger)

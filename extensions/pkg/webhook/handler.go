@@ -17,7 +17,6 @@ package webhook
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -133,7 +132,7 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 			}
 		}
 		if t == nil {
-			return admission.Errored(http.StatusBadRequest, errors.New(fmt.Sprintf("unexpected request kind %s", ar.Kind.String())))
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected request kind %s", ar.Kind.String()))
 		}
 	}
 

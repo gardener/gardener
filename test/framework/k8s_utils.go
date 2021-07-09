@@ -129,7 +129,7 @@ func (f *CommonFramework) WaitUntilNamespaceIsDeleted(ctx context.Context, k8sCl
 			}
 			return retry.MinorError(err)
 		}
-		return retry.MinorError(errors.New(fmt.Sprintf("Namespace %q is not deleted yet", ns)))
+		return retry.MinorError(fmt.Errorf("Namespace %q is not deleted yet", ns))
 	})
 }
 

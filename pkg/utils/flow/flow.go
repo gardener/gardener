@@ -18,7 +18,6 @@ package flow
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -227,11 +226,11 @@ func (e *execution) runNode(ctx context.Context, id TaskID) {
 
 		if err != nil {
 			log.WithError(err).Error("Error")
+			err = fmt.Errorf("task %q failed: %w", id, err)
 		} else {
 			log.Info("Succeeded")
 		}
 
-		err = fmt.Errorf("task %q failed: %w", id, err)
 		e.done <- &nodeResult{TaskID: id, Error: err}
 	}()
 }
@@ -380,7 +379,7 @@ func Causes(err error) *multierror.Error {
 		causes = make([]error, 0, len(errs))
 	)
 	for _, err := range errs {
-		causes = append(causes, errors.Unwrap(err))
+		causes = append(causes, utilerrors.Unwrap(err))
 	}
 	return &multierror.Error{Errors: causes}
 }

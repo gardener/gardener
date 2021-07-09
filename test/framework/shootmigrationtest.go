@@ -16,7 +16,6 @@ package framework
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -187,16 +186,16 @@ func (t *ShootMigrationTest) PopulateAfterMigrationComparisonElements(ctx contex
 // CompareElementsAfterMigration compares the Machine details, Node names and Pod statuses before and after migration and returns error if there are diferences.
 func (t *ShootMigrationTest) CompareElementsAfterMigration() error {
 	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames) {
-		return errors.New(fmt.Sprintf("initial Machines %s, do not match after-migrate Machines %s", t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames))
+		return fmt.Errorf("initial Machines %s, do not match after-migrate Machines %s", t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames)
 	}
 	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes) {
-		return errors.New(fmt.Sprintf("initial Machine Nodes (label) %s, do not match after-migrate Machine Nodes (label) %s", t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes))
+		return fmt.Errorf("initial Machine Nodes (label) %s, do not match after-migrate Machine Nodes (label) %s", t.ComparisonElementsBeforeMigration.MachineNodes, t.ComparisonElementsAfterMigration.MachineNodes)
 	}
 	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames) {
-		return errors.New(fmt.Sprintf("initial Nodes %s, do not match after-migrate Nodes %s", t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames))
+		return fmt.Errorf("initial Nodes %s, do not match after-migrate Nodes %s", t.ComparisonElementsBeforeMigration.NodeNames, t.ComparisonElementsAfterMigration.NodeNames)
 	}
 	if !reflect.DeepEqual(t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames) {
-		return errors.New(fmt.Sprintf("machine Nodes (label) %s, do not match after-migrate Nodes %s", t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames))
+		return fmt.Errorf("machine Nodes (label) %s, do not match after-migrate Nodes %s", t.ComparisonElementsAfterMigration.MachineNodes, t.ComparisonElementsAfterMigration.NodeNames)
 	}
 	return nil
 }
@@ -230,7 +229,7 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 					t.GardenerFramework.Logger.Infof("Object: %s %s/%s Created At: %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp)
 					if t.MigrationTime.Before(&createionTimestamp) {
 						t.GardenerFramework.Logger.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp, t.MigrationTime)
-						return errors.New(fmt.Sprintf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp, t.MigrationTime))
+						return fmt.Errorf("object: %s %s/%s Created At: %s is created after the Shoot migration %s", obj.GetKind(), obj.GetNamespace(), obj.GetName(), createionTimestamp, t.MigrationTime)
 					}
 				}
 			}
@@ -285,7 +284,7 @@ func (t *ShootMigrationTest) CheckForOrphanedNonNamespacedResources(ctx context.
 		return err
 	}
 	if len(leakedObjects) > 0 {
-		return errors.New(fmt.Sprintf("the following object(s) still exists in the source seed %v", leakedObjects))
+		return fmt.Errorf("the following object(s) still exists in the source seed %v", leakedObjects)
 	}
 	return nil
 }
