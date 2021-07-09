@@ -75,7 +75,7 @@ func New(
 	image string,
 	vpaEnabled bool,
 	kubeAPIServerHost *string,
-	sideCar string,
+	addonResizerImage string,
 ) Interface {
 	return &metricsServer{
 		client:            client,
