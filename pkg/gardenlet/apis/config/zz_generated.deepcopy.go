@@ -691,6 +691,11 @@ func (in *SNIIngress) DeepCopyInto(out *SNIIngress) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.ServiceExternalIP != nil {
+		in, out := &in.ServiceExternalIP, &out.ServiceExternalIP
+		*out = new(string)
+		**out = **in
+	}
 	if in.Namespace != nil {
 		in, out := &in.Namespace, &out.Namespace
 		*out = new(string)

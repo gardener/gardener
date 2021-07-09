@@ -63,6 +63,9 @@ var _ = Describe("GardenletConfiguration", func() {
 					SyncJitterPeriod: &metav1.Duration{Duration: 5 * time.Minute},
 				},
 			},
+			FeatureGates: map[string]bool{
+				"APIServerSNI": true,
+			},
 			SeedConfig: &config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
@@ -324,6 +327,39 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 		})
 
+		Context("sni", func() {
+			BeforeEach(func() {
+				cfg.SNI = &config.SNI{Ingress: &config.SNIIngress{}}
+			})
+
+			It("should pass as sni config contains a valid external service ip", func() {
+				cfg.SNI.Ingress.ServiceExternalIP = pointer.StringPtr("1.1.1.1")
+
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				Expect(errorList).To(BeEmpty())
+			})
+
+			It("should forbid as sni config contains an empty external service ip", func() {
+				cfg.SNI.Ingress.ServiceExternalIP = pointer.StringPtr("")
+
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("sni.ingress.serviceExternalIP"),
+				}))))
+			})
+
+			It("should forbid as sni config contains an invalid external service ip", func() {
+				cfg.SNI.Ingress.ServiceExternalIP = pointer.StringPtr("a.b.c.d")
+
+				errorList := ValidateGardenletConfiguration(cfg, nil, false)
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("sni.ingress.serviceExternalIP"),
+				}))))
+			})
+		})
+
 		Context("exposureClassHandlers", func() {
 			BeforeEach(func() {
 				cfg.ExposureClassHandlers = []config.ExposureClassHandler{
@@ -332,6 +368,7 @@ var _ = Describe("GardenletConfiguration", func() {
 						LoadBalancerService: config.LoadBalancerServiceConfig{
 							Annotations: map[string]string{"test": "foo"},
 						},
+						SNI: &config.SNI{Ingress: &config.SNIIngress{}},
 					},
 				}
 			})
@@ -363,6 +400,46 @@ var _ = Describe("GardenletConfiguration", func() {
 				}))))
 			})
 
+			Context("serviceExternalIP", func() {
+				It("should allow to use an external service ip as APIServerSNI feature gate is enabled and loadbalancer ip is valid", func() {
+					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = pointer.StringPtr("1.1.1.1")
+
+					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should forbid to use an external service ip when APIServerSNI feature gate is disabled", func() {
+					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = pointer.StringPtr("1.1.1.1")
+					cfg.FeatureGates["APIServerSNI"] = false
+
+					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeForbidden),
+						"Field": Equal("exposureClassHandlers[0].sni.ingress.serviceExternalIP"),
+					}))))
+				})
+
+				It("should forbid to use an empty external service ip", func() {
+					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = pointer.StringPtr("")
+
+					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("exposureClassHandlers[0].sni.ingress.serviceExternalIP"),
+					}))))
+				})
+
+				It("should forbid to use an invalid external service ip", func() {
+					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = pointer.StringPtr("a.b.c.d")
+
+					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal("exposureClassHandlers[0].sni.ingress.serviceExternalIP"),
+					}))))
+				})
+			})
 		})
 	})
 

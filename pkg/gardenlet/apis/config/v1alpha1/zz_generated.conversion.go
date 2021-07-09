@@ -1072,6 +1072,7 @@ func Convert_config_SNI_To_v1alpha1_SNI(in *config.SNI, out *SNI, s conversion.S
 
 func autoConvert_v1alpha1_SNIIngress_To_config_SNIIngress(in *SNIIngress, out *config.SNIIngress, s conversion.Scope) error {
 	out.ServiceName = (*string)(unsafe.Pointer(in.ServiceName))
+	out.ServiceExternalIP = (*string)(unsafe.Pointer(in.ServiceExternalIP))
 	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	return nil
@@ -1084,6 +1085,7 @@ func Convert_v1alpha1_SNIIngress_To_config_SNIIngress(in *SNIIngress, out *confi
 
 func autoConvert_config_SNIIngress_To_v1alpha1_SNIIngress(in *config.SNIIngress, out *SNIIngress, s conversion.Scope) error {
 	out.ServiceName = (*string)(unsafe.Pointer(in.ServiceName))
+	out.ServiceExternalIP = (*string)(unsafe.Pointer(in.ServiceExternalIP))
 	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
 	return nil

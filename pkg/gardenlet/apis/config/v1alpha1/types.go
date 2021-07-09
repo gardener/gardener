@@ -466,6 +466,11 @@ type SNIIngress struct {
 	// Defaults to "istio-ingressgateway".
 	// +optional
 	ServiceName *string `json:"serviceName,omitempty"`
+	// ServiceExternalIP is the external ip which should be assigned to the
+	// load balancer service of the ingress gateway.
+	// Compatibility is depending on the respective provider cloud-controller-manager.
+	// +optional
+	ServiceExternalIP *string `json:"serviceExternalIP,omitempty"`
 	// Namespace is the namespace in which the ingressgateway is deployed in.
 	// Defaults to "istio-ingress".
 	// +optional

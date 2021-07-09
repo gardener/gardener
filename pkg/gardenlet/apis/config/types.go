@@ -391,6 +391,10 @@ type SNIIngress struct {
 	// ServiceName is the name of the ingressgateway Service.
 	// Defaults to "istio-ingressgateway".
 	ServiceName *string
+	// ServiceExternalIP is the external ip which should be assigned to the
+	// load balancer service of the ingress gateway.
+	// Compatibility is depending on the respective provider cloud-controller-manager.
+	ServiceExternalIP *string
 	// Namespace is the namespace in which the ingressgateway is deployed in.
 	// Defaults to "istio-ingress".
 	Namespace *string

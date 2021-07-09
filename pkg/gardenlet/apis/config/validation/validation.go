@@ -16,9 +16,11 @@ package validation
 
 import (
 	"fmt"
+	"net"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -78,12 +80,28 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 	}
 
+	sniPath := fldPath.Child("sni", "ingress")
+	if cfg.SNI != nil && cfg.SNI.Ingress != nil && cfg.SNI.Ingress.ServiceExternalIP != nil {
+		if ip := net.ParseIP(*cfg.SNI.Ingress.ServiceExternalIP); ip == nil {
+			allErrs = append(allErrs, field.Invalid(sniPath.Child("serviceExternalIP"), cfg.SNI.Ingress.ServiceExternalIP, "external service ip is invalid"))
+		}
+	}
+
 	exposureClassHandlersPath := fldPath.Child("exposureClassHandlers")
 	for i, handler := range cfg.ExposureClassHandlers {
 		handlerPath := exposureClassHandlersPath.Index(i)
 
 		for _, errorMessage := range validation.IsDNS1123Label(handler.Name) {
 			allErrs = append(allErrs, field.Invalid(handlerPath.Child("name"), handler.Name, errorMessage))
+		}
+
+		if handler.SNI != nil && handler.SNI.Ingress != nil && handler.SNI.Ingress.ServiceExternalIP != nil {
+			if !cfg.FeatureGates[string(features.APIServerSNI)] {
+				allErrs = append(allErrs, field.Forbidden(handlerPath.Child("sni", "ingress", "serviceExternalIP"), "cannot use an external service ip when APIServerSNI feature gate is disabled"))
+			}
+			if ip := net.ParseIP(*handler.SNI.Ingress.ServiceExternalIP); ip == nil {
+				allErrs = append(allErrs, field.Invalid(handlerPath.Child("sni", "ingress", "serviceExternalIP"), handler.SNI.Ingress.ServiceExternalIP, "external service ip is invalid"))
+			}
 		}
 	}
 

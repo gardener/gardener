@@ -45,6 +45,7 @@ type IngressValues struct {
 	Image           string            `json:"image,omitempty"`
 	Annotations     map[string]string `json:"annotations,omitempty"`
 	IstiodNamespace string            `json:"istiodNamespace,omitempty"`
+	LoadBalancerIP  *string           `json:"loadBalancerIP,omitempty"`
 	Labels          map[string]string `json:"labels,omitempty"`
 	// Ports is a list of all Ports the istio-ingress gateways is listening on.
 	// Port 15021 and 15000 cannot be used.
