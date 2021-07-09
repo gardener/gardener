@@ -27,6 +27,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -371,6 +372,20 @@ func (b *Botanist) APIServerSNIPodMutatorEnabled() bool {
 	}
 
 	return vs != v1beta1constants.AnnotationShootAPIServerSNIPodInjectorDisableValue
+}
+
+// DeployAdditionalDNSProviders deploys all additional DNS providers in the shoot namespace of the seed.
+func (b *Botanist) DeployAdditionalDNSProviders(ctx context.Context) error {
+	fns := make([]flow.TaskFn, 0, len(b.Shoot.Components.Extensions.DNS.AdditionalProviders))
+
+	for _, v := range b.Shoot.Components.Extensions.DNS.AdditionalProviders {
+		dnsProvider := v
+		fns = append(fns, func(ctx context.Context) error {
+			return component.OpWaiter(dnsProvider).Deploy(ctx)
+		})
+	}
+
+	return flow.Parallel(fns...)(ctx)
 }
 
 // DeleteDNSProviders deletes all DNS providers in the shoot namespace of the seed.
