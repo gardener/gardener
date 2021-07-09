@@ -12,9 +12,9 @@ Further details can be found in
 1. [Architecture of Gardener](https://github.com/gardener/documentation/wiki/Architecture)
 
 This guide is split into three main parts:
-* Preparing your setup by installing all dependencies and tools
-* Building and starting Gardener components locally
-* Using your local Gardener setup to create a Shoot
+* [Preparing your setup by installing all dependencies and tools](#preparing-the-setup)
+* [Building and starting Gardener components locally](#start-gardener-locally)
+* [Using your local Gardener setup to create a Shoot](#create-a-shoot)
 
 ## Limitations of the local development setup
 
