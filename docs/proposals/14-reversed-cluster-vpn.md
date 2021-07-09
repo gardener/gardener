@@ -104,7 +104,7 @@ tls-auth "/srv/secrets/tlsauth/vpn.tlsauth" 0
 push "route 10.242.0.0 255.255.0.0"
 ```
 
-It is a TCP TLS server and configured to automatically assign IP addresses for OpenVPN clients (`server` directive). In addition, it pushes the shoot cluster node-, pod-, and service ranges to the clients running in the seed cluster (`push` directive). 
+It is a TCP TLS server and configured to automatically assign IP addresses for OpenVPN clients (`server` directive). In addition, it pushes the shoot cluster node-, pod-, and service ranges to the clients running in the seed cluster (`push` directive).
 
 **Note:** The network mesh spanned by OpenVPN uses the network range `192.168.123.0 - 192.168.123.255`. This network range cannot be used in either shoot-, or seed clusters. If it is used this might cause subtle problem due to network range overlaps. Unfortunately, this appears not to be well documented but this restriction exists since the very beginning. We should clean up this technical debt as part of the exercise.
 
@@ -130,11 +130,11 @@ The two containers `vpn-seed-server` and `vpn-shoot-client` are new containers a
 
 A service `vpn-seed-server` of type `ClusterIP` is created for each control plane in its namespace.
 
-The `vpn-shoot-client` pod connects to the correct `vpn-seed-server` service via the SNI passthrough proxy introduced with [SNI Passthrough proxy for kube-apiservers](https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md) on port 8132. 
+The `vpn-shoot-client` pod connects to the correct `vpn-seed-server` service via the SNI passthrough proxy introduced with [SNI Passthrough proxy for kube-apiservers](https://github.com/gardener/gardener/blob/master/docs/proposals/08-shoot-apiserver-via-sni.md) on port 8132.
 
 Shoot OpenVPN clients (`vpn-shoot-client`) connect to the correct OpenVPN Server using the http proxy feature provided by OpenVPN. A configuration is added to the envoy proxy to detect http proxy requests and open a connection attempt to the correct OpenVPN server.
 
-The `kube-apiserver` to shoot cluster connections are established using the API server proxy feature via an envoy proxy sidecar container of the `vpn-seed-server` container. 
+The `kube-apiserver` to shoot cluster connections are established using the API server proxy feature via an envoy proxy sidecar container of the `vpn-seed-server` container.
 
 The restriction regarding the `192.168.123.0/24` network range in the current VPN solution still applies to this proposal. No other restrictions are introduced. In the context of this GEP a pull requst has been filed to block usage of that range by shoot clusters.
 
@@ -144,13 +144,13 @@ We do expect performance and throughput to be slightly lower compared to the exi
 
 ### Availability and Failure Scenarios
 
-This solution re-uses multiple instances of the envoy component used for the kube-apiserver endpoints. We assume that the availability for kube-apiservers is good enough for the cluster VPN as well. 
+This solution re-uses multiple instances of the envoy component used for the kube-apiserver endpoints. We assume that the availability for kube-apiservers is good enough for the cluster VPN as well.
 
 The OpenVPN client- and server pods are singleton pods in this approach and therefore are affected by potential failures and during cluster-, and control plane updates. Potential outages are only restricted to single shoot clusters and are comparable to the situation with the existing solution today.
 
 ### Feature Gates and Migration Strategy
 
-We have introduced a gardenlet feature gate `ReversedVPN`. If `APIServerSNI` and `ReversedVPN` are enabled the proposed solution is automatically enabled for all shoot clusters hosted by the seed. If `ReversedVPN` is enabled but `APIServerSNI` is not the gardenlet will panic during startup as this is an invalid configuration. All existing shoot clusters will automatically be migrated during the next reconciliation. We assume that the `ReversedVPN` feature will work with Gardener as well as operator managed Istio. 
+We have introduced a gardenlet feature gate `ReversedVPN`. If `APIServerSNI` and `ReversedVPN` are enabled the proposed solution is automatically enabled for all shoot clusters hosted by the seed. If `ReversedVPN` is enabled but `APIServerSNI` is not the gardenlet will panic during startup as this is an invalid configuration. All existing shoot clusters will automatically be migrated during the next reconciliation. We assume that the `ReversedVPN` feature will work with Gardener as well as operator managed Istio.
 
 We have also added a shoot annotation `alpha.featuregates.shoot.gardener.cloud/reversed-vpn` which can override the feature gate to enable or disable the solution for individual clusters. This is only respected if `APIServerSNI` is enabled, otherwise it is ignored.
 
@@ -197,7 +197,7 @@ With Calico as the networking solution it is not easily possible to put the Wire
 
 The WireGuard endpoint on the seed is exposed via a load balancer. We propose to use [kubelink](https://github.com/mandelsoft/kubelink) to manage the WireGuard configuration/device on the seed. We consider the management of the WireGuard endpoint to be complex especially in error situations which is the reason for utilizing kubelink as there is already significant experience managing an endpoint. We propose moving kubelink to the Gardener org in case it is used by this proposal.
 
-Kubelink addresses three challenges managing WireGuard interfaces on cluster nodes. First, with WireGuard interfaces directly on the node (`hostNework=true`) the lifecycle of the interface is decoupled from the lifecycle of the pod that created it. This means that there will have to be means of cleaning up the interfaces and its configuration in case the interface moves to a different node. Second, additional routing information must be distributed across the cluster. The WireGuard CIDR is unknown to the network implementation so additional routes must be distributed on all nodes of the cluster. Third, kubelink dynamincally configures the Wireguard interface with endpoints and their public keys.
+Kubelink addresses three challenges managing WireGuard interfaces on cluster nodes. First, with WireGuard interfaces directly on the node (`hostNetwork=true`) the lifecycle of the interface is decoupled from the lifecycle of the pod that created it. This means that there will have to be means of cleaning up the interfaces and its configuration in case the interface moves to a different node. Second, additional routing information must be distributed across the cluster. The WireGuard CIDR is unknown to the network implementation so additional routes must be distributed on all nodes of the cluster. Third, kubelink dynamincally configures the Wireguard interface with endpoints and their public keys.
 
 On the shoot, we create the keys and acquire the WireGuard IP in the standard secret generation. The data is added as a secret to the control plane and to the shootstate. The vpn shoot deployment is extended to include the WireGuard device setup inside the vpn shoot pod network. For certain infrastructures (AWS), we need a re-advertiser to resolve the seed WireGuard endpoint and evaluate whether the IP address changed.
 
@@ -238,7 +238,7 @@ Using this approach, it is easy to switch the solution on and off, i.e. migrate 
 
 #### High Availability
 
-There is an issue if the node that hosts the WireGuard endpoint fails. The endpoint is migrated to another node however the time required to do this might exceed the budget for downtimes although one could argue that a disruption of less than 30 seconds to 1 minute does not qualify as a downtime and will in almost all cases not noticeable by end users. 
+There is an issue if the node that hosts the WireGuard endpoint fails. The endpoint is migrated to another node however the time required to do this might exceed the budget for downtimes although one could argue that a disruption of less than 30 seconds to 1 minute does not qualify as a downtime and will in almost all cases not noticeable by end users.
 
 In this case we also assume that TCP connections won't be interrupted - they would just appear to hang. We will confirm this behavior and the potential downtime as part of the development and testing effort as this is hard to predict.
 
@@ -250,7 +250,7 @@ It is desirable that both connections are used in an equal manner. One strategy 
 <connection>
 remote 192.168.45.3 1194 udp
 </connection>
- 
+
 <connection>
 remote 192.168.47.34 1194 udp
 </connection>
@@ -276,5 +276,5 @@ Based on feedback on this proposal and while working on this implementation we i
 
 1. Instead of using OpenVPN for the inner seed/shoot communication we can use the proxy protocol and use a TCP proxy (e.g. envoy) in the shoot cluster to broker the seed-shoot connections. The  advantage is that with this solution seed- and shoot cluster network ranges are allowed to overlap. Disadvantages are increased implementation effort and less efficient network in terms of throughput and scalability. We believe however that the reduced network efficiency does not invalidate this option.
 
-2. There is an option in OpenVPN to specify a tcp proxy as part of the endpoint configuration. 
+2. There is an option in OpenVPN to specify a tcp proxy as part of the endpoint configuration.
 
