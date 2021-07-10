@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestControlPlane(t *testing.T) {
+func TestDNSRecord(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Botanist Component Extensions DNSRecord Suite")
 }

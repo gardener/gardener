@@ -134,6 +134,7 @@ func (b *Botanist) DefaultNginxIngressDNSOwner() component.DeployWaiter {
 	))
 }
 
+// NeedsIngressDNS returns true if the Shoot cluster needs ingress DNS.
 func (b *Botanist) NeedsIngressDNS() bool {
 	return b.NeedsExternalDNS() && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.Info.Spec.Addons)
 }
