@@ -28,6 +28,7 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -70,6 +71,8 @@ var _ = Describe("Etcd", func() {
 
 	Describe("#Deploy", func() {
 		var (
+			configMapName = "etcd-druid-imagevector-overwrite-4475dd36"
+
 			serviceAccountYAML = `apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -219,12 +222,14 @@ status: {}
 			configMapImageVectorOverwriteYAML = `apiVersion: v1
 data:
   images_overwrite.yaml: ` + *imageVectorOverwriteFull + `
+immutable: true
 kind: ConfigMap
 metadata:
   creationTimestamp: null
   labels:
     gardener.cloud/role: etcd-druid
-  name: etcd-druid-imagevector-overwrite
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+  name: ` + configMapName + `
   namespace: ` + namespace + `
 `
 
@@ -273,6 +278,8 @@ status: {}
 			deploymentWithImageVectorOverwriteYAML = `apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
   creationTimestamp: null
   labels:
     gardener.cloud/role: etcd-druid
@@ -288,7 +295,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-imagevector-overwrite: a131f53775a6f537386a63d22cf474b338bbab6d55e439b884c7dea9e148933d
+        ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
       creationTimestamp: null
       labels:
         gardener.cloud/role: etcd-druid
@@ -321,7 +328,7 @@ spec:
       serviceAccountName: etcd-druid
       volumes:
       - configMap:
-          name: etcd-druid-imagevector-overwrite
+          name: ` + configMapName + `
         name: imagevector-overwrite
 status: {}
 `
@@ -399,7 +406,7 @@ status: {}
 		It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
 			bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, imageVectorOverwriteFull)
 
-			managedResourceSecret.Data["configmap__shoot--foo--bar__etcd-druid-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
+			managedResourceSecret.Data["configmap__shoot--foo--bar__"+configMapName+".yaml"] = []byte(configMapImageVectorOverwriteYAML)
 			managedResourceSecret.Data["deployment__shoot--foo--bar__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)
 
 			gomock.InOrder(
