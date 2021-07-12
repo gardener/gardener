@@ -218,7 +218,7 @@ const (
 
 // CRI config is a structure contains configurations of the CRI library
 type CRIConfig struct {
-	// Name is a mandatory string containing the name of the CRI library.
+	// Name is a mandatory string containing the name of the CRI library. Supported values are `docker` and `containerd`.
 	Name CRIName `json:"name"`
 }
 
