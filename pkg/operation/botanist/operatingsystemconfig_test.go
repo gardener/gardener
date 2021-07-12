@@ -354,7 +354,7 @@ data:
 kind: Secret
 metadata:
   annotations:
-    checksum/data-script: ` + utils.ComputeSecretCheckSum(map[string][]byte{"script": worker1ExecutorScript}) + `
+    checksum/data-script: ` + utils.ComputeSecretChecksum(map[string][]byte{"script": worker1ExecutorScript}) + `
   creationTimestamp: null
   labels:
     gardener.cloud/role: cloud-config
@@ -380,7 +380,7 @@ data:
 kind: Secret
 metadata:
   annotations:
-    checksum/data-script: ` + utils.ComputeSecretCheckSum(map[string][]byte{"script": worker2ExecutorScript}) + `
+    checksum/data-script: ` + utils.ComputeSecretChecksum(map[string][]byte{"script": worker2ExecutorScript}) + `
   creationTimestamp: null
   labels:
     gardener.cloud/role: cloud-config

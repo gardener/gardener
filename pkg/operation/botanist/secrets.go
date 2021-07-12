@@ -146,7 +146,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 			b.Secrets[name] = secret
 		}
 		for name, secret := range b.Secrets {
-			b.CheckSums[name] = utils.ComputeSecretCheckSum(secret.Data)
+			b.CheckSums[name] = utils.ComputeSecretChecksum(secret.Data)
 		}
 	}()
 
@@ -181,7 +181,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 // in the Seed cluster.
 func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	var (
-		checksum = utils.ComputeSecretCheckSum(b.Shoot.Secret.Data)
+		checksum = utils.ComputeSecretChecksum(b.Shoot.Secret.Data)
 		secret   = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      v1beta1constants.SecretNameCloudProvider,
@@ -332,7 +332,7 @@ func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *s
 			return err
 		}
 
-		b.CheckSums[secretName] = utils.ComputeSecretCheckSum(secret.Data)
+		b.CheckSums[secretName] = utils.ComputeSecretChecksum(secret.Data)
 	}
 
 	return nil

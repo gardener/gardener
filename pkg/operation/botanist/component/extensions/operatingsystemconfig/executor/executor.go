@@ -203,7 +203,7 @@ func Secret(name, namespace, poolName string, script []byte) *corev1.Secret {
 			Name:      name,
 			Namespace: namespace,
 			Annotations: map[string]string{
-				downloader.AnnotationKeyChecksum: utils.ComputeSecretCheckSum(data),
+				downloader.AnnotationKeyChecksum: utils.ComputeSecretChecksum(data),
 			},
 			Labels: map[string]string{
 				v1beta1constants.GardenRole:      v1beta1constants.GardenRoleCloudConfig,

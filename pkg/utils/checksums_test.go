@@ -22,9 +22,17 @@ import (
 )
 
 var _ = Describe("Checksums", func() {
-	Describe("#ComputeSecretCheckSum", func() {
+	Describe("#ComputeSecretChecksum", func() {
 		It("should compute the correct checksum", func() {
-			checksum := ComputeSecretCheckSum(map[string][]byte{"foo": []byte("bar")})
+			checksum := ComputeSecretChecksum(map[string][]byte{"foo": []byte("bar")})
+			Expect(checksum).To(Equal("bd142ccf5968384068077c58de4d3ad833204a151d3e9f1182703f07b69125b8"))
+			Expect(checksum).To(HaveLen(64))
+		})
+	})
+
+	Describe("#ComputeConfigMapChecksum", func() {
+		It("should compute the correct checksum", func() {
+			checksum := ComputeConfigMapChecksum(map[string]string{"foo": "bar"})
 			Expect(checksum).To(Equal("bd142ccf5968384068077c58de4d3ad833204a151d3e9f1182703f07b69125b8"))
 			Expect(checksum).To(HaveLen(64))
 		})
