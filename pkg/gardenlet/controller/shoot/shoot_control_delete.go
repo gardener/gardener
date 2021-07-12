@@ -218,6 +218,11 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.DeployInternalDNS).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
 		})
+		deployAdditionalDNSProviders = g.Add(flow.Task{
+			Name:         "Deploying additional DNS providers",
+			Fn:           flow.TaskFn(botanist.DeployAdditionalDNSProviders).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
+			Dependencies: flow.NewTaskIDs(deployReferencedResources),
+		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying network policies",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.NetworkPolicies.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
@@ -356,6 +361,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			deployControlPlane,
 			deployKubeControllerManager,
 			waitForControllersToBeActive,
+			deployAdditionalDNSProviders,
 		)
 
 		cleanKubernetesResources = g.Add(flow.Task{
