@@ -29,7 +29,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -39,7 +39,6 @@ type namespaceReconciler struct {
 	log                    *logrus.Logger
 	seedClient             client.Client
 	seedName               string
-	endpointsLister        kubecorev1listers.EndpointsLister
 	shootNamespaceSelector labels.Selector
 	resolver               hostnameresolver.HostResolver
 }
@@ -48,14 +47,12 @@ type namespaceReconciler struct {
 func newNamespaceReconciler(
 	seedLogger *logrus.Logger,
 	seedClient client.Client,
-	endpointsLister kubecorev1listers.EndpointsLister,
 	seedName string,
 	shootNamespaceSelector labels.Selector,
 	resolver hostnameresolver.HostResolver,
 ) reconcile.Reconciler {
 	return &namespaceReconciler{
 		seedClient:             seedClient,
-		endpointsLister:        endpointsLister,
 		log:                    seedLogger,
 		seedName:               seedName,
 		shootNamespaceSelector: shootNamespaceSelector,
@@ -103,8 +100,9 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 	r.log.Debugf("Reconciling NetworkPolicy %q in namespace %q", helper.AllowToSeedAPIServer, request.Name)
 
-	kubernetesEndpoints, err := r.endpointsLister.Endpoints(corev1.NamespaceDefault).Get("kubernetes")
-	if err != nil {
+	kubernetesEndpoints := corev1.Endpoints{}
+	kubernetesEndpointsKey := types.NamespacedName{Namespace: corev1.NamespaceDefault, Name: "kubernetes"}
+	if err := r.seedClient.Get(ctx, kubernetesEndpointsKey, &kubernetesEndpoints); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -119,8 +117,7 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, nil
 	}
 
-	err = helper.EnsureNetworkPolicy(ctx, r.seedClient, request.Name, egressRules)
-	if err != nil {
+	if err := helper.EnsureNetworkPolicy(ctx, r.seedClient, request.Name, egressRules); err != nil {
 		return reconcile.Result{}, err
 	}
 

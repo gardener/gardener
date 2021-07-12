@@ -16,13 +16,11 @@ package networkpolicy
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
@@ -49,7 +47,7 @@ type Controller struct {
 	recorder                record.EventRecorder
 	seedClient              client.Client
 	namespaceReconciler     reconcile.Reconciler
-	endpointsInformer       cache.SharedInformer
+	endpointsInformer       runtimecache.Informer
 	networkPoliciesInformer runtimecache.Informer
 	namespaceQueue          workqueue.RateLimitingInterface
 	namespaceInformer       runtimecache.Informer
@@ -61,12 +59,7 @@ type Controller struct {
 }
 
 // NewController instantiates a new networkpolicy controller.
-func NewController(ctx context.Context, clientMap clientmap.ClientMap, logger *logrus.Logger, recorder record.EventRecorder, seedName string) (*Controller, error) {
-	seedClient, err := clientMap.GetClient(ctx, keys.ForSeedWithName(seedName))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get garden client: %w", err)
-	}
-
+func NewController(ctx context.Context, seedClient kubernetes.Interface, logger *logrus.Logger, recorder record.EventRecorder, seedName string) (*Controller, error) {
 	endpointsInformer, err := seedClient.Cache().GetInformer(ctx, &corev1.Endpoints{})
 	if err != nil {
 		return nil, err
@@ -95,14 +88,13 @@ func NewController(ctx context.Context, clientMap clientmap.ClientMap, logger *l
 		namespaceReconciler: newNamespaceReconciler(
 			logger,
 			seedClient.Client(),
-			endpointsInformer.Lister(),
 			seedName,
 			shootNamespaceSelector,
 			provider,
 		),
 		recorder:                recorder,
 		seedClient:              seedClient.Client(),
-		endpointsInformer:       endpointsInformer.Informer(),
+		endpointsInformer:       endpointsInformer,
 		namespaceInformer:       namespaceInformer,
 		networkPoliciesInformer: networkPoliciesInformer,
 		namespaceQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "namespace"),
@@ -110,9 +102,6 @@ func NewController(ctx context.Context, clientMap clientmap.ClientMap, logger *l
 		workerCh:                make(chan int),
 		hostnameProvider:        provider,
 	}
-
-	// start informer & sync caches
-	seedDefaultNamespaceKubeInformer.Start(ctx.Done())
 
 	go controller.hostnameProvider.Start(ctx)
 
