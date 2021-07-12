@@ -6,12 +6,13 @@ PATH_HYPERKUBE_DOWNLOADS="{{ .pathHyperkubeDownloads }}"
 PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE="{{ .pathLastDownloadedHyperkubeImage }}"
 PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY=""
 
-if [[ "$1" == "kubelet" ]]; then
-  BINARY="kubelet"
+if [[ "$BINARY" == "kubelet" ]]; then
   PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY="{{ .pathHyperKubeImageUsedForLastCopyKubelet }}"
-elif [[ "$1" == "kubectl" ]]; then
-  BINARY="kubectl"
+elif [[ "$BINARY" == "kubectl" ]]; then
   PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY="{{ .pathHyperKubeImageUsedForLastCopyKubectl }}"
+else
+  echo "$BINARY cannot be handled. Only 'kubelet' and 'kubectl' are valid arguments."
+  exit 1
 fi
 
 LAST_DOWNLOADED_HYPERKUBE_IMAGE=""

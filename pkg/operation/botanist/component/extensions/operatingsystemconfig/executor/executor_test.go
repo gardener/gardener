@@ -384,15 +384,17 @@ const scriptCopyKubernetesBinary = `#!/bin/bash -eu
 
 BINARY="$1"
 
+PATH_HYPERKUBE_DOWNLOADS="/var/lib/cloud-config-downloader/downloads/hyperkube"
 PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE="/var/lib/cloud-config-downloader/downloads/hyperkube/last_downloaded_hyperkube_image"
 PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY=""
 
-if [[ "$1" == "kubelet" ]]; then
-  BINARY="kubelet"
+if [[ "$BINARY" == "kubelet" ]]; then
   PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY="/opt/bin/hyperkube_image_used_for_last_copy_of_kubelet"
-elif [[ "$1" == "kubectl" ]]; then
-  BINARY="kubectl"
+elif [[ "$BINARY" == "kubectl" ]]; then
   PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY="/opt/bin/hyperkube_image_used_for_last_copy_of_kubectl"
+else
+  echo "$BINARY cannot be handled. Only 'kubelet' and 'kubectl' are valid arguments."
+  exit 1
 fi
 
 LAST_DOWNLOADED_HYPERKUBE_IMAGE=""
