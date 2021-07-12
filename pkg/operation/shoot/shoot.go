@@ -455,6 +455,7 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 	case defaultDomain != nil:
 		externalDomain.SecretData = defaultDomain.SecretData
 		externalDomain.Provider = defaultDomain.Provider
+		externalDomain.Zone = defaultDomain.Zone
 		externalDomain.IncludeDomains = defaultDomain.IncludeDomains
 		externalDomain.ExcludeDomains = defaultDomain.ExcludeDomains
 		externalDomain.IncludeZones = defaultDomain.IncludeZones
@@ -480,6 +481,9 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 		if zones := primaryProvider.Zones; zones != nil {
 			externalDomain.IncludeZones = zones.Include
 			externalDomain.ExcludeZones = zones.Exclude
+			if len(zones.Include) == 1 {
+				externalDomain.Zone = zones.Include[0]
+			}
 		}
 
 	default:
@@ -530,7 +534,7 @@ func ToNetworks(s *gardencorev1beta1.Shoot) (*Networks, error) {
 
 // ComputeRequiredExtensions compute the extension kind/type combinations that are required for the
 // reconciliation flow.
-func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *garden.Domain) sets.String {
+func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev1beta1.Seed, controllerRegistrationList *gardencorev1beta1.ControllerRegistrationList, internalDomain, externalDomain *garden.Domain, useDNSRecords bool) sets.String {
 	requiredExtensions := sets.NewString()
 
 	if seed.Spec.Backup != nil {
@@ -574,16 +578,26 @@ func ComputeRequiredExtensions(shoot *gardencorev1beta1.Shoot, seed *gardencorev
 			for _, provider := range shoot.Spec.DNS.Providers {
 				if provider.Type != nil && *provider.Type != core.DNSUnmanaged {
 					requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, *provider.Type))
+					if provider.Primary != nil && *provider.Primary && useDNSRecords {
+						requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, *provider.Type))
+					}
 				}
 			}
 		}
 
 		if internalDomain != nil && internalDomain.Provider != core.DNSUnmanaged {
-			requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, internalDomain.Provider))
+			if useDNSRecords {
+				requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, internalDomain.Provider))
+			} else {
+				requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, internalDomain.Provider))
+			}
 		}
 
 		if externalDomain != nil && externalDomain.Provider != core.DNSUnmanaged {
 			requiredExtensions.Insert(gardenerextensions.Id(dnsv1alpha1.DNSProviderKind, externalDomain.Provider))
+			if useDNSRecords {
+				requiredExtensions.Insert(gardenerextensions.Id(extensionsv1alpha1.DNSRecordResource, externalDomain.Provider))
+			}
 		}
 	}
 

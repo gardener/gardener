@@ -428,7 +428,7 @@ func (b *Botanist) DestroyExternalDNS(ctx context.Context) error {
 // MigrateInternalDNS destroys the internal DNSEntry, DNSOwner, and DNSProvider resources,
 // without removing the entry from the DNS provider.
 func (b *Botanist) MigrateInternalDNS(ctx context.Context) error {
-	return component.OpDestroy(
+	return component.OpDestroyAndWait(
 		b.Shoot.Components.Extensions.DNS.InternalOwner,
 		b.Shoot.Components.Extensions.DNS.InternalProvider,
 		b.Shoot.Components.Extensions.DNS.InternalEntry,
@@ -437,8 +437,20 @@ func (b *Botanist) MigrateInternalDNS(ctx context.Context) error {
 
 // MigrateExternalDNS destroys the external DNSEntry, DNSOwner, and DNSProvider resources,
 // without removing the entry from the DNS provider.
-func (b *Botanist) MigrateExternalDNS(ctx context.Context) error {
-	return component.OpDestroy(
+func (b *Botanist) MigrateExternalDNS(ctx context.Context, keepProvider bool) error {
+	if keepProvider {
+		// Delete the DNSOwner and DNSEntry resources in this order to make sure that the actual DNS record is preserved
+		if err := component.OpDestroyAndWait(
+			b.Shoot.Components.Extensions.DNS.ExternalOwner,
+			b.Shoot.Components.Extensions.DNS.ExternalEntry,
+		).Destroy(ctx); err != nil {
+			return err
+		}
+
+		// Deploy the DNSProvider resource
+		return component.OpWaiter(b.Shoot.Components.Extensions.DNS.ExternalProvider).Deploy(ctx)
+	}
+	return component.OpDestroyAndWait(
 		b.Shoot.Components.Extensions.DNS.ExternalOwner,
 		b.Shoot.Components.Extensions.DNS.ExternalProvider,
 		b.Shoot.Components.Extensions.DNS.ExternalEntry,

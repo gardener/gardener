@@ -23,17 +23,19 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	externalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	corev1beta1listers "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	"github.com/hashicorp/go-multierror"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 const (
@@ -221,6 +223,15 @@ func (e *ExtensionValidator) validateSeed(kindToTypesMap map[string]sets.String,
 		)
 	}
 
+	if spec.Ingress != nil && spec.DNS.Provider != nil {
+		provider := spec.DNS.Provider
+		if utilfeature.DefaultFeatureGate.Enabled(features.UseDNSRecords) {
+			requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.DNSRecordResource, provider.Type, fmt.Sprintf("%s extension type: %s", message, field.NewPath("spec", "dns", "provider").Child("type"))})
+		} else {
+			requiredExtensions = append(requiredExtensions, requiredExtension{dnsv1alpha1.DNSProviderKind, provider.Type, fmt.Sprintf("%s dns type: %s", message, field.NewPath("spec", "dns", "provider").Child("type"))})
+		}
+	}
+
 	return requiredExtensions.areRegistered(kindToTypesMap)
 }
 
@@ -244,6 +255,9 @@ func (e *ExtensionValidator) validateShoot(kindToTypesMap map[string]sets.String
 			}
 
 			requiredExtensions = append(requiredExtensions, requiredExtension{dnsv1alpha1.DNSProviderKind, *provider.Type, fmt.Sprintf("%s dns type: %s", message, field.NewPath("spec", "dns", "providers").Index(i).Child("type"))})
+			if provider.Primary != nil && *provider.Primary && utilfeature.DefaultFeatureGate.Enabled(features.UseDNSRecords) {
+				requiredExtensions = append(requiredExtensions, requiredExtension{extensionsv1alpha1.DNSRecordResource, *provider.Type, fmt.Sprintf("%s extension type: %s", message, field.NewPath("spec", "dns", "providers").Index(i).Child("type"))})
+			}
 		}
 	}
 

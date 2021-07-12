@@ -56,6 +56,14 @@ func RemoveFinalizer(ctx context.Context, reader client.Reader, writer client.Wr
 	return tryPatchFinalizers(ctx, reader, writer, obj, controllerutil.RemoveFinalizer, finalizer)
 }
 
+// RemoveAllFinalizers ensures that the given object has no finalizers with exponential backoff.
+// If any finalizers are set, it removes them and issues a patch.
+func RemoveAllFinalizers(ctx context.Context, reader client.Reader, writer client.Writer, obj client.Object) error {
+	return tryPatchObject(ctx, reader, writer, obj, func(obj client.Object) {
+		obj.SetFinalizers(nil)
+	})
+}
+
 func tryPatchFinalizers(ctx context.Context, reader client.Reader, writer client.Writer, obj client.Object, mutate func(client.Object, string), finalizer string) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		// Unset finalizers array manually here, because finalizers array won't be unset in decoder, if it's empty on
@@ -69,4 +77,19 @@ func tryPatchFinalizers(ctx context.Context, reader client.Reader, writer client
 
 		return patchFinalizers(ctx, writer, obj, mutate, finalizer)
 	})
+}
+
+func tryPatchObject(ctx context.Context, reader client.Reader, writer client.Writer, obj client.Object, mutate func(client.Object)) error {
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		if err := reader.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
+			return err
+		}
+		return patchObject(ctx, writer, obj, mutate)
+	})
+}
+
+func patchObject(ctx context.Context, writer client.Writer, obj client.Object, mutate func(client.Object)) error {
+	beforePatch := obj.DeepCopyObject().(client.Object)
+	mutate(obj)
+	return writer.Patch(ctx, obj, client.MergeFromWithOptions(beforePatch, client.MergeFromWithOptimisticLock{}))
 }

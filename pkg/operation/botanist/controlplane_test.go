@@ -20,6 +20,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	cr "github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
@@ -29,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane/mock"
+	mockdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord/mock"
 	mockinfrastructure "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure/mock"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/shoot"
@@ -66,6 +68,8 @@ var _ = Describe("controlplane", func() {
 		infrastructure       *mockinfrastructure.MockInterface
 		controlPlane         *mockcontrolplane.MockInterface
 		controlPlaneExposure *mockcontrolplane.MockInterface
+		externalDNSRecord    *mockdnsrecord.MockInterface
+		internalDNSRecord    *mockdnsrecord.MockInterface
 		botanist             *Botanist
 
 		ctx               = context.TODO()
@@ -84,6 +88,8 @@ var _ = Describe("controlplane", func() {
 		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
 		controlPlane = mockcontrolplane.NewMockInterface(ctrl)
 		controlPlaneExposure = mockcontrolplane.NewMockInterface(ctrl)
+		externalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
+		internalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
 
 		botanist = &Botanist{
 			Operation: &operation.Operation{
@@ -104,6 +110,8 @@ var _ = Describe("controlplane", func() {
 							DNS:                  &shoot.DNS{},
 							ControlPlane:         controlPlane,
 							ControlPlaneExposure: controlPlaneExposure,
+							ExternalDNSRecord:    externalDNSRecord,
+							InternalDNSRecord:    internalDNSRecord,
 							Infrastructure:       infrastructure,
 						},
 					},
@@ -183,6 +191,11 @@ var _ = Describe("controlplane", func() {
 			botanist.Shoot.ExternalClusterDomain = pointer.String("baz")
 			botanist.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 			botanist.Garden.InternalDomain = &garden.Domain{Provider: "valid-provider"}
+
+			externalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			externalDNSRecord.EXPECT().SetValues([]string{"1.2.3.4"})
+			internalDNSRecord.EXPECT().SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			internalDNSRecord.EXPECT().SetValues([]string{"1.2.3.4"})
 
 			botanist.setAPIServerAddress("1.2.3.4", client)
 

@@ -211,6 +211,7 @@ rules:
   - clusters
   - containerruntimes
   - controlplanes
+  - dnsrecords
   - extensions
   - infrastructures
   - networks

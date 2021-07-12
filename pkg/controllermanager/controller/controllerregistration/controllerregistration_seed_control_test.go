@@ -18,16 +18,17 @@ import (
 	"context"
 	"errors"
 
-	"k8s.io/apimachinery/pkg/runtime"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/golang/mock/gomock"
@@ -35,6 +36,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -535,7 +537,9 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 	})
 
 	Describe("#computeKindTypesForShoots", func() {
-		It("should correctly compute the result for a seed without DNS taint", func() {
+		It("should correctly compute the result for a seed without DNS taint if the feature gate is disabled", func() {
+			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, false)()
+
 			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seedWithShootDNSEnabled, controllerRegistrationList, internalDomain, nil)
 
 			Expect(kindTypes).To(Equal(sets.NewString(
@@ -562,6 +566,38 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 				// internal domain + globally enabled extensions
 				extensionsv1alpha1.ExtensionResource+"/"+type10,
 				dnsv1alpha1.DNSProviderKind+"/"+type9,
+			)))
+		})
+
+		It("should correctly compute the result for a seed without DNS taint if the feature gate is enabled", func() {
+			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, true)()
+
+			kindTypes := computeKindTypesForShoots(ctx, nopLogger, nil, shootList, seedWithShootDNSEnabled, controllerRegistrationList, internalDomain, nil)
+
+			Expect(kindTypes).To(Equal(sets.NewString(
+				// seedWithShootDNSEnabled types
+				extensionsv1alpha1.BackupBucketResource+"/"+type8,
+				extensionsv1alpha1.BackupEntryResource+"/"+type8,
+				extensionsv1alpha1.ControlPlaneResource+"/"+type11,
+
+				// shoot2 types
+				extensionsv1alpha1.ControlPlaneResource+"/"+type2,
+				extensionsv1alpha1.InfrastructureResource+"/"+type2,
+				extensionsv1alpha1.WorkerResource+"/"+type2,
+				extensionsv1alpha1.OperatingSystemConfigResource+"/"+type5,
+				extensionsv1alpha1.NetworkResource+"/"+type3,
+				extensionsv1alpha1.ExtensionResource+"/"+type4,
+
+				// shoot3 types
+				extensionsv1alpha1.ControlPlaneResource+"/"+type6,
+				extensionsv1alpha1.InfrastructureResource+"/"+type6,
+				extensionsv1alpha1.WorkerResource+"/"+type6,
+				dnsv1alpha1.DNSProviderKind+"/"+type7,
+				extensionsv1alpha1.ContainerRuntimeResource+"/"+type12,
+
+				// internal domain + globally enabled extensions
+				extensionsv1alpha1.ExtensionResource+"/"+type10,
+				extensionsv1alpha1.DNSRecordResource+"/"+type9,
 			)))
 		})
 
@@ -651,7 +687,9 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 	Describe("#computeKindTypesForSeed", func() {
 		var providerType = "fake-provider-type"
 
-		It("should add the DNSProvider extension", func() {
+		It("should add the DNSProvider extension if the feature gate is disabled", func() {
+			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, false)()
+
 			seed := &gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
 					DNS: gardencorev1beta1.SeedDNS{
@@ -663,6 +701,24 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 			}
 
 			expected := sets.NewString(extensions.Id(dnsv1alpha1.DNSProviderKind, providerType))
+			actual := computeKindTypesForSeed(seed)
+			Expect(actual).To(Equal(expected))
+		})
+
+		It("should add the DNSRecord extension if the feature gate is enabled", func() {
+			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, true)()
+
+			seed := &gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					DNS: gardencorev1beta1.SeedDNS{
+						Provider: &gardencorev1beta1.SeedDNSProvider{
+							Type: providerType,
+						},
+					},
+				},
+			}
+
+			expected := sets.NewString(extensions.Id(extensionsv1alpha1.DNSRecordResource, providerType))
 			actual := computeKindTypesForSeed(seed)
 			Expect(actual).To(Equal(expected))
 		})

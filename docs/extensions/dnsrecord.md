@@ -119,6 +119,18 @@ Some providers might require further information that is not provider specific b
 As Gardener cannot know which information is required by providers it simply mirrors the `Shoot`, `Seed`, and `CloudProfile` resources into the seed.
 They are part of the [`Cluster` extension resource](cluster.md) and can be used to extract information that is not part of the `DNSRecord` resource itself.
 
+## Using `DNSRecord` instead of `DNSProvider` and `DNSEntry` resources
+
+Currently, Gardener will create `DNSRecord` resources only if the feature gate `UseDNSRecords` is enabled on `gardener-apiserver`, `gardener-controller-manager`, and `gardenlet` (it should be enabled on all three of them for the feature to work properly). 
+If this feature gate is enabled, all three DNS records mentioned above (internal, external, and ingress) will be managed via `DNSRecords` and not `DNSProvider` / `DNSEntry`. 
+`DNSProvider` resources will still be created for all providers listed in `spec.dns.providers`, including the one marked as `primary: true`. 
+These providers can be used for `DNSEntry` resources needed by workloads deployed on the shoot cluster.
+
+If the feature gate is disabled, Gardener will not create any `DNSRecord` resources and use `DNSProvider` / `DNSEntry` resources for its DNS records. 
+Currently, the feature gate is still in `Alpha` stage and is therefore disabled by default.
+
+In order to successfully reconcile a shoot with the feature gate enabled, extension controllers for `DNSRecord` resources for types used in the default, internal and custom domain secrets should be registered via `ControllerRegistration` resources.
+
 ## References and additional resources
 
 * [`DNSRecord` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_dnsrecord.go)

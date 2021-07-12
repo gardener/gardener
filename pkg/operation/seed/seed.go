@@ -26,6 +26,7 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -38,6 +39,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/istio"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
@@ -78,6 +80,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -897,7 +900,11 @@ func runCreateSeedFlow(
 		return err
 	}
 
-	if err := updateDNSProviderSecret(ctx, sc, gc, seed); err != nil {
+	secretData, err := getDNSProviderSecretData(ctx, gc.Client(), seed)
+	if err != nil {
+		return err
+	}
+	if err := updateDNSProviderSecret(ctx, sc.Client(), emptyDNSProviderSecret(), secretData, seed); err != nil {
 		return err
 	}
 
@@ -910,7 +917,9 @@ func runCreateSeedFlow(
 		}
 	}
 
-	dnsEntry := getManagedIngressDNSEntry(sc.Client(), seed.GetIngressFQDN("*"), ingressLoadBalancerAddress, seedLogger)
+	dnsEntry := getManagedIngressDNSEntry(sc.Client(), seed.GetIngressFQDN("*"), *seed.Info.Status.ClusterIdentity, ingressLoadBalancerAddress, seedLogger)
+	dnsOwner := getManagedIngressDNSOwner(sc.Client(), *seed.Info.Status.ClusterIdentity)
+	dnsRecord := getManagedIngressDNSRecord(sc.Client(), seed.Info.Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress, seedLogger)
 
 	networkPolicies, err := defaultNetworkPolicies(sc, seed.Info, anySNI)
 	if err != nil {
@@ -943,23 +952,17 @@ func runCreateSeedFlow(
 			Name: "Ensuring network policies",
 			Fn:   networkPolicies.Deploy,
 		})
-		deployDNSProvider = g.Add(flow.Task{
-			Name: "Deploying DNS Provider",
-			Fn:   flow.TaskFn(createDNSProviderTask(sc.Client(), seed.Info.Spec.DNS)).DoIf(seed.Info.Spec.DNS.Provider != nil),
+		_ = g.Add(flow.Task{
+			Name: "Deploying managed ingress DNS record",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return deployDNSResources(ctx, dnsEntry, dnsOwner, dnsRecord, deployDNSProviderTask(sc.Client(), seed.Info.Spec.DNS), destroyDNSProviderTask(sc.Client()))
+			}).DoIf(managedIngress(seed)),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying managed Ingress DNSEntry",
-			Fn:           flow.TaskFn(dnsEntry.Deploy).DoIf(managedIngress(seed)),
-			Dependencies: flow.NewTaskIDs(deployDNSProvider),
-		})
-		destroyDNSEntry = g.Add(flow.Task{
-			Name: "Destroying managed Ingress DNSEntry (if existing)",
-			Fn:   flow.TaskFn(component.OpDestroyAndWait(dnsEntry).Destroy).DoIf(!managedIngress(seed)),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Destroying DNS Provider (if existing)",
-			Fn:           flow.TaskFn(destroyDNSProviderTask(sc.Client())).DoIf(seed.Info.Spec.DNS.Provider == nil),
-			Dependencies: flow.NewTaskIDs(destroyDNSEntry),
+			Name: "Destroying managed ingress DNS record (if existing)",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return destroyDNSResources(ctx, dnsEntry, dnsOwner, dnsRecord, destroyDNSProviderTask(sc.Client()))
+			}).DoIf(!managedIngress(seed)),
 		})
 		deployResourceManager = g.Add(flow.Task{
 			Name: "Deploying gardener-resource-manager",
@@ -1016,13 +1019,19 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 		return err
 	}
 
-	if err := updateDNSProviderSecret(ctx, sc, gc, seed); err != nil {
+	secretData, err := getDNSProviderSecretData(ctx, gc.Client(), seed)
+	if err != nil {
+		return err
+	}
+	if err := updateDNSProviderSecret(ctx, sc.Client(), emptyDNSProviderSecret(), secretData, seed); err != nil {
 		return err
 	}
 
 	// setup for flow graph
 	var (
-		dnsEntry        = getManagedIngressDNSEntry(sc.Client(), seed.GetIngressFQDN("*"), "", seedLogger)
+		dnsEntry        = getManagedIngressDNSEntry(sc.Client(), seed.GetIngressFQDN("*"), *seed.Info.Status.ClusterIdentity, "", seedLogger)
+		dnsOwner        = getManagedIngressDNSOwner(sc.Client(), *seed.Info.Status.ClusterIdentity)
+		dnsRecord       = getManagedIngressDNSRecord(sc.Client(), seed.Info.Spec.DNS, secretData, seed.GetIngressFQDN("*"), "", seedLogger)
 		autoscaler      = clusterautoscaler.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace)
 		gsac            = seedadmissioncontroller.New(sc.Client(), v1beta1constants.GardenNamespace, "", kubernetesVersion)
 		resourceManager = resourcemanager.New(sc.Client(), v1beta1constants.GardenNamespace, "", 0, resourcemanager.Values{})
@@ -1038,20 +1047,17 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 	}
 
 	var (
-		g               = flow.NewGraph("Seed cluster deletion")
-		destroyDNSEntry = g.Add(flow.Task{
-			Name: "Destroying Managed Ingress DNS Entry (if existing)",
-			Fn:   component.OpDestroyAndWait(dnsEntry).Destroy,
-		})
-		destroyDNSProvider = g.Add(flow.Task{
-			Name:         "Destroying DNS Provider",
-			Fn:           destroyDNSProviderTask(sc.Client()),
-			Dependencies: flow.NewTaskIDs(destroyDNSEntry),
+		g                = flow.NewGraph("Seed cluster deletion")
+		destroyDNSRecord = g.Add(flow.Task{
+			Name: "Destroying managed ingress DNS record (if existing)",
+			Fn: func(ctx context.Context) error {
+				return destroyDNSResources(ctx, dnsEntry, dnsOwner, dnsRecord, destroyDNSProviderTask(sc.Client()))
+			},
 		})
 		noControllerInstallations = g.Add(flow.Task{
 			Name:         "Ensuring no ControllerInstallations are left",
 			Fn:           ensureNoControllerInstallations(gc, seed.Info.Name),
-			Dependencies: flow.NewTaskIDs(destroyDNSProvider),
+			Dependencies: flow.NewTaskIDs(destroyDNSRecord),
 		})
 		destroyClusterIdentity = g.Add(flow.Task{
 			Name: "Destroying cluster-identity",
@@ -1109,18 +1115,76 @@ func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *S
 	return nil
 }
 
-func copySecretToSeed(ctx context.Context, gardenClient, seedClient client.Client, sourceSecret types.NamespacedName, targetSecret *corev1.Secret) error {
-	gardenSecret := &corev1.Secret{}
-	if err := gardenClient.Get(ctx, sourceSecret, gardenSecret); err != nil {
+func deployDNSResources(ctx context.Context, dnsEntry, dnsOwner component.DeployWaiter, dnsRecord component.DeployMigrateWaiter, deployDNSProviderTask, destroyDNSProviderTask flow.TaskFn) error {
+	if gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
+		if err := dnsOwner.Destroy(ctx); err != nil {
+			return err
+		}
+		if err := dnsOwner.WaitCleanup(ctx); err != nil {
+			return err
+		}
+		if err := destroyDNSProviderTask(ctx); err != nil {
+			return err
+		}
+		if err := dnsEntry.Destroy(ctx); err != nil {
+			return err
+		}
+		if err := dnsEntry.WaitCleanup(ctx); err != nil {
+			return err
+		}
+		if err := dnsRecord.Deploy(ctx); err != nil {
+			return err
+		}
+		return dnsRecord.Wait(ctx)
+	} else {
+		if err := dnsRecord.Migrate(ctx); err != nil {
+			return err
+		}
+		if err := dnsRecord.WaitMigrate(ctx); err != nil {
+			return err
+		}
+		if err := dnsRecord.Destroy(ctx); err != nil {
+			return err
+		}
+		if err := dnsRecord.WaitCleanup(ctx); err != nil {
+			return err
+		}
+		if err := dnsOwner.Deploy(ctx); err != nil {
+			return err
+		}
+		if err := dnsOwner.Wait(ctx); err != nil {
+			return err
+		}
+		if err := deployDNSProviderTask(ctx); err != nil {
+			return err
+		}
+		if err := dnsEntry.Deploy(ctx); err != nil {
+			return err
+		}
+		return dnsEntry.Wait(ctx)
+	}
+}
+
+func destroyDNSResources(ctx context.Context, dnsEntry, dnsOwner, dnsRecord component.DeployWaiter, destroyDNSProviderTask flow.TaskFn) error {
+	if err := dnsEntry.Destroy(ctx); err != nil {
 		return err
 	}
-
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, targetSecret, func() error {
-		targetSecret.Type = gardenSecret.Type
-		targetSecret.Data = gardenSecret.Data
-		return nil
-	})
-	return err
+	if err := dnsEntry.WaitCleanup(ctx); err != nil {
+		return err
+	}
+	if err := destroyDNSProviderTask(ctx); err != nil {
+		return err
+	}
+	if err := dnsOwner.Destroy(ctx); err != nil {
+		return err
+	}
+	if err := dnsOwner.WaitCleanup(ctx); err != nil {
+		return err
+	}
+	if err := dnsRecord.Destroy(ctx); err != nil {
+		return err
+	}
+	return dnsRecord.WaitCleanup(ctx)
 }
 
 func ensureNoControllerInstallations(gc kubernetes.Interface, seedName string) func(ctx context.Context) error {
@@ -1136,14 +1200,21 @@ func ensureNoControllerInstallations(gc kubernetes.Interface, seedName string) f
 	}
 }
 
-func updateDNSProviderSecret(ctx context.Context, sc kubernetes.Interface, gc kubernetes.Interface, seed *Seed) error {
-	if dnsConfig := seed.Info.Spec.DNS; dnsConfig.Provider != nil {
-		return copySecretToSeed(ctx, gc.Client(), sc.Client(), kutil.Key(dnsConfig.Provider.SecretRef.Namespace, dnsConfig.Provider.SecretRef.Name), emptyDNSProviderSecret())
+// updateDNSProviderSecret updates the DNSProvider secret in the garden namespace of the seed. This is only needed
+// if the `UseDNSRecords` feature gate is not enabled.
+func updateDNSProviderSecret(ctx context.Context, seedClient client.Client, secret *corev1.Secret, secretData map[string][]byte, seed *Seed) error {
+	if dnsConfig := seed.Info.Spec.DNS; dnsConfig.Provider != nil && !gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
+		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, secret, func() error {
+			secret.Type = corev1.SecretTypeOpaque
+			secret.Data = secretData
+			return nil
+		})
+		return err
 	}
 	return nil
 }
 
-func createDNSProviderTask(seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS) func(ctx context.Context) error {
+func deployDNSProviderTask(seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		var (
 			dnsProvider    = emptyDNSProvider()
@@ -1203,14 +1274,26 @@ func emptyDNSProviderSecret() *corev1.Secret {
 	}
 }
 
-func managedIngress(seed *Seed) bool {
-	return seed.Info.Spec.Ingress != nil
+func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *Seed) (map[string][]byte, error) {
+	if dnsConfig := seed.Info.Spec.DNS; dnsConfig.Provider != nil {
+		secret, err := kutil.GetSecretByReference(ctx, gardenClient, &dnsConfig.Provider.SecretRef)
+		if err != nil {
+			return nil, err
+		}
+		return secret.Data, nil
+	}
+	return nil, nil
 }
 
-func getManagedIngressDNSEntry(k8sSeedClient client.Client, seedFQDN string, loadBalancerAddress string, seedLogger *logrus.Entry) component.DeployWaiter {
+func managedIngress(seed *Seed) bool {
+	return seed.Info.Spec.DNS.Provider != nil && seed.Info.Spec.Ingress != nil
+}
+
+func getManagedIngressDNSEntry(k8sSeedClient client.Client, seedFQDN string, seedClusterIdentity, loadBalancerAddress string, seedLogger *logrus.Entry) component.DeployWaiter {
 	values := &dns.EntryValues{
 		Name:    "ingress",
 		DNSName: seedFQDN,
+		OwnerID: seedClusterIdentity + "-ingress",
 	}
 	if loadBalancerAddress != "" {
 		values.Targets = []string{loadBalancerAddress}
@@ -1221,6 +1304,49 @@ func getManagedIngressDNSEntry(k8sSeedClient client.Client, seedFQDN string, loa
 		k8sSeedClient,
 		v1beta1constants.GardenNamespace,
 		values,
+	)
+}
+
+func getManagedIngressDNSOwner(k8sSeedClient client.Client, seedClusterIdentity string) component.DeployWaiter {
+	values := &dns.OwnerValues{
+		Name:    "ingress",
+		OwnerID: seedClusterIdentity + "-ingress",
+		Active:  pointer.Bool(true),
+	}
+
+	return dns.NewOwner(
+		k8sSeedClient,
+		v1beta1constants.GardenNamespace,
+		values,
+	)
+}
+
+func getManagedIngressDNSRecord(seedClient client.Client, dnsConfig gardencorev1beta1.SeedDNS, secretData map[string][]byte, seedFQDN string, loadBalancerAddress string, seedLogger *logrus.Entry) component.DeployMigrateWaiter {
+	values := &dnsrecord.Values{
+		Name:       "seed-ingress",
+		SecretName: "seed-ingress",
+		Namespace:  v1beta1constants.GardenNamespace,
+		SecretData: secretData,
+		DNSName:    seedFQDN,
+		RecordType: extensionsv1alpha1helper.GetDNSRecordType(loadBalancerAddress),
+	}
+	if dnsConfig.Provider != nil {
+		values.Type = dnsConfig.Provider.Type
+		if dnsConfig.Provider.Zones != nil && len(dnsConfig.Provider.Zones.Include) == 1 {
+			values.Zone = &dnsConfig.Provider.Zones.Include[0]
+		}
+	}
+	if loadBalancerAddress != "" {
+		values.Values = []string{loadBalancerAddress}
+	}
+
+	return dnsrecord.New(
+		seedLogger,
+		seedClient,
+		values,
+		dnsrecord.DefaultInterval,
+		dnsrecord.DefaultSevereThreshold,
+		dnsrecord.DefaultTimeout,
 	)
 }
 

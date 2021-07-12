@@ -26,6 +26,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
@@ -81,6 +83,9 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.Extensions.DNS.NginxOwner = b.DefaultNginxIngressDNSOwner()
 	o.Shoot.Components.Extensions.DNS.NginxEntry = b.DefaultNginxIngressDNSEntry()
 	o.Shoot.Components.Extensions.DNS.AdditionalProviders, err = b.AdditionalDNSProviders(ctx)
+	o.Shoot.Components.Extensions.ExternalDNSRecord = b.DefaultExternalDNSRecord()
+	o.Shoot.Components.Extensions.InternalDNSRecord = b.DefaultInternalDNSRecord()
+	o.Shoot.Components.Extensions.IngressDNSRecord = b.DefaultIngressDNSRecord()
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +179,8 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 		return err
 	}
 
-	requiredExtensions := shootpkg.ComputeRequiredExtensions(b.Shoot.Info, b.Seed.Info, controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain)
+	requiredExtensions := shootpkg.ComputeRequiredExtensions(b.Shoot.Info, b.Seed.Info, controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain,
+		gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords))
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
 		if controllerInstallation.Spec.SeedRef.Name != b.Seed.Info.Name {

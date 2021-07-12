@@ -25,6 +25,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
@@ -856,6 +857,9 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
 		)
+
+		b.Shoot.Components.Extensions.InternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(address))
+		b.Shoot.Components.Extensions.InternalDNSRecord.SetValues([]string{address})
 	}
 
 	if b.NeedsExternalDNS() {
@@ -881,6 +885,9 @@ func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client)
 				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 			},
 		)
+
+		b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(address))
+		b.Shoot.Components.Extensions.ExternalDNSRecord.SetValues([]string{address})
 	}
 }
 

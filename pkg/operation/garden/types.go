@@ -38,6 +38,7 @@ type Garden struct {
 type Domain struct {
 	Domain         string
 	Provider       string
+	Zone           string
 	SecretData     map[string][]byte
 	IncludeDomains []string
 	ExcludeDomains []string

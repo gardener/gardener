@@ -20,9 +20,12 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/util/workqueue"
+
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 )
 
 func TestControllerRegistration(t *testing.T) {
+	controllermanagerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "ControllerManager ControllerRegistration Controller Suite")
 }
