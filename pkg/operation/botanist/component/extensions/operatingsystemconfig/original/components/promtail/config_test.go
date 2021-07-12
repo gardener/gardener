@@ -18,21 +18,19 @@ import (
 	"github.com/gardener/gardener/charts"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
-	"gopkg.in/yaml.v3"
-
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v3"
 	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Promtail", func() {
 	Describe("#Config", func() {
 		var (
-			cABundle = "malskjdvbfnasufbaus"
-			//cABundleB64        = utils.EncodeBase64([]byte(cABundle))
+			cABundle           = "malskjdvbfnasufbaus"
 			clusterDomain      = "testClusterDomain.com"
 			promtailImageName  = "Promtail"
 			promtailRepository = "github.com/promtail"
@@ -90,7 +88,7 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 ExecStartPre=/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + promtailRepository + ":" + promtailImageTag + " -c " + "\"cp /usr/bin/promtail /opt/bin\"" + `
 ExecStartPre=/bin/sh ` + PathSetActiveJournalFileScript + `
-ExecStart=` + PathPromtailBinary + `/promtail -config.file=` + PathPromtailConfig)},
+ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
 			))
 
 			Expect(files).To(ConsistOf(

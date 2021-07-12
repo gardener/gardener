@@ -26,14 +26,13 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/charts"
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/docker"
 	oscutils "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 var (
@@ -56,12 +55,7 @@ func init() {
 
 const (
 	// UnitName is the name of the kubelet service.
-	UnitName = gardencorev1beta1constants.OperatingSystemConfigUnitNameKubeletService
-
-	// PathKubeletDirectory is the path for the kubelet's directory.
-	PathKubeletDirectory = "/var/lib/kubelet"
-	// PathKubernetesBinaries is the path for the kubelet and kubectl binaries.
-	PathKubernetesBinaries = "/opt/bin"
+	UnitName = v1beta1constants.OperatingSystemConfigUnitNameKubeletService
 
 	// PathKubeconfigBootstrap is the path for the kubelet's bootstrap kubeconfig.
 	PathKubeconfigBootstrap = PathKubeletDirectory + "/kubeconfig-bootstrap"
@@ -71,7 +65,11 @@ const (
 	// PathKubeletCACert is the path for the kubelet's certificate authority.
 	PathKubeletCACert = PathKubeletDirectory + "/ca.crt"
 	// PathKubeletConfig is the path for the kubelet's config file.
-	PathKubeletConfig = gardencorev1beta1constants.OperatingSystemConfigFilePathKubeletConfig
+	PathKubeletConfig = v1beta1constants.OperatingSystemConfigFilePathKubeletConfig
+	// PathKubeletDirectory is the path for the kubelet's directory.
+	PathKubeletDirectory = "/var/lib/kubelet"
+	// PathScriptCopyKubernetesBinary is the path for the script copying downloaded Kubernetes binaries.
+	PathScriptCopyKubernetesBinary = PathKubeletDirectory + "/copy-kubernetes-binary.sh"
 
 	pathVolumePluginDirectory = "/var/lib/kubelet/volumeplugins"
 )
@@ -88,10 +86,13 @@ func (component) Name() string {
 }
 
 func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
-	const pathHealthMonitor = "/opt/bin/health-monitor-kubelet"
+	const pathHealthMonitor = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/health-monitor-kubelet"
 
 	var healthMonitorScript bytes.Buffer
-	if err := tplHealthMonitor.Execute(&healthMonitorScript, map[string]string{"pathKubeletKubeconfigReal": PathKubeconfigReal}); err != nil {
+	if err := tplHealthMonitor.Execute(&healthMonitorScript, map[string]string{
+		"pathBinaries":              v1beta1constants.OperatingSystemConfigFilePathBinaries,
+		"pathKubeletKubeconfigReal": PathKubeconfigReal,
+	}); err != nil {
 		return nil, nil, err
 	}
 
@@ -118,8 +119,8 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args
-ExecStartPre=` + execStartPreCopyBinaryFromContainer("kubelet", ctx.Images[charts.ImageNameHyperkube], ctx.KubernetesVersion) + `
-ExecStart=` + PathKubernetesBinaries + `/kubelet \
+ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubelet
+ExecStart=` + v1beta1constants.OperatingSystemConfigFilePathBinaries + `/kubelet \
     ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
 			},
 			{
@@ -134,7 +135,7 @@ WantedBy=multi-user.target
 [Service]
 Restart=always
 EnvironmentFile=/etc/environment
-ExecStartPre=` + execStartPreCopyBinaryFromContainer("kubectl", ctx.Images[charts.ImageNameHyperkube], ctx.KubernetesVersion) + `
+ExecStartPre=` + PathScriptCopyKubernetesBinary + ` kubectl
 ExecStart=` + pathHealthMonitor),
 			},
 		},
@@ -180,16 +181,6 @@ func getFileContentKubeletConfig(kubernetesVersion *semver.Version, clusterDNSAd
 	return kcCodec.Encode(kubeletConfig, configFCI.Encoding)
 }
 
-func execStartPreCopyBinaryFromContainer(binaryName string, image *imagevector.Image, kubernetesVersion *semver.Version) string {
-	switch {
-	case versionConstraintK8sLess117.Check(kubernetesVersion):
-		return docker.PathBinary + ` run --rm -v /opt/bin:/opt/bin:rw ` + image.String() + ` /bin/sh -c "cp /usr/local/bin/` + binaryName + ` /opt/bin"`
-	case versionConstraintK8sLess119.Check(kubernetesVersion):
-		return docker.PathBinary + ` run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + image.String() + ` -c "cp /usr/local/bin/` + binaryName + ` /opt/bin"`
-	}
-	return `/usr/bin/env sh -c "ID=\"$(` + docker.PathBinary + ` run --rm -d -v /opt/bin:/opt/bin:rw ` + image.String() + `)\"; ` + docker.PathBinary + ` cp \"$ID\":/` + binaryName + ` /opt/bin; ` + docker.PathBinary + ` stop \"$ID\"; chmod +x /opt/bin/` + binaryName + `"`
-}
-
 func unitConfigAfterCRI(criName extensionsv1alpha1.CRIName) string {
 	if criName == extensionsv1alpha1.CRINameContainerD {
 		return `After=` + containerd.UnitName
@@ -198,19 +189,11 @@ func unitConfigAfterCRI(criName extensionsv1alpha1.CRIName) string {
 Wants=docker.socket rpc-statd.service`
 }
 
-var (
-	versionConstraintK8sLess117         *semver.Constraints
-	versionConstraintK8sLess119         *semver.Constraints
-	versionConstraintK8sGreaterEqual119 *semver.Constraints
-)
+var versionConstraintK8sLess119 *semver.Constraints
 
 func init() {
 	var err error
 
-	versionConstraintK8sLess117, err = semver.NewConstraint("< 1.17")
-	utilruntime.Must(err)
 	versionConstraintK8sLess119, err = semver.NewConstraint("< 1.19")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual119, err = semver.NewConstraint(">= 1.19")
 	utilruntime.Must(err)
 }

@@ -43,7 +43,7 @@ var _ = Describe("Component", func() {
 	})
 
 	DescribeTable("#Config",
-		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, execStartPreFn func(string) string, kubeletFlags, kubeletConfig string) {
+		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, kubeletFlags, kubeletConfig string) {
 			ctx.CRIName = criName
 			ctx.KubernetesVersion = semver.MustParse(kubernetesVersion)
 			ctx.KubeletCACertificate = kubeletCACertificate
@@ -79,7 +79,7 @@ Restart=always
 RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args
-ExecStartPre=` + execStartPreFn("kubelet") + `
+ExecStartPre=/var/lib/kubelet/copy-kubernetes-binary.sh kubelet
 ExecStart=/opt/bin/kubelet \` + kubeletFlags),
 				},
 				extensionsv1alpha1.Unit{
@@ -94,7 +94,7 @@ WantedBy=multi-user.target
 [Service]
 Restart=always
 EnvironmentFile=/etc/environment
-ExecStartPre=` + execStartPreFn("kubectl") + `
+ExecStartPre=/var/lib/kubelet/copy-kubernetes-binary.sh kubectl
 ExecStart=/opt/bin/health-monitor-kubelet`),
 				},
 			))
@@ -136,7 +136,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.15, w/ docker",
 			"1.15.1",
 			extensionsv1alpha1.CRINameDocker,
-			execStartPreLess117,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
@@ -144,7 +143,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.15, w/ containerd",
 			"1.15.1",
 			extensionsv1alpha1.CRINameContainerD,
-			execStartPreLess117,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
@@ -153,7 +151,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.16, w/ docker",
 			"1.16.1",
 			extensionsv1alpha1.CRINameDocker,
-			execStartPreLess117,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
@@ -161,7 +158,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.16, w/ containerd",
 			"1.16.1",
 			extensionsv1alpha1.CRINameContainerD,
-			execStartPreLess117,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
@@ -170,7 +166,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.17, w/ docker",
 			"1.17.1",
 			extensionsv1alpha1.CRINameDocker,
-			execStartPreLess119,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
@@ -178,7 +173,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.17, w/ containerd",
 			"1.17.1",
 			extensionsv1alpha1.CRINameContainerD,
-			execStartPreLess119,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
@@ -187,7 +181,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.18, w/ docker",
 			"1.18.1",
 			extensionsv1alpha1.CRINameDocker,
-			execStartPreLess119,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
@@ -195,7 +188,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.18, w/ containerd",
 			"1.18.1",
 			extensionsv1alpha1.CRINameContainerD,
-			execStartPreLess119,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
@@ -204,7 +196,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.19, w/ docker",
 			"1.19.1",
 			extensionsv1alpha1.CRINameDocker,
-			execStartPreGreaterEqual119,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false),
 			kubeletConfig(true, true),
 		),
@@ -212,7 +203,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.19, w/ containerd",
 			"1.19.1",
 			extensionsv1alpha1.CRINameContainerD,
-			execStartPreGreaterEqual119,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false),
 			kubeletConfig(true, true),
 		),
@@ -221,7 +211,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.20, w/ docker",
 			"1.20.1",
 			extensionsv1alpha1.CRINameDocker,
-			execStartPreGreaterEqual119,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false),
 			kubeletConfig(true, true),
 		),
@@ -229,7 +218,6 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.20, w/ containerd",
 			"1.20.1",
 			extensionsv1alpha1.CRINameContainerD,
-			execStartPreGreaterEqual119,
 			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false),
 			kubeletConfig(true, true),
 		),
@@ -364,18 +352,6 @@ kubelet_monitoring
 	hyperkubeImageRepo      = "hyperkube.io"
 	hyperkubeImageTag       = "v4.5.6"
 )
-
-func execStartPreLess117(binary string) string {
-	return `/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw ` + hyperkubeImageRepo + `:` + hyperkubeImageTag + ` /bin/sh -c "cp /usr/local/bin/` + binary + ` /opt/bin"`
-}
-
-func execStartPreLess119(binary string) string {
-	return `/usr/bin/docker run --rm -v /opt/bin:/opt/bin:rw --entrypoint /bin/sh ` + hyperkubeImageRepo + `:` + hyperkubeImageTag + ` -c "cp /usr/local/bin/` + binary + ` /opt/bin"`
-}
-
-func execStartPreGreaterEqual119(binary string) string {
-	return `/usr/bin/env sh -c "ID=\"$(/usr/bin/docker run --rm -d -v /opt/bin:/opt/bin:rw ` + hyperkubeImageRepo + `:` + hyperkubeImageTag + `)\"; /usr/bin/docker cp \"$ID\":/` + binary + ` /opt/bin; /usr/bin/docker stop \"$ID\"; chmod +x /opt/bin/` + binary + `"`
-}
 
 func unitConfigAfterCRI(criName extensionsv1alpha1.CRIName) string {
 	if criName == extensionsv1alpha1.CRINameContainerD {

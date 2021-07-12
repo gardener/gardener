@@ -10,20 +10,12 @@ PATH_CCD_SCRIPT_CHECKSUM="{{ .pathCCDScriptChecksum }}"
 PATH_CCD_SCRIPT_CHECKSUM_OLD="${PATH_CCD_SCRIPT_CHECKSUM}.old"
 PATH_EXECUTION_DELAY_SECONDS="{{ .pathExecutionDelaySeconds }}"
 PATH_EXECUTION_LAST_DATE="{{ .pathExecutionLastDate }}"
+PATH_HYPERKUBE_DOWNLOADS="{{ .pathHyperkubeDownloads }}"
+PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE="{{ .pathLastDownloadedHyperkubeImage }}"
+PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET="{{ .pathHyperKubeImageUsedForLastCopyKubelet }}"
+PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL="{{ .pathHyperKubeImageUsedForLastCopyKubectl }}"
 
-mkdir -p "{{ .pathDownloadsDirectory }}" "{{ .pathKubeletDirectory }}"
-
-function docker-preload() {
-  name="$1"
-  image="$2"
-  echo "Checking whether to preload $name from $image"
-  if [ -z $(docker images -q "$image") ]; then
-    echo "Preloading $name from $image"
-    docker pull "$image"
-  else
-    echo "No need to preload $name from $image"
-  fi
-}
+mkdir -p "{{ .pathDownloadsDirectory }}" "{{ .pathKubeletDirectory }}" "$PATH_HYPERKUBE_DOWNLOADS"
 
 {{ if .kubeletDataVolume -}}
 function format-data-device() {
@@ -50,9 +42,53 @@ function format-data-device() {
 format-data-device
 {{- end }}
 
-{{ range $name, $image := .images -}}
-docker-preload "{{ $name }}" "{{ $image }}"
-{{ end }}
+LAST_DOWNLOADED_HYPERKUBE_IMAGE=""
+if [[ -f "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
+  LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
+fi
+
+HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET=""
+if [[ -f "$PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET" ]]; then
+  HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET="$(cat "$PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET")"
+fi
+
+HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL=""
+if [[ -f "$PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL" ]]; then
+  HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL="$(cat "$PATH_HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL")"
+fi
+
+echo "Checking whether we need to preload a new hyperkube image..."
+if [[ "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" != "{{ .hyperkubeImage }}" ]]; then
+  echo "Preloading hyperkube image ({{ .hyperkubeImage }}) because last downloaded image ($LAST_DOWNLOADED_HYPERKUBE_IMAGE) is outdated"
+  {{ .pathDockerBinary }} pull "{{ .hyperkubeImage }}"
+
+  echo "Starting temporary hyperkube container to copy binaries to host"
+
+{{- if semverCompare "< 1.17" .kubernetesVersion }}
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}" /bin/sh -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS"
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}" /bin/sh -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS"
+{{- else if semverCompare "< 1.19" .kubernetesVersion }}
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS"
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS"
+{{- else }}
+  HYPERKUBE_CONTAINER_ID="$({{ .pathDockerBinary }} run --rm -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}")"
+  {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS"
+  {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS"
+  {{ .pathDockerBinary }} stop "$HYPERKUBE_CONTAINER_ID"
+{{- end }}
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet"
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl"
+
+  echo "{{ .hyperkubeImage }}" > "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE"
+  LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
+else
+  echo "No need to preload new hyperkube image because binaries for $LAST_DOWNLOADED_HYPERKUBE_IMAGE were found in $PATH_HYPERKUBE_DOWNLOADS"
+fi
+
+cat << 'EOF' | base64 -d > "{{ .pathScriptCopyKubernetesBinary }}"
+{{ .scriptCopyKubernetesBinary }}
+EOF
+chmod +x "{{ .pathScriptCopyKubernetesBinary }}"
 
 cat << 'EOF' | base64 -d > "$PATH_CLOUDCONFIG"
 {{ .cloudConfigUserData }}
@@ -110,7 +146,7 @@ ANNOTATION_RESTART_SYSTEMD_SERVICES="worker.gardener.cloud/restart-systemd-servi
 
 # Try to find Node object for this machine if already registered to the cluster.
 if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
-  {{`NODE="$(/opt/bin/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"`}}
+  {{`NODE="$(`}}{{ .pathBinaries }}{{`/kubectl --kubeconfig="`}}{{ .pathKubeletKubeconfigReal }}{{`" get node -l "kubernetes.io/hostname=$(hostname)" -o go-template="{{ if .items }}{{ (index .items 0).metadata.name }}{{ if (index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\") }} {{ index (index .items 0).metadata.annotations \"$ANNOTATION_RESTART_SYSTEMD_SERVICES\" }}{{ end }}{{ end }}")"`}}
 
   if [[ ! -z "$NODE" ]]; then
     NODENAME="$(echo "$NODE" | awk '{print $1}')"
@@ -127,7 +163,7 @@ if [[ -f "{{ .pathKubeletKubeconfigReal }}" ]]; then
     echo "Restarting systemd service $service due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
     systemctl restart "$service" || true
   done
-  /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
+  {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "${ANNOTATION_RESTART_SYSTEMD_SERVICES}-"
   if [[ ${restart_ccd} == "y" ]]; then
     echo "Restarting systemd service {{ .unitNameCloudConfigDownloader }} due to $ANNOTATION_RESTART_SYSTEMD_SERVICES annotation"
     systemctl restart "{{ .unitNameCloudConfigDownloader }}" || true
@@ -154,8 +190,12 @@ fi
 
 # Apply most recent cloud-config user-data, reload the systemd daemon and restart the units to make the changes
 # effective.
-if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || ! diff "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD" >/dev/null; then
-  echo "Seen newer cloud config or cloud config downloader version"
+if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || \
+   ! diff "$PATH_CCD_SCRIPT_CHECKSUM" "$PATH_CCD_SCRIPT_CHECKSUM_OLD" >/dev/null || \
+   [[ "$HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBELET" != "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]] || \; then
+   [[ "$HYPERKUBE_IMAGE_USED_FOR_LAST_COPY_KUBECTL" != "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" ]]; then
+
+  echo "Seen newer cloud config or cloud config downloader version or hyperkube image"
   if {{ .reloadConfigCommand }}; then
     echo "Successfully applied new cloud config version"
     systemctl daemon-reload
@@ -175,6 +215,6 @@ rm "$PATH_CLOUDCONFIG" "$PATH_CCD_SCRIPT_CHECKSUM"
 # Now that the most recent cloud-config user data was applied, let's update the checksum/cloud-config-data annotation on
 # the Node object if possible and store the current date.
 if [[ ! -z "$NODENAME" ]] && [[ -f "$PATH_CHECKSUM" ]]; then
-  /opt/bin/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+  {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
 fi
 date +%s > "$PATH_EXECUTION_LAST_DATE"

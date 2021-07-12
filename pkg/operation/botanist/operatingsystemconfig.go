@@ -144,11 +144,10 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 	}
 	bootstrapToken := bootstraptoken.FromSecretData(bootstrapTokenSecret.Data)
 
-	imagesMap, err := imagevector.FindImages(b.ImageVector, []string{charts.ImageNameHyperkube}, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	hyperkubeImage, err := b.ImageVector.FindImage(charts.ImageNameHyperkube, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return err
 	}
-	images := imagevector.ImageMapToValues(imagesMap)
 
 	var (
 		managedResource                  = managedresources.NewForShoot(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName, false)
@@ -170,7 +169,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 			return fmt.Errorf("did not find osc data for worker pool %q", worker.Name)
 		}
 
-		secretName, data, err := b.generateCloudConfigExecutorResourcesForWorker(worker, oscData.Original, bootstrapToken, images)
+		secretName, data, err := b.generateCloudConfigExecutorResourcesForWorker(worker, oscData.Original, bootstrapToken, hyperkubeImage)
 		if err != nil {
 			return err
 		}
@@ -231,7 +230,7 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 	worker gardencorev1beta1.Worker,
 	oscDataOriginal operatingsystemconfig.Data,
 	bootstrapToken string,
-	images map[string]interface{},
+	hyperkubeImage *imagevector.Image,
 ) (
 	string,
 	map[string][]byte,
@@ -253,7 +252,7 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 		}
 	}
 
-	executorScript, err := ExecutorScriptFn(bootstrapToken, []byte(oscDataOriginal.Content), images, kubeletDataVolume, *oscDataOriginal.Command, oscDataOriginal.Units)
+	executorScript, err := ExecutorScriptFn(bootstrapToken, []byte(oscDataOriginal.Content), hyperkubeImage, b.Shoot.KubernetesVersion.String(), kubeletDataVolume, *oscDataOriginal.Command, oscDataOriginal.Units)
 	if err != nil {
 		return "", nil, err
 	}

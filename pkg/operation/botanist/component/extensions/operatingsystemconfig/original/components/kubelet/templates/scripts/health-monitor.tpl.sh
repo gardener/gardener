@@ -9,7 +9,7 @@ function kubelet_monitoring {
   local output=""
 
   function kubectl {
-    /opt/bin/kubectl --kubeconfig {{ .pathKubeletKubeconfigReal }} "$@"
+    {{ .pathBinaries }}/kubectl --kubeconfig {{ .pathKubeletKubeconfigReal }} "$@"
   }
 
   function restart_kubelet {

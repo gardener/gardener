@@ -19,7 +19,7 @@ import (
 	_ "embed"
 	"text/template"
 
-	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/logrotate"
@@ -49,7 +49,7 @@ func init() {
 
 const (
 	// UnitName is the name of the Docker service unit.
-	UnitName = gardencorev1beta1constants.OperatingSystemConfigUnitNameDockerService
+	UnitName = v1beta1constants.OperatingSystemConfigUnitNameDockerService
 	// UnitNameMonitor is the name of the Docker monitor service unit.
 	UnitNameMonitor = "docker-monitor.service"
 	// PathBinary is the path to the docker binary.
@@ -69,7 +69,7 @@ func (component) Name() string {
 
 func (component) Config(_ components.Context) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
 	const (
-		pathHealthMonitor   = "/opt/bin/health-monitor-docker"
+		pathHealthMonitor   = v1beta1constants.OperatingSystemConfigFilePathBinaries + "/health-monitor-docker"
 		pathLogRotateConfig = "/etc/systemd/docker.conf"
 	)
 
