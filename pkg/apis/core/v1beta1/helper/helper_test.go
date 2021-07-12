@@ -1136,7 +1136,7 @@ var _ = Describe("helper", func() {
 				true,
 				&gardencorev1beta1.ShootMachineImage{
 					Name:    "gardenlinux",
-					Version: pointer.String("1.16.1"),
+					Version: pointer.StringPtr("1.16.1"),
 				},
 				false,
 			),
@@ -1185,7 +1185,7 @@ var _ = Describe("helper", func() {
 				true,
 				&gardencorev1beta1.ShootMachineImage{
 					Name:    "gardenlinux",
-					Version: pointer.String("1.17.1"),
+					Version: pointer.StringPtr("1.17.1"),
 				},
 				false,
 			),
