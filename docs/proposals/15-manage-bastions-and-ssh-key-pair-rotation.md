@@ -225,4 +225,6 @@ Currently, the `ssh` key pair for the shoot nodes are created once during shoot 
 
 ### Limitations
 
+Each operating system has its own default user (e.g. `core`, `admin`, `ec2-user` etc). These users get their SSH keys during VM creation (however there is a different handling on Google Cloud Platform as stated below). These keys currently do not get rotated respectively are not removed from the `authorized_keys` file. This means that the initial `ssh` key will still be valid for the default operating system user.
+
 On Google Cloud Platform, the VMs do not have any static users (i.e. no `gardener` user) and there is an agent on the nodes that syncs the users with their SSH keypairs from the GCP IAM service.
