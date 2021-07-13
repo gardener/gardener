@@ -226,6 +226,18 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 			return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' in project '%s' already marked for deletion", shoot.Name, project.Name))
 		}
 		addInfrastructureDeploymentTask(shoot)
+	case admission.Update:
+		// We don`t want a shoot to be triggered for deletion when CPM or Restore process is running, since this can leak resources.
+		if err := gutil.CheckIfDeletionIsConfirmed(shoot); err == nil {
+			if shoot.Status.LastOperation != nil {
+				if shoot.Status.LastOperation.Type == core.LastOperationTypeRestore {
+					return admission.NewForbidden(a, fmt.Errorf("cannot mark shoot %s for deletion during restore", shoot.Name))
+				}
+				if shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate {
+					return admission.NewForbidden(a, fmt.Errorf("cannot mark shoot %s for deletion during control plane migration", shoot.Name))
+				}
+			}
+		}
 	}
 
 	mustCheckIfTaintsTolerated := a.GetOperation() == admission.Create || (a.GetOperation() == admission.Update && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName))
