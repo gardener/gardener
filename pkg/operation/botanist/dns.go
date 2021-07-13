@@ -21,10 +21,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/core"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -34,6 +33,7 @@ import (
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -252,8 +252,8 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]compo
 				return nil, fmt.Errorf("dns provider[%d] doesn't specify a type", i)
 			}
 
-			if *providerType == core.DNSUnmanaged {
-				b.Logger.Infof("Skipping deployment of DNS provider[%d] since it specifies type %q", i, core.DNSUnmanaged)
+			if *providerType == gardencore.DNSUnmanaged {
+				b.Logger.Infof("Skipping deployment of DNS provider[%d] since it specifies type %q", i, gardencore.DNSUnmanaged)
 				continue
 			}
 
@@ -349,12 +349,6 @@ func (b *Botanist) NeedsAdditionalDNSProviders() bool {
 	return !b.Shoot.DisableDNS &&
 		b.Shoot.Info.Spec.DNS != nil &&
 		len(b.Shoot.Info.Spec.DNS.Providers) > 0
-}
-
-// APIServerSNIEnabled returns true if APIServerSNI feature gate is enabled and
-// the shoot uses internal and external DNS.
-func (b *Botanist) APIServerSNIEnabled() bool {
-	return gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) && b.NeedsInternalDNS() && b.NeedsExternalDNS()
 }
 
 // APIServerSNIPodMutatorEnabled returns false if the value of the Shoot annotation
@@ -508,6 +502,64 @@ func (d dnsRestoreDeployer) Deploy(ctx context.Context) error {
 	return nil
 }
 
-func (d dnsRestoreDeployer) Destroy(ctx context.Context) error {
-	return nil
+func (d dnsRestoreDeployer) Destroy(_ context.Context) error { return nil }
+
+func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {
+	if b.NeedsInternalDNS() {
+		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSInternalName
+
+		b.Shoot.Components.Extensions.DNS.InternalOwner = dns.NewOwner(
+			b.K8sSeedClient.Client(),
+			b.Shoot.SeedNamespace,
+			&dns.OwnerValues{
+				Name:    DNSInternalName,
+				Active:  pointer.Bool(true),
+				OwnerID: ownerID,
+			},
+		)
+		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewEntry(
+			b.Logger,
+			b.K8sSeedClient.Client(),
+			b.Shoot.SeedNamespace,
+			&dns.EntryValues{
+				Name:    DNSInternalName,
+				DNSName: gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
+				Targets: []string{b.APIServerAddress},
+				OwnerID: ownerID,
+				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+			},
+		)
+
+		b.Shoot.Components.Extensions.InternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(b.APIServerAddress))
+		b.Shoot.Components.Extensions.InternalDNSRecord.SetValues([]string{b.APIServerAddress})
+	}
+
+	if b.NeedsExternalDNS() {
+		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSExternalName
+
+		b.Shoot.Components.Extensions.DNS.ExternalOwner = dns.NewOwner(
+			b.K8sSeedClient.Client(),
+			b.Shoot.SeedNamespace,
+			&dns.OwnerValues{
+				Name:    DNSExternalName,
+				Active:  pointer.Bool(true),
+				OwnerID: ownerID,
+			},
+		)
+		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewEntry(
+			b.Logger,
+			b.K8sSeedClient.Client(),
+			b.Shoot.SeedNamespace,
+			&dns.EntryValues{
+				Name:    DNSExternalName,
+				DNSName: gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
+				Targets: []string{b.APIServerAddress},
+				OwnerID: ownerID,
+				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+			},
+		)
+
+		b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(b.APIServerAddress))
+		b.Shoot.Components.Extensions.ExternalDNSRecord.SetValues([]string{b.APIServerAddress})
+	}
 }
