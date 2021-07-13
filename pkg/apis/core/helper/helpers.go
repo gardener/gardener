@@ -73,14 +73,23 @@ func DetermineLatestMachineImageVersions(images []core.MachineImage) (map[string
 	return resultMapVersions, nil
 }
 
-// DetermineLatestMachineImageVersion determines the latest MachineImageVersion from a slice of MachineImageVersion
-// when filterPreviewVersions is set, versions with classification preview are not considered
+// DetermineLatestMachineImageVersion determines the latest MachineImageVersion from a slice of MachineImageVersion.
+// When filterPreviewVersions is set, versions with classification preview are not considered.
+// It will prefer older but non-deprecated versions over newer but deprecated versions.
 func DetermineLatestMachineImageVersion(versions []core.MachineImageVersion, filterPreviewVersions bool) (core.MachineImageVersion, error) {
-	latestVersion, err := DetermineLatestExpirableVersion(ToExpirableVersions(versions), filterPreviewVersions)
+	latestVersion, latestNonDeprecatedVersion, err := DetermineLatestExpirableVersion(ToExpirableVersions(versions), filterPreviewVersions)
 	if err != nil {
 		return core.MachineImageVersion{}, err
 	}
 
+	// Try to find non-deprecated version first.
+	for _, version := range versions {
+		if version.Version == latestNonDeprecatedVersion.Version {
+			return version, nil
+		}
+	}
+
+	// It looks like there is no non-deprecated version, now look also into the deprecated versions
 	for _, version := range versions {
 		if version.Version == latestVersion.Version {
 			return version, nil
@@ -90,18 +99,22 @@ func DetermineLatestMachineImageVersion(versions []core.MachineImageVersion, fil
 	return core.MachineImageVersion{}, fmt.Errorf("the latest machine version has been removed")
 }
 
-// DetermineLatestExpirableVersion determines the latest ExpirableVersion from a slice of ExpirableVersions
-// when filterPreviewVersions is set, versions with classification preview are not considered
-func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPreviewVersions bool) (core.ExpirableVersion, error) {
+// DetermineLatestExpirableVersion determines the latest expirable version and the latest non-deprecated version from a slice of ExpirableVersions.
+// When filterPreviewVersions is set, versions with classification preview are not considered.
+func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPreviewVersions bool) (core.ExpirableVersion, core.ExpirableVersion, error) {
+
 	var (
-		latestSemVerVersion    *semver.Version
-		latestExpirableVersion core.ExpirableVersion
+		latestSemVerVersion              *semver.Version
+		latestNonDeprecatedSemVerVersion *semver.Version
+
+		latestExpirableVersion              core.ExpirableVersion
+		latestNonDeprecatedExpirableVersion core.ExpirableVersion
 	)
 
 	for _, version := range versions {
 		v, err := semver.NewVersion(version.Version)
 		if err != nil {
-			return core.ExpirableVersion{}, fmt.Errorf("error while parsing expirable version '%s': %s", version.Version, err.Error())
+			return core.ExpirableVersion{}, core.ExpirableVersion{}, fmt.Errorf("error while parsing expirable version '%s': %s", version.Version, err.Error())
 		}
 
 		if filterPreviewVersions && version.Classification != nil && *version.Classification == core.ClassificationPreview {
@@ -112,13 +125,20 @@ func DetermineLatestExpirableVersion(versions []core.ExpirableVersion, filterPre
 			latestSemVerVersion = v
 			latestExpirableVersion = version
 		}
+
+		if version.Classification != nil && *version.Classification != core.ClassificationDeprecated {
+			if latestNonDeprecatedSemVerVersion == nil || v.GreaterThan(latestNonDeprecatedSemVerVersion) {
+				latestNonDeprecatedSemVerVersion = v
+				latestNonDeprecatedExpirableVersion = version
+			}
+		}
 	}
 
 	if latestSemVerVersion == nil {
-		return core.ExpirableVersion{}, fmt.Errorf("unable to determine latest expirable version")
+		return core.ExpirableVersion{}, core.ExpirableVersion{}, fmt.Errorf("unable to determine latest expirable version")
 	}
 
-	return latestExpirableVersion, nil
+	return latestExpirableVersion, latestNonDeprecatedExpirableVersion, nil
 }
 
 // ToExpirableVersions converts MachineImageVersion to ExpirableVersion

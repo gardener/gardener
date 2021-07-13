@@ -1016,6 +1016,8 @@ var _ = Describe("helper", func() {
 
 	Describe("Version helper", func() {
 		var previewClassification = gardencorev1beta1.ClassificationPreview
+		var deprecatedClassification = gardencorev1beta1.ClassificationDeprecated
+		var supportedClassification = gardencorev1beta1.ClassificationSupported
 
 		DescribeTable("#GetLatestQualifyingShootMachineImage",
 			func(original gardencorev1beta1.MachineImage, expectVersionToBeFound bool, expected *gardencorev1beta1.ShootMachineImage, expectError bool) {
@@ -1093,6 +1095,98 @@ var _ = Describe("helper", func() {
 				},
 				false,
 				nil,
+				false,
+			),
+			Entry("Expect older but supported version to be preferred over newer but deprecated one",
+				gardencorev1beta1.MachineImage{
+					Name: "gardenlinux",
+					Versions: []gardencorev1beta1.MachineImageVersion{
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.17.1",
+								Classification: &deprecatedClassification,
+							},
+						},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.16.1",
+								Classification: &supportedClassification,
+							},
+						},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.15.0",
+								Classification: &previewClassification,
+							},
+						},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.14.3",
+								ExpirationDate: &expirationDateInThePast,
+							},
+						},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.13.1",
+								ExpirationDate: &expirationDateInThePast,
+							},
+						},
+					},
+				},
+				true,
+				&gardencorev1beta1.ShootMachineImage{
+					Name:    "gardenlinux",
+					Version: pointer.StringPtr("1.16.1"),
+				},
+				false,
+			),
+			Entry("Expect latest deprecated version to be selected when there is no supported version",
+				gardencorev1beta1.MachineImage{
+					Name: "gardenlinux",
+					Versions: []gardencorev1beta1.MachineImageVersion{
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.17.3",
+								Classification: &previewClassification,
+							},
+						},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.17.2",
+								ExpirationDate: &expirationDateInThePast,
+							},
+						},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.17.1",
+								Classification: &deprecatedClassification,
+							},
+						},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.16.1",
+								Classification: &deprecatedClassification,
+							},
+						},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.15.0",
+								Classification: &previewClassification,
+							},
+						},
+						{
+							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
+								Version:        "1.14.3",
+								ExpirationDate: &expirationDateInThePast,
+							},
+						},
+					},
+				},
+				true,
+				&gardencorev1beta1.ShootMachineImage{
+					Name:    "gardenlinux",
+					Version: pointer.StringPtr("1.17.1"),
+				},
 				false,
 			),
 		)
@@ -1466,6 +1560,35 @@ var _ = Describe("helper", func() {
 				),
 				Entry("Should not filter version.",
 					FilterExpiredVersion(),
+					nil,
+					gardencorev1beta1.ExpirableVersion{},
+					false,
+					false,
+				),
+				// #FilterDeprecatedVersion
+				Entry("Should filter version - version is deprecated",
+					FilterDeprecatedVersion(),
+					nil,
+					gardencorev1beta1.ExpirableVersion{Classification: &deprecatedClassification},
+					true,
+					false,
+				),
+				Entry("Should not filter version - version has preview classification",
+					FilterDeprecatedVersion(),
+					nil,
+					gardencorev1beta1.ExpirableVersion{Classification: &previewClassification},
+					false,
+					false,
+				),
+				Entry("Should not filter version - version has supported classification",
+					FilterDeprecatedVersion(),
+					nil,
+					gardencorev1beta1.ExpirableVersion{Classification: &supportedClassification},
+					false,
+					false,
+				),
+				Entry("Should not filter version - version has no classification",
+					FilterDeprecatedVersion(),
 					nil,
 					gardencorev1beta1.ExpirableVersion{},
 					false,
