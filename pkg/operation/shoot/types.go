@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubecontrollermanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
@@ -102,6 +103,7 @@ type ControlPlane struct {
 	KubeAPIServerService  component.DeployWaiter
 	KubeAPIServerSNI      component.DeployWaiter
 	KubeAPIServerSNIPhase component.Phase
+	KubeAPIServer         kubeapiserver.Interface
 	KubeScheduler         kubescheduler.Interface
 	KubeControllerManager kubecontrollermanager.Interface
 	ClusterAutoscaler     clusterautoscaler.Interface
