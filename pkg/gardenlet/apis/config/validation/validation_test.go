@@ -63,9 +63,7 @@ var _ = Describe("GardenletConfiguration", func() {
 					SyncJitterPeriod: &metav1.Duration{Duration: 5 * time.Minute},
 				},
 			},
-			FeatureGates: map[string]bool{
-				"APIServerSNI": true,
-			},
+			FeatureGates: map[string]bool{},
 			SeedConfig: &config.SeedConfig{
 				SeedTemplate: gardencore.SeedTemplate{
 					ObjectMeta: metav1.ObjectMeta{
@@ -401,8 +399,17 @@ var _ = Describe("GardenletConfiguration", func() {
 			})
 
 			Context("serviceExternalIP", func() {
-				It("should allow to use an external service ip as APIServerSNI feature gate is enabled and loadbalancer ip is valid", func() {
+				It("should allow to use an external service ip as loadbalancer ip is valid", func() {
 					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = pointer.StringPtr("1.1.1.1")
+
+					errorList := ValidateGardenletConfiguration(cfg, nil, false)
+
+					Expect(errorList).To(BeEmpty())
+				})
+
+				It("should allow to use an external service ip as APIServerSNI feature gate is explicitly activated", func() {
+					cfg.ExposureClassHandlers[0].SNI.Ingress.ServiceExternalIP = pointer.StringPtr("1.1.1.1")
+					cfg.FeatureGates["APIServerSNI"] = true
 
 					errorList := ValidateGardenletConfiguration(cfg, nil, false)
 
