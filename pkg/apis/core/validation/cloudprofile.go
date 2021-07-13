@@ -158,7 +158,7 @@ func validateKubernetesSettings(kubernetes core.KubernetesSettings, fldPath *fie
 	if len(kubernetes.Versions) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("versions"), "must provide at least one Kubernetes version"))
 	}
-	latestKubernetesVersion, err := helper.DetermineLatestExpirableVersion(kubernetes.Versions, false)
+	latestKubernetesVersion, _, err := helper.DetermineLatestExpirableVersion(kubernetes.Versions, false)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("versions"), latestKubernetesVersion.Version, "failed to determine the latest kubernetes version from the cloud profile"))
 	}
