@@ -96,11 +96,14 @@ spec:
       - name: vpn-shoot
         secret:
           secretName: vpn-shoot
+          defaultMode: 0400
       - name: vpn-shoot-tlsauth
         secret:
           secretName: vpn-shoot-tlsauth
+          defaultMode: 0400
       {{- if not .Values.reversedVPN.enabled }}
       - name: vpn-shoot-dh
         secret:
           secretName: vpn-shoot-dh
+          defaultMode: 0400
       {{- end }}

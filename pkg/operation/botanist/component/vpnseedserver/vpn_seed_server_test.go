@@ -308,7 +308,8 @@ var _ = Describe("VpnSeedServer", func() {
 									Name: DeploymentName,
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName: DeploymentName,
+											SecretName:  DeploymentName,
+											DefaultMode: pointer.Int32(0400),
 										},
 									},
 								},
@@ -316,7 +317,8 @@ var _ = Describe("VpnSeedServer", func() {
 									Name: VpnSeedServerTLSAuth,
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName: VpnSeedServerTLSAuth,
+											SecretName:  VpnSeedServerTLSAuth,
+											DefaultMode: pointer.Int32(0400),
 										},
 									},
 								},
@@ -324,7 +326,8 @@ var _ = Describe("VpnSeedServer", func() {
 									Name: "vpn-seed-server-dh",
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName: "vpn-seed-server-dh",
+											SecretName:  "vpn-seed-server-dh",
+											DefaultMode: pointer.Int32(0400),
 										},
 									},
 								},
