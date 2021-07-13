@@ -106,7 +106,7 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on bucket secret: %+v", err)
 	}
 
-	r.logger.Info("Starting the reconciliation of backupbucket", "backupbucket", bb.Name)
+	r.logger.Info("Starting the reconciliation of backupbucket", "backupbucket", kutil.ObjectName(bb))
 	if err := r.actuator.Reconcile(ctx, bb); err != nil {
 		_ = r.statusUpdater.Error(ctx, bb, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling backupbucket")
 		return extensionscontroller.ReconcileErr(err)
@@ -121,7 +121,7 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 
 func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBucket) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(bb, FinalizerName) {
-		r.logger.Info("Deleting backupbucket causes a no-op as there is no finalizer.", "backupbucket", bb.Name)
+		r.logger.Info("Deleting backupbucket causes a no-op as there is no finalizer", "backupbucket", kutil.ObjectName(bb))
 		return reconcile.Result{}, nil
 	}
 
@@ -130,7 +130,7 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Starting the deletion of backupbucket", "backupbucket", bb.Name)
+	r.logger.Info("Starting the deletion of backupbucket", "backupbucket", kutil.ObjectName(bb))
 	if err := r.actuator.Delete(ctx, bb); err != nil {
 		_ = r.statusUpdater.Error(ctx, bb, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error deleting backupbucket")
 		return extensionscontroller.ReconcileErr(err)
@@ -148,7 +148,7 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer on bucket secret: %+v", err)
 	}
 
-	r.logger.Info("Removing finalizer.", "backupbucket", bb.Name)
+	r.logger.Info("Removing finalizer", "backupbucket", kutil.ObjectName(bb))
 	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, bb, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from backupbucket: %+v", err)
 	}

@@ -32,6 +32,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type reconciler struct {
@@ -88,7 +89,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if extensionscontroller.IsFailed(cluster) {
-		r.logger.Info("Stop reconciling Network of failed Shoot.", "namespace", request.Namespace, "name", network.Name)
+		r.logger.Info("Skipping the reconciliation of network of failed shoot", "network", kutil.ObjectName(network))
 		return reconcile.Result{}, nil
 	}
 
@@ -117,6 +118,7 @@ func (r *reconciler) reconcile(ctx context.Context, network *extensionsv1alpha1.
 		return reconcile.Result{}, err
 	}
 
+	r.logger.Info("Starting the reconciliation of network", "network", kutil.ObjectName(network))
 	if err := r.actuator.Reconcile(ctx, network, cluster); err != nil {
 		_ = r.statusUpdater.Error(ctx, network, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling network")
 		return extensionscontroller.ReconcileErr(err)
@@ -148,7 +150,7 @@ func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Ne
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, network, v1beta1constants.GardenerOperation); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing annotation from Network: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from network: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -156,7 +158,7 @@ func (r *reconciler) restore(ctx context.Context, network *extensionsv1alpha1.Ne
 
 func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Network, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(network, FinalizerName) {
-		r.logger.Info("Deleting network causes a no-op as there is no finalizer.", "network", network.Name)
+		r.logger.Info("Deleting network causes a no-op as there is no finalizer", "network", kutil.ObjectName(network))
 		return reconcile.Result{}, nil
 	}
 
@@ -164,7 +166,7 @@ func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Net
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Starting the deletion of network", "network", network.Name)
+	r.logger.Info("Starting the deletion of network", "network", kutil.ObjectName(network))
 	if err := r.actuator.Delete(ctx, network, cluster); err != nil {
 		_ = r.statusUpdater.Error(ctx, network, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting network")
 		return extensionscontroller.ReconcileErr(err)
@@ -176,7 +178,7 @@ func (r *reconciler) delete(ctx context.Context, network *extensionsv1alpha1.Net
 
 	r.logger.Info("Removing finalizer.", "network", network.Name)
 	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, network, FinalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizer from the Network resource: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("error removing finalizer from the network: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -196,13 +198,13 @@ func (r *reconciler) migrate(ctx context.Context, network *extensionsv1alpha1.Ne
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Removing all finalizers.", "network", network.Name)
+	r.logger.Info("Removing all finalizers", "network", kutil.ObjectName(network))
 	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, network); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizers from the Network resource: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("error removing finalizers from the network: %+v", err)
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, network, v1beta1constants.GardenerOperation); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing annotation from Network: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from network: %+v", err)
 	}
 
 	return reconcile.Result{}, nil

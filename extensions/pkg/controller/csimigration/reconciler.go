@@ -82,7 +82,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if extensionscontroller.IsShootFailed(shoot) {
-		r.logger.Info("Stop CSI migration of failed Shoot.", "namespace", request.Namespace, "name", shoot.Name)
+		r.logger.Info("Skipping the reconciliation of csimigration of failed shoot", "csimigration", kutil.ObjectName(shoot))
 		return reconcile.Result{}, nil
 	}
 
@@ -90,7 +90,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	r.logger.Info("CSI migration controller got called with cluster", "name", cluster.Name)
+	r.logger.Info("CSI migration controller got called with cluster", "csimigration", kutil.ObjectName(cluster))
 
 	return r.reconcile(ctx, cluster, shoot)
 }
@@ -108,7 +108,7 @@ func (r *reconciler) reconcile(ctx context.Context, cluster *extensionsv1alpha1.
 				return reconcile.Result{}, err
 			}
 
-			r.logger.Info("CSI migration controller detected new shoot cluster with minimum CSI migration Kubernetes version - adding both annotations", "name", cluster.Name)
+			r.logger.Info("CSI migration controller detected new shoot cluster with minimum CSI migration Kubernetes version - adding both annotations", "cismigration", kutil.ObjectName(cluster))
 
 			metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, AnnotationKeyNeedsComplete, "true")
 			metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, AnnotationKeyControllerFinished, "true")
@@ -137,12 +137,12 @@ func (r *reconciler) reconcile(ctx context.Context, cluster *extensionsv1alpha1.
 
 		// At this point the version is equal to the minimum Kubernetes version that introduces CSI, hence, let's start
 		// our migration flow.
-		r.logger.Info("CSI migration controller detected existing shoot cluster with minimum Kubernetes version - starting migration", "name", cluster.Name)
+		r.logger.Info("CSI migration controller detected existing shoot cluster with minimum Kubernetes version - starting migration", "csimigrations", kutil.ObjectName(cluster))
 
 		// If the shoot is hibernated then we wait until the cluster gets woken up again so that the kube-controller-manager
 		// can perform the CSI migration steps.
 		if extensionscontroller.IsHibernated(&extensionscontroller.Cluster{Shoot: shoot}) {
-			r.logger.Info("Shoot cluster is hibernated - doing nothing until it gets woken up", "name", cluster.Name)
+			r.logger.Info("Shoot cluster is hibernated - doing nothing until it gets woken up", "csimigration", kutil.ObjectName(cluster))
 			return reconcile.Result{}, nil
 		}
 
@@ -167,7 +167,7 @@ func (r *reconciler) reconcile(ctx context.Context, cluster *extensionsv1alpha1.
 			// At least one kubelet is of a version lower than our minimum version - requeueing and waiting until all
 			// kubelets are updated.
 			if !kubeletVersionAtLeastMinimum {
-				r.logger.Info("At least one kubelet was not yet updated to the minimum Kubernetes version - requeuing", "name", cluster.Name, "nodeName", node.Name)
+				r.logger.Info("At least one kubelet was not yet updated to the minimum Kubernetes version - requeuing", "csimigration", kutil.ObjectName(cluster), "nodeName", node.Name)
 				return reconcile.Result{RequeueAfter: RequeueAfter}, nil
 			}
 		}
@@ -182,7 +182,7 @@ func (r *reconciler) reconcile(ctx context.Context, cluster *extensionsv1alpha1.
 
 		for _, storageClass := range storageClassList.Items {
 			if legacyProvisioner, ok := r.storageClassNameToLegacyProvisioner[storageClass.Name]; ok && storageClass.Provisioner == legacyProvisioner {
-				r.logger.Info("Deleting storage class using legacy provisioner", "name", cluster.Name, "storageClassName", storageClass.Name)
+				r.logger.Info("Deleting storage class using legacy provisioner", "csimigration", kutil.ObjectName(cluster), "storageclassname", storageClass.Name)
 				if err := shootClient.Delete(ctx, storageClass.DeepCopy()); client.IgnoreNotFound(err) != nil {
 					return reconcile.Result{}, err
 				}
@@ -203,7 +203,7 @@ func (r *reconciler) reconcile(ctx context.Context, cluster *extensionsv1alpha1.
 		v1beta1constants.DeploymentNameKubeControllerManager,
 		v1beta1constants.DeploymentNameKubeScheduler,
 	} {
-		r.logger.Info("Submitting empty PATCH for control plane component deployment", "name", cluster.Name, "deploymentName", deploymentName)
+		r.logger.Info("Submitting empty PATCH for control plane component deployment", "csimigration", kutil.ObjectName(cluster), "deploymentName", deploymentName)
 
 		obj := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -217,7 +217,7 @@ func (r *reconciler) reconcile(ctx context.Context, cluster *extensionsv1alpha1.
 		}
 	}
 
-	r.logger.Info("CSI migration completed successfully", "name", cluster.Name)
+	r.logger.Info("CSI migration completed successfully", "csimigration", kutil.ObjectName(cluster))
 
 	metav1.SetMetaDataAnnotation(&cluster.ObjectMeta, AnnotationKeyControllerFinished, "true")
 	return reconcile.Result{}, r.client.Update(ctx, cluster)

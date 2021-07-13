@@ -92,7 +92,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if extensionscontroller.IsShootFailed(shoot) {
-		r.logger.Info("Stop reconciling BackupEntry of failed Shoot.", "name", be.Name)
+		r.logger.Info("Skipping the reconciliation of backupentry of failed shoot", "name", kutil.ObjectName(be))
 		return reconcile.Result{}, nil
 	}
 
@@ -129,7 +129,7 @@ func (r *reconciler) reconcile(ctx context.Context, be *extensionsv1alpha1.Backu
 		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup entry secret: %+v", err)
 	}
 
-	r.logger.Info("Starting the reconciliation of backupentry", "backupentry", be.Name)
+	r.logger.Info("Starting the reconciliation of backupentry", "backupentry", kutil.ObjectName(be))
 	if err := r.actuator.Reconcile(ctx, be); err != nil {
 		_ = r.statusUpdater.Error(ctx, be, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling backupentry")
 		return extensionscontroller.ReconcileErr(err)
@@ -159,7 +159,7 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 		return reconcile.Result{}, fmt.Errorf("failed to ensure finalizer on backup entry secret: %+v", err)
 	}
 
-	r.logger.Info("Starting the restoration of backupentry", "backupentry", be.Name)
+	r.logger.Info("Starting the restoration of backupentry", "backupentry", kutil.ObjectName(be))
 	if err := r.actuator.Restore(ctx, be); err != nil {
 		_ = r.statusUpdater.Error(ctx, be, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring backupentry")
 		return extensionscontroller.ReconcileErr(err)
@@ -170,7 +170,7 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, be, v1beta1constants.GardenerOperation); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to remove the annotation from BackupEntry: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("failed to remove the annotation from backupentry: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -178,7 +178,7 @@ func (r *reconciler) restore(ctx context.Context, be *extensionsv1alpha1.BackupE
 
 func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEntry) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(be, FinalizerName) {
-		r.logger.Info("Deleting backupentry causes a no-op as there is no finalizer.", "backupentry", be.Name)
+		r.logger.Info("Deleting backupentry causes a no-op as there is no finalizer", "backupentry", kutil.ObjectName(be))
 		return reconcile.Result{}, nil
 	}
 
@@ -187,7 +187,7 @@ func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEn
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Starting the deletion of backupentry", "backupentry", be.Name)
+	r.logger.Info("Starting the deletion of backupentry", "backupentry", kutil.ObjectName(be))
 
 	secret, err := kutil.GetSecretByReference(ctx, r.client, &be.Spec.SecretRef)
 	if err != nil {
@@ -195,7 +195,7 @@ func (r *reconciler) delete(ctx context.Context, be *extensionsv1alpha1.BackupEn
 			return reconcile.Result{}, fmt.Errorf("failed to get backup entry secret: %+v", err)
 		}
 
-		r.logger.Info("Skipping deletion as referred secret does not exist any more - removing finalizer.", "backupentry", be.Name)
+		r.logger.Info("Skipping deletion as referred secret does not exist any more - removing finalizer", "backupentry", kutil.ObjectName(be))
 		if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, be, FinalizerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error removing finalizer from backupentry: %+v", err)
 		}
@@ -229,7 +229,7 @@ func (r *reconciler) migrate(ctx context.Context, be *extensionsv1alpha1.BackupE
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Starting the migration of backupentry", "backupentry", be.Name)
+	r.logger.Info("Starting the migration of backupentry", "backupentry", kutil.ObjectName(be))
 	if err := r.actuator.Migrate(ctx, be); err != nil {
 		_ = r.statusUpdater.Error(ctx, be, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating backupentry")
 		return extensionscontroller.ReconcileErr(err)
@@ -247,13 +247,13 @@ func (r *reconciler) migrate(ctx context.Context, be *extensionsv1alpha1.BackupE
 		return reconcile.Result{}, fmt.Errorf("failed to remove finalizer on backup entry secret: %+v", err)
 	}
 
-	r.logger.Info("Removing all finalizers.", "backupentry", be.Name)
+	r.logger.Info("Removing all finalizers", "backupentry", kutil.ObjectName(be))
 	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, be); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing all finalizers from backupentry: %+v", err)
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, be, v1beta1constants.GardenerOperation); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing annotation from BackupEntry: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("error removing annotation from backupentry: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
