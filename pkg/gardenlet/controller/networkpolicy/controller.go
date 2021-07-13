@@ -16,21 +16,21 @@ package networkpolicy
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/hostnameresolver"
+	"github.com/gardener/gardener/pkg/gardenlet"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -43,11 +43,11 @@ import (
 // to keep the NetworkPolicy "allow-to-seed-apiserver" in sync.
 type Controller struct {
 	ctx                     context.Context
-	log                     *logrus.Entry
+	log                     *logrus.Logger
 	recorder                record.EventRecorder
 	seedClient              client.Client
 	namespaceReconciler     reconcile.Reconciler
-	endpointsInformer       cache.SharedInformer
+	endpointsInformer       runtimecache.Informer
 	networkPoliciesInformer runtimecache.Informer
 	namespaceQueue          workqueue.RateLimitingInterface
 	namespaceInformer       runtimecache.Informer
@@ -58,8 +58,12 @@ type Controller struct {
 	waitGroup               sync.WaitGroup
 }
 
-// NewController instantiates a new controller.
-func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDefaultNamespaceKubeInformer kubeinformers.SharedInformerFactory, seedLogger *logrus.Entry, recorder record.EventRecorder, seedName string) (*Controller, error) {
+// NewController instantiates a new networkpolicy controller.
+func NewController(ctx context.Context, seedClient kubernetes.Interface, logger *logrus.Logger, recorder record.EventRecorder, seedName string) (*Controller, error) {
+	endpointsInformer, err := seedClient.Cache().GetInformer(ctx, &corev1.Endpoints{})
+	if err != nil {
+		return nil, err
+	}
 	networkPoliciesInformer, err := seedClient.Cache().GetInformer(ctx, &networkingv1.NetworkPolicy{})
 	if err != nil {
 		return nil, err
@@ -69,15 +73,10 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 		return nil, err
 	}
 
-	provider, err := hostnameresolver.CreateForCluster(seedClient, seedLogger)
+	provider, err := hostnameresolver.CreateForCluster(seedClient, logger)
 	if err != nil {
 		return nil, err
 	}
-
-	var (
-		endpointsInformer = seedDefaultNamespaceKubeInformer.Core().V1().Endpoints()
-		namespaceQueue    = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "namespace")
-	)
 
 	shootNamespaceSelector := labels.SelectorFromSet(labels.Set{
 		v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot,
@@ -85,28 +84,24 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 
 	controller := &Controller{
 		ctx: ctx,
-		log: seedLogger,
+		log: logger,
 		namespaceReconciler: newNamespaceReconciler(
-			seedLogger,
+			logger,
 			seedClient.Client(),
-			endpointsInformer.Lister(),
 			seedName,
 			shootNamespaceSelector,
 			provider,
 		),
 		recorder:                recorder,
 		seedClient:              seedClient.Client(),
-		endpointsInformer:       endpointsInformer.Informer(),
+		endpointsInformer:       endpointsInformer,
 		namespaceInformer:       namespaceInformer,
 		networkPoliciesInformer: networkPoliciesInformer,
-		namespaceQueue:          namespaceQueue,
+		namespaceQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "namespace"),
 		shootNamespaceSelector:  shootNamespaceSelector,
 		workerCh:                make(chan int),
 		hostnameProvider:        provider,
 	}
-
-	// start informer & sync caches
-	seedDefaultNamespaceKubeInformer.Start(ctx.Done())
 
 	go controller.hostnameProvider.Start(ctx)
 
@@ -114,7 +109,7 @@ func NewController(ctx context.Context, seedClient kubernetes.Interface, seedDef
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, workers int) error {
+func (c *Controller) Run(ctx context.Context, workers int) {
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*2)
 	defer cancel()
 
@@ -125,7 +120,8 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 		c.networkPoliciesInformer.HasSynced,
 		c.hostnameProvider.HasSynced,
 	) {
-		return fmt.Errorf("timeout waiting for informers to sync")
+		c.log.Fatal("timeout waiting for caches to sync")
+		return
 	}
 
 	c.hostnameProvider.WithCallback(func() {
@@ -138,7 +134,7 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 			if !ok {
 				return false
 			}
-			return endpoints.Name == "kubernetes"
+			return endpoints.Namespace == corev1.NamespaceDefault && endpoints.Name == "kubernetes"
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    c.endpointAdd,
@@ -177,8 +173,6 @@ func (c *Controller) Run(ctx context.Context, workers int) error {
 	}
 
 	c.log.Info("Seed API server network policy controller initialized.")
-
-	return nil
 }
 
 // Stop the controller
@@ -200,4 +194,14 @@ func (c *Controller) Stop() {
 // RunningWorkers returns the number of running workers.
 func (c *Controller) RunningWorkers() int {
 	return c.numberOfRunningWorkers
+}
+
+// CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
+func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
+	metric, err := prometheus.NewConstMetric(gardenlet.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "extensions")
+	if err != nil {
+		gardenlet.ScrapeFailures.With(prometheus.Labels{"kind": "extensions-controller"}).Inc()
+		return
+	}
+	ch <- metric
 }

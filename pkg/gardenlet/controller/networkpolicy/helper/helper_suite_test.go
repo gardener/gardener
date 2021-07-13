@@ -23,5 +23,5 @@ import (
 
 func TestHelper(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardenlet FederatedSeed Controller NetworkPolicy Helper Suite")
+	RunSpecs(t, "Gardenlet NetworkPolicy Controller Helper Suite")
 }

@@ -23,5 +23,5 @@ import (
 
 func TestExtensionControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardenlet Federated Extension Controller Suite")
+	RunSpecs(t, "Gardenlet Extension Controller Suite")
 }
