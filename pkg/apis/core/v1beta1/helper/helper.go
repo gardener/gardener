@@ -897,10 +897,22 @@ func toExpirableVersions(versions []gardencorev1beta1.MachineImageVersion) []gar
 	return expVersions
 }
 
-// GetLatestQualifyingShootMachineImage determines the latest qualifying version in a machine image and returns that as a ShootMachineImage
+// GetLatestQualifyingShootMachineImage determines the latest qualifying version in a machine image and returns that as a ShootMachineImage.
 // A version qualifies if its classification is not preview and the version is not expired.
+// Older but non-deprecated version is preferred over newer but deprecated one.
 func GetLatestQualifyingShootMachineImage(image gardencorev1beta1.MachineImage, predicates ...VersionPredicate) (bool, *gardencorev1beta1.ShootMachineImage, error) {
 	predicates = append(predicates, FilterExpiredVersion())
+
+	// Try to find non-deprecated version first
+	qualifyingVersionFound, latestNonDeprecatedImageVersion, err := GetLatestQualifyingVersion(toExpirableVersions(image.Versions), append(predicates, FilterDeprecatedVersion())...)
+	if err != nil {
+		return false, nil, err
+	}
+	if qualifyingVersionFound {
+		return true, &gardencorev1beta1.ShootMachineImage{Name: image.Name, Version: &latestNonDeprecatedImageVersion.Version}, nil
+	}
+
+	// It looks like there is no non-deprecated version, now look also into the deprecated versions
 	qualifyingVersionFound, latestImageVersion, err := GetLatestQualifyingVersion(toExpirableVersions(image.Versions), predicates...)
 	if err != nil {
 		return false, nil, err
@@ -1124,7 +1136,7 @@ func FilterNonConsecutiveMinorVersion(currentSemVerVersion semver.Version) Versi
 }
 
 // FilterSameVersion returns a VersionPredicate(closure) that evaluates whether a given version v is equal to the currentSemVerVersion
-// returns true it it is equal
+// returns true if it is equal
 func FilterSameVersion(currentSemVerVersion semver.Version) VersionPredicate {
 	return func(_ gardencorev1beta1.ExpirableVersion, v *semver.Version) (bool, error) {
 		return v.Equal(&currentSemVerVersion), nil
@@ -1140,10 +1152,18 @@ func FilterLowerVersion(currentSemVerVersion semver.Version) VersionPredicate {
 }
 
 // FilterExpiredVersion returns a closure that evaluates whether a given expirable version is expired
-// returns true it it is expired
+// returns true if it is expired
 func FilterExpiredVersion() func(expirableVersion gardencorev1beta1.ExpirableVersion, version *semver.Version) (bool, error) {
 	return func(expirableVersion gardencorev1beta1.ExpirableVersion, _ *semver.Version) (bool, error) {
 		return expirableVersion.ExpirationDate != nil && (time.Now().UTC().After(expirableVersion.ExpirationDate.UTC()) || time.Now().UTC().Equal(expirableVersion.ExpirationDate.UTC())), nil
+	}
+}
+
+// FilterDeprecatedVersion returns a closure that evaluates whether a given expirable version is deprecated
+// returns true if it is deprecated
+func FilterDeprecatedVersion() func(expirableVersion gardencorev1beta1.ExpirableVersion, version *semver.Version) (bool, error) {
+	return func(expirableVersion gardencorev1beta1.ExpirableVersion, _ *semver.Version) (bool, error) {
+		return expirableVersion.Classification != nil && *expirableVersion.Classification == gardencorev1beta1.ClassificationDeprecated, nil
 	}
 }
 
