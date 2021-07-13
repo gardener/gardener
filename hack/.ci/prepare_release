@@ -61,7 +61,7 @@ export GOHOSTOS="$GOOS" \
   GOHOSTARCH="$GOARCH"
 cd /usr/local/go/src
 echo "Executing make on go $GOLANG_VERSION"
-./make.bash -v
+./make.bash
 
 echo "Deleting the virtual package for go"
 apk del --no-network .build-deps
