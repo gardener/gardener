@@ -32,6 +32,11 @@ func (b *Botanist) DefaultMetricsServer() (metricsserver.Interface, error) {
 		return nil, err
 	}
 
+	sideCar, err := b.ImageVector.FindImage(charts.ImageNameAddonResizer, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return nil, err
+	}
+
 	var kubeAPIServerHost *string
 	if b.APIServerSNIEnabled() {
 		kubeAPIServerHost = pointer.String(b.outOfClusterAPIServerFQDN())
@@ -41,8 +46,8 @@ func (b *Botanist) DefaultMetricsServer() (metricsserver.Interface, error) {
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
 		image.String(),
-		b.Shoot.WantsVerticalPodAutoscaler,
 		kubeAPIServerHost,
+		sideCar.String(),
 	), nil
 }
 
