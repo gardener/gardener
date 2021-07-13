@@ -88,14 +88,14 @@ func mustIncreaseGeneration(oldShoot, newShoot *core.Shoot) bool {
 				mustIncrease = true
 			}
 		default:
-			// The shoot state is not failed and the reconcile or rotate-credentials annotation is set.
+			// The shoot state is not failed and the reconcile or rotate-credentials/rotate-ssh-keypair annotations are set.
 			if val, ok := newShoot.Annotations[v1beta1constants.GardenerOperation]; ok {
 				if val == v1beta1constants.GardenerOperationReconcile {
 					mustIncrease = true
 				}
-				if val == v1beta1constants.ShootOperationRotateKubeconfigCredentials {
-					// We don't want to remove the annotation so that the controller-manager can pick it up and rotate
-					// the credentials. It has to remove the annotation after it is done.
+				if val == v1beta1constants.ShootOperationRotateKubeconfigCredentials || val == v1beta1constants.ShootOperationRotateSSHKeypair {
+					// We don't want to remove the annotation so that the controller-manager can pick it up and perform
+					// the rotation. It has to remove the annotation after it is done.
 					return true
 				}
 			}

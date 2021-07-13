@@ -55,7 +55,7 @@ var _ = Describe("Original", func() {
 			kubeletConfigParameters = components.ConfigurableKubeletConfigParameters{}
 			kubeletDataVolumeName   = pointer.String("datavolname")
 			kubernetesVersion       = semver.MustParse("1.2.3")
-			sshPublicKey            = "ssh-public-key"
+			sshPublicKeys           = []string{"ssh-public-key-a", "ssh-public-key-b"}
 
 			ctx = components.Context{
 				CABundle:                caBundle,
@@ -66,7 +66,7 @@ var _ = Describe("Original", func() {
 				KubeletConfigParameters: kubeletConfigParameters,
 				KubeletDataVolumeName:   kubeletDataVolumeName,
 				KubernetesVersion:       kubernetesVersion,
-				SSHPublicKey:            sshPublicKey,
+				SSHPublicKeys:           sshPublicKeys,
 			}
 
 			unit1 = extensionsv1alpha1.Unit{Name: "1"}

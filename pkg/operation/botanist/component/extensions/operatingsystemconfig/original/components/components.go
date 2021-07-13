@@ -41,7 +41,7 @@ type Context struct {
 	KubeletConfigParameters ConfigurableKubeletConfigParameters
 	KubeletDataVolumeName   *string
 	KubernetesVersion       *semver.Version
-	SSHPublicKey            string
+	SSHPublicKeys           []string
 	LokiIngress             string
 	PromtailRBACAuthToken   string
 }

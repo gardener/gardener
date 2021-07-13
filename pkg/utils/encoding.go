@@ -29,11 +29,7 @@ import (
 
 // EncodeBase64 takes a byte slice and returns the Base64-encoded string.
 func EncodeBase64(in []byte) string {
-	encodedLength := base64.StdEncoding.EncodedLen(len(in))
-	buffer := make([]byte, encodedLength)
-	out := buffer[0:encodedLength]
-	base64.StdEncoding.Encode(out, in)
-	return string(out)
+	return base64.StdEncoding.EncodeToString(in)
 }
 
 // DecodeBase64 takes a Base64-encoded string and returns the decoded byte slice.

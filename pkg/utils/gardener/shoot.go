@@ -159,6 +159,8 @@ const (
 	ShootProjectSecretSuffixKubeconfig = "kubeconfig"
 	// ShootProjectSecretSuffixSSHKeypair is a constant for a shoot project secret with suffix 'ssh-keypair'.
 	ShootProjectSecretSuffixSSHKeypair = v1beta1constants.SecretNameSSHKeyPair
+	// ShootProjectSecretSuffixOldSSHKeypair is a constant for a shoot project secret with suffix 'ssh-keypair.old'.
+	ShootProjectSecretSuffixOldSSHKeypair = v1beta1constants.SecretNameOldSSHKeyPair
 	// ShootProjectSecretSuffixMonitoring is a constant for a shoot project secret with suffix 'monitoring'.
 	ShootProjectSecretSuffixMonitoring = "monitoring"
 )
@@ -168,6 +170,7 @@ func GetShootProjectSecretSuffixes() []string {
 	return []string{
 		ShootProjectSecretSuffixKubeconfig,
 		ShootProjectSecretSuffixSSHKeypair,
+		ShootProjectSecretSuffixOldSSHKeypair,
 		ShootProjectSecretSuffixMonitoring,
 	}
 }
