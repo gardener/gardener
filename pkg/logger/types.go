@@ -12,16 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package scheduler
+package logger
 
-import (
-	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
+const (
+	DebugLevel = "debug"
+	InfoLevel  = "info"
+	ErrorLevel = "error"
 )
 
 var (
-	// ControllerWorkerSum is a metric descriptor which collects the current amount of workers per controller.
-	ControllerWorkerSum = gardenmetrics.NewMetricDescriptor("garden_scheduler_worker_amount", "Count of currently running controller workers")
-
-	// ScrapeFailures is a metric descriptor which counts the amount scrape issues grouped by kind.
-	ScrapeFailures = gardenmetrics.NewCounterVec("garden_scheduler_scrape_failure_total", "Total count of scraping failures, grouped by kind/group of metric(s)")
+	AllLogLevels = []string{DebugLevel, InfoLevel, ErrorLevel}
 )
