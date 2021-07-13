@@ -66,7 +66,7 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 	}
 	seedDNSServerAddress, err := common.ComputeOffsetIP(seedServiceCIDR, 10)
 	if err != nil {
-		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %v", err)
+		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
 	}
 
 	return NewNetworkPoliciesDeployer(

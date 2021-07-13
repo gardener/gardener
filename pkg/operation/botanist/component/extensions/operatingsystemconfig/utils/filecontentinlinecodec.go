@@ -15,10 +15,10 @@
 package utils
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cloudinit"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
-	"github.com/pkg/errors"
 )
 
 // FileContentInlineCodec contains methods for encoding and decoding byte slices
@@ -48,7 +48,7 @@ func (c *fileContentInlineCodec) Encode(data []byte, encoding string) (*extensio
 	// Encode data using the file codec, if needed
 	if fileCodec != nil {
 		if data, err = fileCodec.Encode(data); err != nil {
-			return nil, errors.Wrap(err, "could not encode data using file codec")
+			return nil, fmt.Errorf("could not encode data using file codec: %w", err)
 		}
 	}
 
@@ -71,7 +71,7 @@ func (c *fileContentInlineCodec) Decode(fci *extensionsv1alpha1.FileContentInlin
 	// Decode data using the file codec, if needed
 	if fileCodec != nil {
 		if data, err = fileCodec.Decode(data); err != nil {
-			return nil, errors.Wrap(err, "could not decode data using file codec")
+			return nil, fmt.Errorf("could not decode data using file codec: %w", err)
 		}
 	}
 
@@ -84,7 +84,7 @@ func getFileCodec(encoding string) (cloudinit.FileCodec, error) {
 	}
 	fileCodecID, err := cloudinit.ParseFileCodecID(encoding)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not parse file codec ID '%s'", encoding)
+		return nil, fmt.Errorf("could not parse file codec ID '%s': %w", encoding, err)
 	}
 	return cloudinit.FileCodecForID(fileCodecID), nil
 }

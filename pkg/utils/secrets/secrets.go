@@ -16,10 +16,10 @@ package secrets
 
 import (
 	"context"
+	"fmt"
 
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -58,14 +58,14 @@ func (s *Secrets) Deploy(
 	// Generate CAs
 	_, cas, err := GenerateCertificateAuthorities(ctx, gcs, existingSecrets, s.CertificateSecretConfigs, namespace)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not generate CA secrets in namespace '%s'", namespace)
+		return nil, fmt.Errorf("could not generate CA secrets in namespace '%s': %w", namespace, err)
 	}
 
 	// Generate cluster secrets
 	secretConfigs := s.SecretConfigsFunc(cas, namespace)
 	clusterSecrets, err := GenerateClusterSecrets(ctx, gcs, existingSecrets, secretConfigs, namespace)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not generate cluster secrets in namespace '%s'", namespace)
+		return nil, fmt.Errorf("could not generate cluster secrets in namespace '%s': %w", namespace, err)
 	}
 
 	return clusterSecrets, nil
@@ -84,7 +84,7 @@ func (s *Secrets) Delete(ctx context.Context, cs kubernetes.Interface, namespace
 func getSecrets(ctx context.Context, cs kubernetes.Interface, namespace string) (map[string]*corev1.Secret, error) {
 	secretList, err := cs.CoreV1().Secrets(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not list secrets in namespace '%s'", namespace)
+		return nil, fmt.Errorf("could not list secrets in namespace '%s': %w", namespace, err)
 	}
 	result := make(map[string]*corev1.Secret, len(secretList.Items))
 	for _, secret := range secretList.Items {

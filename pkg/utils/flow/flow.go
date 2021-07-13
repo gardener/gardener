@@ -25,7 +25,6 @@ import (
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -227,11 +226,11 @@ func (e *execution) runNode(ctx context.Context, id TaskID) {
 
 		if err != nil {
 			log.WithError(err).Error("Error")
+			err = fmt.Errorf("task %q failed: %w", id, err)
 		} else {
 			log.Info("Succeeded")
 		}
 
-		err = errors.Wrapf(err, "task %q failed", id)
 		e.done <- &nodeResult{TaskID: id, Error: err}
 	}()
 }
@@ -380,7 +379,7 @@ func Causes(err error) *multierror.Error {
 		causes = make([]error, 0, len(errs))
 	)
 	for _, err := range errs {
-		causes = append(causes, errors.Cause(err))
+		causes = append(causes, utilerrors.Unwrap(err))
 	}
 	return &multierror.Error{Errors: causes}
 }

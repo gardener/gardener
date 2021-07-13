@@ -95,14 +95,14 @@ func (h *DefaultHealthChecker) DeepCopy() healthcheck.HealthCheck {
 func (h *DefaultHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
 	machineDeploymentList := &machinev1alpha1.MachineDeploymentList{}
 	if err := h.seedClient.List(ctx, machineDeploymentList, client.InNamespace(request.Namespace)); err != nil {
-		err := fmt.Errorf("unable to check nodes. Failed to list machine deployments in namespace %q: %v", request.Namespace, err)
+		err := fmt.Errorf("unable to check nodes. Failed to list machine deployments in namespace %q: %w", request.Namespace, err)
 		h.logger.Error(err, "Health check failed")
 		return nil, err
 	}
 
 	nodeList := &corev1.NodeList{}
 	if err := h.shootClient.List(ctx, nodeList); err != nil {
-		err := fmt.Errorf("unable to check nodes. Failed to list shoot nodes: %v", err)
+		err := fmt.Errorf("unable to check nodes. Failed to list shoot nodes: %w", err)
 		h.logger.Error(err, "Health check failed")
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (h *DefaultHealthChecker) Check(ctx context.Context, request types.Namespac
 	machineList := &machinev1alpha1.MachineList{}
 	if registeredNodes != desiredMachines || readyNodes != desiredMachines {
 		if err := h.seedClient.List(ctx, machineList, client.InNamespace(request.Namespace)); err != nil {
-			err := fmt.Errorf("unable to check nodes. Failed to list machines in namespace %q: %v", request.Namespace, err)
+			err := fmt.Errorf("unable to check nodes. Failed to list machines in namespace %q: %w", request.Namespace, err)
 			h.logger.Error(err, "Health check failed")
 			return nil, err
 		}

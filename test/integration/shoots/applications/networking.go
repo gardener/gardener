@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 	"github.com/hashicorp/go-multierror"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -86,7 +85,7 @@ var _ = ginkgo.Describe("Shoot network testing", func() {
 				ginkgo.By(fmt.Sprintf("Testing %s to %s", from.GetName(), to.GetName()))
 				reader, err := podExecutor.Execute(ctx, from.Namespace, from.Name, "net-curl", fmt.Sprintf("curl -L %s:80 --fail -m 10", to.Status.PodIP))
 				if err != nil {
-					res = multierror.Append(res, errors.Wrapf(err, "%s to %s", from.GetName(), to.GetName()))
+					res = multierror.Append(res, fmt.Errorf("%s to %s: %w", from.GetName(), to.GetName(), err))
 					continue
 				}
 				data, err := io.ReadAll(reader)

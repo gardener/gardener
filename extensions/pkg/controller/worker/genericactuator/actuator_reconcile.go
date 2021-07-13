@@ -16,13 +16,13 @@ package genericactuator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -52,7 +52,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {
-		return errors.Wrapf(err, "could not instantiate actuator context")
+		return fmt.Errorf("could not instantiate actuator context: %w", err)
 	}
 
 	// If the shoot is hibernated then we want to scale down the machine-controller-manager. However, we want to first allow it to delete
@@ -72,7 +72,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 
 	// Deploy machine dependencies.
 	if err := workerDelegate.DeployMachineDependencies(ctx); err != nil {
-		return errors.Wrap(err, "failed to deploy machine dependencies")
+		return fmt.Errorf("failed to deploy machine dependencies: %w", err)
 	}
 
 	// Deploy the machine-controller-manager into the cluster.
@@ -84,7 +84,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	logger.Info("Generating machine deployments")
 	wantedMachineDeployments, err := workerDelegate.GenerateMachineDeployments(ctx)
 	if err != nil {
-		return errors.Wrapf(err, "failed to generate the machine deployments")
+		return fmt.Errorf("failed to generate the machine deployments: %w", err)
 	}
 
 	var clusterAutoscalerUsed = extensionsv1alpha1helper.ClusterAutoscalerRequired(worker.Spec.Pools)
@@ -107,23 +107,23 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	// Deploy generated machine classes.
 	logger.Info("Deploying machine classes")
 	if err := workerDelegate.DeployMachineClasses(ctx); err != nil {
-		return errors.Wrapf(err, "failed to deploy the machine classes")
+		return fmt.Errorf("failed to deploy the machine classes: %w", err)
 	}
 
 	if workerCredentialsDelegate, ok := workerDelegate.(WorkerCredentialsDelegate); ok {
 		// Update cloud credentials for all existing machine class secrets
 		cloudCredentials, err := workerCredentialsDelegate.GetMachineControllerManagerCloudCredentials(ctx)
 		if err != nil {
-			return errors.Wrapf(err, "failed to get the cloud credentials in namespace %s", worker.Namespace)
+			return fmt.Errorf("failed to get the cloud credentials in namespace %s: %w", worker.Namespace, err)
 		}
 		if err = a.updateCloudCredentialsInAllMachineClassSecrets(ctx, logger, cloudCredentials, worker.Namespace); err != nil {
-			return errors.Wrapf(err, "failed to update cloud credentials in machine class secrets for namespace %s", worker.Namespace)
+			return fmt.Errorf("failed to update cloud credentials in machine class secrets for namespace %s: %w", worker.Namespace, err)
 		}
 	}
 
 	// Update the machine images in the worker provider status.
 	if err := workerDelegate.UpdateMachineImagesStatus(ctx); err != nil {
-		return errors.Wrapf(err, "failed to update the machine image status")
+		return fmt.Errorf("failed to update the machine image status: %w", err)
 	}
 
 	// Get the list of all existing machine deployments.
@@ -139,7 +139,7 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 
 	// Generate machine deployment configuration based on previously computed list of deployments and deploy them.
 	if err := a.deployMachineDeployments(ctx, logger, cluster, worker, existingMachineDeployments, wantedMachineDeployments, workerDelegate.MachineClassKind(), clusterAutoscalerUsed); err != nil {
-		return errors.Wrapf(err, "failed to generate the machine deployment config")
+		return fmt.Errorf("failed to generate the machine deployment config: %w", err)
 	}
 
 	// Wait until all generated machine deployments are healthy/available.
@@ -154,12 +154,12 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 		if isStuck {
 			podList := corev1.PodList{}
 			if err2 := a.client.List(ctx, &podList, client.InNamespace(worker.Namespace), client.MatchingLabels{"role": "machine-controller-manager"}); err2 != nil {
-				return errors.Wrapf(err2, "failed to list machine controller manager pods for worker (%s/%s)", worker.Namespace, worker.Name)
+				return fmt.Errorf("failed to list machine controller manager pods for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
 			}
 
 			for _, pod := range podList.Items {
 				if err2 := a.client.Delete(ctx, &pod); err2 != nil {
-					return errors.Wrapf(err2, "failed to delete stuck machine controller manager pod for worker (%s/%s)", worker.Namespace, worker.Name)
+					return fmt.Errorf("failed to delete stuck machine controller manager pod for worker (%s/%s): %w", worker.Namespace, worker.Name, err2)
 				}
 			}
 			logger.Info("Successfully deleted stuck machine controller manager pod", "reason", msg)
@@ -170,34 +170,34 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 
 	// Delete all old machine deployments (i.e. those which were not previously computed but exist in the cluster).
 	if err := a.cleanupMachineDeployments(ctx, logger, existingMachineDeployments, wantedMachineDeployments); err != nil {
-		return errors.Wrapf(err, "failed to cleanup the machine deployments")
+		return fmt.Errorf("failed to cleanup the machine deployments: %w", err)
 	}
 
 	// Delete all old machine classes (i.e. those which were not previously computed but exist in the cluster).
 	if err := a.cleanupMachineClasses(ctx, logger, worker.Namespace, workerDelegate.MachineClassList(), wantedMachineDeployments); err != nil {
-		return errors.Wrapf(err, "failed to cleanup the machine classes")
+		return fmt.Errorf("failed to cleanup the machine classes: %w", err)
 	}
 
 	// Delete all old machine class secrets (i.e. those which were not previously computed but exist in the cluster).
 	if err := a.cleanupMachineClassSecrets(ctx, logger, worker.Namespace, wantedMachineDeployments); err != nil {
-		return errors.Wrapf(err, "failed to cleanup the orphaned machine class secrets")
+		return fmt.Errorf("failed to cleanup the orphaned machine class secrets: %w", err)
 	}
 
 	replicas, err := replicaFunc()
 	if err != nil {
-		return errors.Wrapf(err, "failed to get machine-controller-manager replicas")
+		return fmt.Errorf("failed to get machine-controller-manager replicas: %w", err)
 	}
 
 	if replicas > 0 {
 		// Wait until all unwanted machine deployments are deleted from the system.
 		if err := a.waitUntilUnwantedMachineDeploymentsDeleted(ctx, logger, worker, wantedMachineDeployments); err != nil {
-			return errors.Wrapf(err, "error while waiting for all undesired machine deployments to be deleted")
+			return fmt.Errorf("error while waiting for all undesired machine deployments to be deleted: %w", err)
 		}
 	}
 
 	// Delete MachineSets having number of desired and actual replicas equaling 0
 	if err := a.cleanupMachineSets(ctx, logger, worker.Namespace); err != nil {
-		return errors.Wrapf(err, "failed to cleanup the machine sets")
+		return fmt.Errorf("failed to cleanup the machine sets: %w", err)
 	}
 
 	// Scale down machine-controller-manager if shoot is hibernated.
@@ -214,12 +214,12 @@ func (a *genericActuator) Reconcile(ctx context.Context, worker *extensionsv1alp
 	}
 
 	if err := a.updateWorkerStatusMachineDeployments(ctx, worker, wantedMachineDeployments, false); err != nil {
-		return errors.Wrapf(err, "failed to update the machine deployments in worker status")
+		return fmt.Errorf("failed to update the machine deployments in worker status: %w", err)
 	}
 
 	// Cleanup machine dependencies.
 	if err := workerDelegate.CleanupMachineDependencies(ctx); err != nil {
-		return errors.Wrap(err, "failed to cleanup machine dependencies")
+		return fmt.Errorf("failed to cleanup machine dependencies: %w", err)
 	}
 
 	return nil
@@ -245,7 +245,7 @@ func (a *genericActuator) deployMachineDeployments(ctx context.Context, logger l
 		case controller.IsHibernated(cluster):
 			replicas = 0
 			if err := a.markAllMachinesForcefulDeletion(ctx, logger, worker.Namespace); err != nil {
-				return errors.Wrapf(err, "marking all machines for forceful deletion failed")
+				return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
 			}
 		// If the cluster autoscaler is not enabled then min=max (as per API validation), hence
 		// we can use either min or max.
@@ -429,7 +429,7 @@ func (a *genericActuator) waitUntilWantedMachineDeploymentsAvailable(ctx context
 			// update worker status with condition that indicates an ongoing rolling update operation
 			if !workerStatusUpdatedForRollingUpdate {
 				if err := a.updateWorkerStatusMachineDeployments(ctx, worker, extensionsworker.MachineDeployments{}, true); err != nil {
-					return retryutils.SevereError(errors.Wrapf(err, "failed to update the machine status rolling update condition"))
+					return retryutils.SevereError(fmt.Errorf("failed to update the machine status rolling update condition: %w", err))
 				}
 				workerStatusUpdatedForRollingUpdate = true
 			}

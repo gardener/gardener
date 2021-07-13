@@ -16,10 +16,10 @@ package gardenerkubescheduler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -112,7 +112,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 
 	componentConfigYAML, componentConfigChecksum, err := k.config.Config()
 	if err != nil {
-		return errors.Wrap(err, "generate component config failed")
+		return fmt.Errorf("generate component config failed: %w", err)
 	}
 
 	if k.image == nil || len(k.image.String()) == 0 {
@@ -362,7 +362,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		namespace.Labels = utils.MergeStringMaps(namespace.Labels, getLabels())
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "update of Namespace failed")
+		return fmt.Errorf("update of Namespace failed: %w", err)
 	}
 
 	resources, err := registry.AddAllAndSerialize(

@@ -32,7 +32,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -269,7 +268,7 @@ func (a *actuator) deployBackupEntryExtensionSecret(ctx context.Context) error {
 
 	coreSecret, err := kutil.GetSecretByReference(ctx, a.gardenClient.Client(), coreSecretRef)
 	if err != nil {
-		return errors.Wrapf(err, "could not get secret referred in core backup bucket")
+		return fmt.Errorf("could not get secret referred in core backup bucket: %w", err)
 	}
 
 	// create secret for extension BackupEntry in seed
@@ -278,7 +277,7 @@ func (a *actuator) deployBackupEntryExtensionSecret(ctx context.Context) error {
 		extensionSecret.Data = coreSecret.DeepCopy().Data
 		return nil
 	}); err != nil {
-		return errors.Wrapf(err, "could not reconcile extension secret in seed")
+		return fmt.Errorf("could not reconcile extension secret in seed: %w", err)
 	}
 
 	return nil

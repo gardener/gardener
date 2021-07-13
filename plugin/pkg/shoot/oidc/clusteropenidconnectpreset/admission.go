@@ -143,7 +143,7 @@ func (c *ClusterOpenIDConnectPreset) Admit(ctx context.Context, a admission.Attr
 
 	coidcs, err := c.clusterOIDCLister.List(labels.Everything())
 	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not list existing clusteropenidconnectpresets: %v", err))
+		return apierrors.NewInternalError(fmt.Errorf("could not list existing clusteropenidconnectpresets: %w", err))
 	}
 	if len(coidcs) == 0 {
 		return nil
@@ -151,7 +151,7 @@ func (c *ClusterOpenIDConnectPreset) Admit(ctx context.Context, a admission.Attr
 
 	projects, err := c.projectLister.List(labels.Everything())
 	if err != nil {
-		return apierrors.NewInternalError(fmt.Errorf("could not list existing projects: %v", err))
+		return apierrors.NewInternalError(fmt.Errorf("could not list existing projects: %w", err))
 	}
 	if len(projects) == 0 {
 		return nil
@@ -187,11 +187,11 @@ func filterClusterOIDCs(oidcs []*settingsv1alpha1.ClusterOpenIDConnectPreset, sh
 		spec := oidc.Spec
 		projectSelector, err := metav1.LabelSelectorAsSelector(spec.ProjectSelector)
 		if err != nil {
-			return nil, fmt.Errorf("label selector conversion failed: %v for projectSelector: %v", *spec.ShootSelector, err)
+			return nil, fmt.Errorf("label selector conversion failed: %v for projectSelector: %w", *spec.ShootSelector, err)
 		}
 		shootSelector, err := metav1.LabelSelectorAsSelector(spec.ShootSelector)
 		if err != nil {
-			return nil, fmt.Errorf("label selector conversion failed: %v for shootSelector: %v", *spec.ShootSelector, err)
+			return nil, fmt.Errorf("label selector conversion failed: %v for shootSelector: %w", *spec.ShootSelector, err)
 		}
 
 		// check if the Shoot / project labels match the selector

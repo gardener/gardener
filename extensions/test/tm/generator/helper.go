@@ -17,10 +17,11 @@
 package generator
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path"
 
-	"github.com/pkg/errors"
 	"sigs.k8s.io/yaml"
 )
 
@@ -28,14 +29,14 @@ import (
 func MarshalAndWriteConfig(filepath string, config interface{}) error {
 	raw, err := yaml.Marshal(config)
 	if err != nil {
-		return errors.Wrap(err, "unable to parse config")
+		return fmt.Errorf("unable to parse config: %w", err)
 	}
 
 	if err := os.MkdirAll(path.Dir(filepath), os.ModePerm); err != nil {
-		return errors.Wrapf(err, "unable to create path %s", path.Dir(filepath))
+		return fmt.Errorf("unable to create path %s: %w", path.Dir(filepath), err)
 	}
 	if err := os.WriteFile(filepath, raw, os.ModePerm); err != nil {
-		return errors.Wrapf(err, "unable to write config to %s", filepath)
+		return fmt.Errorf("unable to write config to %s: %w", filepath, err)
 	}
 
 	return nil

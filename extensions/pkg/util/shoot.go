@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/Masterminds/semver"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -41,7 +40,7 @@ const CAChecksumAnnotation = "checksum/ca"
 func GetOrCreateShootKubeconfig(ctx context.Context, c client.Client, certificateConfig secrets.CertificateSecretConfig, namespace string) (*corev1.Secret, error) {
 	caSecret, ca, err := secrets.LoadCAFromSecret(ctx, c, namespace, v1beta1constants.SecretNameCACluster)
 	if err != nil {
-		return nil, fmt.Errorf("error fetching CA secret %s/%s: %v", namespace, v1beta1constants.SecretNameCACluster, err)
+		return nil, fmt.Errorf("error fetching CA secret %s/%s: %w", namespace, v1beta1constants.SecretNameCACluster, err)
 	}
 
 	var (
@@ -58,7 +57,7 @@ func GetOrCreateShootKubeconfig(ctx context.Context, c client.Client, certificat
 		}
 	)
 	if err := c.Get(ctx, key, &secret); client.IgnoreNotFound(err) != nil {
-		return nil, fmt.Errorf("error preparing kubeconfig: %v", err)
+		return nil, fmt.Errorf("error preparing kubeconfig: %w", err)
 	}
 
 	var (
@@ -83,7 +82,7 @@ func GetOrCreateShootKubeconfig(ctx context.Context, c client.Client, certificat
 
 	controlPlane, err := config.GenerateControlPlane()
 	if err != nil {
-		return nil, fmt.Errorf("error creating kubeconfig: %v", err)
+		return nil, fmt.Errorf("error creating kubeconfig: %w", err)
 	}
 
 	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, c, &secret, func() error {
@@ -109,7 +108,7 @@ func kubeAPIServerServiceDNS(namespace string) string {
 func VersionMajorMinor(version string) (string, error) {
 	v, err := semver.NewVersion(version)
 	if err != nil {
-		return "", errors.Wrapf(err, "Invalid version string '%s'", version)
+		return "", fmt.Errorf("Invalid version string '%s': %w", version, err)
 	}
 	return fmt.Sprintf("%d.%d", v.Major(), v.Minor()), nil
 }
@@ -118,7 +117,7 @@ func VersionMajorMinor(version string) (string, error) {
 func VersionInfo(vs string) (*version.Info, error) {
 	v, err := semver.NewVersion(vs)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Invalid version string '%s'", vs)
+		return nil, fmt.Errorf("Invalid version string '%s': %w", vs, err)
 	}
 	return &version.Info{
 		Major:      fmt.Sprintf("%d", v.Major()),

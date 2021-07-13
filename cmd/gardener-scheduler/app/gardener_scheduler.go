@@ -245,7 +245,7 @@ func (g *GardenerScheduler) Run(ctx context.Context) error {
 
 		leaderElector, err := leaderelection.NewLeaderElector(*g.LeaderElection)
 		if err != nil {
-			return fmt.Errorf("couldn't create leader elector: %v", err)
+			return fmt.Errorf("couldn't create leader elector: %w", err)
 		}
 
 		leaderElector.Run(leaderElectionCtx)

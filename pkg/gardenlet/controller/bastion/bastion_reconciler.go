@@ -103,7 +103,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	shoot := gardencorev1beta1.Shoot{}
 	shootKey := kutil.Key(bastion.Namespace, bastion.Spec.ShootRef.Name)
 	if err := gardenClient.Client().Get(ctx, shootKey, &shoot); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %v", shootKey, err)
+		return reconcile.Result{}, fmt.Errorf("could not get shoot %v: %w", shootKey, err)
 	}
 
 	if bastion.DeletionTimestamp != nil {
@@ -132,7 +132,7 @@ func (r *reconciler) reconcileBastion(
 	// ensure finalizer is set
 	if !controllerutil.ContainsFinalizer(bastion, finalizerName) {
 		if err := controllerutils.PatchAddFinalizers(ctx, gardenClient, bastion, finalizerName); err != nil {
-			return fmt.Errorf("failed ensure %q finalizer on bastion: %v", finalizerName, err)
+			return fmt.Errorf("failed ensure %q finalizer on bastion: %w", finalizerName, err)
 		}
 		// the patch above already triggers a reconcile, so we can stop here
 		return nil
@@ -162,7 +162,7 @@ func (r *reconciler) reconcileBastion(
 			logger.Errorf("failed patching ready condition of Bastion: %v", patchErr)
 		}
 
-		return fmt.Errorf("failed to ensure bastion extension resource: %v", err)
+		return fmt.Errorf("failed to ensure bastion extension resource: %w", err)
 	}
 
 	// wait for the extension controller to reconcile possible changes
@@ -181,7 +181,7 @@ func (r *reconciler) reconcileBastion(
 			logger.Errorf("failed patching ready condition of Bastion: %v", patchErr)
 		}
 
-		return fmt.Errorf("failed wait for bastion extension resource to be reconciled: %v", err)
+		return fmt.Errorf("failed wait for bastion extension resource to be reconciled: %w", err)
 	}
 
 	// copy over the extension's status to the garden and set the condition
@@ -191,7 +191,7 @@ func (r *reconciler) reconcileBastion(
 	bastion.Status.ObservedGeneration = &bastion.Generation
 
 	if err := gardenClient.Status().Patch(ctx, bastion, patch); err != nil {
-		return fmt.Errorf("failed patching ready condition of Bastion: %v", err)
+		return fmt.Errorf("failed patching ready condition of Bastion: %w", err)
 	}
 	return nil
 }
@@ -220,7 +220,7 @@ func (r *reconciler) cleanupBastion(
 
 	err := seedClient.Delete(ctx, extBastion)
 	if client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("failed to delete bastion extension resource: %v", err)
+		return fmt.Errorf("failed to delete bastion extension resource: %w", err)
 	}
 
 	// cleanup completed in seed cluster

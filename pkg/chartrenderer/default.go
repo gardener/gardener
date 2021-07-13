@@ -52,7 +52,7 @@ func NewForConfig(cfg *rest.Config) (Interface, error) {
 
 	sv, err := disc.ServerVersion()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get kubernetes server version %v", err)
+		return nil, fmt.Errorf("failed to get kubernetes server version %w", err)
 	}
 
 	return NewWithServerVersion(sv), nil
@@ -71,7 +71,7 @@ func NewWithServerVersion(serverVersion *version.Info) Interface {
 func DiscoverCapabilities(disc discovery.DiscoveryInterface) (*chartutil.Capabilities, error) {
 	sv, err := disc.ServerVersion()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get kubernetes server version %v", err)
+		return nil, fmt.Errorf("failed to get kubernetes server version %w", err)
 	}
 
 	return &chartutil.Capabilities{KubeVersion: sv}, nil

@@ -130,7 +130,7 @@ var _ admission.ValidationInterface = &TolerationRestriction{}
 // Admit defaults shoot tolerations with both global and project defaults.
 func (t *TolerationRestriction) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := t.waitUntilReady(a); err != nil {
-		return fmt.Errorf("err while waiting for ready %v", err)
+		return fmt.Errorf("err while waiting for ready %w", err)
 	}
 
 	if a.GetKind().GroupKind() != core.Kind("Shoot") {
@@ -182,7 +182,7 @@ func (t *TolerationRestriction) admitShoot(shoot *core.Shoot) error {
 // Validate makes admissions decisions based on the allowed project tolerations or globally allowed tolerations.
 func (t *TolerationRestriction) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := t.waitUntilReady(a); err != nil {
-		return fmt.Errorf("err while waiting for ready %v", err)
+		return fmt.Errorf("err while waiting for ready %w", err)
 	}
 
 	if a.GetKind().GroupKind() != core.Kind("Shoot") {

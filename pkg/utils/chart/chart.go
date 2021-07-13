@@ -16,13 +16,13 @@ package chart
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
-	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -74,7 +74,7 @@ func (c *Chart) Apply(
 	// Apply chart
 	err = chartApplier.Apply(ctx, c.Path, namespace, c.Name, gardenerkubernetes.Values(utils.MergeMaps(values, additionalValues)))
 	if err != nil {
-		return errors.Wrapf(err, "could not apply chart '%s' in namespace '%s'", c.Name, namespace)
+		return fmt.Errorf("could not apply chart '%s' in namespace '%s': %w", c.Name, namespace, err)
 	}
 	return nil
 }
@@ -98,7 +98,7 @@ func (c *Chart) Render(
 	// Apply chart
 	rc, err := chartRenderer.Render(c.Path, c.Name, namespace, utils.MergeMaps(values, additionalValues))
 	if err != nil {
-		return "", nil, errors.Wrapf(err, "could not render chart '%s' in namespace '%s'", c.Name, namespace)
+		return "", nil, fmt.Errorf("could not render chart '%s' in namespace '%s': %w", c.Name, namespace, err)
 	}
 	return rc.ChartName, rc.Manifest(), nil
 }
@@ -115,7 +115,7 @@ func (c *Chart) injectImages(
 	if len(c.Images) > 0 {
 		values, err = InjectImages(values, imageVector, c.Images, imagevector.RuntimeVersion(runtimeVersion), imagevector.TargetVersion(targetVersion))
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not inject chart '%s' images", c.Name)
+			return nil, fmt.Errorf("could not inject chart '%s' images: %w", c.Name, err)
 		}
 	}
 
@@ -136,7 +136,7 @@ func (c *Chart) Delete(ctx context.Context, client client.Client, namespace stri
 	// Delete objects
 	for _, o := range c.Objects {
 		if err := o.Delete(ctx, client, namespace); err != nil {
-			return errors.Wrap(err, "could not delete chart object")
+			return fmt.Errorf("could not delete chart object: %w", err)
 		}
 	}
 
@@ -159,10 +159,10 @@ func (o *Object) Delete(ctx context.Context, c client.Client, namespace string) 
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
-		return errors.Wrapf(err, "could not get %s '%s'", kind, key.String())
+		return fmt.Errorf("could not get %s '%s': %w", kind, key.String(), err)
 	}
 	if err := c.Delete(ctx, obj); err != nil {
-		return errors.Wrapf(err, "could not delete %s '%s'", kind, key.String())
+		return fmt.Errorf("could not delete %s '%s': %w", kind, key.String(), err)
 	}
 	return nil
 }

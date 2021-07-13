@@ -103,7 +103,7 @@ func NewEncryptionKeyName(t time.Time) string {
 func NewEncryptionKeySecret(r io.Reader) (string, error) {
 	buf := make([]byte, common.EtcdEncryptionKeySecretLen)
 	if _, err := io.ReadFull(r, buf); err != nil {
-		return "", fmt.Errorf("could not read enough data: %v", err)
+		return "", fmt.Errorf("could not read enough data: %w", err)
 	}
 
 	sEnc := base64.StdEncoding.EncodeToString(buf)

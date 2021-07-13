@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -73,16 +72,16 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 
 	if err := a.mcmSeedChart.Apply(ctx, a.chartApplier, workerObj.Namespace,
 		a.imageVector, a.gardenerClientset.Version(), cluster.Shoot.Spec.Kubernetes.Version, mcmValues); err != nil {
-		return errors.Wrapf(err, "could not apply MCM chart in seed for worker '%s'", kutil.ObjectName(workerObj))
+		return fmt.Errorf("could not apply MCM chart in seed for worker '%s': %w", kutil.ObjectName(workerObj), err)
 	}
 
 	if err := a.applyMachineControllerManagerShootChart(ctx, workerDelegate, workerObj, cluster); err != nil {
-		return errors.Wrapf(err, "could not apply machine-controller-manager shoot chart")
+		return fmt.Errorf("could not apply machine-controller-manager shoot chart: %w", err)
 	}
 
 	logger.Info("Waiting until rollout of machine-controller-manager Deployment is completed")
 	if err := kubernetes.WaitUntilDeploymentRolloutIsComplete(ctx, a.client, workerObj.Namespace, McmDeploymentName, 5*time.Second, 300*time.Second); err != nil {
-		return errors.Wrapf(err, "waiting until deployment/%s is updated", McmDeploymentName)
+		return fmt.Errorf("waiting until deployment/%s is updated: %w", McmDeploymentName, err)
 	}
 
 	return nil
@@ -91,18 +90,18 @@ func (a *genericActuator) deployMachineControllerManager(ctx context.Context, lo
 func (a *genericActuator) deleteMachineControllerManager(ctx context.Context, logger logr.Logger, workerObj *extensionsv1alpha1.Worker) error {
 	logger.Info("Deleting the machine-controller-manager")
 	if err := managedresources.Delete(ctx, a.client, workerObj.Namespace, McmShootResourceName, false); err != nil {
-		return errors.Wrapf(err, "could not delete managed resource containing mcm chart for worker '%s'", kutil.ObjectName(workerObj))
+		return fmt.Errorf("could not delete managed resource containing mcm chart for worker '%s': %w", kutil.ObjectName(workerObj), err)
 	}
 
 	logger.Info("Waiting for machine-controller-manager ManagedResource to be deleted")
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 	if err := managedresources.WaitUntilDeleted(timeoutCtx, a.client, workerObj.Namespace, McmShootResourceName); err != nil {
-		return errors.Wrapf(err, "error while waiting for managed resource containing mcm for '%s' to be deleted", kutil.ObjectName(workerObj))
+		return fmt.Errorf("error while waiting for managed resource containing mcm for '%s' to be deleted: %w", kutil.ObjectName(workerObj), err)
 	}
 
 	if err := a.mcmSeedChart.Delete(ctx, a.client, workerObj.Namespace); err != nil {
-		return errors.Wrapf(err, "cleaning up machine-controller-manager resources in seed failed")
+		return fmt.Errorf("cleaning up machine-controller-manager resources in seed failed: %w", err)
 	}
 
 	return nil
@@ -132,7 +131,7 @@ func (a *genericActuator) applyMachineControllerManagerShootChart(ctx context.Co
 	// Create shoot chart renderer
 	chartRenderer, err := a.chartRendererFactory.NewChartRendererForShoot(cluster.Shoot.Spec.Kubernetes.Version)
 	if err != nil {
-		return errors.Wrapf(err, "could not create chart renderer for shoot '%s'", workerObj.Namespace)
+		return fmt.Errorf("could not create chart renderer for shoot '%s': %w", workerObj.Namespace, err)
 	}
 
 	// Get machine-controller-manager shoot chart values
@@ -142,7 +141,7 @@ func (a *genericActuator) applyMachineControllerManagerShootChart(ctx context.Co
 	}
 
 	if err := managedresources.RenderChartAndCreate(ctx, workerObj.Namespace, McmShootResourceName, false, a.client, chartRenderer, a.mcmShootChart, values, a.imageVector, metav1.NamespaceSystem, cluster.Shoot.Spec.Kubernetes.Version, true, false); err != nil {
-		return errors.Wrapf(err, "could not apply control plane shoot chart for worker '%s'", kutil.ObjectName(workerObj))
+		return fmt.Errorf("could not apply control plane shoot chart for worker '%s': %w", kutil.ObjectName(workerObj), err)
 	}
 
 	return nil

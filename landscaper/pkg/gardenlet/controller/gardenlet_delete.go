@@ -64,7 +64,7 @@ func (g Landscaper) Delete(ctx context.Context) error {
 
 	applier := chart.NewGardenletChartApplier(chartApplier, values, g.chartPath)
 	if err := applier.Destroy(ctx); err != nil {
-		return fmt.Errorf("failed to delete the Gardenlet resources from the Seed cluster %q: %v", g.gardenletConfiguration.SeedConfig.Name, err)
+		return fmt.Errorf("failed to delete the Gardenlet resources from the Seed cluster %q: %w", g.gardenletConfiguration.SeedConfig.Name, err)
 	}
 
 	// delete the Seed secret containing the Seed cluster kubeconfig from the Garden cluster
@@ -95,7 +95,7 @@ func (g Landscaper) deleteSeedAndWait(ctx context.Context, seed *gardencorev1bet
 		}
 		return retry.Ok()
 	}); err != nil {
-		return fmt.Errorf("failed to delete seed %q: %v", g.gardenletConfiguration.SeedConfig.Name, err)
+		return fmt.Errorf("failed to delete seed %q: %w", g.gardenletConfiguration.SeedConfig.Name, err)
 	}
 
 	if err := retry.UntilTimeout(ctx, 10*time.Second, 10*time.Minute, func(ctx context.Context) (done bool, err error) {

@@ -653,7 +653,7 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 
 			// Check if the resource actually exists
 			if err := r.lookupResource(ctx, gv.WithResource(apiResource.Name), shoot.Namespace, resource.ResourceRef.Name); err != nil {
-				return fmt.Errorf("failed to resolve shoot resource reference %q: %v", resource.Name, err)
+				return fmt.Errorf("failed to resolve shoot resource reference %q: %w", resource.Name, err)
 			}
 		}
 
@@ -665,7 +665,7 @@ func (r *ReferenceManager) ensureShootReferences(ctx context.Context, attributes
 				continue
 			}
 			if err := r.lookupSecret(ctx, shoot.Namespace, *dnsProvider.SecretName); err != nil {
-				return fmt.Errorf("failed to reference DNS provider secret %v", err)
+				return fmt.Errorf("failed to reference DNS provider secret %w", err)
 			}
 		}
 	}

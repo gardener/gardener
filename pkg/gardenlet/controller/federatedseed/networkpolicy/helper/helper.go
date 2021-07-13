@@ -84,7 +84,7 @@ func EnsureNetworkPolicy(ctx context.Context, seedClient client.Client, namespac
 		MutatePolicy(&policy, egressRules)
 		return nil
 	}); err != nil {
-		return fmt.Errorf("failed to create / update NetworkPolicy %q in namespace %q: %v", AllowToSeedAPIServer, namespace, err)
+		return fmt.Errorf("failed to create / update NetworkPolicy %q in namespace %q: %w", AllowToSeedAPIServer, namespace, err)
 	}
 	return nil
 }

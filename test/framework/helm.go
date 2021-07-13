@@ -25,7 +25,6 @@ import (
 
 	"github.com/mholt/archiver"
 	"github.com/onsi/ginkgo"
-	"github.com/pkg/errors"
 	"k8s.io/helm/pkg/downloader"
 	"k8s.io/helm/pkg/getter"
 	"k8s.io/helm/pkg/helm/environment"
@@ -48,7 +47,7 @@ func (f *CommonFramework) RenderAndDeployChart(ctx context.Context, k8sClient ku
 	ginkgo.By("Downloading chart artifacts")
 	err = f.DownloadChartArtifacts(ctx, helmRepo, f.ChartDir, c.Name, c.Version)
 	if err != nil {
-		return errors.Wrapf(err, "unable to download chart artifacts for chart %s with version %s", c.Name, c.Version)
+		return fmt.Errorf("unable to download chart artifacts for chart %s with version %s: %w", c.Name, c.Version, err)
 	}
 
 	return f.DeployChart(ctx, k8sClient, c.Namespace, f.ChartDir, c.ReleaseName, values)
@@ -157,7 +156,7 @@ func EnsureRepositoryDirectories(helm Helm) error {
 		if err != nil {
 			if os.IsNotExist(err) {
 				if err := os.MkdirAll(p, os.ModePerm); err != nil {
-					return errors.Wrapf(err, "unable to create %s", p)
+					return fmt.Errorf("unable to create %s: %w", p, err)
 				}
 				continue
 			}

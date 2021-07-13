@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/pkg/errors"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -114,13 +113,13 @@ func buildRule(mgr manager.Manager, t runtime.Object) (*admissionregistrationv1b
 	// Get GVK from the type
 	gvk, err := apiutil.GVKForObject(t, mgr.GetScheme())
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get GroupVersionKind from object %v", t)
+		return nil, fmt.Errorf("could not get GroupVersionKind from object %v: %w", t, err)
 	}
 
 	// Get REST mapping from GVK
 	mapping, err := mgr.GetRESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get REST mapping from GroupVersionKind '%s'", gvk.String())
+		return nil, fmt.Errorf("could not get REST mapping from GroupVersionKind '%s': %w", gvk.String(), err)
 	}
 
 	// Create and return RuleWithOperations

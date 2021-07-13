@@ -16,6 +16,8 @@ package genericmutator
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cloudinit"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
@@ -28,7 +30,6 @@ import (
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kubeletconfigv1beta1 "k8s.io/kubelet/config/v1beta1"
@@ -277,13 +278,13 @@ func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcon
 
 	// Deserialize unit options
 	if opts, err = m.unitSerializer.Deserialize(*content); err != nil {
-		return errors.Wrap(err, "could not deserialize kubelet.service unit content")
+		return fmt.Errorf("could not deserialize kubelet.service unit content: %w", err)
 	}
 
 	if oldContent != nil {
 		// Deserialize old unit options
 		if oldOpts, err = m.unitSerializer.Deserialize(*oldContent); err != nil {
-			return errors.Wrap(err, "could not deserialize old kubelet.service unit content")
+			return fmt.Errorf("could not deserialize old kubelet.service unit content: %w", err)
 		}
 	}
 
@@ -293,7 +294,7 @@ func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcon
 
 	// Serialize unit options
 	if *content, err = m.unitSerializer.Serialize(opts); err != nil {
-		return errors.Wrap(err, "could not serialize kubelet.service unit options")
+		return fmt.Errorf("could not serialize kubelet.service unit options: %w", err)
 	}
 
 	return nil
@@ -307,13 +308,13 @@ func (m *mutator) ensureKubeletConfigFileContent(ctx context.Context, gctx gcont
 
 	// Decode kubelet configuration from inline content
 	if kubeletConfig, err = m.kubeletConfigCodec.Decode(fci); err != nil {
-		return errors.Wrap(err, "could not decode kubelet configuration")
+		return fmt.Errorf("could not decode kubelet configuration: %w", err)
 	}
 
 	if oldFCI != nil {
 		// Decode old kubelet configuration from inline content
 		if oldKubeletConfig, err = m.kubeletConfigCodec.Decode(oldFCI); err != nil {
-			return errors.Wrap(err, "could not decode old kubelet configuration")
+			return fmt.Errorf("could not decode old kubelet configuration: %w", err)
 		}
 	}
 
@@ -324,7 +325,7 @@ func (m *mutator) ensureKubeletConfigFileContent(ctx context.Context, gctx gcont
 	// Encode kubelet configuration into inline content
 	var newFCI *extensionsv1alpha1.FileContentInline
 	if newFCI, err = m.kubeletConfigCodec.Encode(kubeletConfig, fci.Encoding); err != nil {
-		return errors.Wrap(err, "could not encode kubelet configuration")
+		return fmt.Errorf("could not encode kubelet configuration: %w", err)
 	}
 	*fci = *newFCI
 
@@ -339,13 +340,13 @@ func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx
 
 	// Decode kubernetes general configuration from inline content
 	if data, err = m.fciCodec.Decode(fci); err != nil {
-		return errors.Wrap(err, "could not decode kubernetes general configuration")
+		return fmt.Errorf("could not decode kubernetes general configuration: %w", err)
 	}
 
 	if oldFCI != nil {
 		// Decode kubernetes general configuration from inline content
 		if oldData, err = m.fciCodec.Decode(oldFCI); err != nil {
-			return errors.Wrap(err, "could not decode old kubernetes general configuration")
+			return fmt.Errorf("could not decode old kubernetes general configuration: %w", err)
 		}
 	}
 
@@ -358,7 +359,7 @@ func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx
 	// Encode kubernetes general configuration into inline content
 	var newFCI *extensionsv1alpha1.FileContentInline
 	if newFCI, err = m.fciCodec.Encode([]byte(s), fci.Encoding); err != nil {
-		return errors.Wrap(err, "could not encode kubernetes general configuration")
+		return fmt.Errorf("could not encode kubernetes general configuration: %w", err)
 	}
 	*fci = *newFCI
 
@@ -379,7 +380,7 @@ func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx gco
 	// Encode cloud provider config into inline content
 	var fci *extensionsv1alpha1.FileContentInline
 	if fci, err = m.fciCodec.Encode([]byte(s), string(cloudinit.B64FileCodecID)); err != nil {
-		return errors.Wrap(err, "could not encode kubelet cloud provider config")
+		return fmt.Errorf("could not encode kubelet cloud provider config: %w", err)
 	}
 
 	// Ensure the cloud provider config file is part of the OperatingSystemConfig

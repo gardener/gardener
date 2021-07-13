@@ -29,7 +29,7 @@ import (
 func MakeLeaderElectionConfig(cfg componentbaseconfig.LeaderElectionConfiguration, lockObjectNamespace string, lockObjectName string, client k8s.Interface, recorder record.EventRecorder) (*leaderelection.LeaderElectionConfig, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
-		return nil, fmt.Errorf("unable to get hostname: %v", err)
+		return nil, fmt.Errorf("unable to get hostname: %w", err)
 	}
 
 	lock, err := resourcelock.New(
@@ -44,7 +44,7 @@ func MakeLeaderElectionConfig(cfg componentbaseconfig.LeaderElectionConfiguratio
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("couldn't create resource lock: %v", err)
+		return nil, fmt.Errorf("couldn't create resource lock: %w", err)
 	}
 
 	return &leaderelection.LeaderElectionConfig{

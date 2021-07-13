@@ -25,7 +25,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 )
 
 func TestErrors(t *testing.T) {
@@ -54,7 +53,7 @@ var _ = Describe("Errors", func() {
 		It("should return an error with cause and suppressed equal to the given errors", func() {
 			err := utilerrors.WithSuppressed(err1, err2)
 
-			Expect(errors.Cause(err)).To(BeIdenticalTo(err1))
+			Expect(utilerrors.Unwrap(err)).To(BeIdenticalTo(err1))
 			Expect(utilerrors.Suppressed(err)).To(BeIdenticalTo(err2))
 		})
 	})
@@ -166,7 +165,7 @@ var _ = Describe("Errors", func() {
 				}),
 			)
 
-			Expect(utilerrors.WasCanceled(errors.Cause(err))).To(BeTrue())
+			Expect(utilerrors.WasCanceled(utilerrors.Unwrap(err))).To(BeTrue())
 		})
 
 		It("Should stop execution on error", func() {
