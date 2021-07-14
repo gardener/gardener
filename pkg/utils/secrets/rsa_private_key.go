@@ -79,7 +79,7 @@ func (s *RSASecretConfig) GenerateFromInfoData(infoData infodata.InfoData) (Data
 
 	privateKey, err := utils.DecodePrivateKey(data.PrivateKey)
 	if err != nil {
-		return nil, fmt.Errorf("could not load privateKey secret %s: %v", s.Name, err)
+		return nil, fmt.Errorf("could not load privateKey secret %s: %w", s.Name, err)
 	}
 
 	return s.generateWithPrivateKey(privateKey)

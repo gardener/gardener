@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/extensions/pkg/controller"
@@ -36,45 +35,45 @@ func (a *genericActuator) Migrate(ctx context.Context, worker *extensionsv1alpha
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {
-		return errors.Wrap(err, "could not instantiate actuator context")
+		return fmt.Errorf("could not instantiate actuator context: %w", err)
 	}
 
 	// Keep objects for shoot managed resources so that they are not deleted from the shoot during the migration
 	if err := managedresources.SetKeepObjects(ctx, a.client, worker.Namespace, McmShootResourceName, true); err != nil {
-		return errors.Wrapf(err, "could not keep objects of managed resource containing mcm chart for worker '%s'", kutil.ObjectName(worker))
+		return fmt.Errorf("could not keep objects of managed resource containing mcm chart for worker '%s': %w", kutil.ObjectName(worker), err)
 	}
 
 	// Make sure machine-controller-manager is deleted before deleting the machines.
 	if err := a.deleteMachineControllerManager(ctx, logger, worker); err != nil {
-		return errors.Wrap(err, "failed deleting machine-controller-manager")
+		return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
 	}
 
 	if err := a.waitUntilMachineControllerManagerIsDeleted(ctx, logger, worker.Namespace); err != nil {
-		return errors.Wrap(err, "failed deleting machine-controller-manager")
+		return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
 	}
 
 	if err := a.shallowDeleteAllObjects(ctx, logger, worker.Namespace, &machinev1alpha1.MachineList{}); err != nil {
-		return errors.Wrap(err, "shallow deletion of all machine failed")
+		return fmt.Errorf("shallow deletion of all machine failed: %w", err)
 	}
 
 	if err := a.shallowDeleteAllObjects(ctx, logger, worker.Namespace, &machinev1alpha1.MachineSetList{}); err != nil {
-		return errors.Wrap(err, "shallow deletion of all machineSets failed")
+		return fmt.Errorf("shallow deletion of all machineSets failed: %w", err)
 	}
 
 	if err := a.shallowDeleteAllObjects(ctx, logger, worker.Namespace, &machinev1alpha1.MachineDeploymentList{}); err != nil {
-		return errors.Wrap(err, "shallow deletion of all machineDeployments failed")
+		return fmt.Errorf("shallow deletion of all machineDeployments failed: %w", err)
 	}
 
 	if err := a.shallowDeleteAllObjects(ctx, logger, worker.Namespace, workerDelegate.MachineClassList()); err != nil {
-		return errors.Wrap(err, "cleaning up machine classes failed")
+		return fmt.Errorf("cleaning up machine classes failed: %w", err)
 	}
 
 	if err := a.shallowDeleteMachineClassSecrets(ctx, logger, worker.Namespace, nil); err != nil {
-		return errors.Wrap(err, "cleaning up machine class secrets failed")
+		return fmt.Errorf("cleaning up machine class secrets failed: %w", err)
 	}
 
 	if err := a.removeFinalizerFromWorkerSecretRef(ctx, logger, worker); err != nil {
-		return errors.Wrap(err, "unable to remove the finalizers from worker`s secret")
+		return fmt.Errorf("unable to remove the finalizers from worker`s secret: %w", err)
 	}
 
 	// Wait until all machine resources have been properly deleted.

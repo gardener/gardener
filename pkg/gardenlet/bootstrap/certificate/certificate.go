@@ -48,7 +48,7 @@ func RequestCertificate(ctx context.Context, logger logrus.FieldLogger, client k
 
 	privateKeyData, err := keyutil.MakeEllipticPrivateKeyPEM()
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("error generating client certificate private key: %v", err)
+		return nil, nil, "", fmt.Errorf("error generating client certificate private key: %w", err)
 	}
 
 	certData, csrName, err := requestCertificate(ctx, logger, client, privateKeyData, certificateSubject, dnsSANs, ipSANs)
@@ -70,11 +70,11 @@ var DigestedName = bootstraputil.DigestedName
 func requestCertificate(ctx context.Context, logger logrus.FieldLogger, client kubernetesclientset.Interface, privateKeyData []byte, certificateSubject *pkix.Name, dnsSANs []string, ipSANs []net.IP) (certData []byte, csrName string, err error) {
 	privateKey, err := keyutil.ParsePrivateKeyPEM(privateKeyData)
 	if err != nil {
-		return nil, "", fmt.Errorf("invalid private key for certificate request: %v", err)
+		return nil, "", fmt.Errorf("invalid private key for certificate request: %w", err)
 	}
 	csrData, err := certutil.MakeCSR(privateKey, certificateSubject, dnsSANs, ipSANs)
 	if err != nil {
-		return nil, "", fmt.Errorf("unable to generate certificate request: %v", err)
+		return nil, "", fmt.Errorf("unable to generate certificate request: %w", err)
 	}
 
 	usages := []certificatesv1.KeyUsage{

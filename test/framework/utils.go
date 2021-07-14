@@ -15,6 +15,7 @@
 package framework
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -24,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/hashicorp/go-multierror"
 	"github.com/onsi/ginkgo"
-	"github.com/pkg/errors"
 	apimachineryRuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/yaml"
@@ -200,7 +200,7 @@ func (v *TextValidation) validate(text []byte, validationFunc func([][]byte) err
 
 		matches := re.FindAll(text, -1)
 		if err := validationFunc(matches); err != nil {
-			allErrs = multierror.Append(allErrs, errors.Wrapf(err, "RegExp %s validation failed: %s", reString, description))
+			allErrs = multierror.Append(allErrs, fmt.Errorf("RegExp %s validation failed: %s: %w", reString, description, err))
 		}
 	}
 

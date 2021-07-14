@@ -626,7 +626,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 				// kube-apiserver in case the end-user deleted the configmap before/simultaneously to the shoot
 				// deletion.
 				if !apierrors.IsNotFound(err) || b.Shoot.Info.DeletionTimestamp == nil {
-					return fmt.Errorf("retrieving audit policy from the ConfigMap '%v' failed with reason '%v'", apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, err)
+					return fmt.Errorf("retrieving audit policy from the ConfigMap '%v' failed with reason '%w'", apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, err)
 				}
 			} else {
 				defaultValues["auditConfig"] = map[string]interface{}{

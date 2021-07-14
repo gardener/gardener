@@ -16,6 +16,7 @@ package framework
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"time"
 
@@ -28,7 +29,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/onsi/ginkgo"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

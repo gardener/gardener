@@ -52,7 +52,7 @@ type mutator struct {
 func (m *mutator) InjectClient(client client.Client) error {
 	m.client = client
 	if _, err := inject.ClientInto(client, m.ensurer); err != nil {
-		return fmt.Errorf("could not inject the client into the ensurer: %v", err)
+		return fmt.Errorf("could not inject the client into the ensurer: %w", err)
 	}
 	return nil
 }
@@ -60,7 +60,7 @@ func (m *mutator) InjectClient(client client.Client) error {
 // InjectScheme injects the manager's scheme into the ensurer.
 func (m *mutator) InjectScheme(scheme *runtime.Scheme) error {
 	if _, err := inject.SchemeInto(scheme, m.ensurer); err != nil {
-		return fmt.Errorf("could not inject scheme into the ensurer: %v", err)
+		return fmt.Errorf("could not inject scheme into the ensurer: %w", err)
 	}
 	return nil
 }

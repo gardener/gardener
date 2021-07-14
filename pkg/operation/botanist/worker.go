@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -147,7 +146,7 @@ func (b *Botanist) WaitUntilCloudConfigUpdatedForAllWorkerPools(ctx context.Cont
 	defer cancel()
 
 	if err := managedresources.WaitUntilHealthy(timeoutCtx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName); err != nil {
-		return errors.Wrapf(err, "the cloud-config user data scripts for the worker nodes were not populated yet")
+		return fmt.Errorf("the cloud-config user data scripts for the worker nodes were not populated yet: %w", err)
 	}
 
 	timeoutCtx2, cancel2 := context.WithTimeout(ctx, TimeoutWaitCloudConfigUpdated)

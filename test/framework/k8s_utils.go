@@ -16,6 +16,7 @@ package framework
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -28,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -129,7 +129,7 @@ func (f *CommonFramework) WaitUntilNamespaceIsDeleted(ctx context.Context, k8sCl
 			}
 			return retry.MinorError(err)
 		}
-		return retry.MinorError(errors.Errorf("Namespace %q is not deleted yet", ns))
+		return retry.MinorError(fmt.Errorf("Namespace %q is not deleted yet", ns))
 	})
 }
 
@@ -255,7 +255,7 @@ func ScaleDeployment(timeout time.Duration, client client.Client, desiredReplica
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve the replica count of deployment %q: '%v'", name, err)
+		return nil, fmt.Errorf("failed to retrieve the replica count of deployment %q: '%w'", name, err)
 	}
 	if replicas == nil || *replicas == *desiredReplicas {
 		return replicas, nil
@@ -263,12 +263,12 @@ func ScaleDeployment(timeout time.Duration, client client.Client, desiredReplica
 
 	// scale the deployment
 	if err := kubernetes.ScaleDeployment(ctxSetup, client, kutil.Key(namespace, name), *desiredReplicas); err != nil {
-		return nil, fmt.Errorf("failed to scale the replica count of deployment %q: '%v'", name, err)
+		return nil, fmt.Errorf("failed to scale the replica count of deployment %q: '%w'", name, err)
 	}
 
 	// wait until scaled
 	if err := WaitUntilDeploymentScaled(ctxSetup, client, namespace, name, *desiredReplicas); err != nil {
-		return nil, fmt.Errorf("failed to wait until deployment %q is scaled: '%v'", name, err)
+		return nil, fmt.Errorf("failed to wait until deployment %q is scaled: '%w'", name, err)
 	}
 	return replicas, nil
 }

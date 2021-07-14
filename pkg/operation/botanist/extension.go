@@ -35,7 +35,7 @@ func (b *Botanist) DefaultExtension(ctx context.Context) (extension.Interface, e
 
 	extensions, err := mergeExtensions(controllerRegistrations.Items, b.Shoot.Info.Spec.Extensions, b.Shoot.SeedNamespace)
 	if err != nil {
-		return nil, fmt.Errorf("cannot calculate required extensions for shoot %s: %v", b.Shoot.Info.Name, err)
+		return nil, fmt.Errorf("cannot calculate required extensions for shoot %s: %w", b.Shoot.Info.Name, err)
 	}
 
 	return extension.New(

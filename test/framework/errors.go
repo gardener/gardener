@@ -14,7 +14,7 @@
 
 package framework
 
-import "github.com/pkg/errors"
+import "errors"
 
 var (
 	// ErrNoRepositoriesFound no repositories found in repository file

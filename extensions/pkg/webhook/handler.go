@@ -21,7 +21,6 @@ import (
 	"net/http"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -112,7 +111,7 @@ type handler struct {
 func (h *handler) InjectFunc(f inject.Func) error {
 	for _, mutator := range h.mutatorMap {
 		if err := f(mutator); err != nil {
-			return errors.Wrap(err, "could not inject into the mutator")
+			return fmt.Errorf("could not inject into the mutator: %w", err)
 		}
 	}
 	return nil
@@ -133,7 +132,7 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 			}
 		}
 		if t == nil {
-			return admission.Errored(http.StatusBadRequest, errors.Errorf("unexpected request kind %s", ar.Kind.String()))
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected request kind %s", ar.Kind.String()))
 		}
 	}
 
@@ -147,7 +146,7 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 			}
 		}
 		if mutator == nil {
-			return admission.Errored(http.StatusBadRequest, errors.Errorf("unexpected request kind %s", ar.Kind.String()))
+			return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected request kind %s", ar.Kind.String()))
 		}
 	}
 
@@ -161,8 +160,8 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 	obj := t.DeepCopyObject().(client.Object)
 	_, _, err := decoder.Decode(req.Object.Raw, nil, obj)
 	if err != nil {
-		logger.Error(errors.WithStack(err), "could not decode request", "request", ar)
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode request %v: %v", ar, err))
+		logger.Error(err, "could not decode request", "request", ar)
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode request %v: %w", ar, err))
 	}
 
 	var oldObj client.Object
@@ -171,7 +170,7 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 	if len(req.OldObject.Raw) != 0 {
 		oldObj = t.DeepCopyObject().(client.Object)
 		if _, _, err := decoder.Decode(ar.OldObject.Raw, nil, oldObj); err != nil {
-			logger.Error(errors.WithStack(err), "could not decode old object", "object", oldObj)
+			logger.Error(err, "could not decode old object", "object", oldObj)
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode old object %v: %v", oldObj, err))
 		}
 	}
@@ -184,7 +183,7 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 	// Process the resource
 	newObj := obj.DeepCopyObject().(client.Object)
 	if err = m.Mutate(ctx, newObj, oldObj); err != nil {
-		logger.Error(errors.Wrap(err, "could not process"), "admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
+		logger.Error(fmt.Errorf("could not process: %w", err), "admission denied", "kind", ar.Kind.Kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -214,7 +213,7 @@ func buildTypesMap(scheme *runtime.Scheme, types []client.Object) (map[metav1.Gr
 		// Get GVK from the type
 		gvk, err := apiutil.GVKForObject(t, scheme)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get GroupVersionKind from object %v", t)
+			return nil, fmt.Errorf("could not get GroupVersionKind from object %v: %w", t, err)
 		}
 
 		// Add the type to the types map

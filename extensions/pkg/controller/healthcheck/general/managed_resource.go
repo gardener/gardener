@@ -73,7 +73,7 @@ func (healthChecker *ManagedResourceHealthChecker) Check(ctx context.Context, re
 			}, nil
 		}
 
-		err := fmt.Errorf("check Managed Resource failed. Unable to retrieve managed resource %q in namespace %q: %v", healthChecker.managedResourceName, request.Namespace, err)
+		err := fmt.Errorf("check Managed Resource failed. Unable to retrieve managed resource %q in namespace %q: %w", healthChecker.managedResourceName, request.Namespace, err)
 		healthChecker.logger.Error(err, "Health check failed")
 		return nil, err
 	}

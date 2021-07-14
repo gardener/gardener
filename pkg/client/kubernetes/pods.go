@@ -74,7 +74,7 @@ func (p *podExecutor) Execute(namespace, name, containerName, command, commandAr
 
 	executor, err := remotecommand.NewSPDYExecutor(p.config, http.MethodPost, request.URL())
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialized the command exector: %v", err)
+		return nil, fmt.Errorf("failed to initialized the command exector: %w", err)
 	}
 
 	err = executor.Stream(remotecommand.StreamOptions{
@@ -120,7 +120,7 @@ func (c *clientSet) ForwardPodPort(namespace, name string, local, remote int) (c
 func (c *clientSet) CheckForwardPodPort(namespace, name string, local, remote int) error {
 	fw, stopChan, err := c.setupForwardPodPort(namespace, name, local, remote)
 	if err != nil {
-		return fmt.Errorf("could not setup pod port forwarding: %v", err)
+		return fmt.Errorf("could not setup pod port forwarding: %w", err)
 	}
 
 	errChan := make(chan error)
@@ -131,7 +131,7 @@ func (c *clientSet) CheckForwardPodPort(namespace, name string, local, remote in
 
 	select {
 	case err = <-errChan:
-		return fmt.Errorf("error forwarding ports: %v", err)
+		return fmt.Errorf("error forwarding ports: %w", err)
 	case <-fw.Ready:
 		return nil
 	case <-time.After(time.Second * 5):

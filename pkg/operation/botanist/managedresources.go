@@ -73,7 +73,7 @@ func (b *Botanist) waitUntilManagedResourceAreDeleted(ctx context.Context, listO
 func (b *Botanist) KeepObjectsForAllManagedResources(ctx context.Context) error {
 	managedResources := &resourcesv1alpha1.ManagedResourceList{}
 	if err := b.K8sSeedClient.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
-		return fmt.Errorf("failed to list all managed resource, %v", err)
+		return fmt.Errorf("failed to list all managed resource, %w", err)
 	}
 
 	for _, resource := range managedResources.Items {

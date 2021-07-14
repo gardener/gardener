@@ -43,7 +43,7 @@ func (k *kubeControllerManager) WaitForControllerToBeActive(ctx context.Context)
 	// Check whether the kube-controller-manager deployment exists
 	if err := k.seedClient.Get(ctx, kutil.Key(k.namespace, v1beta1constants.DeploymentNameKubeControllerManager), &appsv1.Deployment{}); err != nil {
 		if apierrors.IsNotFound(err) {
-			return fmt.Errorf("kube controller manager deployment not found: %v", err)
+			return fmt.Errorf("kube controller manager deployment not found: %w", err)
 		}
 		return err
 	}

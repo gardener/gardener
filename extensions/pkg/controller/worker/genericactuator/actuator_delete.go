@@ -16,13 +16,13 @@ package genericactuator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,7 +46,7 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 
 	workerDelegate, err := a.delegateFactory.WorkerDelegate(ctx, worker, cluster)
 	if err != nil {
-		return errors.Wrapf(err, "could not instantiate actuator context")
+		return fmt.Errorf("could not instantiate actuator context: %w", err)
 	}
 
 	// Make sure machine-controller-manager is awake before deleting the machines.
@@ -62,42 +62,42 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 	// Redeploy generated machine classes to update credentials machine-controller-manager used.
 	logger.Info("Deploying the machine classes")
 	if err := workerDelegate.DeployMachineClasses(ctx); err != nil {
-		return errors.Wrapf(err, "failed to deploy the machine classes")
+		return fmt.Errorf("failed to deploy the machine classes: %w", err)
 	}
 
 	if workerCredentialsDelegate, ok := workerDelegate.(WorkerCredentialsDelegate); ok {
 		// Update cloud credentials for all existing machine class secrets
 		cloudCredentials, err := workerCredentialsDelegate.GetMachineControllerManagerCloudCredentials(ctx)
 		if err != nil {
-			return errors.Wrapf(err, "failed to get the cloud credentials in namespace %s", worker.Namespace)
+			return fmt.Errorf("failed to get the cloud credentials in namespace %s: %w", worker.Namespace, err)
 		}
 		if err = a.updateCloudCredentialsInAllMachineClassSecrets(ctx, logger, cloudCredentials, worker.Namespace); err != nil {
-			return errors.Wrapf(err, "failed to update cloud credentials in machine class secrets for namespace %s", worker.Namespace)
+			return fmt.Errorf("failed to update cloud credentials in machine class secrets for namespace %s: %w", worker.Namespace, err)
 		}
 	}
 
 	// Mark all existing machines to become forcefully deleted.
 	logger.Info("Marking all machines to become forcefully deleted")
 	if err := a.markAllMachinesForcefulDeletion(ctx, logger, worker.Namespace); err != nil {
-		return errors.Wrapf(err, "marking all machines for forceful deletion failed")
+		return fmt.Errorf("marking all machines for forceful deletion failed: %w", err)
 	}
 
 	// Delete all machine deployments.
 	logger.Info("Deleting all machine deployments")
 	if err := a.client.DeleteAllOf(ctx, &machinev1alpha1.MachineDeployment{}, client.InNamespace(worker.Namespace)); err != nil {
-		return errors.Wrapf(err, "cleaning up all machine deployments failed")
+		return fmt.Errorf("cleaning up all machine deployments failed: %w", err)
 	}
 
 	// Delete all machine classes.
 	logger.Info("Deleting all machine classes")
 	if err := a.client.DeleteAllOf(ctx, workerDelegate.MachineClass(), client.InNamespace(worker.Namespace)); err != nil {
-		return errors.Wrapf(err, "cleaning up all machine classes failed")
+		return fmt.Errorf("cleaning up all machine classes failed: %w", err)
 	}
 
 	// Delete all machine class secrets.
 	logger.Info("Deleting all machine class secrets")
 	if err := a.client.DeleteAllOf(ctx, &corev1.Secret{}, client.InNamespace(worker.Namespace), client.MatchingLabels(getMachineClassSecretLabels())); err != nil {
-		return errors.Wrapf(err, "cleaning up all machine class secrets failed")
+		return fmt.Errorf("cleaning up all machine class secrets failed: %w", err)
 	}
 
 	// Wait until all machine resources have been properly deleted.
@@ -107,12 +107,12 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 
 	// Delete the machine-controller-manager.
 	if err := a.deleteMachineControllerManager(ctx, logger, worker); err != nil {
-		return errors.Wrapf(err, "failed deleting machine-controller-manager")
+		return fmt.Errorf("failed deleting machine-controller-manager: %w", err)
 	}
 
 	// Cleanup machine dependencies.
 	if err := workerDelegate.CleanupMachineDependencies(ctx); err != nil {
-		return errors.Wrap(err, "failed to cleanup machine dependencies")
+		return fmt.Errorf("failed to cleanup machine dependencies: %w", err)
 	}
 
 	return nil
@@ -136,7 +136,7 @@ func (a *genericActuator) markAllMachinesForcefulDeletion(ctx context.Context, l
 	}
 
 	if err := flow.Parallel(tasks...)(ctx); err != nil {
-		return fmt.Errorf("failed labelling machines for forceful deletion: %v", err)
+		return fmt.Errorf("failed labelling machines for forceful deletion: %w", err)
 	}
 
 	return nil

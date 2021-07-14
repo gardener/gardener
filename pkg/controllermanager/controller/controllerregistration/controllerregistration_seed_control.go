@@ -431,7 +431,7 @@ func deployNeededInstallations(
 			controllerDeployment = &gardencorev1beta1.ControllerDeployment{}
 
 			if err := c.Get(ctx, kutil.Key(controllerRegistration.Spec.Deployment.DeploymentRefs[0].Name), controllerDeployment); err != nil {
-				return fmt.Errorf("cannot deploy ControllerInstallation because the referenced ControllerDeployment cannot be retrieved: %v", err)
+				return fmt.Errorf("cannot deploy ControllerInstallation because the referenced ControllerDeployment cannot be retrieved: %w", err)
 			}
 		}
 
@@ -566,7 +566,7 @@ func seedSelectorMatches(deployment *gardencorev1beta1.ControllerRegistrationDep
 
 	seedSelector, err := metav1.LabelSelectorAsSelector(selector)
 	if err != nil {
-		return false, fmt.Errorf("label selector conversion failed: %v for seedSelector: %v", *selector, err)
+		return false, fmt.Errorf("label selector conversion failed: %v for seedSelector: %w", *selector, err)
 	}
 
 	return seedSelector.Matches(labels.Set(seedLabels)), nil

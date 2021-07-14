@@ -87,7 +87,7 @@ func checkMachineDeploymentsHealthy(machineDeployments []machinev1alpha1.Machine
 		}
 
 		if err := CheckMachineDeployment(&deployment); err != nil {
-			return false, fmt.Errorf("machine deployment %q in namespace %q is unhealthy: %v", deployment.Name, deployment.Namespace, err)
+			return false, fmt.Errorf("machine deployment %q in namespace %q is unhealthy: %w", deployment.Name, deployment.Namespace, err)
 		}
 	}
 

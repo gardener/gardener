@@ -16,8 +16,8 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
@@ -39,7 +39,7 @@ func (d *validationWrapper) Mutate(ctx context.Context, new, old client.Object) 
 // InjectFunc calls the inject.Func on the handler mutators.
 func (d *validationWrapper) InjectFunc(f inject.Func) error {
 	if err := f(d.Validator); err != nil {
-		return errors.Wrap(err, "could not inject into the validator")
+		return fmt.Errorf("could not inject into the validator: %w", err)
 	}
 	return nil
 }

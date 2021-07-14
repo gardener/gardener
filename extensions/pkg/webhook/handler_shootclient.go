@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -108,7 +107,7 @@ func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) 
 			v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 			v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
 		}); err != nil {
-			return errors.Wrapf(err, "error while listing all pods")
+			return fmt.Errorf("error while listing all pods: %w", err)
 		}
 
 		var shootNamespace string
@@ -125,7 +124,7 @@ func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) 
 
 		_, shootClient, err := util.NewClientForShoot(ctx, h.client, shootNamespace, client.Options{})
 		if err != nil {
-			return errors.Wrapf(err, "could not create shoot client")
+			return fmt.Errorf("could not create shoot client: %w", err)
 		}
 
 		return h.mutator.Mutate(ctx, new, old, shootClient)
@@ -134,7 +133,7 @@ func (h *handlerShootClient) Handle(ctx context.Context, req admission.Request) 
 	// Decode object
 	t, ok := h.typesMap[req.AdmissionRequest.Kind]
 	if !ok {
-		return admission.Errored(http.StatusBadRequest, errors.Errorf("unexpected request kind %s", req.AdmissionRequest.Kind))
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected request kind %s", req.AdmissionRequest.Kind))
 	}
 
 	return handle(ctx, req, mut, t, h.decoder, h.logger)

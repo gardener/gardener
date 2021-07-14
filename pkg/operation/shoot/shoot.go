@@ -506,22 +506,22 @@ func ToNetworks(s *gardencorev1beta1.Shoot) (*Networks, error) {
 
 	_, svc, err := net.ParseCIDR(*s.Spec.Networking.Services)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse shoot's network cidr %v", err)
+		return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
 	}
 
 	_, pods, err := net.ParseCIDR(*s.Spec.Networking.Pods)
 	if err != nil {
-		return nil, fmt.Errorf("cannot parse shoot's network cidr %v", err)
+		return nil, fmt.Errorf("cannot parse shoot's network cidr %w", err)
 	}
 
 	apiserver, err := common.ComputeOffsetIP(svc, 1)
 	if err != nil {
-		return nil, fmt.Errorf("cannot calculate default/kubernetes ClusterIP: %v", err)
+		return nil, fmt.Errorf("cannot calculate default/kubernetes ClusterIP: %w", err)
 	}
 
 	coreDNS, err := common.ComputeOffsetIP(svc, 10)
 	if err != nil {
-		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %v", err)
+		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %w", err)
 	}
 
 	return &Networks{

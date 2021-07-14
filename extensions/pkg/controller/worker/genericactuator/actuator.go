@@ -22,7 +22,6 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -108,12 +107,12 @@ func (a *genericActuator) InjectConfig(config *rest.Config) error {
 
 	a.clientset, err = kubernetes.NewForConfig(config)
 	if err != nil {
-		return errors.Wrap(err, "could not create Kubernetes client")
+		return fmt.Errorf("could not create Kubernetes client: %w", err)
 	}
 
 	a.gardenerClientset, err = gardenerkubernetes.NewWithConfig(gardenerkubernetes.WithRESTConfig(config))
 	if err != nil {
-		return errors.Wrap(err, "could not create Gardener client")
+		return fmt.Errorf("could not create Gardener client: %w", err)
 	}
 
 	a.chartApplier = a.gardenerClientset.ChartApplier()
@@ -214,7 +213,7 @@ func (a *genericActuator) updateCloudCredentialsInAllMachineClassSecrets(ctx con
 	logger.Info("Updating cloud credentials for existing machine class secrets")
 	secretList, err := a.listMachineClassSecrets(ctx, namespace)
 	if err != nil {
-		return errors.Wrapf(err, "failed to list machine class secrets in namespace %s", namespace)
+		return fmt.Errorf("failed to list machine class secrets in namespace %s: %w", namespace, err)
 	}
 
 	for _, secret := range secretList.Items {
@@ -223,7 +222,7 @@ func (a *genericActuator) updateCloudCredentialsInAllMachineClassSecrets(ctx con
 			secretCopy.Data[key] = value
 		}
 		if err := a.client.Patch(ctx, secretCopy, client.MergeFrom(&secret)); err != nil {
-			return errors.Wrapf(err, "failed to patch secret %s/%s with cloud credentials", namespace, secret.Name)
+			return fmt.Errorf("failed to patch secret %s/%s with cloud credentials: %w", namespace, secret.Name, err)
 		}
 	}
 	return nil
@@ -241,7 +240,7 @@ func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, 
 	for _, secret := range secretList.Items {
 		if !wantedMachineDeployments.HasSecret(secret.Name) {
 			if err := extensionscontroller.DeleteAllFinalizers(ctx, a.client, &secret); err != nil {
-				return errors.Wrapf(err, "Error removing finalizer from MachineClassSecret: %s/%s", secret.Namespace, secret.Name)
+				return fmt.Errorf("Error removing finalizer from MachineClassSecret: %s/%s: %w", secret.Namespace, secret.Name, err)
 			}
 			if err := a.client.Delete(ctx, &secret); err != nil {
 				return err

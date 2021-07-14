@@ -344,7 +344,7 @@ func FetchEventMessages(ctx context.Context, scheme *runtime.Scheme, reader clie
 	}
 	eventList := &corev1.EventList{}
 	if err := reader.List(ctx, eventList, fieldSelector); err != nil {
-		return "", fmt.Errorf("error '%v' occurred while fetching more details", err)
+		return "", fmt.Errorf("error '%w' occurred while fetching more details", err)
 	}
 
 	if len(eventList.Items) > 0 {
@@ -533,7 +533,7 @@ func NewestPodForDeployment(ctx context.Context, c client.Reader, deployment *ap
 
 	podSelector, err := metav1.LabelSelectorAsSelector(newestReplicaSet.Spec.Selector)
 	if err != nil {
-		return nil, fmt.Errorf("failed to convert the pod selector from ReplicaSet %s/%s: %v", newestReplicaSet.Namespace, newestReplicaSet.Name, err)
+		return nil, fmt.Errorf("failed to convert the pod selector from ReplicaSet %s/%s: %w", newestReplicaSet.Namespace, newestReplicaSet.Name, err)
 	}
 
 	listOpts = append(listOpts, client.MatchingLabelsSelector{Selector: podSelector})

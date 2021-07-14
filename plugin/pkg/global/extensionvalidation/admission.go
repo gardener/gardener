@@ -127,7 +127,7 @@ var _ admission.ValidationInterface = &ExtensionValidator{}
 // Validate makes admissions decisions based on the extension types.
 func (e *ExtensionValidator) Validate(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := e.waitUntilReady(a); err != nil {
-		return fmt.Errorf("err while waiting for ready %v", err)
+		return fmt.Errorf("err while waiting for ready %w", err)
 	}
 
 	switch a.GetKind().GroupKind() {

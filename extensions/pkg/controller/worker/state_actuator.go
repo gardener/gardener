@@ -17,6 +17,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sort"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -25,7 +26,6 @@ import (
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
@@ -53,7 +53,7 @@ func (a *genericStateActuator) InjectClient(client client.Client) error {
 func (a *genericStateActuator) Reconcile(ctx context.Context, worker *extensionsv1alpha1.Worker) error {
 	copyOfWorker := worker.DeepCopy()
 	if err := a.updateWorkerState(ctx, copyOfWorker); err != nil {
-		return errors.Wrapf(err, "failed to update the state in worker status")
+		return fmt.Errorf("failed to update the state in worker status: %w", err)
 	}
 
 	return nil

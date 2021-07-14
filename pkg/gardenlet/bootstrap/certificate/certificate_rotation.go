@@ -188,7 +188,7 @@ func getCurrentCertificate(ctx context.Context, logger logrus.FieldLogger, seedC
 
 	cert, err := tls.X509KeyPair(restConfig.CertData, restConfig.KeyData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse X509 certificate from kubeconfig in secret %s/%s on the target cluster: %v", secretNamespace, secretName, err)
+		return nil, fmt.Errorf("failed to parse X509 certificate from kubeconfig in secret %s/%s on the target cluster: %w", secretNamespace, secretName, err)
 	}
 
 	if len(cert.Certificate) < 1 {
@@ -197,7 +197,7 @@ func getCurrentCertificate(ctx context.Context, logger logrus.FieldLogger, seedC
 
 	certs, err := x509.ParseCertificates(cert.Certificate[0])
 	if err != nil {
-		return nil, fmt.Errorf("the X509 certificate from kubeconfig in secret %s/%s on the target cluster cannot be parsed: %v", secretNamespace, secretName, err)
+		return nil, fmt.Errorf("the X509 certificate from kubeconfig in secret %s/%s on the target cluster cannot be parsed: %w", secretNamespace, secretName, err)
 	}
 
 	if len(certs) < 1 {
@@ -227,7 +227,7 @@ func rotateCertificate(ctx context.Context, logger logrus.FieldLogger, clientMap
 
 	_, err = bootstraputil.UpdateGardenKubeconfigSecret(ctx, gardenClient.RESTConfig(), certData, privateKeyData, seedClient, gardenClientConnection)
 	if err != nil {
-		return fmt.Errorf("unable to update secret (%s/%s) on the target cluster during certificate rotation: %v", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name, err)
+		return fmt.Errorf("unable to update secret (%s/%s) on the target cluster during certificate rotation: %w", gardenClientConnection.KubeconfigSecret.Namespace, gardenClientConnection.KubeconfigSecret.Name, err)
 	}
 
 	return nil

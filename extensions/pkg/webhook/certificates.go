@@ -24,7 +24,6 @@ import (
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,7 +60,7 @@ func GenerateCertificates(ctx context.Context, mgr manager.Manager, certDir, nam
 	if len(namespace) == 0 {
 		caCert, serverCert, err = generateNewCAAndServerCert(mode, namespace, name, url)
 		if err != nil {
-			return nil, errors.Wrapf(err, "error generating new certificates for webhook server")
+			return nil, fmt.Errorf("error generating new certificates for webhook server: %w", err)
 		}
 		return writeCertificates(certDir, caCert, serverCert)
 	}
@@ -76,13 +75,13 @@ func GenerateCertificates(ctx context.Context, mgr manager.Manager, certDir, nam
 	secret := &corev1.Secret{}
 	if err := c.Get(ctx, kutil.Key(namespace, certSecretName), secret); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return nil, errors.Wrapf(err, "error getting cert secret")
+			return nil, fmt.Errorf("error getting cert secret: %w", err)
 		}
 
 		// The secret was not found, let's generate new certificates and store them in the secret afterwards.
 		caCert, serverCert, err = generateNewCAAndServerCert(mode, namespace, name, url)
 		if err != nil {
-			return nil, errors.Wrapf(err, "error generating new certificates for webhook server")
+			return nil, fmt.Errorf("error generating new certificates for webhook server: %w", err)
 		}
 
 		secret.ObjectMeta = metav1.ObjectMeta{Namespace: namespace, Name: certSecretName}
@@ -103,7 +102,7 @@ func GenerateCertificates(ctx context.Context, mgr manager.Manager, certDir, nam
 	// The secret has been found and we are now trying to read the stored certificate inside it.
 	caCert, serverCert, err = loadExistingCAAndServerCert(secret.Data)
 	if err != nil {
-		return nil, errors.Wrapf(err, "error reading data of secret %s/%s", namespace, certSecretName)
+		return nil, fmt.Errorf("error reading data of secret %s/%s: %w", namespace, certSecretName, err)
 	}
 	return writeCertificates(certDir, caCert, serverCert)
 }

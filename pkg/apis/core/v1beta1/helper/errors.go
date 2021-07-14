@@ -23,7 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
 
-	errors2 "github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -170,7 +169,7 @@ func NewWrappedLastErrors(description string, err error) *WrappedLastErrors {
 		lastErrors = append(lastErrors, *LastErrorWithTaskID(
 			partError.Error(),
 			utilerrors.GetID(partError),
-			DetermineErrorCodes(errors2.Cause(partError))...))
+			DetermineErrorCodes(utilerrors.Unwrap(partError))...))
 	}
 
 	return &WrappedLastErrors{

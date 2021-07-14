@@ -111,7 +111,7 @@ func (e *ExposureClass) ValidateInitialization() error {
 // with the ones from the referenced ExposureClass.
 func (e *ExposureClass) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := e.waitUntilReady(a); err != nil {
-		return fmt.Errorf("err while waiting for ready %v", err)
+		return fmt.Errorf("err while waiting for ready %w", err)
 	}
 
 	if a.GetKind().GroupKind() != core.Kind("Shoot") {

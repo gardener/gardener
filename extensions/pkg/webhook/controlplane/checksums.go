@@ -16,10 +16,10 @@ package controlplane
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/utils"
 
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +31,7 @@ func EnsureSecretChecksumAnnotation(ctx context.Context, template *corev1.PodTem
 	// Get secret from cluster
 	secret := &corev1.Secret{}
 	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret); err != nil {
-		return errors.Wrapf(err, "could not get secret '%s/%s'", namespace, name)
+		return fmt.Errorf("could not get secret '%s/%s': %w", namespace, name, err)
 	}
 
 	// Add checksum annotation
@@ -45,7 +45,7 @@ func EnsureConfigMapChecksumAnnotation(ctx context.Context, template *corev1.Pod
 	// Get configmap from cluster
 	cm := &corev1.ConfigMap{}
 	if err := c.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, cm); err != nil {
-		return errors.Wrapf(err, "could not get configmap '%s/%s'", namespace, name)
+		return fmt.Errorf("could not get configmap '%s/%s': %w", namespace, name, err)
 	}
 
 	// Add checksum annotation

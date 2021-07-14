@@ -84,7 +84,7 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 		}
 		err := r.seedClient.Delete(ctx, policy)
 		if client.IgnoreNotFound(err) != nil {
-			return reconcile.Result{}, fmt.Errorf("unable to delete NetworkPolicy %q from namespace %q: %v", policy.Name, namespace.Name, err)
+			return reconcile.Result{}, fmt.Errorf("unable to delete NetworkPolicy %q from namespace %q: %w", policy.Name, namespace.Name, err)
 		} else if err == nil {
 			r.log.Infof("Deleting NetworkPolicy %q from namespace %q", policy.Name, namespace.Name)
 		}

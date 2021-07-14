@@ -149,7 +149,7 @@ func run(ctx context.Context, o *Options) error {
 	if len(o.ConfigFile) > 0 {
 		c, err := o.loadConfigFromFile(o.ConfigFile)
 		if err != nil {
-			return fmt.Errorf("unable to read the configuration file: %v", err)
+			return fmt.Errorf("unable to read the configuration file: %w", err)
 		}
 
 		if errs := configvalidation.ValidateGardenletConfiguration(c, nil, false); len(errs) > 0 {
@@ -385,7 +385,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 
 	gardenClusterIdentity := &corev1.ConfigMap{}
 	if err := k8sGardenClient.Client().Get(ctx, kutil.Key(metav1.NamespaceSystem, v1beta1constants.ClusterIdentity), gardenClusterIdentity); err != nil {
-		return nil, fmt.Errorf("unable to get Gardener`s cluster-identity ConfigMap: %v", err)
+		return nil, fmt.Errorf("unable to get Gardener`s cluster-identity ConfigMap: %w", err)
 	}
 
 	clusterIdentity, ok := gardenClusterIdentity.Data[v1beta1constants.ClusterIdentity]
@@ -480,7 +480,7 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 		}
 		leaderElector, err := leaderelection.NewLeaderElector(*g.LeaderElection)
 		if err != nil {
-			return fmt.Errorf("couldn't create leader elector: %v", err)
+			return fmt.Errorf("couldn't create leader elector: %w", err)
 		}
 		leaderElector.Run(leaderElectionCtx)
 		return nil
@@ -522,7 +522,7 @@ func determineGardenletIdentity() (*gardencorev1beta1.Gardener, error) {
 
 	gardenletName, err = os.Hostname()
 	if err != nil {
-		return nil, fmt.Errorf("unable to get hostname: %v", err)
+		return nil, fmt.Errorf("unable to get hostname: %w", err)
 	}
 
 	// If running inside a Kubernetes cluster (as container) we can read the container id from the proc file system.
@@ -561,7 +561,7 @@ func determineGardenletIdentity() (*gardencorev1beta1.Gardener, error) {
 	if gardenletID == "" {
 		gardenletID, err = utils.GenerateRandomString(64)
 		if err != nil {
-			return nil, fmt.Errorf("unable to generate gardenletID: %v", err)
+			return nil, fmt.Errorf("unable to generate gardenletID: %w", err)
 		}
 	}
 
