@@ -268,6 +268,19 @@ var _ = Describe("Shoot Maintenance", func() {
 			Expect(shoot.Spec.Provider.Workers[0].Machine.Image).To(Equal(expected))
 		})
 
+		It("should determine that some shoot worker machine images must be not be maintained - MachineImageVersion doesn't support certain CRIs", func() {
+			cloudProfile.Spec.MachineImages[0].Versions[0].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}}
+			shoot.Spec.Provider.Workers[0].CRI = &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameContainerD}
+
+			shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, gardencorev1beta1.Worker{Name: "worker-without-cri-config", Machine: gardencorev1beta1.Machine{Image: shootCurrentImage}})
+
+			_, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
+			Expect(err).NotTo(HaveOccurred())
+
+			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.0.0")
+			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[1], "CoreOs", "1.1.1")
+		})
+
 		It("should determine that the shoot worker machine images must be maintained - cloud profile has no matching (machineImage.name & machineImage.version) machine image defined (the shoots image has been deleted from the cloudProfile) -> update to latest machineImage with same name", func() {
 			cloudProfile.Spec.MachineImages = []gardencorev1beta1.MachineImage{
 				{

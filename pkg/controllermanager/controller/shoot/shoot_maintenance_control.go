@@ -150,6 +150,7 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 	for _, reason := range reasonForImageUpdatePerPool {
 		r.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventImageVersionMaintenance, "%s",
 			fmt.Sprintf("Updated %s.", reason))
+		shootLogger.Debugf("[SHOOT MAINTENANCE] Updating %s", reason)
 	}
 
 	updatedKubernetesVersion, reasonForKubernetesUpdate, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
@@ -157,8 +158,6 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		// continue execution to allow the machine image version update
 		shootLogger.Error(fmt.Sprintf("Could not maintain kubernetes version: %s", err.Error()))
 	}
-
-	// Update shoot object
 
 	// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
 	if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
@@ -214,13 +213,32 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 
 // MaintainMachineImages updates the machine images of a Shoot's worker pools if necessary
 func MaintainMachineImages(shootLogger *logrus.Entry, shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) ([]string, error) {
-	updatedMachineImages, reasonForImageUpdatePerPool, err := selectUpdatedMachineImages(shootLogger, shoot, cloudProfile)
+	var reasonsForUpdate []string
 
-	if updatedMachineImages != nil {
-		gardencorev1beta1helper.UpdateMachineImages(shoot.Spec.Provider.Workers, updatedMachineImages)
+	for i, worker := range shoot.Spec.Provider.Workers {
+		workerImage := worker.Machine.Image
+		machineImageFromCloudProfile, err := determineMachineImage(cloudProfile, workerImage)
+		if err != nil {
+			return nil, err
+		}
+
+		filteredMachineImageVersionsFromCloudProfile := filterForCRIName(&machineImageFromCloudProfile, worker.CRI)
+		shouldBeUpdated, reason, updatedMachineImage, err := shouldMachineImageBeUpdated(shootLogger, shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion, filteredMachineImageVersionsFromCloudProfile, workerImage)
+		if err != nil {
+			return nil, err
+		}
+
+		if !shouldBeUpdated {
+			continue
+		}
+
+		shoot.Spec.Provider.Workers[i].Machine.Image = updatedMachineImage
+
+		message := fmt.Sprintf("image of worker-pool '%s' from '%s' version '%s' to version '%s'. Reason: %s", worker.Name, workerImage.Name, *workerImage.Version, *updatedMachineImage.Version, *reason)
+		reasonsForUpdate = append(reasonsForUpdate, message)
 	}
 
-	return reasonForImageUpdatePerPool, err
+	return reasonsForUpdate, nil
 }
 
 // MaintainKubernetesVersion determines if a shoots kubernetes version has to be maintained and in case returns the target version
@@ -292,39 +310,6 @@ func mustMaintainNow(shoot *gardencorev1beta1.Shoot) bool {
 func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
 	operation, ok := shoot.Annotations[v1beta1constants.GardenerOperation]
 	return ok && operation == v1beta1constants.ShootOperationMaintain
-}
-
-func selectUpdatedMachineImages(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile) (updatedMachineImages []*gardencorev1beta1.ShootMachineImage, reasons []string, error error) {
-	var (
-		shootMachineImagesForUpdate []*gardencorev1beta1.ShootMachineImage
-		reasonsForUpdate            []string
-	)
-	for _, worker := range shoot.Spec.Provider.Workers {
-		workerImage := worker.Machine.Image
-		machineImageFromCloudProfile, err := determineMachineImage(cloudProfile, workerImage)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		filteredMachineImageVersionsFromCloudProfile := filterForCRIName(&machineImageFromCloudProfile, worker.CRI)
-		shouldBeUpdated, reason, updatedMachineImage, err := shouldMachineImageBeUpdated(logger, shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion, filteredMachineImageVersionsFromCloudProfile, workerImage)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if !shouldBeUpdated {
-			continue
-		}
-
-		message := fmt.Sprintf("image of worker-pool '%s' from '%s' version '%s' to version '%s'. Reason: %s", worker.Name, workerImage.Name, *workerImage.Version, *updatedMachineImage.Version, *reason)
-		reasonsForUpdate = append(reasonsForUpdate, message)
-		logger.Debugf("[SHOOT MAINTENANCE] Updating %s", message)
-		shootMachineImagesForUpdate = append(shootMachineImagesForUpdate, updatedMachineImage)
-	}
-	if len(shootMachineImagesForUpdate) == 0 {
-		return nil, nil, nil
-	}
-	return shootMachineImagesForUpdate, reasonsForUpdate, nil
 }
 
 func filterForCRIName(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, workerCRI *gardencorev1beta1.CRI) *gardencorev1beta1.MachineImage {
