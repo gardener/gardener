@@ -749,11 +749,6 @@ func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
 	}
 }
 
-// DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
-func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
-	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
-}
-
 func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
 	if b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase == component.PhaseDisabled {
 		return

@@ -71,6 +71,11 @@ func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
 	))
 }
 
+// DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
+func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
+	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
+}
+
 func (b *Botanist) getKubeAPIServerServiceAnnotations(sniPhase component.Phase) map[string]string {
 	if b.ExposureClassHandler != nil && sniPhase != component.PhaseEnabled {
 		return utils.MergeStringMaps(b.Seed.LoadBalancerServiceAnnotations, b.ExposureClassHandler.LoadBalancerService.Annotations)
