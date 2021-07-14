@@ -922,7 +922,7 @@ var envoyConfig = `static_resources:
           - upgrade_type: CONNECT
   clusters:
   - name: dynamic_forward_proxy_cluster
-    connect_timeout: 1s
+    connect_timeout: 20s
     lb_policy: CLUSTER_PROVIDED
     cluster_type:
       name: envoy.clusters.dynamic_forward_proxy
