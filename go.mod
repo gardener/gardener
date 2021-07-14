@@ -12,7 +12,8 @@ require (
 	github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
 	github.com/gardener/etcd-druid v0.5.0
 	github.com/gardener/external-dns-management v0.7.18
-	github.com/gardener/gardener-resource-manager v0.18.0
+	github.com/gardener/gardener-resource-manager v0.25.0
+	github.com/gardener/gardener-resource-manager/api v0.0.0-00010101000000-000000000000
 	github.com/gardener/hvpa-controller v0.3.1
 	github.com/gardener/landscaper/apis v0.7.0
 	github.com/gardener/machine-controller-manager v0.33.0
@@ -72,6 +73,7 @@ require (
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible // keep this value in sync with k8s.io/apiserver
 	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
+	github.com/gardener/gardener-resource-manager/api => github.com/gardener/gardener-resource-manager/api v0.25.0
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.0 // keep this value in sync with sigs.k8s.io/controller-runtime
 	google.golang.org/grpc => google.golang.org/grpc v1.27.1 // keep this value in sync with k8s.io/apiserver

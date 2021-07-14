@@ -15,7 +15,7 @@
 package v1alpha1
 
 import (
-	resources "github.com/gardener/gardener-resource-manager/pkg/apis/resources"
+	resources "github.com/gardener/gardener-resource-manager/api/resources"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

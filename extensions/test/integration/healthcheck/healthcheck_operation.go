@@ -24,8 +24,8 @@ import (
 	"github.com/gardener/gardener/extensions/test/integration/operation"
 	"k8s.io/utils/pointer"
 
-	resourcev1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-	resourcev1alpha1helper "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1/helper"
+	resourcev1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	resourcev1alpha1helper "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
