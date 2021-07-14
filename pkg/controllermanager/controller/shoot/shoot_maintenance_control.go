@@ -302,7 +302,8 @@ func MaintainMachineImages(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot,
 			return nil, nil, err
 		}
 
-		shouldBeUpdated, reason, updatedMachineImage, err := shouldMachineImageBeUpdated(logger, shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion, &machineImageFromCloudProfile, workerImage)
+		filteredMachineImageVersionsFromCloudProfile := filterForCRIName(&machineImageFromCloudProfile, worker.CRI)
+		shouldBeUpdated, reason, updatedMachineImage, err := shouldMachineImageBeUpdated(logger, shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion, filteredMachineImageVersionsFromCloudProfile, workerImage)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -320,6 +321,26 @@ func MaintainMachineImages(logger *logrus.Entry, shoot *gardencorev1beta1.Shoot,
 		return nil, nil, nil
 	}
 	return shootMachineImagesForUpdate, reasonsForUpdate, nil
+}
+
+func filterForCRIName(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, workerCRI *gardencorev1beta1.CRI) *gardencorev1beta1.MachineImage {
+	if workerCRI == nil {
+		return machineImageFromCloudProfile
+	}
+
+	filteredMachineImages := gardencorev1beta1.MachineImage{Name: machineImageFromCloudProfile.Name,
+		Versions: []gardencorev1beta1.MachineImageVersion{}}
+
+	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
+		for _, cri := range cloudProfileVersion.CRI {
+			if cri.Name == workerCRI.Name {
+				filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
+				continue
+			}
+		}
+	}
+
+	return &filteredMachineImages
 }
 
 func determineMachineImage(cloudProfile *gardencorev1beta1.CloudProfile, shootMachineImage *gardencorev1beta1.ShootMachineImage) (gardencorev1beta1.MachineImage, error) {
