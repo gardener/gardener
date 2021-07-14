@@ -36,6 +36,7 @@ import (
 	gardenv1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type reconciler struct {
@@ -93,12 +94,12 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if acc.GetDeletionTimestamp() != nil {
-		r.logger.V(6).Info("Do not perform HealthCheck for extension resource. Extension is being deleted.", "name", acc.GetName(), "namespace", acc.GetNamespace())
+		r.logger.V(6).Info("Do not perform HealthCheck for extension resource. Extension is being deleted.", "healthcheck", kutil.ObjectName(acc))
 		return reconcile.Result{}, nil
 	}
 
 	if isInMigration(acc) {
-		r.logger.Info("Do not perform HealthCheck for extension resource. Extension is being migrated.", "name", acc.GetName(), "namespace", acc.GetNamespace())
+		r.logger.Info("Do not perform HealthCheck for extension resource. Extension is being migrated.", "healthecheck", kutil.ObjectName(acc))
 		return reconcile.Result{}, nil
 	}
 
@@ -121,11 +122,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			return reconcile.Result{}, err
 		}
 
-		r.logger.V(6).Info("Do not perform HealthCheck for extension resource. Shoot is hibernated.", "name", acc.GetName(), "namespace", acc.GetNamespace(), "kind", acc.GetObjectKind().GroupVersionKind().Kind)
+		r.logger.V(6).Info("Do not perform HealthCheck for extension resource. Shoot is hibernated.", "healthcheck", kutil.ObjectName(acc), "kind", acc.GetObjectKind().GroupVersionKind().Kind)
 		return reconcile.Result{}, nil
 	}
 
-	r.logger.V(6).Info("Performing health check", "name", acc.GetName(), "namespace", acc.GetNamespace(), "kind", acc.GetObjectKind().GroupVersionKind().Kind)
+	r.logger.V(6).Info("Performing healthcheck", "healthcheck", kutil.ObjectName(acc), "kind", acc.GetObjectKind().GroupVersionKind().Kind)
 	return r.performHealthCheck(ctx, request, extension)
 }
 

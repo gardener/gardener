@@ -40,6 +40,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 const (
@@ -169,7 +170,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, fmt.Errorf("could not fetch Extension resource: %+v", err)
+		return reconcile.Result{}, err
 	}
 
 	var result reconcile.Result
@@ -180,7 +181,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if extensionscontroller.IsShootFailed(shoot) {
-		r.logger.Info("Stop reconciling Extension of failed Shoot.", "namespace", request.Namespace, "name", ex.Name)
+		r.logger.Info("Skipping the reconciliation of extension of failed shoot", "extension", kutil.ObjectName(ex))
 		return reconcile.Result{}, nil
 	}
 
@@ -208,16 +209,17 @@ func (r *reconciler) reconcile(ctx context.Context, ex *extensionsv1alpha1.Exten
 		return reconcile.Result{}, err
 	}
 
-	if err := r.statusUpdater.Processing(ctx, ex, operationType, "Reconciling Extension resource"); err != nil {
+	if err := r.statusUpdater.Processing(ctx, ex, operationType, "Reconciling the extension"); err != nil {
 		return reconcile.Result{}, err
 	}
 
+	r.logger.Info("Starting the reconciliation of extension", "extension", kutil.ObjectName(ex))
 	if err := r.actuator.Reconcile(ctx, ex); err != nil {
-		_ = r.statusUpdater.Error(ctx, ex, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Unable to reconcile Extension resource")
+		_ = r.statusUpdater.Error(ctx, ex, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling extension")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, ex, operationType, "Successfully reconciled Extension resource"); err != nil {
+	if err := r.statusUpdater.Success(ctx, ex, operationType, "Successfully reconciled extension"); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -226,25 +228,26 @@ func (r *reconciler) reconcile(ctx context.Context, ex *extensionsv1alpha1.Exten
 
 func (r *reconciler) delete(ctx context.Context, ex *extensionsv1alpha1.Extension) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(ex, r.finalizerName) {
-		r.logger.Info("Reconciling Extension resource causes a no-op as there is no finalizer.", "extension", ex.Name, "namespace", ex.Namespace)
+		r.logger.Info("Deleting extension causes a no-op as there is no finalizer", "extension", kutil.ObjectName(ex))
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.statusUpdater.Processing(ctx, ex, gardencorev1beta1.LastOperationTypeDelete, "Deleting Extension resource."); err != nil {
+	if err := r.statusUpdater.Processing(ctx, ex, gardencorev1beta1.LastOperationTypeDelete, "Deleting the extension"); err != nil {
 		return reconcile.Result{}, err
 	}
 
+	r.logger.Info("Starting the deletion of extension", "extension", kutil.ObjectName(ex))
 	if err := r.actuator.Delete(ctx, ex); err != nil {
-		_ = r.statusUpdater.Error(ctx, ex, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting Extension resource")
+		_ = r.statusUpdater.Error(ctx, ex, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting the extension")
 		return extensionscontroller.ReconcileErr(err)
 	}
 
-	if err := r.statusUpdater.Success(ctx, ex, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted Extension resource"); err != nil {
+	if err := r.statusUpdater.Success(ctx, ex, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted the extension"); err != nil {
 		return reconcile.Result{}, err
 	}
-
+	r.logger.Info("Removing finalizer", "extension", kutil.ObjectName(ex))
 	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, ex, r.finalizerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing finalizer from Extension resource: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("error removing finalizer from extension: %+v", err)
 	}
 
 	return reconcile.Result{}, nil
@@ -259,6 +262,7 @@ func (r *reconciler) restore(ctx context.Context, ex *extensionsv1alpha1.Extensi
 		return reconcile.Result{}, err
 	}
 
+	r.logger.Info("Starting the restoration of extension", "extension", kutil.ObjectName(ex))
 	if err := r.actuator.Restore(ctx, ex); err != nil {
 		_ = r.statusUpdater.Error(ctx, ex, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Unable to restore Extension resource")
 		return extensionscontroller.ReconcileErr(err)
@@ -280,6 +284,7 @@ func (r *reconciler) migrate(ctx context.Context, ex *extensionsv1alpha1.Extensi
 		return reconcile.Result{}, err
 	}
 
+	r.logger.Info("Starting the migration of extension", "extension", kutil.ObjectName(ex))
 	if err := r.actuator.Migrate(ctx, ex); err != nil {
 		_ = r.statusUpdater.Error(ctx, ex, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating Extension resource")
 		return extensionscontroller.ReconcileErr(err)
@@ -289,8 +294,9 @@ func (r *reconciler) migrate(ctx context.Context, ex *extensionsv1alpha1.Extensi
 		return reconcile.Result{}, err
 	}
 
+	r.logger.Info("Removing all finalizers", "extension", kutil.ObjectName(ex))
 	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, ex); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error removing all finalizers from Extension resource: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("error removing finalizers from extension: %+v", err)
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, ex, v1beta1constants.GardenerOperation); err != nil {

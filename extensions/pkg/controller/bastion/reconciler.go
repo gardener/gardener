@@ -31,6 +31,7 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 type reconciler struct {
@@ -50,7 +51,7 @@ func NewReconciler(actuator Actuator) reconcile.Reconciler {
 	return extensionscontroller.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.Bastion{} },
 		&reconciler{
-			logger:        log.Log.WithName(ControllerName),
+			logger:        logger,
 			actuator:      actuator,
 			statusUpdater: extensionscontroller.NewStatusUpdater(logger),
 		},
@@ -105,7 +106,7 @@ func (r *reconciler) reconcile(ctx context.Context, bastion *extensionsv1alpha1.
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Starting the reconciliation of bastion", "bastion", bastion.Name)
+	r.logger.Info("Starting the reconciliation of bastion", "bastion", kutil.ObjectName(bastion))
 	if err := r.actuator.Reconcile(ctx, bastion, cluster); err != nil {
 		_ = r.statusUpdater.Error(ctx, bastion, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling bastion")
 		return extensionscontroller.ReconcileErr(err)
@@ -120,7 +121,7 @@ func (r *reconciler) reconcile(ctx context.Context, bastion *extensionsv1alpha1.
 
 func (r *reconciler) delete(ctx context.Context, bastion *extensionsv1alpha1.Bastion, cluster *extensionscontroller.Cluster) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(bastion, FinalizerName) {
-		r.logger.Info("Deleting bastion causes a no-op as there is no finalizer.", "bastion", bastion.Name)
+		r.logger.Info("Deleting bastion causes a no-op as there is no finalizer", "bastion", kutil.ObjectName(bastion))
 		return reconcile.Result{}, nil
 	}
 
@@ -129,7 +130,7 @@ func (r *reconciler) delete(ctx context.Context, bastion *extensionsv1alpha1.Bas
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Starting the deletion of bastion", "bastion", bastion.Name)
+	r.logger.Info("Starting the deletion of bastion", "bastion", kutil.ObjectName(bastion))
 
 	if err := r.actuator.Delete(ctx, bastion, cluster); err != nil {
 		_ = r.statusUpdater.Error(ctx, bastion, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error deleting bastion")
@@ -140,7 +141,7 @@ func (r *reconciler) delete(ctx context.Context, bastion *extensionsv1alpha1.Bas
 		return reconcile.Result{}, err
 	}
 
-	r.logger.Info("Removing finalizer.", "bastion", bastion.Name)
+	r.logger.Info("Removing finalizer", "bastion", kutil.ObjectName(bastion))
 	if err := controllerutils.RemoveFinalizer(ctx, r.reader, r.client, bastion, FinalizerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizer from bastion: %+v", err)
 	}
