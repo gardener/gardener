@@ -470,6 +470,7 @@ func (r *resourceManager) computeCommand() []string {
 	if r.values.ClusterIdentity != nil {
 		cmd = append(cmd, fmt.Sprintf("--cluster-id=%s", *r.values.ClusterIdentity))
 	}
+	cmd = append(cmd, "--garbage-collector-sync-period=12h")
 	cmd = append(cmd, fmt.Sprintf("--health-bind-address=:%v", healthPort))
 	if r.values.MaxConcurrentHealthWorkers != nil {
 		cmd = append(cmd, fmt.Sprintf("--health-max-concurrent-workers=%d", *r.values.MaxConcurrentHealthWorkers))
