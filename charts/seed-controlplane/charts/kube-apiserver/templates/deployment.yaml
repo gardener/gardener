@@ -1,8 +1,26 @@
+{{- define "kube-apiserver.deployment.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "kube-apiserver.admissionConfig.name" . | sha256sum | trunc 8 }}: {{ include "kube-apiserver.admissionConfig.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "kube-apiserver.auditConfig.name" . | sha256sum | trunc 8 }}: {{ include "kube-apiserver.auditConfig.name" . }}
+{{- if .Values.reversedVPN.enabled }}
+reference.resources.gardener.cloud/configmap-{{ include "kube-apiserver.egressSelector.name" . | sha256sum | trunc 8 }}: {{ include "kube-apiserver.egressSelector.name" . }}
+{{- end }}
+{{- if .Values.oidcConfig.caBundle }}
+reference.resources.gardener.cloud/secret-{{ include "kube-apiserver.oidcCABundle.name" . | sha256sum | trunc 8 }}: {{ include "kube-apiserver.oidcCABundle.name" . }}
+{{- end }}
+{{- if .Values.serviceAccountConfig }}
+{{- if .Values.serviceAccountConfig.signingKey}}
+reference.resources.gardener.cloud/secret-{{ include "kube-apiserver.serviceAccountSigningKeyConfig.name" . | sha256sum | trunc 8 }}: {{ include "kube-apiserver.serviceAccountSigningKeyConfig.name" . }}
+{{- end }}
+{{- end }}
+{{- end -}}
+---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: kube-apiserver
   namespace: {{ .Release.Namespace }}
+  annotations:
+{{ include "kube-apiserver.deployment.annotations" . | indent 4 }}
   labels:
     gardener.cloud/role: controlplane
     app: kubernetes
@@ -26,17 +44,7 @@ spec:
   template:
     metadata:
       annotations:
-        {{- if .Values.serviceAccountConfig }}
-        {{- if .Values.serviceAccountConfig.signingKey}}
-        checksum/service-account-signing-key: {{ include ( print $.Template.BasePath "/secret-service-account-signing-key.yaml") . | sha256sum }}
-        {{- end }}
-        {{- end }}
-        checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/configmap-audit-policy.yaml") . | sha256sum }}
-        checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/secret-oidc-ca.yaml") . | sha256sum }}
-        checksum/configmap-admission-config: {{ include (print $.Template.BasePath "/configmap-admission-config.yaml") . | sha256sum }}
-        {{- if .Values.reversedVPN.enabled }}
-        checksum/egress-selection-config: {{ include (print $.Template.BasePath "/configmap-egress-selection.yaml") . | sha256sum }}
-        {{- end}}
+{{ include "kube-apiserver.deployment.annotations" . | indent 8 }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
@@ -370,7 +378,7 @@ spec:
           path: /lib/modules
       - name: audit-policy-config
         configMap:
-          name: audit-policy-config
+          name: {{ include "kube-apiserver.auditConfig.name" . }}
       - name: ca
         secret:
           secretName: ca
@@ -411,22 +419,22 @@ spec:
       {{- if .Values.oidcConfig.caBundle }}
       - name: kube-apiserver-oidc-cabundle
         secret:
-          secretName: kube-apiserver-oidc-cabundle
+          secretName: {{ include "kube-apiserver.oidcCABundle.name" . }}
       {{- end }}
       {{- if .Values.serviceAccountConfig }}
       {{- if .Values.serviceAccountConfig.signingKey }}
       - name: kube-apiserver-service-account-signing-key
         secret:
-          secretName: kube-apiserver-service-account-signing-key
+          secretName: {{ include "kube-apiserver.serviceAccountSigningKeyConfig.name" . }}
       {{- end }}
       {{- end }}
       - name: kube-apiserver-admission-config
         configMap:
-          name: kube-apiserver-admission-config
+          name: {{ include "kube-apiserver.admissionConfig.name" . }}
       {{- if .Values.reversedVPN.enabled }}
       - name: egress-selection-config
         configMap:
-          name: kube-apiserver-egress-selector-configuration
+          name: {{ include "kube-apiserver.egressSelector.name" . }}
       {{- else }}
       - name: vpn-seed
         secret:
