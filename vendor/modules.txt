@@ -108,6 +108,7 @@ github.com/gardener/external-dns-management/pkg/apis/dns
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 # github.com/gardener/gardener-resource-manager v0.25.0
 ## explicit
+github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references
 github.com/gardener/gardener-resource-manager/pkg/health
 github.com/gardener/gardener-resource-manager/pkg/manager
 # github.com/gardener/gardener-resource-manager/api v0.0.0-00010101000000-000000000000 => github.com/gardener/gardener-resource-manager/api v0.25.0

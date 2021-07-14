@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -205,6 +206,56 @@ var _ = Describe("Object", func() {
 
 			f()
 			Expect(obj).To(Equal(&corev1.ServiceAccount{}))
+		})
+	})
+
+	Describe("#MakeImmutable", func() {
+		var (
+			name                 = "some-name"
+			nameWithHyphenSuffix = name + "-"
+			labels               = map[string]string{"foo": "bar"}
+		)
+
+		It("should do nothing for resources not ConfigMap or Secret", func() {
+			Expect(MakeImmutable(&corev1.Pod{})).To(MatchError(ContainSubstring("unhandled object type")))
+		})
+
+		It("should properly make the ConfigMap immutable", func() {
+			var (
+				configMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   name,
+						Labels: labels,
+					},
+				}
+				expectedConfigMap = configMap.DeepCopy()
+			)
+
+			expectedConfigMap.Name += "-e3b0c442"
+			expectedConfigMap.Immutable = pointer.Bool(true)
+			expectedConfigMap.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
+
+			Expect(MakeImmutable(configMap)).To(Succeed())
+			Expect(configMap).To(Equal(expectedConfigMap))
+		})
+
+		It("should properly make the Secret immutable", func() {
+			var (
+				secret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   nameWithHyphenSuffix,
+						Labels: labels,
+					},
+				}
+				expectedSecret = secret.DeepCopy()
+			)
+
+			expectedSecret.Name += "e3b0c442"
+			expectedSecret.Immutable = pointer.Bool(true)
+			expectedSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
+
+			Expect(MakeImmutable(secret)).To(Succeed())
+			Expect(secret).To(Equal(expectedSecret))
 		})
 	})
 })
