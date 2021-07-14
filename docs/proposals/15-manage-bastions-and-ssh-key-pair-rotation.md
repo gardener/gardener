@@ -222,3 +222,9 @@ Currently, the `ssh` key pair for the shoot nodes are created once during shoot 
         - The "execution" script includes also the original user data script, which it writes to `PATH_CLOUDCONFIG`, compares it against the previous cloud config and runs the script in case it has changed
         - Running the [original user data](https://github.com/gardener/gardener/tree/master/pkg/operation/botanist/component/extensions/operatingsystemconfig/original) script will also run the `gardeneruser` component, where the `authorized_keys` file will be updated
         - After the most recent cloud-config user data was applied, the "execution" script annotates the node with `checksum/cloud-config-data: <cloud-config-checksum>` to indicate the success
+
+### Limitations
+
+Each operating system has its own default user (e.g. `core`, `admin`, `ec2-user` etc). These users get their SSH keys during VM creation (however there is a different handling on Google Cloud Platform as stated below). These keys currently do not get rotated respectively are not removed from the `authorized_keys` file. This means that the initial `ssh` key will still be valid for the default operating system user.
+
+On Google Cloud Platform, the VMs do not have any static users (i.e. no `gardener` user) and there is an agent on the nodes that syncs the users with their SSH keypairs from the GCP IAM service.

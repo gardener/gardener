@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -46,8 +47,14 @@ import (
 func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener).DeepCopy()
 
-	if val, ok := b.Shoot.Info.Annotations[v1beta1constants.GardenerOperation]; ok && val == v1beta1constants.ShootOperationRotateKubeconfigCredentials {
+	switch b.Shoot.Info.Annotations[v1beta1constants.GardenerOperation] {
+	case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
 		if err := b.rotateKubeconfigSecrets(ctx, &gardenerResourceDataList); err != nil {
+			return err
+		}
+
+	case v1beta1constants.ShootOperationRotateSSHKeypair:
+		if err := b.rotateSSHKeypairSecrets(ctx, &gardenerResourceDataList); err != nil {
 			return err
 		}
 	}
@@ -241,6 +248,35 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 	return b.K8sGardenClient.Client().Patch(ctx, b.Shoot.Info, client.MergeFrom(oldObj))
 }
 
+func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
+	currentSecret := gardenerResourceDataList.Get(v1beta1constants.SecretNameSSHKeyPair)
+	if currentSecret == nil {
+		return fmt.Errorf("no Secret named %s loaded", v1beta1constants.SecretNameSSHKeyPair)
+	}
+
+	// copy current key to old secret
+	oldSecret := currentSecret.DeepCopy()
+	oldSecret.Name = v1beta1constants.SecretNameOldSSHKeyPair
+	gardenerResourceDataList.Upsert(oldSecret)
+
+	names := []string{
+		v1beta1constants.SecretNameSSHKeyPair,
+		v1beta1constants.SecretNameOldSSHKeyPair,
+	}
+
+	for _, secretName := range names {
+		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+	}
+	gardenerResourceDataList.Delete(v1beta1constants.SecretNameSSHKeyPair)
+
+	// remove operation annotation
+	oldObj := b.Shoot.Info.DeepCopy()
+	delete(b.Shoot.Info.Annotations, v1beta1constants.GardenerOperation)
+	return b.K8sGardenClient.Client().Patch(ctx, b.Shoot.Info, client.MergeFrom(oldObj))
+}
+
 func (b *Botanist) deleteBasicAuthDependantSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
 	for _, secretName := range []string{common.BasicAuthSecretName, common.KubecfgSecretName} {
 		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
@@ -331,6 +367,11 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 		{
 			secretName: v1beta1constants.SecretNameSSHKeyPair,
 			suffix:     gutil.ShootProjectSecretSuffixSSHKeypair,
+			labels:     map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
+		},
+		{
+			secretName: v1beta1constants.SecretNameOldSSHKeyPair,
+			suffix:     gutil.ShootProjectSecretSuffixOldSSHKeypair,
 			labels:     map[string]string{v1beta1constants.GardenRole: v1beta1constants.GardenRoleSSHKeyPair},
 		},
 		{

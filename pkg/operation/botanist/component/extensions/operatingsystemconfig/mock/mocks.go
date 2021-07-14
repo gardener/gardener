@@ -154,16 +154,16 @@ func (mr *MockInterfaceMockRecorder) SetPromtailRBACAuthToken(arg0 interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPromtailRBACAuthToken", reflect.TypeOf((*MockInterface)(nil).SetPromtailRBACAuthToken), arg0)
 }
 
-// SetSSHPublicKey mocks base method.
-func (m *MockInterface) SetSSHPublicKey(arg0 string) {
+// SetSSHPublicKeys mocks base method.
+func (m *MockInterface) SetSSHPublicKeys(arg0 []string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetSSHPublicKey", arg0)
+	m.ctrl.Call(m, "SetSSHPublicKeys", arg0)
 }
 
-// SetSSHPublicKey indicates an expected call of SetSSHPublicKey.
-func (mr *MockInterfaceMockRecorder) SetSSHPublicKey(arg0 interface{}) *gomock.Call {
+// SetSSHPublicKeys indicates an expected call of SetSSHPublicKeys.
+func (mr *MockInterfaceMockRecorder) SetSSHPublicKeys(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSSHPublicKey", reflect.TypeOf((*MockInterface)(nil).SetSSHPublicKey), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSSHPublicKeys", reflect.TypeOf((*MockInterface)(nil).SetSSHPublicKeys), arg0)
 }
 
 // Wait mocks base method.
