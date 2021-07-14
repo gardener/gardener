@@ -410,7 +410,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							Name: DeploymentName,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: DeploymentName,
+									SecretName:  DeploymentName,
+									DefaultMode: pointer.Int32Ptr(0400),
 								},
 							},
 						},
@@ -418,7 +419,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							Name: VpnSeedServerTLSAuth,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: VpnSeedServerTLSAuth,
+									SecretName:  VpnSeedServerTLSAuth,
+									DefaultMode: pointer.Int32Ptr(0400),
 								},
 							},
 						},
@@ -426,7 +428,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							Name: vpnSeedServerDH,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: vpnSeedServerDH,
+									SecretName:  vpnSeedServerDH,
+									DefaultMode: pointer.Int32Ptr(0400),
 								},
 							},
 						},
