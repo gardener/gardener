@@ -217,7 +217,7 @@ for pull in "${PULLS[@]}"; do
   rm -f "/tmp/${pull}.patch"
 
   # get the release notes
-  notes=$(echo ${pr_info} | jq '.body' | grep -Po "\`\`\` *${RELEASE_NOTE_CATEGORY} ${RELEASE_NOTE_TARGET_GROUP}.*?\`\`\`")
+  notes=$(echo ${pr_info} | jq '.body' | grep -Po "\`\`\` *${RELEASE_NOTE_CATEGORY} ${RELEASE_NOTE_TARGET_GROUP}.*?\`\`\`" || true)
   RELEASE_NOTES+=("${notes}")
 done
 gitamcleanup=false
