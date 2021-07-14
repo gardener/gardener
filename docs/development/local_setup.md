@@ -386,7 +386,7 @@ to operate against your local running Gardener API Server.
 
 The steps below describe the general process of creating a Shoot. Have in mind that the steps do not provide full example manifests. The reader needs to check the provider documentation and adapt the manifests accordingly.
 
-## Copy the example manifests
+#### 1. Copy the example manifests
 
 The next steps require modifications of the example manifests. These modifications are part of local setup and should not be `git push`-ed. To do not interfere with git, let's copy the example manifests to `dev/` which is ignored by git.
 
@@ -394,7 +394,7 @@ The next steps require modifications of the example manifests. These modificatio
 cp example/*.yaml dev/
 ```
 
-## Create a Project
+#### 2. Create a Project
 
 Every Shoot is associated with a Project. Check the corresponding example manifests `dev/00-namespace-garden-dev.yaml` and `dev/05-project-dev.yaml`. Adapt them and create them.
 
@@ -411,7 +411,7 @@ NAME   NAMESPACE    STATUS   OWNER                  CREATOR            AGE
 dev    garden-dev   Ready    john.doe@example.com   kubernetes-admin   6s
 ```
 
-## Create a CloudProfile
+#### 3. Create a CloudProfile
 
 The `CloudProfile` resource is provider specific and describes the underlying cloud provider (available machine types, regions, machine images, etc.). Check the corresponding example manifest `dev/30-cloudprofile.yaml`. Check also the documentation and example manifests of the provider extension. Adapt `dev/30-cloudprofile.yaml` and apply it.
 
@@ -419,7 +419,7 @@ The `CloudProfile` resource is provider specific and describes the underlying cl
 kubectl apply -f dev/30-cloudprofile.yaml
 ```
 
-## Install necessary Gardener Extensions
+#### 4. Install necessary Gardener Extensions
 
 The [Known Extension Implementations](../../extensions/README.md#known-extension-implementations) section contains a list of available extension implementations. You need to create a ControllerRegistration and ControllerDeployment for
 * at least one infrastructure provider
@@ -436,7 +436,7 @@ kubectl apply -f https://raw.githubusercontent.com/gardener/gardener-extension-p
 Instead of updating extensions manually you can use [Gardener Extensions Manager](https://github.com/gardener/gem) to install and update extension controllers. This is especially useful if you want to keep and maintain your development setup for a longer time.
 Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
 
-## Register a Seed
+#### 5. Register a Seed
 
 Shoot controlplanes run in seed clusters, so we need to create our first Seed now.
 
@@ -452,7 +452,7 @@ Adapt `dev/50-seed.yaml` - adjust `.spec.secretRef` to refer the newly created S
 kubectl apply -f dev/50-seed.yaml
 ```
 
-## Start Gardenlet
+#### 6. Start Gardenlet
 
 Once the Seed is created, start the Gardenlet to reconcile it. The `make start-gardenlet` command will automatically configure the local Gardenlet process to use the Seed and its kubeconfig. If you have multiple Seeds, you have to specify which to use by setting the `SEED_NAME` environment variable like in `make start-gardenlet SEED_NAME=my-first-seed`.
 
@@ -477,7 +477,7 @@ NAME       STATUS    PROVIDER    REGION      AGE    VERSION       K8S VERSION
 seed-aws   Ready     aws         eu-west-1   4m     v1.11.0-dev   v1.17.12
 ```
 
-## Create a Shoot
+#### 7. Create a Shoot
 
 A Shoot requires a SecretBinding. The SecretBinding refers to a Secret that contains the cloud provider credentials. The Secret data keys are provider specific and you need to check the documentation of the provider to find out which data keys are expected (for example for AWS the related documentation can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage-as-end-user.md#provider-secret-data)). Adapt `dev/70-secret-provider.yaml` and `dev/80-secretbinding.yaml` and apply them.
 
