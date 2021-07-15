@@ -188,9 +188,9 @@ func WaitUntilLoadBalancerIsReady(ctx context.Context, kubeClient kubernetes.Int
 	if err := retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (done bool, err error) {
 		loadBalancerIngress, err = GetLoadBalancerIngress(ctx, kubeClient.Client(), service)
 		if err != nil {
-			logger.Infof("Waiting until the %s service deployed is ready...", name)
+			logger.Infof("Waiting until the %s service is ready...", name)
 			// TODO(AC): This is a quite optimistic check / we should differentiate here
-			return retry.MinorError(fmt.Errorf("%s service deployed is not ready: %v", name, err))
+			return retry.MinorError(fmt.Errorf("%s service is not ready: %v", name, err))
 		}
 		return retry.Ok()
 	}); err != nil {
