@@ -25,20 +25,15 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserverexposure"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -50,7 +45,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -717,180 +711,6 @@ func (b *Botanist) getAuditPolicy(ctx context.Context, name, namespace string) (
 	return auditPolicy, nil
 }
 
-// DefaultKubeAPIServerService returns a deployer for kube-apiserver service.
-func (b *Botanist) DefaultKubeAPIServerService(sniPhase component.Phase) component.DeployWaiter {
-	return b.kubeAPIServiceService(sniPhase)
-}
-
-func (b *Botanist) getKubeApiServerServiceAnnotations(sniPhase component.Phase) map[string]string {
-	if b.ExposureClassHandler != nil && sniPhase != component.PhaseEnabled {
-		return utils.MergeStringMaps(b.Seed.LoadBalancerServiceAnnotations, b.ExposureClassHandler.LoadBalancerService.Annotations)
-	}
-	return b.Seed.LoadBalancerServiceAnnotations
-}
-
-func (b *Botanist) kubeAPIServiceService(sniPhase component.Phase) component.DeployWaiter {
-	var sniServiceKey = client.ObjectKey{Name: *b.Config.SNI.Ingress.ServiceName, Namespace: *b.Config.SNI.Ingress.Namespace}
-	if b.ExposureClassHandler != nil {
-		sniServiceKey.Name = *b.ExposureClassHandler.SNI.Ingress.ServiceName
-		sniServiceKey.Namespace = *b.ExposureClassHandler.SNI.Ingress.Namespace
-	}
-
-	return kubeapiserverexposure.NewService(
-		b.Logger,
-		b.K8sSeedClient.Client(),
-		&kubeapiserverexposure.ServiceValues{
-			Annotations: b.getKubeApiServerServiceAnnotations(sniPhase),
-			SNIPhase:    sniPhase,
-		},
-		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
-		sniServiceKey,
-		nil,
-		b.setAPIServerServiceClusterIP,
-		func(address string) { b.setAPIServerAddress(address, b.K8sSeedClient.Client()) },
-	)
-}
-
-// SNIPhase returns the current phase of the SNI enablement of kube-apiserver's service.
-func (b *Botanist) SNIPhase(ctx context.Context) (component.Phase, error) {
-	var (
-		svc        = &corev1.Service{}
-		sniEnabled = b.APIServerSNIEnabled()
-	)
-
-	if err := b.K8sSeedClient.APIReader().Get(
-		ctx,
-		client.ObjectKey{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace},
-		svc,
-	); client.IgnoreNotFound(err) != nil {
-		return component.PhaseUnknown, err
-	}
-
-	switch {
-	case svc.Spec.Type == corev1.ServiceTypeLoadBalancer && sniEnabled:
-		return component.PhaseEnabling, nil
-	case svc.Spec.Type == corev1.ServiceTypeClusterIP && sniEnabled:
-		return component.PhaseEnabled, nil
-	case svc.Spec.Type == corev1.ServiceTypeClusterIP && !sniEnabled:
-		return component.PhaseDisabling, nil
-	default:
-		if sniEnabled {
-			// initial cluster creation with SNI enabled (enabling only relevant for migration).
-			return component.PhaseEnabled, nil
-		}
-		// initial cluster creation with SNI disabled.
-		return component.PhaseDisabled, nil
-	}
-}
-
-// DeployKubeAPIService deploys for kube-apiserver service.
-func (b *Botanist) DeployKubeAPIService(ctx context.Context, sniPhase component.Phase) error {
-	return b.kubeAPIServiceService(sniPhase).Deploy(ctx)
-}
-
-// DeployKubeAPIServerSNI deploys the kube-apiserver-sni chart.
-func (b *Botanist) DeployKubeAPIServerSNI(ctx context.Context) error {
-	return b.Shoot.Components.ControlPlane.KubeAPIServerSNI.Deploy(ctx)
-}
-
-// DefaultKubeAPIServerSNI returns a deployer for kube-apiserver SNI.
-func (b *Botanist) DefaultKubeAPIServerSNI() component.DeployWaiter {
-	return component.OpDestroy(kubeapiserverexposure.NewSNI(
-		b.K8sSeedClient.Client(),
-		b.K8sSeedClient.Applier(),
-		b.Shoot.SeedNamespace,
-		&kubeapiserverexposure.SNIValues{
-			IstioIngressGateway:      b.getIngressGatewayConfig(),
-			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
-		},
-	))
-}
-
-func (b *Botanist) setAPIServerServiceClusterIP(clusterIP string) {
-	if b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase == component.PhaseDisabled {
-		return
-	}
-
-	b.APIServerClusterIP = clusterIP
-
-	b.Shoot.Components.ControlPlane.KubeAPIServerSNI = kubeapiserverexposure.NewSNI(
-		b.K8sSeedClient.Client(),
-		b.K8sSeedClient.Applier(),
-		b.Shoot.SeedNamespace,
-		&kubeapiserverexposure.SNIValues{
-			APIServerClusterIP: clusterIP,
-			NamespaceUID:       b.SeedNamespaceObject.UID,
-			Hosts: []string{
-				gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-				gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-			},
-			IstioIngressGateway:      b.getIngressGatewayConfig(),
-			APIServerInternalDNSName: b.outOfClusterAPIServerFQDN(),
-		},
-	)
-}
-
-// setAPIServerAddress sets the IP address of the API server's LoadBalancer.
-func (b *Botanist) setAPIServerAddress(address string, seedClient client.Client) {
-	b.Operation.APIServerAddress = address
-
-	if b.NeedsInternalDNS() {
-		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSInternalName
-		b.Shoot.Components.Extensions.DNS.InternalOwner = dns.NewOwner(
-			seedClient,
-			b.Shoot.SeedNamespace,
-			&dns.OwnerValues{
-				Name:    DNSInternalName,
-				Active:  pointer.Bool(true),
-				OwnerID: ownerID,
-			},
-		)
-		b.Shoot.Components.Extensions.DNS.InternalEntry = dns.NewEntry(
-			b.Logger,
-			seedClient,
-			b.Shoot.SeedNamespace,
-			&dns.EntryValues{
-				Name:    DNSInternalName,
-				DNSName: gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-				Targets: []string{b.APIServerAddress},
-				OwnerID: ownerID,
-				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
-			},
-		)
-
-		b.Shoot.Components.Extensions.InternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(address))
-		b.Shoot.Components.Extensions.InternalDNSRecord.SetValues([]string{address})
-	}
-
-	if b.NeedsExternalDNS() {
-		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSExternalName
-		b.Shoot.Components.Extensions.DNS.ExternalOwner = dns.NewOwner(
-			seedClient,
-			b.Shoot.SeedNamespace,
-			&dns.OwnerValues{
-				Name:    DNSExternalName,
-				Active:  pointer.Bool(true),
-				OwnerID: ownerID,
-			},
-		)
-		b.Shoot.Components.Extensions.DNS.ExternalEntry = dns.NewEntry(
-			b.Logger,
-			seedClient,
-			b.Shoot.SeedNamespace,
-			&dns.EntryValues{
-				Name:    DNSExternalName,
-				DNSName: gutil.GetAPIServerDomain(*b.Shoot.ExternalClusterDomain),
-				Targets: []string{b.APIServerAddress},
-				OwnerID: ownerID,
-				TTL:     *b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
-			},
-		)
-
-		b.Shoot.Components.Extensions.ExternalDNSRecord.SetRecordType(extensionsv1alpha1helper.GetDNSRecordType(address))
-		b.Shoot.Components.Extensions.ExternalDNSRecord.SetValues([]string{address})
-	}
-}
-
 // RestartControlPlanePods restarts (deletes) pods of the shoot control plane.
 func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 	return b.K8sSeedClient.Client().DeleteAllOf(
@@ -899,18 +719,4 @@ func (b *Botanist) RestartControlPlanePods(ctx context.Context) error {
 		client.InNamespace(b.Shoot.SeedNamespace),
 		client.MatchingLabels{v1beta1constants.LabelPodMaintenanceRestart: "true"},
 	)
-}
-
-func (b *Botanist) getIngressGatewayConfig() kubeapiserverexposure.IstioIngressGateway {
-	var ingressGatewayConfig = kubeapiserverexposure.IstioIngressGateway{
-		Namespace: *b.Config.SNI.Ingress.Namespace,
-		Labels:    b.Config.SNI.Ingress.Labels,
-	}
-
-	if b.ExposureClassHandler != nil {
-		ingressGatewayConfig.Namespace = *b.ExposureClassHandler.SNI.Ingress.Namespace
-		ingressGatewayConfig.Labels = gutil.GetMandatoryExposureClassHandlerSNILabels(b.ExposureClassHandler.SNI.Ingress.Labels, b.ExposureClassHandler.Name)
-	}
-
-	return ingressGatewayConfig
 }

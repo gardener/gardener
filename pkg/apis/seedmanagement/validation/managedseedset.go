@@ -72,7 +72,7 @@ func ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, oldManagedSeedSet *se
 		allErrs = append(allErrs, field.Invalid(statusPath.Child("nextReplicaNumber"), newManagedSeedSet.Status.NextReplicaNumber, "cannot be decremented"))
 	}
 	if isDecremented(newManagedSeedSet.Status.CollisionCount, oldManagedSeedSet.Status.CollisionCount) {
-		value := pointer.Int32PtrDerefOr(newManagedSeedSet.Status.CollisionCount, 0)
+		value := pointer.Int32Deref(newManagedSeedSet.Status.CollisionCount, 0)
 		allErrs = append(allErrs, field.Invalid(statusPath.Child("collisionCount"), value, "cannot be decremented"))
 	}
 
