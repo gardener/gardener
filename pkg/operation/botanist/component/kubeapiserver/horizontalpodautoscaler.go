@@ -38,40 +38,40 @@ func (k *kubeAPIServer) emptyHorizontalPodAutoscaler() *autoscalingv2beta1.Horiz
 }
 
 func (k *kubeAPIServer) reconcileHorizontalPodAutoscaler(ctx context.Context, horizontalPodAutoscaler *autoscalingv2beta1.HorizontalPodAutoscaler, deployment *appsv1.Deployment) error {
-	if !k.values.Autoscaling.HVPAEnabled &&
-		k.values.Autoscaling.Replicas != nil &&
-		*k.values.Autoscaling.Replicas > 0 {
+	if k.values.Autoscaling.HVPAEnabled ||
+		k.values.Autoscaling.Replicas == nil ||
+		*k.values.Autoscaling.Replicas == 0 {
 
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), horizontalPodAutoscaler, func() error {
-			horizontalPodAutoscaler.Spec = autoscalingv2beta1.HorizontalPodAutoscalerSpec{
-				MinReplicas: &k.values.Autoscaling.MinReplicas,
-				MaxReplicas: k.values.Autoscaling.MaxReplicas,
-				ScaleTargetRef: autoscalingv2beta1.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       deployment.Name,
-				},
-				Metrics: []autoscalingv2beta1.MetricSpec{
-					{
-						Type: autoscalingv2beta1.ResourceMetricSourceType,
-						Resource: &autoscalingv2beta1.ResourceMetricSource{
-							Name:                     corev1.ResourceCPU,
-							TargetAverageUtilization: pointer.Int32(hpaTargetAverageUtilizationCPU),
-						},
-					},
-					{
-						Type: autoscalingv2beta1.ResourceMetricSourceType,
-						Resource: &autoscalingv2beta1.ResourceMetricSource{
-							Name:                     corev1.ResourceMemory,
-							TargetAverageUtilization: pointer.Int32(hpaTargetAverageUtilizationMemory),
-						},
-					},
-				},
-			}
-			return nil
-		})
-		return err
+		return kutil.DeleteObject(ctx, k.client.Client(), horizontalPodAutoscaler)
 	}
 
-	return kutil.DeleteObject(ctx, k.client.Client(), horizontalPodAutoscaler)
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), horizontalPodAutoscaler, func() error {
+		horizontalPodAutoscaler.Spec = autoscalingv2beta1.HorizontalPodAutoscalerSpec{
+			MinReplicas: &k.values.Autoscaling.MinReplicas,
+			MaxReplicas: k.values.Autoscaling.MaxReplicas,
+			ScaleTargetRef: autoscalingv2beta1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       deployment.Name,
+			},
+			Metrics: []autoscalingv2beta1.MetricSpec{
+				{
+					Type: autoscalingv2beta1.ResourceMetricSourceType,
+					Resource: &autoscalingv2beta1.ResourceMetricSource{
+						Name:                     corev1.ResourceCPU,
+						TargetAverageUtilization: pointer.Int32(hpaTargetAverageUtilizationCPU),
+					},
+				},
+				{
+					Type: autoscalingv2beta1.ResourceMetricSourceType,
+					Resource: &autoscalingv2beta1.ResourceMetricSource{
+						Name:                     corev1.ResourceMemory,
+						TargetAverageUtilization: pointer.Int32(hpaTargetAverageUtilizationMemory),
+					},
+				},
+			},
+		}
+		return nil
+	})
+	return err
 }

@@ -32,24 +32,24 @@ func (k *kubeAPIServer) emptyVerticalPodAutoscaler() *autoscalingv1beta2.Vertica
 }
 
 func (k *kubeAPIServer) reconcileVerticalPodAutoscaler(ctx context.Context, verticalPodAutoscaler *autoscalingv1beta2.VerticalPodAutoscaler, deployment *appsv1.Deployment) error {
-	vpaUpdateMode := autoscalingv1beta2.UpdateModeOff
-
-	if !k.values.Autoscaling.HVPAEnabled {
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), verticalPodAutoscaler, func() error {
-			verticalPodAutoscaler.Spec = autoscalingv1beta2.VerticalPodAutoscalerSpec{
-				TargetRef: &autoscalingv1.CrossVersionObjectReference{
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-					Kind:       "Deployment",
-					Name:       deployment.Name,
-				},
-				UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
-					UpdateMode: &vpaUpdateMode,
-				},
-			}
-			return nil
-		})
-		return err
+	if k.values.Autoscaling.HVPAEnabled {
+		return kutil.DeleteObject(ctx, k.client.Client(), verticalPodAutoscaler)
 	}
 
-	return kutil.DeleteObject(ctx, k.client.Client(), verticalPodAutoscaler)
+	vpaUpdateMode := autoscalingv1beta2.UpdateModeOff
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), verticalPodAutoscaler, func() error {
+		verticalPodAutoscaler.Spec = autoscalingv1beta2.VerticalPodAutoscalerSpec{
+			TargetRef: &autoscalingv1.CrossVersionObjectReference{
+				APIVersion: appsv1.SchemeGroupVersion.String(),
+				Kind:       "Deployment",
+				Name:       deployment.Name,
+			},
+			UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+				UpdateMode: &vpaUpdateMode,
+			},
+		}
+		return nil
+	})
+	return err
 }
