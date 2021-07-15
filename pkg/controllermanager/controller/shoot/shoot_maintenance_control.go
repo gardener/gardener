@@ -222,7 +222,7 @@ func MaintainMachineImages(shootLogger *logrus.Entry, shoot *gardencorev1beta1.S
 			return nil, err
 		}
 
-		filteredMachineImageVersionsFromCloudProfile := filterForCRIName(&machineImageFromCloudProfile, worker.CRI)
+		filteredMachineImageVersionsFromCloudProfile := filterForCRI(&machineImageFromCloudProfile, worker.CRI)
 		shouldBeUpdated, reason, updatedMachineImage, err := shouldMachineImageBeUpdated(shootLogger, shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion, filteredMachineImageVersionsFromCloudProfile, workerImage)
 		if err != nil {
 			return nil, err
@@ -312,7 +312,7 @@ func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
 	return ok && operation == v1beta1constants.ShootOperationMaintain
 }
 
-func filterForCRIName(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, workerCRI *gardencorev1beta1.CRI) *gardencorev1beta1.MachineImage {
+func filterForCRI(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, workerCRI *gardencorev1beta1.CRI) *gardencorev1beta1.MachineImage {
 	if workerCRI == nil {
 		return machineImageFromCloudProfile
 	}
@@ -321,15 +321,49 @@ func filterForCRIName(machineImageFromCloudProfile *gardencorev1beta1.MachineIma
 		Versions: []gardencorev1beta1.MachineImageVersion{}}
 
 	for _, cloudProfileVersion := range machineImageFromCloudProfile.Versions {
-		for _, cri := range cloudProfileVersion.CRI {
-			if cri.Name == workerCRI.Name {
-				filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
-				continue
-			}
+		criFromCloudProfileVersion, found := findCRIByName(workerCRI.Name, cloudProfileVersion.CRI)
+		if !found {
+			continue
 		}
+
+		if !areAllWorkerCRsPartOfCloudProfileVersion(workerCRI.ContainerRuntimes, criFromCloudProfileVersion.ContainerRuntimes) {
+			continue
+		}
+
+		filteredMachineImages.Versions = append(filteredMachineImages.Versions, cloudProfileVersion)
 	}
 
 	return &filteredMachineImages
+}
+
+func findCRIByName(wanted gardencorev1beta1.CRIName, cris []gardencorev1beta1.CRI) (gardencorev1beta1.CRI, bool) {
+	for _, cri := range cris {
+		if cri.Name == wanted {
+			return cri, true
+		}
+	}
+	return gardencorev1beta1.CRI{}, false
+}
+
+func areAllWorkerCRsPartOfCloudProfileVersion(workerCRs []gardencorev1beta1.ContainerRuntime, crsFromCloudProfileVersion []gardencorev1beta1.ContainerRuntime) bool {
+	if workerCRs == nil {
+		return true
+	}
+	for _, workerCr := range workerCRs {
+		if !isWorkerCRPartOfCloudProfileVersionCRs(workerCr, crsFromCloudProfileVersion) {
+			return false
+		}
+	}
+	return true
+}
+
+func isWorkerCRPartOfCloudProfileVersionCRs(wanted gardencorev1beta1.ContainerRuntime, cloudProfileVersionCRs []gardencorev1beta1.ContainerRuntime) bool {
+	for _, cr := range cloudProfileVersionCRs {
+		if wanted.Type == cr.Type {
+			return true
+		}
+	}
+	return false
 }
 
 func determineMachineImage(cloudProfile *gardencorev1beta1.CloudProfile, shootMachineImage *gardencorev1beta1.ShootMachineImage) (gardencorev1beta1.MachineImage, error) {
