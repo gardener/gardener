@@ -15,7 +15,7 @@
 package helper
 
 import (
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -25,12 +25,14 @@ var Now = metav1.Now
 
 // InitCondition initializes a new Condition with an Unknown status.
 func InitCondition(conditionType resourcesv1alpha1.ConditionType) resourcesv1alpha1.ManagedResourceCondition {
+	now := Now()
 	return resourcesv1alpha1.ManagedResourceCondition{
 		Type:               conditionType,
 		Status:             resourcesv1alpha1.ConditionUnknown,
 		Reason:             "ConditionInitialized",
 		Message:            "The condition has been initialized but its semantic check has not been performed yet.",
-		LastTransitionTime: Now(),
+		LastTransitionTime: now,
+		LastUpdateTime:     now,
 	}
 }
 
@@ -39,10 +41,10 @@ func InitCondition(conditionType resourcesv1alpha1.ConditionType) resourcesv1alp
 func GetCondition(conditions []resourcesv1alpha1.ManagedResourceCondition, conditionType resourcesv1alpha1.ConditionType) *resourcesv1alpha1.ManagedResourceCondition {
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
-			return &condition
+			c := condition
+			return &c
 		}
 	}
-
 	return nil
 }
 
@@ -52,23 +54,29 @@ func GetOrInitCondition(conditions []resourcesv1alpha1.ManagedResourceCondition,
 	if condition := GetCondition(conditions, conditionType); condition != nil {
 		return *condition
 	}
-
 	return InitCondition(conditionType)
 }
 
 // UpdatedCondition updates the properties of one specific condition.
 func UpdatedCondition(condition resourcesv1alpha1.ManagedResourceCondition, status resourcesv1alpha1.ConditionStatus, reason, message string) resourcesv1alpha1.ManagedResourceCondition {
-	newCondition := resourcesv1alpha1.ManagedResourceCondition{
-		Type:               condition.Type,
-		Status:             status,
-		Reason:             reason,
-		Message:            message,
-		LastTransitionTime: condition.LastTransitionTime,
-		LastUpdateTime:     Now(),
-	}
+	var (
+		newCondition = resourcesv1alpha1.ManagedResourceCondition{
+			Type:               condition.Type,
+			Status:             status,
+			Reason:             reason,
+			Message:            message,
+			LastTransitionTime: condition.LastTransitionTime,
+			LastUpdateTime:     condition.LastUpdateTime,
+		}
+		now = Now()
+	)
 
 	if condition.Status != status {
-		newCondition.LastTransitionTime = Now()
+		newCondition.LastTransitionTime = now
+	}
+
+	if condition.Reason != reason || condition.Message != message {
+		newCondition.LastUpdateTime = now
 	}
 
 	return newCondition

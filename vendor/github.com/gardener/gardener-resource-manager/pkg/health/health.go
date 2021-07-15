@@ -15,15 +15,20 @@
 package health
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1/helper"
+	"github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/api/resources/v1alpha1/helper"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CheckManagedResource checks if all conditions of a ManagedResource ('ResourcesApplied' and 'ResourcesHealthy')
@@ -73,18 +78,18 @@ func CheckManagedResourceHealthy(mr *v1alpha1.ManagedResource) error {
 }
 
 var (
-	trueCrdConditionTypes = []apiextensionsv1beta1.CustomResourceDefinitionConditionType{
-		apiextensionsv1beta1.NamesAccepted, apiextensionsv1beta1.Established,
+	trueCrdConditionTypes = []apiextensionsv1.CustomResourceDefinitionConditionType{
+		apiextensionsv1.NamesAccepted, apiextensionsv1.Established,
 	}
-	falseOptionalCrdConditionTypes = []apiextensionsv1beta1.CustomResourceDefinitionConditionType{
-		apiextensionsv1beta1.Terminating,
+	falseOptionalCrdConditionTypes = []apiextensionsv1.CustomResourceDefinitionConditionType{
+		apiextensionsv1.Terminating,
 	}
 )
 
 // CheckCustomResourceDefinition checks whether the given CustomResourceDefinition is healthy.
 // A CRD is considered healthy if its `NamesAccepted` and `Established` conditions are with status `True`
 // and its `Terminating` condition is missing or has status `False`.
-func CheckCustomResourceDefinition(crd *apiextensionsv1beta1.CustomResourceDefinition) error {
+func CheckCustomResourceDefinition(crd *apiextensionsv1.CustomResourceDefinition) error {
 	for _, trueConditionType := range trueCrdConditionTypes {
 		conditionType := string(trueConditionType)
 		condition := getCustomResourceDefinitionCondition(crd.Status.Conditions, trueConditionType)
@@ -118,11 +123,22 @@ func CheckDaemonSet(daemonSet *appsv1.DaemonSet) error {
 		return fmt.Errorf("observed generation outdated (%d/%d)", daemonSet.Status.ObservedGeneration, daemonSet.Generation)
 	}
 
-	maxUnavailable := daemonSetMaxUnavailable(daemonSet)
-
-	if requiredAvailable := daemonSet.Status.DesiredNumberScheduled - maxUnavailable; daemonSet.Status.CurrentNumberScheduled < requiredAvailable {
-		return fmt.Errorf("not enough available replicas (%d/%d)", daemonSet.Status.CurrentNumberScheduled, requiredAvailable)
+	if daemonSet.Status.CurrentNumberScheduled < daemonSet.Status.DesiredNumberScheduled {
+		return fmt.Errorf("not enough scheduled pods (%d/%d)", daemonSet.Status.CurrentNumberScheduled, daemonSet.Status.DesiredNumberScheduled)
 	}
+
+	if daemonSet.Status.NumberMisscheduled > 0 {
+		return fmt.Errorf("misscheduled pods found (%d)", daemonSet.Status.NumberMisscheduled)
+	}
+
+	if maxUnavailable := daemonSetMaxUnavailable(daemonSet); daemonSet.Status.NumberUnavailable > maxUnavailable {
+		return fmt.Errorf("too many unavailable pods found (%d/%d, only max. %d unavailable pods allowed)", daemonSet.Status.NumberUnavailable, daemonSet.Status.CurrentNumberScheduled, maxUnavailable)
+	}
+
+	if daemonSet.Status.NumberReady < daemonSet.Status.DesiredNumberScheduled {
+		return fmt.Errorf("unready pods found (%d/%d), %d pods updated", daemonSet.Status.NumberReady, daemonSet.Status.DesiredNumberScheduled, daemonSet.Status.UpdatedNumberScheduled)
+	}
+
 	return nil
 }
 
@@ -198,16 +214,14 @@ func CheckJob(job *batchv1.Job) error {
 	return nil
 }
 
-var (
-	healthyPodPhases = []corev1.PodPhase{
-		corev1.PodRunning, corev1.PodSucceeded,
-	}
-)
+var healthyPodPhases = []corev1.PodPhase{
+	corev1.PodRunning, corev1.PodSucceeded,
+}
 
 // CheckPod checks whether the given Pod is healthy.
 // A Pod is considered healthy if its `.status.phase` is `Running` or `Succeeded`.
 func CheckPod(pod *corev1.Pod) error {
-	var phase = pod.Status.Phase
+	phase := pod.Status.Phase
 	for _, healthyPhase := range healthyPodPhases {
 		if phase == healthyPhase {
 			return nil
@@ -226,7 +240,7 @@ func CheckReplicaSet(rs *appsv1.ReplicaSet) error {
 		return fmt.Errorf("observed generation outdated (%d/%d)", rs.Status.ObservedGeneration, rs.Generation)
 	}
 
-	var replicas = rs.Spec.Replicas
+	replicas := rs.Spec.Replicas
 	if replicas != nil && rs.Status.ReadyReplicas < *replicas {
 		return fmt.Errorf("ReplicaSet does not have minimum availability")
 	}
@@ -234,7 +248,7 @@ func CheckReplicaSet(rs *appsv1.ReplicaSet) error {
 	return nil
 }
 
-// CheckReplicationController check whether the given ReplicationController is healthy.
+// CheckReplicationController checks whether the given ReplicationController is healthy.
 // A ReplicationController is considered healthy if the controller observed its current revision and
 // if the number of ready replicas is equal to the number of replicas.
 func CheckReplicationController(rc *corev1.ReplicationController) error {
@@ -242,12 +256,35 @@ func CheckReplicationController(rc *corev1.ReplicationController) error {
 		return fmt.Errorf("observed generation outdated (%d/%d)", rc.Status.ObservedGeneration, rc.Generation)
 	}
 
-	var replicas = rc.Spec.Replicas
+	replicas := rc.Spec.Replicas
 	if replicas != nil && rc.Status.ReadyReplicas < *replicas {
 		return fmt.Errorf("ReplicationController does not have minimum availability")
 	}
 
 	return nil
+}
+
+const eventLimit = 2
+
+// CheckService checks whether the given service is healthy.
+// A Service is considered unhealthy if it is of type `LoadBalancer` but doesn't have an ingress element in its status.
+func CheckService(ctx context.Context, scheme *runtime.Scheme, c client.Client, service *corev1.Service) error {
+	if service.Spec.Type != corev1.ServiceTypeLoadBalancer {
+		return nil
+	}
+	if len(service.Status.LoadBalancer.Ingress) > 0 {
+		return nil
+	}
+	// consult service events for more information
+	noIngressMsg := "service is missing ingress status"
+	eventsMsg, err := kutil.FetchEventMessages(ctx, scheme, c, service, corev1.EventTypeWarning, eventLimit)
+	if err != nil {
+		return fmt.Errorf("%s but couldn't read events for more information: %s", noIngressMsg, err)
+	}
+	if eventsMsg != "" {
+		noIngressMsg = fmt.Sprintf("%s\n\n%s", noIngressMsg, eventsMsg)
+	}
+	return fmt.Errorf(noIngressMsg)
 }
 
 // CheckStatefulSet checks whether the given StatefulSet is healthy.
@@ -288,7 +325,7 @@ func daemonSetMaxUnavailable(daemonSet *appsv1.DaemonSet) int32 {
 	return int32(maxUnavailable)
 }
 
-func getCustomResourceDefinitionCondition(conditions []apiextensionsv1beta1.CustomResourceDefinitionCondition, conditionType apiextensionsv1beta1.CustomResourceDefinitionConditionType) *apiextensionsv1beta1.CustomResourceDefinitionCondition {
+func getCustomResourceDefinitionCondition(conditions []apiextensionsv1.CustomResourceDefinitionCondition, conditionType apiextensionsv1.CustomResourceDefinitionConditionType) *apiextensionsv1.CustomResourceDefinitionCondition {
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
 			return &condition
