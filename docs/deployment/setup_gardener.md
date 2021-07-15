@@ -17,13 +17,13 @@ If you enable the Gardener admission controller as part of you setup, please mak
 Otherwise, the backing service account for the admission controller Pod might not be created successfully.
 No action is necessary, if you deploy the `garden` namespace with the Gardener control plane Helm chart.
 
-After preparing your values in a separate `controlplane-values.yaml` file, you can run the following command against your garden cluster:
+After preparing your values in a separate `controlplane-values.yaml` file ([values.yaml](../../charts/gardener/controlplane/values.yaml) can be used as starting point), you can run the following command against your garden cluster:
 
 ```bash
 helm install charts/gardener/controlplane \
   --namespace garden \
   --name gardener-controlplane \
-  -f gardener-values.yaml \
+  -f controlplane-values.yaml \
   --wait
 ```
 
