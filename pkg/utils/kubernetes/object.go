@@ -129,19 +129,18 @@ func MakeImmutable(obj runtime.Object) error {
 			}
 			return "-"
 		}
-		labels = map[string]string{references.LabelKeyGarbageCollectable: references.LabelValueGarbageCollectable}
 	)
 
 	switch o := obj.(type) {
 	case *corev1.Secret:
 		o.Immutable = pointer.Bool(true)
 		o.Name += prependHyphen(o.Name) + utils.ComputeSecretChecksum(o.Data)[:numberOfChecksumChars]
-		o.Labels = utils.MergeStringMaps(o.Labels, labels)
+		metav1.SetMetaDataLabel(&o.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
 
 	case *corev1.ConfigMap:
 		o.Immutable = pointer.Bool(true)
 		o.Name += prependHyphen(o.Name) + utils.ComputeConfigMapChecksum(o.Data)[:numberOfChecksumChars]
-		o.Labels = utils.MergeStringMaps(o.Labels, labels)
+		metav1.SetMetaDataLabel(&o.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
 
 	default:
 		return fmt.Errorf("unhandled object type: %T", obj)
