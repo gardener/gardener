@@ -19,8 +19,8 @@ import (
 	"fmt"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/networkpolicy/hostnameresolver"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
@@ -29,33 +29,30 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // namespaceReconciler implements the reconcile.Reconcile interface for namespace reconciliation.
 type namespaceReconciler struct {
-	log                    *logrus.Entry
+	log                    *logrus.Logger
 	seedClient             client.Client
 	seedName               string
-	endpointsLister        kubecorev1listers.EndpointsLister
 	shootNamespaceSelector labels.Selector
 	resolver               hostnameresolver.HostResolver
 }
 
 // newNamespaceReconciler returns the new namespace reconciler.
 func newNamespaceReconciler(
-	seedLogger *logrus.Entry,
+	seedLogger *logrus.Logger,
 	seedClient client.Client,
-	endpointsLister kubecorev1listers.EndpointsLister,
 	seedName string,
 	shootNamespaceSelector labels.Selector,
 	resolver hostnameresolver.HostResolver,
 ) reconcile.Reconciler {
 	return &namespaceReconciler{
 		seedClient:             seedClient,
-		endpointsLister:        endpointsLister,
 		log:                    seedLogger,
 		seedName:               seedName,
 		shootNamespaceSelector: shootNamespaceSelector,
@@ -103,8 +100,9 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 	r.log.Debugf("Reconciling NetworkPolicy %q in namespace %q", helper.AllowToSeedAPIServer, request.Name)
 
-	kubernetesEndpoints, err := r.endpointsLister.Endpoints(corev1.NamespaceDefault).Get("kubernetes")
-	if err != nil {
+	kubernetesEndpoints := corev1.Endpoints{}
+	kubernetesEndpointsKey := types.NamespacedName{Namespace: corev1.NamespaceDefault, Name: "kubernetes"}
+	if err := r.seedClient.Get(ctx, kubernetesEndpointsKey, &kubernetesEndpoints); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -119,8 +117,7 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, request reconcile.R
 		return reconcile.Result{}, nil
 	}
 
-	err = helper.EnsureNetworkPolicy(ctx, r.seedClient, request.Name, egressRules)
-	if err != nil {
+	if err := helper.EnsureNetworkPolicy(ctx, r.seedClient, request.Name, egressRules); err != nil {
 		return reconcile.Result{}, err
 	}
 

@@ -40,7 +40,7 @@ type controllerInstallationControl struct {
 	k8sGardenClient kubernetes.Interface
 	seedClient      kubernetes.Interface
 	seedName        string
-	log             *logrus.Entry
+	log             *logrus.Logger
 
 	controllerInstallationQueue workqueue.RateLimitingInterface
 	lock                        *sync.RWMutex

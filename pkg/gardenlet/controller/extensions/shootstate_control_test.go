@@ -23,7 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/federatedseed/extensions"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/extensions"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 
@@ -91,7 +91,7 @@ var _ = Describe("ShootState Control", func() {
 		fakeSeedClient = fakeclientset.NewClientSetBuilder().WithClient(seedClient).Build()
 
 		recorder := record.NewFakeRecorder(64)
-		shootStateControl = extensions.NewShootStateControl(fakeGardenClient, fakeSeedClient, log.WithField("seed", "test-seed"), recorder)
+		shootStateControl = extensions.NewShootStateControl(fakeGardenClient, fakeSeedClient, log, recorder)
 
 		cluster = &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -287,7 +287,7 @@ var _ = Describe("ShootState Control", func() {
 			mc := mockclient.NewMockClient(ctrl)
 			fakeClientSet := fakeclientset.NewClientSetBuilder().WithClient(mc).Build()
 			recorder := record.NewFakeRecorder(64)
-			shootStateControl = extensions.NewShootStateControl(fakeClientSet, fakeClientSet, log.WithField("seed", "test-seed"), recorder)
+			shootStateControl = extensions.NewShootStateControl(fakeClientSet, fakeClientSet, log, recorder)
 			gomock.InOrder(
 				mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(extension), gomock.AssignableToTypeOf(&extensionsv1alpha1.Extension{})),
 				mc.EXPECT().Get(ctx, client.ObjectKeyFromObject(cluster), gomock.AssignableToTypeOf(&extensionsv1alpha1.Cluster{})).SetArg(2, *cluster),
