@@ -30,7 +30,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
-	"istio.io/api/networking/v1beta1"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -380,14 +379,14 @@ var _ = Describe("VpnSeedServer", func() {
 
 		gateway = &networkingv1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
-			Spec: v1beta1.Gateway{
+			Spec: istionetworkingv1beta1.Gateway{
 				Selector: map[string]string{
 					"app": "istio-ingressgateway",
 				},
-				Servers: []*v1beta1.Server{
+				Servers: []*istionetworkingv1beta1.Server{
 					{
 						Hosts: []string{kubeAPIServerHost},
-						Port: &v1beta1.Port{
+						Port: &istionetworkingv1beta1.Port{
 							Name:     "tls-tunnel",
 							Number:   8132,
 							Protocol: "HTTP",
@@ -510,16 +509,16 @@ var _ = Describe("VpnSeedServer", func() {
 
 		virtualService = &networkingv1beta1.VirtualService{
 			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
-			Spec: v1beta1.VirtualService{
+			Spec: istionetworkingv1beta1.VirtualService{
 				ExportTo: []string{"*"},
 				Hosts:    []string{kubeAPIServerHost},
 				Gateways: []string{DeploymentName},
-				Http: []*v1beta1.HTTPRoute{
+				Http: []*istionetworkingv1beta1.HTTPRoute{
 					{
-						Route: []*v1beta1.HTTPRouteDestination{
+						Route: []*istionetworkingv1beta1.HTTPRouteDestination{
 							{
-								Destination: &v1beta1.Destination{
-									Port: &v1beta1.PortSelector{
+								Destination: &istionetworkingv1beta1.Destination{
+									Port: &istionetworkingv1beta1.PortSelector{
 										Number: 1194,
 									},
 									Host: DeploymentName,
@@ -581,7 +580,7 @@ var _ = Describe("VpnSeedServer", func() {
 					Labels: istioLabels,
 				},
 				ConfigPatches: []*istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
-					&istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
+					{
 						ApplyTo: istionetworkingv1alpha3.EnvoyFilter_NETWORK_FILTER,
 						Match: &istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch{
 							Context: istionetworkingv1alpha3.EnvoyFilter_GATEWAY,
@@ -601,25 +600,25 @@ var _ = Describe("VpnSeedServer", func() {
 							Operation: istionetworkingv1alpha3.EnvoyFilter_Patch_MERGE,
 							Value: &protobuftypes.Struct{
 								Fields: map[string]*protobuftypes.Value{
-									"name": &protobuftypes.Value{
+									"name": {
 										Kind: &protobuftypes.Value_StringValue{
 											StringValue: "envoy.filters.network.http_connection_manager",
 										},
 									},
-									"typed_config": &protobuftypes.Value{
+									"typed_config": {
 										Kind: &protobuftypes.Value_StructValue{
 											StructValue: &protobuftypes.Struct{
 												Fields: map[string]*protobuftypes.Value{
-													"@type": &protobuftypes.Value{
+													"@type": {
 														Kind: &protobuftypes.Value_StringValue{
 															StringValue: "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
 														},
 													},
-													"route_config": &protobuftypes.Value{
+													"route_config": {
 														Kind: &protobuftypes.Value_StructValue{
 															StructValue: &protobuftypes.Struct{
 																Fields: map[string]*protobuftypes.Value{
-																	"virtual_hosts": &protobuftypes.Value{
+																	"virtual_hosts": {
 																		Kind: &protobuftypes.Value_ListValue{
 																			ListValue: &protobuftypes.ListValue{
 																				Values: []*protobuftypes.Value{
@@ -627,12 +626,12 @@ var _ = Describe("VpnSeedServer", func() {
 																						Kind: &protobuftypes.Value_StructValue{
 																							StructValue: &protobuftypes.Struct{
 																								Fields: map[string]*protobuftypes.Value{
-																									"name": &protobuftypes.Value{
+																									"name": {
 																										Kind: &protobuftypes.Value_StringValue{
 																											StringValue: namespace,
 																										},
 																									},
-																									"domains": &protobuftypes.Value{
+																									"domains": {
 																										Kind: &protobuftypes.Value_ListValue{
 																											ListValue: &protobuftypes.ListValue{
 																												Values: []*protobuftypes.Value{
@@ -645,7 +644,7 @@ var _ = Describe("VpnSeedServer", func() {
 																											},
 																										},
 																									},
-																									"routes": &protobuftypes.Value{
+																									"routes": {
 																										Kind: &protobuftypes.Value_ListValue{
 																											ListValue: &protobuftypes.ListValue{
 																												Values: []*protobuftypes.Value{
@@ -653,11 +652,11 @@ var _ = Describe("VpnSeedServer", func() {
 																														Kind: &protobuftypes.Value_StructValue{
 																															StructValue: &protobuftypes.Struct{
 																																Fields: map[string]*protobuftypes.Value{
-																																	"match": &protobuftypes.Value{
+																																	"match": {
 																																		Kind: &protobuftypes.Value_StructValue{
 																																			StructValue: &protobuftypes.Struct{
 																																				Fields: map[string]*protobuftypes.Value{
-																																					"connect_matcher": &protobuftypes.Value{
+																																					"connect_matcher": {
 																																						Kind: &protobuftypes.Value_StructValue{
 																																							StructValue: &protobuftypes.Struct{},
 																																						},
@@ -666,16 +665,16 @@ var _ = Describe("VpnSeedServer", func() {
 																																			},
 																																		},
 																																	},
-																																	"route": &protobuftypes.Value{
+																																	"route": {
 																																		Kind: &protobuftypes.Value_StructValue{
 																																			StructValue: &protobuftypes.Struct{
 																																				Fields: map[string]*protobuftypes.Value{
-																																					"cluster": &protobuftypes.Value{
+																																					"cluster": {
 																																						Kind: &protobuftypes.Value_StringValue{
 																																							StringValue: "outbound|1194||" + ServiceName + "." + namespace + ".svc.cluster.local",
 																																						},
 																																					},
-																																					"upgrade_configs": &protobuftypes.Value{
+																																					"upgrade_configs": {
 																																						Kind: &protobuftypes.Value_ListValue{
 																																							ListValue: &protobuftypes.ListValue{
 																																								Values: []*protobuftypes.Value{
@@ -683,12 +682,12 @@ var _ = Describe("VpnSeedServer", func() {
 																																										Kind: &protobuftypes.Value_StructValue{
 																																											StructValue: &protobuftypes.Struct{
 																																												Fields: map[string]*protobuftypes.Value{
-																																													"upgrade_type": &protobuftypes.Value{
+																																													"upgrade_type": {
 																																														Kind: &protobuftypes.Value_StringValue{
 																																															StringValue: "CONNECT",
 																																														},
 																																													},
-																																													"connect_config": &protobuftypes.Value{
+																																													"connect_config": {
 																																														Kind: &protobuftypes.Value_StructValue{
 																																															StructValue: &protobuftypes.Struct{},
 																																														},
