@@ -44,8 +44,8 @@ var _ = Describe("MetricsServer", func() {
 		fakeErr           = fmt.Errorf("fake error")
 		namespace         = "shoot--foo--bar"
 		image             = "k8s.gcr.io/metrics-server:v4.5.6"
+		imageSidecar      = "k8s.gcr.io/addon-resizer:1.8.11"
 		kubeAPIServerHost = "foo.bar"
-		sideCar           = "k8s.gcr.io/addon-resizer:1.8.11"
 
 		secretNameCA         = "ca-metrics-server"
 		secretChecksumCA     = "1234"
@@ -120,6 +120,15 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - update
+  - watch
 `
 		clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -181,6 +190,8 @@ metadata:
 		deploymentYAMLWithoutHostEnv = `apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    resources.gardener.cloud/preserve-resources: "true"
   creationTimestamp: null
   labels:
     gardener.cloud/role: system-component
@@ -251,8 +262,30 @@ spec:
         volumeMounts:
         - mountPath: /srv/metrics-server/tls
           name: metrics-server
-      - name: metrics-server-nanny
-        image: ` + sideCar + `
+      - command:
+        - /pod_nanny
+        - --cpu=20m
+        - --extra-cpu=1m
+        - --memory=15Mi
+        - --extra-memory=2Mi
+        - --threshold=5
+        - --deployment=metrics-server
+        - --container=metrics-server
+        - --poll-period=300000
+        - --minClusterSize=10
+        - --use-metrics=false
+        env:
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MY_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        image: ` + imageSidecar + `
+        imagePullPolicy: IfNotPresent
+        name: metrics-server-nanny
         resources:
           limits:
             cpu: 40m
@@ -260,27 +293,6 @@ spec:
           requests:
             cpu: 40m
             memory: 25Mi
-        env:
-          - name: MY_POD_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
-          - name: MY_POD_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
-        command:
-          - /pod_nanny
-          - --cpu=20m
-          - --extra-cpu=1m
-          - --memory=15Mi
-          - --extra-memory=2Mi
-          - --threshold=5
-          - --deployment=metrics-server
-          - --container=metrics-server
-          - --poll-period=300000
-          - --minClusterSize=10
-          - --use-metrics=false
       dnsPolicy: Default
       nodeSelector:
         worker.gardener.cloud/system-components: "true"
@@ -301,6 +313,8 @@ status: {}
 		deploymentYAMLWithHostEnv = `apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    resources.gardener.cloud/preserve-resources: "true"
   creationTimestamp: null
   labels:
     gardener.cloud/role: system-component
@@ -374,8 +388,30 @@ spec:
         volumeMounts:
         - mountPath: /srv/metrics-server/tls
           name: metrics-server
-      - name: metrics-server-nanny
-        image: ` + sideCar + `
+      - command:
+        - /pod_nanny
+        - --cpu=20m
+        - --extra-cpu=1m
+        - --memory=15Mi
+        - --extra-memory=2Mi
+        - --threshold=5
+        - --deployment=metrics-server
+        - --container=metrics-server
+        - --poll-period=300000
+        - --minClusterSize=10
+        - --use-metrics=false
+        env:
+        - name: MY_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MY_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        image: ` + imageSidecar + `
+        imagePullPolicy: IfNotPresent
+        name: metrics-server-nanny
         resources:
           limits:
             cpu: 40m
@@ -383,27 +419,6 @@ spec:
           requests:
             cpu: 40m
             memory: 25Mi
-        env:
-          - name: MY_POD_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
-          - name: MY_POD_NAMESPACE
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.namespace
-        command:
-          - /pod_nanny
-          - --cpu=20m
-          - --extra-cpu=1m
-          - --memory=15Mi
-          - --extra-memory=2Mi
-          - --threshold=5
-          - --deployment=metrics-server
-          - --container=metrics-server
-          - --poll-period=300000
-          - --minClusterSize=10
-          - --use-metrics=false
       dnsPolicy: Default
       nodeSelector:
         worker.gardener.cloud/system-components: "true"
@@ -433,7 +448,7 @@ status: {}
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
-		metricsServer = New(c, namespace, image, nil, sideCar)
+		metricsServer = New(c, namespace, image, imageSidecar, nil)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -526,7 +541,7 @@ status: {}
 			})
 
 			It("should successfully deploy all resources (w/ VPA, w/ host env)", func() {
-				metricsServer = New(c, namespace, image, &kubeAPIServerHost, sideCar)
+				metricsServer = New(c, namespace, image, imageSidecar, &kubeAPIServerHost)
 				metricsServer.SetSecrets(secrets)
 
 				managedResourceSecret.Data["deployment__kube-system__metrics-server.yaml"] = []byte(deploymentYAMLWithHostEnv)

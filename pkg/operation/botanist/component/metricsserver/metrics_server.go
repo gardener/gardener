@@ -73,15 +73,15 @@ func New(
 	client client.Client,
 	namespace string,
 	image string,
+	imageAddonResizer string,
 	kubeAPIServerHost *string,
-	addonResizerImage string,
 ) Interface {
 	return &metricsServer{
 		client:            client,
 		namespace:         namespace,
 		image:             image,
 		kubeAPIServerHost: kubeAPIServerHost,
-		addonResizerImage: addonResizerImage,
+		imageAddonResizer: imageAddonResizer,
 	}
 }
 
@@ -89,8 +89,8 @@ type metricsServer struct {
 	client            client.Client
 	namespace         string
 	image             string
+	imageAddonResizer string
 	kubeAPIServerHost *string
-	addonResizerImage string
 	secrets           Secrets
 }
 
@@ -266,7 +266,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 					v1beta1constants.GardenRole:     v1beta1constants.GardenRoleSystemComponent,
 				}),
 				Annotations: map[string]string{
-					resourcesv1alpha1.PreserveResources: true,
+					resourcesv1alpha1.PreserveResources: "true",
 				},
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -366,7 +366,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 							}},
 						}, {
 							Name:            addonResizerName,
-							Image:           m.addonResizerImage,
+							Image:           m.imageAddonResizer,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Command: []string{
 								"/pod_nanny",
@@ -375,8 +375,8 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 								"--memory=15Mi",
 								"--extra-memory=2Mi",
 								"--threshold=5",
-								"--deployment=metrics-server",
-								"--container=metrics-server",
+								"--deployment=" + deploymentName,
+								"--container=" + containerName,
 								"--poll-period=300000",
 								"--minClusterSize=10",
 								"--use-metrics=false",
