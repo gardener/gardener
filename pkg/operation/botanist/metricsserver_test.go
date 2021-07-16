@@ -69,15 +69,23 @@ var _ = Describe("MetricsServer", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.APIServerSNI, true)()
 
 			kubernetesClient.EXPECT().Client()
-			botanist.ImageVector = imagevector.ImageVector{{Name: "metrics-server"}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: "metrics-server"}, {Name: "addon-resizer"}}
 
 			metricsServer, err := botanist.DefaultMetricsServer()
 			Expect(metricsServer).NotTo(BeNil())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should return an error because the image cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{}
+		It("should return an error because the metric-server image cannot be found", func() {
+			botanist.ImageVector = imagevector.ImageVector{{Name: "addon-resizer"}}
+
+			metricsServer, err := botanist.DefaultMetricsServer()
+			Expect(metricsServer).To(BeNil())
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should return an error because the addon-resizer image cannot be found", func() {
+			botanist.ImageVector = imagevector.ImageVector{{Name: "metrics-server"}}
 
 			metricsServer, err := botanist.DefaultMetricsServer()
 			Expect(metricsServer).To(BeNil())
