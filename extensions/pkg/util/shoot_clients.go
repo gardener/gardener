@@ -16,6 +16,7 @@ package util
 
 import (
 	"context"
+	"os"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -65,16 +66,26 @@ func NewShootClients(c client.Client, clientset kubernetes.Interface, gardenerCl
 	}
 }
 
-// NewClientForShoot returns the rest config and the client for the given shoot namespace.
+// NewClientForShoot returns the rest config and the client for the given shoot namespace. It first looks to use the endpoint given by
+// v1beta1constants.SecretNameGardenerInternal and, if it cannot find that, then from v1beta1constants.SecretNameGardener.
+// However, if the environment variable GARDENER_SHOOT_CLIENT=external, then it *only* checks for the external endpoint,
+// i.e. v1beta1constants.SecretNameGardener. This is useful when connecting from outside the seed cluster on which the shoot kube-apiserver
+// is running.
 func NewClientForShoot(ctx context.Context, c client.Client, namespace string, opts client.Options) (*rest.Config, client.Client, error) {
 	var (
 		gardenerSecret = &corev1.Secret{}
 		err            error
 	)
 
-	if err = c.Get(ctx, kutil.Key(namespace, v1beta1constants.SecretNameGardenerInternal), gardenerSecret); err != nil && apierrors.IsNotFound(err) {
+	// do we try the internal one first?
+	if os.Getenv("GARDENER_SHOOT_CLIENT") != "external" {
+		if err = c.Get(ctx, kutil.Key(namespace, v1beta1constants.SecretNameGardenerInternal), gardenerSecret); err != nil && apierrors.IsNotFound(err) {
+			err = c.Get(ctx, kutil.Key(namespace, v1beta1constants.SecretNameGardener), gardenerSecret)
+		}
+	} else {
 		err = c.Get(ctx, kutil.Key(namespace, v1beta1constants.SecretNameGardener), gardenerSecret)
 	}
+
 	if err != nil {
 		return nil, nil, err
 	}
