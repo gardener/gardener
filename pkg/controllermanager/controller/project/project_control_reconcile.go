@@ -36,7 +36,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -81,15 +80,15 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 
 	// Update the name of the created namespace in the projects '.spec.namespace' field.
 	if ns := project.Spec.Namespace; ns == nil {
-		if err := kutil.TryPatch(ctx, retry.DefaultBackoff, gardenClient, project, func() error {
-			project.Spec.Namespace = &namespace.Name
-			return nil
-		}); err != nil {
+		project.Spec.Namespace = &namespace.Name
+		if err := gardenClient.Update(ctx, project); err != nil {
 			r.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
 			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectFailed })
 
 			// If we failed to update the namespace in the project specification we should try to delete
 			// our created namespace again to prevent an inconsistent state.
+			// TODO: this mechanism is only a best effort implementation, is fragile and can create orphaned namespaces.
+			//  We should think about a better way to prevent an inconsistent state.
 			if err := retryutils.UntilTimeout(ctx, time.Second, time.Minute, func(context.Context) (done bool, err error) {
 				if err := gardenClient.Delete(ctx, namespace, kubernetes.DefaultDeleteOptions...); err != nil {
 					if apierrors.IsNotFound(err) {
@@ -172,37 +171,11 @@ func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, ga
 				Annotations:     projectAnnotations,
 			},
 		}
-		err := gardenClient.Create(ctx, obj)
-		return obj, err
+		return obj, gardenClient.Create(ctx, obj)
 	}
 
-	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: *namespaceName,
-		},
-	}
-
-	if err := kutil.TryPatch(ctx, retry.DefaultBackoff, gardenClient, namespace, func() error {
-		if !apiequality.Semantic.DeepDerivative(projectLabels, namespace.Labels) {
-			return fmt.Errorf("namespace cannot be used as it needs the project labels %#v", projectLabels)
-		}
-
-		if metav1.HasAnnotation(namespace.ObjectMeta, v1beta1constants.NamespaceProject) && !apiequality.Semantic.DeepDerivative(projectAnnotations, namespace.Annotations) {
-			return fmt.Errorf("namespace is already in-use by another project")
-		}
-
-		namespace.OwnerReferences = kutil.MergeOwnerReferences(namespace.OwnerReferences, *ownerReference)
-		namespace.Labels = utils.MergeStringMaps(namespace.Labels, projectLabels)
-		namespace.Annotations = utils.MergeStringMaps(namespace.Annotations, projectAnnotations)
-
-		// If the project is reconciled for the first time then its observed generation is 0. Only in this case we want
-		// to add the "keep-after-project-deletion" annotation to the namespace when we adopt it.
-		if project.Status.ObservedGeneration == 0 {
-			namespace.Annotations[v1beta1constants.NamespaceKeepAfterProjectDeletion] = "true"
-		}
-
-		return nil
-	}); err != nil {
+	namespace := &corev1.Namespace{}
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: *namespaceName}, namespace); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, err
 		}
@@ -215,11 +188,35 @@ func (r *projectReconciler) reconcileNamespaceForProject(ctx context.Context, ga
 				Annotations:     projectAnnotations,
 			},
 		}
-		err := gardenClient.Create(ctx, obj)
-		return obj, err
+		return obj, gardenClient.Create(ctx, obj)
 	}
 
-	return namespace, nil
+	if !apiequality.Semantic.DeepDerivative(projectLabels, namespace.Labels) {
+		return nil, fmt.Errorf("namespace cannot be used as it needs the project labels %#v", projectLabels)
+	}
+
+	if metav1.HasAnnotation(namespace.ObjectMeta, v1beta1constants.NamespaceProject) && !apiequality.Semantic.DeepDerivative(projectAnnotations, namespace.Annotations) {
+		return nil, fmt.Errorf("namespace is already in-use by another project")
+	}
+
+	before := namespace.DeepCopy()
+
+	namespace.OwnerReferences = kutil.MergeOwnerReferences(namespace.OwnerReferences, *ownerReference)
+	namespace.Labels = utils.MergeStringMaps(namespace.Labels, projectLabels)
+	namespace.Annotations = utils.MergeStringMaps(namespace.Annotations, projectAnnotations)
+
+	// If the project is reconciled for the first time then its observed generation is 0. Only in this case we want
+	// to add the "keep-after-project-deletion" annotation to the namespace when we adopt it.
+	if project.Status.ObservedGeneration == 0 {
+		namespace.Annotations[v1beta1constants.NamespaceKeepAfterProjectDeletion] = "true"
+	}
+
+	if apiequality.Semantic.DeepEqual(before, namespace) {
+		return namespace, nil
+	}
+
+	// update namespace if required
+	return namespace, gardenClient.Update(ctx, namespace)
 }
 
 // quotaConfiguration returns the first matching quota configuration if one is configured for the given project.

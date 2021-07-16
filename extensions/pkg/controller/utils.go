@@ -121,22 +121,6 @@ func DeleteAllFinalizers(ctx context.Context, client client.Client, obj client.O
 // GetSecretByReference returns the Secret object matching the given SecretReference.
 var GetSecretByReference = kutil.GetSecretByReference
 
-// TryPatch tries to apply the given transformation function onto the given object, and to patch it afterwards with optimistic locking.
-// It retries the patch with an exponential backoff.
-var TryPatch = kutil.TryPatch
-
-// TryPatchStatus tries to apply the given transformation function onto the given object, and to patch its
-// status afterwards with optimistic locking. It retries the status patch with an exponential backoff.
-var TryPatchStatus = kutil.TryPatchStatus
-
-// TryUpdate tries to apply the given transformation function onto the given object, and to update it afterwards.
-// It retries the update with an exponential backoff.
-var TryUpdate = kutil.TryUpdate
-
-// TryUpdateStatus tries to apply the given transformation function onto the given object, and to update its
-// status afterwards. It retries the status update with an exponential backoff.
-var TryUpdateStatus = kutil.TryUpdateStatus
-
 // WatchBuilder holds various functions which add watch controls to the passed Controller.
 type WatchBuilder []func(controller.Controller) error
 

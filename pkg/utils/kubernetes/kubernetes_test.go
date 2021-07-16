@@ -149,18 +149,6 @@ var _ = Describe("kubernetes", func() {
 		Entry("no matching value", map[string]string{"key": "value"}, "key", "value1", false),
 	)
 
-	DescribeTable("#IsEmptyPatch",
-		func(patch string, expected bool) {
-			Expect(IsEmptyPatch([]byte(patch))).To(Equal(expected))
-		},
-		Entry("non-empty-patch", `{"foo": "bar"}`, false),
-		Entry("non-json-patch", `random input`, false),
-		Entry("empty string", ``, true),
-		Entry("empty string with spaces", `  `, true),
-		Entry("empty json object", `{}`, true),
-		Entry("empty json object with spaces", ` { } `, true),
-	)
-
 	DescribeTable("#ValidDeploymentContainerImageVersion",
 		func(containerName, minVersion string, expected bool) {
 			fakeImage := "test:0.3.0"

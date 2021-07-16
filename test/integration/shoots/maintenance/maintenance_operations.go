@@ -21,19 +21,16 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/sirupsen/logrus"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 // CleanupCloudProfile tries to patch the CloudProfile to make sure the machine image version & kubernetes version introduced during the integration test is being removed
@@ -142,76 +139,48 @@ func WaitForExpectedKubernetesVersionMaintenance(ctx context.Context, logger *lo
 	}, ctx.Done())
 }
 
-// TryUpdateShootForMachineImageMaintenance tries to update the maintenance section of the shoot spec regarding the machine image
-func TryUpdateShootForMachineImageMaintenance(ctx context.Context, gardenClient client.Client, shootToUpdate *gardencorev1beta1.Shoot) error {
-	shoot := &gardencorev1beta1.Shoot{ObjectMeta: shootToUpdate.ObjectMeta}
-	return kutil.TryUpdate(ctx, retry.DefaultBackoff, gardenClient, shoot, func() error {
-		if shootToUpdate.Spec.Maintenance.AutoUpdate != nil {
-			shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion = shootToUpdate.Spec.Maintenance.AutoUpdate.MachineImageVersion
-		}
-		shoot.Spec.Provider.Workers = shootToUpdate.Spec.Provider.Workers
-		return nil
-	})
-}
-
 // StartShootMaintenance adds the maintenance annotation on the Shoot to start the Shoot Maintenance
-func StartShootMaintenance(ctx context.Context, gardenClient client.Client, shootToUpdate *gardencorev1beta1.Shoot) error {
-	shoot := &gardencorev1beta1.Shoot{ObjectMeta: shootToUpdate.ObjectMeta}
-	return kutil.TryUpdate(ctx, retry.DefaultBackoff, gardenClient, shoot, func() error {
-		shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.ShootOperationMaintain
-		return nil
-	})
+func StartShootMaintenance(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) error {
+	patch := client.MergeFrom(shoot.DeepCopy())
+	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)
+	return c.Patch(ctx, shoot, patch)
 }
 
-// TryUpdateShootForKubernetesMaintenance tries to update the maintenance section of the shoot spec regarding the Kubernetes version
-func TryUpdateShootForKubernetesMaintenance(ctx context.Context, gardenClient client.Client, shootToUpdate *gardencorev1beta1.Shoot) error {
-	shoot := &gardencorev1beta1.Shoot{ObjectMeta: shootToUpdate.ObjectMeta}
+// PatchCloudProfileForMachineImageMaintenance patches the images of the Cloud Profile
+func PatchCloudProfileForMachineImageMaintenance(ctx context.Context, c client.Client, cloudProfileName string, testMachineImage gardencorev1beta1.ShootMachineImage, expirationDate *metav1.Time, classification *gardencorev1beta1.VersionClassification) error {
+	cloudProfile := &gardencorev1beta1.CloudProfile{}
+	if err := c.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile); err != nil {
+		return err
+	}
+	patch := client.StrategicMergeFrom(cloudProfile.DeepCopy())
 
-	return kutil.TryUpdate(ctx, retry.DefaultBackoff, gardenClient, shoot, func() error {
-		shoot.Spec.Kubernetes.Version = shootToUpdate.Spec.Kubernetes.Version
-		shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = shootToUpdate.Spec.Maintenance.AutoUpdate.KubernetesVersion
-		shoot.Annotations = utils.MergeStringMaps(shoot.Annotations, shootToUpdate.Annotations)
-		return nil
-	})
-}
-
-// TryUpdateCloudProfileForMachineImageMaintenance tries to update the images of the Cloud Profile
-func TryUpdateCloudProfileForMachineImageMaintenance(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot, testMachineImage gardencorev1beta1.ShootMachineImage, expirationDate *metav1.Time, classification *gardencorev1beta1.VersionClassification) error {
-	cloudProfile := &gardencorev1beta1.CloudProfile{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: shoot.Spec.CloudProfileName,
-		},
+	// update Cloud Profile with expirationDate for integration test machine image
+	for i, image := range cloudProfile.Spec.MachineImages {
+		versionExists, index := helper.ShootMachineImageVersionExists(image, testMachineImage)
+		if versionExists {
+			cloudProfile.Spec.MachineImages[i].Versions[index].ExpirationDate = expirationDate
+			cloudProfile.Spec.MachineImages[i].Versions[index].Classification = classification
+		}
 	}
 
-	return kutil.TryUpdate(ctx, retry.DefaultBackoff, gardenClient, cloudProfile, func() error {
-		// update Cloud Profile with expirationDate for integration test machine image
-		for i, image := range cloudProfile.Spec.MachineImages {
-			versionExists, index := helper.ShootMachineImageVersionExists(image, testMachineImage)
-			if versionExists {
-				cloudProfile.Spec.MachineImages[i].Versions[index].ExpirationDate = expirationDate
-				cloudProfile.Spec.MachineImages[i].Versions[index].Classification = classification
-			}
-		}
-		return nil
-	})
+	return c.Patch(ctx, cloudProfile, patch)
 }
 
-// TryUpdateCloudProfileForKubernetesVersionMaintenance tries to update a specific kubernetes version of the Cloud Profile
-func TryUpdateCloudProfileForKubernetesVersionMaintenance(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot, targetVersion string, expirationDate *metav1.Time, classification *gardencorev1beta1.VersionClassification) error {
-	cloudProfile := &gardencorev1beta1.CloudProfile{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: shoot.Spec.CloudProfileName,
-		},
+// PatchCloudProfileForKubernetesVersionMaintenance patches a specific kubernetes version of the Cloud Profile
+func PatchCloudProfileForKubernetesVersionMaintenance(ctx context.Context, c client.Client, cloudProfileName string, targetVersion string, expirationDate *metav1.Time, classification *gardencorev1beta1.VersionClassification) error {
+	cloudProfile := &gardencorev1beta1.CloudProfile{}
+	if err := c.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile); err != nil {
+		return err
+	}
+	patch := client.StrategicMergeFrom(cloudProfile.DeepCopy())
+
+	// update kubernetes version in cloud profile with an expiration date
+	for i, version := range cloudProfile.Spec.Kubernetes.Versions {
+		if version.Version == targetVersion {
+			cloudProfile.Spec.Kubernetes.Versions[i].Classification = classification
+			cloudProfile.Spec.Kubernetes.Versions[i].ExpirationDate = expirationDate
+		}
 	}
 
-	return kutil.TryUpdate(ctx, retry.DefaultBackoff, gardenClient, cloudProfile, func() error {
-		// update kubernetes version in cloud profile with an expiration date
-		for i, version := range cloudProfile.Spec.Kubernetes.Versions {
-			if version.Version == targetVersion {
-				cloudProfile.Spec.Kubernetes.Versions[i].Classification = classification
-				cloudProfile.Spec.Kubernetes.Versions[i].ExpirationDate = expirationDate
-			}
-		}
-		return nil
-	})
+	return c.Patch(ctx, cloudProfile, patch)
 }

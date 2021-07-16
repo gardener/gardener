@@ -12,21 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetes
+package controller
 
 import (
 	"context"
 	"reflect"
-	"strings"
 
-	jsoniter "github.com/json-iterator/go"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-var json = jsoniter.ConfigFastest
 
 // TryPatch tries to apply the given transformation function onto the given object, and to patch it afterwards with optimistic locking.
 // It retries the patch with an exponential backoff.
@@ -66,24 +61,4 @@ func tryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj cl
 		}
 		return true, nil
 	})
-}
-
-// IsEmptyPatch checks if the given patch is empty. A patch is considered empty if it is
-// the empty string or if it json-decodes to an empty json map.
-func IsEmptyPatch(patch []byte) bool {
-	if len(strings.TrimSpace(string(patch))) == 0 {
-		return true
-	}
-
-	var m map[string]interface{}
-	if err := json.Unmarshal(patch, &m); err != nil {
-		return false
-	}
-
-	return len(m) == 0
-}
-
-// SubmitEmptyPatch submits an empty patch to the given `obj` with the given `client` instance.
-func SubmitEmptyPatch(ctx context.Context, c client.Client, obj client.Object) error {
-	return c.Patch(ctx, obj, client.RawPatch(types.StrategicMergePatchType, []byte("{}")))
 }
