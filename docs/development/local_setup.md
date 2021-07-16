@@ -1,19 +1,50 @@
-# Preparing the Setup
+# Overview
 
-Conceptually, all Gardener components are designated to run as a Pod inside a Kubernetes cluster.
-The API server extends the Kubernetes API via the user-aggregated API server concepts.
+Conceptually, all Gardener components are designed to run as a Pod inside a Kubernetes cluster.
+The Gardener API server extends the Kubernetes API via the user-aggregated API server concepts.
 However, if you want to develop it, you may want to work locally with the Gardener without building a Docker image and deploying it to a cluster each and every time.
 That means that the Gardener runs outside a Kubernetes cluster which requires providing a [Kubeconfig](https://kubernetes.io/docs/tasks/access-application-cluster/authenticate-across-clusters-kubeconfig/) in your local filesystem and point the Gardener to it when starting it (see below).
 
-Further details could be found in
+Further details can be found in
 
 1. [Principles of Kubernetes](https://kubernetes.io/docs/concepts/), and its [components](https://kubernetes.io/docs/concepts/overview/components/)
 1. [Kubernetes Development Guide](https://github.com/kubernetes/community/tree/master/contributors/devel)
 1. [Architecture of Gardener](https://github.com/gardener/documentation/wiki/Architecture)
 
-## Installing Golang environment
+This guide is split into three main parts:
+* [Preparing your setup by installing all dependencies and tools](#preparing-the-setup)
+* [Building and starting Gardener components locally](#start-gardener-locally)
+* [Using your local Gardener setup to create a Shoot](#create-a-shoot)
 
-Install latest version of Golang. For MacOS you could use [Homebrew](https://brew.sh/):
+## Limitations of the local development setup
+
+You can run Gardener (API server, controller manager, scheduler, gardenlet) against any local Kubernetes cluster, however, your seed and shoot clusters must be deployed to a cloud provider.
+Currently, it is not possible to run Gardener entirely isolated from any cloud provider. This means that to be able create Shoot clusters you need to register an external Seed cluster (e.g., one created in AWS).
+
+# Preparing the Setup
+
+## [macOS only] Installing homebrew
+
+The copy-paste instructions in this guide are designed for macOS and use the package manager [Homebrew](https://brew.sh/).
+
+On macOS run
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+## Installing git
+
+We use `git` as VCS which you need to install. On macOS run
+
+```bash
+brew install git
+```
+
+For other OS, please check the [Git installation documentation](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+
+## Installing Go
+
+Install the latest version of Go. On macOS run
 
 ```bash
 brew install go
@@ -21,64 +52,50 @@ brew install go
 
 For other OS, please check [Go installation documentation](https://golang.org/doc/install).
 
-## Installing kubectl and helm
+## Installing kubectl
 
-As already mentioned in the introduction, the communication with the Gardener happens via the Kubernetes (Garden) cluster it is targeting. To interact with that cluster, you need to install `kubectl`. Please make sure that the version of `kubectl` is at least `v1.11.x`.
-
-On MacOS run
+Install `kubectl`. Please make sure that the version of `kubectl` is at least `v1.11.x`. On macOS run
 
 ```bash
 brew install kubernetes-cli
 ```
 
-Please check the [kubectl installation documentation](https://kubernetes.io/docs/tasks/tools/install-kubectl/) for other OS.
+For other OS, please check the [kubectl installation documentation](https://kubernetes.io/docs/tasks/tools/install-kubectl/).
 
-You may also need to develop Helm charts or interact with Tiller using the [Helm](https://github.com/kubernetes/helm) CLI:
-
-On MacOS run
-
-```bash
-brew install kubernetes-helm
-```
-
-On other OS please check the [Helm installation documentation](https://helm.sh/docs/intro/install/).
-
-## Installing git
-
-We use `git` as VCS which you need to install.
-
-On MacOS run
+## Installing helm
+You also need the [Helm](https://github.com/kubernetes/helm) CLI. On macOS run
 
 ```bash
-brew install git
+brew install helm
 ```
 
-On other OS, please check the [Git installation documentation](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
+For other OS please check the [Helm installation documentation](https://helm.sh/docs/intro/install/).
 
 ## Installing openvpn
 
 We use `OpenVPN` to establish network connectivity from the control plane running in the Seed cluster to the Shoot's worker nodes running in private networks.
 To harden the security we need to generate another secret to encrypt the network traffic ([details](https://openvpn.net/index.php/open-source/documentation/howto.html#security)).
-Please install the `openvpn` binary.
-
-On MacOS run
+Please install the `openvpn` binary. On macOS run
 
 ```bash
 brew install openvpn
 export PATH=$(brew --prefix openvpn)/sbin:$PATH
 ```
 
-On other OS, please check the [OpenVPN downloads page](https://openvpn.net/index.php/open-source/downloads.html).
+For other OS, please check the [OpenVPN downloads page](https://openvpn.net/index.php/open-source/downloads.html).
 
 ## Installing Docker
 
-You'll need to have [docker](https://docs.docker.com/get-docker/) installed and running.
+You need to have docker installed and running. On macOS run
+```bash
+brew install --cask docker
+```
+
+For other OS please check the [docker installation documentation](https://docs.docker.com/get-docker/).
 
 ## Installing iproute2
 
-`iproute2` provides a collection of utilities for network administration and configuration.
-
-On MacOS run
+`iproute2` provides a collection of utilities for network administration and configuration. On macOS run
 
 ```bash
 brew install iproute2mac
@@ -89,22 +106,25 @@ brew install iproute2mac
 ```bash
 go get -u github.com/bronze1man/yaml2json
 brew install jq
+```
+
+And make sure the yaml2json binary is on your `PATH`
+```bash
 export PATH=$PATH:$(go env GOPATH)/bin
 ```
 
+
 ## Installing GNU Parallel
 
-[GNU Parallel](https://www.gnu.org/software/parallel/) is a shell tool for executing jobs in parallel, used by the code generation scripts (`make generate`).
-
-On MacOS run
+[GNU Parallel](https://www.gnu.org/software/parallel/) is a shell tool for executing jobs in parallel, used by the code generation scripts (`make generate`). On macOS run
 
 ```bash
 brew install parallel
 ```
 
-## [MacOS only] Install GNU core utilities
+## [macOS only] Install GNU core utilities
 
-When running on MacOS you have to install the GNU core utilities:
+When running on macOS you have to install the GNU core utilities:
 
 ```bash
 brew install coreutils gnu-sed
@@ -112,9 +132,9 @@ brew install coreutils gnu-sed
 
 This will create symbolic links for the GNU utilities with `g` prefix in `/usr/local/bin`, e.g., `gsed` or `gbase64`. To allow using them without the `g` prefix please put `/usr/local/opt/coreutils/libexec/gnubin` at the beginning of your `PATH` environment variable, e.g., `export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH`.
 
-## [Windows] WSL2
+## [Windows only] WSL2
 
-Apart from Linux distributions and MacOS, the local gardener setup can also run on the Windows Subsystem for Linux 2.
+Apart from Linux distributions and macOS, the local gardener setup can also run on the Windows Subsystem for Linux 2.
 
 While WSL1, plain docker for windows and various Linux distributions and local Kubernetes environments may be supported, this setup was verified with:
 * [WSL2](https://docs.microsoft.com/en-us/windows/wsl/wsl2-index)
@@ -124,15 +144,9 @@ While WSL1, plain docker for windows and various Linux distributions and local K
 
 The Gardener repository and all the above-mentioned tools (git, golang, kubectl, ...) should be installed in your WSL2 distro, according to the distribution-specific Linux installation instructions.
 
-## [Optional] Installing gcloud SDK
+# Start Gardener locally
 
-In case you have to create a new release or a new hotfix of the Gardener you have to push the resulting Docker image into a Docker registry. Currently, we are using the Google Container Registry (this could change in the future). Please follow the official [installation instructions from Google](https://cloud.google.com/sdk/downloads).
-
-## Local Gardener setup
-
-This setup is only meant to be used for developing purposes, which means that only the control plane of the Gardener cluster is running on your machine.
-
-### Get the sources
+## Get the sources
 
 Clone the repository from GitHub into your `$GOPATH`.
 
@@ -145,14 +159,9 @@ cd gardener
 
 > Note: Gardener is using Go modules and cloning the repository into `$GOPATH` is not a hard requirement. However it is still recommended to clone into `$GOPATH` because `k8s.io/code-generator` does not work yet outside of `$GOPATH` - [kubernetes/kubernetes#86753](https://github.com/kubernetes/kubernetes/issues/86753).
 
-### Start the Gardener
+## Start the Gardener
 
-:warning: Before you start developing, please ensure to comply with the following requirements:
-
-1. You have understood the [principles of Kubernetes](https://kubernetes.io/docs/concepts/), and its [components](https://kubernetes.io/docs/concepts/overview/components/), what their purpose is and how they interact with each other.
-1. You have understood the [architecture of Gardener](https://github.com/gardener/documentation/wiki/Architecture), and what the various clusters are used for.
-
-#### Start a local kubernetes cluster
+### Start a local kubernetes cluster
 
 For the development of Gardener you need a Kubernetes API server on which you can register Gardener's own Extension API Server as `APIService`. This cluster doesn't need any worker nodes to run pods, though, therefore, you can use the "nodeless Garden cluster setup" residing in `hack/local-garden`. This will start all minimally required components of a Kubernetes cluster (`etcd`, `kube-apiserver`, `kube-controller-manager`)
 and an `etcd` Instance for the `gardener-apiserver` as Docker containers. This is the easiest way to get your
@@ -278,7 +287,7 @@ If the seed authorizer is enabled, you also have to start the `gardener-admissio
 
 </details>
 
-#### Prepare the Gardener
+### Prepare the Gardener
 
 Now, that you have started your local cluster, we can go ahead and register the Gardener API Server.
 Just point your `KUBECONFIG` environment variable to the cluster you created in the previous step and run:
@@ -316,7 +325,7 @@ kubectl apply -f example/10-secret-internal-domain-unmanaged.yaml
 secret/internal-domain-unmanaged created
 ```
 
-#### Run the Gardener
+### Run the Gardener
 
 Next, run the Gardener API Server, the Gardener Controller Manager (optionally), the Gardener Scheduler (optionally), and the Gardenlet in different terminal windows/panes using rules in the `Makefile`.
 
@@ -362,9 +371,6 @@ time="2019-05-02T16:31:50+02:00" level=info msg="Scheduler controller initialize
 [...]
 ```
 
-Please checkout the [Gardener Extensions Manager](https://github.com/gardener/gem) to install extension controllers - make sure that you install all of them required for your local development.
-Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
-
 The Gardener should now be ready to operate on Shoot resources. You can use
 
 ```bash
@@ -376,11 +382,11 @@ to operate against your local running Gardener API Server.
 
 > Note: It may take several seconds until the Gardener API server has been started and is available. `No resources found` is the expected result of our initial development setup.
 
-### Create a Shoot
+# Create a Shoot
 
 The steps below describe the general process of creating a Shoot. Have in mind that the steps do not provide full example manifests. The reader needs to check the provider documentation and adapt the manifests accordingly.
 
-#### 1. Copy the example manifests to dev/
+#### 1. Copy the example manifests
 
 The next steps require modifications of the example manifests. These modifications are part of local setup and should not be `git push`-ed. To do not interfere with git, let's copy the example manifests to `dev/` which is ignored by git.
 
@@ -413,14 +419,22 @@ The `CloudProfile` resource is provider specific and describes the underlying cl
 kubectl apply -f dev/30-cloudprofile.yaml
 ```
 
-#### 4. Create the required ControllerRegistrations
+#### 4. Install necessary Gardener Extensions
 
-The [Known Extension Implementations](../../extensions/README.md#known-extension-implementations) section contains a list of available extension implementations. You need to create a ControllerRegistration for at least one infrastructure provider, dns provider (if the DNS for the Seed is not disabled), at least one operating system extension and at least one network plugin extension.
-As a convention, example ControllerRegistration manifest for an extension is located under `example/controller-registration.yaml` in the corresponding repository (for example for AWS the ControllerRegistration can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/controller-registration.yaml)). An example creation of ControllerRegistration for provider-aws:
+The [Known Extension Implementations](../../extensions/README.md#known-extension-implementations) section contains a list of available extension implementations. You need to create a ControllerRegistration and ControllerDeployment for
+* at least one infrastructure provider
+* a dns provider (if the DNS for the Seed is not disabled)
+* at least one operating system extension
+* at least one network plugin extension
+
+As a convention, the example ControllerRegistration manifest (containing also the necessary ControllerDeployment) for an extension is located under `example/controller-registration.yaml` in the corresponding repository (for example for AWS the ControllerRegistration can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/controller-registration.yaml)). An example creation for provider-aws (make sure to replace `<version>` with the newest released version tag):
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-aws/master/example/controller-registration.yaml
+kubectl apply -f https://raw.githubusercontent.com/gardener/gardener-extension-provider-aws/<version>/example/controller-registration.yaml
 ```
+
+Instead of updating extensions manually you can use [Gardener Extensions Manager](https://github.com/gardener/gem) to install and update extension controllers. This is especially useful if you want to keep and maintain your development setup for a longer time.
+Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
 
 #### 5. Register a Seed
 
@@ -438,7 +452,7 @@ Adapt `dev/50-seed.yaml` - adjust `.spec.secretRef` to refer the newly created S
 kubectl apply -f dev/50-seed.yaml
 ```
 
-### 6. Start Gardenlet
+#### 6. Start Gardenlet
 
 Once the Seed is created, start the Gardenlet to reconcile it. The `make start-gardenlet` command will automatically configure the local Gardenlet process to use the Seed and its kubeconfig. If you have multiple Seeds, you have to specify which to use by setting the `SEED_NAME` environment variable like in `make start-gardenlet SEED_NAME=my-first-seed`.
 
@@ -463,7 +477,7 @@ NAME       STATUS    PROVIDER    REGION      AGE    VERSION       K8S VERSION
 seed-aws   Ready     aws         eu-west-1   4m     v1.11.0-dev   v1.17.12
 ```
 
-### 7. Create a Shoot
+#### 7. Create a Shoot
 
 A Shoot requires a SecretBinding. The SecretBinding refers to a Secret that contains the cloud provider credentials. The Secret data keys are provider specific and you need to check the documentation of the provider to find out which data keys are expected (for example for AWS the related documentation can be found [here](https://github.com/gardener/gardener-extension-provider-aws/blob/master/docs/usage-as-end-user.md#provider-secret-data)). Adapt `dev/70-secret-provider.yaml` and `dev/80-secretbinding.yaml` and apply them.
 
@@ -485,11 +499,3 @@ Watch the progress of the operation and make sure that the Shoot will be success
 ```bash
 watch kubectl get shoot --all-namespaces
 ```
-
-#### Limitations of local development setup
-
-You can run Gardener (API server, controller manager, scheduler, gardenlet) against any local Kubernetes cluster, however, your seed and shoot clusters must be deployed to a "real" provider.
-Currently, it is not possible to run Gardener entirely isolated from any cloud provider.
-We are planning to support a setup that can run completely locally (see [this for details](https://github.com/gardener/gardener-extension-provider-mock)), however, it does not yet exist.
-This means that - after you have setup Gardener - you need to register an external seed cluster (e.g., one created in AWS).
-Only after that step you can start creating shoot clusters with your locally running Gardener.
