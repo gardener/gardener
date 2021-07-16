@@ -18,12 +18,7 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	. "github.com/onsi/ginkgo"
-
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +27,10 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("#tryUpdate", func() {
@@ -60,7 +59,7 @@ var _ = Describe("#tryUpdate", func() {
 		Expect(tryUpdateErr).NotTo(HaveOccurred())
 
 		objFromFakeClient := &extensionsv1alpha1.Infrastructure{}
-		err := c.Get(context.TODO(), kubernetes.Key("infraNamespace", "infraName"), objFromFakeClient)
+		err := c.Get(context.TODO(), kutil.Key("infraNamespace", "infraName"), objFromFakeClient)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(objFromFakeClient).To(Equal(infraObj))
 	})

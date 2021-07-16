@@ -18,20 +18,19 @@ import (
 	"context"
 	"encoding/json"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("#tryPatch", func() {
@@ -61,7 +60,7 @@ var _ = Describe("#tryPatch", func() {
 		Expect(tryPatchErr).NotTo(HaveOccurred())
 
 		objFromFakeClient := &extensionsv1alpha1.Infrastructure{}
-		err := c.Get(context.Background(), kubernetes.Key("infraNamespace", "infraName"), objFromFakeClient)
+		err := c.Get(context.Background(), kutil.Key("infraNamespace", "infraName"), objFromFakeClient)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(objFromFakeClient).To(Equal(infraObj))
 	})
