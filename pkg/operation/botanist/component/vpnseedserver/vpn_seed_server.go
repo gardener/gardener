@@ -617,7 +617,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 			Labels: envoyFilterSelector,
 		}
 		envoyFilter.Spec.ConfigPatches = []*istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
-			&istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectPatch{
+			{
 				ApplyTo: istionetworkingv1alpha3.EnvoyFilter_NETWORK_FILTER,
 				Match: &istionetworkingv1alpha3.EnvoyFilter_EnvoyConfigObjectMatch{
 					Context: istionetworkingv1alpha3.EnvoyFilter_GATEWAY,
@@ -637,25 +637,25 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 					Operation: istionetworkingv1alpha3.EnvoyFilter_Patch_MERGE,
 					Value: &protobuftypes.Struct{
 						Fields: map[string]*protobuftypes.Value{
-							"name": &protobuftypes.Value{
+							"name": {
 								Kind: &protobuftypes.Value_StringValue{
 									StringValue: "envoy.filters.network.http_connection_manager",
 								},
 							},
-							"typed_config": &protobuftypes.Value{
+							"typed_config": {
 								Kind: &protobuftypes.Value_StructValue{
 									StructValue: &protobuftypes.Struct{
 										Fields: map[string]*protobuftypes.Value{
-											"@type": &protobuftypes.Value{
+											"@type": {
 												Kind: &protobuftypes.Value_StringValue{
 													StringValue: "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
 												},
 											},
-											"route_config": &protobuftypes.Value{
+											"route_config": {
 												Kind: &protobuftypes.Value_StructValue{
 													StructValue: &protobuftypes.Struct{
 														Fields: map[string]*protobuftypes.Value{
-															"virtual_hosts": &protobuftypes.Value{
+															"virtual_hosts": {
 																Kind: &protobuftypes.Value_ListValue{
 																	ListValue: &protobuftypes.ListValue{
 																		Values: []*protobuftypes.Value{
@@ -663,12 +663,12 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 																				Kind: &protobuftypes.Value_StructValue{
 																					StructValue: &protobuftypes.Struct{
 																						Fields: map[string]*protobuftypes.Value{
-																							"name": &protobuftypes.Value{
+																							"name": {
 																								Kind: &protobuftypes.Value_StringValue{
 																									StringValue: v.namespace,
 																								},
 																							},
-																							"domains": &protobuftypes.Value{
+																							"domains": {
 																								Kind: &protobuftypes.Value_ListValue{
 																									ListValue: &protobuftypes.ListValue{
 																										Values: []*protobuftypes.Value{
@@ -681,7 +681,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 																									},
 																								},
 																							},
-																							"routes": &protobuftypes.Value{
+																							"routes": {
 																								Kind: &protobuftypes.Value_ListValue{
 																									ListValue: &protobuftypes.ListValue{
 																										Values: []*protobuftypes.Value{
@@ -689,11 +689,11 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 																												Kind: &protobuftypes.Value_StructValue{
 																													StructValue: &protobuftypes.Struct{
 																														Fields: map[string]*protobuftypes.Value{
-																															"match": &protobuftypes.Value{
+																															"match": {
 																																Kind: &protobuftypes.Value_StructValue{
 																																	StructValue: &protobuftypes.Struct{
 																																		Fields: map[string]*protobuftypes.Value{
-																																			"connect_matcher": &protobuftypes.Value{
+																																			"connect_matcher": {
 																																				Kind: &protobuftypes.Value_StructValue{
 																																					StructValue: &protobuftypes.Struct{},
 																																				},
@@ -702,16 +702,16 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 																																	},
 																																},
 																															},
-																															"route": &protobuftypes.Value{
+																															"route": {
 																																Kind: &protobuftypes.Value_StructValue{
 																																	StructValue: &protobuftypes.Struct{
 																																		Fields: map[string]*protobuftypes.Value{
-																																			"cluster": &protobuftypes.Value{
+																																			"cluster": {
 																																				Kind: &protobuftypes.Value_StringValue{
 																																					StringValue: "outbound|1194||" + ServiceName + "." + v.namespace + ".svc.cluster.local",
 																																				},
 																																			},
-																																			"upgrade_configs": &protobuftypes.Value{
+																																			"upgrade_configs": {
 																																				Kind: &protobuftypes.Value_ListValue{
 																																					ListValue: &protobuftypes.ListValue{
 																																						Values: []*protobuftypes.Value{
@@ -719,12 +719,12 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 																																								Kind: &protobuftypes.Value_StructValue{
 																																									StructValue: &protobuftypes.Struct{
 																																										Fields: map[string]*protobuftypes.Value{
-																																											"upgrade_type": &protobuftypes.Value{
+																																											"upgrade_type": {
 																																												Kind: &protobuftypes.Value_StringValue{
 																																													StringValue: "CONNECT",
 																																												},
 																																											},
-																																											"connect_config": &protobuftypes.Value{
+																																											"connect_config": {
 																																												Kind: &protobuftypes.Value_StructValue{
 																																													StructValue: &protobuftypes.Struct{},
 																																												},
