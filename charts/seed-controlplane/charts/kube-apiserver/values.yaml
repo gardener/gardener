@@ -84,14 +84,6 @@ podMutatorResources:
     cpu: 200m
     memory: 500M
 
-maxReplicas: 1
-minReplicas: 1
-
-hpa:
-  targetAverageUtilizationCpu: 80
-  memoryMetricForHpaEnabled: false
-  targetAverageUtilizationMemory: 80
-
 auditConfig:
   auditPolicy: ""
 
@@ -113,38 +105,6 @@ apiAudiences:
 #  # The current private key of the service account token issuer. The issuer will sign issued ID
 #  #  tokens with this private key. (Requires the 'TokenRequest' feature gate.)
 #  signingKey: <private key in PEM format>
-
-hvpa:
-  enabled: false
-
-scaleUpStabilization:
-  stabilizationDuration: "3m"
-  minChange:
-    cpu:
-      value: 300m
-      percentage: 80
-    memory:
-      value: 200M
-      percentage: 80
-
-scaleDownStabilization:
-  stabilizationDuration: "15m"
-  minChange:
-    cpu:
-      value: 300m
-      percentage: 80
-    memory:
-      value: 200M
-      percentage: 80
-scaleDownUpdateMode: "Auto"
-
-limitsRequestsGapScaleParams:
-  cpu:
-    value: "1"
-    percentage: 70
-  memory:
-    value: "1G"
-    percentage: 70
 
 sni:
   enabled: false

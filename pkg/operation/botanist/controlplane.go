@@ -38,35 +38,15 @@ import (
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var chartPathControlPlane = filepath.Join(charts.Path, "seed-controlplane", "charts")
-
-// DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
-func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
-	// invalidate shoot client here before deleting API server
-	if err := b.ClientMap.InvalidateClient(keys.ForShoot(b.Shoot.Info)); err != nil {
-		return err
-	}
-	b.K8sShootClient = nil
-
-	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      v1beta1constants.DeploymentNameKubeAPIServer,
-			Namespace: b.Shoot.SeedNamespace,
-		},
-	}
-
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptions...))
-}
 
 // DeployVerticalPodAutoscaler deploys the VPA into the shoot namespace in the seed.
 func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
@@ -162,34 +142,6 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values))
 }
 
-// WakeUpKubeAPIServer creates a service and ensures API Server is scaled up
-func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
-	sniPhase := b.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase.Done()
-
-	if err := b.DeployKubeAPIService(ctx, sniPhase); err != nil {
-		return err
-	}
-	if err := b.Shoot.Components.ControlPlane.KubeAPIServerService.Wait(ctx); err != nil {
-		return err
-	}
-	if b.APIServerSNIEnabled() {
-		if err := b.DeployKubeAPIServerSNI(ctx); err != nil {
-			return err
-		}
-	}
-	if err := b.DeployKubeAPIServer(ctx); err != nil {
-		return err
-	}
-	if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
-		return err
-	}
-	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.
 func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	if b.K8sShootClient != nil {
@@ -267,20 +219,6 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 
 	return client.IgnoreNotFound(b.ScaleETCDToZero(ctx))
-}
-
-// ScaleKubeAPIServerToOne scales kube-apiserver replicas to one
-func (b *Botanist) ScaleKubeAPIServerToOne(ctx context.Context) error {
-	return kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1)
-}
-
-// PrepareKubeAPIServerForMigration deletes the kube-apiserver and deletes its hvpa
-func (b *Botanist) PrepareKubeAPIServerForMigration(ctx context.Context) error {
-	if err := b.K8sSeedClient.Client().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
-		return err
-	}
-
-	return b.DeleteKubeAPIServer(ctx)
 }
 
 // DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
@@ -395,37 +333,15 @@ func getResourcesForAPIServer(nodeCount int32, scalingClass string) (string, str
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
 }
 
-// DeployKubeAPIServer deploys kube-apiserver deployment.
-func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
+func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	var (
-		hvpaEnabled               = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-		mountHostCADirectories    = gardenletfeatures.FeatureGate.Enabled(features.MountHostCADirectories)
-		memoryMetricForHpaEnabled = false
-
-		scaleDownUpdateMode       = hvpav1alpha1.UpdateModeAuto
-		minReplicas         int32 = 1
-		maxReplicas         int32 = 4
+		hvpaEnabled            = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
+		mountHostCADirectories = gardenletfeatures.FeatureGate.Enabled(features.MountHostCADirectories)
 	)
-
-	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
-		minReplicas = 2
-	}
-
-	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
-		minReplicas = 4
-		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
-	}
 
 	if b.ManagedSeed != nil {
 		// Override for shooted seeds
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
-		memoryMetricForHpaEnabled = true
-
-		if b.ManagedSeedAPIServer != nil {
-			autoscaler := b.ManagedSeedAPIServer.Autoscaler
-			minReplicas = *autoscaler.MinReplicas
-			maxReplicas = autoscaler.MaxReplicas
-		}
 	}
 
 	var (
@@ -442,8 +358,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"checksum/secret-etcd-encryption":        b.CheckSums[common.EtcdEncryptionSecretName],
 		}
 		defaultValues = map[string]interface{}{
-			"minReplicas":               minReplicas,
-			"maxReplicas":               maxReplicas,
 			"etcdServicePort":           etcd.PortEtcdClient,
 			"kubernetesVersion":         b.Shoot.Info.Spec.Kubernetes.Version,
 			"priorityClassName":         v1beta1constants.PriorityClassNameShootControlPlane,
@@ -454,13 +368,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 			"podAnnotations":            podAnnotations,
 			"reversedVPN": map[string]interface{}{
 				"enabled": b.Shoot.ReversedVPNEnabled,
-			},
-			"hvpa": map[string]interface{}{
-				"enabled": hvpaEnabled,
-			},
-			"scaleDownUpdateMode": scaleDownUpdateMode,
-			"hpa": map[string]interface{}{
-				"memoryMetricForHpaEnabled": memoryMetricForHpaEnabled,
 			},
 			"enableAnonymousAuthentication": gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.Info.Spec.Kubernetes.KubeAPIServer),
 		}
@@ -661,39 +568,6 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	)
 	if err != nil {
 		return err
-	}
-
-	// If HVPA feature gate is enabled then we should delete the old HPA and VPA resources as
-	// the HVPA controller will create its own for the kube-apiserver deployment.
-	if hvpaEnabled {
-		objects := []client.Object{
-			&autoscalingv1beta2.VerticalPodAutoscaler{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: b.Shoot.SeedNamespace,
-					Name:      v1beta1constants.DeploymentNameKubeAPIServer + "-vpa",
-				},
-			},
-			&autoscalingv2beta2.HorizontalPodAutoscaler{
-				ObjectMeta: kutil.ObjectMeta(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer),
-			},
-		}
-
-		if err := kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(), objects...); err != nil {
-			return err
-		}
-	} else {
-		// If HVPA is disabled, delete any HVPA that was already deployed
-		hvpa := &hvpav1alpha1.Hvpa{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: b.Shoot.SeedNamespace,
-				Name:      v1beta1constants.DeploymentNameKubeAPIServer,
-			},
-		}
-		if err := b.K8sSeedClient.Client().Delete(ctx, hvpa); err != nil {
-			if !apierrors.IsNotFound(err) && !meta.IsNoMatchError(err) {
-				return err
-			}
-		}
 	}
 
 	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, kubernetes.Values(values))

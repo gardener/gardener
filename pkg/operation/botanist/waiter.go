@@ -16,36 +16,18 @@ package botanist
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
-	"github.com/Masterminds/semver"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/utils/pointer"
 )
-
-var (
-	versionConstraintK8sLess119 *semver.Constraints
-)
-
-func init() {
-	var err error
-
-	versionConstraintK8sLess119, err = semver.NewConstraint("< 1.19")
-	utilruntime.Must(err)
-}
 
 // WaitUntilNginxIngressServiceIsReady waits until the external load balancer of the nginx ingress controller has been created.
 func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) error {
@@ -66,87 +48,6 @@ func (b *Botanist) WaitUntilVpnShootServiceIsReady(ctx context.Context) error {
 
 	_, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.K8sShootClient, metav1.NamespaceSystem, "vpn-shoot", timeout, b.Logger)
 	return err
-}
-
-// WaitUntilKubeAPIServerIsDeleted waits until the kube-apiserver is deleted
-func (b *Botanist) WaitUntilKubeAPIServerIsDeleted(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		deploy := &appsv1.Deployment{}
-		err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deploy)
-		switch {
-		case apierrors.IsNotFound(err):
-			return retry.Ok()
-		case err == nil:
-			return retry.MinorError(err)
-		default:
-			return retry.SevereError(err)
-		}
-	})
-}
-
-// WaitUntilKubeAPIServerReady waits until the kube-apiserver pod(s) indicate readiness in their statuses.
-func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
-	deployment := &appsv1.Deployment{}
-
-	if err := retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		if err := b.K8sSeedClient.APIReader().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
-			return retry.SevereError(err)
-		}
-		if deployment.Generation != deployment.Status.ObservedGeneration {
-			return retry.MinorError(fmt.Errorf("kube-apiserver not observed at latest generation (%d/%d)",
-				deployment.Status.ObservedGeneration, deployment.Generation))
-		}
-
-		replicas := int32(0)
-		if deployment.Spec.Replicas != nil {
-			replicas = *deployment.Spec.Replicas
-		}
-		if replicas != deployment.Status.UpdatedReplicas {
-			return retry.MinorError(fmt.Errorf("kube-apiserver does not have enough updated replicas (%d/%d)",
-				deployment.Status.UpdatedReplicas, replicas))
-		}
-		if replicas != deployment.Status.Replicas {
-			return retry.MinorError(fmt.Errorf("kube-apiserver deployment has outdated replicas"))
-		}
-		if replicas != deployment.Status.AvailableReplicas {
-			return retry.MinorError(fmt.Errorf("kube-apiserver does not have enough available replicas (%d/%d",
-				deployment.Status.AvailableReplicas, replicas))
-		}
-
-		return retry.Ok()
-	}); err != nil {
-		var (
-			retryError *retry.Error
-			headBytes  *int64
-			tailLines  = pointer.Int64(10)
-		)
-
-		if !errors.As(err, &retryError) {
-			return err
-		}
-
-		newestPod, err2 := kutil.NewestPodForDeployment(ctx, b.K8sSeedClient.APIReader(), deployment)
-		if err2 != nil {
-			return fmt.Errorf("failure to find the newest pod for deployment to read the logs: %s: %w", err2.Error(), err)
-		}
-		if newestPod == nil {
-			return err
-		}
-
-		if versionConstraintK8sLess119.Check(semver.MustParse(b.ShootVersion())) {
-			headBytes = pointer.Int64(1024)
-		}
-
-		logs, err2 := kutil.MostRecentCompleteLogs(ctx, b.K8sSeedClient.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, "kube-apiserver", tailLines, headBytes)
-		if err2 != nil {
-			return fmt.Errorf("failure to read the logs: %s: %w", err2.Error(), err)
-		}
-
-		errWithLogs := fmt.Errorf("%s, logs of newest pod:\n%s", err.Error(), logs)
-		return errWithLogs
-	}
-
-	return nil
 }
 
 // WaitUntilTunnelConnectionExists waits until a port forward connection to the tunnel pod (vpn-shoot) in the kube-system
