@@ -19,23 +19,35 @@ import (
 	"sort"
 )
 
-// ComputeSecretCheckSum computes the sha256 checksum of secret data.
-func ComputeSecretCheckSum(data map[string][]byte) string {
-	var (
-		hash string
-		keys []string
-	)
-
+func computeChecksum(data map[string][]byte) string {
+	var keys []string
 	for k := range data {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
+	var hash string
 	for _, k := range keys {
 		hash += ComputeSHA256Hex(data[k])
 	}
 
 	return ComputeSHA256Hex([]byte(hash))
+}
+
+// ComputeSecretChecksum computes the sha256 checksum of secret data.
+func ComputeSecretChecksum(data map[string][]byte) string {
+	return computeChecksum(data)
+}
+
+// ComputeConfigMapChecksum computes the sha256 checksum of configmap data.
+func ComputeConfigMapChecksum(data map[string]string) string {
+	out := make(map[string][]byte, len(data))
+
+	for k, v := range data {
+		out[k] = []byte(v)
+	}
+
+	return computeChecksum(out)
 }
 
 // ComputeChecksum computes a SHA256 checksum for the give map.

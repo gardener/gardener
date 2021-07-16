@@ -16,15 +16,21 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
@@ -108,4 +114,37 @@ func CreateResetObjectFunc(obj runtime.Object, scheme *runtime.Scheme) (func(), 
 // https://github.com/kubernetes-sigs/controller-runtime/blob/55a329c15d6b4f91a9ff072fed6f6f05ff3339e7/pkg/cache/internal/cache_reader.go#L85-L90
 func deepCopyIntoObject(dest, src runtime.Object) {
 	reflect.ValueOf(dest).Elem().Set(reflect.ValueOf(src.DeepCopyObject()).Elem())
+}
+
+// MakeImmutable takes either a *corev1.ConfigMap or a *corev1.Secret object and makes it immutable, i.e., it sets
+// .immutable=true, computes a checksum based on .data, and appends the first 8 characters of the computed checksum
+// to the name of the object. Additionally, it injects the `resources.gardener.cloud/garbage-collectable-reference=true`
+// label.
+func MakeImmutable(obj runtime.Object) error {
+	var (
+		numberOfChecksumChars = 8
+		prependHyphen         = func(name string) string {
+			if strings.HasSuffix(name, "-") {
+				return ""
+			}
+			return "-"
+		}
+	)
+
+	switch o := obj.(type) {
+	case *corev1.Secret:
+		o.Immutable = pointer.Bool(true)
+		o.Name += prependHyphen(o.Name) + utils.ComputeSecretChecksum(o.Data)[:numberOfChecksumChars]
+		metav1.SetMetaDataLabel(&o.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
+
+	case *corev1.ConfigMap:
+		o.Immutable = pointer.Bool(true)
+		o.Name += prependHyphen(o.Name) + utils.ComputeConfigMapChecksum(o.Data)[:numberOfChecksumChars]
+		metav1.SetMetaDataLabel(&o.ObjectMeta, references.LabelKeyGarbageCollectable, references.LabelValueGarbageCollectable)
+
+	default:
+		return fmt.Errorf("unhandled object type: %T", obj)
+	}
+
+	return nil
 }
