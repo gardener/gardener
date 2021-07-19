@@ -295,6 +295,8 @@ rules:
   - create
   - delete
   - get
+  - list
+  - watch
   - patch
   - update
 - apiGroups:

@@ -302,7 +302,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{"policy"},
 				Resources: []string{"poddisruptionbudgets"},
-				Verbs:     []string{"create", "delete", "get", "patch", "update"},
+				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 			},
 			{
 				APIGroups: []string{"rbac.authorization.k8s.io"},
