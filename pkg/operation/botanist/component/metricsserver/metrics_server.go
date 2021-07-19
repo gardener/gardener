@@ -352,12 +352,12 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("50m"),
-									corev1.ResourceMemory: resource.MustParse("150Mi"),
+									corev1.ResourceCPU:    resource.MustParse("20m"),
+									corev1.ResourceMemory: resource.MustParse("40Mi"),
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("500m"),
-									corev1.ResourceMemory: resource.MustParse("1Gi"),
+									corev1.ResourceCPU:    resource.MustParse("20m"),
+									corev1.ResourceMemory: resource.MustParse("40Mi"),
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{{
@@ -372,7 +372,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 								"/pod_nanny",
 								"--cpu=20m",
 								"--extra-cpu=1m",
-								"--memory=15Mi",
+								"--memory=40Mi",
 								"--extra-memory=2Mi",
 								"--threshold=5",
 								"--deployment=" + deploymentName,

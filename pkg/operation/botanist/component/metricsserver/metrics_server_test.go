@@ -254,11 +254,11 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 500m
-            memory: 1Gi
+            cpu: 20m
+            memory: 40Mi
           requests:
-            cpu: 50m
-            memory: 150Mi
+            cpu: 20m
+            memory: 40Mi
         volumeMounts:
         - mountPath: /srv/metrics-server/tls
           name: metrics-server
@@ -266,7 +266,7 @@ spec:
         - /pod_nanny
         - --cpu=20m
         - --extra-cpu=1m
-        - --memory=15Mi
+        - --memory=40Mi
         - --extra-memory=2Mi
         - --threshold=5
         - --deployment=metrics-server
@@ -380,11 +380,11 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 500m
-            memory: 1Gi
+            cpu: 20m
+            memory: 40Mi
           requests:
-            cpu: 50m
-            memory: 150Mi
+            cpu: 20m
+            memory: 40Mi
         volumeMounts:
         - mountPath: /srv/metrics-server/tls
           name: metrics-server
@@ -392,7 +392,7 @@ spec:
         - /pod_nanny
         - --cpu=20m
         - --extra-cpu=1m
-        - --memory=15Mi
+        - --memory=40Mi
         - --extra-memory=2Mi
         - --threshold=5
         - --deployment=metrics-server
