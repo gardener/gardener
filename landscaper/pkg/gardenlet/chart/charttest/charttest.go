@@ -142,11 +142,9 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 	}
 
 	// Roles
-	defaultGardenletRole := getDefaultGardenletRole(expectedLabels)
 	gardenGardenletRole := getGardenGardenletRole(expectedLabels)
 	expectedRoles := map[types.NamespacedName]*rbacv1.Role{
-		{Name: defaultGardenletRole.Name, Namespace: defaultGardenletRole.Namespace}: defaultGardenletRole,
-		{Name: gardenGardenletRole.Name, Namespace: gardenGardenletRole.Namespace}:   gardenGardenletRole,
+		{Name: gardenGardenletRole.Name, Namespace: gardenGardenletRole.Namespace}: gardenGardenletRole,
 	}
 	for key, expected := range expectedRoles {
 		actual := &rbacv1.Role{}
@@ -156,11 +154,9 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 	}
 
 	// RoleBindings
-	defaultGardenletRoleBinding := getDefaultGardenletRoleBinding(expectedLabels, serviceAccountName)
 	gardenGardenletRoleBinding := getGardenGardenletRoleBinding(expectedLabels, serviceAccountName)
 	expectedRoleBindings := map[types.NamespacedName]*rbacv1.RoleBinding{
-		{Name: defaultGardenletRoleBinding.Name, Namespace: defaultGardenletRoleBinding.Namespace}: defaultGardenletRoleBinding,
-		{Name: gardenGardenletRoleBinding.Name, Namespace: gardenGardenletRoleBinding.Namespace}:   gardenGardenletRoleBinding,
+		{Name: gardenGardenletRoleBinding.Name, Namespace: gardenGardenletRoleBinding.Namespace}: gardenGardenletRoleBinding,
 	}
 	for key, expected := range expectedRoleBindings {
 		actual := &rbacv1.RoleBinding{}
@@ -179,6 +175,11 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			ResourceVersion: "1",
 		},
 		Rules: []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"endpoints"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
 			{
 				APIGroups: []string{""},
 				Resources: []string{"nodes"},
@@ -429,25 +430,6 @@ func getManagedIstioClusterRoleBinding(labels map[string]string, serviceAccountN
 	}
 }
 
-func getDefaultGardenletRole(labels map[string]string) *rbacv1.Role {
-	return &rbacv1.Role{
-		TypeMeta: metav1.TypeMeta{Kind: "Role", APIVersion: rbacv1.SchemeGroupVersion.String()},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "gardener.cloud:system:gardenlet",
-			Namespace:       metav1.NamespaceDefault,
-			Labels:          labels,
-			ResourceVersion: "1",
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{""},
-				Resources: []string{"endpoints"},
-				Verbs:     []string{"get", "list", "watch"},
-			},
-		},
-	}
-}
-
 func getGardenGardenletRole(labels map[string]string) *rbacv1.Role {
 	return &rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{Kind: "Role", APIVersion: rbacv1.SchemeGroupVersion.String()},
@@ -473,30 +455,6 @@ func getGardenGardenletRole(labels map[string]string) *rbacv1.Role {
 				APIGroups: []string{"apps"},
 				Resources: []string{"daemonsets"},
 				Verbs:     []string{"create"},
-			},
-		},
-	}
-}
-
-func getDefaultGardenletRoleBinding(labels map[string]string, serviceAccountName string) *rbacv1.RoleBinding {
-	return &rbacv1.RoleBinding{
-		TypeMeta: metav1.TypeMeta{Kind: "RoleBinding", APIVersion: rbacv1.SchemeGroupVersion.String()},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "gardener.cloud:system:gardenlet",
-			Namespace:       metav1.NamespaceDefault,
-			Labels:          labels,
-			ResourceVersion: "1",
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.SchemeGroupVersion.Group,
-			Kind:     "Role",
-			Name:     "gardener.cloud:system:gardenlet",
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      serviceAccountName,
-				Namespace: gardencorev1beta1constants.GardenNamespace,
 			},
 		},
 	}
