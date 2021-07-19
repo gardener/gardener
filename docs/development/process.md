@@ -27,10 +27,10 @@ v1.24   | Week 21-22  | May 24, 2021           | June 5, 2021       | [@stoyanr]
 v1.25   | Week 23-24  | June 7, 2021           | June 20, 2021      | [@rfranzke](https://github.com/rfranzke)           |
 v1.26   | Week 25-26  | June 21, 2021          | July 4, 2021       | [@danielfoehrKn](https://github.com/danielfoehrKn) |
 v1.27   | Week 27-28  | July 5, 2021           | July 18, 2021      | [@timebertt](https://github.com/timebertt)         |
-v1.28   | Week 29-30  | July 19, 2021          | August 1, 2021     | [@vpnachev](https://github.com/vpnachev)           |
+v1.28   | Week 29-30  | July 19, 2021          | August 1, 2021     | [@ialidzhikov](https://github.com/ialidzhikov)     |
 v1.29   | Week 31-32  | August 2, 2021         | August 15, 2021    | [@timuthy](https://github.com/timuthy)             |
 v1.30   | Week 33-34  | August 16, 2021        | August 29, 2021    | [@BeckerMax](https://github.com/BeckerMax)         |
-v1.31   | Week 35-26  | August 30, 2021        | September 12, 2021 | [@ialidzhikov](https://github.com/ialidzhikov)     |
+v1.31   | Week 35-36  | August 30, 2021        | September 12, 2021 | [@vpnachev](https://github.com/vpnachev)           |
 v1.32   | Week 37-38  | September 13, 2021     | September 26, 2021 | [@stoyanr](https://github.com/stoyanr)             |
 v1.33   | Week 39-40  | September 27, 2021     | October 10, 2021   | [@voelzmo](https://github.com/voelzmo)             |
 
