@@ -246,7 +246,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			{
 				APIGroups: []string{"autoscaling"},
 				Resources: []string{"horizontalpodautoscalers"},
-				Verbs:     []string{"create", "delete", "get", "patch", "update"},
+				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 			},
 			{
 				APIGroups: []string{"autoscaling.k8s.io"},
