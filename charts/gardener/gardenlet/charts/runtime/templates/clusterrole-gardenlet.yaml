@@ -16,6 +16,14 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - nodes
   verbs:
   - list
@@ -137,6 +145,8 @@ rules:
   - create
   - delete
   - get
+  - list
+  - watch
   - patch
   - update
 - apiGroups:
@@ -287,6 +297,8 @@ rules:
   - create
   - delete
   - get
+  - list
+  - watch
   - patch
   - update
 - apiGroups:
