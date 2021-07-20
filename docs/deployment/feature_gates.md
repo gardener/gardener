@@ -30,8 +30,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | SeedChange | `false` | `Alpha` | `1.12` | |
 | SeedKubeScheduler | `false` | `Alpha` | `1.15` | |
 | ReversedVPN | `false` | `Alpha` | `1.22` | |
-| UseDNSRecords | `false` | `Alpha` | `1.27.0` | |
+| UseDNSRecords | `false` | `Alpha` | `1.27` | |
 | DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | |
+| RotateSSHKeypairOnMaintenance | `false` | `Alpha` | `1.28` | |
 
 ## Feature gates for graduated or deprecated features
 
@@ -93,3 +94,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `AdminKubeconfigRequest` enables the `AdminKubeconfigRequest` endpoint on Shoot resources. See [GEP-16](../proposals/16-adminkubeconfig-subresource.md) for more details.
 * `UseDNSRecords` enables using `DNSRecord` resources for Gardener DNS records instead of `DNSProvider`, `DNSEntry`, and `DNSOwner` resources. See [Contract: `DNSRecord` resources](../extensions/dnsrecord.md) for more details.
 * `DisallowKubeconfigRotationForShootInDeletion` when enabled, does not allow kubeconfig rotation to be requested for shoot cluster that is already in deletion phase, i.e. `metadata.deletionTimestamp` is set.
+* `RotateSSHKeypairOnMaintenance` enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager. Details can be found in [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md).

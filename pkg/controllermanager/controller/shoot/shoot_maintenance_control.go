@@ -24,7 +24,9 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -166,12 +168,12 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 	delete(shoot.Annotations, v1beta1constants.FailedShootNeedsRetryOperation)
 
 	// Failed shoots need to be retried first; healthy shoots instead
-	// default to rotating their SSH keypair on each maintenance interval.
-	operation := v1beta1constants.ShootOperationRotateSSHKeypair
+	// default to rotating their SSH keypair on each maintenance interval if the RotateSSHKeypairOnMaintenance is enabled.
 	if needsRetry {
-		operation = v1beta1constants.ShootOperationRetry
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
+	} else if controllermanagerfeatures.FeatureGate.Enabled(features.RotateSSHKeypairOnMaintenance) {
+		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
 	}
-	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, operation)
 
 	controllerutils.AddTasks(shoot.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)
 	if utils.IsTrue(r.config.EnableShootControlPlaneRestarter) {
@@ -187,6 +189,10 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 	}
 	if updatedKubernetesVersion != nil {
 		shoot.Spec.Kubernetes.Version = *updatedKubernetesVersion
+	}
+
+	if hasMaintainNowAnnotation(shoot) {
+		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 	}
 
 	// try to maintain shoot, but don't retry on conflict, because a conflict means that we potentially operated on stale

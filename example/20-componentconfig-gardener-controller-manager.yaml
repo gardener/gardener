@@ -75,3 +75,4 @@ server:
 featureGates:
   CachedRuntimeClients: true
   UseDNSRecords: false
+  RotateSSHKeypairOnMaintenance: false

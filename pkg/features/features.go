@@ -103,4 +103,9 @@ const (
 	// owner: @vpnachev
 	// alpha: v1.28.0
 	DisallowKubeconfigRotationForShootInDeletion featuregate.Feature = "DisallowKubeconfigRotationForShootInDeletion"
+
+	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.
+	// owner: @petersutter @xrstf
+	// alpha: v1.28.0
+	RotateSSHKeypairOnMaintenance featuregate.Feature = "RotateSSHKeypairOnMaintenance"
 )
