@@ -16,7 +16,6 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -251,7 +250,8 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
 	currentSecret := gardenerResourceDataList.Get(v1beta1constants.SecretNameSSHKeyPair)
 	if currentSecret == nil {
-		return fmt.Errorf("no Secret named %s loaded", v1beta1constants.SecretNameSSHKeyPair)
+		b.Logger.Debugf("No %s Secret loaded, not rotating keypair.", v1beta1constants.SecretNameSSHKeyPair)
+		return nil
 	}
 
 	// copy current key to old secret
