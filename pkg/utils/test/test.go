@@ -144,7 +144,7 @@ func WithFeatureGate(gate featuregate.FeatureGate, f featuregate.Feature, value 
 
 	return func() {
 		if err := gate.(featuregate.MutableFeatureGate).Set(fmt.Sprintf("%s=%v", f, originalValue)); err != nil {
-			ginkgo.Fail(fmt.Sprintf("cound not restore feature gate %s=%v: %v", f, originalValue, err))
+			ginkgo.Fail(fmt.Sprintf("could not restore feature gate %s=%v: %v", f, originalValue, err))
 		}
 	}
 }

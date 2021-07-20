@@ -31,6 +31,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | SeedKubeScheduler | `false` | `Alpha` | `1.15` | |
 | ReversedVPN | `false` | `Alpha` | `1.22` | |
 | UseDNSRecords | `false` | `Alpha` | `1.27.0` | |
+| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | |
 
 ## Feature gates for graduated or deprecated features
 
@@ -91,3 +92,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `ReversedVPN` reverses the connection setup of the vpn tunnel between the Seed and the Shoot cluster(s). It allows Seed and Shoot clusters to be in different networks with only direct access in one direction (Shoot -> Seed). In addition to that, it reduces the amount of load balancers required, i.e. no load balancers are required for the vpn tunnel anymore. It requires `APIServerSNI` and kubernetes version `1.18` or higher to work. Details can be found in [GEP-14](../proposals/14-reversed-cluster-vpn.md).
 * `AdminKubeconfigRequest` enables the `AdminKubeconfigRequest` endpoint on Shoot resources. See [GEP-16](../proposals/16-adminkubeconfig-subresource.md) for more details.
 * `UseDNSRecords` enables using `DNSRecord` resources for Gardener DNS records instead of `DNSProvider`, `DNSEntry`, and `DNSOwner` resources. See [Contract: `DNSRecord` resources](../extensions/dnsrecord.md) for more details.
+* `DisallowKubeconfigRotationForShootInDeletion` when enabled, does not allow kubeconfig rotation to be requested for shoot cluster that is already in deletion phase, i.e. `metadata.deletionTimestamp` is set.
