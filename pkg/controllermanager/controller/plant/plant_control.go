@@ -25,93 +25,17 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// reconcilePlantForMatchingSecret checks if there is a plant resource that references this secret and then reconciles the plant again
-func (c *Controller) reconcilePlantForMatchingSecret(ctx context.Context, obj interface{}) {
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		logger.Logger.Errorf("Could not convert object %v into Secret", obj)
-		return
-	}
-
-	plantList := &gardencorev1beta1.PlantList{}
-	if err := c.gardenClient.List(ctx, plantList); err != nil {
-		logger.Logger.Errorf("Couldn't list plants for updated secret %+v: %v", obj, err)
-		return
-	}
-
-	for _, plant := range plantList.Items {
-		if isPlantSecret(plant, kutil.Key(secret.Namespace, secret.Name)) {
-			key, err := cache.MetaNamespaceKeyFunc(&plant)
-			if err != nil {
-				logger.Logger.Errorf("Couldn't get key for plant %+v: %v", plant, err)
-				return
-			}
-			logger.Logger.Infof("[PLANT RECONCILE] Reconciling Plant after secret change")
-			c.plantQueue.Add(key)
-			return
-		}
-	}
-}
-
-// plantSecretUpdate calls reconcilePlantForMatchingSecret with the updated secret
-func (c *Controller) plantSecretUpdate(ctx context.Context, oldObj, newObj interface{}) {
-	old, ok1 := oldObj.(*corev1.Secret)
-	new, ok2 := newObj.(*corev1.Secret)
-	if !ok1 || !ok2 {
-		return
-	}
-	if old.ResourceVersion != new.ResourceVersion {
-		c.reconcilePlantForMatchingSecret(ctx, newObj)
-	}
-}
-
-// plantAdd adds the plant resource
-func (c *Controller) plantAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
-		return
-	}
-	c.plantQueue.Add(key)
-}
-
-// plantUpdate updates the plant resource
-func (c *Controller) plantUpdate(oldObj, newObj interface{}) {
-	old, ok1 := oldObj.(*gardencorev1beta1.Plant)
-	new, ok2 := newObj.(*gardencorev1beta1.Plant)
-	if !ok1 || !ok2 {
-		return
-	}
-
-	if new.ObjectMeta.Generation == old.ObjectMeta.Generation {
-		return
-	}
-
-	c.plantAdd(newObj)
-}
-
-func (c *Controller) plantDelete(obj interface{}) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
-		return
-	}
-	c.plantQueue.Add(key)
-}
-
-// NewPlantReconciler creates a new instance of a reconciler which reconciles Plants.
-func NewPlantReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, gardenClient client.Client, config *config.PlantControllerConfiguration) reconcile.Reconciler {
+// NewReconciler creates a new instance of a reconciler which reconciles Plants.
+func NewReconciler(l logr.Logger, clientMap clientmap.ClientMap, gardenClient client.Client, config *config.PlantControllerConfiguration) reconcile.Reconciler {
 	return &plantReconciler{
 		logger:       l,
 		clientMap:    clientMap,
@@ -121,39 +45,41 @@ func NewPlantReconciler(l logrus.FieldLogger, clientMap clientmap.ClientMap, gar
 }
 
 type plantReconciler struct {
-	logger       logrus.FieldLogger
+	logger       logr.Logger
 	clientMap    clientmap.ClientMap
 	gardenClient client.Client
 	config       *config.PlantControllerConfiguration
 }
 
 func (r *plantReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	logger := r.logger.WithValues("plant", request)
+
 	plant := &gardencorev1beta1.Plant{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, plant); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			logger.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+
+		logger.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
 
 	if plant.DeletionTimestamp != nil {
-		if err := r.delete(ctx, plant, r.gardenClient); err != nil {
+		if err := r.delete(ctx, plant, r.gardenClient, logger); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	if err := r.reconcile(ctx, plant, r.gardenClient); err != nil {
+	if err := r.reconcile(ctx, plant, r.gardenClient, logger); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{RequeueAfter: r.config.SyncPeriod.Duration}, nil
 }
 
-func (r *plantReconciler) reconcile(ctx context.Context, plant *gardencorev1beta1.Plant, gardenClient client.Client) error {
-	logger := logger.NewFieldLogger(r.logger, "plant", plant.Name)
-	logger.Infof("[PLANT RECONCILE] %s", plant.Name)
+func (r *plantReconciler) reconcile(ctx context.Context, plant *gardencorev1beta1.Plant, gardenClient client.Client, logger logr.Logger) error {
+	logger.Info("[PLANT RECONCILE]")
 
 	// Add Finalizers to Plant
 	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient, plant, FinalizerName); err != nil {
@@ -179,8 +105,8 @@ func (r *plantReconciler) reconcile(ctx context.Context, plant *gardencorev1beta
 
 	plantClient, err := r.clientMap.GetClient(ctx, keys.ForPlant(plant))
 	if err != nil {
+		logger.Error(err, "Failed to get plant client")
 		msg := fmt.Sprintf("failed to get plant client: %v", err)
-		logger.Error(msg)
 		return updateStatusToUnknown(ctx, gardenClient, plant, msg, conditionAPIServerAvailable, conditionEveryNodeReady)
 	}
 
@@ -189,7 +115,7 @@ func (r *plantReconciler) reconcile(ctx context.Context, plant *gardencorev1beta
 	// Trigger health check
 	conditionAPIServerAvailable, conditionEveryNodeReady = healthChecks(ctx, healthChecker, conditionAPIServerAvailable, conditionEveryNodeReady)
 
-	cloudInfo, err := FetchCloudInfo(ctx, plantClient.Client(), plantClient.Kubernetes().Discovery(), logger)
+	cloudInfo, err := FetchCloudInfo(ctx, plantClient.Client(), plantClient.Kubernetes().Discovery())
 	if err != nil {
 		return fmt.Errorf("failed to fetch cloud info for plant: %w", err)
 	}
@@ -217,7 +143,7 @@ func updateStatus(ctx context.Context, c client.Client, plant *gardencorev1beta1
 	return c.Status().Patch(ctx, plant, patch)
 }
 
-func (r *plantReconciler) delete(ctx context.Context, plant *gardencorev1beta1.Plant, gardenClient client.Client) error {
+func (r *plantReconciler) delete(ctx context.Context, plant *gardencorev1beta1.Plant, gardenClient client.Client, logger logr.Logger) error {
 	secret := &corev1.Secret{}
 	err := gardenClient.Get(ctx, kutil.Key(plant.Namespace, plant.Spec.SecretRef.Name), secret)
 	if err == nil {

@@ -114,6 +114,10 @@ func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manage
 		}
 	}
 
+	if err := plantcontroller.AddToManager(ctx, mgr, f.clientMap, f.cfg.Controllers.Plant); err != nil {
+		return fmt.Errorf("failed to setup plant controller: %w", err)
+	}
+
 	if err := quotacontroller.AddToManager(ctx, mgr, f.cfg.Controllers.Quota); err != nil {
 		return fmt.Errorf("failed to setup quota controller: %w", err)
 	}
@@ -163,12 +167,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 	metricsCollectors = append(metricsCollectors, controllerRegistrationController)
 
-	plantController, err := plantcontroller.NewController(ctx, f.clientMap, f.cfg)
-	if err != nil {
-		return fmt.Errorf("failed initializing Plant controller: %w", err)
-	}
-	metricsCollectors = append(metricsCollectors, plantController)
-
 	projectController, err := projectcontroller.NewProjectController(ctx, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Project controller: %w", err)
@@ -194,7 +192,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	metricsCollectors = append(metricsCollectors, managedSeedSetController)
 
 	go controllerRegistrationController.Run(ctx, f.cfg.Controllers.ControllerRegistration.ConcurrentSyncs)
-	go plantController.Run(ctx, f.cfg.Controllers.Plant.ConcurrentSyncs)
 	go projectController.Run(ctx, f.cfg.Controllers.Project.ConcurrentSyncs)
 	go seedController.Run(ctx, f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs, f.cfg.Controllers.ShootRetry.ConcurrentSyncs)
