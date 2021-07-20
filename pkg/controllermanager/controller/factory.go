@@ -104,6 +104,10 @@ func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manage
 		return fmt.Errorf("failed to setup controllerdeployment controller: %w", err)
 	}
 
+	if err := exposureclasscontroller.AddToManager(ctx, mgr, f.cfg.Controllers.ExposureClass); err != nil {
+		return fmt.Errorf("failed to setup exposureclass controller: %w", err)
+	}
+
 	if eventControllerConfig := f.cfg.Controllers.Event; eventControllerConfig != nil {
 		if err := eventcontroller.AddToManager(ctx, mgr, eventControllerConfig); err != nil {
 			return fmt.Errorf("failed to setup event controller: %w", err)
@@ -159,12 +163,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 	metricsCollectors = append(metricsCollectors, controllerRegistrationController)
 
-	exposureClassController, err := exposureclasscontroller.NewExposureClassController(ctx, f.clientMap, f.recorder)
-	if err != nil {
-		return fmt.Errorf("failed initializing ExposureClass controller: %w", err)
-	}
-	metricsCollectors = append(metricsCollectors, exposureClassController)
-
 	plantController, err := plantcontroller.NewController(ctx, f.clientMap, f.cfg)
 	if err != nil {
 		return fmt.Errorf("failed initializing Plant controller: %w", err)
@@ -200,7 +198,6 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	go projectController.Run(ctx, f.cfg.Controllers.Project.ConcurrentSyncs)
 	go seedController.Run(ctx, f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs, f.cfg.Controllers.ShootRetry.ConcurrentSyncs)
-	go exposureClassController.Run(ctx, f.cfg.Controllers.ExposureClass.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, f.cfg.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
 	// Initialize the Controller metrics collection.
