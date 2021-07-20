@@ -340,6 +340,10 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		addInfrastructureDeploymentTask(shoot)
 	}
 
+	if shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateSSHKeypair {
+		addInfrastructureDeploymentTask(shoot)
+	}
+
 	if shoot.Spec.Maintenance != nil && utils.IsTrue(shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
 		!apiequality.Semantic.DeepEqual(oldShoot.Spec, shoot.Spec) &&
 		shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == core.LastOperationStateFailed {
