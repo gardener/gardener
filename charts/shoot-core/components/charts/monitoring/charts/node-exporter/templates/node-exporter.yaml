@@ -112,7 +112,7 @@ spec:
             memory: 150Mi
           {{- else }}
             cpu: 200m
-            memory: 2000Mi
+            memory: 200Mi
           {{- end }}
         volumeMounts:
         - name: host
