@@ -247,7 +247,7 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 ) {
 	var (
 		registry   = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-		secretName = operatingsystemconfig.Key(worker.Name, b.Shoot.KubernetesVersion, worker.CRI)
+		secretName = operatingsystemconfig.Key(worker.Name, b.Shoot.KubernetesVersion)
 	)
 
 	var kubeletDataVolume *gardencorev1beta1.DataVolume
