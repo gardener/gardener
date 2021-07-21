@@ -19,8 +19,6 @@ limitations under the License.
 package charts
 
 const (
-	// ImageNameAlertmanager is a constant for an image in the image vector with name 'addon-resizer'.
-	ImageNameAddonResizer = "addon-resizer"
 	// ImageNameAlertmanager is a constant for an image in the image vector with name 'alertmanager'.
 	ImageNameAlertmanager = "alertmanager"
 	// ImageNameAlpine is a constant for an image in the image vector with name 'alpine'.

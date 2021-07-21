@@ -124,10 +124,6 @@ images:
   sourceRepository: github.com/kubernetes-sigs/metrics-server
   repository: k8s.gcr.io/metrics-server/metrics-server
   tag: v0.4.3
-- name: addon-resizer
-  sourceRepository: github.com/kubernetes/autoscaler
-  repository: k8s.gcr.io/addon-resizer
-  tag: "1.8.11"
 
 # Shoot core addons
 - name: vpn-shoot
