@@ -265,9 +265,9 @@ spec:
       - command:
         - /pod_nanny
         - --cpu=20m
-        - --extra-cpu=1m
+        - --extra-cpu=2m
         - --memory=40Mi
-        - --extra-memory=2Mi
+        - --extra-memory=14Mi
         - --threshold=5
         - --deployment=metrics-server
         - --container=metrics-server
@@ -391,9 +391,9 @@ spec:
       - command:
         - /pod_nanny
         - --cpu=20m
-        - --extra-cpu=1m
+        - --extra-cpu=2m
         - --memory=40Mi
-        - --extra-memory=2Mi
+        - --extra-memory=14Mi
         - --threshold=5
         - --deployment=metrics-server
         - --container=metrics-server
