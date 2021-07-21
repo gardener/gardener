@@ -832,6 +832,17 @@ var _ = Describe("validator", func() {
 				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)).To(BeTrue())
 			})
 
+			It("should add deploy infrastructure task because shoot operation annotation to rotate ssh keypair was set", func() {
+				shoot.Annotations = make(map[string]string)
+				shoot.Annotations[v1beta1constants.GardenerOperation] = v1beta1constants.ShootOperationRotateSSHKeypair
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(controllerutils.HasTask(shoot.ObjectMeta.Annotations, v1beta1constants.ShootTaskDeployInfrastructure)).To(BeTrue())
+			})
+
 			It("should not add deploy infrastructure task because spec has not changed", func() {
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
