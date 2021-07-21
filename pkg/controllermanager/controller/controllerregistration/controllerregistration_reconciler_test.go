@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,12 +28,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
@@ -40,7 +39,7 @@ var _ = Describe("Controller", func() {
 	var (
 		ctx     = context.TODO()
 		fakeErr = fmt.Errorf("fake err")
-		log     = logger.NewNopLogger()
+		log     = logr.Discard()
 
 		ctrl *gomock.Controller
 		c    *mockclient.MockClient
@@ -55,153 +54,6 @@ var _ = Describe("Controller", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
-	})
-
-	Describe("controller", func() {
-		var (
-			queue                           *fakeQueue
-			controllerRegistrationSeedQueue *fakeQueue
-			controller                      *Controller
-		)
-
-		BeforeEach(func() {
-			queue = &fakeQueue{}
-			controllerRegistrationSeedQueue = &fakeQueue{}
-			controller = &Controller{
-				gardenClient:                    c,
-				controllerRegistrationQueue:     queue,
-				controllerRegistrationSeedQueue: controllerRegistrationSeedQueue,
-			}
-		})
-
-		Describe("#controllerRegistrationAdd", func() {
-			It("should do nothing because the object key computation fails", func() {
-				obj := "foo"
-
-				controller.controllerRegistrationAdd(ctx, obj)
-
-				Expect(queue.Len()).To(BeZero())
-			})
-
-			It("should add the object to the queue", func() {
-				obj := &gardencorev1beta1.ControllerRegistration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: controllerRegistrationName,
-					},
-				}
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
-
-				controller.controllerRegistrationAdd(ctx, obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			})
-
-			It("should add the object to the queue and not enqueue any seeds due to list error", func() {
-				obj := &gardencorev1beta1.ControllerRegistration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: controllerRegistrationName,
-					},
-				}
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{})).Return(fakeErr)
-
-				controller.controllerRegistrationAdd(ctx, obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			})
-
-			It("should add the object to the queue and enqueue all seeds", func() {
-				obj := &gardencorev1beta1.ControllerRegistration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: controllerRegistrationName,
-					},
-				}
-
-				var (
-					seed1    = "seed1"
-					seed2    = "seed2"
-					seedList = []metav1.PartialObjectMetadata{
-						{ObjectMeta: metav1.ObjectMeta{Name: seed1}},
-						{ObjectMeta: metav1.ObjectMeta{Name: seed2}},
-					}
-				)
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{})).DoAndReturn(func(_ context.Context, obj *metav1.PartialObjectMetadataList, _ ...client.ListOption) error {
-					(&metav1.PartialObjectMetadataList{Items: seedList}).DeepCopyInto(obj)
-					return nil
-				})
-
-				controller.controllerRegistrationAdd(ctx, obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-				Expect(controllerRegistrationSeedQueue.Len()).To(Equal(len(seedList)))
-				Expect(controllerRegistrationSeedQueue.items[0]).To(Equal(seed1))
-				Expect(controllerRegistrationSeedQueue.items[1]).To(Equal(seed2))
-			})
-		})
-
-		Describe("#controllerRegistrationUpdate", func() {
-			It("should do nothing because the object key computation fails", func() {
-				obj := "foo"
-
-				controller.controllerRegistrationUpdate(ctx, nil, obj)
-
-				Expect(queue.Len()).To(BeZero())
-			})
-
-			It("should add the object to the queue", func() {
-				obj := &gardencorev1beta1.ControllerRegistration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: controllerRegistrationName,
-					},
-				}
-
-				c.EXPECT().List(ctx, gomock.AssignableToTypeOf(&metav1.PartialObjectMetadataList{}))
-
-				controller.controllerRegistrationUpdate(ctx, nil, obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			})
-		})
-
-		Describe("#controllerRegistrationDelete", func() {
-			It("should do nothing because the object key computation fails", func() {
-				obj := "foo"
-
-				controller.controllerRegistrationDelete(obj)
-
-				Expect(queue.Len()).To(BeZero())
-			})
-
-			It("should add the object to the queue (tomb stone)", func() {
-				obj := cache.DeletedFinalStateUnknown{
-					Key: controllerRegistrationName,
-				}
-
-				controller.controllerRegistrationDelete(obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			})
-
-			It("should add the object to the queue", func() {
-				obj := &gardencorev1beta1.ControllerRegistration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: controllerRegistrationName,
-					},
-				}
-
-				controller.controllerRegistrationDelete(obj)
-
-				Expect(queue.Len()).To(Equal(1))
-				Expect(queue.items[0]).To(Equal(controllerRegistrationName))
-			})
-		})
 	})
 
 	Describe("controllerRegistrationReconciler", func() {

@@ -29,16 +29,15 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +49,7 @@ import (
 
 // NewControllerRegistrationSeedReconciler creates a new instance of a reconciler which determines which
 // ControllerRegistrations are required for a seed.
-func NewControllerRegistrationSeedReconciler(logger logrus.FieldLogger, gardenClient kubernetes.Interface) reconcile.Reconciler {
+func NewControllerRegistrationSeedReconciler(logger logr.Logger, gardenClient kubernetes.Interface) reconcile.Reconciler {
 	return &controllerRegistrationSeedReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
@@ -58,23 +57,25 @@ func NewControllerRegistrationSeedReconciler(logger logrus.FieldLogger, gardenCl
 }
 
 type controllerRegistrationSeedReconciler struct {
-	logger       logrus.FieldLogger
+	logger       logr.Logger
 	gardenClient kubernetes.Interface
 }
 
 func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	logger := r.logger.WithValues("controllerregistration-seed", request.Name)
+
 	seed := &gardencorev1beta1.Seed{}
 	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			logger.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+
+		logger.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
 
-	logger := logger.NewFieldLogger(r.logger, "controllerregistration-seed", seed.Name)
-	logger.Info("[CONTROLLERINSTALLATION SEED] Reconciling")
+	logger.Info("Reconciling")
 
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
 	if err := r.gardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
@@ -188,7 +189,7 @@ func computeKindTypesForBackupBuckets(
 // computeKindTypesForBackupEntries computes the list of wanted kind/type combinations for extension resources based on the
 // the list of existing BackupEntry resources.
 func computeKindTypesForBackupEntries(
-	logger *logrus.Entry,
+	logger logr.Logger,
 	backupEntryList *gardencorev1beta1.BackupEntryList,
 	buckets map[string]gardencorev1beta1.BackupBucket,
 	seedName string,
@@ -202,7 +203,7 @@ func computeKindTypesForBackupEntries(
 
 		bucket, ok := buckets[backupEntry.Spec.BucketName]
 		if !ok {
-			logger.Errorf("couldn't find BackupBucket %q for BackupEntry %q", backupEntry.Spec.BucketName, backupEntry.Name)
+			logger.WithValues("bucket", backupEntry.Spec.BucketName, "entry", backupEntry.Name).Error(nil, "Could not find BackupBucket for BackupEntry")
 			continue
 		}
 
@@ -216,7 +217,7 @@ func computeKindTypesForBackupEntries(
 // the list of existing Shoot resources.
 func computeKindTypesForShoots(
 	ctx context.Context,
-	logger *logrus.Entry,
+	logger logr.Logger,
 	client client.Client,
 	shootList []gardencorev1beta1.Shoot,
 	seed *gardencorev1beta1.Seed,
@@ -242,7 +243,7 @@ func computeKindTypesForShoots(
 
 			externalDomain, err := shootpkg.ConstructExternalDomain(ctx, client, shoot, &corev1.Secret{}, defaultDomains)
 			if err != nil && !(shootpkg.IsIncompleteDNSConfigError(err) && shoot.DeletionTimestamp != nil && len(shoot.Status.UID) == 0) {
-				logger.Warnf("could not determine external domain for shoot %s/%s: %+v", shoot.Namespace, shoot.Name, err)
+				logger.WithValues("shoot", shoot).Error(err, "Could not determine external domain for shoot")
 			}
 
 			out <- shootpkg.ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain,
@@ -402,7 +403,7 @@ func computeRegistrationNameToInstallationNameMap(
 // creates or update ControllerInstallation objects for that reference the given seed and the various desired ControllerRegistrations.
 func deployNeededInstallations(
 	ctx context.Context,
-	logger *logrus.Entry,
+	logger logr.Logger,
 	c client.Client,
 	seed *gardencorev1beta1.Seed,
 	wantedControllerRegistrations sets.String,
@@ -410,16 +411,18 @@ func deployNeededInstallations(
 	registrationNameToInstallationName map[string]string,
 ) error {
 	for _, registrationName := range wantedControllerRegistrations.UnsortedList() {
+		rlogger := logger.WithValues("registration", registrationName)
+
 		// Sometimes an operator needs to migrate to a new controller registration that supports the required
 		// kind and types, but it is required to offboard the old extension. Thus, the operator marks the old
 		// controller registration for deletion and manually delete its controller installation.
 		// In parallel, Gardener should not create new controller installations for the deleted controller registation.
 		if controllerRegistrations[registrationName].obj.DeletionTimestamp != nil {
-			logger.Infof("Do not create or update ControllerInstallation for %q which is in deletion", registrationName)
+			rlogger.Info("Do not create or update ControllerInstallation for registration which is in deletion")
 			continue
 		}
 
-		logger.Infof("Deploying wanted ControllerInstallation for %q", registrationName)
+		rlogger.Info("Deploying wanted ControllerInstallation")
 
 		var (
 			controllerDeployment   *gardencorev1beta1.ControllerDeployment
@@ -525,14 +528,14 @@ func deployNeededInstallation(
 // referenced ControllerRegistration is not part of the given list of required list.
 func deleteUnneededInstallations(
 	ctx context.Context,
-	logger *logrus.Entry,
+	logger logr.Logger,
 	c client.Client,
 	wantedControllerRegistrationNames sets.String,
 	registrationNameToInstallationName map[string]string,
 ) error {
 	for registrationName, installationName := range registrationNameToInstallationName {
 		if !wantedControllerRegistrationNames.Has(registrationName) {
-			logger.Infof("Deleting unneeded ControllerInstallation %q", installationName)
+			logger.WithValues("installation", installationName).Info("Deleting unneeded ControllerInstallation")
 
 			if err := c.Delete(ctx, &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: installationName}}); client.IgnoreNotFound(err) != nil {
 				return err

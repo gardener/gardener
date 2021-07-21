@@ -20,38 +20,16 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/go-logr/logr"
 
-	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (c *Controller) controllerRegistrationAdd(ctx context.Context, obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-	c.controllerRegistrationQueue.Add(key)
-	c.enqueueAllSeeds(ctx)
-}
-
-func (c *Controller) controllerRegistrationUpdate(ctx context.Context, _, newObj interface{}) {
-	c.controllerRegistrationAdd(ctx, newObj)
-}
-
-func (c *Controller) controllerRegistrationDelete(obj interface{}) {
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-	c.controllerRegistrationQueue.Add(key)
-}
-
 // NewControllerRegistrationReconciler creates a new instance of a reconciler which reconciles ControllerRegistrations.
-func NewControllerRegistrationReconciler(logger logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
+func NewControllerRegistrationReconciler(logger logr.Logger, gardenClient client.Client) reconcile.Reconciler {
 	return &controllerRegistrationReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
@@ -59,18 +37,21 @@ func NewControllerRegistrationReconciler(logger logrus.FieldLogger, gardenClient
 }
 
 type controllerRegistrationReconciler struct {
-	logger       logrus.FieldLogger
+	logger       logr.Logger
 	gardenClient client.Client
 }
 
 func (r *controllerRegistrationReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	logger := r.logger.WithValues("controllerregistration", request)
+
 	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, controllerRegistration); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			logger.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+
+		logger.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
 

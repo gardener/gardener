@@ -23,12 +23,12 @@ import (
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/common"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
+	"github.com/go-logr/logr"
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/golang/mock/gomock"
@@ -45,7 +45,7 @@ import (
 var _ = Describe("controllerRegistrationReconciler", func() {
 	var (
 		ctx       = context.TODO()
-		nopLogger = logger.NewFieldLogger(logger.NewNopLogger(), "", "")
+		nopLogger = logr.Discard()
 
 		seedName       = "seed"
 		seedLabels     = map[string]string{"foo": "bar"}

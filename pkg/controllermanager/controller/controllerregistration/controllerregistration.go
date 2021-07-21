@@ -17,210 +17,305 @@ package controllerregistration
 import (
 	"context"
 	"fmt"
-	"sync"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllermanager"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/go-logr/logr"
 
-	"github.com/prometheus/client_golang/prometheus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/util/workqueue"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// FinalizerName is the finalizer used by this controller.
-const FinalizerName = "core.gardener.cloud/controllerregistration"
+const (
+	// ControllerName is the name of this controller.
+	ControllerName = "controllerregistration-controller"
 
-// Controller controls ControllerRegistration.
-type Controller struct {
-	gardenClient client.Client
+	// FinalizerName is the finalizer used by this controller.
+	FinalizerName = "core.gardener.cloud/controllerregistration"
 
+	controllerRegistrationRequestKind     = "controllerregistration"
+	controllerRegistrationSeedRequestKind = "controllerregistration-seed"
+	seedRequestKind                       = "seed"
+)
+
+type multiplexReconciler struct {
 	controllerRegistrationReconciler     reconcile.Reconciler
 	controllerRegistrationSeedReconciler reconcile.Reconciler
 	seedReconciler                       reconcile.Reconciler
-	hasSyncedFuncs                       []cache.InformerSynced
-
-	controllerRegistrationQueue     workqueue.RateLimitingInterface
-	controllerRegistrationSeedQueue workqueue.RateLimitingInterface
-	seedQueue                       workqueue.RateLimitingInterface
-	workerCh                        chan int
-	numberOfRunningWorkers          int
 }
 
-// NewController instantiates a new ControllerRegistration controller.
-func NewController(ctx context.Context, clientMap clientmap.ClientMap) (*Controller, error) {
-	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, err
+func newMultiplexReconciler(
+	controllerRegistrationReconciler reconcile.Reconciler,
+	controllerRegistrationSeedReconciler reconcile.Reconciler,
+	seedReconciler reconcile.Reconciler,
+) reconcile.Reconciler {
+	return &multiplexReconciler{
+		controllerRegistrationReconciler:     controllerRegistrationReconciler,
+		controllerRegistrationSeedReconciler: controllerRegistrationSeedReconciler,
+		seedReconciler:                       seedReconciler,
 	}
-
-	backupBucketInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupBucket{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get BackupBucket Informer: %w", err)
-	}
-	backupEntryInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.BackupEntry{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get BackupEntry Informer: %w", err)
-	}
-	controllerDeploymentInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerDeployment{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ControllerDeployment Informer: %w", err)
-	}
-	controllerInstallationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
-	}
-	controllerRegistrationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerRegistration{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ControllerRegistration Informer: %w", err)
-	}
-	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
-	}
-	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
-	}
-
-	controller := &Controller{
-		gardenClient: gardenClient.Client(),
-
-		controllerRegistrationReconciler:     NewControllerRegistrationReconciler(logger.Logger, gardenClient.Client()),
-		controllerRegistrationSeedReconciler: NewControllerRegistrationSeedReconciler(logger.Logger, gardenClient),
-		seedReconciler:                       NewSeedReconciler(logger.Logger, gardenClient.Client()),
-
-		controllerRegistrationQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration"),
-		controllerRegistrationSeedQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerregistration-seed"),
-		seedQueue:                       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
-		workerCh:                        make(chan int),
-	}
-
-	backupBucketInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.backupBucketAdd,
-		UpdateFunc: controller.backupBucketUpdate,
-		DeleteFunc: controller.backupBucketDelete,
-	})
-
-	backupEntryInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.backupEntryAdd,
-		UpdateFunc: controller.backupEntryUpdate,
-		DeleteFunc: controller.backupEntryDelete,
-	})
-
-	controllerRegistrationInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj interface{}) { controller.controllerRegistrationAdd(ctx, obj) },
-		UpdateFunc: func(oldObj, newObj interface{}) { controller.controllerRegistrationUpdate(ctx, oldObj, newObj) },
-		DeleteFunc: controller.controllerRegistrationDelete,
-	})
-
-	controllerDeploymentInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj interface{}) { controller.controllerDeploymentAdd(ctx, obj) },
-		UpdateFunc: func(oldObj, newObj interface{}) { controller.controllerDeploymentUpdate(ctx, oldObj, newObj) },
-	})
-
-	controllerInstallationInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.controllerInstallationAdd,
-		UpdateFunc: controller.controllerInstallationUpdate,
-	})
-
-	seedInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj interface{}) { controller.seedAdd(obj, true) },
-		UpdateFunc: controller.seedUpdate,
-		DeleteFunc: controller.seedDelete,
-	})
-
-	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.shootAdd,
-		UpdateFunc: controller.shootUpdate,
-		DeleteFunc: controller.shootDelete,
-	})
-
-	controller.hasSyncedFuncs = append(controller.hasSyncedFuncs,
-		backupBucketInformer.HasSynced,
-		backupEntryInformer.HasSynced,
-		controllerRegistrationInformer.HasSynced,
-		controllerDeploymentInformer.HasSynced,
-		controllerInstallationInformer.HasSynced,
-		seedInformer.HasSynced,
-		shootInformer.HasSynced,
-	)
-
-	return controller, nil
 }
 
-// Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, workers int) {
-	var waitGroup sync.WaitGroup
+func (r *multiplexReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	var target reconcile.Reconciler
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
-		logger.Logger.Error("Timed out waiting for caches to sync")
-		return
+	switch request.Namespace {
+	case controllerRegistrationRequestKind:
+		target = r.controllerRegistrationReconciler
+	case controllerRegistrationSeedRequestKind:
+		target = r.controllerRegistrationSeedReconciler
+	case seedRequestKind:
+		target = r.seedReconciler
+	default:
+		return reconcile.Result{}, fmt.Errorf("invalid request kind %s", request.Namespace)
 	}
 
-	go func() {
-		for res := range c.workerCh {
-			c.numberOfRunningWorkers += res
-			logger.Logger.Debugf("Current number of running ControllerRegistration workers is %d", c.numberOfRunningWorkers)
+	return target.Reconcile(ctx, request)
+}
+
+// AddToManager adds a new controllerregistration controller to the given manager.
+func AddToManager(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.ControllerRegistrationControllerConfiguration,
+) error {
+	logger := mgr.GetLogger()
+
+	controllerRegistrationReconciler := NewControllerRegistrationReconciler(logger.WithName("controllerregistration"), mgr.GetClient())
+	controllerRegistrationSeedReconciler := NewControllerRegistrationReconciler(logger.WithName("controllerregistration-seed"), mgr.GetClient())
+	seedReconciler := NewSeedReconciler(logger.WithName("seed"), mgr.GetClient())
+
+	ctrlOptions := controller.Options{
+		Reconciler: newMultiplexReconciler(
+			controllerRegistrationReconciler,
+			controllerRegistrationSeedReconciler,
+			seedReconciler,
+		),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
+	}
+	c, err := controller.New(ControllerName, mgr, ctrlOptions)
+	if err != nil {
+		return err
+	}
+
+	// For all of these watched resource kinds, we eventually enqueue the related seed(s) and reconcile from there.
+
+	backupBucket := &gardencorev1beta1.BackupBucket{}
+	if err := c.Watch(&source.Kind{Type: backupBucket}, newBackupBucketEventHandler()); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", backupBucket, err)
+	}
+
+	backupEntry := &gardencorev1beta1.BackupEntry{}
+	if err := c.Watch(&source.Kind{Type: backupEntry}, newBackupEntryEventHandler()); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", backupEntry, err)
+	}
+
+	controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
+	if err := c.Watch(&source.Kind{Type: controllerDeployment}, newControllerDeploymentEventHandler(ctx, mgr.GetClient(), logger)); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", controllerDeployment, err)
+	}
+
+	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+	if err := c.Watch(&source.Kind{Type: controllerInstallation}, newControllerInstallationEventHandler()); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", controllerInstallation, err)
+	}
+
+	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+	if err := c.Watch(&source.Kind{Type: controllerRegistration}, newControllerRegistrationEventHandler(ctx, mgr.GetClient())); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", controllerRegistration, err)
+	}
+
+	seed := &gardencorev1beta1.Seed{}
+	if err := c.Watch(&source.Kind{Type: seed}, newSeedEventHandler(ctx, mgr.GetClient())); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", seed, err)
+	}
+
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := c.Watch(&source.Kind{Type: shoot}, newShootEventHandler()); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", shoot, err)
+	}
+
+	return nil
+}
+
+func newBackupBucketEventHandler() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
+		if !ok {
+			return nil
 		}
-	}()
 
-	logger.Logger.Info("ControllerRegistration controller initialized.")
-
-	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.controllerRegistrationQueue, "ControllerRegistration", c.controllerRegistrationReconciler, &waitGroup, c.workerCh)
-		controllerutils.CreateWorker(ctx, c.controllerRegistrationSeedQueue, "ControllerRegistration-Seed", c.controllerRegistrationSeedReconciler, &waitGroup, c.workerCh)
-		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.seedReconciler, &waitGroup, c.workerCh)
-	}
-
-	// Shutdown handling
-	<-ctx.Done()
-	c.controllerRegistrationQueue.ShutDown()
-	c.controllerRegistrationSeedQueue.ShutDown()
-	c.seedQueue.ShutDown()
-
-	for {
-		if c.controllerRegistrationQueue.Len() == 0 && c.seedQueue.Len() == 0 && c.controllerRegistrationSeedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Debug("No running ControllerRegistration worker and no items left in the queues. Terminated ControllerRegistration controller...")
-			break
+		// only buckets with a seed assigned can trigger a reconciliation
+		if backupBucket.Spec.SeedName == nil {
+			return nil
 		}
-		logger.Logger.Debugf("Waiting for %d ControllerRegistration worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.controllerRegistrationQueue.Len()+c.seedQueue.Len()+c.controllerRegistrationSeedQueue.Len())
-		time.Sleep(5 * time.Second)
-	}
 
-	waitGroup.Wait()
+		return []reconcile.Request{{
+			NamespacedName: types.NamespacedName{
+				Namespace: controllerRegistrationSeedRequestKind,
+				Name:      *backupBucket.Spec.SeedName,
+			},
+		}}
+	})
 }
 
-// RunningWorkers returns the number of running workers.
-func (c *Controller) RunningWorkers() int {
-	return c.numberOfRunningWorkers
+func newBackupEntryEventHandler() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
+		if !ok {
+			return nil
+		}
+
+		// only entries with a seed assigned can trigger a reconciliation
+		if backupEntry.Spec.SeedName == nil {
+			return nil
+		}
+
+		return []reconcile.Request{{
+			NamespacedName: types.NamespacedName{
+				Namespace: controllerRegistrationSeedRequestKind,
+				Name:      *backupEntry.Spec.SeedName,
+			},
+		}}
+	})
 }
 
-// CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
-func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
-	metric, err := prometheus.NewConstMetric(controllermanager.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "controllerregistration")
-	if err != nil {
-		controllermanager.ScrapeFailures.With(prometheus.Labels{"kind": "controllerregistration-controller"}).Inc()
-		return
-	}
-	ch <- metric
+func newControllerDeploymentEventHandler(ctx context.Context, c client.Client, logger logr.Logger) handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		controllerDeployment, ok := obj.(*gardencorev1beta1.ControllerDeployment)
+		if !ok {
+			return nil
+		}
+
+		controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
+		if err := c.List(ctx, controllerRegistrationList); err != nil {
+			logger.Error(err, "Error listing controllerregistrations")
+			return nil
+		}
+
+		for _, controllerReg := range controllerRegistrationList.Items {
+			deployment := controllerReg.Spec.Deployment
+			if deployment == nil {
+				continue
+			}
+
+			for _, ref := range deployment.DeploymentRefs {
+				if ref.Name == controllerDeployment.Name {
+					return enqueueAllSeeds(ctx, c)
+				}
+			}
+		}
+
+		return nil
+	})
 }
 
-func (c *Controller) enqueueAllSeeds(ctx context.Context) {
+func newControllerInstallationEventHandler() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+		if !ok {
+			return nil
+		}
+
+		// if gardencorev1beta1helper.IsControllerInstallationRequired(*oldObject) == gardencorev1beta1helper.IsControllerInstallationRequired(*newObject) {
+		// 	return
+		// }
+
+		return []reconcile.Request{{
+			NamespacedName: types.NamespacedName{
+				Namespace: controllerRegistrationSeedRequestKind,
+				Name:      controllerInstallation.Spec.SeedRef.Name,
+			},
+		}}
+	})
+}
+
+func newControllerRegistrationEventHandler(ctx context.Context, c client.Client) handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+		if !ok {
+			return nil
+		}
+
+		// if gardencorev1beta1helper.IsControllerInstallationRequired(*oldObject) == gardencorev1beta1helper.IsControllerInstallationRequired(*newObject) {
+		// 	return
+		// }
+
+		requests := enqueueAllSeeds(ctx, c)
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name: controllerInstallation.Spec.SeedRef.Name,
+			},
+		})
+
+		return requests
+	})
+}
+
+func newSeedEventHandler(ctx context.Context, c client.Client) handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		seed, ok := obj.(*gardencorev1beta1.Seed)
+		if !ok {
+			return nil
+		}
+
+		return []reconcile.Request{{
+			NamespacedName: types.NamespacedName{
+				Namespace: seedRequestKind,
+				Name:      seed.Name,
+			},
+		}, {
+			NamespacedName: types.NamespacedName{
+				Namespace: controllerRegistrationSeedRequestKind,
+				Name:      seed.Name,
+			},
+		}}
+	})
+}
+
+func newShootEventHandler() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		shoot, ok := obj.(*gardencorev1beta1.Shoot)
+		if !ok {
+			return nil
+		}
+
+		if shoot.Spec.SeedName == nil {
+			return nil
+		}
+
+		return []reconcile.Request{{
+			NamespacedName: types.NamespacedName{
+				Namespace: controllerRegistrationSeedRequestKind,
+				Name:      *shoot.Spec.SeedName,
+			},
+		}}
+	})
+}
+
+func enqueueAllSeeds(ctx context.Context, c client.Client) []reconcile.Request {
 	seedList := &metav1.PartialObjectMetadataList{}
 	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
-	if err := c.gardenClient.List(ctx, seedList); err != nil {
-		return
+	if err := c.List(ctx, seedList); err != nil {
+		return nil
 	}
 
+	requests := []reconcile.Request{}
+
 	for _, seed := range seedList.Items {
-		c.controllerRegistrationSeedQueue.Add(seed.Name)
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: controllerRegistrationSeedRequestKind,
+				Name:      seed.Name,
+			},
+		})
 	}
+
+	return requests
 }
