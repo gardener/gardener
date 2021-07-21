@@ -1814,7 +1814,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("shoul fail when kube-proxy is switched off", func() {
+			It("should fail when kube-proxy is switched off", func() {
 				kubernetesConfig := core.KubernetesConfig{}
 				disabled := false
 				config := core.KubeProxyConfig{
@@ -2128,6 +2128,73 @@ var _ = Describe("Shoot Validation Tests", func() {
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
 			Expect(errorList).To(HaveLen(0))
+		})
+
+		Describe("kubeconfig rotation", func() {
+			DescribeTable("DisallowKubeconfigRotationForShootInDeletion=true",
+				func(oldAnnotations, newAnnotations map[string]string, newSetDeletionTimestamp, expectedError bool) {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.DisallowKubeconfigRotationForShootInDeletion, true)()
+					now := metav1.NewTime(time.Now())
+					newShoot := prepareShootForUpdate(shoot)
+					if oldAnnotations != nil {
+						shoot.Annotations = oldAnnotations
+					}
+
+					if newSetDeletionTimestamp {
+						newShoot.DeletionTimestamp = &now
+					}
+					newShoot.Annotations = newAnnotations
+
+					errorList := ValidateShootObjectMetaUpdate(newShoot.ObjectMeta, shoot.ObjectMeta, field.NewPath("metadata"))
+
+					if expectedError {
+						Expect(errorList).ToNot(HaveLen(0))
+						Expect(errorList).To(ConsistOfFields(Fields{
+							"Type":   Equal(field.ErrorTypeInvalid),
+							"Field":  Equal("metadata.annotations[gardener.cloud/operation]"),
+							"Detail": ContainSubstring(`kubeconfig rotations is not allowed for clusters in deletion`),
+						}))
+					} else {
+						Expect(errorList).To(HaveLen(0))
+					}
+				},
+				Entry("should allow kubeconfig rotation for cluster not in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, false, false),
+				Entry("should allow reconcile operation for cluster in deletion", nil, map[string]string{"gardener.cloud/operation": "reconcile"}, true, false),
+				Entry("should allow any annotations for cluster in deletion", nil, map[string]string{"foo": "bar"}, true, false),
+				Entry("should allow other update request for cluster in deletion and already requested kubeconfig rotation operation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"gardener.cloud/operation": "reconcile"}, true, false),
+				Entry("should allow any annotations for cluster in deletion with already requested kubeconfig rotation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"foo": "bar"}, true, false),
+				Entry("should allow update request for cluster in deletion with already requested kubeconfig rotation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials", "foo": "bar"}, true, false),
+				Entry("should not allow kubeconfig rotation for cluster in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true, true),
+				Entry("should not allow kubeconfig rotation for cluster in deletion with already requested operation", map[string]string{"gardener.cloud/operation": "some-other-operation"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true, true),
+			)
+
+			DescribeTable("DisallowKubeconfigRotationForShootInDeletion=false",
+				func(oldAnnotations, newAnnotations map[string]string, newSetDeletionTimestamp bool) {
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.DisallowKubeconfigRotationForShootInDeletion, false)()
+					now := metav1.NewTime(time.Now())
+					newShoot := prepareShootForUpdate(shoot)
+					if oldAnnotations != nil {
+						shoot.Annotations = oldAnnotations
+					}
+
+					if newSetDeletionTimestamp {
+						newShoot.DeletionTimestamp = &now
+					}
+					newShoot.Annotations = newAnnotations
+
+					errorList := ValidateShootObjectMetaUpdate(newShoot.ObjectMeta, shoot.ObjectMeta, field.NewPath("metadata"))
+
+					Expect(errorList).To(HaveLen(0))
+				},
+				Entry("should allow kubeconfig rotation for cluster not in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, false),
+				Entry("should allow reconcile operation for cluster in deletion", nil, map[string]string{"gardener.cloud/operation": "reconcile"}, true),
+				Entry("should allow any annotations for cluster in deletion", nil, map[string]string{"foo": "bar"}, true),
+				Entry("should allow other update request for cluster in deletion and already requested kubeconfig rotation operation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"gardener.cloud/operation": "reconcile"}, true),
+				Entry("should allow any annotations for cluster in deletion with already requested kubeconfig rotation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"foo": "bar"}, true),
+				Entry("should allow update request for cluster in deletion with already requested kubeconfig rotation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials", "foo": "bar"}, true),
+				Entry("should allow kubeconfig rotation for cluster in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true),
+				Entry("should allow kubeconfig rotation for cluster in deletion with already requested operation", map[string]string{"gardener.cloud/operation": "some-other-operation"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true),
+			)
 		})
 	})
 

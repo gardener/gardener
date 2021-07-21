@@ -105,6 +105,7 @@ func ValidateShootUpdate(newShoot, oldShoot *core.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newShoot.ObjectMeta, &oldShoot.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateShootObjectMetaUpdate(newShoot.ObjectMeta, oldShoot.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShoot.Spec, &oldShoot.Spec, newShoot.ObjectMeta, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
 
@@ -127,6 +128,41 @@ func ValidateShootTemplateUpdate(newShootTemplate, oldShootTemplate *core.ShootT
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShootTemplate.Spec, &oldShootTemplate.Spec, newShootTemplate.ObjectMeta, fldPath.Child("spec"))...)
+
+	return allErrs
+}
+
+// ValidateShootObjectMetaUpdate validates the object metadata of a Shoot object.
+func ValidateShootObjectMetaUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateShootKubeconfigRotation(newMeta, oldMeta, fldPath)...)
+
+	return allErrs
+}
+
+// validateShootKubeconfigRotation validates that shoot in deletion cannot rotate its kubeconfig.
+func validateShootKubeconfigRotation(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
+	// if the feature gate `DisallowKubeconfigRotationForShootInDeletion` is disabled, allow kubeconfig rotation
+	if !utilfeature.DefaultFeatureGate.Enabled(features.DisallowKubeconfigRotationForShootInDeletion) {
+		return field.ErrorList{}
+	}
+
+	if newMeta.DeletionTimestamp == nil {
+		return field.ErrorList{}
+	}
+
+	// already set operation is valid use case
+	if oldOperation, oldOk := oldMeta.Annotations[v1beta1constants.GardenerOperation]; oldOk && oldOperation == v1beta1constants.ShootOperationRotateKubeconfigCredentials {
+		return field.ErrorList{}
+	}
+
+	allErrs := field.ErrorList{}
+
+	// disallow kubeconfig rotation
+	if operation, ok := newMeta.Annotations[v1beta1constants.GardenerOperation]; ok && operation == v1beta1constants.ShootOperationRotateKubeconfigCredentials {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("annotations").Key(v1beta1constants.GardenerOperation), v1beta1constants.ShootOperationRotateKubeconfigCredentials, "kubeconfig rotations is not allowed for clusters in deletion"))
+	}
 
 	return allErrs
 }

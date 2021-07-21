@@ -97,4 +97,10 @@ const (
 	// owner: @stoyanr
 	// alpha: v1.27.0
 	UseDNSRecords featuregate.Feature = "UseDNSRecords"
+
+	// DisallowKubeconfigRotationForShootInDeletion when enabled disallows kubeconfig rotations to be requested
+	// for shoots that are already in the deletion phase, i.e. `metadata.deletionTimestamp` is set
+	// owner: @vpnachev
+	// alpha: v1.28.0
+	DisallowKubeconfigRotationForShootInDeletion featuregate.Feature = "DisallowKubeconfigRotationForShootInDeletion"
 )
