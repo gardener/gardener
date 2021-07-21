@@ -20,10 +20,10 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/go-logr/logr"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -39,45 +39,10 @@ const (
 	// FinalizerName is the finalizer used by this controller.
 	FinalizerName = "core.gardener.cloud/controllerregistration"
 
-	controllerRegistrationRequestKind     = "controllerregistration"
-	controllerRegistrationSeedRequestKind = "controllerregistration-seed"
-	seedRequestKind                       = "seed"
+	controllerRegistrationQueue     = "controllerregistration"
+	controllerRegistrationSeedQueue = "controllerregistration-seed"
+	seedQueue                       = "seed"
 )
-
-type multiplexReconciler struct {
-	controllerRegistrationReconciler     reconcile.Reconciler
-	controllerRegistrationSeedReconciler reconcile.Reconciler
-	seedReconciler                       reconcile.Reconciler
-}
-
-func newMultiplexReconciler(
-	controllerRegistrationReconciler reconcile.Reconciler,
-	controllerRegistrationSeedReconciler reconcile.Reconciler,
-	seedReconciler reconcile.Reconciler,
-) reconcile.Reconciler {
-	return &multiplexReconciler{
-		controllerRegistrationReconciler:     controllerRegistrationReconciler,
-		controllerRegistrationSeedReconciler: controllerRegistrationSeedReconciler,
-		seedReconciler:                       seedReconciler,
-	}
-}
-
-func (r *multiplexReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	var target reconcile.Reconciler
-
-	switch request.Namespace {
-	case controllerRegistrationRequestKind:
-		target = r.controllerRegistrationReconciler
-	case controllerRegistrationSeedRequestKind:
-		target = r.controllerRegistrationSeedReconciler
-	case seedRequestKind:
-		target = r.seedReconciler
-	default:
-		return reconcile.Result{}, fmt.Errorf("invalid request kind %s", request.Namespace)
-	}
-
-	return target.Reconcile(ctx, request)
-}
 
 // AddToManager adds a new controllerregistration controller to the given manager.
 func AddToManager(
@@ -86,17 +51,16 @@ func AddToManager(
 	config *config.ControllerRegistrationControllerConfiguration,
 ) error {
 	logger := mgr.GetLogger()
+	gardenClient := mgr.GetClient()
 
-	controllerRegistrationReconciler := NewControllerRegistrationReconciler(logger.WithName("controllerregistration"), mgr.GetClient())
-	controllerRegistrationSeedReconciler := NewControllerRegistrationReconciler(logger.WithName("controllerregistration-seed"), mgr.GetClient())
-	seedReconciler := NewSeedReconciler(logger.WithName("seed"), mgr.GetClient())
+	reconciler := controllerutils.NewMultiplexReconciler(map[string]reconcile.Reconciler{
+		controllerRegistrationQueue:     NewControllerRegistrationReconciler(logger, gardenClient),
+		controllerRegistrationSeedQueue: NewControllerRegistrationReconciler(logger, gardenClient),
+		seedQueue:                       NewSeedReconciler(logger, gardenClient),
+	})
 
 	ctrlOptions := controller.Options{
-		Reconciler: newMultiplexReconciler(
-			controllerRegistrationReconciler,
-			controllerRegistrationSeedReconciler,
-			seedReconciler,
-		),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ControllerName, mgr, ctrlOptions)
@@ -107,44 +71,44 @@ func AddToManager(
 	// For all of these watched resource kinds, we eventually enqueue the related seed(s) and reconcile from there.
 
 	backupBucket := &gardencorev1beta1.BackupBucket{}
-	if err := c.Watch(&source.Kind{Type: backupBucket}, newBackupBucketEventHandler()); err != nil {
+	if err := c.Watch(&source.Kind{Type: backupBucket}, newBackupBucketEventHandler(reconciler)); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %w", backupBucket, err)
 	}
 
 	backupEntry := &gardencorev1beta1.BackupEntry{}
-	if err := c.Watch(&source.Kind{Type: backupEntry}, newBackupEntryEventHandler()); err != nil {
+	if err := c.Watch(&source.Kind{Type: backupEntry}, newBackupEntryEventHandler(reconciler)); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %w", backupEntry, err)
 	}
 
 	controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
-	if err := c.Watch(&source.Kind{Type: controllerDeployment}, newControllerDeploymentEventHandler(ctx, mgr.GetClient(), logger)); err != nil {
+	if err := c.Watch(&source.Kind{Type: controllerDeployment}, newControllerDeploymentEventHandler(ctx, gardenClient, logger, reconciler)); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %w", controllerDeployment, err)
 	}
 
 	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
-	if err := c.Watch(&source.Kind{Type: controllerInstallation}, newControllerInstallationEventHandler()); err != nil {
+	if err := c.Watch(&source.Kind{Type: controllerInstallation}, newControllerInstallationEventHandler(reconciler)); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %w", controllerInstallation, err)
 	}
 
 	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
-	if err := c.Watch(&source.Kind{Type: controllerRegistration}, newControllerRegistrationEventHandler(ctx, mgr.GetClient())); err != nil {
+	if err := c.Watch(&source.Kind{Type: controllerRegistration}, newControllerRegistrationEventHandler(ctx, gardenClient, reconciler)); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %w", controllerRegistration, err)
 	}
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := c.Watch(&source.Kind{Type: seed}, newSeedEventHandler(ctx, mgr.GetClient())); err != nil {
+	if err := c.Watch(&source.Kind{Type: seed}, newSeedEventHandler(ctx, gardenClient, reconciler)); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %w", seed, err)
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := c.Watch(&source.Kind{Type: shoot}, newShootEventHandler()); err != nil {
+	if err := c.Watch(&source.Kind{Type: shoot}, newShootEventHandler(reconciler)); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %w", shoot, err)
 	}
 
 	return nil
 }
 
-func newBackupBucketEventHandler() handler.EventHandler {
+func newBackupBucketEventHandler(reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		backupBucket, ok := obj.(*gardencorev1beta1.BackupBucket)
 		if !ok {
@@ -156,16 +120,13 @@ func newBackupBucketEventHandler() handler.EventHandler {
 			return nil
 		}
 
-		return []reconcile.Request{{
-			NamespacedName: types.NamespacedName{
-				Namespace: controllerRegistrationSeedRequestKind,
-				Name:      *backupBucket.Spec.SeedName,
-			},
-		}}
+		return []reconcile.Request{
+			reconciler.NewRequest(controllerRegistrationSeedQueue, *backupBucket.Spec.SeedName, ""),
+		}
 	})
 }
 
-func newBackupEntryEventHandler() handler.EventHandler {
+func newBackupEntryEventHandler(reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		backupEntry, ok := obj.(*gardencorev1beta1.BackupEntry)
 		if !ok {
@@ -177,16 +138,13 @@ func newBackupEntryEventHandler() handler.EventHandler {
 			return nil
 		}
 
-		return []reconcile.Request{{
-			NamespacedName: types.NamespacedName{
-				Namespace: controllerRegistrationSeedRequestKind,
-				Name:      *backupEntry.Spec.SeedName,
-			},
-		}}
+		return []reconcile.Request{
+			reconciler.NewRequest(controllerRegistrationSeedQueue, *backupEntry.Spec.SeedName, ""),
+		}
 	})
 }
 
-func newControllerDeploymentEventHandler(ctx context.Context, c client.Client, logger logr.Logger) handler.EventHandler {
+func newControllerDeploymentEventHandler(ctx context.Context, c client.Client, logger logr.Logger, reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		controllerDeployment, ok := obj.(*gardencorev1beta1.ControllerDeployment)
 		if !ok {
@@ -207,7 +165,7 @@ func newControllerDeploymentEventHandler(ctx context.Context, c client.Client, l
 
 			for _, ref := range deployment.DeploymentRefs {
 				if ref.Name == controllerDeployment.Name {
-					return enqueueAllSeeds(ctx, c)
+					return enqueueAllSeeds(ctx, c, reconciler)
 				}
 			}
 		}
@@ -216,7 +174,7 @@ func newControllerDeploymentEventHandler(ctx context.Context, c client.Client, l
 	})
 }
 
-func newControllerInstallationEventHandler() handler.EventHandler {
+func newControllerInstallationEventHandler(reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 		if !ok {
@@ -227,16 +185,13 @@ func newControllerInstallationEventHandler() handler.EventHandler {
 		// 	return
 		// }
 
-		return []reconcile.Request{{
-			NamespacedName: types.NamespacedName{
-				Namespace: controllerRegistrationSeedRequestKind,
-				Name:      controllerInstallation.Spec.SeedRef.Name,
-			},
-		}}
+		return []reconcile.Request{
+			reconciler.NewRequest(controllerRegistrationSeedQueue, controllerInstallation.Spec.SeedRef.Name, ""),
+		}
 	})
 }
 
-func newControllerRegistrationEventHandler(ctx context.Context, c client.Client) handler.EventHandler {
+func newControllerRegistrationEventHandler(ctx context.Context, c client.Client, reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
 		if !ok {
@@ -247,39 +202,28 @@ func newControllerRegistrationEventHandler(ctx context.Context, c client.Client)
 		// 	return
 		// }
 
-		requests := enqueueAllSeeds(ctx, c)
-		requests = append(requests, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name: controllerInstallation.Spec.SeedRef.Name,
-			},
-		})
+		requests := enqueueAllSeeds(ctx, c, reconciler)
+		requests = append(requests, reconciler.NewRequest(controllerRegistrationQueue, controllerInstallation.Spec.SeedRef.Name, ""))
 
 		return requests
 	})
 }
 
-func newSeedEventHandler(ctx context.Context, c client.Client) handler.EventHandler {
+func newSeedEventHandler(ctx context.Context, c client.Client, reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		seed, ok := obj.(*gardencorev1beta1.Seed)
 		if !ok {
 			return nil
 		}
 
-		return []reconcile.Request{{
-			NamespacedName: types.NamespacedName{
-				Namespace: seedRequestKind,
-				Name:      seed.Name,
-			},
-		}, {
-			NamespacedName: types.NamespacedName{
-				Namespace: controllerRegistrationSeedRequestKind,
-				Name:      seed.Name,
-			},
-		}}
+		return []reconcile.Request{
+			reconciler.NewRequest(seedQueue, seed.Name, ""),
+			reconciler.NewRequest(controllerRegistrationSeedQueue, seed.Name, ""),
+		}
 	})
 }
 
-func newShootEventHandler() handler.EventHandler {
+func newShootEventHandler(reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		shoot, ok := obj.(*gardencorev1beta1.Shoot)
 		if !ok {
@@ -290,16 +234,13 @@ func newShootEventHandler() handler.EventHandler {
 			return nil
 		}
 
-		return []reconcile.Request{{
-			NamespacedName: types.NamespacedName{
-				Namespace: controllerRegistrationSeedRequestKind,
-				Name:      *shoot.Spec.SeedName,
-			},
-		}}
+		return []reconcile.Request{
+			reconciler.NewRequest(controllerRegistrationSeedQueue, *shoot.Spec.SeedName, ""),
+		}
 	})
 }
 
-func enqueueAllSeeds(ctx context.Context, c client.Client) []reconcile.Request {
+func enqueueAllSeeds(ctx context.Context, c client.Client, reconciler *controllerutils.MultiplexReconciler) []reconcile.Request {
 	seedList := &metav1.PartialObjectMetadataList{}
 	seedList.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("SeedList"))
 	if err := c.List(ctx, seedList); err != nil {
@@ -309,12 +250,7 @@ func enqueueAllSeeds(ctx context.Context, c client.Client) []reconcile.Request {
 	requests := []reconcile.Request{}
 
 	for _, seed := range seedList.Items {
-		requests = append(requests, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: controllerRegistrationSeedRequestKind,
-				Name:      seed.Name,
-			},
-		})
+		requests = append(requests, reconciler.NewRequest(controllerRegistrationSeedQueue, seed.Name, ""))
 	}
 
 	return requests
