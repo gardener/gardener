@@ -19,7 +19,7 @@ We encourage you to take a look at already merged [GEPs]( https://github.com/gar
 ## Before creating a GEP
 
 Before starting your work and creating a GEP, please take some time to familiarize yourself with our
-general [Gardener Contribution Guidelines](https://gardener.cloud/documentation/contribute/).
+general [Gardener Contribution Guidelines](https://gardener.cloud/docs/contribute/).
 
 It is recommended to discuss and outline the motivation of your prospective GEP as a draft with the community before you take the investment of creating the actual GEP. This early briefing supports the understanding for the broad community and leads to a fast feedback for your proposal from the respective experts in the community.
 An appropriate format for this may be the regular [Gardener community meeting](https://github.com/gardener/documentation/blob/master/CONTRIBUTING.md#weekly-meeting).
@@ -38,7 +38,7 @@ the enhancement.
 
 Apart from general metadata, the GEP should name at least one "main reviewer".
 You can find a main reviewer for your GEP either when discussing the proposal in the community meeting, by asking in our
-[Slack Channel](https://gardener.cloud/documentation/contribute/#slack-channel) or at latest during the GEP PR review.
+[Slack Channel](https://gardener.cloud/docs/contribute/#slack-channel) or at latest during the GEP PR review.
 New GEPs should only be accepted once at least one main reviewer is nominated/assigned. 
 
 The main reviewers are charged with the following tasks:
