@@ -16,6 +16,7 @@ package seed
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -30,8 +31,42 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+const (
+	// SeedLifecycleControllerName is the name of the seed controller.
+	SeedLifecycleControllerName = "seed-lifecycle"
+)
+
+func addSeedLifecycleController(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.SeedControllerConfiguration,
+) error {
+	logger := mgr.GetLogger()
+	gardenClient := mgr.GetClient()
+
+	ctrlOptions := controller.Options{
+		Reconciler:              NewDefaultBackupBucketControl(logger, gardenClient),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
+	}
+	c, err := controller.New(SeedLifecycleControllerName, mgr, ctrlOptions)
+	if err != nil {
+		return err
+	}
+
+	seed := &gardencorev1beta1.Seed{}
+	if err := c.Watch(&source.Kind{Type: seed}, &handler.EnqueueRequestForObject{}); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", seed, err)
+	}
+
+	return nil
+}
 
 // NewLifecycleDefaultControl returns a new instance of the default implementation that
 // implements the documented semantics for checking the lifecycle for Seeds.

@@ -19,14 +19,50 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/go-logr/logr"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+const (
+	// ControllerRegistrationControllerName is the name of the sub controller
+	// that reconciles ControllerRegistrations.
+	ControllerRegistrationControllerName = "controllerregistration-ctrlreg"
+)
+
+func addControllerRegistrationReconciler(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.ControllerRegistrationControllerConfiguration,
+) error {
+	logger := mgr.GetLogger()
+	gardenClient := mgr.GetClient()
+
+	ctrlOptions := controller.Options{
+		Reconciler:              NewControllerRegistrationReconciler(logger, gardenClient),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
+	}
+	c, err := controller.New(ControllerRegistrationControllerName, mgr, ctrlOptions)
+	if err != nil {
+		return err
+	}
+
+	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+	if err := c.Watch(&source.Kind{Type: controllerRegistration}, &handler.EnqueueRequestForObject{}); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", controllerRegistration, err)
+	}
+
+	return nil
+}
 
 // NewControllerRegistrationReconciler creates a new instance of a reconciler which reconciles ControllerRegistrations.
 func NewControllerRegistrationReconciler(logger logr.Logger, gardenClient client.Client) reconcile.Reconciler {

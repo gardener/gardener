@@ -18,56 +18,23 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllerutils"
 
-	rbacv1 "k8s.io/api/rbac/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	// ControllerName is the name of this controller.
-	ControllerName = "project-controller"
-
-	activeProjectsQueue = "active"
-	staleProjectsQueue  = "stale"
-)
-
-// AddToManager adds a new project controller to the given manager.
+// AddToManager adds new project controllers to the given manager.
 func AddToManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	config *config.ProjectControllerConfiguration,
 ) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
-
-	reconciler := controllerutils.NewMultiplexReconciler(map[string]reconcile.Reconciler{
-		activeProjectsQueue: NewProjectReconciler(logger, config, gardenClient, mgr.GetEventRecorderFor(ControllerName)),
-		staleProjectsQueue:  NewProjectStaleReconciler(logger, config, gardenClient),
-	})
-
-	ctrlOptions := controller.Options{
-		Reconciler:              reconciler,
-		MaxConcurrentReconciles: config.ConcurrentSyncs,
-	}
-	c, err := controller.New(ControllerName, mgr, ctrlOptions)
-	if err != nil {
-		return err
+	if err := addProjectController(ctx, mgr, config); err != nil {
+		return fmt.Errorf("failed to add project controller: %w", err)
 	}
 
-	roleBinding := &rbacv1.RoleBinding{}
-	if err := c.Watch(&source.Kind{Type: roleBinding}, newRoleBindingEventHandler(ctx, gardenClient, logger)); err != nil {
-		return fmt.Errorf("failed to create watcher for %T: %w", roleBinding, err)
-	}
-
-	project := &gardencorev1beta1.Project{}
-	if err := c.Watch(&source.Kind{Type: project}, newProjectEventHandler()); err != nil {
-		return fmt.Errorf("failed to create watcher for %T: %w", project, err)
+	if err := addProjectStaleController(ctx, mgr, config); err != nil {
+		return fmt.Errorf("failed to add stale-project controller: %w", err)
 	}
 
 	return nil

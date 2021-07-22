@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -44,28 +44,97 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+const (
+	// ControllerRegistrationSeedControllerName is the name of the sub controller
+	// that determines which ControllerRegistrations are required for a seed.
+	ControllerRegistrationSeedControllerName = "controllerregistration-ctrlreg-seed"
+)
+
+func addControllerRegistrationSeedReconciler(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.ControllerRegistrationControllerConfiguration,
+) error {
+	logger := mgr.GetLogger()
+	gardenClient := mgr.GetClient()
+
+	ctrlOptions := controller.Options{
+		Reconciler:              NewControllerRegistrationSeedReconciler(logger, gardenClient, mgr.GetAPIReader()),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
+	}
+	c, err := controller.New(ControllerRegistrationSeedControllerName, mgr, ctrlOptions)
+	if err != nil {
+		return err
+	}
+
+	// For all of these watched resource kinds, we eventually enqueue the related seed(s) and reconcile from there.
+
+	backupBucket := &gardencorev1beta1.BackupBucket{}
+	if err := c.Watch(&source.Kind{Type: backupBucket}, newBackupBucketEventHandler()); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", backupBucket, err)
+	}
+
+	backupEntry := &gardencorev1beta1.BackupEntry{}
+	if err := c.Watch(&source.Kind{Type: backupEntry}, newBackupEntryEventHandler()); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", backupEntry, err)
+	}
+
+	controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
+	if err := c.Watch(&source.Kind{Type: controllerDeployment}, newControllerDeploymentEventHandler(ctx, gardenClient, logger)); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", controllerDeployment, err)
+	}
+
+	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+	if err := c.Watch(&source.Kind{Type: controllerInstallation}, newControllerInstallationEventHandler()); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", controllerInstallation, err)
+	}
+
+	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+	if err := c.Watch(&source.Kind{Type: controllerRegistration}, newControllerRegistrationEventHandler(ctx, gardenClient)); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", controllerRegistration, err)
+	}
+
+	seed := &gardencorev1beta1.Seed{}
+	if err := c.Watch(&source.Kind{Type: seed}, &handler.EnqueueRequestForObject{}); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", seed, err)
+	}
+
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := c.Watch(&source.Kind{Type: shoot}, newShootEventHandler()); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", shoot, err)
+	}
+
+	return nil
+}
 
 // NewControllerRegistrationSeedReconciler creates a new instance of a reconciler which determines which
 // ControllerRegistrations are required for a seed.
-func NewControllerRegistrationSeedReconciler(logger logr.Logger, gardenClient kubernetes.Interface) reconcile.Reconciler {
+func NewControllerRegistrationSeedReconciler(logger logr.Logger, gardenClient client.Client, gardenReader client.Reader) reconcile.Reconciler {
 	return &controllerRegistrationSeedReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
+		gardenReader: gardenReader,
 	}
 }
 
 type controllerRegistrationSeedReconciler struct {
 	logger       logr.Logger
-	gardenClient kubernetes.Interface
+	gardenClient client.Client
+	gardenReader client.Reader
 }
 
 func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	logger := r.logger.WithValues("controllerregistration-seed", request.Name)
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
@@ -78,33 +147,33 @@ func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, re
 	logger.Info("Reconciling")
 
 	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
-	if err := r.gardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
+	if err := r.gardenClient.List(ctx, controllerRegistrationList); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// Live lookup to prevent working on a stale cache and trying to create multiple installations for the same
 	// registration/seed combination.
 	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
-	if err := r.gardenClient.APIReader().List(ctx, controllerInstallationList); err != nil {
+	if err := r.gardenReader.List(ctx, controllerInstallationList); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	backupBucketList := &gardencorev1beta1.BackupBucketList{}
-	if err := r.gardenClient.Client().List(ctx, backupBucketList); err != nil {
+	if err := r.gardenClient.List(ctx, backupBucketList); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	backupEntryList := &gardencorev1beta1.BackupEntryList{}
-	if err := r.gardenClient.APIReader().List(ctx, backupEntryList, client.MatchingFields{core.BackupEntrySeedName: seed.Name}); err != nil {
+	if err := r.gardenReader.List(ctx, backupEntryList, client.MatchingFields{core.BackupEntrySeedName: seed.Name}); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	shootList, err := getShoots(ctx, r.gardenClient.APIReader(), seed)
+	shootList, err := getShoots(ctx, r.gardenReader, seed)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	secrets, err := gardenpkg.ReadGardenSecretsFromReader(ctx, r.gardenClient.Client(), gutil.ComputeGardenNamespace(seed.Name))
+	secrets, err := gardenpkg.ReadGardenSecretsFromReader(ctx, r.gardenClient, gutil.ComputeGardenNamespace(seed.Name))
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -127,7 +196,7 @@ func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, re
 
 		wantedKindTypeCombinationForBackupBuckets, buckets = computeKindTypesForBackupBuckets(backupBucketList, seed.Name)
 		wantedKindTypeCombinationForBackupEntries          = computeKindTypesForBackupEntries(logger, backupEntryList, buckets, seed.Name)
-		wantedKindTypeCombinationForShoots                 = computeKindTypesForShoots(ctx, logger, r.gardenClient.Client(), shootList, seed, controllerRegistrationList, internalDomain, defaultDomains)
+		wantedKindTypeCombinationForShoots                 = computeKindTypesForShoots(ctx, logger, r.gardenClient, shootList, seed, controllerRegistrationList, internalDomain, defaultDomains)
 		wantedKindTypeCombinationForSeed                   = computeKindTypesForSeed(seed)
 
 		wantedKindTypeCombinations = sets.
@@ -148,11 +217,11 @@ func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, re
 		return reconcile.Result{}, err
 	}
 
-	if err := deployNeededInstallations(ctx, logger, r.gardenClient.Client(), seed, wantedControllerRegistrationNames, controllerRegistrations, registrationNameToInstallationName); err != nil {
+	if err := deployNeededInstallations(ctx, logger, r.gardenClient, seed, wantedControllerRegistrationNames, controllerRegistrations, registrationNameToInstallationName); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := deleteUnneededInstallations(ctx, logger, r.gardenClient.Client(), wantedControllerRegistrationNames, registrationNameToInstallationName); err != nil {
+	if err := deleteUnneededInstallations(ctx, logger, r.gardenClient, wantedControllerRegistrationNames, registrationNameToInstallationName); err != nil {
 		return reconcile.Result{}, err
 	}
 

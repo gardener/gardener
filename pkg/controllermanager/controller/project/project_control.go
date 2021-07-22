@@ -17,35 +17,87 @@ package project
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-func newProjectEventHandler() handler.EventHandler {
-	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
-		requests := []reconcile.Request{{
-			NamespacedName: types.NamespacedName{
-				Namespace: "",
-				Name:      obj.GetName(),
-			},
-		}, {
-			NamespacedName: types.NamespacedName{
-				Namespace: "stale",
-				Name:      obj.GetName(),
-			},
-		}}
+const (
+	// ProjectControllerName is the name of the project controller.
+	ProjectControllerName = "project"
+)
 
-		return requests
+func addProjectController(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.ProjectControllerConfiguration,
+) error {
+	logger := mgr.GetLogger()
+	gardenClient := mgr.GetClient()
+
+	ctrlOptions := controller.Options{
+		Reconciler:              NewProjectReconciler(logger, config, gardenClient, mgr.GetEventRecorderFor(ProjectControllerName)),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
+	}
+	c, err := controller.New(ProjectControllerName, mgr, ctrlOptions)
+	if err != nil {
+		return err
+	}
+
+	roleBinding := &rbacv1.RoleBinding{}
+	if err := c.Watch(&source.Kind{Type: roleBinding}, newRoleBindingEventHandler(ctx, gardenClient, logger)); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", roleBinding, err)
+	}
+
+	project := &gardencorev1beta1.Project{}
+	if err := c.Watch(&source.Kind{Type: project}, &handler.EnqueueRequestForObject{}); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", project, err)
+	}
+
+	return nil
+}
+
+func newRoleBindingEventHandler(ctx context.Context, c client.Client, logger logr.Logger) handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		name := obj.GetName()
+
+		if name == "gardener.cloud:system:project-member" ||
+			name == "gardener.cloud:system:project-viewer" ||
+			strings.HasPrefix(name, "gardener.cloud:extension:project:") {
+
+			namespace := obj.GetNamespace()
+
+			project, err := gutil.ProjectForNamespaceFromReader(ctx, c, namespace)
+			if err != nil {
+				logger.WithValues("namespace", namespace).Error(err, "Failed to get project for RoleBinding")
+				return nil
+			}
+
+			if project.DeletionTimestamp == nil {
+				return []reconcile.Request{{
+					NamespacedName: types.NamespacedName{
+						Name: project.Name,
+					},
+				}}
+			}
+		}
+
+		return nil
 	})
 }
 

@@ -19,24 +19,10 @@ import (
 	"fmt"
 	"time"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/controllerutils"
 
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-)
-
-const (
-	// ControllerName is the name of this controller.
-	ControllerName = "seed-controller"
-
-	backupBucketQueue  = "backupbucket"
-	seedLifecycleQueue = "seed-lifecycle"
-	seedQueue          = "seed"
 )
 
 // AddToManager adds a new seed controller to the given manager.
@@ -45,37 +31,16 @@ func AddToManager(
 	mgr manager.Manager,
 	config *config.SeedControllerConfiguration,
 ) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
-
-	reconciler := controllerutils.NewMultiplexReconciler(map[string]reconcile.Reconciler{
-		seedQueue:          NewDefaultControl(logger, gardenClient),
-		seedLifecycleQueue: NewLifecycleDefaultControl(logger, gardenClient, config),
-		backupBucketQueue:  NewDefaultBackupBucketControl(logger, gardenClient),
-	})
-
-	ctrlOptions := controller.Options{
-		Reconciler:              reconciler,
-		MaxConcurrentReconciles: config.ConcurrentSyncs,
-	}
-	c, err := controller.New(ControllerName, mgr, ctrlOptions)
-	if err != nil {
-		return err
+	if err := addDefaultBackupBucketController(ctx, mgr, config); err != nil {
+		return fmt.Errorf("failed to add default-backupbucket controller: %w", err)
 	}
 
-	backupBucket := &gardencorev1beta1.BackupBucket{}
-	if err := c.Watch(&source.Kind{Type: backupBucket}, newBackupBucketEventHandler(reconciler)); err != nil {
-		return fmt.Errorf("failed to create watcher for %T: %w", backupBucket, err)
+	if err := addSeedController(ctx, mgr, config); err != nil {
+		return fmt.Errorf("failed to add seed controller: %w", err)
 	}
 
-	secret := &corev1.Secret{}
-	if err := c.Watch(&source.Kind{Type: secret}, newSecretEventHandler(ctx, gardenClient, logger, reconciler)); err != nil {
-		return fmt.Errorf("failed to create watcher for %T: %w", secret, err)
-	}
-
-	seed := &gardencorev1beta1.Seed{}
-	if err := c.Watch(&source.Kind{Type: seed}, newSeedEventHandler(reconciler)); err != nil {
-		return fmt.Errorf("failed to create watcher for %T: %w", seed, err)
+	if err := addSeedLifecycleController(ctx, mgr, config); err != nil {
+		return fmt.Errorf("failed to add seed-lifecycle controller: %w", err)
 	}
 
 	return nil

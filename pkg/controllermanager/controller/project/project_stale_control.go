@@ -16,6 +16,7 @@ package project
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -31,8 +32,39 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+const (
+	// ProjectStaleControllerName is the name of the stale-project controller.
+	ProjectStaleControllerName = "project-stale"
+)
+
+func addProjectStaleController(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.ProjectControllerConfiguration,
+) error {
+	ctrlOptions := controller.Options{
+		Reconciler:              NewProjectStaleReconciler(mgr.GetLogger(), config, mgr.GetClient()),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
+	}
+	c, err := controller.New(ProjectStaleControllerName, mgr, ctrlOptions)
+	if err != nil {
+		return err
+	}
+
+	project := &gardencorev1beta1.Project{}
+	if err := c.Watch(&source.Kind{Type: project}, &handler.EnqueueRequestForObject{}); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", project, err)
+	}
+
+	return nil
+}
 
 // NewProjectStaleReconciler creates a new instance of a reconciler which reconciles stale Projects.
 func NewProjectStaleReconciler(

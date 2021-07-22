@@ -19,11 +19,11 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -40,7 +40,7 @@ func filterGardenSecret(obj interface{}) bool {
 	return gardenRoleSelector.Matches(labels.Set(secret.Labels))
 }
 
-func newSecretEventHandler(ctx context.Context, gardenClient client.Client, logger logr.Logger, reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
+func newSecretEventHandler(ctx context.Context, gardenClient client.Client, logger logr.Logger) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		seedList := &gardencorev1beta1.SeedList{}
 		if err := gardenClient.List(ctx, seedList); err != nil {
@@ -50,7 +50,11 @@ func newSecretEventHandler(ctx context.Context, gardenClient client.Client, logg
 
 		requests := []reconcile.Request{}
 		for _, seed := range seedList.Items {
-			requests = append(requests, reconciler.NewRequest(seedQueue, seed.Name, ""))
+			requests = append(requests, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name: seed.Name,
+				},
+			})
 		}
 
 		return requests

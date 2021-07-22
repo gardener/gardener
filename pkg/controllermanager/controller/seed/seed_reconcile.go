@@ -20,6 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -33,17 +34,47 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-func newSeedEventHandler(reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
-	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
-		return []reconcile.Request{
-			reconciler.NewRequest(seedQueue, obj.GetName(), obj.GetNamespace()),
-			reconciler.NewRequest(seedLifecycleQueue, obj.GetName(), obj.GetNamespace()),
-		}
-	})
+const (
+	// SeedControllerName is the name of the seed controller.
+	SeedControllerName = "seed"
+)
+
+func addSeedController(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.SeedControllerConfiguration,
+) error {
+	logger := mgr.GetLogger()
+	gardenClient := mgr.GetClient()
+
+	ctrlOptions := controller.Options{
+		Reconciler:              NewDefaultBackupBucketControl(logger, gardenClient),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
+	}
+	c, err := controller.New(SeedControllerName, mgr, ctrlOptions)
+	if err != nil {
+		return err
+	}
+
+	seed := &gardencorev1beta1.Seed{}
+	if err := c.Watch(&source.Kind{Type: seed}, &handler.EnqueueRequestForObject{}); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", seed, err)
+	}
+
+	// TODO: Filter! filterGardenSecret
+	secret := &corev1.Secret{}
+	if err := c.Watch(&source.Kind{Type: secret}, newSecretEventHandler(ctx, gardenClient, logger)); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", secret, err)
+	}
+
+	return nil
 }
 
 // NewDefaultControl returns a new instance of the default implementation that

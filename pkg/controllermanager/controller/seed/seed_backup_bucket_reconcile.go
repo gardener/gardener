@@ -20,16 +20,50 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/go-logr/logr"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-func newBackupBucketEventHandler(reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
+const (
+	// DefaultBackupBucketControllerName is the name of the default-backupbucket controller.
+	DefaultBackupBucketControllerName = "seed-default-backupbucket"
+)
+
+func addDefaultBackupBucketController(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.SeedControllerConfiguration,
+) error {
+	logger := mgr.GetLogger()
+	gardenClient := mgr.GetClient()
+
+	ctrlOptions := controller.Options{
+		Reconciler:              NewDefaultBackupBucketControl(logger, gardenClient),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
+	}
+	c, err := controller.New(DefaultBackupBucketControllerName, mgr, ctrlOptions)
+	if err != nil {
+		return err
+	}
+
+	backupBucket := &gardencorev1beta1.BackupBucket{}
+	if err := c.Watch(&source.Kind{Type: backupBucket}, newBackupBucketEventHandler()); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", backupBucket, err)
+	}
+
+	return nil
+}
+
+func newBackupBucketEventHandler() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		// Ignore non-shoots
 		bb, ok := obj.(*gardencorev1beta1.BackupBucket)
@@ -42,9 +76,11 @@ func newBackupBucketEventHandler(reconciler *controllerutils.MultiplexReconciler
 			return nil
 		}
 
-		return []reconcile.Request{
-			reconciler.NewRequest(backupBucketQueue, *seedName, ""),
-		}
+		return []reconcile.Request{{
+			NamespacedName: types.NamespacedName{
+				Name: *seedName,
+			},
+		}}
 	})
 }
 

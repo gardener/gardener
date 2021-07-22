@@ -19,14 +19,50 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/go-logr/logr"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
+
+const (
+	// SeedControllerName is the name of the sub controller
+	// that reconciles Seeds.
+	SeedControllerName = "controllerregistration-seed"
+)
+
+func addSeedReconciler(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.ControllerRegistrationControllerConfiguration,
+) error {
+	logger := mgr.GetLogger()
+	gardenClient := mgr.GetClient()
+
+	ctrlOptions := controller.Options{
+		Reconciler:              NewSeedReconciler(logger, gardenClient),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
+	}
+	c, err := controller.New(SeedControllerName, mgr, ctrlOptions)
+	if err != nil {
+		return err
+	}
+
+	seed := &gardencorev1beta1.Seed{}
+	if err := c.Watch(&source.Kind{Type: seed}, &handler.EnqueueRequestForObject{}); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", seed, err)
+	}
+
+	return nil
+}
 
 // NewSeedReconciler creates a new instance of a reconciler which reconciles Seeds.
 func NewSeedReconciler(logger logr.Logger, gardenClient client.Client) reconcile.Reconciler {
