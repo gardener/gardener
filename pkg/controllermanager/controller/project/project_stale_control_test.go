@@ -27,6 +27,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
+	"github.com/go-logr/logr"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -125,7 +126,7 @@ var _ = Describe("ProjectStaleControl", func() {
 			}
 			request = reconcile.Request{NamespacedName: types.NamespacedName{Name: project.Name}}
 
-			reconciler = NewProjectStaleReconciler(logger.NewNopLogger(), cfg, k8sGardenRuntimeClient)
+			reconciler = NewProjectStaleReconciler(logr.Discard(), cfg, k8sGardenRuntimeClient)
 
 			k8sGardenRuntimeClient.EXPECT().Get(ctx, kutil.Key(project.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Project{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Project) error {
 				*obj = *project

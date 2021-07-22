@@ -18,43 +18,41 @@ import (
 	"context"
 	"strings"
 
-	"k8s.io/client-go/tools/cache"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/gardener/gardener/pkg/logger"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/go-logr/logr"
 )
 
-func (c *Controller) roleBindingUpdate(ctx context.Context, _, new interface{}) {
-	c.roleBindingDelete(ctx, new)
-}
+func newRoleBindingEventHandler(ctx context.Context, c client.Client, logger logr.Logger) handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		name := obj.GetName()
 
-func (c *Controller) roleBindingDelete(ctx context.Context, obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
-		return
-	}
+		if name == "gardener.cloud:system:project-member" ||
+			name == "gardener.cloud:system:project-viewer" ||
+			strings.HasPrefix(name, "gardener.cloud:extension:project:") {
 
-	namespace, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
-		return
-	}
+			namespace := obj.GetNamespace()
 
-	if name == "gardener.cloud:system:project-member" ||
-		name == "gardener.cloud:system:project-viewer" ||
-		strings.HasPrefix(name, "gardener.cloud:extension:project:") {
+			project, err := gutil.ProjectForNamespaceFromReader(ctx, c, namespace)
+			if err != nil {
+				logger.WithValues("namespace", namespace).Error(err, "Failed to get project for RoleBinding")
+				return nil
+			}
 
-		logger.Logger.Debugf("[PROJECT RECONCILE] %q rolebinding modified", key)
-
-		project, err := gutil.ProjectForNamespaceFromReader(ctx, c.gardenClient, namespace)
-		if err != nil {
-			logger.Logger.Errorf("Couldn't get list keys for object %+v: %v", obj, err)
-			return
+			if project.DeletionTimestamp == nil {
+				return []reconcile.Request{{
+					NamespacedName: types.NamespacedName{
+						Namespace: "",
+						Name:      project.Name,
+					},
+				}}
+			}
 		}
 
-		if project.DeletionTimestamp == nil {
-			c.projectQueue.Add(project.Name)
-		}
-	}
+		return nil
+	})
 }

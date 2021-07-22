@@ -24,8 +24,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,35 +36,38 @@ import (
 
 // NewProjectStaleReconciler creates a new instance of a reconciler which reconciles stale Projects.
 func NewProjectStaleReconciler(
-	l logrus.FieldLogger,
+	logger logr.Logger,
 	config *config.ProjectControllerConfiguration,
 	gardenClient client.Client,
 ) reconcile.Reconciler {
 	return &projectStaleReconciler{
-		logger:       l,
+		logger:       logger,
 		config:       config,
 		gardenClient: gardenClient,
 	}
 }
 
 type projectStaleReconciler struct {
-	logger       logrus.FieldLogger
+	logger       logr.Logger
 	gardenClient client.Client
 	config       *config.ProjectControllerConfiguration
 }
 
 func (r *projectStaleReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	logger := r.logger.WithValues("project", request)
+
 	project := &gardencorev1beta1.Project{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, project); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			logger.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+
+		logger.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
 
-	if err := r.reconcile(ctx, project); err != nil {
+	if err := r.reconcile(ctx, project, logger); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -80,13 +83,12 @@ type projectInUseChecker struct {
 // Exposed for testing.
 var NowFunc = metav1.Now
 
-func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project) error {
+func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project, logger logr.Logger) error {
 	if project.DeletionTimestamp != nil || project.Spec.Namespace == nil {
 		return nil
 	}
 
-	projectLogger := newProjectLogger(project)
-	projectLogger.Infof("[STALE PROJECT RECONCILE]")
+	logger.Info("Reconciling")
 
 	// Skip projects whose namespace is annotated with the skip-stale-check annotation.
 	namespace := &corev1.Namespace{}
@@ -100,14 +102,14 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 	}
 
 	if skipStaleCheck {
-		projectLogger.Infof("[STALE PROJECT RECONCILE] Namespace %q is annotated with %s, skipping the check and considering the project as 'not stale'", *project.Spec.Namespace, v1beta1constants.ProjectSkipStaleCheck)
+		logger.WithValues("namespace", *project.Spec.Namespace, "annotation", v1beta1constants.ProjectSkipStaleCheck).Info("Namespace has skip-annotation, skipping the check and considering the project as 'not stale'")
 		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 	}
 
 	// Skip projects that are not older than the configured minimum lifetime in days. This allows having Projects for a
 	// certain period of time until they are checked whether they got stale.
 	if project.CreationTimestamp.UTC().Add(time.Hour * 24 * time.Duration(*r.config.MinimumLifetimeDays)).After(NowFunc().UTC()) {
-		projectLogger.Infof("[STALE PROJECT RECONCILE] Project is not older than the configured minimum %d days lifetime (%v), considering it 'not stale'", *r.config.MinimumLifetimeDays, project.CreationTimestamp.UTC())
+		logger.WithValues("minLifetime", *r.config.MinimumLifetimeDays).Info("Project is not older than the configured minimum days lifetime, considering it 'not stale'")
 		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 	}
 
@@ -123,29 +125,29 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 			return err
 		}
 		if projectInUse {
-			projectLogger.Infof("[STALE PROJECT RECONCILE] Project is being marked as 'not stale' because it is used by %s", check.resource)
+			logger.WithValues("resource", check.resource).Info("Project is being marked as 'not stale' because it is used")
 			return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 		}
 	}
 
-	projectLogger.Infof("[STALE PROJECT RECONCILE] Project is being marked as 'stale' because it is not being used by any resource")
+	logger.Info("Project is being marked as 'stale' because it is not being used by any resource")
 	if err := r.markProjectAsStale(ctx, r.gardenClient, project, NowFunc); err != nil {
 		return err
 	}
 
-	projectLogger.Infof("[STALE PROJECT RECONCILE] Project is stale since %s", *project.Status.StaleSinceTimestamp)
+	logger.WithValues("since", *project.Status.StaleSinceTimestamp).Info("Project is stale")
 	if project.Status.StaleAutoDeleteTimestamp != nil {
-		projectLogger.Infof("[STALE PROJECT RECONCILE] Project will be deleted at %s", *project.Status.StaleAutoDeleteTimestamp)
+		logger.WithValues("deleteAt", *project.Status.StaleAutoDeleteTimestamp).Info("Project will be deleted soon")
 	}
 
 	if project.Status.StaleAutoDeleteTimestamp == nil || NowFunc().UTC().Before(project.Status.StaleAutoDeleteTimestamp.UTC()) {
 		return nil
 	}
 
-	projectLogger.Infof("[STALE PROJECT RECONCILE] Deleting Project now because it's auto-delete timestamp is expired")
+	logger.Info("Deleting Project now because its auto-delete timestamp has expired")
 	if err := gutil.ConfirmDeletion(ctx, r.gardenClient, project); err != nil {
 		if apierrors.IsNotFound(err) {
-			projectLogger.Info("Project already gone")
+			logger.Info("Project already gone")
 			return nil
 		}
 		return err

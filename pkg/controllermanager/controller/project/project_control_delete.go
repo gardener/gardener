@@ -31,17 +31,18 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 )
 
-func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, gardenReader client.Reader) (reconcile.Result, error) {
+func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, logger logr.Logger) (reconcile.Result, error) {
 	if namespace := project.Spec.Namespace; namespace != nil {
-		inUse, err := kutil.IsNamespaceInUse(ctx, gardenReader, *namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
+		inUse, err := kutil.IsNamespaceInUse(ctx, gardenClient, *namespace, gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to check if namespace is empty: %w", err)
 		}
 
 		if inUse {
-			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots.", *namespace)
+			r.reportEvent(project, logger, true, gardencorev1beta1.ProjectEventNamespaceNotEmpty, "Cannot release namespace %q because it still contains Shoots.", *namespace)
 
 			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectTerminating })
 			return reconcile.Result{RequeueAfter: time.Minute}, nil
@@ -49,13 +50,13 @@ func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1bet
 
 		released, err := r.releaseNamespace(ctx, gardenClient, project, *namespace)
 		if err != nil {
-			r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
+			r.reportEvent(project, logger, true, gardencorev1beta1.ProjectEventNamespaceDeletionFailed, err.Error())
 			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectFailed })
 			return reconcile.Result{}, err
 		}
 
 		if !released {
-			r.reportEvent(project, false, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
+			r.reportEvent(project, logger, false, gardencorev1beta1.ProjectEventNamespaceMarkedForDeletion, "Successfully marked namespace %q for deletion.", *namespace)
 			_ = updateStatus(ctx, gardenClient, project, func() { project.Status.Phase = gardencorev1beta1.ProjectTerminating })
 			return reconcile.Result{RequeueAfter: time.Minute}, nil
 		}
@@ -66,7 +67,7 @@ func (r *projectReconciler) delete(ctx context.Context, project *gardencorev1bet
 
 func (r *projectReconciler) releaseNamespace(ctx context.Context, gardenClient client.Client, project *gardencorev1beta1.Project, namespaceName string) (bool, error) {
 	namespace := &corev1.Namespace{}
-	if err := r.gardenClient.Client().Get(ctx, kutil.Key(namespaceName), namespace); err != nil {
+	if err := r.gardenClient.Get(ctx, kutil.Key(namespaceName), namespace); err != nil {
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
