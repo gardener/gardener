@@ -22,9 +22,9 @@ import (
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
-	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -91,7 +91,7 @@ var _ = Describe("BackupBucketReconciler", func() {
 			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
 			Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
 
-			control = NewDefaultBackupBucketControl(logger.NewNopLogger(), k8sGardenClient)
+			control = NewDefaultBackupBucketControl(logr.Discard(), k8sGardenClient.Client())
 
 			c.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
 				*obj = *seed

@@ -24,41 +24,32 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/go-logr/logr"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (c *Controller) seedEnqueue(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-
-	c.seedQueue.Add(key)
-}
-
-func (c *Controller) seedAdd(obj interface{}) {
-	seed, ok := obj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return
-	}
-
-	c.seedEnqueue(seed)
+func newSeedEventHandler(reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		return []reconcile.Request{
+			reconciler.NewRequest(seedQueue, obj.GetName(), obj.GetNamespace()),
+			reconciler.NewRequest(seedLifecycleQueue, obj.GetName(), obj.GetNamespace()),
+		}
+	})
 }
 
 // NewDefaultControl returns a new instance of the default implementation that
 // implements the documented semantics for seeds.
 // You should use an instance returned from NewDefaultControl() for any scenario other than testing.
-func NewDefaultControl(logger logrus.FieldLogger, gardenClient client.Client) *reconciler {
+func NewDefaultControl(logger logr.Logger, gardenClient client.Client) *reconciler {
 	return &reconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
@@ -66,20 +57,22 @@ func NewDefaultControl(logger logrus.FieldLogger, gardenClient client.Client) *r
 }
 
 type reconciler struct {
-	logger       logrus.FieldLogger
+	logger       logr.Logger
 	gardenClient client.Client
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	seed := &gardencorev1beta1.Seed{}
+	logger := r.logger.WithValues("seed", req.Name)
+
 	err := r.gardenClient.Get(ctx, req.NamespacedName, seed)
 	if apierrors.IsNotFound(err) {
-		r.logger.Infof("[SEED] Stopping operations for Seed %s since it has been deleted", req.Name)
-		return reconcileResult(nil)
+		logger.Info("[SEED] Stopping operations for Seed since it has been deleted")
+		return reconcile.Result{}, nil
 	}
 	if err != nil {
-		r.logger.Infof("[SEED] %s - unable to retrieve object from store: %v", req.Name, err)
-		return reconcileResult(err)
+		logger.Error(err, "[SEED] Unable to retrieve object from store")
+		return reconcile.Result{}, err
 	}
 
 	namespace := &corev1.Namespace{
@@ -107,14 +100,14 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	syncedSecrets, err := r.syncGardenSecrets(ctx, r.gardenClient, namespace)
 	if err != nil {
-		return reconcileResult(fmt.Errorf("failed to sync garden secrets: %v", err))
+		return reconcile.Result{}, fmt.Errorf("failed to sync garden secrets: %w", err)
 	}
 
 	if err := r.cleanupStaleSecrets(ctx, r.gardenClient, syncedSecrets, namespace.Name); err != nil {
-		return reconcileResult(fmt.Errorf("failed to clean up secrets in seed namespace: %v", err))
+		return reconcile.Result{}, fmt.Errorf("failed to clean up secrets in seed namespace: %w", err)
 	}
 
-	return reconcileResult(nil)
+	return reconcile.Result{}, nil
 }
 
 var (

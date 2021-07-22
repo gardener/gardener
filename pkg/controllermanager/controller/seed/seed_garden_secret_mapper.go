@@ -19,12 +19,14 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func filterGardenSecret(obj interface{}) bool {
@@ -38,29 +40,19 @@ func filterGardenSecret(obj interface{}) bool {
 	return gardenRoleSelector.Matches(labels.Set(secret.Labels))
 }
 
-func (c *Controller) enqueueSeeds(ctx context.Context) {
-	seedList := &gardencorev1beta1.SeedList{}
-	if err := c.gardenClient.List(ctx, seedList); err != nil {
-		logger.Logger.Errorf("Could not enqueue seeds: %v", err)
-	}
-	for _, seed := range seedList.Items {
-		c.seedQueue.Add(client.ObjectKeyFromObject(&seed).String())
-	}
-}
+func newSecretEventHandler(ctx context.Context, gardenClient client.Client, logger logr.Logger, reconciler *controllerutils.MultiplexReconciler) handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
+		seedList := &gardencorev1beta1.SeedList{}
+		if err := gardenClient.List(ctx, seedList); err != nil {
+			logger.Error(err, "Could not enqueue seeds")
+			return nil
+		}
 
-func (c *Controller) gardenSecretAdd(ctx context.Context, _ interface{}) {
-	c.enqueueSeeds(ctx)
-}
+		requests := []reconcile.Request{}
+		for _, seed := range seedList.Items {
+			requests = append(requests, reconciler.NewRequest(seedQueue, seed.Name, ""))
+		}
 
-func (c *Controller) gardenSecretUpdate(ctx context.Context, oldObj, newObj interface{}) {
-	oldSecret := oldObj.(*corev1.Secret)
-	newSecret := newObj.(*corev1.Secret)
-
-	if !apiequality.Semantic.DeepEqual(oldSecret, newSecret) {
-		c.enqueueSeeds(ctx)
-	}
-}
-
-func (c *Controller) gardenSecretDelete(ctx context.Context, _ interface{}) {
-	c.enqueueSeeds(ctx)
+		return requests
+	})
 }

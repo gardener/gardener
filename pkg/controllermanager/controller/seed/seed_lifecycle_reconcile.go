@@ -21,36 +21,25 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 
-	"github.com/sirupsen/logrus"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func (c *Controller) seedLifecycleAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-	c.seedLifecycleQueue.Add(key)
-}
 
 // NewLifecycleDefaultControl returns a new instance of the default implementation that
 // implements the documented semantics for checking the lifecycle for Seeds.
 // You should use an instance returned from NewLifecycleDefaultControl() for any scenario other than testing.
 func NewLifecycleDefaultControl(
-	logger logrus.FieldLogger,
-	gardenClient kubernetes.Interface,
-	config *config.ControllerManagerConfiguration,
+	logger logr.Logger,
+	gardenClient client.Client,
+	config *config.SeedControllerConfiguration,
 ) *livecycleReconciler {
 	return &livecycleReconciler{
 		logger:       logger,
@@ -60,24 +49,24 @@ func NewLifecycleDefaultControl(
 }
 
 type livecycleReconciler struct {
-	logger       logrus.FieldLogger
-	gardenClient kubernetes.Interface
-	config       *config.ControllerManagerConfiguration
+	logger       logr.Logger
+	gardenClient client.Client
+	config       *config.SeedControllerConfiguration
 }
 
-func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	seed := &gardencorev1beta1.Seed{}
-	err := c.gardenClient.Cache().Get(ctx, req.NamespacedName, seed)
+	logger := r.logger.WithValues("seed", req.Name)
+
+	err := r.gardenClient.Get(ctx, req.NamespacedName, seed)
 	if apierrors.IsNotFound(err) {
-		c.logger.Infof("[SEED LIFECYCLE] Stopping lifecycle operations for Seed %s since it has been deleted", req.Name)
-		return reconcileResult(nil)
+		logger.Info("[SEED LIFECYCLE] Stopping lifecycle operations for Seed since it has been deleted")
+		return reconcile.Result{}, nil
 	}
 	if err != nil {
-		c.logger.Infof("[SEED LIFECYCLE] %s - unable to retrieve object from store: %v", req.Name, err)
-		return reconcileResult(err)
+		logger.Error(err, "[SEED LIFECYCLE] Unable to retrieve object from store")
+		return reconcile.Result{}, err
 	}
-
-	seedLogger := logger.NewFieldLogger(c.logger, "seed", seed.Name)
 
 	// New seeds don't have conditions - gardenlet never reported anything yet. Wait for grace period.
 	if len(seed.Status.Conditions) == 0 {
@@ -85,31 +74,31 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	}
 
 	observedSeedLease := &coordinationv1.Lease{}
-	if err := c.gardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), observedSeedLease); client.IgnoreNotFound(err) != nil {
-		return reconcileResult(err)
+	if err := r.gardenClient.Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), observedSeedLease); client.IgnoreNotFound(err) != nil {
+		return reconcile.Result{}, err
 	}
 
 	if observedSeedLease != nil && observedSeedLease.Spec.RenewTime != nil {
-		if observedSeedLease.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-c.config.Controllers.Seed.MonitorPeriod.Duration)) {
+		if observedSeedLease.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-r.config.MonitorPeriod.Duration)) {
 			return reconcileAfter(10 * time.Second)
 		}
 
 		// Get the latest Lease object in cases which the LeaseLister cache is outdated, to ensure that the lease is really expired
 		latestLeaseObject := &coordinationv1.Lease{}
-		if err := c.gardenClient.Client().Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), latestLeaseObject); err != nil {
-			return reconcileResult(err)
+		if err := r.gardenClient.Get(ctx, kutil.Key(gardencorev1beta1.GardenerSeedLeaseNamespace, seed.Name), latestLeaseObject); err != nil {
+			return reconcile.Result{}, err
 		}
 
-		if latestLeaseObject.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-c.config.Controllers.Seed.MonitorPeriod.Duration)) {
+		if latestLeaseObject.Spec.RenewTime.UTC().After(time.Now().UTC().Add(-r.config.MonitorPeriod.Duration)) {
 			return reconcileAfter(10 * time.Second)
 		}
 	}
 
-	seedLogger.Debugf("Setting status for seed %q to 'Unknown' as gardenlet stopped reporting seed status.", seed.Name)
+	logger.Info("Setting status for seed to 'Unknown' as gardenlet stopped reporting seed status.")
 
 	bldr, err := gardencorev1beta1helper.NewConditionBuilder(gardencorev1beta1.SeedGardenletReady)
 	if err != nil {
-		return reconcileResult(err)
+		return reconcile.Result{}, err
 	}
 
 	conditionGardenletReady := gardencorev1beta1helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
@@ -122,8 +111,8 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	bldr.WithMessage("Gardenlet stopped posting seed status.")
 	if newCondition, update := bldr.WithNowFunc(metav1.Now).Build(); update {
 		seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, newCondition)
-		if err := c.gardenClient.Client().Status().Update(ctx, seed); err != nil {
-			return reconcileResult(err)
+		if err := r.gardenClient.Status().Update(ctx, seed); err != nil {
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -131,15 +120,15 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	// and constraints for all the shoots that belong to this seed as `Unknown`. The reason is that the gardenlet didn't send a heartbeat
 	// anymore, hence, it most likely didn't check the shoot status. This means that the current shoot status might not reflect the truth
 	// anymore. We are indicating this by marking it as `Unknown`.
-	if conditionGardenletReady != nil && !conditionGardenletReady.LastTransitionTime.UTC().Before(time.Now().UTC().Add(-c.config.Controllers.Seed.ShootMonitorPeriod.Duration)) {
+	if conditionGardenletReady != nil && !conditionGardenletReady.LastTransitionTime.UTC().Before(time.Now().UTC().Add(-r.config.ShootMonitorPeriod.Duration)) {
 		return reconcileAfter(10 * time.Second)
 	}
 
-	seedLogger.Debugf("Gardenlet didn't send a heartbeat for at least %s - setting the shoot conditions/constraints to 'unknown' for all shoots on this seed", c.config.Controllers.Seed.ShootMonitorPeriod.Duration)
+	logger.WithValues("gracePeriod", r.config.ShootMonitorPeriod.Duration).Info("Gardenlet didn't send a heartbeat during the grace period - setting the shoot conditions/constraints to 'unknown' for all shoots on this seed")
 
 	shootList := &gardencorev1beta1.ShootList{}
-	if err := c.gardenClient.Cache().List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {
-		return reconcileResult(err)
+	if err := r.gardenClient.List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	var fns []flow.TaskFn
@@ -147,12 +136,12 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	for _, s := range shootList.Items {
 		shoot := s
 		fns = append(fns, func(ctx context.Context) error {
-			return setShootStatusToUnknown(ctx, c.gardenClient.Client(), &shoot)
+			return setShootStatusToUnknown(ctx, r.gardenClient, &shoot)
 		})
 	}
 
 	if err := flow.Parallel(fns...)(ctx); err != nil {
-		return reconcileResult(err)
+		return reconcile.Result{}, err
 	}
 
 	return reconcileAfter(1 * time.Minute)

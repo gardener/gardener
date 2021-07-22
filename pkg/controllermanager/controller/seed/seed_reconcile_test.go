@@ -30,6 +30,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
+	"github.com/go-logr/logr"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -105,7 +106,7 @@ var _ = Describe("SeedReconciler", func() {
 				Expect(coreInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 			}
 
-			control = NewDefaultControl(logger.NewNopLogger(), cl)
+			control = NewDefaultControl(logr.Discard(), cl)
 		})
 
 		It("should fail if get namespace fails", func() {
@@ -263,7 +264,7 @@ var _ = Describe("SeedReconciler", func() {
 			It("should not create and copy assets if seed cannot be found", func() {
 				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-				defer test.WithVar(&logger.Logger, logger.NewNopLogger())()
+				defer test.WithVar(&logger.Logger, logr.Discard())()
 				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(result).To(Equal(reconcile.Result{}))
