@@ -79,6 +79,10 @@ func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manage
 		return fmt.Errorf("failed to setup field indexes: %w", err)
 	}
 
+	if err := f.clientMap.Start(ctx.Done()); err != nil {
+		return fmt.Errorf("failed to start ClientMap: %w", err)
+	}
+
 	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return fmt.Errorf("failed to get garden client: %w", err)
