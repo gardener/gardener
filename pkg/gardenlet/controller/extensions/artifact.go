@@ -43,6 +43,8 @@ type predicateFn func(newObj, oldObj interface{}) bool
 // artifact is specified for extension kinds.
 // It servers as a helper to setup the corresponding reconciliation function.
 type artifact struct {
+	initialized bool
+
 	gvk               schema.GroupVersionKind
 	newObjFunc        func() client.Object
 	newListFunc       func() client.ObjectList
@@ -152,6 +154,9 @@ func (c *controllerArtifacts) registerExtensionControllerArtifacts(controllerIns
 // initialize obtains the informers for the enclosing artifacts.
 func (c *controllerArtifacts) initialize(ctx context.Context, seedClient kubernetes.Interface) error {
 	initialize := func(a *artifact) error {
+		if a.initialized {
+			return nil
+		}
 		informer, err := seedClient.Cache().GetInformerForKind(ctx, a.gvk)
 		if err != nil {
 			return err
@@ -160,6 +165,7 @@ func (c *controllerArtifacts) initialize(ctx context.Context, seedClient kuberne
 		c.hasSyncedFuncs = append(c.hasSyncedFuncs, informer.HasSynced)
 		c.shutDownFuncs = append(c.shutDownFuncs, a.queue.ShutDown)
 		a.addEventHandlerFn()
+		a.initialized = true
 		return nil
 	}
 
