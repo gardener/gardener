@@ -48,8 +48,10 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
@@ -136,7 +138,8 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	// Initialize the workqueue metrics collection.
 	gardenmetrics.RegisterWorkqueMetrics()
 
-	seedClient, err := f.clientMap.GetClient(ctx, keys.ForSeedWithName(f.cfg.SeedConfig.Name))
+	seedName := f.cfg.SeedConfig.Name
+	seedClient, err := f.clientMap.GetClient(ctx, keys.ForSeedWithName(seedName))
 	if err != nil {
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
@@ -167,10 +170,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
 
-	extensionsController, err := extensionscontroller.NewController(ctx, k8sGardenClient, seedClient, f.cfg.SeedConfig.Name, logger.Logger, f.recorder)
-	if err != nil {
-		return fmt.Errorf("failed initializing extensions controller: %w", err)
-	}
+	extensionsController := extensionscontroller.NewController(k8sGardenClient, seedClient, f.cfg.SeedConfig.Name, logger.Logger, f.recorder)
 
 	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, f.clientMap, f.cfg, imageVector, f.recorder, logger.Logger)
 	if err != nil {
@@ -192,20 +192,40 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		extensionsController,
 	)
 
-	go networkpolicyController.Run(ctx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
-	go extensionsController.Run(ctx, *f.cfg.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *f.cfg.Controllers.ShootStateSync.ConcurrentSyncs)
-	go backupBucketController.Run(ctx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
-	go backupEntryController.Run(ctx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs)
-	go bastionController.Run(ctx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)
-	go controllerInstallationController.Run(ctx, *f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs, *f.cfg.Controllers.ControllerInstallationCare.ConcurrentSyncs)
-	go seedController.Run(ctx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
-	go shootController.Run(ctx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs)
-	go managedSeedController.Run(ctx, *f.cfg.Controllers.ManagedSeed.ConcurrentSyncs)
+	controllerCtx, cancel := context.WithCancel(ctx)
+
+	go networkpolicyController.Run(controllerCtx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
+	go backupBucketController.Run(controllerCtx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
+	go backupEntryController.Run(controllerCtx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs)
+	go bastionController.Run(controllerCtx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)
+	go controllerInstallationController.Run(controllerCtx, *f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs, *f.cfg.Controllers.ControllerInstallationCare.ConcurrentSyncs)
+	go seedController.Run(controllerCtx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
+	go shootController.Run(controllerCtx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs)
+	go managedSeedController.Run(controllerCtx, *f.cfg.Controllers.ManagedSeed.ConcurrentSyncs)
+
+	if err := retry.Until(ctx, 10*time.Second, func(ctx context.Context) (bool, error) {
+		if err := extensionsController.Initialize(ctx, seedClient); err != nil {
+			// A NoMatchError most probably indicates that the necessary CRDs haven't been deployed to the affected seed cluster yet.
+			// This can either be the case if the seed cluster is new or if a new extension CRD was added.
+			if meta.IsNoMatchError(err) {
+				logger.Logger.Errorf("An error occurred when initializing extension controllers: %v. Will retry.", err)
+				return retry.MinorError(err)
+			}
+			return retry.SevereError(err)
+		}
+		return retry.Ok()
+	}); err != nil {
+		cancel()
+		return err
+	}
+
+	go extensionsController.Run(controllerCtx, *f.cfg.Controllers.ControllerInstallationRequired.ConcurrentSyncs, *f.cfg.Controllers.ShootStateSync.ConcurrentSyncs)
 
 	logger.Logger.Infof("Gardenlet (version %s) initialized.", version.Get().GitVersion)
 
 	// Shutdown handling
 	<-ctx.Done()
+	cancel()
 
 	logger.Logger.Infof("I have received a stop signal and will no longer watch resources.")
 	logger.Logger.Infof("Bye Bye!")

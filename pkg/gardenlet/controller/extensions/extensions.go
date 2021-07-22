@@ -39,6 +39,7 @@ import (
 type Controller struct {
 	log *logrus.Logger
 
+	initialized            bool
 	waitGroup              sync.WaitGroup
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -49,7 +50,7 @@ type Controller struct {
 }
 
 // NewController creates new controller that syncs extensions states to ShootState
-func NewController(ctx context.Context, gardenClient, seedClient kubernetes.Interface, seedName string, log *logrus.Logger, recorder record.EventRecorder) (*Controller, error) {
+func NewController(gardenClient, seedClient kubernetes.Interface, seedName string, log *logrus.Logger, recorder record.EventRecorder) *Controller {
 	controller := &Controller{
 		log:      log,
 		workerCh: make(chan int),
@@ -67,15 +68,27 @@ func NewController(ctx context.Context, gardenClient, seedClient kubernetes.Inte
 		shootStateControl: NewShootStateControl(gardenClient, seedClient, log, recorder),
 	}
 
-	if err := controller.controllerArtifacts.initialize(ctx, seedClient); err != nil {
-		return nil, err
-	}
+	return controller
+}
 
-	return controller, nil
+// Initialize sets up all necessary dependencies to run this controller.
+// This function must be called before Run is executed.
+func (s *Controller) Initialize(ctx context.Context, seedClient kubernetes.Interface) error {
+	if err := s.controllerArtifacts.initialize(ctx, seedClient); err != nil {
+		return err
+	}
+	s.initialized = true
+	return nil
 }
 
 // Run creates workers that reconciles extension resources.
+// Initialize must be called before running the controller.
 func (s *Controller) Run(ctx context.Context, controllerInstallationWorkers, shootStateWorkers int) {
+	if !s.initialized {
+		s.log.Fatal("controller is not initialized")
+		return
+	}
+
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute*2)
 	defer cancel()
 
