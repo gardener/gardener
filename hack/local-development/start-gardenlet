@@ -106,6 +106,10 @@ if [ ! -f "$file_imagevector_overwrite" ]; then
 else
   trap cleanup_imagevector_overwrite EXIT
 
+  # garden namespace is required for the gardenlet leader election
+  kubectl   --kubeconfig="$SEED_KUBECONFIG" get    namespace garden &>/dev/null || \
+    kubectl --kubeconfig="$SEED_KUBECONFIG" create namespace garden
+
   echo "Starting gardenlet for seed $SEED_NAME..."
 
   KUBECONFIG="$SEED_KUBECONFIG" \
