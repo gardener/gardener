@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -71,7 +72,6 @@ func (v *handler) Validate(_ context.Context, a admission.Attributes, _ admissio
 
 	// TODO: Remove this admission plugin in favor of static validation in a future release, see https://github.com/gardener/gardener/pull/4228.
 	if project.Spec.Namespace != nil && *project.Spec.Namespace != v1beta1constants.GardenNamespace && !strings.HasPrefix(*project.Spec.Namespace, gutil.ProjectNamespacePrefix) {
-
 		return admission.NewForbidden(a, fmt.Errorf(".spec.namespace must start with %s", gutil.ProjectNamespacePrefix))
 	}
 
