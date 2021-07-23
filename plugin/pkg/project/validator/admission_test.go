@@ -34,6 +34,7 @@ var _ = Describe("Admission", func() {
 			project          core.Project
 			admissionHandler admission.ValidationInterface
 
+			gardenProject = "garden"
 			namespaceName = "garden-my-project"
 			projectName   = "my-project"
 			projectBase   = core.Project{
@@ -59,6 +60,14 @@ var _ = Describe("Admission", func() {
 
 		It("should allow creating the project(namespace non-nil)", func() {
 			project.Spec.Namespace = &namespaceName
+
+			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+		})
+
+		It("should allow creating the project(special garden project)", func() {
+			project.Spec.Namespace = &gardenProject
 
 			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
