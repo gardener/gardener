@@ -208,7 +208,7 @@ images:
 - name: fluent-bit-plugin-installer
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
-  tag: "v0.35.0"
+  tag: "v0.36.1"
 - name: loki
   sourceRepository: github.com/grafana/loki
   repository: grafana/loki
@@ -216,9 +216,9 @@ images:
 - name: loki-curator
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/loki-curator
-  tag: "v0.35.0"
+  tag: "v0.36.1"
 - name: kube-rbac-proxy
-  sourceRepository: https://github.com/brancz/kube-rbac-proxy
+  sourceRepository: github.com/brancz/kube-rbac-proxy
   repository: quay.io/brancz/kube-rbac-proxy
   tag: v0.8.0
 - name: promtail
@@ -226,9 +226,9 @@ images:
   repository: "docker.io/grafana/promtail"
   tag: "2.1.0"
 - name: telegraf
-  sourceRepository: https://github.com/influxdata/telegraf
-  repository: eu.gcr.io/gardener-project/3rd/telegraf
-  tag: 1.18.0-alpine-iptables
+  sourceRepository: github.com/gardener/logging
+  repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables
+  tag: "v0.36.1"
 
 # VPA
 - name: vpa-admission-controller
