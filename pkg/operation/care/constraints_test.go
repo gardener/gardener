@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
@@ -50,8 +50,8 @@ import (
 )
 
 type webhookTestCase struct {
-	failurePolicy     *admissionregistrationv1beta1.FailurePolicyType
-	operationType     *admissionregistrationv1beta1.OperationType
+	failurePolicy     *admissionregistrationv1.FailurePolicyType
+	operationType     *admissionregistrationv1.OperationType
 	gvr               schema.GroupVersionResource
 	namespaceSelector *metav1.LabelSelector
 	objectSelector    *metav1.LabelSelector
@@ -59,17 +59,17 @@ type webhookTestCase struct {
 }
 
 func (w *webhookTestCase) build() (
-	failurePolicy *admissionregistrationv1beta1.FailurePolicyType,
+	failurePolicy *admissionregistrationv1.FailurePolicyType,
 	objSelector *metav1.LabelSelector,
 	nsSelector *metav1.LabelSelector,
-	rules []admissionregistrationv1beta1.RuleWithOperations,
+	rules []admissionregistrationv1.RuleWithOperations,
 	timeoutSeconds *int32,
 ) {
 	failurePolicy = w.failurePolicy
 	nsSelector = w.namespaceSelector
 	objSelector = w.objectSelector
-	rules = []admissionregistrationv1beta1.RuleWithOperations{{
-		Rule: admissionregistrationv1beta1.Rule{
+	rules = []admissionregistrationv1.RuleWithOperations{{
+		Rule: admissionregistrationv1.Rule{
 			APIGroups:   []string{w.gvr.Group},
 			Resources:   []string{w.gvr.Resource},
 			APIVersions: []string{w.gvr.Version},
@@ -77,28 +77,28 @@ func (w *webhookTestCase) build() (
 	}
 	timeoutSeconds = w.timeoutSeconds
 
-	opType := admissionregistrationv1beta1.OperationAll
+	opType := admissionregistrationv1.OperationAll
 	if w.operationType != nil {
 		opType = *w.operationType
 	}
 
-	rules[0].Operations = []admissionregistrationv1beta1.OperationType{opType}
+	rules[0].Operations = []admissionregistrationv1.OperationType{opType}
 
 	return
 }
 
 var _ = Describe("#IsProblematicWebhook", func() {
 	var (
-		failurePolicyIgnore = admissionregistrationv1beta1.Ignore
-		failurePolicyFail   = admissionregistrationv1beta1.Fail
+		failurePolicyIgnore = admissionregistrationv1.Ignore
+		failurePolicyFail   = admissionregistrationv1.Fail
 
 		timeoutSecondsNotProblematic int32 = 15
 		timeoutSecondsProblematic    int32 = 16
 
-		operationCreate = admissionregistrationv1beta1.Create
-		operationUpdate = admissionregistrationv1beta1.Update
-		operationAll    = admissionregistrationv1beta1.OperationAll
-		operationDelete = admissionregistrationv1beta1.Delete
+		operationCreate = admissionregistrationv1.Create
+		operationUpdate = admissionregistrationv1.Update
+		operationAll    = admissionregistrationv1.OperationAll
+		operationDelete = admissionregistrationv1.Delete
 
 		kubeSystemNamespaceProblematic = []TableEntry{
 			Entry("namespaceSelector matching no-cleanup", webhookTestCase{

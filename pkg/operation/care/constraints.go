@@ -20,13 +20,20 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	"github.com/sirupsen/logrus"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -133,15 +140,96 @@ func (c *Constraint) constraintsChecks(
 	return []gardencorev1beta1.Condition{hibernationPossibleConstraint, maintenancePreconditionsSatisfiedConstraint}
 }
 
+func getValidatingWebhookConfigurations(ctx context.Context, client client.Client, k8sVersion *semver.Version) ([]admissionregistrationv1.ValidatingWebhookConfiguration, error) {
+	if version.ConstraintK8sLessEqual115.Check(k8sVersion) {
+		l := &unstructured.UnstructuredList{
+			Object: map[string]interface{}{
+				"apiVersion": admissionregistrationv1beta1.SchemeGroupVersion.String(),
+				"kind":       "ValidatingWebhookConfigurationList",
+			},
+		}
+
+		if err := client.List(ctx, l); err != nil && !meta.IsNoMatchError(err) {
+			return nil, err
+		}
+
+		var webhookConfigs []admissionregistrationv1.ValidatingWebhookConfiguration
+		if err := meta.EachListItem(l, func(obj runtime.Object) error {
+			u, _ := obj.(*unstructured.Unstructured)
+			// Set APIVersion to v1 as the target version. We can transform v1beta1 directly to v1 because both APIs are identical.
+			u.SetGroupVersionKind(admissionregistrationv1.SchemeGroupVersion.WithKind("ValidatingWebhookConfiguration"))
+
+			webhookConfig := &admissionregistrationv1.ValidatingWebhookConfiguration{}
+			if err := kubernetes.ShootScheme.Convert(u, webhookConfig, nil); err != nil {
+				return err
+			}
+
+			webhookConfigs = append(webhookConfigs, *webhookConfig)
+
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+
+		return webhookConfigs, nil
+	}
+
+	validatingWebhookConfigs := &admissionregistrationv1.ValidatingWebhookConfigurationList{}
+	if err := client.List(ctx, validatingWebhookConfigs); err != nil {
+		return nil, err
+	}
+	return validatingWebhookConfigs.Items, nil
+}
+
+func getMutatingWebhookConfigurations(ctx context.Context, client client.Client, k8sVersion *semver.Version) ([]admissionregistrationv1.MutatingWebhookConfiguration, error) {
+	if version.ConstraintK8sLessEqual115.Check(k8sVersion) {
+		l := &unstructured.UnstructuredList{
+			Object: map[string]interface{}{
+				"apiVersion": admissionregistrationv1beta1.SchemeGroupVersion.String(),
+				"kind":       "MutatingWebhookConfigurationList",
+			},
+		}
+
+		if err := client.List(ctx, l); err != nil && !meta.IsNoMatchError(err) {
+			return nil, err
+		}
+
+		var webhookConfigs []admissionregistrationv1.MutatingWebhookConfiguration
+		if err := meta.EachListItem(l, func(obj runtime.Object) error {
+			u, _ := obj.(*unstructured.Unstructured)
+			// Set APIVersion to v1 as the target version. We can transform v1beta1 directly to v1 because both APIs are identical.
+			u.SetGroupVersionKind(admissionregistrationv1.SchemeGroupVersion.WithKind("MutatingWebhookConfiguration"))
+
+			webhookConfig := &admissionregistrationv1.MutatingWebhookConfiguration{}
+			if err := kubernetes.ShootScheme.Convert(u, webhookConfig, nil); err != nil {
+				return err
+			}
+
+			webhookConfigs = append(webhookConfigs, *webhookConfig)
+
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+		return webhookConfigs, nil
+	}
+
+	mutatingWebhookConfigs := &admissionregistrationv1.MutatingWebhookConfigurationList{}
+	if err := client.List(ctx, mutatingWebhookConfigs); err != nil {
+		return nil, err
+	}
+	return mutatingWebhookConfigs.Items, nil
+}
+
 // CheckForProblematicWebhooks checks the Shoot for problematic webhooks which could prevent shoot worker nodes from
 // joining the cluster.
 func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencorev1beta1.ConditionStatus, string, string, error) {
-	validatingWebhookConfigs := &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}
-	if err := c.shootClient.List(ctx, validatingWebhookConfigs); err != nil {
-		return "", "", "", fmt.Errorf("could not get ValidatingWebhookConfigurations of Shoot cluster to check for problematic webhooks")
+	validatingWebhookConfigs, err := getValidatingWebhookConfigurations(ctx, c.shootClient, c.shoot.KubernetesVersion)
+	if err != nil {
+		return "", "", "", fmt.Errorf("could not get ValidatingWebhookConfigurations of Shoot cluster to check for problematic webhooks: %w", err)
 	}
 
-	for _, webhookConfig := range validatingWebhookConfigs.Items {
+	for _, webhookConfig := range validatingWebhookConfigs {
 		for _, w := range webhookConfig.Webhooks {
 			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules, w.TimeoutSeconds) {
 				return gardencorev1beta1.ConditionFalse,
@@ -152,12 +240,12 @@ func (c *Constraint) CheckForProblematicWebhooks(ctx context.Context) (gardencor
 		}
 	}
 
-	mutatingWebhookConfigs := &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}
-	if err := c.shootClient.List(ctx, mutatingWebhookConfigs); err != nil {
-		return "", "", "", fmt.Errorf("could not get MutatingWebhookConfigurations of Shoot cluster to check for problematic webhooks")
+	mutatingWebhookConfigs, err := getMutatingWebhookConfigurations(ctx, c.shootClient, c.shoot.KubernetesVersion)
+	if err != nil {
+		return "", "", "", fmt.Errorf("could not get MutatingWebhookConfigurations of Shoot cluster to check for problematic webhooks: %w", err)
 	}
 
-	for _, webhookConfig := range mutatingWebhookConfigs.Items {
+	for _, webhookConfig := range mutatingWebhookConfigs {
 		for _, w := range webhookConfig.Webhooks {
 			if IsProblematicWebhook(w.FailurePolicy, w.ObjectSelector, w.NamespaceSelector, w.Rules, w.TimeoutSeconds) {
 				return gardencorev1beta1.ConditionFalse,
@@ -178,7 +266,7 @@ func buildProblematicWebhookMessage(
 	kind string,
 	configName string,
 	webhookName string,
-	failurePolicy *admissionregistrationv1beta1.FailurePolicyType,
+	failurePolicy *admissionregistrationv1.FailurePolicyType,
 	timeoutSeconds *int32,
 ) string {
 	failurePolicyString := "nil"
@@ -198,13 +286,13 @@ func buildProblematicWebhookMessage(
 // webhook, we can never wake up this shoot cluster again as new nodes cannot get created/ready, or our system
 // component pods cannot get created/ready (because the webhook's backing pod is not yet running).
 func IsProblematicWebhook(
-	failurePolicy *admissionregistrationv1beta1.FailurePolicyType,
+	failurePolicy *admissionregistrationv1.FailurePolicyType,
 	objSelector *metav1.LabelSelector,
 	nsSelector *metav1.LabelSelector,
-	rules []admissionregistrationv1beta1.RuleWithOperations,
+	rules []admissionregistrationv1.RuleWithOperations,
 	timeoutSeconds *int32,
 ) bool {
-	if failurePolicy != nil && *failurePolicy != admissionregistrationv1beta1.Fail {
+	if failurePolicy != nil && *failurePolicy != admissionregistrationv1.Fail {
 		// in admissionregistration.k8s.io/v1 FailurePolicy is defaulted to `Fail`
 		// see https://github.com/kubernetes/api/blob/release-1.16/admissionregistration/v1/types.go#L195
 		// and https://github.com/kubernetes/api/blob/release-1.16/admissionregistration/v1/types.go#L324

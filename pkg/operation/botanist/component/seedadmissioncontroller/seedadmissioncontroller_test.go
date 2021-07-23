@@ -240,7 +240,7 @@ metadata:
   name: gardener-seed-admission-controller
   namespace: shoot--foo--bar
 `
-		validatingWebhookConfigurationYAML = `apiVersion: admissionregistration.k8s.io/v1beta1
+		validatingWebhookConfigurationYAML = `apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   creationTimestamp: null
@@ -259,6 +259,7 @@ webhooks:
       namespace: shoot--foo--bar
       path: /webhooks/validate-extension-crd-deletion
   failurePolicy: Fail
+  matchPolicy: Exact
   name: crds.seed.admission.core.gardener.cloud
   namespaceSelector: {}
   objectSelector:
@@ -274,6 +275,7 @@ webhooks:
     - DELETE
     resources:
     - customresourcedefinitions
+  sideEffects: None
   timeoutSeconds: 10
 - admissionReviewVersions:
   - v1beta1
@@ -285,6 +287,7 @@ webhooks:
       namespace: shoot--foo--bar
       path: /webhooks/validate-extension-crd-deletion
   failurePolicy: Fail
+  matchPolicy: Exact
   name: crs.seed.admission.core.gardener.cloud
   namespaceSelector: {}
   rules:
@@ -306,6 +309,7 @@ webhooks:
     - networks
     - operatingsystemconfigs
     - workers
+  sideEffects: None
   timeoutSeconds: 10
 `
 		vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2

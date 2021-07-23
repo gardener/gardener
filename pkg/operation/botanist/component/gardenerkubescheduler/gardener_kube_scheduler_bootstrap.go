@@ -33,7 +33,7 @@ import (
 	schedulerconfigv20v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v20/v1beta1"
 
 	"github.com/Masterminds/semver"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -127,8 +127,8 @@ func Bootstrap(
 		Name,
 		image,
 		config,
-		&admissionregistrationv1beta1.WebhookClientConfig{
-			Service: &admissionregistrationv1beta1.ServiceReference{
+		&admissionregistrationv1.WebhookClientConfig{
+			Service: &admissionregistrationv1.ServiceReference{
 				Name:      seedadmissioncontroller.Name,
 				Namespace: seedAdmissionControllerNamespace,
 				Path:      pointer.String(podschedulername.WebhookPath),

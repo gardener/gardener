@@ -28,7 +28,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -57,7 +57,7 @@ var _ = Describe("Bootstrap", func() {
 		Expect(appsv1.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(rbacv1.AddToScheme(s)).NotTo(HaveOccurred())
-		Expect(admissionregistrationv1beta1.AddToScheme(s)).NotTo(HaveOccurred())
+		Expect(admissionregistrationv1.AddToScheme(s)).NotTo(HaveOccurred())
 		Expect(resourcesv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
 
 		codec = serializer.NewCodecFactory(s, serializer.EnableStrict)
@@ -135,11 +135,11 @@ var _ = Describe("Bootstrap", func() {
 
 				var (
 					actualCM    = &corev1.ConfigMap{}
-					actualMWC   = &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-					expectedMWC = &admissionregistrationv1beta1.MutatingWebhookConfiguration{
-						Webhooks: []admissionregistrationv1beta1.MutatingWebhook{{
-							ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
-								Service: &admissionregistrationv1beta1.ServiceReference{
+					actualMWC   = &admissionregistrationv1.MutatingWebhookConfiguration{}
+					expectedMWC = &admissionregistrationv1.MutatingWebhookConfiguration{
+						Webhooks: []admissionregistrationv1.MutatingWebhook{{
+							ClientConfig: admissionregistrationv1.WebhookClientConfig{
+								Service: &admissionregistrationv1.ServiceReference{
 									Namespace: "foo",
 									Name:      "gardener-seed-admission-controller",
 									Path:      pointer.String("/webhooks/default-pod-scheduler-name/gardener-shoot-controlplane-scheduler"),

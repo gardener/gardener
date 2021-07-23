@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -106,30 +106,30 @@ var _ = AfterSuite(func() {
 	Expect(testEnv.Stop()).To(Succeed())
 })
 
-func getValidatingWebhookConfig() *admissionregistrationv1beta1.ValidatingWebhookConfiguration {
-	clientConfig := admissionregistrationv1beta1.WebhookClientConfig{
-		Service: &admissionregistrationv1beta1.ServiceReference{
+func getValidatingWebhookConfig() *admissionregistrationv1.ValidatingWebhookConfiguration {
+	clientConfig := admissionregistrationv1.WebhookClientConfig{
+		Service: &admissionregistrationv1.ServiceReference{
 			Path: pointer.String(extensioncrds.WebhookPath),
 		},
 	}
 
 	webhookConfig := seedadmissioncontroller.GetValidatingWebhookConfig(clientConfig)
 	// envtest doesn't default the webhook config's GVK, so set it explicitly
-	webhookConfig.SetGroupVersionKind(admissionregistrationv1beta1.SchemeGroupVersion.WithKind("ValidatingWebhookConfiguration"))
+	webhookConfig.SetGroupVersionKind(admissionregistrationv1.SchemeGroupVersion.WithKind("ValidatingWebhookConfiguration"))
 
 	return webhookConfig
 }
 
-func getMutatingWebhookConfig() *admissionregistrationv1beta1.MutatingWebhookConfiguration {
-	clientConfig := admissionregistrationv1beta1.WebhookClientConfig{
-		Service: &admissionregistrationv1beta1.ServiceReference{
+func getMutatingWebhookConfig() *admissionregistrationv1.MutatingWebhookConfiguration {
+	clientConfig := admissionregistrationv1.WebhookClientConfig{
+		Service: &admissionregistrationv1.ServiceReference{
 			Path: pointer.String(podschedulername.WebhookPath),
 		},
 	}
 
 	webhookConfig := gardenerkubescheduler.GetMutatingWebhookConfig(clientConfig)
 	// envtest doesn't default the webhook config's GVK, so set it explicitly
-	webhookConfig.SetGroupVersionKind(admissionregistrationv1beta1.SchemeGroupVersion.WithKind("MutatingWebhookConfiguration"))
+	webhookConfig.SetGroupVersionKind(admissionregistrationv1.SchemeGroupVersion.WithKind("MutatingWebhookConfiguration"))
 
 	return webhookConfig
 }

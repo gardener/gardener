@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
 	"github.com/onsi/ginkgo"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -195,7 +195,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Cleaning up loki's MutatingWebhook and the additional label")
-		webhookToDelete := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
+		webhookToDelete := &admissionregistrationv1.ValidatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "block-loki-updates",
 			},

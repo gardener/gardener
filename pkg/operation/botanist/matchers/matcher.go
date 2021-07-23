@@ -18,7 +18,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
@@ -192,7 +192,7 @@ type WebhookConstraintMatcher struct {
 // Match rule with objLabelSelector and namespaceLabelSelector if
 // the resource is not namespaced.
 func (w *WebhookConstraintMatcher) Match(
-	r admissionregistrationv1beta1.RuleWithOperations,
+	r admissionregistrationv1.RuleWithOperations,
 	objLabelSelector *metav1.LabelSelector,
 	namespaceLabelSelector *metav1.LabelSelector,
 ) bool {

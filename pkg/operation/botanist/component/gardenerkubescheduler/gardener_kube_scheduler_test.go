@@ -23,7 +23,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -54,7 +55,7 @@ var _ = Describe("New", func() {
 		ctx                                              context.Context
 		c                                                client.Client
 		sched                                            component.DeployWaiter
-		webhookClientConfig, expectedWebhookClientConfig *admissionregistrationv1beta1.WebhookClientConfig
+		webhookClientConfig, expectedWebhookClientConfig *admissionregistrationv1.WebhookClientConfig
 		expectedLabels                                   map[string]string
 		codec                                            serializer.CodecFactory
 		image                                            *imagevector.Image
@@ -63,7 +64,7 @@ var _ = Describe("New", func() {
 	BeforeEach(func() {
 		ctx = context.TODO()
 		image = &imagevector.Image{Repository: "foo"}
-		webhookClientConfig = &admissionregistrationv1beta1.WebhookClientConfig{}
+		webhookClientConfig = &admissionregistrationv1.WebhookClientConfig{}
 		expectedWebhookClientConfig = webhookClientConfig.DeepCopy()
 
 		expectedLabels = map[string]string{"app": "kubernetes", "role": "scheduler"}
@@ -72,7 +73,7 @@ var _ = Describe("New", func() {
 		Expect(appsv1.AddToScheme(s)).To(Succeed())
 		Expect(corev1.AddToScheme(s)).To(Succeed())
 		Expect(rbacv1.AddToScheme(s)).To(Succeed())
-		Expect(admissionregistrationv1beta1.AddToScheme(s)).To(Succeed())
+		Expect(admissionregistrationv1.AddToScheme(s)).To(Succeed())
 		Expect(resourcesv1alpha1.AddToScheme(s)).To(Succeed())
 		Expect(autoscalingv1beta2.AddToScheme(s)).To(Succeed())
 
@@ -363,20 +364,20 @@ var _ = Describe("New", func() {
 			It("mutatingwebhook is created", func() {
 				const key = "mutatingwebhookconfiguration____kube-scheduler.scheduling.gardener.cloud.yaml"
 				var (
-					failurePolicy      = admissionregistrationv1beta1.Ignore
-					matchPolicy        = admissionregistrationv1beta1.Exact
-					actual             = &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-					reinvocationPolicy = admissionregistrationv1beta1.NeverReinvocationPolicy
-					sideEffects        = admissionregistrationv1beta1.SideEffectClassNone
-					scope              = admissionregistrationv1beta1.NamespacedScope
-					expected           = &admissionregistrationv1beta1.MutatingWebhookConfiguration{
+					failurePolicy      = admissionregistrationv1.Ignore
+					matchPolicy        = admissionregistrationv1.Exact
+					actual             = &admissionregistrationv1.MutatingWebhookConfiguration{}
+					reinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
+					sideEffects        = admissionregistrationv1.SideEffectClassNone
+					scope              = admissionregistrationv1.NamespacedScope
+					expected           = &admissionregistrationv1.MutatingWebhookConfiguration{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:   "kube-scheduler.scheduling.gardener.cloud",
 							Labels: expectedLabels,
 						},
-						Webhooks: []admissionregistrationv1beta1.MutatingWebhook{{
+						Webhooks: []admissionregistrationv1.MutatingWebhook{{
 							Name:                    "kube-scheduler.scheduling.gardener.cloud",
-							AdmissionReviewVersions: []string{admissionregistrationv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+							AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 							ClientConfig:            *expectedWebhookClientConfig,
 							FailurePolicy:           &failurePolicy,
 							MatchPolicy:             &matchPolicy,
@@ -386,9 +387,9 @@ var _ = Describe("New", func() {
 							ObjectSelector:     &metav1.LabelSelector{},
 							ReinvocationPolicy: &reinvocationPolicy,
 							SideEffects:        &sideEffects,
-							Rules: []admissionregistrationv1beta1.RuleWithOperations{{
-								Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Create},
-								Rule: admissionregistrationv1beta1.Rule{
+							Rules: []admissionregistrationv1.RuleWithOperations{{
+								Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+								Rule: admissionregistrationv1.Rule{
 									APIGroups:   []string{corev1.SchemeGroupVersion.Group},
 									APIVersions: []string{corev1.SchemeGroupVersion.Version},
 									Resources:   []string{"pods"},
