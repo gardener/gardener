@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	. "github.com/gardener/gardener/plugin/pkg/project/validator"
 
 	. "github.com/onsi/ginkgo"
@@ -59,6 +60,14 @@ var _ = Describe("Admission", func() {
 
 		It("should allow creating the project(namespace non-nil)", func() {
 			project.Spec.Namespace = &namespaceName
+
+			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+			Expect(admissionHandler.Validate(context.TODO(), attrs, nil)).To(Succeed())
+		})
+
+		It("should allow creating the project (namespace is 'garden')", func() {
+			project.Spec.Namespace = pointer.String(v1beta1constants.GardenNamespace)
 
 			attrs := admission.NewAttributesRecord(&project, nil, core.Kind("Project").WithVersion("version"), "", project.Name, core.Resource("projects").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
 
