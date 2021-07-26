@@ -39,8 +39,17 @@ type ControllerManagerConfiguration struct {
 	LogLevel string `json:"logLevel"`
 	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
 	KubernetesLogLevel klog.Level `json:"kubernetesLogLevel"`
-	// Server defines the configuration of the HTTP server.
-	Server ServerConfiguration `json:"server"`
+	// Server defines the configuration of the HTTP server. This is deprecated in favor of
+	// HealthServer.
+	Server ServerConfiguration `json:"server,omitempty"`
+	// HealthServer defines the configuration of the HTTP server providing the health & alive
+	// endpoints.
+	// +optional
+	HealthServer *ServerConfiguration `json:"healthServer,omitempty"`
+	// MetricsServer defines the configuration of the HTTP server that provides the /metrics
+	// endpoint.
+	// +optional
+	MetricsServer *ServerConfiguration `json:"metricsServer,omitempty"`
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/gardener/pkg/controllermanager/features/features.go".

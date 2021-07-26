@@ -368,6 +368,8 @@ func autoConvert_v1alpha1_ControllerManagerConfiguration_To_config_ControllerMan
 	if err := Convert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
+	out.HealthServer = (*config.ServerConfiguration)(unsafe.Pointer(in.HealthServer))
+	out.MetricsServer = (*config.ServerConfiguration)(unsafe.Pointer(in.MetricsServer))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
@@ -392,6 +394,8 @@ func autoConvert_config_ControllerManagerConfiguration_To_v1alpha1_ControllerMan
 	if err := Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
+	out.HealthServer = (*ServerConfiguration)(unsafe.Pointer(in.HealthServer))
+	out.MetricsServer = (*ServerConfiguration)(unsafe.Pointer(in.MetricsServer))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }

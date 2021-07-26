@@ -15,6 +15,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -140,7 +141,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 			if err := opts.validate(args); err != nil {
 				return err
 			}
-			return runCommand(cmd, opts)
+			return runCommand(cmd.Context(), opts)
 		},
 	}
 
@@ -150,7 +151,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 	return cmd
 }
 
-func runCommand(cmd *cobra.Command, opts *Options) error {
+func runCommand(ctx context.Context, opts *Options) error {
 	config, err := opts.loadConfigFromFile(opts.ConfigFile)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
@@ -171,22 +172,12 @@ func runCommand(cmd *cobra.Command, opts *Options) error {
 	// 	return fmt.Errorf("failed to init logger: %w", err)
 	// }
 
-	zapLogger := zap.NewRaw()
-
-	sugarLogger := zapLogger.Sugar()
-	defer func() {
-		if err := sugarLogger.Sync(); err != nil {
-			fmt.Println(err)
-		}
-	}()
-
-	sugarLogger.Info("Starting Gardener Controller Manager ...")
-	sugarLogger.Infof("Feature Gates: %s", controllermanagerfeatures.FeatureGate.String())
-
 	// set the logger used by sigs.k8s.io/controller-runtime
 	// zapLogr := logger.NewZapLogr(zapLogger)
 	zapLogr := zap.New()
 	ctrlruntimelog.SetLogger(zapLogr)
+
+	zapLogr.Info("Starting Gardener Controller Manager ...", "featuresGates", controllermanagerfeatures.FeatureGate.String())
 
 	// if flag := flag.Lookup("v"); flag != nil {
 	// 	if err := flag.Value.Set(fmt.Sprintf("%d", cfg.KubernetesLogLevel)); err != nil {
@@ -210,7 +201,7 @@ func runCommand(cmd *cobra.Command, opts *Options) error {
 		MetricsBindAddress:         getAddress(config.MetricsServer),
 		HealthProbeBindAddress:     getHealthAddress(config),
 		LeaderElection:             config.LeaderElection.LeaderElect,
-		LeaderElectionID:           "gardener-scheduler-leader-election",
+		LeaderElectionID:           "gardener-controller-manager-leader-election",
 		LeaderElectionNamespace:    config.LeaderElection.ResourceNamespace,
 		LeaderElectionResourceLock: config.LeaderElection.ResourceLock,
 		Logger:                     zapLogr,
@@ -240,12 +231,12 @@ func runCommand(cmd *cobra.Command, opts *Options) error {
 	eventRecorder := mgr.GetEventRecorderFor("gardener-controller-manager")
 	factory := controller.NewGardenControllerFactory(clientMap, config, eventRecorder, zapLogr)
 
-	if err := factory.AddControllers(cmd.Context(), mgr); err != nil {
+	if err := factory.AddControllers(ctx, mgr); err != nil {
 		return fmt.Errorf("failed to add controllers: %w", err)
 	}
 
 	// Start manager and all runnables (the command context is tied to OS signals already)
-	if err := mgr.Start(cmd.Context()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		return fmt.Errorf("failed to start manager: %w", err)
 	}
 
@@ -262,7 +253,7 @@ func getHealthAddress(cfg *config.ControllerManagerConfiguration) string {
 }
 
 func getAddress(server *config.ServerConfiguration) string {
-	if server != nil && len(server.HTTP.BindAddress) > 0 && server.HTTP.Port != 0 {
+	if server != nil && server.HTTP.Port != 0 {
 		return net.JoinHostPort(server.HTTP.BindAddress, strconv.Itoa(server.HTTP.Port))
 	}
 
