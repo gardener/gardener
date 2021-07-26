@@ -19,7 +19,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	"github.com/gardener/gardener/pkg/logger"
+	"github.com/go-logr/logr"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -105,7 +105,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shootCurrentImage        *gardencorev1beta1.ShootMachineImage
 			cloudProfile             *gardencorev1beta1.CloudProfile
 			shoot                    *gardencorev1beta1.Shoot
-			testlogger               = logger.NewFieldLogger(logger.NewLogger("info"), "cloudprofile", "test")
+			testlogger               = logr.Discard()
 			previewClassification    = gardencorev1beta1.ClassificationPreview
 			deprecatedClassification = gardencorev1beta1.ClassificationDeprecated
 		)
@@ -332,7 +332,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot                 *gardencorev1beta1.Shoot
 			kubernetesSettings    gardencorev1beta1.KubernetesSettings
 			previewClassification = gardencorev1beta1.ClassificationPreview
-			shootLogger           = logger.NewShootLogger(logger.NewLogger(""), "mock", "mockspace")
+			shootLogger           = logr.Discard()
 		)
 
 		BeforeEach(func() {

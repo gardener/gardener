@@ -23,10 +23,10 @@ import (
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	"github.com/gardener/gardener/pkg/logger"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -78,7 +78,7 @@ var _ = Describe("Shoot References", func() {
 	})
 
 	JustBeforeEach(func() {
-		reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), gardenClient, cfg)
+		reconciler = NewShootReferenceReconciler(logr.Discard(), gardenClient.Client(), cfg)
 	})
 
 	Context("Common controller tests", func() {
@@ -475,7 +475,7 @@ var _ = Describe("Shoot References", func() {
 
 		BeforeEach(func() {
 			cfg.ProtectAuditPolicyConfigMaps = pointer.Bool(true)
-			reconciler = NewShootReferenceReconciler(logger.NewNopLogger(), gardenClient, cfg)
+			reconciler = NewShootReferenceReconciler(logr.Discard(), gardenClient.Client(), cfg)
 
 			configMaps = []corev1.ConfigMap{
 				{ObjectMeta: metav1.ObjectMeta{

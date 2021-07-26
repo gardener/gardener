@@ -16,43 +16,54 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	"github.com/go-logr/logr"
 )
 
-func (c *Controller) configMapAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
+const (
+	// ConfigMapControllerName is the name of the shoot-configmap controller.
+	ConfigMapControllerName = "shoot-configmap"
+)
+
+func addConfigMapController(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.ShootMaintenanceControllerConfiguration,
+) error {
+	logger := mgr.GetLogger()
+	gardenClient := mgr.GetClient()
+
+	ctrlOptions := controller.Options{
+		Reconciler:              NewConfigMapReconciler(logger, gardenClient),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
+	}
+	c, err := controller.New(ConfigMapControllerName, mgr, ctrlOptions)
 	if err != nil {
-		logger.Logger.Errorf("[ConfigMap controller] Couldn't get key for object %+v: %v", obj, err)
-		return
+		return err
 	}
-	c.configMapQueue.Add(key)
-}
 
-func (c *Controller) configMapUpdate(oldObj, newObj interface{}) {
-	var (
-		oldConfigMap = oldObj.(*corev1.ConfigMap)
-		newConfigMap = newObj.(*corev1.ConfigMap)
-	)
-
-	if apiequality.Semantic.Equalities.DeepEqual(oldConfigMap.Data, newConfigMap.Data) {
-		logger.Logger.Debugf("[SHOOT CONFIGMAP controller] No update of the `.data` field of cm %v/%v. Do not requeue the ConfigMap", oldConfigMap.Namespace, oldConfigMap.Name)
-		return
+	configMap := &corev1.ConfigMap{}
+	if err := c.Watch(&source.Kind{Type: configMap}, &handler.EnqueueRequestForObject{}); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", configMap, err)
 	}
-	c.configMapAdd(newObj)
+
+	return nil
 }
 
 // NewConfigMapReconciler creates a new instance of a reconciler which reconciles ConfigMaps.
-func NewConfigMapReconciler(l logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
+func NewConfigMapReconciler(l logr.Logger, gardenClient client.Client) reconcile.Reconciler {
 	return &configMapReconciler{
 		logger:       l,
 		gardenClient: gardenClient,
@@ -60,18 +71,21 @@ func NewConfigMapReconciler(l logrus.FieldLogger, gardenClient client.Client) re
 }
 
 type configMapReconciler struct {
-	logger       logrus.FieldLogger
+	logger       logr.Logger
 	gardenClient client.Client
 }
 
 func (r *configMapReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	logger := r.logger.WithValues("shoot", request)
+
 	configMap := &corev1.ConfigMap{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, configMap); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			logger.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+
+		logger.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
 
@@ -92,14 +106,8 @@ func (r *configMapReconciler) Reconcile(ctx context.Context, request reconcile.R
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef != nil &&
 			shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name == configMap.Name {
 
-			shootKey, err := cache.MetaNamespaceKeyFunc(&shoot)
-			if err != nil {
-				logger.Logger.Errorf("[SHOOT CONFIGMAP controller] failed to get key for shoot. err=%+v", err)
-				continue
-			}
-
 			if shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion != configMap.ResourceVersion {
-				logger.Logger.Infof("[SHOOT CONFIGMAP controller] schedule for reconciliation shoot %v", shootKey)
+				logger.Info("schedule for reconciliation shoot")
 
 				patch := client.MergeFrom(shoot.DeepCopy())
 				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.ResourceVersion = configMap.ResourceVersion

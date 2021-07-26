@@ -23,43 +23,50 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	gardenlogger "github.com/gardener/gardener/pkg/logger"
+	"github.com/go-logr/logr"
 
-	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-func (c *Controller) shootRetryAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
+const (
+	// ShootRetryControllerName is the name of the shoot-retry controller.
+	ShootRetryControllerName = "shoot-retry"
+)
+
+func addShootRetryController(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.ShootRetryControllerConfiguration,
+) error {
+	logger := mgr.GetLogger()
+	gardenClient := mgr.GetClient()
+
+	ctrlOptions := controller.Options{
+		Reconciler:              NewShootRetryReconciler(logger, gardenClient, config),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
+	}
+	c, err := controller.New(ShootRetryControllerName, mgr, ctrlOptions)
 	if err != nil {
-		gardenlogger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
-		return
+		return err
 	}
-	c.shootRetryQueue.Add(key)
-}
 
-func (c *Controller) shootRetryUpdate(oldObj, newObj interface{}) {
-	var (
-		oldShoot = oldObj.(*gardencorev1beta1.Shoot)
-		newShoot = newObj.(*gardencorev1beta1.Shoot)
-	)
-
-	if shootFailedDueToRateLimits(newShoot) && !isShootFailed(oldShoot) {
-		key, err := cache.MetaNamespaceKeyFunc(newObj)
-		if err != nil {
-			gardenlogger.Logger.Errorf("Couldn't get key for object %+v: %v", newObj, err)
-			return
-		}
-		c.shootRetryQueue.Add(key)
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := c.Watch(&source.Kind{Type: shoot}, &handler.EnqueueRequestForObject{}); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", shoot, err)
 	}
+
+	return nil
 }
 
 // NewShootRetryReconciler creates a new instance of a reconciler which retries certain failed Shoots.
-func NewShootRetryReconciler(l logrus.FieldLogger, gardenClient client.Client, config *config.ShootRetryControllerConfiguration) reconcile.Reconciler {
+func NewShootRetryReconciler(l logr.Logger, gardenClient client.Client, config *config.ShootRetryControllerConfiguration) reconcile.Reconciler {
 	return &shootRetryReconciler{
 		logger:       l,
 		gardenClient: gardenClient,
@@ -68,24 +75,24 @@ func NewShootRetryReconciler(l logrus.FieldLogger, gardenClient client.Client, c
 }
 
 type shootRetryReconciler struct {
-	logger       logrus.FieldLogger
+	logger       logr.Logger
 	gardenClient client.Client
 	config       *config.ShootRetryControllerConfiguration
 }
 
 func (r *shootRetryReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	logger := r.logger.WithValues("shoot", request)
+
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			logger.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+
+		logger.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
-
-	key := fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name)
-	shootLogger := r.logger.WithField("shoot", key)
 
 	if !shootFailedDueToRateLimits(shoot) {
 		return reconcile.Result{}, nil
@@ -93,11 +100,11 @@ func (r *shootRetryReconciler) Reconcile(ctx context.Context, request reconcile.
 
 	mustRetry, requeueAfter := mustRetryNow(shoot, *r.config.RetryPeriod)
 	if !mustRetry {
-		shootLogger.Infof("[SHOOT RETRY] Scheduled retry in %s", requeueAfter.Round(time.Minute))
+		logger.WithValues("retry", requeueAfter.Round(time.Minute)).Info("Scheduled retry")
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 
-	shootLogger.Info("[SHOOT RETRY] Retrying a failed Shoot")
+	logger.Info("Retrying a failed Shoot")
 
 	shootCopy := shoot.DeepCopy()
 	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
@@ -105,7 +112,7 @@ func (r *shootRetryReconciler) Reconcile(ctx context.Context, request reconcile.
 		return reconcile.Result{}, err
 	}
 
-	shootLogger.Info("[SHOOT RETRY] Shoot was successfully retried")
+	logger.Info("Shoot was successfully retried")
 
 	return reconcile.Result{}, nil
 }

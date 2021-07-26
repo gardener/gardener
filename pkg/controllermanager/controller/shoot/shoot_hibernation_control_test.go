@@ -21,17 +21,16 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	mockshoot "github.com/gardener/gardener/pkg/controllermanager/controller/shoot/mock"
-	"github.com/gardener/gardener/pkg/logger"
 	mockevent "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
 	"github.com/gardener/gardener/pkg/utils/test"
+	"github.com/go-logr/logr"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/robfig/cron"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
@@ -88,7 +87,7 @@ var _ = Describe("Shoot Hibernation", func() {
 		Describe("#ComputeHibernationSchedule", func() {
 			It("should compute a correct hibernation schedule", func() {
 				var (
-					log      = logger.NewNopLogger()
+					log      = logr.Discard()
 					recorder = &record.FakeRecorder{}
 					now      time.Time
 
@@ -130,8 +129,8 @@ var _ = Describe("Shoot Hibernation", func() {
 				gomock.InOrder(
 					newCronWithLocation.EXPECT().Do(location).Return(cr),
 
-					cr.EXPECT().Schedule(startSched, NewHibernationJob(ctx, gardenClient, LocationLogger(log, location), recorder, &shoot, trueVar)),
-					cr.EXPECT().Schedule(endSched, NewHibernationJob(ctx, gardenClient, LocationLogger(log, location), recorder, &shoot, false)),
+					cr.EXPECT().Schedule(startSched, NewHibernationJob(ctx, gardenClient, log, recorder, &shoot, trueVar)),
+					cr.EXPECT().Schedule(endSched, NewHibernationJob(ctx, gardenClient, log, recorder, &shoot, false)),
 				)
 
 				actualSched, err := ComputeHibernationSchedule(ctx, gardenClient, log, recorder, &shoot)
@@ -231,7 +230,7 @@ var _ = Describe("Shoot Hibernation", func() {
 	Context("HibernationJob", func() {
 		Describe("#Run", func() {
 			var (
-				log      *logrus.Logger
+				log      logr.Logger
 				recorder *mockevent.MockEventRecorder
 				shoot    *gardencorev1beta1.Shoot
 
@@ -240,7 +239,7 @@ var _ = Describe("Shoot Hibernation", func() {
 			)
 
 			BeforeEach(func() {
-				log = logger.NewNopLogger()
+				log = logr.Discard()
 				recorder = mockevent.NewMockEventRecorder(ctrl)
 
 				namespace = "foo"

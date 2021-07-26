@@ -20,9 +20,9 @@ import (
 	"sync"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/go-logr/logr"
 
 	"github.com/robfig/cron"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/client-go/tools/record"
@@ -92,7 +92,7 @@ func NewHibernationScheduleRegistry() HibernationScheduleRegistry {
 type hibernationJob struct {
 	ctx          context.Context
 	gardenClient client.Client
-	logger       logrus.FieldLogger
+	logger       logr.Logger
 	recorder     record.EventRecorder
 	target       *gardencorev1beta1.Shoot
 	enabled      bool
@@ -100,7 +100,7 @@ type hibernationJob struct {
 
 // Run implements cron.Job.
 func (h *hibernationJob) Run() {
-	h.logger.Infof("Setting hibernation.enabled to %t", h.enabled)
+	h.logger.WithValues("enabled", h.enabled).Info("Setting hibernation.enabled")
 	if err := func() error {
 		shoot := &gardencorev1beta1.Shoot{}
 		if err := h.gardenClient.Get(h.ctx, client.ObjectKeyFromObject(h.target), shoot); err != nil {
@@ -117,7 +117,7 @@ func (h *hibernationJob) Run() {
 
 		return h.gardenClient.Patch(h.ctx, shoot, patch)
 	}(); err != nil {
-		h.logger.Errorf("Could not set hibernation.enabled to %t: %+v", h.enabled, err)
+		h.logger.Error(err, "Could not set hibernation.enabled")
 		return
 	}
 
@@ -131,6 +131,6 @@ func (h *hibernationJob) Run() {
 }
 
 // NewHibernationJob creates a new cron.Job that sets the hibernation of the given shoot to enabled when it triggers.
-func NewHibernationJob(ctx context.Context, gardenClient client.Client, logger logrus.FieldLogger, recorder record.EventRecorder, target *gardencorev1beta1.Shoot, enabled bool) cron.Job {
+func NewHibernationJob(ctx context.Context, gardenClient client.Client, logger logr.Logger, recorder record.EventRecorder, target *gardencorev1beta1.Shoot, enabled bool) cron.Job {
 	return &hibernationJob{ctx, gardenClient, logger, recorder, target, enabled}
 }

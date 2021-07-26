@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -23,38 +24,51 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 
-	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-func (c *Controller) shootQuotaAdd(obj interface{}) {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
-	if err != nil {
-		return
-	}
-	c.shootQuotaQueue.Add(key)
-}
+const (
+	// ShootQuotaControllerName is the name of the shoot-quota controller.
+	ShootQuotaControllerName = "shoot-quota"
+)
 
-func (c *Controller) shootQuotaDelete(obj interface{}) {
-	shoot, ok := obj.(*gardencorev1beta1.Shoot)
-	if shoot == nil || !ok {
-		return
+func addShootQuotaController(
+	ctx context.Context,
+	mgr manager.Manager,
+	config *config.ShootQuotaControllerConfiguration,
+) error {
+	logger := mgr.GetLogger()
+	gardenClient := mgr.GetClient()
+
+	ctrlOptions := controller.Options{
+		Reconciler:              NewShootQuotaReconciler(logger, gardenClient, *config),
+		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
-	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+	c, err := controller.New(ShootQuotaControllerName, mgr, ctrlOptions)
 	if err != nil {
-		return
+		return err
 	}
-	c.shootQuotaQueue.Done(key)
+
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := c.Watch(&source.Kind{Type: shoot}, &handler.EnqueueRequestForObject{}); err != nil {
+		return fmt.Errorf("failed to create watcher for %T: %w", shoot, err)
+	}
+
+	return nil
 }
 
 // NewShootQuotaReconciler creates a new instance of a reconciler which checks handles Shoots using SecretBindings that
 // references Quotas.
-func NewShootQuotaReconciler(l logrus.FieldLogger, gardenClient client.Client, cfg config.ShootQuotaControllerConfiguration) reconcile.Reconciler {
+func NewShootQuotaReconciler(l logr.Logger, gardenClient client.Client, cfg config.ShootQuotaControllerConfiguration) reconcile.Reconciler {
 	return &shootQuotaReconciler{
 		logger:       l,
 		cfg:          cfg,
@@ -63,19 +77,22 @@ func NewShootQuotaReconciler(l logrus.FieldLogger, gardenClient client.Client, c
 }
 
 type shootQuotaReconciler struct {
-	logger       logrus.FieldLogger
+	logger       logr.Logger
 	cfg          config.ShootQuotaControllerConfiguration
 	gardenClient client.Client
 }
 
 func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	logger := r.logger.WithValues("shoot", request)
+
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+			logger.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+
+		logger.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
 
@@ -122,12 +139,12 @@ func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.
 	}
 
 	if time.Now().UTC().After(expirationTimeParsed.UTC()) {
-		r.logger.Info("[SHOOT QUOTA] Shoot cluster lifetime expired. Shoot will be deleted.")
+		logger.Info("Shoot cluster lifetime expired. Shoot will be deleted.")
 
 		// We have to annotate the Shoot to confirm the deletion.
 		if err := gutil.ConfirmDeletion(ctx, r.gardenClient, shoot); err != nil {
 			if apierrors.IsNotFound(err) {
-				r.logger.Info("Shoot already gone")
+				logger.Info("Shoot already gone")
 				return reconcile.Result{}, nil
 			}
 			return reconcile.Result{}, err

@@ -142,6 +142,10 @@ func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manage
 		return fmt.Errorf("failed to setup seed controller: %w", err)
 	}
 
+	if err := shootcontroller.AddToManager(ctx, mgr, &f.cfg.Controllers); err != nil {
+		return fmt.Errorf("failed to setup shoot controller: %w", err)
+	}
+
 	// Done :)
 	f.logger.WithValues("version", version.Get().GitVersion).Info("Gardener controller manager initialized.")
 
@@ -177,19 +181,12 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	// Create controllers.
-	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, f.cfg, f.recorder)
-	if err != nil {
-		return fmt.Errorf("failed initializing Shoot controller: %w", err)
-	}
-	metricsCollectors = append(metricsCollectors, shootController)
-
 	managedSeedSetController, err := managedseedsetcontroller.NewManagedSeedSetController(ctx, f.clientMap, f.cfg, f.recorder, logger.Logger)
 	if err != nil {
 		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
 	}
 	metricsCollectors = append(metricsCollectors, managedSeedSetController)
 
-	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs, f.cfg.Controllers.ShootRetry.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, f.cfg.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
 	// Initialize the Controller metrics collection.
