@@ -29,7 +29,7 @@ import (
 
 const (
 	// ControllerName is the name of this controller.
-	ControllerName = "controllerDeployment-controller"
+	ControllerName = "controllerdeployment"
 
 	// FinalizerName is the finalizer used by this controller.
 	FinalizerName = "core.gardener.cloud/controllerdeployment"
@@ -42,7 +42,6 @@ func AddToManager(
 	config *config.ControllerDeploymentControllerConfiguration,
 ) error {
 	reconciler := &reconciler{
-		logger:       mgr.GetLogger(),
 		gardenClient: mgr.GetClient(),
 	}
 
@@ -54,6 +53,8 @@ func AddToManager(
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	dep := &gardencorev1beta1.ControllerDeployment{}
 	if err := c.Watch(&source.Kind{Type: dep}, &handler.EnqueueRequestForObject{}); err != nil {
