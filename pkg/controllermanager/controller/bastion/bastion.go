@@ -34,7 +34,7 @@ import (
 
 const (
 	// ControllerName is the name of this controller.
-	ControllerName = "bastion-controller"
+	ControllerName = "bastion"
 )
 
 // AddToManager adds a new bastion controller to the given manager.
@@ -44,7 +44,6 @@ func AddToManager(
 	config *config.BastionControllerConfiguration,
 ) error {
 	reconciler := &reconciler{
-		logger:       mgr.GetLogger(),
 		gardenClient: mgr.GetClient(),
 		maxLifetime:  config.MaxLifetime.Duration,
 	}
@@ -58,13 +57,15 @@ func AddToManager(
 		return err
 	}
 
+	reconciler.logger = c.GetLogger()
+
 	shootHandler := handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
 		// list all bastions that reference this shoot
 		bastionList := operationsv1alpha1.BastionList{}
 		listOptions := client.ListOptions{Namespace: obj.GetNamespace()}
 
 		if err := mgr.GetClient().List(ctx, &bastionList, &listOptions); err != nil {
-			mgr.GetLogger().Error(err, "Failed to list Bastions")
+			reconciler.logger.Error(err, "Failed to list Bastions")
 			return nil
 		}
 
