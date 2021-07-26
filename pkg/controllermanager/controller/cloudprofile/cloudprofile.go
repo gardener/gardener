@@ -29,7 +29,7 @@ import (
 
 const (
 	// ControllerName is the name of this controller.
-	ControllerName = "cloudprofile-controller"
+	ControllerName = "cloudprofile"
 )
 
 // AddToManager adds a new cloudprofile controller to the given manager.
@@ -39,9 +39,8 @@ func AddToManager(
 	config *config.CloudProfileControllerConfiguration,
 ) error {
 	reconciler := &reconciler{
-		logger:       mgr.GetLogger(),
 		gardenClient: mgr.GetClient(),
-		recorder:     mgr.GetEventRecorderFor(ControllerName),
+		recorder:     mgr.GetEventRecorderFor("controller-" + ControllerName),
 	}
 
 	ctrlOptions := controller.Options{
@@ -52,6 +51,8 @@ func AddToManager(
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	profile := &gardencorev1beta1.CloudProfile{}
 	if err := c.Watch(&source.Kind{Type: profile}, &handler.EnqueueRequestForObject{}); err != nil {
