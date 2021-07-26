@@ -87,7 +87,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	// under normal operations, shoots cannot be migrated to another seed while there are still
 	// bastions for it, so this check here is just a safety measure.
 	if !equality.Semantic.DeepEqual(shoot.Spec.SeedName, bastion.Spec.SeedName) {
-		logger.WithValues("bastion-seed", *bastion.Spec.SeedName).Info("Deleting bastion because the referenced Shoot has been migrated to another Seed")
+		logger.Info("Deleting bastion because the referenced Shoot has been migrated to another Seed", "bastion-seed", *bastion.Spec.SeedName)
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 
@@ -95,13 +95,13 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	// delete the bastion once it has expired
 	if bastion.Status.ExpirationTimestamp != nil && now.After(bastion.Status.ExpirationTimestamp.Time) {
-		logger.WithValues("expired", bastion.Status.ExpirationTimestamp.Time).Info("Deleting expired bastion")
+		logger.Info("Deleting expired bastion", "expired", bastion.Status.ExpirationTimestamp.Time)
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 
 	// delete the bastion once it has reached its maximum lifetime
 	if time.Since(bastion.CreationTimestamp.Time) > r.maxLifetime {
-		logger.WithValues("created", bastion.CreationTimestamp.Time).Info("Deleting bastion because it reached its maximum lifetime")
+		logger.Info("Deleting bastion because it reached its maximum lifetime", "created", bastion.CreationTimestamp.Time)
 		return reconcile.Result{}, client.IgnoreNotFound(r.gardenClient.Delete(ctx, bastion))
 	}
 

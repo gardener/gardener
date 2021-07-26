@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -58,20 +59,9 @@ func AddToManager(
 	}
 
 	shootHandler := handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
-		// Ignore non-shoots
-		shoot, ok := obj.(*gardencorev1beta1.Shoot)
-		if !ok {
-			return nil
-		}
-
-		// only shoot deletions should trigger this, so we can cleanup Bastions
-		if shoot.DeletionTimestamp == nil {
-			return nil
-		}
-
 		// list all bastions that reference this shoot
 		bastionList := operationsv1alpha1.BastionList{}
-		listOptions := client.ListOptions{Namespace: shoot.Namespace, Limit: int64(1)}
+		listOptions := client.ListOptions{Namespace: obj.GetNamespace()}
 
 		if err := mgr.GetClient().List(ctx, &bastionList, &listOptions); err != nil {
 			mgr.GetLogger().Error(err, "Failed to list Bastions")
@@ -80,7 +70,7 @@ func AddToManager(
 
 		requests := []reconcile.Request{}
 		for _, bastion := range bastionList.Items {
-			if bastion.Spec.ShootRef.Name == shoot.Name {
+			if bastion.Spec.ShootRef.Name == obj.GetName() {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: bastion.Namespace,
@@ -100,8 +90,12 @@ func AddToManager(
 	}
 
 	// whenever a shoot is deleted, cleanup the associated bastions
+	isDeleted := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetDeletionTimestamp() != nil
+	})
+
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := c.Watch(&source.Kind{Type: shoot}, shootHandler); err != nil {
+	if err := c.Watch(&source.Kind{Type: shoot}, shootHandler, isDeleted); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %w", shoot, err)
 	}
 
