@@ -66,8 +66,9 @@ func NewShootClients(c client.Client, clientset kubernetes.Interface, gardenerCl
 	}
 }
 
-// NewClientForShoot returns the rest config and the client for the given shoot namespace. It first looks to use the endpoint given by
-// v1beta1constants.SecretNameGardenerInternal and, if it cannot find that, then from v1beta1constants.SecretNameGardener.
+// NewClientForShoot returns the rest config and the client for the given shoot namespace. It first looks to use the "internal" kubeconfig
+// (the one with in-cluster address) as in-cluster traffic is free of charge. If it cannot find that, then it fallbacks to the "external" kubeconfig
+// (the one with external DNS name or load balancer address) and this usually translates to egress traffic costs.
 // However, if the environment variable GARDENER_SHOOT_CLIENT=external, then it *only* checks for the external endpoint,
 // i.e. v1beta1constants.SecretNameGardener. This is useful when connecting from outside the seed cluster on which the shoot kube-apiserver
 // is running.
@@ -77,7 +78,6 @@ func NewClientForShoot(ctx context.Context, c client.Client, namespace string, o
 		err            error
 	)
 
-	// do we try the internal one first?
 	if os.Getenv("GARDENER_SHOOT_CLIENT") != "external" {
 		if err = c.Get(ctx, kutil.Key(namespace, v1beta1constants.SecretNameGardenerInternal), gardenerSecret); err != nil && apierrors.IsNotFound(err) {
 			err = c.Get(ctx, kutil.Key(namespace, v1beta1constants.SecretNameGardener), gardenerSecret)
