@@ -27,7 +27,7 @@ import (
 
 const (
 	// ControllerName is the name of this controller.
-	ControllerName = "csr-controller"
+	ControllerName = "certificatesigningrequest"
 )
 
 // AddToManager adds a new CSR controller to the given manager.
@@ -36,7 +36,6 @@ func AddToManager(
 	mgr manager.Manager,
 ) error {
 	reconciler := &reconciler{
-		logger:       mgr.GetLogger(),
 		gardenClient: mgr.GetClient(),
 	}
 
@@ -47,6 +46,8 @@ func AddToManager(
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	csr := &certificatesv1beta1.CertificateSigningRequest{}
 	if err := c.Watch(&source.Kind{Type: csr}, &handler.EnqueueRequestForObject{}); err != nil {
