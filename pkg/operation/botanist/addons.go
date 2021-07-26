@@ -457,6 +457,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 				},
 				"reversedVPN": map[string]interface{}{
 					"enabled": true,
+					"header":  "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
 				},
 				"podAnnotations": map[string]interface{}{
 					"checksum/secret-vpn-shoot-client": b.LoadCheckSum(vpnseedserver.VpnShootSecretName),
