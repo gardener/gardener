@@ -64,11 +64,7 @@ global:
     insecureSkipTLSVerify: false
     groupPriorityMinimum: 10000
     versionPriority: 20
-    createNewCa: false
-    caFromSecret:
-      enabled: false
-      secretName: mysecret
-    caFromInline: true
+    tlsSecretName:
     caBundle: |
       -----BEGIN CERTIFICATE-----
       ...
