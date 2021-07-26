@@ -10,9 +10,9 @@ in `admissionregistration.k8s.io/v1` version which is only served in Kubernetes 
 
 ## Seed cluster versions
 
-:warning: The minimum version of a seed cluster that can be connected to Gardener is **`1.15.x`**.
-
-> If `ManagedIstio` feature gate is enabled in gardenlet, the minimum version of a seed cluster is **`1.16.x`**. Additionally `TokenRequest` and `TokenRequestProjection` feature gates must be enabled and [Service Account Token Volume Projection](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection) set as well.
+:warning: The minimum version of a seed cluster that can be connected to Gardener is **`1.18.x`**.
+Kubernetes `1.18` sets the common ground for several Gardener features, e.g. `SeedKubeScheduler` ([ref](https://github.com/gardener/gardener/blob/master/docs/deployment/feature_gates.md#list-of-feature-gates)).
+It also enables the Gardener code base to leverage more advanced Kubernetes features, like [Server-Side Apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/), in the future.
 
 ## Shoot cluster versions
 
