@@ -15,29 +15,24 @@
 package shoot
 
 import (
-	"context"
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 
-	"k8s.io/apimachinery/pkg/types"
-	ctrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
 	// ControllerName is the name of this controller.
-	ControllerName = "shoot-scheduler-controller"
+	ControllerName = "shoot-scheduler"
 )
 
 // AddToManager adds a new scheduler controller to the given manager.
 func AddToManager(
-	ctx context.Context,
 	mgr manager.Manager,
 	config *config.ShootSchedulerConfiguration,
 ) error {
@@ -59,33 +54,8 @@ func AddToManager(
 		return err
 	}
 
-	shootHandler := handler.EnqueueRequestsFromMapFunc(func(obj ctrlruntimeclient.Object) []reconcile.Request {
-		// Ignore non-shoots
-		shoot, ok := obj.(*gardencorev1beta1.Shoot)
-		if !ok {
-			return nil
-		}
-
-		// If the Shoot manifest already specifies a desired Seed cluster, we ignore it.
-		if shoot.Spec.SeedName != nil {
-			return nil
-		}
-
-		if shoot.DeletionTimestamp != nil {
-			logger.Info("Ignoring shoot because it has been marked for deletion", "shoot", shoot.Name)
-			return nil
-		}
-
-		return []reconcile.Request{{
-			NamespacedName: types.NamespacedName{
-				Namespace: obj.GetNamespace(),
-				Name:      obj.GetName(),
-			}},
-		}
-	})
-
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := c.Watch(&source.Kind{Type: shoot}, shootHandler); err != nil {
+	if err := c.Watch(&source.Kind{Type: shoot}, &handler.EnqueueRequestForObject{}); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %v", shoot, err)
 	}
 
