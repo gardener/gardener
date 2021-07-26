@@ -278,7 +278,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 				createOrUpdateETCDEncryptionConfiguration,
 			).InsertIf(!staticNodesCIDR),
 		})
-		_ = g.Add(flow.Task{
+		scaleUpKubeAPIServer = g.Add(flow.Task{
 			Name: "Scale up Kubernetes API server",
 			Fn: flow.TaskFn(botanist.ScaleKubeAPIServerToOne).
 				RetryUntilTimeout(defaultInterval, defaultTimeout).
@@ -288,7 +288,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServer, scaleUpKubeAPIServer),
 		})
 		deployControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane exposure components",
