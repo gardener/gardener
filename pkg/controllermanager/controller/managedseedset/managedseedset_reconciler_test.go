@@ -24,9 +24,9 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	mockmanagedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset/mock"
-	gardenerlogger "github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -75,7 +75,7 @@ var _ = Describe("Reconciler", func() {
 			SyncPeriod: metav1.Duration{Duration: syncPeriod},
 		}
 
-		reconciler = NewReconciler(gardenClient, actuator, cfg, gardenerlogger.NewNopLogger())
+		reconciler = NewReconciler(gardenClient.Client(), actuator, cfg, logr.Discard())
 
 		ctx = context.TODO()
 		request = reconcile.Request{NamespacedName: kutil.Key(namespace, name)}

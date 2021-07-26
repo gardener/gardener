@@ -64,7 +64,7 @@ var _ = Describe("ReplicaGetter", func() {
 		gardenClient.EXPECT().Client().Return(c).AnyTimes()
 		gardenClient.EXPECT().APIReader().Return(r).AnyTimes()
 
-		replicaGetter = NewReplicaGetter(gardenClient, ReplicaFactoryFunc(NewReplica))
+		replicaGetter = NewReplicaGetter(gardenClient.Client(), gardenClient.APIReader(), ReplicaFactoryFunc(NewReplica))
 
 		ctx = context.TODO()
 

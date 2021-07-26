@@ -20,17 +20,16 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/logger"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -43,22 +42,22 @@ type Actuator interface {
 
 // actuator is a concrete implementation of Actuator.
 type actuator struct {
-	gardenClient   kubernetes.Interface
+	gardenClient   client.Client
 	replicaGetter  ReplicaGetter
 	replicaFactory ReplicaFactory
 	cfg            *config.ManagedSeedSetControllerConfiguration
 	recorder       record.EventRecorder
-	logger         *logrus.Logger
+	logger         logr.Logger
 }
 
 // NewActuator creates and returns a new Actuator with the given parameters.
 func NewActuator(
-	gardenClient kubernetes.Interface,
+	gardenClient client.Client,
 	replicaGetter ReplicaGetter,
 	replicaFactory ReplicaFactory,
 	cfg *config.ManagedSeedSetControllerConfiguration,
 	recorder record.EventRecorder,
-	logger *logrus.Logger,
+	logger logr.Logger,
 ) Actuator {
 	return &actuator{
 		gardenClient:   gardenClient,
@@ -111,7 +110,7 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 		}
 		debug = append(debug, replicaDebugString(r))
 	}
-	a.getLogger(set).Debugf("Replicas: %s", debug)
+	a.getLogger(set).WithValues("replicas", debug).Info("Found replicas")
 
 	// Update replicas and readyReplicas in status
 	status.Replicas = int32(len(replicas))
@@ -177,7 +176,7 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 		}
 	}
 
-	a.getLogger(set).Debugf("Nothing to do")
+	a.getLogger(set).Info("Nothing to do")
 	status.PendingReplica = nil
 	return status, true, nil
 }
@@ -215,7 +214,7 @@ func (a *actuator) reconcileReplica(
 		retries := getPendingReplicaRetries(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason)
 		if int(retries) < *a.cfg.MaxShootRetries {
 			a.infoEventf(set, EventRetryingShootReconciliation, "Retrying shoot %s reconciliation", r.GetFullName())
-			if err := r.RetryShoot(ctx, a.gardenClient.Client()); err != nil {
+			if err := r.RetryShoot(ctx, a.gardenClient); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, pointer.Int32(retries+1))
@@ -230,7 +229,7 @@ func (a *actuator) reconcileReplica(
 		retries := getPendingReplicaRetries(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason)
 		if int(retries) < *a.cfg.MaxShootRetries {
 			a.infoEventf(set, EventRetryingShootDeletion, "Retrying shoot %s deletion", r.GetFullName())
-			if err := r.RetryShoot(ctx, a.gardenClient.Client()); err != nil {
+			if err := r.RetryShoot(ctx, a.gardenClient); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, pointer.Int32(retries+1))
@@ -257,13 +256,13 @@ func (a *actuator) reconcileReplica(
 		// If not scaling in, create its managed seed, otherwise delete its shoot
 		if !scalingIn {
 			a.infoEventf(set, EventCreatingManagedSeed, "Creating managed seed %s", r.GetFullName())
-			if err := r.CreateManagedSeed(ctx, a.gardenClient.Client()); err != nil {
+			if err := r.CreateManagedSeed(ctx, a.gardenClient); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedPreparingReason, nil)
 		} else {
 			a.infoEventf(set, EventDeletingShoot, "Deleting shoot %s", r.GetFullName())
-			if err := r.DeleteShoot(ctx, a.gardenClient.Client()); err != nil {
+			if err := r.DeleteShoot(ctx, a.gardenClient); err != nil {
 				return false, err
 			}
 			updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, nil)
@@ -306,7 +305,7 @@ func (a *actuator) createReplica(
 ) error {
 	r := a.replicaFactory.NewReplica(set, nil, nil, nil, false)
 	a.infoEventf(set, EventCreatingShoot, "Creating shoot %s", getFullName(set, ordinal))
-	if err := r.CreateShoot(ctx, a.gardenClient.Client(), ordinal); err != nil {
+	if err := r.CreateShoot(ctx, a.gardenClient, ordinal); err != nil {
 		return err
 	}
 	updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootReconcilingReason, nil)
@@ -321,13 +320,13 @@ func (a *actuator) deleteReplica(
 ) error {
 	if replicaManagedSeedExists(r.GetStatus()) {
 		a.infoEventf(set, EventDeletingManagedSeed, "Deleting managed seed %s", r.GetFullName())
-		if err := r.DeleteManagedSeed(ctx, a.gardenClient.Client()); err != nil {
+		if err := r.DeleteManagedSeed(ctx, a.gardenClient); err != nil {
 			return err
 		}
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ManagedSeedDeletingReason, nil)
 	} else {
 		a.infoEventf(set, EventDeletingShoot, "Deleting shoot %s", r.GetFullName())
-		if err := r.DeleteShoot(ctx, a.gardenClient.Client()); err != nil {
+		if err := r.DeleteShoot(ctx, a.gardenClient); err != nil {
 			return err
 		}
 		updatePendingReplica(status, r.GetName(), seedmanagementv1alpha1.ShootDeletingReason, nil)
@@ -335,18 +334,18 @@ func (a *actuator) deleteReplica(
 	return nil
 }
 
-func (a *actuator) infoEventf(set *seedmanagementv1alpha1.ManagedSeedSet, reason, fmt string, args ...interface{}) {
-	a.recorder.Eventf(set, corev1.EventTypeNormal, reason, fmt, args...)
-	a.getLogger(set).Infof(fmt, args...)
+func (a *actuator) infoEventf(set *seedmanagementv1alpha1.ManagedSeedSet, reason, format string, args ...interface{}) {
+	a.recorder.Eventf(set, corev1.EventTypeNormal, reason, format, args...)
+	a.getLogger(set).Info(fmt.Sprintf(format, args...))
 }
 
-func (a *actuator) errorEventf(set *seedmanagementv1alpha1.ManagedSeedSet, reason, fmt string, args ...interface{}) {
-	a.recorder.Eventf(set, corev1.EventTypeWarning, reason, fmt, args...)
-	a.getLogger(set).Errorf(fmt, args...)
+func (a *actuator) errorEventf(set *seedmanagementv1alpha1.ManagedSeedSet, reason, format string, args ...interface{}) {
+	a.recorder.Eventf(set, corev1.EventTypeWarning, reason, format, args...)
+	a.getLogger(set).Error(nil, fmt.Sprintf(format, args...))
 }
 
-func (a *actuator) getLogger(set *seedmanagementv1alpha1.ManagedSeedSet) *logrus.Entry {
-	return logger.NewFieldLogger(a.logger, "managedSeedSet", kutil.ObjectName(set))
+func (a *actuator) getLogger(set *seedmanagementv1alpha1.ManagedSeedSet) logr.Logger {
+	return a.logger.WithValues("managedSeedSet", kutil.ObjectName(set))
 }
 
 func getPendingReplica(replicas []Replica, status *seedmanagementv1alpha1.ManagedSeedSetStatus) Replica {

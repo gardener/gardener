@@ -24,9 +24,6 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
-	"github.com/gardener/gardener/pkg/features"
 )
 
 // ReplicaGetter provides a method for getting all existing replicas of a ManagedSeedSet.
@@ -36,16 +33,18 @@ type ReplicaGetter interface {
 }
 
 // NewReplicaGetter creates and returns a new ReplicaGetter with the given parameters.
-func NewReplicaGetter(client kubernetes.Interface, replicaFactory ReplicaFactory) ReplicaGetter {
+func NewReplicaGetter(c client.Client, reader client.Reader, replicaFactory ReplicaFactory) ReplicaGetter {
 	return &replicaGetter{
-		client:         client,
+		client:         c,
+		reader:         reader,
 		replicaFactory: replicaFactory,
 	}
 }
 
 // replicaGetter is a concrete implementation of ReplicaGetter.
 type replicaGetter struct {
-	client         kubernetes.Interface
+	client         client.Client
+	reader         client.Reader
 	replicaFactory ReplicaFactory
 }
 
@@ -59,29 +58,27 @@ func (rg *replicaGetter) GetReplicas(ctx context.Context, set *seedmanagementv1a
 
 	// Get managed seeds, shoots, and seeds in set's namespace matching selector
 	shoots := &gardencorev1beta1.ShootList{}
-	if err := rg.client.Client().List(ctx, shoots, client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
+	if err := rg.client.List(ctx, shoots, client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
 		return nil, err
 	}
 	managedSeeds := &seedmanagementv1alpha1.ManagedSeedList{}
-	if err := rg.client.Client().List(ctx, managedSeeds, client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
+	if err := rg.client.List(ctx, managedSeeds, client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
 		return nil, err
 	}
 	seeds := &gardencorev1beta1.SeedList{}
-	if err := rg.client.Client().List(ctx, seeds, client.MatchingLabelsSelector{Selector: selector}); err != nil {
+	if err := rg.client.List(ctx, seeds, client.MatchingLabelsSelector{Selector: selector}); err != nil {
 		return nil, err
 	}
 
-	// If CachedRuntimeClients feature gate is enabled, cross-check number of shoots with a partial metadata list
+	// cross-check number of shoots with a partial metadata list
 	// from the API server to ensure what we got from the cache is up-to-date
-	if controllermanagerfeatures.FeatureGate.Enabled(features.CachedRuntimeClients) {
-		shoots2 := &metav1.PartialObjectMetadataList{}
-		shoots2.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
-		if err := rg.client.APIReader().List(ctx, shoots2, client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
-			return nil, err
-		}
-		if len(shoots2.Items) != len(shoots.Items) {
-			return nil, fmt.Errorf("cross-checking number of shoots failed")
-		}
+	shoots2 := &metav1.PartialObjectMetadataList{}
+	shoots2.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
+	if err := rg.reader.List(ctx, shoots2, client.InNamespace(set.Namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
+		return nil, err
+	}
+	if len(shoots2.Items) != len(shoots.Items) {
+		return nil, fmt.Errorf("cross-checking number of shoots failed")
 	}
 
 	// Map names to objects for managed seeds and seeds
@@ -115,7 +112,7 @@ func (rg *replicaGetter) hasScheduledShoots(ctx context.Context, seed *gardencor
 	if seed != nil {
 		shoots := &metav1.PartialObjectMetadataList{}
 		shoots.SetGroupVersionKind(gardencorev1beta1.SchemeGroupVersion.WithKind("ShootList"))
-		if err := rg.client.APIReader().List(ctx, shoots, client.MatchingFields{gardencore.ShootSeedName: seed.Name}, client.Limit(1)); err != nil {
+		if err := rg.reader.List(ctx, shoots, client.MatchingFields{gardencore.ShootSeedName: seed.Name}, client.Limit(1)); err != nil {
 			return false, err
 		}
 		return len(shoots.Items) > 0, nil

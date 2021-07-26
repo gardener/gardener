@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -32,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset"
 	mockmanagedseedset "github.com/gardener/gardener/pkg/controllermanager/controller/managedseedset/mock"
-	gardenerlogger "github.com/gardener/gardener/pkg/logger"
 	mockrecord "github.com/gardener/gardener/pkg/mock/client-go/tools/record"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
@@ -85,7 +85,7 @@ var _ = Describe("Actuator", func() {
 			MaxShootRetries: &v,
 		}
 
-		actuator = NewActuator(gardenClient, rg, rf, cfg, recorder, gardenerlogger.NewNopLogger())
+		actuator = NewActuator(gardenClient.Client(), rg, rf, cfg, recorder, logr.Discard())
 
 		ctx = context.TODO()
 

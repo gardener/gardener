@@ -20,10 +20,8 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	bastioncontroller "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	csrcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/certificatesigningrequest"
@@ -39,15 +37,9 @@ import (
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
 	seedcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
-	"github.com/gardener/gardener/pkg/controllerutils/metrics"
-	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
@@ -122,6 +114,10 @@ func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manage
 		}
 	}
 
+	if err := managedseedsetcontroller.AddToManager(ctx, mgr, f.cfg.Controllers.ManagedSeedSet); err != nil {
+		return fmt.Errorf("failed to setup managedseedset controller: %w", err)
+	}
+
 	if err := plantcontroller.AddToManager(ctx, mgr, f.clientMap, f.cfg.Controllers.Plant); err != nil {
 		return fmt.Errorf("failed to setup plant controller: %w", err)
 	}
@@ -148,57 +144,6 @@ func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manage
 
 	// Done :)
 	f.logger.WithValues("version", version.Get().GitVersion).Info("Gardener controller manager initialized.")
-
-	return nil
-}
-
-// Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
-func (f *GardenControllerFactory) Run(ctx context.Context) error {
-	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		panic(fmt.Errorf("failed to get garden client: %+v", err))
-	}
-
-	if err := addAllFieldIndexes(ctx, k8sGardenClient.Cache()); err != nil {
-		return err
-	}
-
-	if err := f.clientMap.Start(ctx.Done()); err != nil {
-		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
-	}
-
-	// Delete legacy (and meanwhile unused) ConfigMap after https://github.com/gardener/gardener/pull/3756.
-	// TODO: This code can be removed in a future release.
-	if err := kutil.DeleteObject(ctx, k8sGardenClient.Client(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-controller-manager-internal-config", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
-		return err
-	}
-
-	runtime.Must(garden.BootstrapCluster(ctx, k8sGardenClient))
-	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
-
-	// Initialize the workqueue metrics collection.
-	var metricsCollectors []metrics.ControllerMetricsCollector
-	gardenmetrics.RegisterWorkqueMetrics()
-
-	// Create controllers.
-	managedSeedSetController, err := managedseedsetcontroller.NewManagedSeedSetController(ctx, f.clientMap, f.cfg, f.recorder, logger.Logger)
-	if err != nil {
-		return fmt.Errorf("failed initializing ManagedSeedSet controller: %w", err)
-	}
-	metricsCollectors = append(metricsCollectors, managedSeedSetController)
-
-	go managedSeedSetController.Run(ctx, f.cfg.Controllers.ManagedSeedSet.ConcurrentSyncs)
-
-	// Initialize the Controller metrics collection.
-	gardenmetrics.RegisterControllerMetrics(controllermanager.ControllerWorkerSum, controllermanager.ScrapeFailures, metricsCollectors...)
-
-	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
-
-	// Shutdown handling
-	<-ctx.Done()
-
-	logger.Logger.Infof("I have received a stop signal and will no longer watch resources.")
-	logger.Logger.Infof("Bye Bye!")
 
 	return nil
 }

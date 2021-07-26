@@ -20,13 +20,11 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 
-	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -35,18 +33,18 @@ import (
 
 // reconciler implements the reconcile.Reconciler interface for ManagedSeedSet reconciliation.
 type reconciler struct {
-	gardenClient kubernetes.Interface
+	gardenClient client.Client
 	actuator     Actuator
 	cfg          *config.ManagedSeedSetControllerConfiguration
-	logger       *logrus.Logger
+	logger       logr.Logger
 }
 
 // NewReconciler creates and returns a new ManagedSeedSet reconciler with the given parameters.
 func NewReconciler(
-	gardenClient kubernetes.Interface,
+	gardenClient client.Client,
 	actuator Actuator,
 	cfg *config.ManagedSeedSetControllerConfiguration,
-	logger *logrus.Logger,
+	logger logr.Logger,
 ) reconcile.Reconciler {
 	return &reconciler{
 		gardenClient: gardenClient,
@@ -57,26 +55,29 @@ func NewReconciler(
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	logger := r.logger.WithValues("managedseedset", request)
+
 	set := &seedmanagementv1alpha1.ManagedSeedSet{}
-	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, set); err != nil {
+	if err := r.gardenClient.Get(ctx, request.NamespacedName, set); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Debugf("Skipping ManagedSeedSet %s because it has been deleted", request.NamespacedName)
+			logger.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
-		r.logger.Errorf("Could not get ManagedSeedSet %s from store: %+v", request.NamespacedName, err)
+
+		logger.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
 
 	if set.DeletionTimestamp != nil {
-		return r.delete(ctx, set)
+		return r.delete(ctx, set, logger)
 	}
-	return r.reconcile(ctx, set)
+	return r.reconcile(ctx, set, logger)
 }
 
-func (r *reconciler) reconcile(ctx context.Context, set *seedmanagementv1alpha1.ManagedSeedSet) (result reconcile.Result, err error) {
+func (r *reconciler) reconcile(ctx context.Context, set *seedmanagementv1alpha1.ManagedSeedSet, logger logr.Logger) (result reconcile.Result, err error) {
 	// Ensure gardener finalizer
-	r.getLogger(set).Debug("Ensuring finalizer")
-	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
+	logger.Info("Ensuring finalizer")
+	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient, set, gardencorev1beta1.GardenerName); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not ensure gardener finalizer: %w", err)
 	}
 
@@ -89,20 +90,20 @@ func (r *reconciler) reconcile(ctx context.Context, set *seedmanagementv1alpha1.
 	}()
 
 	// Reconcile creation or update
-	r.getLogger(set).Debug("Reconciling creation or update")
+	logger.Info("Reconciling creation or update")
 	if status, _, err = r.actuator.Reconcile(ctx, set); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeedSet %s creation or update: %w", kutil.ObjectName(set), err)
 	}
-	r.getLogger(set).Debug("Creation or update reconciled")
+	logger.Info("Creation or update reconciled")
 
 	// Return success result
 	return reconcile.Result{RequeueAfter: r.cfg.SyncPeriod.Duration}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, set *seedmanagementv1alpha1.ManagedSeedSet) (result reconcile.Result, err error) {
+func (r *reconciler) delete(ctx context.Context, set *seedmanagementv1alpha1.ManagedSeedSet, logger logr.Logger) (result reconcile.Result, err error) {
 	// Check gardener finalizer
 	if !controllerutil.ContainsFinalizer(set, gardencorev1beta1.GardenerName) {
-		r.getLogger(set).Debug("Skipping as it does not have a finalizer")
+		logger.Info("Skipping as it does not have a finalizer")
 		return reconcile.Result{}, nil
 	}
 
@@ -119,16 +120,16 @@ func (r *reconciler) delete(ctx context.Context, set *seedmanagementv1alpha1.Man
 	}()
 
 	// Reconcile deletion
-	r.getLogger(set).Debug("Reconciling deletion")
+	logger.Info("Reconciling deletion")
 	if status, removeFinalizer, err = r.actuator.Reconcile(ctx, set); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not reconcile ManagedSeedSet %s deletion: %w", kutil.ObjectName(set), err)
 	}
-	r.getLogger(set).Debug("Deletion reconciled")
+	logger.Info("Deletion reconciled")
 
 	// Remove gardener finalizer if requested by the actuator
 	if removeFinalizer {
-		r.getLogger(set).Debug("Removing finalizer")
-		if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
+		logger.Info("Removing finalizer")
+		if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, set, gardencorev1beta1.GardenerName); err != nil {
 			return reconcile.Result{}, fmt.Errorf("could not remove gardener finalizer: %w", err)
 		}
 		return reconcile.Result{}, nil
@@ -138,15 +139,11 @@ func (r *reconciler) delete(ctx context.Context, set *seedmanagementv1alpha1.Man
 	return reconcile.Result{RequeueAfter: r.cfg.SyncPeriod.Duration}, nil
 }
 
-func (r *reconciler) getLogger(set *seedmanagementv1alpha1.ManagedSeedSet) *logrus.Entry {
-	return logger.NewFieldLogger(r.logger, "managedSeedSet", kutil.ObjectName(set))
-}
-
 func (r *reconciler) updateStatus(ctx context.Context, set *seedmanagementv1alpha1.ManagedSeedSet, status *seedmanagementv1alpha1.ManagedSeedSetStatus) error {
 	if status == nil {
 		return nil
 	}
 	patch := client.StrategicMergeFrom(set.DeepCopy())
 	set.Status = *status
-	return r.gardenClient.Client().Status().Patch(ctx, set, patch)
+	return r.gardenClient.Status().Patch(ctx, set, patch)
 }

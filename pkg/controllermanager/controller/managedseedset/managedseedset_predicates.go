@@ -14,6 +14,7 @@
 
 package managedseedset
 
+/*
 import (
 	"reflect"
 
@@ -139,3 +140,5 @@ func (c *Controller) filterSeed(obj, oldObj, controller client.Object, _ bool) b
 		return false
 	}
 }
+
+*/
