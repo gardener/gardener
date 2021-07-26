@@ -50,7 +50,7 @@ var _ = Describe("Framework tests", func() {
 		It("Should download chart artifacts", func() {
 
 			f = &framework.CommonFramework{
-				Logger:       logger.AddWriter(logger.NewLogger("info"), GinkgoWriter),
+				Logger:       logger.AddWriter(logger.NewLogger("info", ""), GinkgoWriter),
 				ResourcesDir: "./resources",
 				ChartDir:     "./resources/charts",
 			}

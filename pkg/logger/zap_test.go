@@ -25,34 +25,34 @@ import (
 var _ = Describe("zap", func() {
 	Describe("#NewZapLogger", func() {
 		It("should return a pointer to a Logger object ('debug' level)", func() {
-			logger, err := NewZapLogger(DebugLevel)
+			logger, err := NewZapLogger(DebugLevel, FormatText)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(logger.Core().Enabled(zapcore.DebugLevel)).To(BeTrue())
 		})
 
 		It("should return a pointer to a Logger object ('info' level)", func() {
-			logger, err := NewZapLogger(InfoLevel)
+			logger, err := NewZapLogger(InfoLevel, FormatText)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(logger.Core().Enabled(zapcore.DebugLevel)).To(BeFalse())
 			Expect(logger.Core().Enabled(zapcore.InfoLevel)).To(BeTrue())
 		})
 
 		It("should default to 'info' level", func() {
-			logger, err := NewZapLogger("")
+			logger, err := NewZapLogger("", FormatText)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(logger.Core().Enabled(zapcore.DebugLevel)).To(BeFalse())
 			Expect(logger.Core().Enabled(zapcore.InfoLevel)).To(BeTrue())
 		})
 
 		It("should return a pointer to a Logger object ('error' level)", func() {
-			logger, err := NewZapLogger(ErrorLevel)
+			logger, err := NewZapLogger(ErrorLevel, FormatText)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(logger.Core().Enabled(zapcore.InfoLevel)).To(BeFalse())
 			Expect(logger.Core().Enabled(zapcore.ErrorLevel)).To(BeTrue())
 		})
 
 		It("should reject invalid log level", func() {
-			_, err := NewZapLogger("invalid")
+			_, err := NewZapLogger("invalid", FormatText)
 			Expect(err).To(HaveOccurred())
 		})
 	})

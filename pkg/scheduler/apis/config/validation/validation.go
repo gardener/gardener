@@ -34,6 +34,12 @@ func ValidateConfiguration(config *schedulerapi.SchedulerConfiguration) error {
 		}
 	}
 
+	if config.LogFormat != "" {
+		if !sets.NewString(logger.AllLogFormats...).Has(config.LogFormat) {
+			return fmt.Errorf("invalid log format %q, valid formats are %v", config.LogFormat, logger.AllLogFormats)
+		}
+	}
+
 	return nil
 }
 

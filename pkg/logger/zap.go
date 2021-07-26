@@ -26,7 +26,7 @@ import (
 )
 
 // NewZapLogger creates a new logger backed by Zap.
-func NewZapLogger(logLevel string) (*zap.Logger, error) {
+func NewZapLogger(logLevel string, format string) (*zap.Logger, error) {
 	var lvl zapcore.Level
 	switch logLevel {
 	case DebugLevel:
@@ -44,14 +44,24 @@ func NewZapLogger(logLevel string) (*zap.Logger, error) {
 	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
 	encCfg.EncodeDuration = zapcore.StringDurationEncoder
 
+	var encoder zapcore.Encoder
+	switch format {
+	case FormatText:
+		encoder = zapcore.NewConsoleEncoder(encCfg)
+	case "", FormatJSON:
+		encoder = zapcore.NewJSONEncoder(encCfg)
+	default:
+		return nil, fmt.Errorf("invalid log format %q", format)
+	}
+
 	sink := zapcore.AddSync(os.Stderr)
 	opts := []zap.Option{
 		zap.AddCaller(),
 		zap.ErrorOutput(sink),
 	}
 
-	encoder := &ctrlruntimelzap.KubeAwareEncoder{Encoder: zapcore.NewConsoleEncoder(encCfg)}
-	coreLog := zapcore.NewCore(encoder, sink, zap.NewAtomicLevelAt(lvl))
+	kubeEncoder := &ctrlruntimelzap.KubeAwareEncoder{Encoder: encoder}
+	coreLog := zapcore.NewCore(kubeEncoder, sink, zap.NewAtomicLevelAt(lvl))
 
 	return zap.New(coreLog, opts...), nil
 }

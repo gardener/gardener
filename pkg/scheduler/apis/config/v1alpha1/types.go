@@ -58,6 +58,8 @@ type SchedulerConfiguration struct {
 	LeaderElection LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string `json:"logLevel,omitempty"`
+	// LogFormat is the output format for the logs. Must be one of [text,json].
+	LogFormat string `json:"logFormat,omitempty"`
 	// Server defines the configuration of the HTTP server. This is deprecated in favor of
 	// HealthServer.
 	Server ServerConfiguration `json:"server,omitempty"`

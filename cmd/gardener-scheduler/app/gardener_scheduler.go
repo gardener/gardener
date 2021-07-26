@@ -15,6 +15,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -78,7 +79,7 @@ func NewCommandStartGardenerScheduler() *cobra.Command {
 				return err
 			}
 
-			return runCommand(cmd, opts)
+			return runCommand(cmd.Context(), opts)
 		},
 	}
 
@@ -89,7 +90,7 @@ func NewCommandStartGardenerScheduler() *cobra.Command {
 	return cmd
 }
 
-func runCommand(cmd *cobra.Command, opts *Options) error {
+func runCommand(ctx context.Context, opts *Options) error {
 	// Load config file
 	config, err := configloader.LoadFromFile(opts.ConfigFile)
 	if err != nil {
@@ -107,24 +108,16 @@ func runCommand(cmd *cobra.Command, opts *Options) error {
 	}
 
 	// Initialize logger
-	zapLogger, err := logger.NewZapLogger(config.LogLevel)
+	zapLogger, err := logger.NewZapLogger(config.LogLevel, config.LogFormat)
 	if err != nil {
 		return fmt.Errorf("failed to init logger: %w", err)
 	}
 
-	sugarLogger := zapLogger.Sugar()
-	defer func() {
-		if err := sugarLogger.Sync(); err != nil {
-			fmt.Println(err)
-		}
-	}()
-
-	sugarLogger.Info("Starting Gardener scheduler ...")
-	sugarLogger.Infof("Feature Gates: %s", schedulerfeatures.FeatureGate.String())
-
 	// set the logger used by sigs.k8s.io/controller-runtime
 	zapLogr := logger.NewZapLogr(zapLogger)
 	ctrlruntimelog.SetLogger(zapLogr)
+
+	zapLogr.Info("Starting Gardener scheduler ...", "features", schedulerfeatures.FeatureGate.String())
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.
@@ -158,12 +151,12 @@ func runCommand(cmd *cobra.Command, opts *Options) error {
 	}
 
 	// Add controllers
-	if err := shootcontroller.AddToManager(cmd.Context(), mgr, config.Schedulers.Shoot); err != nil {
+	if err := shootcontroller.AddToManager(mgr, config.Schedulers.Shoot); err != nil {
 		return fmt.Errorf("failed to create shoot scheduler controller: %w", err)
 	}
 
 	// Start manager and all runnables (the command context is tied to OS signals already)
-	if err := mgr.Start(cmd.Context()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		return fmt.Errorf("failed to start manager: %w", err)
 	}
 
@@ -180,7 +173,7 @@ func getHealthAddress(cfg *config.SchedulerConfiguration) string {
 }
 
 func getAddress(server *config.ServerConfiguration) string {
-	if server != nil && len(server.HTTP.BindAddress) > 0 && server.HTTP.Port != 0 {
+	if server != nil && server.HTTP.Port != 0 {
 		return net.JoinHostPort(server.HTTP.BindAddress, strconv.Itoa(server.HTTP.Port))
 	}
 

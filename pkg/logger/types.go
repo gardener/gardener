@@ -21,9 +21,17 @@ const (
 	InfoLevel = "info"
 	// ErrorLevel is a log level where only errors are logged.
 	ErrorLevel = "error"
+
+	// FormatJSON is the output type that produces a JSON object per log line.
+	FormatJSON = "json"
+	// FormatText outputs the log as human-readable text.
+	FormatText = "text"
 )
 
 var (
 	// AllLogLevels is a slice of all available log levels.
 	AllLogLevels = []string{DebugLevel, InfoLevel, ErrorLevel}
+
+	// AllLogFormats is a slice of all available log formats.
+	AllLogFormats = []string{FormatJSON, FormatText}
 )

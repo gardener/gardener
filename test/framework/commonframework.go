@@ -74,7 +74,7 @@ func (f *CommonFramework) BeforeEach() {
 
 	f.Config = mergeCommonConfigs(f.Config, commonCfg)
 
-	f.Logger = logger.AddWriter(logger.NewLogger(f.Config.LogLevel), ginkgo.GinkgoWriter)
+	f.Logger = logger.AddWriter(logger.NewLogger(f.Config.LogLevel, ""), ginkgo.GinkgoWriter)
 	f.DisableStateDump = f.Config.DisableStateDump
 
 	if f.ResourcesDir == "" {

@@ -336,6 +336,11 @@ func (in *GardenletConfiguration) DeepCopyInto(out *GardenletConfiguration) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.LogFormat != nil {
+		in, out := &in.LogFormat, &out.LogFormat
+		*out = new(string)
+		**out = **in
+	}
 	if in.KubernetesLogLevel != nil {
 		in, out := &in.KubernetesLogLevel, &out.KubernetesLogLevel
 		*out = new(klog.Level)

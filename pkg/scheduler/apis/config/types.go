@@ -59,6 +59,8 @@ type SchedulerConfiguration struct {
 	LeaderElection LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
+	// LogFormat is the output format for the logs. Must be one of [text,json].
+	LogFormat string
 	// Server defines the configuration of the HTTP server. This is deprecated in favor of
 	// HealthServer.
 	Server ServerConfiguration

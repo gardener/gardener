@@ -165,6 +165,7 @@ func autoConvert_v1alpha1_SchedulerConfiguration_To_config_SchedulerConfiguratio
 		return err
 	}
 	out.LogLevel = in.LogLevel
+	out.LogFormat = in.LogFormat
 	if err := Convert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
@@ -190,6 +191,7 @@ func autoConvert_config_SchedulerConfiguration_To_v1alpha1_SchedulerConfiguratio
 		return err
 	}
 	out.LogLevel = in.LogLevel
+	out.LogFormat = in.LogFormat
 	if err := Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}

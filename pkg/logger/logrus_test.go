@@ -32,7 +32,7 @@ var _ = Describe("logrus", func() {
 
 	Describe("#NewLogger", func() {
 		It("should return a pointer to a Logger object ('info' level)", func() {
-			logger := NewLogger(InfoLevel)
+			logger := NewLogger(InfoLevel, FormatText)
 
 			Expect(logger.Out).To(Equal(os.Stderr))
 			Expect(logger.Level).To(Equal(logrus.InfoLevel))
@@ -40,7 +40,7 @@ var _ = Describe("logrus", func() {
 		})
 
 		It("should return a pointer to a Logger object ('debug' level)", func() {
-			logger := NewLogger(DebugLevel)
+			logger := NewLogger(DebugLevel, FormatText)
 
 			Expect(logger.Out).To(Equal(os.Stderr))
 			Expect(logger.Level).To(Equal(logrus.DebugLevel))
@@ -48,17 +48,32 @@ var _ = Describe("logrus", func() {
 		})
 
 		It("should return a pointer to a Logger object ('error' level)", func() {
-			logger := NewLogger(ErrorLevel)
+			logger := NewLogger(ErrorLevel, FormatText)
 
 			Expect(logger.Out).To(Equal(os.Stderr))
 			Expect(logger.Level).To(Equal(logrus.ErrorLevel))
 			Expect(Logger).To(Equal(logger))
 		})
+
+		It("should return a pointer to a Logger object ('json' format)", func() {
+			logger := NewLogger(InfoLevel, FormatJSON)
+			Expect(logger.Formatter).To(BeAssignableToTypeOf(&logrus.JSONFormatter{}))
+		})
+
+		It("should return a pointer to a Logger object ('text' format)", func() {
+			logger := NewLogger(InfoLevel, FormatText)
+			Expect(logger.Formatter).To(BeAssignableToTypeOf(&logrus.TextFormatter{}))
+		})
+
+		It("should return a pointer to a Logger object (default format)", func() {
+			logger := NewLogger(InfoLevel, "")
+			Expect(logger.Formatter).To(BeAssignableToTypeOf(&logrus.JSONFormatter{}))
+		})
 	})
 
 	Describe("#NewShootLogger", func() {
 		It("should return an Entry object with additional fields (w/o operationID)", func() {
-			logger := NewLogger(InfoLevel)
+			logger := NewLogger(InfoLevel, FormatText)
 			namespace := "core"
 			name := "shoot01"
 
@@ -70,7 +85,7 @@ var _ = Describe("logrus", func() {
 
 	Describe("#NewFieldLogger", func() {
 		It("should return an Entry object with additional fields", func() {
-			logger := NewLogger(InfoLevel)
+			logger := NewLogger(InfoLevel, FormatText)
 			key := "foo"
 			value := "bar"
 
@@ -82,7 +97,7 @@ var _ = Describe("logrus", func() {
 
 	Describe("#NewIDLogger", func() {
 		It("should return an Entry object an ID field", func() {
-			logger := NewLogger(InfoLevel)
+			logger := NewLogger(InfoLevel, FormatText)
 
 			fieldLogger := NewIDLogger(logger)
 
@@ -93,7 +108,7 @@ var _ = Describe("logrus", func() {
 
 	Describe("#AddWriter", func() {
 		It("should return a pointer to a Test Logger object ('info' level)", func() {
-			logger := AddWriter(NewLogger(""), GinkgoWriter)
+			logger := AddWriter(NewLogger("", FormatText), GinkgoWriter)
 			Expect(logger.Out).To(Equal(GinkgoWriter))
 			Expect(logger.Level).To(Equal(logrus.InfoLevel))
 			Expect(Logger).To(Equal(logger))

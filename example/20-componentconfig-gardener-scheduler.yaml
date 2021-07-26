@@ -12,6 +12,7 @@ leaderElection:
   resourceLock: leases
   resourceNamespace: garden
 logLevel: info
+logFormat: text
 healthServer:
   http:
     bindAddress: 0.0.0.0

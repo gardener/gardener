@@ -201,7 +201,7 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 	}
 
 	// Initialize logger
-	logger := logger.NewLogger(cfg.LogLevel)
+	logger := logger.NewLogger(cfg.LogLevel, cfg.LogFormat)
 	logger.Info("Starting Gardener controller manager...")
 	logger.Infof("Feature Gates: %s", controllermanagerfeatures.FeatureGate.String())
 
