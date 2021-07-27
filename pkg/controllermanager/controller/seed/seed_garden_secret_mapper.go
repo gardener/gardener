@@ -18,27 +18,13 @@ import (
 	"context"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/go-logr/logr"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func filterGardenSecret(obj interface{}) bool {
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		return false
-	}
-	if secret.Namespace != v1beta1constants.GardenNamespace {
-		return false
-	}
-	return gardenRoleSelector.Matches(labels.Set(secret.Labels))
-}
 
 func newSecretEventHandler(ctx context.Context, gardenClient client.Client, logger logr.Logger) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {

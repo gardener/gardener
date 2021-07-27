@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
 
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -69,9 +71,16 @@ func addSeedController(
 		return fmt.Errorf("failed to create watcher for %T: %w", seed, err)
 	}
 
-	// TODO: Filter! filterGardenSecret
 	secret := &corev1.Secret{}
-	if err := c.Watch(&source.Kind{Type: secret}, newSecretEventHandler(ctx, mgr.GetClient(), reconciler.logger)); err != nil {
+	handler := newSecretEventHandler(ctx, mgr.GetClient(), reconciler.logger)
+	predicates := []predicate.Predicate{
+		kubernetes.NewNamespacePredicate(v1beta1constants.GardenNamespace),
+		predicate.NewPredicateFuncs(func(object client.Object) bool {
+			return gardenRoleSelector.Matches(labels.Set(object.GetLabels()))
+		}),
+	}
+
+	if err := c.Watch(&source.Kind{Type: secret}, handler, predicates...); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %w", secret, err)
 	}
 

@@ -28,6 +28,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
+// NewNamespacePredicate returns a predicate func that only includes objects in the given namespace
+func NewNamespacePredicate(namespace string) predicate.Funcs {
+	return predicate.NewPredicateFuncs(func(o client.Object) bool {
+		return o.GetNamespace() == namespace
+	})
+}
+
 // ControllerPredicateFactory provides a method for creating new Predicates for a controller.
 type ControllerPredicateFactory interface {
 	// NewControllerPredicate creates and returns a new Predicate with the given controller.
