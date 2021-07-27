@@ -245,6 +245,11 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 			Fn:           flow.TaskFn(botanist.MigrateInternalDNSResources),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
+		destroyDNSRecords = g.Add(flow.Task{
+			Name:         "Deleting DNSRecords from the Shoot namespace",
+			Fn:           botanist.DestroyDNSRecords,
+			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord),
+		})
 		destroyDNSProviders = g.Add(flow.Task{
 			Name:         "Deleting DNS providers",
 			Fn:           flow.TaskFn(botanist.DeleteDNSProviders),
@@ -273,7 +278,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteSeedNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryInGardenMigrated, deleteAllExtensionCRs, destroyDNSProviders, waitForManagedResourcesDeletion, scaleETCDToZero),
+			Dependencies: flow.NewTaskIDs(waitUntilBackupEntryInGardenMigrated, deleteAllExtensionCRs, destroyDNSRecords, destroyDNSProviders, waitForManagedResourcesDeletion, scaleETCDToZero),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until shoot namespace in Seed has been deleted",
