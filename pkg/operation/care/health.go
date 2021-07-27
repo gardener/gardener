@@ -318,7 +318,7 @@ func (h *Health) checkSystemComponents(
 		return &c, nil
 	}
 
-	if established, err := botanist.CheckTunnelConnection(ctx, h.shootClient, logrus.NewEntry(logger.NewNopLogger()), common.VPNTunnel); err != nil || !established {
+	if err := botanist.CheckAndWaitForTunnelConnection(ctx, h.shootClient, h.shoot, logrus.NewEntry(logger.NewNopLogger()), common.VPNTunnel, 2*time.Minute); err != nil {
 		msg := "Tunnel connection has not been established"
 		if err != nil {
 			msg += fmt.Sprintf(" (%+v)", err)
