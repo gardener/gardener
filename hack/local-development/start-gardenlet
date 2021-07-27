@@ -100,6 +100,21 @@ if [ -z "${SEED_KUBECONFIG:-}" ]; then
     base64 -d > "$SEED_KUBECONFIG"
 fi
 
+# generate RBAC roles
+GARDENLET_CHARTS_DIR=charts/gardener/gardenlet
+GARDENLET_CHARTS_RUNTIME_DIR="$GARDENLET_CHARTS_DIR/charts/runtime"
+helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/clusterrole-gardenlet.yaml -f "$GARDENLET_CHARTS_DIR/values.yaml" | kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
+helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/clusterrolebinding-gardenlet.yaml -f "$GARDENLET_CHARTS_DIR/values.yaml" | kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
+helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/serviceaccount.yaml -f "$GARDENLET_CHARTS_DIR/values.yaml" | kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
+
+# backup gardenlet seed kubeconfig
+cp "$SEED_KUBECONFIG" "$DEV_DIR/gardenlet-seed-$SEED_NAME-ORIGINAl.conf"
+
+# start using appropriate token in the gardenlet seed kubeconfig
+secret=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get serviceaccount gardenlet -o jsonpath='{.secrets[0].name}')
+token=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get secret "$secret" -o jsonpath='{.data.token}' | base64 --decode)
+TOKEN_VALUE="$token" $YQ eval --inplace '.users[0].user.token = strenv(TOKEN_VALUE)' "$SEED_KUBECONFIG"
+
 file_imagevector_overwrite="$(mktemp_imagevector_overwrite github.com/gardener/gardener "$REPO_ROOT" "$REPO_ROOT"/charts)"
 if [ ! -f "$file_imagevector_overwrite" ]; then
   echo "failed to generate local image vector override: $file_imagevector_overwrite"
