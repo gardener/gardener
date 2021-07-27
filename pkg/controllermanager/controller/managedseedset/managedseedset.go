@@ -44,7 +44,7 @@ func AddToManager(
 
 	replicaFactory := ReplicaFactoryFunc(NewReplica)
 	replicaGetter := NewReplicaGetter(gardenClient, mgr.GetAPIReader(), replicaFactory)
-	actuator := NewActuator(gardenClient, replicaGetter, replicaFactory, config, mgr.GetEventRecorderFor(ControllerName), logger)
+	actuator := NewActuator(gardenClient, replicaGetter, replicaFactory, config, mgr.GetEventRecorderFor(ControllerName+"-actuator"), logger)
 	reconciler := NewReconciler(gardenClient, actuator, config, logger)
 
 	ctrlOptions := controller.Options{
@@ -55,6 +55,10 @@ func AddToManager(
 	if err != nil {
 		return err
 	}
+
+	logger = c.GetLogger()
+	reconciler.logger = logger
+	actuator.logger = logger.WithName("actuator")
 
 	managedSeedSet := &seedmanagementv1alpha1.ManagedSeedSet{}
 	if err := c.Watch(&source.Kind{Type: managedSeedSet}, &handler.EnqueueRequestForObject{}); err != nil {

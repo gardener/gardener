@@ -62,17 +62,20 @@ func addControllerRegistrationSeedReconciler(
 	mgr manager.Manager,
 	config *config.ControllerRegistrationControllerConfiguration,
 ) error {
-	logger := mgr.GetLogger()
 	gardenClient := mgr.GetClient()
+	reconciler := NewControllerRegistrationSeedReconciler(mgr.GetLogger(), gardenClient, mgr.GetAPIReader())
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewControllerRegistrationSeedReconciler(logger, gardenClient, mgr.GetAPIReader()),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ControllerRegistrationSeedControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	logger := c.GetLogger()
+	reconciler.logger = logger
 
 	// For all of these watched resource kinds, we eventually enqueue the related seed(s) and reconcile from there.
 
@@ -116,7 +119,7 @@ func addControllerRegistrationSeedReconciler(
 
 // NewControllerRegistrationSeedReconciler creates a new instance of a reconciler which determines which
 // ControllerRegistrations are required for a seed.
-func NewControllerRegistrationSeedReconciler(logger logr.Logger, gardenClient client.Client, gardenReader client.Reader) reconcile.Reconciler {
+func NewControllerRegistrationSeedReconciler(logger logr.Logger, gardenClient client.Client, gardenReader client.Reader) *controllerRegistrationSeedReconciler {
 	return &controllerRegistrationSeedReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
@@ -272,7 +275,7 @@ func computeKindTypesForBackupEntries(
 
 		bucket, ok := buckets[backupEntry.Spec.BucketName]
 		if !ok {
-			logger.WithValues("bucket", backupEntry.Spec.BucketName, "entry", backupEntry.Name).Error(nil, "Could not find BackupBucket for BackupEntry")
+			logger.Error(nil, "Could not find BackupBucket for BackupEntry", "bucket", backupEntry.Spec.BucketName, "entry", backupEntry.Name)
 			continue
 		}
 
@@ -312,7 +315,7 @@ func computeKindTypesForShoots(
 
 			externalDomain, err := shootpkg.ConstructExternalDomain(ctx, client, shoot, &corev1.Secret{}, defaultDomains)
 			if err != nil && !(shootpkg.IsIncompleteDNSConfigError(err) && shoot.DeletionTimestamp != nil && len(shoot.Status.UID) == 0) {
-				logger.WithValues("shoot", shoot).Error(err, "Could not determine external domain for shoot")
+				logger.Error(err, "Could not determine external domain for shoot", "shoot", shoot)
 			}
 
 			out <- shootpkg.ComputeRequiredExtensions(shoot, seed, controllerRegistrationList, internalDomain, externalDomain,
@@ -604,7 +607,7 @@ func deleteUnneededInstallations(
 ) error {
 	for registrationName, installationName := range registrationNameToInstallationName {
 		if !wantedControllerRegistrationNames.Has(registrationName) {
-			logger.WithValues("installation", installationName).Info("Deleting unneeded ControllerInstallation")
+			logger.Info("Deleting unneeded ControllerInstallation", "installation", installationName)
 
 			if err := c.Delete(ctx, &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: installationName}}); client.IgnoreNotFound(err) != nil {
 				return err

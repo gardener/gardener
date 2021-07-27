@@ -32,7 +32,7 @@ import (
 )
 
 // NewReconciler creates a new instance of a reconciler which reconciles ExposureClass.
-func NewReconciler(l logr.Logger, gardenClient client.Client, recorder record.EventRecorder) reconcile.Reconciler {
+func NewReconciler(l logr.Logger, gardenClient client.Client, recorder record.EventRecorder) *exposureClassReconciler {
 	return &exposureClassReconciler{
 		logger:       l,
 		gardenClient: gardenClient,

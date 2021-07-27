@@ -69,11 +69,6 @@ func newBackupEntryEventHandler() handler.EventHandler {
 
 func newControllerDeploymentEventHandler(ctx context.Context, c client.Client, logger logr.Logger) handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
-		controllerDeployment, ok := obj.(*gardencorev1beta1.ControllerDeployment)
-		if !ok {
-			return nil
-		}
-
 		controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
 		if err := c.List(ctx, controllerRegistrationList); err != nil {
 			logger.Error(err, "Error listing controllerregistrations")
@@ -87,7 +82,7 @@ func newControllerDeploymentEventHandler(ctx context.Context, c client.Client, l
 			}
 
 			for _, ref := range deployment.DeploymentRefs {
-				if ref.Name == controllerDeployment.Name {
+				if ref.Name == obj.GetName() {
 					return enqueueAllSeeds(ctx, c)
 				}
 			}

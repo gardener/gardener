@@ -91,7 +91,7 @@ var _ = Describe("BackupBucketReconciler", func() {
 			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
 			Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
 
-			control = NewDefaultBackupBucketControl(logr.Discard(), k8sGardenClient.Client())
+			control = NewDefaultBackupBucketReconciler(logr.Discard(), k8sGardenClient.Client())
 
 			c.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
 				*obj = *seed

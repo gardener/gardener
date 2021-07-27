@@ -39,22 +39,22 @@ const (
 	ShootHibernationControllerName = "shoot-hibernation"
 )
 
-func addShootHibernationController(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ShootHibernationControllerConfiguration,
-) error {
+func addShootHibernationController(mgr manager.Manager, config *config.ShootHibernationControllerConfiguration) error {
 	logger := mgr.GetLogger()
 	gardenClient := mgr.GetClient()
+	recorder := mgr.GetEventRecorderFor("controller-" + ShootHibernationControllerName)
+	reconciler := NewShootHibernationReconciler(logger, gardenClient, NewHibernationScheduleRegistry(), recorder)
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewShootHibernationReconciler(logger, gardenClient, NewHibernationScheduleRegistry(), mgr.GetEventRecorderFor(ShootHibernationControllerName)),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ShootHibernationControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := c.Watch(&source.Kind{Type: shoot}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -129,10 +129,7 @@ func ComputeHibernationSchedule(ctx context.Context, gardenClient client.Client,
 				}
 
 				cr.Schedule(start, NewHibernationJob(ctx, gardenClient, cronLogger, recorder, shoot, true))
-				cronLogger.WithValues(
-					"spec", *schedule.Start,
-					"triggered", start.Next(TimeNow().UTC()),
-				).Info("Scheduled hibernation")
+				cronLogger.Info("Scheduled hibernation", "spec", *schedule.Start, "triggered", start.Next(TimeNow().UTC()))
 			}
 
 			if schedule.End != nil {
@@ -142,10 +139,7 @@ func ComputeHibernationSchedule(ctx context.Context, gardenClient client.Client,
 				}
 
 				cr.Schedule(end, NewHibernationJob(ctx, gardenClient, cronLogger, recorder, shoot, false))
-				cronLogger.WithValues(
-					"spec", *schedule.End,
-					"triggered", end.Next(TimeNow().UTC()),
-				).Info("Scheduled wakeup")
+				cronLogger.Info("Scheduled wakeup", "spec", *schedule.End, "triggered", end.Next(TimeNow().UTC()))
 			}
 		}
 		schedule[locationID] = cr
@@ -164,7 +158,7 @@ func NewShootHibernationReconciler(
 	gardenClient client.Client,
 	hibernationScheduleRegistry HibernationScheduleRegistry,
 	recorder record.EventRecorder,
-) reconcile.Reconciler {
+) *shootHibernationReconciler {
 	return &shootHibernationReconciler{
 		logger:                      l,
 		gardenClient:                gardenClient,

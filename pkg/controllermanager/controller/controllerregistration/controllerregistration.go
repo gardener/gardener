@@ -34,11 +34,11 @@ func AddToManager(
 	mgr manager.Manager,
 	config *config.ControllerRegistrationControllerConfiguration,
 ) error {
-	if err := addSeedReconciler(ctx, mgr, config); err != nil {
+	if err := addSeedReconciler(mgr, config); err != nil {
 		return fmt.Errorf("failed to add seed controller: %w", err)
 	}
 
-	if err := addControllerRegistrationReconciler(ctx, mgr, config); err != nil {
+	if err := addControllerRegistrationReconciler(mgr, config); err != nil {
 		return fmt.Errorf("failed to add controllerregistration controller: %w", err)
 	}
 

@@ -39,22 +39,19 @@ const (
 	SeedControllerName = "controllerregistration-seed"
 )
 
-func addSeedReconciler(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ControllerRegistrationControllerConfiguration,
-) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
+func addSeedReconciler(mgr manager.Manager, config *config.ControllerRegistrationControllerConfiguration) error {
+	reconciler := NewSeedReconciler(mgr.GetLogger(), mgr.GetClient())
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewSeedReconciler(logger, gardenClient),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(SeedControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	seed := &gardencorev1beta1.Seed{}
 	if err := c.Watch(&source.Kind{Type: seed}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -65,7 +62,7 @@ func addSeedReconciler(
 }
 
 // NewSeedReconciler creates a new instance of a reconciler which reconciles Seeds.
-func NewSeedReconciler(logger logr.Logger, gardenClient client.Client) reconcile.Reconciler {
+func NewSeedReconciler(logger logr.Logger, gardenClient client.Client) *seedReconciler {
 	return &seedReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,

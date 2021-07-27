@@ -15,7 +15,6 @@
 package shoot
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -24,32 +23,28 @@ import (
 )
 
 // AddToManager adds new shoot controllers to the given manager.
-func AddToManager(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ControllerManagerControllerConfiguration,
-) error {
-	if err := addShootHibernationController(ctx, mgr, &config.ShootHibernation); err != nil {
+func AddToManager(mgr manager.Manager, config *config.ControllerManagerControllerConfiguration) error {
+	if err := addShootHibernationController(mgr, &config.ShootHibernation); err != nil {
 		return fmt.Errorf("failed to add shoot-hibernation controller: %w", err)
 	}
 
-	if err := addShootMaintenanceController(ctx, mgr, &config.ShootMaintenance); err != nil {
+	if err := addShootMaintenanceController(mgr, &config.ShootMaintenance); err != nil {
 		return fmt.Errorf("failed to add shoot-maintenance controller: %w", err)
 	}
 
-	if err := addShootQuotaController(ctx, mgr, &config.ShootQuota); err != nil {
+	if err := addShootQuotaController(mgr, &config.ShootQuota); err != nil {
 		return fmt.Errorf("failed to add shoot-quota controller: %w", err)
 	}
 
-	if err := addShootReferenceController(ctx, mgr, config.ShootReference); err != nil {
+	if err := addShootReferenceController(mgr, config.ShootReference); err != nil {
 		return fmt.Errorf("failed to add shoot-reference controller: %w", err)
 	}
 
-	if err := addShootRetryController(ctx, mgr, config.ShootRetry); err != nil {
+	if err := addShootRetryController(mgr, config.ShootRetry); err != nil {
 		return fmt.Errorf("failed to add shoot-retry controller: %w", err)
 	}
 
-	if err := addConfigMapController(ctx, mgr, &config.ShootMaintenance); err != nil {
+	if err := addConfigMapController(mgr, &config.ShootMaintenance); err != nil {
 		return fmt.Errorf("failed to add shoot-configmap controller: %w", err)
 	}
 

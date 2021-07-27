@@ -25,13 +25,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// AddToManager adds a new seed controller to the given manager.
+// AddToManager adds new seed controllers to the given manager.
 func AddToManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	config *config.SeedControllerConfiguration,
 ) error {
-	if err := addDefaultBackupBucketController(ctx, mgr, config); err != nil {
+	if err := addDefaultBackupBucketController(mgr, config); err != nil {
 		return fmt.Errorf("failed to add default-backupbucket controller: %w", err)
 	}
 
@@ -39,7 +39,7 @@ func AddToManager(
 		return fmt.Errorf("failed to add seed controller: %w", err)
 	}
 
-	if err := addSeedLifecycleController(ctx, mgr, config); err != nil {
+	if err := addSeedLifecycleController(mgr, config); err != nil {
 		return fmt.Errorf("failed to add seed-lifecycle controller: %w", err)
 	}
 

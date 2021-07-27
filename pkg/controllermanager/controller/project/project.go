@@ -33,7 +33,7 @@ func AddToManager(
 		return fmt.Errorf("failed to add project controller: %w", err)
 	}
 
-	if err := addProjectStaleController(ctx, mgr, config); err != nil {
+	if err := addProjectStaleController(mgr, config); err != nil {
 		return fmt.Errorf("failed to add stale-project controller: %w", err)
 	}
 

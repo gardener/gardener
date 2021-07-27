@@ -38,7 +38,7 @@ type eventReconciler struct {
 }
 
 // NewEventReconciler creates a new instance of a reconciler which reconciles Events.
-func NewEventReconciler(logger logr.Logger, gardenClient client.Client, cfg *config.EventControllerConfiguration) reconcile.Reconciler {
+func NewEventReconciler(logger logr.Logger, gardenClient client.Client, cfg *config.EventControllerConfiguration) *eventReconciler {
 	return &eventReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,

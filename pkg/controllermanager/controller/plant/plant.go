@@ -35,21 +35,22 @@ import (
 
 const (
 	// ControllerName is the name of this controller.
-	ControllerName = "exposureclass-controller"
+	ControllerName = "plant"
 
 	// FinalizerName is the name of the Plant finalizer.
 	FinalizerName = "core.gardener.cloud/plant"
 )
 
-// AddToManager adds a new exposureclass controller to the given manager.
+// AddToManager adds a new plant controller to the given manager.
 func AddToManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	clientMap clientmap.ClientMap,
 	config *config.PlantControllerConfiguration,
 ) error {
+	reconciler := NewReconciler(mgr.GetLogger(), clientMap, mgr.GetClient(), config)
 	ctrlOptions := controller.Options{
-		Reconciler:              NewReconciler(mgr.GetLogger(), clientMap, mgr.GetClient(), config),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ControllerName, mgr, ctrlOptions)
@@ -57,31 +58,27 @@ func AddToManager(
 		return err
 	}
 
+	reconciler.logger = c.GetLogger()
+
 	plant := &gardencorev1beta1.Plant{}
 	if err := c.Watch(&source.Kind{Type: plant}, &handler.EnqueueRequestForObject{}); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %w", plant, err)
 	}
 
 	secretHandler := handler.EnqueueRequestsFromMapFunc(func(obj client.Object) []reconcile.Request {
-		// Ignore non-secrets
-		secret, ok := obj.(*corev1.Secret)
-		if !ok {
-			return nil
-		}
-
 		// list all related plants
 		plantList := gardencorev1beta1.PlantList{}
 
 		// TODO: Can't this be restricted to the secret's namespace instead of listing _all_ plants
 		// in _all_ namespaces?
 		if err := mgr.GetClient().List(ctx, &plantList); err != nil {
-			mgr.GetLogger().Error(err, "Failed to list Plants")
+			reconciler.logger.Error(err, "Failed to list Plants")
 			return nil
 		}
 
 		requests := []reconcile.Request{}
 		for _, plant := range plantList.Items {
-			if isPlantSecret(plant, kutil.Key(secret.Namespace, secret.Name)) {
+			if isPlantSecret(plant, kutil.Key(obj.GetNamespace(), obj.GetName())) {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Namespace: plant.Namespace,

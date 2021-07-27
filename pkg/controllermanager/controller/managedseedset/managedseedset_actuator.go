@@ -58,7 +58,7 @@ func NewActuator(
 	cfg *config.ManagedSeedSetControllerConfiguration,
 	recorder record.EventRecorder,
 	logger logr.Logger,
-) Actuator {
+) *actuator {
 	return &actuator{
 		gardenClient:   gardenClient,
 		replicaFactory: replicaFactory,
@@ -110,7 +110,9 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 		}
 		debug = append(debug, replicaDebugString(r))
 	}
-	a.getLogger(set).WithValues("replicas", debug).Info("Found replicas")
+
+	logger := a.getLogger(set)
+	logger.Info("Found replicas", "replicas", debug)
 
 	// Update replicas and readyReplicas in status
 	status.Replicas = int32(len(replicas))
@@ -176,7 +178,7 @@ func (a *actuator) Reconcile(ctx context.Context, set *seedmanagementv1alpha1.Ma
 		}
 	}
 
-	a.getLogger(set).Info("Nothing to do")
+	logger.Info("Nothing to do")
 	status.PendingReplica = nil
 	return status, true, nil
 }

@@ -36,25 +36,22 @@ import (
 const (
 	// ControllerRegistrationControllerName is the name of the sub controller
 	// that reconciles ControllerRegistrations.
-	ControllerRegistrationControllerName = "controllerregistration-ctrlreg"
+	ControllerRegistrationControllerName = "controllerregistration-controllerregistration"
 )
 
-func addControllerRegistrationReconciler(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ControllerRegistrationControllerConfiguration,
-) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
+func addControllerRegistrationReconciler(mgr manager.Manager, config *config.ControllerRegistrationControllerConfiguration) error {
+	reconciler := NewControllerRegistrationReconciler(mgr.GetLogger(), mgr.GetClient())
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewControllerRegistrationReconciler(logger, gardenClient),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ControllerRegistrationControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
 	if err := c.Watch(&source.Kind{Type: controllerRegistration}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -65,7 +62,7 @@ func addControllerRegistrationReconciler(
 }
 
 // NewControllerRegistrationReconciler creates a new instance of a reconciler which reconciles ControllerRegistrations.
-func NewControllerRegistrationReconciler(logger logr.Logger, gardenClient client.Client) reconcile.Reconciler {
+func NewControllerRegistrationReconciler(logger logr.Logger, gardenClient client.Client) *controllerRegistrationReconciler {
 	return &controllerRegistrationReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,

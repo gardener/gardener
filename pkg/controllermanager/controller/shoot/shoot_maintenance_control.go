@@ -50,22 +50,20 @@ const (
 	ShootMaintenanceControllerName = "shoot-maintenance"
 )
 
-func addShootMaintenanceController(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ShootMaintenanceControllerConfiguration,
-) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
+func addShootMaintenanceController(mgr manager.Manager, config *config.ShootMaintenanceControllerConfiguration) error {
+	recorder := mgr.GetEventRecorderFor("controller-" + ShootMaintenanceControllerName)
+	reconciler := NewShootMaintenanceReconciler(mgr.GetLogger(), mgr.GetClient(), config, recorder)
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewShootMaintenanceReconciler(logger, gardenClient, *config, mgr.GetEventRecorderFor(ShootMaintenanceControllerName)),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ShootMaintenanceControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := c.Watch(&source.Kind{Type: shoot}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -76,7 +74,7 @@ func addShootMaintenanceController(
 }
 
 // NewShootMaintenanceReconciler creates a new instance of a reconciler which maintains Shoots.
-func NewShootMaintenanceReconciler(l logr.Logger, gardenClient client.Client, config config.ShootMaintenanceControllerConfiguration, recorder record.EventRecorder) reconcile.Reconciler {
+func NewShootMaintenanceReconciler(l logr.Logger, gardenClient client.Client, config *config.ShootMaintenanceControllerConfiguration, recorder record.EventRecorder) *shootMaintenanceReconciler {
 	return &shootMaintenanceReconciler{
 		logger:       l,
 		gardenClient: gardenClient,
@@ -88,7 +86,7 @@ func NewShootMaintenanceReconciler(l logr.Logger, gardenClient client.Client, co
 type shootMaintenanceReconciler struct {
 	logger       logr.Logger
 	gardenClient client.Client
-	config       config.ShootMaintenanceControllerConfiguration
+	config       *config.ShootMaintenanceControllerConfiguration
 	recorder     record.EventRecorder
 }
 
@@ -129,7 +127,7 @@ func requeueAfterDuration(shoot *gardencorev1beta1.Shoot, logger logr.Logger) ti
 		nextMaintenance = time.Now().UTC().Add(duration)
 	)
 
-	logger.WithValues("schedule", nextMaintenance.UTC().Round(time.Minute)).Info("Scheduled maintenance")
+	logger.Info("Scheduled maintenance", "schedule", nextMaintenance.UTC().Round(time.Minute))
 	return duration
 }
 

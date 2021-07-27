@@ -88,15 +88,15 @@ func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manage
 		return fmt.Errorf("failed to setup bastion controller: %w", err)
 	}
 
-	if err := csrcontroller.AddToManager(ctx, mgr); err != nil {
+	if err := csrcontroller.AddToManager(mgr); err != nil {
 		return fmt.Errorf("failed to setup CSR controller: %w", err)
 	}
 
-	if err := cloudprofilecontroller.AddToManager(ctx, mgr, f.cfg.Controllers.CloudProfile); err != nil {
+	if err := cloudprofilecontroller.AddToManager(mgr, f.cfg.Controllers.CloudProfile); err != nil {
 		return fmt.Errorf("failed to setup cloudprofile controller: %w", err)
 	}
 
-	if err := controllerdeploymentcontroller.AddToManager(ctx, mgr, f.cfg.Controllers.ControllerDeployment); err != nil {
+	if err := controllerdeploymentcontroller.AddToManager(mgr, f.cfg.Controllers.ControllerDeployment); err != nil {
 		return fmt.Errorf("failed to setup controllerdeployment controller: %w", err)
 	}
 
@@ -104,12 +104,12 @@ func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manage
 		return fmt.Errorf("failed to setup controllerregistration controller: %w", err)
 	}
 
-	if err := exposureclasscontroller.AddToManager(ctx, mgr, f.cfg.Controllers.ExposureClass); err != nil {
+	if err := exposureclasscontroller.AddToManager(mgr, f.cfg.Controllers.ExposureClass); err != nil {
 		return fmt.Errorf("failed to setup exposureclass controller: %w", err)
 	}
 
 	if eventControllerConfig := f.cfg.Controllers.Event; eventControllerConfig != nil {
-		if err := eventcontroller.AddToManager(ctx, mgr, eventControllerConfig); err != nil {
+		if err := eventcontroller.AddToManager(mgr, eventControllerConfig); err != nil {
 			return fmt.Errorf("failed to setup event controller: %w", err)
 		}
 	}
@@ -126,11 +126,11 @@ func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manage
 		return fmt.Errorf("failed to setup project controller: %w", err)
 	}
 
-	if err := quotacontroller.AddToManager(ctx, mgr, f.cfg.Controllers.Quota); err != nil {
+	if err := quotacontroller.AddToManager(mgr, f.cfg.Controllers.Quota); err != nil {
 		return fmt.Errorf("failed to setup quota controller: %w", err)
 	}
 
-	if err := secretbindingcontroller.AddToManager(ctx, mgr, f.cfg.Controllers.SecretBinding); err != nil {
+	if err := secretbindingcontroller.AddToManager(mgr, f.cfg.Controllers.SecretBinding); err != nil {
 		return fmt.Errorf("failed to setup secretbinding controller: %w", err)
 	}
 
@@ -138,7 +138,7 @@ func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manage
 		return fmt.Errorf("failed to setup seed controller: %w", err)
 	}
 
-	if err := shootcontroller.AddToManager(ctx, mgr, &f.cfg.Controllers); err != nil {
+	if err := shootcontroller.AddToManager(mgr, &f.cfg.Controllers); err != nil {
 		return fmt.Errorf("failed to setup shoot controller: %w", err)
 	}
 

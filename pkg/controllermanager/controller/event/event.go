@@ -15,7 +15,6 @@
 package event
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -29,23 +28,23 @@ import (
 
 const (
 	// ControllerName is the name of this controller.
-	ControllerName = "event-controller"
+	ControllerName = "event"
 )
 
 // AddToManager adds a new event controller to the given manager.
-func AddToManager(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.EventControllerConfiguration,
-) error {
+func AddToManager(mgr manager.Manager, config *config.EventControllerConfiguration) error {
+	reconciler := NewEventReconciler(mgr.GetLogger(), mgr.GetClient(), config)
+
 	ctrlOptions := controller.Options{
-		Reconciler:              NewEventReconciler(mgr.GetLogger(), mgr.GetClient(), config),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	event := &corev1.Event{}
 	if err := c.Watch(&source.Kind{Type: event}, &handler.EnqueueRequestForObject{}); err != nil {

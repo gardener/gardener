@@ -15,7 +15,6 @@
 package exposureclass
 
 import (
-	"context"
 	"fmt"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -29,23 +28,23 @@ import (
 
 const (
 	// ControllerName is the name of this controller.
-	ControllerName = "exposureclass-controller"
+	ControllerName = "exposureclass"
 )
 
 // AddToManager adds a new exposureclass controller to the given manager.
-func AddToManager(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ExposureClassControllerConfiguration,
-) error {
+func AddToManager(mgr manager.Manager, config *config.ExposureClassControllerConfiguration) error {
+	reconciler := NewReconciler(mgr.GetLogger(), mgr.GetClient(), mgr.GetEventRecorderFor(ControllerName))
+
 	ctrlOptions := controller.Options{
-		Reconciler:              NewReconciler(mgr.GetLogger(), mgr.GetClient(), mgr.GetEventRecorderFor(ControllerName)),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	exposureClass := &gardencorev1alpha1.ExposureClass{}
 	if err := c.Watch(&source.Kind{Type: exposureClass}, &handler.EnqueueRequestForObject{}); err != nil {

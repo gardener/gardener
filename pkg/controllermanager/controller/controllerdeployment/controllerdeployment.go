@@ -15,7 +15,6 @@
 package controllerdeployment
 
 import (
-	"context"
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -36,11 +35,7 @@ const (
 )
 
 // AddToManager adds a new controllerdeployment controller to the given manager.
-func AddToManager(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ControllerDeploymentControllerConfiguration,
-) error {
+func AddToManager(mgr manager.Manager, config *config.ControllerDeploymentControllerConfiguration) error {
 	reconciler := &reconciler{
 		gardenClient: mgr.GetClient(),
 	}

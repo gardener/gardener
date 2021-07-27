@@ -37,22 +37,19 @@ const (
 	ConfigMapControllerName = "shoot-configmap"
 )
 
-func addConfigMapController(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ShootMaintenanceControllerConfiguration,
-) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
+func addConfigMapController(mgr manager.Manager, config *config.ShootMaintenanceControllerConfiguration) error {
+	reconciler := NewConfigMapReconciler(mgr.GetLogger(), mgr.GetClient())
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewConfigMapReconciler(logger, gardenClient),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ConfigMapControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	configMap := &corev1.ConfigMap{}
 	if err := c.Watch(&source.Kind{Type: configMap}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -63,7 +60,7 @@ func addConfigMapController(
 }
 
 // NewConfigMapReconciler creates a new instance of a reconciler which reconciles ConfigMaps.
-func NewConfigMapReconciler(l logr.Logger, gardenClient client.Client) reconcile.Reconciler {
+func NewConfigMapReconciler(l logr.Logger, gardenClient client.Client) *configMapReconciler {
 	return &configMapReconciler{
 		logger:       l,
 		gardenClient: gardenClient,

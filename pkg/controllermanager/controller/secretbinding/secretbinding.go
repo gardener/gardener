@@ -15,7 +15,6 @@
 package secretbinding
 
 import (
-	"context"
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -29,19 +28,14 @@ import (
 
 const (
 	// ControllerName is the name of this controller.
-	ControllerName = "secretbinding-controller"
+	ControllerName = "secretbinding"
 )
 
 // AddToManager adds a new secretbinding controller to the given manager.
-func AddToManager(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.SecretBindingControllerConfiguration,
-) error {
+func AddToManager(mgr manager.Manager, config *config.SecretBindingControllerConfiguration) error {
 	reconciler := &reconciler{
-		logger:       mgr.GetLogger(),
 		gardenClient: mgr.GetClient(),
-		recorder:     mgr.GetEventRecorderFor(ControllerName),
+		recorder:     mgr.GetEventRecorderFor("controller-" + ControllerName),
 	}
 
 	ctrlOptions := controller.Options{
@@ -52,6 +46,8 @@ func AddToManager(
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	sb := &gardencorev1beta1.SecretBinding{}
 	if err := c.Watch(&source.Kind{Type: sb}, &handler.EnqueueRequestForObject{}); err != nil {

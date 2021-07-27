@@ -51,17 +51,18 @@ func addSeedController(
 	mgr manager.Manager,
 	config *config.SeedControllerConfiguration,
 ) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
+	reconciler := NewSeedReconciler(mgr.GetLogger(), mgr.GetClient())
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewDefaultBackupBucketControl(logger, gardenClient),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(SeedControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	seed := &gardencorev1beta1.Seed{}
 	if err := c.Watch(&source.Kind{Type: seed}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -70,39 +71,39 @@ func addSeedController(
 
 	// TODO: Filter! filterGardenSecret
 	secret := &corev1.Secret{}
-	if err := c.Watch(&source.Kind{Type: secret}, newSecretEventHandler(ctx, gardenClient, logger)); err != nil {
+	if err := c.Watch(&source.Kind{Type: secret}, newSecretEventHandler(ctx, mgr.GetClient(), reconciler.logger)); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %w", secret, err)
 	}
 
 	return nil
 }
 
-// NewDefaultControl returns a new instance of the default implementation that
+// NewSeedReconciler returns a new instance of the default implementation that
 // implements the documented semantics for seeds.
-// You should use an instance returned from NewDefaultControl() for any scenario other than testing.
-func NewDefaultControl(logger logr.Logger, gardenClient client.Client) *reconciler {
-	return &reconciler{
+// You should use an instance returned from NewSeedReconciler() for any scenario other than testing.
+func NewSeedReconciler(logger logr.Logger, gardenClient client.Client) *seedReconciler {
+	return &seedReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
 	}
 }
 
-type reconciler struct {
+type seedReconciler struct {
 	logger       logr.Logger
 	gardenClient client.Client
 }
 
-func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *seedReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	seed := &gardencorev1beta1.Seed{}
 	logger := r.logger.WithValues("seed", req.Name)
 
 	err := r.gardenClient.Get(ctx, req.NamespacedName, seed)
 	if apierrors.IsNotFound(err) {
-		logger.Info("[SEED] Stopping operations for Seed since it has been deleted")
+		logger.Info("Stopping operations for Seed since it has been deleted")
 		return reconcile.Result{}, nil
 	}
 	if err != nil {
-		logger.Error(err, "[SEED] Unable to retrieve object from store")
+		logger.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
 
@@ -146,7 +147,7 @@ var (
 	gardenRoleSelector = labels.NewSelector().Add(gardenRoleReq).Add(gutil.NoControlPlaneSecretsReq)
 )
 
-func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient client.Client, existingSecrets []string, namespace string) error {
+func (r *seedReconciler) cleanupStaleSecrets(ctx context.Context, gardenClient client.Client, existingSecrets []string, namespace string) error {
 	var fns []flow.TaskFn
 	exclude := sets.NewString(existingSecrets...)
 
@@ -168,7 +169,7 @@ func (r *reconciler) cleanupStaleSecrets(ctx context.Context, gardenClient clien
 	return flow.Parallel(fns...)(ctx)
 }
 
-func (r *reconciler) syncGardenSecrets(ctx context.Context, gardenClient client.Client, namespace *corev1.Namespace) ([]string, error) {
+func (r *seedReconciler) syncGardenSecrets(ctx context.Context, gardenClient client.Client, namespace *corev1.Namespace) ([]string, error) {
 	secretList := &corev1.SecretList{}
 	if err := r.gardenClient.List(ctx, secretList, client.InNamespace(v1beta1constants.GardenNamespace), client.MatchingLabelsSelector{Selector: gardenRoleSelector}); err != nil {
 		return nil, err

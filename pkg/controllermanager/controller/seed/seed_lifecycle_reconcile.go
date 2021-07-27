@@ -39,26 +39,23 @@ import (
 )
 
 const (
-	// SeedLifecycleControllerName is the name of the seed controller.
+	// SeedLifecycleControllerName is the name of the seed-lifecycle controller.
 	SeedLifecycleControllerName = "seed-lifecycle"
 )
 
-func addSeedLifecycleController(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.SeedControllerConfiguration,
-) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
+func addSeedLifecycleController(mgr manager.Manager, config *config.SeedControllerConfiguration) error {
+	reconciler := NewSeedLifecycleReconciler(mgr.GetLogger(), mgr.GetClient(), config)
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewDefaultBackupBucketControl(logger, gardenClient),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(SeedLifecycleControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	seed := &gardencorev1beta1.Seed{}
 	if err := c.Watch(&source.Kind{Type: seed}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -68,38 +65,38 @@ func addSeedLifecycleController(
 	return nil
 }
 
-// NewLifecycleDefaultControl returns a new instance of the default implementation that
+// NewSeedLifecycleReconciler returns a new instance of the default implementation that
 // implements the documented semantics for checking the lifecycle for Seeds.
-// You should use an instance returned from NewLifecycleDefaultControl() for any scenario other than testing.
-func NewLifecycleDefaultControl(
+// You should use an instance returned from NewSeedLifecycleReconciler() for any scenario other than testing.
+func NewSeedLifecycleReconciler(
 	logger logr.Logger,
 	gardenClient client.Client,
 	config *config.SeedControllerConfiguration,
-) *livecycleReconciler {
-	return &livecycleReconciler{
+) *lifecycleReconciler {
+	return &lifecycleReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
 		config:       config,
 	}
 }
 
-type livecycleReconciler struct {
+type lifecycleReconciler struct {
 	logger       logr.Logger
 	gardenClient client.Client
 	config       *config.SeedControllerConfiguration
 }
 
-func (r *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *lifecycleReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	seed := &gardencorev1beta1.Seed{}
 	logger := r.logger.WithValues("seed", req.Name)
 
 	err := r.gardenClient.Get(ctx, req.NamespacedName, seed)
 	if apierrors.IsNotFound(err) {
-		logger.Info("[SEED LIFECYCLE] Stopping lifecycle operations for Seed since it has been deleted")
+		logger.Info("Stopping lifecycle operations for Seed since it has been deleted")
 		return reconcile.Result{}, nil
 	}
 	if err != nil {
-		logger.Error(err, "[SEED LIFECYCLE] Unable to retrieve object from store")
+		logger.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
 
@@ -159,7 +156,7 @@ func (r *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 		return reconcileAfter(10 * time.Second)
 	}
 
-	logger.WithValues("gracePeriod", r.config.ShootMonitorPeriod.Duration).Info("Gardenlet didn't send a heartbeat during the grace period - setting the shoot conditions/constraints to 'unknown' for all shoots on this seed")
+	logger.Info("Gardenlet didn't send a heartbeat during the grace period - setting the shoot conditions/constraints to 'unknown' for all shoots on this seed", "gracePeriod", r.config.ShootMonitorPeriod.Duration)
 
 	shootList := &gardencorev1beta1.ShootList{}
 	if err := r.gardenClient.List(ctx, shootList, client.MatchingFields{core.ShootSeedName: seed.Name}); err != nil {

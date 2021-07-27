@@ -50,22 +50,19 @@ const (
 	FinalizerName = "gardener.cloud/reference-protection"
 )
 
-func addShootReferenceController(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ShootReferenceControllerConfiguration,
-) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
+func addShootReferenceController(mgr manager.Manager, config *config.ShootReferenceControllerConfiguration) error {
+	reconciler := NewShootReferenceReconciler(mgr.GetLogger(), mgr.GetClient(), config)
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewShootReferenceReconciler(logger, gardenClient, config),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ShootReferenceControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := c.Watch(&source.Kind{Type: shoot}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -96,7 +93,7 @@ type ConfigMapLister func(ctx context.Context, configMapList *corev1.ConfigMapLi
 
 // NewShootReferenceReconciler creates a new instance of a reconciler which checks object references from shoot objects.
 // A special `userSecretLister` serves as an option to retrieve secret objects which are not gardener managed.
-func NewShootReferenceReconciler(l logr.Logger, gardenClient client.Client, config *config.ShootReferenceControllerConfiguration) reconcile.Reconciler {
+func NewShootReferenceReconciler(l logr.Logger, gardenClient client.Client, config *config.ShootReferenceControllerConfiguration) *shootReferenceReconciler {
 	return &shootReferenceReconciler{
 		gardenClient: gardenClient,
 		logger:       l,

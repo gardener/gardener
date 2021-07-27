@@ -106,7 +106,7 @@ var _ = Describe("SeedReconciler", func() {
 				Expect(coreInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
 			}
 
-			control = NewDefaultControl(logr.Discard(), cl)
+			control = NewSeedReconciler(logr.Discard(), cl)
 		})
 
 		It("should fail if get namespace fails", func() {

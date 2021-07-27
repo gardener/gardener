@@ -15,7 +15,6 @@
 package cloudprofile
 
 import (
-	"context"
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -33,11 +32,7 @@ const (
 )
 
 // AddToManager adds a new cloudprofile controller to the given manager.
-func AddToManager(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.CloudProfileControllerConfiguration,
-) error {
+func AddToManager(mgr manager.Manager, config *config.CloudProfileControllerConfiguration) error {
 	reconciler := &reconciler{
 		gardenClient: mgr.GetClient(),
 		recorder:     mgr.GetEventRecorderFor("controller-" + ControllerName),

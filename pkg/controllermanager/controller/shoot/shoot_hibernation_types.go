@@ -100,7 +100,7 @@ type hibernationJob struct {
 
 // Run implements cron.Job.
 func (h *hibernationJob) Run() {
-	h.logger.WithValues("enabled", h.enabled).Info("Setting hibernation.enabled")
+	h.logger.Info("Setting hibernation.enabled", "enabled", h.enabled)
 	if err := func() error {
 		shoot := &gardencorev1beta1.Shoot{}
 		if err := h.gardenClient.Get(h.ctx, client.ObjectKeyFromObject(h.target), shoot); err != nil {

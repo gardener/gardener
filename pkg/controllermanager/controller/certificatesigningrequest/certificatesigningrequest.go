@@ -15,7 +15,6 @@
 package certificatesigningrequest
 
 import (
-	"context"
 	"fmt"
 
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
@@ -31,10 +30,7 @@ const (
 )
 
 // AddToManager adds a new CSR controller to the given manager.
-func AddToManager(
-	ctx context.Context,
-	mgr manager.Manager,
-) error {
+func AddToManager(mgr manager.Manager) error {
 	reconciler := &reconciler{
 		gardenClient: mgr.GetClient(),
 	}

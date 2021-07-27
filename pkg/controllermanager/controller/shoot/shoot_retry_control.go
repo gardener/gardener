@@ -40,22 +40,19 @@ const (
 	ShootRetryControllerName = "shoot-retry"
 )
 
-func addShootRetryController(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ShootRetryControllerConfiguration,
-) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
+func addShootRetryController(mgr manager.Manager, config *config.ShootRetryControllerConfiguration) error {
+	reconciler := NewShootRetryReconciler(mgr.GetLogger(), mgr.GetClient(), config)
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewShootRetryReconciler(logger, gardenClient, config),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ShootRetryControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := c.Watch(&source.Kind{Type: shoot}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -66,7 +63,7 @@ func addShootRetryController(
 }
 
 // NewShootRetryReconciler creates a new instance of a reconciler which retries certain failed Shoots.
-func NewShootRetryReconciler(l logr.Logger, gardenClient client.Client, config *config.ShootRetryControllerConfiguration) reconcile.Reconciler {
+func NewShootRetryReconciler(l logr.Logger, gardenClient client.Client, config *config.ShootRetryControllerConfiguration) *shootRetryReconciler {
 	return &shootRetryReconciler{
 		logger:       l,
 		gardenClient: gardenClient,
@@ -100,7 +97,7 @@ func (r *shootRetryReconciler) Reconcile(ctx context.Context, request reconcile.
 
 	mustRetry, requeueAfter := mustRetryNow(shoot, *r.config.RetryPeriod)
 	if !mustRetry {
-		logger.WithValues("retry", requeueAfter.Round(time.Minute)).Info("Scheduled retry")
+		logger.Info("Scheduled retry", "retry", requeueAfter.Round(time.Minute))
 		return reconcile.Result{RequeueAfter: requeueAfter}, nil
 	}
 

@@ -35,7 +35,7 @@ import (
 )
 
 // NewReconciler creates a new instance of a reconciler which reconciles Plants.
-func NewReconciler(l logr.Logger, clientMap clientmap.ClientMap, gardenClient client.Client, config *config.PlantControllerConfiguration) reconcile.Reconciler {
+func NewReconciler(l logr.Logger, clientMap clientmap.ClientMap, gardenClient client.Client, config *config.PlantControllerConfiguration) *plantReconciler {
 	return &plantReconciler{
 		logger:       l,
 		clientMap:    clientMap,

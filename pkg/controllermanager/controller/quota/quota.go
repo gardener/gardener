@@ -15,7 +15,6 @@
 package quota
 
 import (
-	"context"
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -29,19 +28,14 @@ import (
 
 const (
 	// ControllerName is the name of this controller.
-	ControllerName = "quota-controller"
+	ControllerName = "quota"
 )
 
 // AddToManager adds a new quota controller to the given manager.
-func AddToManager(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.QuotaControllerConfiguration,
-) error {
+func AddToManager(mgr manager.Manager, config *config.QuotaControllerConfiguration) error {
 	reconciler := &reconciler{
-		logger:       mgr.GetLogger(),
 		gardenClient: mgr.GetClient(),
-		recorder:     mgr.GetEventRecorderFor(ControllerName),
+		recorder:     mgr.GetEventRecorderFor("controller-" + ControllerName),
 	}
 
 	ctrlOptions := controller.Options{
@@ -52,6 +46,8 @@ func AddToManager(
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	quota := &gardencorev1beta1.Quota{}
 	if err := c.Watch(&source.Kind{Type: quota}, &handler.EnqueueRequestForObject{}); err != nil {

@@ -38,22 +38,19 @@ const (
 	DefaultBackupBucketControllerName = "seed-default-backupbucket"
 )
 
-func addDefaultBackupBucketController(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.SeedControllerConfiguration,
-) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
+func addDefaultBackupBucketController(mgr manager.Manager, config *config.SeedControllerConfiguration) error {
+	reconciler := NewDefaultBackupBucketReconciler(mgr.GetLogger(), mgr.GetClient())
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewDefaultBackupBucketControl(logger, gardenClient),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(DefaultBackupBucketControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	backupBucket := &gardencorev1beta1.BackupBucket{}
 	if err := c.Watch(&source.Kind{Type: backupBucket}, newBackupBucketEventHandler()); err != nil {
@@ -84,8 +81,8 @@ func newBackupBucketEventHandler() handler.EventHandler {
 	})
 }
 
-// NewDefaultBackupBucketControl returns a new default control to checks backup buckets of related seeds.
-func NewDefaultBackupBucketControl(logger logr.Logger, gardenClient client.Client) *backupBucketReconciler {
+// NewDefaultBackupBucketReconciler returns a new default control to checks backup buckets of related seeds.
+func NewDefaultBackupBucketReconciler(logger logr.Logger, gardenClient client.Client) *backupBucketReconciler {
 	return &backupBucketReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
@@ -112,11 +109,11 @@ func (r *backupBucketReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	seed := &gardencorev1beta1.Seed{}
 	if err := r.gardenClient.Get(ctx, req.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Info("[BACKUPBUCKET SEED RECONCILE] Object is gone, stop reconciling")
+			logger.Info("Object is gone, stop reconciling")
 			return reconcile.Result{}, nil
 		}
 
-		logger.Error(err, "[BACKUPBUCKET SEED RECONCILE] Unable to retrieve object from store")
+		logger.Error(err, "Unable to retrieve object from store")
 		return reconcile.Result{}, err
 	}
 

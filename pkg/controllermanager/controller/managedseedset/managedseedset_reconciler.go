@@ -45,7 +45,7 @@ func NewReconciler(
 	actuator Actuator,
 	cfg *config.ManagedSeedSetControllerConfiguration,
 	logger logr.Logger,
-) reconcile.Reconciler {
+) *reconciler {
 	return &reconciler{
 		gardenClient: gardenClient,
 		actuator:     actuator,

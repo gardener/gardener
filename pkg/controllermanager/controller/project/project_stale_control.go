@@ -44,19 +44,19 @@ const (
 	ProjectStaleControllerName = "project-stale"
 )
 
-func addProjectStaleController(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ProjectControllerConfiguration,
-) error {
+func addProjectStaleController(mgr manager.Manager, config *config.ProjectControllerConfiguration) error {
+	reconciler := NewProjectStaleReconciler(mgr.GetLogger(), config, mgr.GetClient())
+
 	ctrlOptions := controller.Options{
-		Reconciler:              NewProjectStaleReconciler(mgr.GetLogger(), config, mgr.GetClient()),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ProjectStaleControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	project := &gardencorev1beta1.Project{}
 	if err := c.Watch(&source.Kind{Type: project}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -71,7 +71,7 @@ func NewProjectStaleReconciler(
 	logger logr.Logger,
 	config *config.ProjectControllerConfiguration,
 	gardenClient client.Client,
-) reconcile.Reconciler {
+) *projectStaleReconciler {
 	return &projectStaleReconciler{
 		logger:       logger,
 		config:       config,
@@ -134,14 +134,14 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 	}
 
 	if skipStaleCheck {
-		logger.WithValues("namespace", *project.Spec.Namespace, "annotation", v1beta1constants.ProjectSkipStaleCheck).Info("Namespace has skip-annotation, skipping the check and considering the project as 'not stale'")
+		logger.Info("Namespace has skip-annotation, skipping the check and considering the project as 'not stale'", "namespace", *project.Spec.Namespace, "annotation", v1beta1constants.ProjectSkipStaleCheck)
 		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 	}
 
 	// Skip projects that are not older than the configured minimum lifetime in days. This allows having Projects for a
 	// certain period of time until they are checked whether they got stale.
 	if project.CreationTimestamp.UTC().Add(time.Hour * 24 * time.Duration(*r.config.MinimumLifetimeDays)).After(NowFunc().UTC()) {
-		logger.WithValues("minLifetime", *r.config.MinimumLifetimeDays).Info("Project is not older than the configured minimum days lifetime, considering it 'not stale'")
+		logger.Info("Project is not older than the configured minimum days lifetime, considering it 'not stale'", "minLifetime", *r.config.MinimumLifetimeDays)
 		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 	}
 
@@ -157,7 +157,7 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 			return err
 		}
 		if projectInUse {
-			logger.WithValues("resource", check.resource).Info("Project is being marked as 'not stale' because it is used")
+			logger.Info("Project is being marked as 'not stale' because it is used", "resource", check.resource)
 			return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 		}
 	}
@@ -167,9 +167,9 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 		return err
 	}
 
-	logger.WithValues("since", *project.Status.StaleSinceTimestamp).Info("Project is stale")
+	logger.Info("Project is stale", "since", *project.Status.StaleSinceTimestamp)
 	if project.Status.StaleAutoDeleteTimestamp != nil {
-		logger.WithValues("deleteAt", *project.Status.StaleAutoDeleteTimestamp).Info("Project will be deleted soon")
+		logger.Info("Project will be deleted soon", "deleteAt", *project.Status.StaleAutoDeleteTimestamp)
 	}
 
 	if project.Status.StaleAutoDeleteTimestamp == nil || NowFunc().UTC().Before(project.Status.StaleAutoDeleteTimestamp.UTC()) {

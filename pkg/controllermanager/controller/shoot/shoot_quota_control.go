@@ -41,22 +41,19 @@ const (
 	ShootQuotaControllerName = "shoot-quota"
 )
 
-func addShootQuotaController(
-	ctx context.Context,
-	mgr manager.Manager,
-	config *config.ShootQuotaControllerConfiguration,
-) error {
-	logger := mgr.GetLogger()
-	gardenClient := mgr.GetClient()
+func addShootQuotaController(mgr manager.Manager, config *config.ShootQuotaControllerConfiguration) error {
+	reconciler := NewShootQuotaReconciler(mgr.GetLogger(), mgr.GetClient(), config)
 
 	ctrlOptions := controller.Options{
-		Reconciler:              NewShootQuotaReconciler(logger, gardenClient, *config),
+		Reconciler:              reconciler,
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
 	c, err := controller.New(ShootQuotaControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err
 	}
+
+	reconciler.logger = c.GetLogger()
 
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := c.Watch(&source.Kind{Type: shoot}, &handler.EnqueueRequestForObject{}); err != nil {
@@ -68,18 +65,18 @@ func addShootQuotaController(
 
 // NewShootQuotaReconciler creates a new instance of a reconciler which checks handles Shoots using SecretBindings that
 // references Quotas.
-func NewShootQuotaReconciler(l logr.Logger, gardenClient client.Client, cfg config.ShootQuotaControllerConfiguration) reconcile.Reconciler {
+func NewShootQuotaReconciler(l logr.Logger, gardenClient client.Client, cfg *config.ShootQuotaControllerConfiguration) *shootQuotaReconciler {
 	return &shootQuotaReconciler{
 		logger:       l,
-		cfg:          cfg,
 		gardenClient: gardenClient,
+		cfg:          cfg,
 	}
 }
 
 type shootQuotaReconciler struct {
 	logger       logr.Logger
-	cfg          config.ShootQuotaControllerConfiguration
 	gardenClient client.Client
+	cfg          *config.ShootQuotaControllerConfiguration
 }
 
 func (r *shootQuotaReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
