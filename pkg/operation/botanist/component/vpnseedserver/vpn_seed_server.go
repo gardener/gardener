@@ -75,6 +75,8 @@ const (
 	envoyPort = 9443
 	// envoyProxyContainerName is the name of the envoy proxy container.
 	envoyProxyContainerName = "envoy-proxy"
+	// openVPNPort is the port exposed by the OpenVPN server.
+	openVPNPort = 1194
 )
 
 // Interface contains functions for a vpn-seed-server deployer.
@@ -317,7 +319,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							Ports: []corev1.ContainerPort{
 								{
 									Name:          "tcp-tunnel",
-									ContainerPort: 1194,
+									ContainerPort: openVPNPort,
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
@@ -337,6 +339,20 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 								{
 									Name:  "POD_NETWORK",
 									Value: v.podNetwork,
+								},
+							},
+							ReadinessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									TCPSocket: &corev1.TCPSocketAction{
+										Port: intstr.FromInt(openVPNPort),
+									},
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									TCPSocket: &corev1.TCPSocketAction{
+										Port: intstr.FromInt(openVPNPort),
+									},
 								},
 							},
 							Resources: corev1.ResourceRequirements{
@@ -381,6 +397,20 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 								"2",
 								"-c",
 								fmt.Sprintf("%s/%s", envoyConfigDir, envoyConfigFileName),
+							},
+							ReadinessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									TCPSocket: &corev1.TCPSocketAction{
+										Port: intstr.FromInt(envoyPort),
+									},
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									TCPSocket: &corev1.TCPSocketAction{
+										Port: intstr.FromInt(envoyPort),
+									},
+								},
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
@@ -524,7 +554,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 						{
 							Destination: &istionetworkingv1beta1.Destination{
 								Port: &istionetworkingv1beta1.PortSelector{
-									Number: 1194,
+									Number: openVPNPort,
 								},
 								Host: DeploymentName,
 							},
@@ -546,8 +576,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		service.Spec.Ports = []corev1.ServicePort{
 			{
 				Name:       DeploymentName,
-				Port:       1194,
-				TargetPort: intstr.FromInt(1194),
+				Port:       openVPNPort,
+				TargetPort: intstr.FromInt(openVPNPort),
 			},
 			{
 				Name:       "http-proxy",
@@ -708,7 +738,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 																																		Fields: map[string]*protobuftypes.Value{
 																																			"cluster": {
 																																				Kind: &protobuftypes.Value_StringValue{
-																																					StringValue: "outbound|1194||" + ServiceName + "." + v.namespace + ".svc.cluster.local",
+																																					StringValue: fmt.Sprintf("outbound|%d||%s.%s.svc.cluster.local", openVPNPort, ServiceName, v.namespace),
 																																				},
 																																			},
 																																			"upgrade_configs": {

@@ -236,6 +236,20 @@ var _ = Describe("VpnSeedServer", func() {
 											Value: podNetwork,
 										},
 									},
+									ReadinessProbe: &corev1.Probe{
+										Handler: corev1.Handler{
+											TCPSocket: &corev1.TCPSocketAction{
+												Port: intstr.FromInt(1194),
+											},
+										},
+									},
+									LivenessProbe: &corev1.Probe{
+										Handler: corev1.Handler{
+											TCPSocket: &corev1.TCPSocketAction{
+												Port: intstr.FromInt(1194),
+											},
+										},
+									},
 									Resources: corev1.ResourceRequirements{
 										Requests: corev1.ResourceList{
 											corev1.ResourceCPU:    resource.MustParse("100m"),
@@ -278,6 +292,20 @@ var _ = Describe("VpnSeedServer", func() {
 										"2",
 										"-c",
 										"/etc/envoy/envoy.yaml",
+									},
+									ReadinessProbe: &corev1.Probe{
+										Handler: corev1.Handler{
+											TCPSocket: &corev1.TCPSocketAction{
+												Port: intstr.FromInt(9443),
+											},
+										},
+									},
+									LivenessProbe: &corev1.Probe{
+										Handler: corev1.Handler{
+											TCPSocket: &corev1.TCPSocketAction{
+												Port: intstr.FromInt(9443),
+											},
+										},
 									},
 									Resources: corev1.ResourceRequirements{
 										Requests: corev1.ResourceList{
