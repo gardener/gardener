@@ -66,13 +66,17 @@ leaderElection:
   renewDeadline: 10s
   retryPeriod: 2s
   resourceLock: leases
+  resourceNamespace: garden
 logLevel: info
 kubernetesLogLevel: 0
-server:
+healthServer:
   http:
     bindAddress: 0.0.0.0
     port: 2718
+metricsServer:
+  http:
+    bindAddress: 0.0.0.0
+    port: 2798
 featureGates:
-  CachedRuntimeClients: true
   UseDNSRecords: false
   RotateSSHKeypairOnMaintenance: false

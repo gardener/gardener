@@ -210,7 +210,7 @@ func runCommand(ctx context.Context, opts *Options) error {
 		HealthProbeBindAddress:     getHealthAddress(config),
 		LeaderElection:             config.LeaderElection.LeaderElect,
 		LeaderElectionID:           "gardener-controller-manager-leader-election",
-		LeaderElectionNamespace:    config.LeaderElection.LockObjectNamespace,
+		LeaderElectionNamespace:    config.LeaderElection.ResourceNamespace,
 		LeaderElectionResourceLock: config.LeaderElection.ResourceLock,
 		Logger:                     zapLogr,
 	})

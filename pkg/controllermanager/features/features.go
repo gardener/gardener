@@ -25,7 +25,6 @@ var (
 	// FeatureGate is a shared global FeatureGate for Gardener Controller Manager flags.
 	FeatureGate  = featuregate.NewFeatureGate()
 	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-		features.CachedRuntimeClients:          {Default: false, PreRelease: featuregate.Alpha},
 		features.UseDNSRecords:                 {Default: false, PreRelease: featuregate.Alpha},
 		features.RotateSSHKeypairOnMaintenance: {Default: false, PreRelease: featuregate.Alpha},
 	}
