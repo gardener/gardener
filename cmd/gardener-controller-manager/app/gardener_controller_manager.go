@@ -22,7 +22,10 @@ import (
 	"os"
 	"strconv"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -196,13 +199,18 @@ func runCommand(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed to create Kubernetes REST configuration: %w", err)
 	}
 
+	k8sClient, err := kubernetes.NewWithConfig(kubernetes.WithRESTConfig(restCfg))
+	if err != nil {
+		return fmt.Errorf("failed to create Kubernetes clientset: %w", err)
+	}
+
 	// Setup controller-runtime manager
 	mgr, err := manager.New(restCfg, manager.Options{
 		MetricsBindAddress:         getAddress(config.MetricsServer),
 		HealthProbeBindAddress:     getHealthAddress(config),
 		LeaderElection:             config.LeaderElection.LeaderElect,
 		LeaderElectionID:           "gardener-controller-manager-leader-election",
-		LeaderElectionNamespace:    config.LeaderElection.ResourceNamespace,
+		LeaderElectionNamespace:    config.LeaderElection.LockObjectNamespace,
 		LeaderElectionResourceLock: config.LeaderElection.ResourceLock,
 		Logger:                     zapLogr,
 	})
@@ -211,8 +219,20 @@ func runCommand(ctx context.Context, opts *Options) error {
 	}
 
 	// Add APIs
+	if err := gardencorev1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		return fmt.Errorf("failed to register scheme gardencorev1alpha1: %w", err)
+	}
 	if err := gardencorev1beta1.AddToScheme(mgr.GetScheme()); err != nil {
 		return fmt.Errorf("failed to register scheme gardencorev1beta1: %w", err)
+	}
+	if err := seedmanagementv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		return fmt.Errorf("failed to register scheme seedmanagementv1alpha1: %w", err)
+	}
+	if err := operationsv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		return fmt.Errorf("failed to register scheme operationsv1alpha1: %w", err)
+	}
+	if err := operationsv1alpha1.AddToScheme(mgr.GetScheme()); err != nil {
+		return fmt.Errorf("failed to register scheme operationsv1alpha1: %w", err)
 	}
 
 	// Setup client map; this should be refactored to use the Zap logger
@@ -231,7 +251,7 @@ func runCommand(ctx context.Context, opts *Options) error {
 	eventRecorder := mgr.GetEventRecorderFor("gardener-controller-manager")
 	factory := controller.NewGardenControllerFactory(clientMap, config, eventRecorder, zapLogr)
 
-	if err := factory.AddControllers(ctx, mgr); err != nil {
+	if err := factory.AddControllers(ctx, mgr, k8sClient); err != nil {
 		return fmt.Errorf("failed to add controllers: %w", err)
 	}
 

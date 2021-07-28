@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/go-logr/logr"
@@ -38,6 +39,7 @@ import (
 type reconciler struct {
 	logger       logr.Logger
 	gardenClient client.Client
+	k8sClient    kubernetes.Interface
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -99,8 +101,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
 		})
 
-		// TODO:
-		// _, err := r.gardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(ctx, csr, kubernetes.DefaultUpdateOptions())
+		_, err := r.k8sClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(ctx, csr, kubernetes.DefaultUpdateOptions())
 		return reconcile.Result{}, err
 	}
 

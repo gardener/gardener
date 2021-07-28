@@ -17,6 +17,8 @@ package certificatesigningrequest
 import (
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -30,9 +32,10 @@ const (
 )
 
 // AddToManager adds a new CSR controller to the given manager.
-func AddToManager(mgr manager.Manager) error {
+func AddToManager(mgr manager.Manager, k8sClient kubernetes.Interface) error {
 	reconciler := &reconciler{
 		gardenClient: mgr.GetClient(),
+		k8sClient:    k8sClient,
 	}
 
 	ctrlOptions := controller.Options{

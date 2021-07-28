@@ -20,6 +20,7 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -66,7 +67,7 @@ func NewGardenControllerFactory(clientMap clientmap.ClientMap, cfg *config.Contr
 }
 
 // AddControllers adds all the controllers for the Garden API group. It also performs bootstrapping tasks.
-func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manager.Manager) error {
+func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manager.Manager, k8sClient kubernetes.Interface) error {
 	if err := addAllFieldIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
 		return fmt.Errorf("failed to setup field indexes: %w", err)
 	}
@@ -88,7 +89,7 @@ func (f *GardenControllerFactory) AddControllers(ctx context.Context, mgr manage
 		return fmt.Errorf("failed to setup bastion controller: %w", err)
 	}
 
-	if err := csrcontroller.AddToManager(mgr); err != nil {
+	if err := csrcontroller.AddToManager(mgr, k8sClient); err != nil {
 		return fmt.Errorf("failed to setup CSR controller: %w", err)
 	}
 
