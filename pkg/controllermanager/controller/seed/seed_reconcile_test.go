@@ -22,14 +22,12 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
-	"github.com/gardener/gardener/pkg/logger"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockclientgo "github.com/gardener/gardener/pkg/mock/client-go/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/go-logr/logr"
 
 	"github.com/golang/mock/gomock"
@@ -264,7 +262,6 @@ var _ = Describe("SeedReconciler", func() {
 			It("should not create and copy assets if seed cannot be found", func() {
 				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
 
-				defer test.WithVar(&logger.Logger, logr.Discard())()
 				result, err := control.Reconcile(context.Background(), reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)})
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(result).To(Equal(reconcile.Result{}))

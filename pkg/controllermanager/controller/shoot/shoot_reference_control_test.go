@@ -145,12 +145,12 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				})
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
 				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
@@ -180,12 +180,12 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				})
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
 				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), client.InNamespace(shootNamespace)).DoAndReturn(
 				func(_ context.Context, list *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
@@ -224,12 +224,12 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				}).Times(2)
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
 				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			var (
 				m              sync.Mutex
@@ -310,12 +310,12 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				})
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
 				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
@@ -385,12 +385,12 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				})
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
 				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
@@ -434,12 +434,12 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				})
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
 				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, secrets...)
 					return nil
 				})
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace))
 
 			cl.EXPECT().Get(gomock.Any(), namespacedName, gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(
 				func(_ context.Context, _ types.NamespacedName, s *gardencorev1beta1.Shoot) error {
@@ -492,7 +492,7 @@ var _ = Describe("Shoot References", func() {
 				},
 			}
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.SecretList{}), client.InNamespace(shootNamespace), UserManagedSelector).DoAndReturn(
 				func(_ context.Context, list *corev1.SecretList, _ ...client.ListOption) error {
 					list.Items = []corev1.Secret{}
 					return nil
@@ -508,7 +508,7 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				}).Times(2)
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
 				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, configMaps...)
 					return nil
@@ -552,7 +552,7 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				}).Times(2)
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
 				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, configMaps...)
 					return nil
@@ -618,7 +618,7 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				}).Times(2)
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
 				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, configMaps...)
 					return nil
@@ -697,7 +697,7 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				}).Times(2)
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
 				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, configMaps...)
 					return nil
@@ -748,7 +748,7 @@ var _ = Describe("Shoot References", func() {
 					return nil
 				}).Times(2)
 
-			cache.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
+			cl.EXPECT().List(gomock.Any(), gomock.AssignableToTypeOf(&corev1.ConfigMapList{}), client.InNamespace(shootNamespace)).DoAndReturn(
 				func(_ context.Context, list *corev1.ConfigMapList, _ ...client.ListOption) error {
 					list.Items = append(list.Items, configMaps...)
 					return nil
