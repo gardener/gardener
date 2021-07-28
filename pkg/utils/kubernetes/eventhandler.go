@@ -22,10 +22,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // NewNamespacePredicate returns a predicate func that only includes objects in the given namespace
@@ -334,4 +338,47 @@ func getObjectGroupKind(scheme *runtime.Scheme, obj client.Object) (*schema.Grou
 		return nil, fmt.Errorf("expected exactly 1 kind for type %T, but found %d kinds", obj, len(kinds))
 	}
 	return &schema.GroupKind{Group: kinds[0].Group, Kind: kinds[0].Kind}, nil
+}
+
+// ctrlRuntimeEnqueuer is an adapter to translate the Enqueuer interface to
+// the reconcile.Request-based queueing in controller-runtime reconcilers.
+type ctrlRuntimeEnqueuer struct {
+	queue workqueue.RateLimitingInterface
+}
+
+func (e *ctrlRuntimeEnqueuer) Enqueue(o client.Object) {
+	e.queue.Add(reconcile.Request{NamespacedName: types.NamespacedName{
+		Name:      o.GetName(),
+		Namespace: o.GetNamespace(),
+	}})
+}
+
+// ctrlRuntimeDecorator is a wrapper around a ControlledResourceEventHandler that can be used
+// to make the ControlledResourceEventHandler fit into the handler.EventHandler interface.
+type ctrlRuntimeDecorator struct {
+	handler *ControlledResourceEventHandler
+}
+
+func (d *ctrlRuntimeDecorator) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
+	d.handler.Enqueuer = &ctrlRuntimeEnqueuer{queue: q}
+	d.handler.OnAdd(evt.Object)
+}
+
+func (d *ctrlRuntimeDecorator) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
+	d.handler.Enqueuer = &ctrlRuntimeEnqueuer{queue: q}
+	d.handler.OnUpdate(evt.ObjectOld, evt.ObjectNew)
+}
+
+func (d *ctrlRuntimeDecorator) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
+	d.handler.Enqueuer = &ctrlRuntimeEnqueuer{queue: q}
+	d.handler.OnDelete(evt.Object)
+}
+
+func (d *ctrlRuntimeDecorator) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
+	d.handler.Enqueuer = &ctrlRuntimeEnqueuer{queue: q}
+	d.handler.OnAdd(evt.Object)
+}
+
+func (h *ControlledResourceEventHandler) ToHandler() handler.EventHandler {
+	return &ctrlRuntimeDecorator{handler: h}
 }

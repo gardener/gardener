@@ -14,131 +14,137 @@
 
 package managedseedset
 
-/*
 import (
 	"reflect"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	operationshoot "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/go-logr/logr"
 )
 
-func (c *Controller) filterShoot(obj, oldObj, controller client.Object, deleted bool) bool {
-	shoot, ok := obj.(*gardencorev1beta1.Shoot)
-	if !ok {
-		return false
-	}
-	set, ok := controller.(*seedmanagementv1alpha1.ManagedSeedSet)
-	if !ok {
-		return false
-	}
-
-	// If the shoot was deleted or its health status changed, return true
-	if oldObj != nil {
-		oldShoot, ok := oldObj.(*gardencorev1beta1.Shoot)
+func newShootPredicate(logger logr.Logger) predicate.Predicate {
+	return kubernetes.ControllerPredicateFactoryFunc(func(obj, oldObj, controller client.Object, deleted bool) bool {
+		shoot, ok := obj.(*gardencorev1beta1.Shoot)
 		if !ok {
 			return false
 		}
-		if !reflect.DeepEqual(shoot.DeletionTimestamp, oldShoot.DeletionTimestamp) || shootHealthStatus(shoot) != shootHealthStatus(oldShoot) {
-			c.logger.Debugf("Shoot %s was deleted or its health status changed", kutil.ObjectName(shoot))
-			return true
-		}
-	}
-
-	// Return true only if the shoot belongs to the pending replica and it progressed from the state
-	// that caused the replica to be pending
-	if set.Status.PendingReplica == nil || set.Status.PendingReplica.Name != shoot.Name {
-		return false
-	}
-	switch set.Status.PendingReplica.Reason {
-	case seedmanagementv1alpha1.ShootReconcilingReason:
-		return shootReconcileFailed(shoot) || shootReconcileSucceeded(shoot) || shoot.DeletionTimestamp != nil
-	case seedmanagementv1alpha1.ShootDeletingReason:
-		return deleted || shootDeleteFailed(shoot)
-	case seedmanagementv1alpha1.ShootReconcileFailedReason:
-		return !shootReconcileFailed(shoot)
-	case seedmanagementv1alpha1.ShootDeleteFailedReason:
-		return !shootDeleteFailed(shoot)
-	case seedmanagementv1alpha1.ShootNotHealthyReason:
-		return shootHealthStatus(shoot) == operationshoot.StatusHealthy
-	default:
-		return false
-	}
-}
-
-func (c *Controller) filterManagedSeed(obj, oldObj, controller client.Object, deleted bool) bool {
-	managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
-	if !ok {
-		return false
-	}
-	set, ok := controller.(*seedmanagementv1alpha1.ManagedSeedSet)
-	if !ok {
-		return false
-	}
-
-	// If the managed seed was deleted, return true
-	if oldObj != nil {
-		oldManagedSeed, ok := oldObj.(*seedmanagementv1alpha1.ManagedSeed)
+		set, ok := controller.(*seedmanagementv1alpha1.ManagedSeedSet)
 		if !ok {
 			return false
 		}
-		if !reflect.DeepEqual(managedSeed.DeletionTimestamp, oldManagedSeed.DeletionTimestamp) {
-			c.logger.Debugf("Managed seed %s was deleted", kutil.ObjectName(managedSeed))
-			return true
-		}
-	}
 
-	// Return true only if the managed seed belongs to the pending replica and it progressed from the state
-	// that caused the replica to be pending
-	if set.Status.PendingReplica == nil || set.Status.PendingReplica.Name != managedSeed.Name {
-		return false
-	}
-	switch set.Status.PendingReplica.Reason {
-	case seedmanagementv1alpha1.ManagedSeedPreparingReason:
-		return managedSeedRegistered(managedSeed) || managedSeed.DeletionTimestamp != nil
-	case seedmanagementv1alpha1.ManagedSeedDeletingReason:
-		return deleted
-	default:
-		return false
-	}
+		// If the shoot was deleted or its health status changed, return true
+		if oldObj != nil {
+			oldShoot, ok := oldObj.(*gardencorev1beta1.Shoot)
+			if !ok {
+				return false
+			}
+			if !reflect.DeepEqual(shoot.DeletionTimestamp, oldShoot.DeletionTimestamp) || shootHealthStatus(shoot) != shootHealthStatus(oldShoot) {
+				logger.Info("Shoot was deleted or its health status changed", "shoot", kutil.ObjectName(shoot))
+				return true
+			}
+		}
+
+		// Return true only if the shoot belongs to the pending replica and it progressed from the state
+		// that caused the replica to be pending
+		if set.Status.PendingReplica == nil || set.Status.PendingReplica.Name != shoot.Name {
+			return false
+		}
+		switch set.Status.PendingReplica.Reason {
+		case seedmanagementv1alpha1.ShootReconcilingReason:
+			return shootReconcileFailed(shoot) || shootReconcileSucceeded(shoot) || shoot.DeletionTimestamp != nil
+		case seedmanagementv1alpha1.ShootDeletingReason:
+			return deleted || shootDeleteFailed(shoot)
+		case seedmanagementv1alpha1.ShootReconcileFailedReason:
+			return !shootReconcileFailed(shoot)
+		case seedmanagementv1alpha1.ShootDeleteFailedReason:
+			return !shootDeleteFailed(shoot)
+		case seedmanagementv1alpha1.ShootNotHealthyReason:
+			return shootHealthStatus(shoot) == operationshoot.StatusHealthy
+		default:
+			return false
+		}
+	}).NewControllerPredicate(&seedmanagementv1alpha1.ManagedSeedSet{})
 }
 
-func (c *Controller) filterSeed(obj, oldObj, controller client.Object, _ bool) bool {
-	seed, ok := obj.(*gardencorev1beta1.Seed)
-	if !ok {
-		return false
-	}
-	set, ok := controller.(*seedmanagementv1alpha1.ManagedSeedSet)
-	if !ok {
-		return false
-	}
-
-	// If the seed readiness changed, return true
-	if oldObj != nil {
-		oldSeed, ok := oldObj.(*gardencorev1beta1.Seed)
+func newManagedSeedPredicate(logger logr.Logger) predicate.Predicate {
+	return kubernetes.ControllerPredicateFactoryFunc(func(obj, oldObj, controller client.Object, deleted bool) bool {
+		managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
 		if !ok {
 			return false
 		}
-		if seedReady(seed) != seedReady(oldSeed) {
-			c.logger.Debugf("Seed %s readiness changed", kutil.ObjectName(seed))
-			return true
+		set, ok := controller.(*seedmanagementv1alpha1.ManagedSeedSet)
+		if !ok {
+			return false
 		}
-	}
 
-	// Return true only if the seed belongs to the pending replica and it progressed from the state
-	// that caused the replica to be pending
-	if set.Status.PendingReplica == nil || set.Status.PendingReplica.Name != seed.Name {
-		return false
-	}
-	switch set.Status.PendingReplica.Reason {
-	case seedmanagementv1alpha1.SeedNotReadyReason:
-		return seedReady(seed)
-	default:
-		return false
-	}
+		// If the managed seed was deleted, return true
+		if oldObj != nil {
+			oldManagedSeed, ok := oldObj.(*seedmanagementv1alpha1.ManagedSeed)
+			if !ok {
+				return false
+			}
+			if !reflect.DeepEqual(managedSeed.DeletionTimestamp, oldManagedSeed.DeletionTimestamp) {
+				logger.Info("Managed seed was deleted", "managedseed", kutil.ObjectName(managedSeed))
+				return true
+			}
+		}
+
+		// Return true only if the managed seed belongs to the pending replica and it progressed from the state
+		// that caused the replica to be pending
+		if set.Status.PendingReplica == nil || set.Status.PendingReplica.Name != managedSeed.Name {
+			return false
+		}
+		switch set.Status.PendingReplica.Reason {
+		case seedmanagementv1alpha1.ManagedSeedPreparingReason:
+			return managedSeedRegistered(managedSeed) || managedSeed.DeletionTimestamp != nil
+		case seedmanagementv1alpha1.ManagedSeedDeletingReason:
+			return deleted
+		default:
+			return false
+		}
+	}).NewControllerPredicate(&seedmanagementv1alpha1.ManagedSeedSet{})
 }
 
-*/
+func newSeedPredicate(logger logr.Logger) predicate.Predicate {
+	return kubernetes.ControllerPredicateFactoryFunc(func(obj, oldObj, controller client.Object, _ bool) bool {
+		seed, ok := obj.(*gardencorev1beta1.Seed)
+		if !ok {
+			return false
+		}
+		set, ok := controller.(*seedmanagementv1alpha1.ManagedSeedSet)
+		if !ok {
+			return false
+		}
+
+		// If the seed readiness changed, return true
+		if oldObj != nil {
+			oldSeed, ok := oldObj.(*gardencorev1beta1.Seed)
+			if !ok {
+				return false
+			}
+			if seedReady(seed) != seedReady(oldSeed) {
+				logger.Info("Seed readiness changed", "seed", kutil.ObjectName(seed))
+				return true
+			}
+		}
+
+		// Return true only if the seed belongs to the pending replica and it progressed from the state
+		// that caused the replica to be pending
+		if set.Status.PendingReplica == nil || set.Status.PendingReplica.Name != seed.Name {
+			return false
+		}
+		switch set.Status.PendingReplica.Reason {
+		case seedmanagementv1alpha1.SeedNotReadyReason:
+			return seedReady(seed)
+		default:
+			return false
+		}
+	}).NewControllerPredicate(&seedmanagementv1alpha1.ManagedSeedSet{})
+}
