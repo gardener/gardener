@@ -112,7 +112,7 @@ cluster rather than Gardener cluster, in our example we'll use
 
 Assuming you have the AWS cli for your Route53 Hosted Zone is
 configured on your local, here we'll create the wildcard DNS record
-using the [`awless`](http://awless.io/). You can also use the AWS
+using the [`awless`](https://github.com/wallix/awless#readme). You can also use the AWS
 console or any other tool of your choice to create the wildcard
 record:
 
