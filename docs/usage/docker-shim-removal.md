@@ -1,0 +1,47 @@
+# Kubernetes dockershim removal
+
+## What's happening?
+With Kubernetes v1.20 the built-in dockershim [was deprecated](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.20.md#dockershim-deprecation) and is scheduled to be [removed with v1.24](https://github.com/kubernetes/enhancements/issues/2221).
+Don't Panic! The Kubernetes community has [published a blogpost](https://kubernetes.io/blog/2020/12/02/dont-panic-kubernetes-and-docker/) and an [FAQ](https://kubernetes.io/blog/2020/12/02/dockershim-faq/) with more information.
+
+Gardener also needs to switch from using the built-in dockershim to `containerd`.
+Gardener will not change running Shoot clusters. But changes to the container runtime will be coupled to the K8s version selected by the Shoot:
+- starting with K8s version 1.22 Shoots not explicitly selecting a container runtime will get `containerd` instead of `docker`. Shoots can still select `docker` explicitly if needed.
+- starting with K8s version 1.23 `docker` can no longer be selected. 
+
+At this point in time, we have no plans to support other container runtimes, such as `cri-o`.
+    
+## What should I do?
+As a gardener operator:
+- add `containerd` and `docker` to `.spec.machineImages[].versions[].cri.name` in your CloudProfile to allow users selecting a container runtime for their Shoots (see below). **Note:** [not all operating systems support all container runtimes](#differences-in-operating-systems)
+- update your cloud provider extensions to avoid a node rollout when a Shoot is configured from `cri=nil` to `cri.name: docker`:
+  - Alicloud 1.26.0
+  - AWS 1.27.0
+  - Azure 1.21.0
+  - GCP 1.18.0
+  - OpenStack 1.21.0
+  - vSphere 0.11.0
+
+As a shoot owner:
+- [check if you have dependencies to the `docker` container runtime](https://kubernetes.io/docs/tasks/administer-cluster/migrating-from-dockershim/check-if-dockershim-deprecation-affects-you/#find-docker-dependencies). **Note:** This is not only about your actual workload, but also concerns ops tooling as well as logging, monitoring and metric agents installed on the nodes
+- test with `containerd`:
+  - create a new Shoot or add a Worker Pool to an existing one
+  - [set `.spec.provider.workers[].cri.name: containerd`](https://gardener.cloud/docs/references/core/#core.gardener.cloud/v1beta1.CRI) for your Shoot
+- once testing is successful, switch to `containerd` with your production workload. You don't need to wait for kubernetes v1.22, `containerd` is considered production ready as of today
+- if you find dependencies to `docker`, set `.spec.provider.workers[].cri.name: docker` explicitly to avoid defaulting to `containerd` once you update your Shoot to kubernetes v1.22
+
+## Timeline
+  - **2021-12-30:** Kubernetes v1.21 goes out of maintenance. This is the last version not affected by these changes. Make sure you have tested thoroughly and set the correct configuration for your Shoots!
+  - **2021-08-04:** Kubernetes v1.22 released. Shoots using this version get `containerd` as default container runtime. Shoots can still select `docker` explicitly if needed.
+  - **2021-12-07:** Kubernetes v1.23 released. Shoots using this version can no longer select `docker` as container runtime.
+  - **~2022-05:** Kubernetes v1.22 goes out of maintenance. This is the last version that you can use with `docker` as container runtime. Make sure you have removed any dependencies to `docker` as container runtime!
+
+## Differences in Operating Systems
+Support matrix for container runtimes in the supported Gardener operating systems
+
+| Operating System | docker support     | containerd support | 
+|------------------|--------------------|--------------------|
+| GardenLinux      | :white_check_mark: | :white_check_mark: |
+| Ubuntu           | :white_check_mark: | :white_check_mark: |
+| SuSE CHost       | :white_check_mark: | [in progress](https://github.com/gardener/gardener-extension-os-suse-chost/issues/42) |
+| CoreOS/FlatCar   | :white_check_mark: | [in progress](https://github.com/gardener/gardener-extension-os-coreos/issues/26) |
