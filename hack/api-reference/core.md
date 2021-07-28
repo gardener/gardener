@@ -6776,6 +6776,20 @@ Kubernetes meta/v1.Time
 because it&rsquo;s stale/unused.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>lastActivityTimestamp</code></br>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.19/#time-v1-meta">
+Kubernetes meta/v1.Time
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>LastActivityTimestamp contains the timestamp from the last activity performed in this project.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ProjectTolerations">ProjectTolerations

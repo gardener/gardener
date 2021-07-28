@@ -111,6 +111,12 @@ func (r *projectStaleReconciler) reconcile(ctx context.Context, project *gardenc
 		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
 	}
 
+	//Skip projects that have been used recently
+	if project.Status.LastActivityTimestamp != nil && project.Status.LastActivityTimestamp.UTC().Add(time.Hour*24*time.Duration(*r.config.MinimumLifetimeDays)).After(NowFunc().UTC()) {
+		projectLogger.Infof("[STALE PROJECT RECONCILE] Project was used recently (%v) and it is not exceeding the minimum configured lifetime %d days, considering it 'not stale'", project.Status.LastActivityTimestamp.UTC(), *r.config.MinimumLifetimeDays)
+		return r.markProjectAsNotStale(ctx, r.gardenClient, project)
+	}
+
 	for _, check := range []projectInUseChecker{
 		{"Shoots", r.projectInUseDueToShoots},
 		{"Plants", r.projectInUseDueToPlants},

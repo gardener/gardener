@@ -78,6 +78,8 @@ type ProjectStatus struct {
 	// StaleAutoDeleteTimestamp contains the timestamp when the project will be garbage-collected/automatically deleted
 	// because it's stale/unused.
 	StaleAutoDeleteTimestamp *metav1.Time
+	// LastActivityTimestamp contains the timestamp from the last activity performed in this project.
+	LastActivityTimestamp *metav1.Time
 }
 
 // ProjectMember is a member of a project.

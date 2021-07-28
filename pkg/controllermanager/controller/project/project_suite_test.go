@@ -29,11 +29,11 @@ func TestProject(t *testing.T) {
 
 type fakeQueue struct {
 	workqueue.RateLimitingInterface
-	items []string
+	items []interface{}
 }
 
 func (f *fakeQueue) Add(item interface{}) {
-	f.items = append(f.items, item.(string))
+	f.items = append(f.items, item.(interface{}))
 }
 
 func (f *fakeQueue) Len() int {

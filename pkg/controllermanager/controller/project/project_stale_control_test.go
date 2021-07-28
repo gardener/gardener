@@ -178,6 +178,20 @@ var _ = Describe("ProjectStaleControl", func() {
 				Expect(result).To(Succeed())
 			})
 
+			It("should mark the project as 'not stale' because the last activity was before the MinimumLifetimeDays", func() {
+				nowFunc := func() metav1.Time {
+					return metav1.Time{Time: time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC)}
+				}
+				defer test.WithVar(&NowFunc, nowFunc)()
+
+				project.Status.LastActivityTimestamp = &metav1.Time{Time: time.Date(1, 1, minimumLifetimeDays-1, 0, 0, 0, 0, time.UTC)}
+
+				expectNonStaleMarking(k8sGardenRuntimeClient, project)
+
+				_, result := reconciler.Reconcile(ctx, request)
+				Expect(result).To(Succeed())
+			})
+
 			Context("project older than the configured MinimumLifetimeDays", func() {
 				var nowFunc func() metav1.Time
 

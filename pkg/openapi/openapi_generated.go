@@ -5205,6 +5205,12 @@ func schema_pkg_apis_core_v1alpha1_ProjectStatus(ref common.ReferenceCallback) c
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"lastActivityTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastActivityTimestamp contains the timestamp from the last activity performed in this project.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 				},
 			},
 		},
@@ -11892,6 +11898,12 @@ func schema_pkg_apis_core_v1beta1_ProjectStatus(ref common.ReferenceCallback) co
 					"staleAutoDeleteTimestamp": {
 						SchemaProps: spec.SchemaProps{
 							Description: "StaleAutoDeleteTimestamp contains the timestamp when the project will be garbage-collected/automatically deleted because it's stale/unused.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"lastActivityTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastActivityTimestamp contains the timestamp from the last activity performed in this project.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
