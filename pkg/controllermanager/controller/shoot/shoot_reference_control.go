@@ -72,19 +72,6 @@ func addShootReferenceController(mgr manager.Manager, config *config.ShootRefere
 	return nil
 }
 
-// func (c *Controller) refChange(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-// 	return shootDNSFieldChanged(oldShoot, newShoot) ||
-// 		(utils.IsTrue(c.config.Controllers.ShootReference.ProtectAuditPolicyConfigMaps) && shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot))
-// }
-
-// func shootDNSFieldChanged(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-// 	return !apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.DNS, newShoot.Spec.DNS)
-// }
-
-// func shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot *gardencorev1beta1.Shoot) bool {
-// 	return !apiequality.Semantic.Equalities.DeepEqual(oldShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig, newShoot.Spec.Kubernetes.KubeAPIServer.AuditConfig)
-// }
-
 // SecretLister fetches secret objects with the given options.
 type SecretLister func(ctx context.Context, secretList *corev1.SecretList, options ...client.ListOption) error
 
