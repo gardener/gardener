@@ -301,6 +301,16 @@ func (s *Shoot) GetExtensionComponentsForMigration() []component.DeployMigrateWa
 	}
 }
 
+// GetDNSRecordComponentsForMigration returns a list of component.DeployMigrateWaiters of DNSRecord components that
+// should be migrated by the shoot controller.
+func (s *Shoot) GetDNSRecordComponentsForMigration() []component.DeployMigrateWaiter {
+	return []component.DeployMigrateWaiter{
+		s.Components.Extensions.IngressDNSRecord,
+		s.Components.Extensions.ExternalDNSRecord,
+		s.Components.Extensions.InternalDNSRecord,
+	}
+}
+
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Shoot cluster. The
 // end result is '<subDomain>.<ingressPrefix>.<clusterDomain>'.
 func (s *Shoot) GetIngressFQDN(subDomain string) string {

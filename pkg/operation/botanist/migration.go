@@ -24,28 +24,35 @@ import (
 
 // MigrateAllExtensionResources migrates all extension CRs.
 func (b *Botanist) MigrateAllExtensionResources(ctx context.Context) (err error) {
-	return b.runParallelTaskForEachExtensionComponent(ctx, func(c component.DeployMigrateWaiter) func(context.Context) error {
+	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
 		return c.Migrate
 	})
 }
 
 // WaitUntilAllExtensionResourcesMigrated waits until all extension CRs were successfully migrated.
 func (b *Botanist) WaitUntilAllExtensionResourcesMigrated(ctx context.Context) error {
-	return b.runParallelTaskForEachExtensionComponent(ctx, func(c component.DeployMigrateWaiter) func(context.Context) error {
+	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
 		return c.WaitMigrate
 	})
 }
 
 // DestroyAllExtensionResources deletes all extension CRs from the Shoot namespace.
 func (b *Botanist) DestroyAllExtensionResources(ctx context.Context) error {
-	return b.runParallelTaskForEachExtensionComponent(ctx, func(c component.DeployMigrateWaiter) func(context.Context) error {
+	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetExtensionComponentsForMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
 		return c.Destroy
 	})
 }
 
-func (b *Botanist) runParallelTaskForEachExtensionComponent(ctx context.Context, fn func(component.DeployMigrateWaiter) func(context.Context) error) error {
+// DestroyDNSRecords deletes all DNSRecord resources from the Shoot namespace.
+func (b *Botanist) DestroyDNSRecords(ctx context.Context) error {
+	return b.runParallelTaskForEachComponent(ctx, b.Shoot.GetDNSRecordComponentsForMigration(), func(c component.DeployMigrateWaiter) func(context.Context) error {
+		return c.Destroy
+	})
+}
+
+func (b *Botanist) runParallelTaskForEachComponent(ctx context.Context, components []component.DeployMigrateWaiter, fn func(component.DeployMigrateWaiter) func(context.Context) error) error {
 	var fns []flow.TaskFn
-	for _, component := range b.Shoot.GetExtensionComponentsForMigration() {
+	for _, component := range components {
 		fns = append(fns, fn(component))
 	}
 	return flow.Parallel(fns...)(ctx)
