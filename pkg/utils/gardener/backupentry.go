@@ -15,6 +15,7 @@
 package gardener
 
 import (
+	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -23,8 +24,14 @@ import (
 var backupEntryDelimiter = "--"
 
 // GenerateBackupEntryName returns BackupEntry resource name created from provided <seedNamespace> and <shootUID>.
-func GenerateBackupEntryName(shootTechnicalID string, shootUID types.UID) string {
-	return shootTechnicalID + backupEntryDelimiter + string(shootUID)
+func GenerateBackupEntryName(shootTechnicalID string, shootUID types.UID) (string, error) {
+	if shootTechnicalID == "" {
+		return "", fmt.Errorf("can't generate backup entry name with an empty shoot technical ID")
+	}
+	if shootUID == "" {
+		return "", fmt.Errorf("can't generate backup entry name with an empty shoot UID")
+	}
+	return shootTechnicalID + backupEntryDelimiter + string(shootUID), nil
 }
 
 // ExtractShootDetailsFromBackupEntryName returns Shoot resource technicalID its UID from provided <backupEntryName>.
