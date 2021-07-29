@@ -80,6 +80,7 @@ type Shoot struct {
 	NodeLocalDNSEnabled        bool
 	Networks                   *Networks
 	ExposureClass              *gardencorev1alpha1.ExposureClass
+	BackupEntryName            string
 
 	Components     *Components
 	ETCDEncryption *etcdencryption.EncryptionConfig

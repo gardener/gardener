@@ -277,7 +277,8 @@ var _ = Describe("Etcd", func() {
 						UID:         shootUID,
 					},
 				},
-				SeedNamespace: namespace,
+				SeedNamespace:   namespace,
+				BackupEntryName: namespace + "--" + string(shootUID),
 			}
 
 			etcdMain.EXPECT().SetSecrets(etcd.Secrets{
