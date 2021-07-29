@@ -291,6 +291,13 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 
 	shoot.Purpose = gardencorev1beta1helper.GetPurpose(shootObject)
 
+	// Determine backup entry name
+	backupEntryName, err := gutil.GenerateBackupEntryName(shootObject.Status.TechnicalID, shootObject.UID)
+	if err != nil {
+		return nil, err
+	}
+	shoot.BackupEntryName = backupEntryName
+
 	return shoot, nil
 }
 
