@@ -100,19 +100,27 @@ if [ -z "${SEED_KUBECONFIG:-}" ]; then
     base64 -d > "$SEED_KUBECONFIG"
 fi
 
+
 # apply RBAC resources in seed cluster
 GARDENLET_CHARTS_DIR=charts/gardener/gardenlet
 GARDENLET_CHARTS_RUNTIME_DIR="$GARDENLET_CHARTS_DIR/charts/runtime"
-helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/clusterrole-gardenlet.yaml -f "$GARDENLET_CHARTS_DIR/values.yaml" | kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
-helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/clusterrolebinding-gardenlet.yaml -f "$GARDENLET_CHARTS_DIR/values.yaml" | kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
-helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/serviceaccount.yaml -f "$GARDENLET_CHARTS_DIR/values.yaml" | kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
+tmpConfig="$DEV_DIR/20-componentconfig-gardenlet-seed-$SEED_NAME-tmp.yaml"
+chartValues="$DEV_DIR/gardenlet-charts-values.yaml"
+$YQ eval 'del(.apiVersion, .kind)' "$configFile" | yq eval '{"config": .}' - > "$tmpConfig"
+$YQ eval-all 'select(fi==0).global.gardenlet * select(fi==1)' "$GARDENLET_CHARTS_DIR/values.yaml" "$tmpConfig" | yq eval '{"global": {"gardenlet": . }}' - > "$chartValues"
+
+helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" | yaml2json | jq 'select(.apiVersion=="rbac.authorization.k8s.io/v1")' |
+  kubectl --kubeconfig="$SEED_KUBECONFIG" auth reconcile --remove-extra-permissions --remove-extra-subjects -f -
+
+helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/serviceaccount.yaml -f "$chartValues" |
+  kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
 
 # backup gardenlet seed kubeconfig
 cp "$SEED_KUBECONFIG" "$DEV_DIR/gardenlet-seed-$SEED_NAME-original.conf"
 
 # replace the token in gardenlet seed kubeconfig with the one from the gardenlet serviceaccount
-secret=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get serviceaccount gardenlet -o jsonpath='{.secrets[0].name}')
-token=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get secret "$secret" -o jsonpath='{.data.token}' | base64 --decode)
+secretName=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get serviceaccount gardenlet -o jsonpath='{.secrets[0].name}')
+token=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get secret "$secretName" -o jsonpath='{.data.token}' | base64 --decode)
 TOKEN_VALUE="$token" $YQ eval --inplace '.users[0].user.token = strenv(TOKEN_VALUE)' "$SEED_KUBECONFIG"
 
 file_imagevector_overwrite="$(mktemp_imagevector_overwrite github.com/gardener/gardener "$REPO_ROOT" "$REPO_ROOT"/charts)"
