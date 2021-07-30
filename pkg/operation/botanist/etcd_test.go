@@ -261,10 +261,15 @@ var _ = Describe("Etcd", func() {
 						EtcdEvents: etcdEvents,
 					},
 				},
-				SeedNamespace:   namespace,
-				BackupEntryName: namespace + "--" + string(shootUID),
+				SeedNamespace:         namespace,
+				BackupEntryName:       namespace + "--" + string(shootUID),
+				InternalClusterDomain: "internal.example.com",
 			}
-			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					ClusterIdentity: pointer.String("seed-identity"),
+				},
+			})
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Maintenance: &gardencorev1beta1.Maintenance{
@@ -349,6 +354,10 @@ var _ = Describe("Etcd", func() {
 					Prefix:               namespace + "--" + string(shootUID),
 					Container:            bucketName,
 					FullSnapshotSchedule: "1 12 * * *",
+				})
+				etcdMain.EXPECT().SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
+					Name: "owner.internal.example.com",
+					ID:   "seed-identity",
 				})
 
 				etcdMain.EXPECT().Deploy(ctx)

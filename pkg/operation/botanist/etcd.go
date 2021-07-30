@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -107,6 +108,11 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 			Prefix:               b.Shoot.BackupEntryName,
 			Container:            string(secret.Data[v1beta1constants.DataKeyBackupBucketName]),
 			FullSnapshotSchedule: snapshotSchedule,
+		})
+
+		b.Shoot.Components.ControlPlane.EtcdMain.SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
+			Name: gutil.GetOwnerDomain(b.Shoot.InternalClusterDomain),
+			ID:   *b.Seed.GetInfo().Status.ClusterIdentity,
 		})
 	}
 
