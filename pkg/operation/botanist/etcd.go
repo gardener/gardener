@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -106,7 +105,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.EtcdMain.SetBackupConfig(&etcd.BackupConfig{
 			Provider:             b.Seed.Info.Spec.Backup.Provider,
 			SecretRefName:        genericactuator.BackupSecretName,
-			Prefix:               gutil.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
+			Prefix:               b.Shoot.BackupEntryName,
 			Container:            string(secret.Data[genericactuator.DataKeyBackupBucketName]),
 			FullSnapshotSchedule: snapshotSchedule,
 		})
