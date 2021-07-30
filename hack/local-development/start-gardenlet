@@ -100,20 +100,21 @@ if [ -z "${SEED_KUBECONFIG:-}" ]; then
     base64 -d > "$SEED_KUBECONFIG"
 fi
 
-
-# apply RBAC resources in seed cluster
+# generate temporary chart values
 GARDENLET_CHARTS_DIR=charts/gardener/gardenlet
 GARDENLET_CHARTS_RUNTIME_DIR="$GARDENLET_CHARTS_DIR/charts/runtime"
 tmpConfig="$DEV_DIR/20-componentconfig-gardenlet-seed-$SEED_NAME-tmp.yaml"
 chartValues="$DEV_DIR/gardenlet-charts-values.yaml"
-$YQ eval 'del(.apiVersion, .kind)' "$configFile" | yq eval '{"config": .}' - > "$tmpConfig"
-$YQ eval-all 'select(fi==0).global.gardenlet * select(fi==1)' "$GARDENLET_CHARTS_DIR/values.yaml" "$tmpConfig" | yq eval '{"global": {"gardenlet": . }}' - > "$chartValues"
+$YQ eval 'del(.apiVersion, .kind)' "$configFile" | $YQ eval '{"config": .}' - > "$tmpConfig"
+$YQ eval-all 'select(fi==0).global.gardenlet * select(fi==1)' "$GARDENLET_CHARTS_DIR/values.yaml" "$tmpConfig" | $YQ eval '{"global": {"gardenlet": . }}' - > "$chartValues"
+rm "$tmpConfig"
 
-helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" | yaml2json | jq 'select(.apiVersion=="rbac.authorization.k8s.io/v1")' |
+# apply RBAC resources in seed cluster
+helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -f "$chartValues" | $YQ eval 'select(.apiVersion=="rbac.authorization.k8s.io/v1")' - |
   kubectl --kubeconfig="$SEED_KUBECONFIG" auth reconcile --remove-extra-permissions --remove-extra-subjects -f -
-
 helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/serviceaccount.yaml -f "$chartValues" |
   kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
+rm "$chartValues"
 
 # backup gardenlet seed kubeconfig
 cp "$SEED_KUBECONFIG" "$DEV_DIR/gardenlet-seed-$SEED_NAME-original.conf"
