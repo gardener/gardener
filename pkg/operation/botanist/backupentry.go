@@ -20,8 +20,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	corebackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
@@ -36,7 +34,7 @@ func (b *Botanist) DefaultCoreBackupEntry() component.DeployMigrateWaiter {
 		b.K8sGardenClient.Client(),
 		&corebackupentry.Values{
 			Namespace:      b.Shoot.Info.Namespace,
-			Name:           gutil.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID),
+			Name:           b.Shoot.BackupEntryName,
 			ShootPurpose:   b.Shoot.Info.Spec.Purpose,
 			OwnerReference: ownerRef,
 			SeedName:       b.Shoot.Info.Spec.SeedName,
