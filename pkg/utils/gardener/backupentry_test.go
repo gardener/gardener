@@ -31,7 +31,19 @@ var _ = Describe("BackupEntry", func() {
 
 	Describe("#GenerateBackupEntryName", func() {
 		It("should compute the correct name", func() {
-			Expect(GenerateBackupEntryName(shootTechnicalID, shootUID)).To(Equal(backupEntryName))
+			result, err := GenerateBackupEntryName(shootTechnicalID, shootUID)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result).To(Equal(backupEntryName))
+		})
+
+		It("should fail if the shoot technical ID is empty", func() {
+			_, err := GenerateBackupEntryName("", shootUID)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail if the shoot UID is empty", func() {
+			_, err := GenerateBackupEntryName(shootTechnicalID, "")
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
