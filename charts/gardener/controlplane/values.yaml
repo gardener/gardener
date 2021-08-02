@@ -49,19 +49,19 @@ global:
       useSidecar: false # only meant for development purposes. if this is set to true, other etcd config values are ignored
       servers: https://etcd:2379
       tlsSecretName:
-      caBundle: |
-       -----BEGIN CERTIFICATE-----
-        ...
-        -----END CERTIFICATE-----
-      tls:
-        crt: |
-          -----BEGIN CERTIFICATE-----
-          ...
-          -----END CERTIFICATE-----
-        key: |
-          -----BEGIN RSA PRIVATE KEY-----
-          ...
-          -----END RSA PRIVATE KEY-----
+      # caBundle: |
+      # -----BEGIN CERTIFICATE-----
+      #  ...
+      #  -----END CERTIFICATE-----
+      # tls:
+      #  crt: |
+      #    -----BEGIN CERTIFICATE-----
+      #    ...
+      #    -----END CERTIFICATE-----
+      #  key: |
+      #    -----BEGIN RSA PRIVATE KEY-----
+      #    ...
+      #    -----END RSA PRIVATE KEY-----
     insecureSkipTLSVerify: false
     groupPriorityMinimum: 10000
     versionPriority: 20
