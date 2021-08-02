@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/pkg/apis/core"
@@ -1999,6 +2000,44 @@ var _ = Describe("validator", func() {
 
 				Expect(err).To(HaveOccurred())
 			})
+		})
+
+		Context("shoot deletion", func() {
+			var shootStore cache.Store
+
+			BeforeEach(func() {
+				shootStore = coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore()
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+			})
+
+			DescribeTable("DeleteShootInMigration",
+				func(lastOperationType core.LastOperationType, lastOperationState core.LastOperationState, matcher types.GomegaMatcher) {
+					shootBase.Status = core.ShootStatus{
+						LastOperation: &core.LastOperation{
+							Type:  lastOperationType,
+							State: lastOperationState,
+						},
+					}
+					shoot.Annotations = map[string]string{
+						gutil.ConfirmationDeletion: "true",
+					}
+					attrs := admission.NewAttributesRecord(nil, shootBase.DeepCopyObject(), core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+
+					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(matcher)
+				},
+				Entry("should reject if the shoot has lastOperation=Migrate:Processing", core.LastOperationTypeMigrate, core.LastOperationStateProcessing, BeForbiddenError()),
+				Entry("should reject if the shoot has lastOperation=Migrate:Succeeded", core.LastOperationTypeMigrate, core.LastOperationStateSucceeded, BeForbiddenError()),
+				Entry("should reject if the shoot has lastOperation=Migrate:Error", core.LastOperationTypeMigrate, core.LastOperationStateError, BeForbiddenError()),
+				Entry("should reject if the shoot has lastOperation=Restore:Processing", core.LastOperationTypeRestore, core.LastOperationStateProcessing, BeForbiddenError()),
+				Entry("should reject if the shoot has lastOperation=Restore:Error", core.LastOperationTypeRestore, core.LastOperationStateError, BeForbiddenError()),
+				Entry("should not reject if the shoot has lastOperation=Restore:Succeeded ", core.LastOperationTypeRestore, core.LastOperationStateSucceeded, BeNil()),
+				Entry("should not reject the delete operation", core.LastOperationTypeReconcile, core.LastOperationStateSucceeded, BeNil()))
 		})
 	})
 })
