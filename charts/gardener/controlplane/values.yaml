@@ -50,18 +50,18 @@ global:
       servers: https://etcd:2379
       tlsSecretName:
       # caBundle: |
-      # -----BEGIN CERTIFICATE-----
-      #  ...
-      #  -----END CERTIFICATE-----
+      #   -----BEGIN CERTIFICATE-----
+      #   ...
+      #   -----END CERTIFICATE-----
       # tls:
-      #  crt: |
-      #    -----BEGIN CERTIFICATE-----
-      #    ...
-      #    -----END CERTIFICATE-----
-      #  key: |
-      #    -----BEGIN RSA PRIVATE KEY-----
-      #    ...
-      #    -----END RSA PRIVATE KEY-----
+      #   crt: |
+      #     -----BEGIN CERTIFICATE-----
+      #     ...
+      #     -----END CERTIFICATE-----
+      #   key: |
+      #     -----BEGIN RSA PRIVATE KEY-----
+      #     ...
+      #     -----END RSA PRIVATE KEY-----
     insecureSkipTLSVerify: false
     groupPriorityMinimum: 10000
     versionPriority: 20
