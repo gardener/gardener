@@ -58,6 +58,15 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		}
 	}
 
+	// remove operation annotation
+	shoot := b.Shoot.Info.DeepCopy()
+	patch := client.MergeFrom(shoot.DeepCopy())
+	delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+	if err := b.K8sGardenClient.Client().Patch(ctx, shoot, patch); err != nil {
+		return err
+	}
+	b.Shoot.Info = shoot
+
 	if b.Shoot.Info.DeletionTimestamp == nil {
 		if b.Shoot.ReversedVPNEnabled {
 			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"); err != nil {
@@ -242,9 +251,7 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 		gardenerResourceDataList.Delete(secretName)
 	}
 
-	oldObj := b.Shoot.Info.DeepCopy()
-	delete(b.Shoot.Info.Annotations, v1beta1constants.GardenerOperation)
-	return b.K8sGardenClient.Client().Patch(ctx, b.Shoot.Info, client.MergeFrom(oldObj))
+	return nil
 }
 
 func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
@@ -271,10 +278,7 @@ func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResource
 	}
 	gardenerResourceDataList.Delete(v1beta1constants.SecretNameSSHKeyPair)
 
-	// remove operation annotation
-	oldObj := b.Shoot.Info.DeepCopy()
-	delete(b.Shoot.Info.Annotations, v1beta1constants.GardenerOperation)
-	return b.K8sGardenClient.Client().Patch(ctx, b.Shoot.Info, client.MergeFrom(oldObj))
+	return nil
 }
 
 func (b *Botanist) deleteBasicAuthDependantSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {

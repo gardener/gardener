@@ -70,7 +70,7 @@ func (c *Controller) prepareShootForMigration(ctx context.Context, logger *logru
 
 	if flowErr := c.runPrepareShootControlPlaneMigration(o); flowErr != nil {
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventMigrationPreparationFailed, flowErr.Description)
-		updateErr := c.patchShootStatusOperationError(ctx, gardenClient.Client(), o, o.Shoot.Info, flowErr.Description, gardencorev1beta1.LastOperationTypeMigrate, flowErr.LastErrors...)
+		updateErr := c.patchShootStatusOperationError(ctx, gardenClient.Client(), o, shoot, flowErr.Description, gardencorev1beta1.LastOperationTypeMigrate, flowErr.LastErrors...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 

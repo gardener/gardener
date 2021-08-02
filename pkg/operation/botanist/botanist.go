@@ -25,7 +25,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
@@ -213,25 +212,5 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 		return fmt.Errorf("extension controllers missing or unready: %+v", requiredExtensions)
 	}
 
-	return nil
-}
-
-// UpdateShootAndCluster updates the given `core.gardener.cloud/v1beta1.Shoot` resource in the garden cluster after
-// applying the given transform function to it. It will also update the `shoot` field in the
-// extensions.gardener.cloud/v1alpha1.Cluster` resource in the seed cluster with the updated shoot information.
-func (b *Botanist) UpdateShootAndCluster(ctx context.Context, shoot *gardencorev1beta1.Shoot, transform func() error) error {
-	shootPatch := client.StrategicMergeFrom(shoot.DeepCopy())
-	if err := transform(); err != nil {
-		return err
-	}
-	if err := b.K8sGardenClient.Client().Patch(ctx, shoot, shootPatch); err != nil {
-		return err
-	}
-
-	if err := extensions.SyncClusterResourceToSeed(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, shoot, nil, nil); err != nil {
-		return err
-	}
-
-	b.Shoot.Info = shoot
 	return nil
 }

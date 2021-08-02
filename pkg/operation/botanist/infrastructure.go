@@ -19,8 +19,10 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultInfrastructure creates the default deployer for the Infrastructure custom resource.
@@ -62,11 +64,17 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 	}
 
 	if nodesCIDR := b.Shoot.Components.Extensions.Infrastructure.NodesCIDR(); nodesCIDR != nil {
-		shootCopy := b.Shoot.Info.DeepCopy()
-		return b.UpdateShootAndCluster(ctx, shootCopy, func() error {
-			shootCopy.Spec.Networking.Nodes = nodesCIDR
-			return nil
-		})
+		shoot := b.Shoot.Info.DeepCopy()
+		patch := client.StrategicMergeFrom(shoot.DeepCopy())
+		shoot.Spec.Networking.Nodes = nodesCIDR
+		if err := b.K8sGardenClient.Client().Patch(ctx, shoot, patch); err != nil {
+			return err
+		}
+		b.Shoot.Info = shoot
+
+		if err := extensions.SyncClusterResourceToSeed(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, b.Shoot.Info, nil, nil); err != nil {
+			return err
+		}
 	}
 
 	return nil

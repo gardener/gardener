@@ -419,7 +419,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		description    = makeDescription(stats)
 		progress       = stats.ProgressPercent()
 		lastUpdateTime = metav1.Now()
-		shoot          = o.Shoot.Info
+		shoot          = o.Shoot.Info.DeepCopy()
 	)
 
 	if err := func() error {
@@ -442,13 +442,15 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		o.Logger.Errorf("Could not report shoot progress: %v", err)
 		return
 	}
+
+	o.Shoot.Info = shoot
 }
 
 // CleanShootTaskErrorAndUpdateStatusLabel removes the error with taskID from the Shoot's status.LastErrors array.
 // If the status.LastErrors array is empty then status.LastErrors is also removed. It also re-evaluates the shoot status
 // in case the last error list is empty now, and if necessary, updates the status label on the shoot.
 func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context, taskID string) {
-	shoot := o.Shoot.Info
+	shoot := o.Shoot.Info.DeepCopy()
 
 	statusPatch := client.MergeFrom(shoot.DeepCopy())
 	// LastErrors doesn't have patchMergeKey as TaskID is optional, so strategic merge wouldn't make a difference.
@@ -459,6 +461,7 @@ func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context,
 		o.Logger.Errorf("Could not update shoot's %s/%s last errors: %v", shoot.Namespace, shoot.Name, err)
 		return
 	}
+	o.Shoot.Info = shoot
 
 	if len(shoot.Status.LastErrors) == 0 {
 		metaPatch := client.MergeFrom(shoot.DeepCopy())
@@ -471,6 +474,7 @@ func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context,
 			o.Logger.Errorf("Could not update shoot's %s/%s status label after removing an erroneous task: %v", shoot.Namespace, shoot.Name, err)
 			return
 		}
+		o.Shoot.Info = shoot
 	}
 }
 

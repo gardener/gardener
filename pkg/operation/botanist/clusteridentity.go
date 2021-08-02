@@ -30,12 +30,13 @@ func (b *Botanist) EnsureShootClusterIdentity(ctx context.Context) error {
 	if b.Shoot.Info.Status.ClusterIdentity == nil {
 		clusterIdentity := fmt.Sprintf("%s-%s-%s", b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID, b.GardenClusterIdentity)
 
-		patch := client.MergeFrom(b.Shoot.Info.DeepCopy())
-		b.Shoot.Info.Status.ClusterIdentity = &clusterIdentity
-
-		if err := b.K8sGardenClient.Client().Status().Patch(ctx, b.Shoot.Info, patch); err != nil {
+		shoot := b.Shoot.Info.DeepCopy()
+		patch := client.MergeFrom(shoot.DeepCopy())
+		shoot.Status.ClusterIdentity = &clusterIdentity
+		if err := b.K8sGardenClient.Client().Status().Patch(ctx, shoot, patch); err != nil {
 			return err
 		}
+		b.Shoot.Info = shoot
 
 		if err := extensions.SyncClusterResourceToSeed(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, b.Shoot.Info, nil, nil); err != nil {
 			return err
