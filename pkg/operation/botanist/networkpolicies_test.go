@@ -127,9 +127,9 @@ var _ = Describe("Networkpolicies", func() {
 			"w/ network CIDRs",
 			component.PhaseUnknown,
 			func() {
-				botanist.Shoot.Info.Spec.Networking.Pods = &podCIDRShoot
-				botanist.Shoot.Info.Spec.Networking.Services = &serviceCIDRShoot
-				botanist.Shoot.Info.Spec.Networking.Nodes = &nodeCIDRShoot
+				botanist.Shoot.GetInfo().Spec.Networking.Pods = &podCIDRShoot
+				botanist.Shoot.GetInfo().Spec.Networking.Services = &serviceCIDRShoot
+				botanist.Shoot.GetInfo().Spec.Networking.Nodes = &nodeCIDRShoot
 				botanist.Seed.Info.Spec.Networks.Nodes = &nodeCIDRSeed
 				botanist.Seed.Info.Spec.Networks.BlockCIDRs = blockCIDRs
 			},

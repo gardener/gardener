@@ -25,8 +25,8 @@ import (
 // DefaultExternalDNSRecord creates the default deployer for the external DNSRecord resource.
 func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:       b.Shoot.Info.Name + "-" + DNSExternalName,
-		SecretName: b.Shoot.Info.Name + "-" + DNSExternalName,
+		Name:       b.Shoot.GetInfo().Name + "-" + DNSExternalName,
+		SecretName: b.Shoot.GetInfo().Name + "-" + DNSExternalName,
 		Namespace:  b.Shoot.SeedNamespace,
 		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}
@@ -51,8 +51,8 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 // DefaultInternalDNSRecord creates the default deployer for the internal DNSRecord resource.
 func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:       b.Shoot.Info.Name + "-" + DNSInternalName,
-		SecretName: b.Shoot.Info.Name + "-" + DNSInternalName,
+		Name:       b.Shoot.GetInfo().Name + "-" + DNSInternalName,
+		SecretName: b.Shoot.GetInfo().Name + "-" + DNSInternalName,
 		Namespace:  b.Shoot.SeedNamespace,
 		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}

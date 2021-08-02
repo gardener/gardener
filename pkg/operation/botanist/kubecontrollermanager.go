@@ -45,7 +45,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 	}
 
 	scaleDownUpdateMode := hvpav1alpha1.UpdateModeAuto
-	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
+	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled) {
 		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
 	}
 
@@ -55,7 +55,7 @@ func (b *Botanist) DefaultKubeControllerManager() (kubecontrollermanager.Interfa
 		b.Shoot.SeedNamespace,
 		b.Shoot.KubernetesVersion,
 		image.String(),
-		b.Shoot.Info.Spec.Kubernetes.KubeControllerManager,
+		b.Shoot.GetInfo().Spec.Kubernetes.KubeControllerManager,
 		b.Shoot.Networks.Pods,
 		b.Shoot.Networks.Services,
 		&kubecontrollermanager.HVPAConfig{
@@ -96,7 +96,7 @@ func (b *Botanist) ScaleKubeControllerManagerToOne(ctx context.Context) error {
 }
 
 func (b *Botanist) determineKubeControllerManagerReplicas(ctx context.Context) (int32, error) {
-	if b.Shoot.Info.Status.LastOperation != nil && b.Shoot.Info.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate {
+	if b.Shoot.GetInfo().Status.LastOperation != nil && b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate {
 		if b.Shoot.HibernationEnabled {
 			// shoot is being created with .spec.hibernation.enabled=true, don't deploy KCM at all
 			return 0, nil
@@ -106,7 +106,7 @@ func (b *Botanist) determineKubeControllerManagerReplicas(ctx context.Context) (
 		return 1, nil
 	}
 
-	if b.Shoot.HibernationEnabled == b.Shoot.Info.Status.IsHibernated {
+	if b.Shoot.HibernationEnabled == b.Shoot.GetInfo().Status.IsHibernated {
 		// shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated, so keep the replicas which
 		// are controlled by the dependency-watchdog
 		return kutil.CurrentReplicaCountForDeployment(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)

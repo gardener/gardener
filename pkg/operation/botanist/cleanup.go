@@ -174,7 +174,7 @@ func cleanResourceFn(cleanOps utilclient.CleanOps, c client.Client, list client.
 func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	var (
 		c       = b.K8sShootClient.Client()
-		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.Info.GetDeletionTimestamp().Time)
+		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
 		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 	)
 
@@ -193,7 +193,7 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	var (
 		c           = b.K8sShootClient.Client()
-		ensurer     = utilclient.GoneBeforeEnsurer(b.Shoot.Info.GetDeletionTimestamp().Time)
+		ensurer     = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
 		defaultOps  = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 		crdCleanOps = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 	)
@@ -216,7 +216,7 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	var (
 		c       = b.K8sShootClient.Client()
-		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.Info.GetDeletionTimestamp().Time)
+		ensurer = utilclient.GoneBeforeEnsurer(b.Shoot.GetInfo().GetDeletionTimestamp().Time)
 		ops     = utilclient.NewCleanOps(utilclient.DefaultCleaner(), ensurer)
 	)
 
@@ -225,7 +225,7 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		return err
 	}
 
-	if metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup) {
+	if metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup) {
 		return flow.Parallel(
 			cleanResourceFn(ops, c, &corev1.ServiceList{}, ServiceCleanOption, cleanOptions),
 			cleanResourceFn(ops, c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOption, cleanOptions),
@@ -284,7 +284,7 @@ func (b *Botanist) getCleanOptions(
 		finalizeAfter      = defaultFinalizeAfter
 	)
 
-	if v, ok := b.Shoot.Info.Annotations[annotationKey]; ok {
+	if v, ok := b.Shoot.GetInfo().Annotations[annotationKey]; ok {
 		seconds, err := strconv.Atoi(v)
 		if err != nil {
 			return nil, err

@@ -27,7 +27,7 @@ func (b *Botanist) DefaultContainerRuntime() containerruntime.Interface {
 		b.K8sSeedClient.Client(),
 		&containerruntime.Values{
 			Namespace: b.Shoot.SeedNamespace,
-			Workers:   b.Shoot.Info.Spec.Provider.Workers,
+			Workers:   b.Shoot.GetInfo().Spec.Provider.Workers,
 		},
 		containerruntime.DefaultInterval,
 		containerruntime.DefaultSevereThreshold,

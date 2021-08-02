@@ -50,7 +50,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	)
 
 	// Determine all default domain secrets and check whether the used Shoot domain matches a default domain.
-	if o.Shoot != nil && o.Shoot.Info.Spec.DNS != nil && o.Shoot.Info.Spec.DNS.Domain != nil {
+	if o.Shoot != nil && o.Shoot.GetInfo().Spec.DNS != nil && o.Shoot.GetInfo().Spec.DNS.Domain != nil {
 		var (
 			prefix            = fmt.Sprintf("%s-", v1beta1constants.GardenRoleDefaultDomain)
 			defaultDomainKeys = o.GetSecretKeysOfRole(v1beta1constants.GardenRoleDefaultDomain)
@@ -58,7 +58,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		sort.Slice(defaultDomainKeys, func(i, j int) bool { return len(defaultDomainKeys[i]) >= len(defaultDomainKeys[j]) })
 		for _, key := range defaultDomainKeys {
 			defaultDomain := strings.SplitAfter(key, prefix)[1]
-			if strings.HasSuffix(*(o.Shoot.Info.Spec.DNS.Domain), defaultDomain) {
+			if strings.HasSuffix(*(o.Shoot.GetInfo().Spec.DNS.Domain), defaultDomain) {
 				b.DefaultDomainSecret = b.Secrets[prefix+defaultDomain]
 				break
 			}
@@ -182,7 +182,7 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 		return err
 	}
 
-	requiredExtensions := shootpkg.ComputeRequiredExtensions(b.Shoot.Info, b.Seed.Info, controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain,
+	requiredExtensions := shootpkg.ComputeRequiredExtensions(b.Shoot.GetInfo(), b.Seed.Info, controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain,
 		gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords))
 
 	for _, controllerInstallation := range controllerInstallationList.Items {

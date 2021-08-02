@@ -196,7 +196,7 @@ var _ = Describe("addons", func() {
 		})
 
 		It("does nothing when nginx is disabled", func() {
-			b.Shoot.Info.Spec.Addons.NginxIngress.Enabled = false
+			b.Shoot.GetInfo().Spec.Addons.NginxIngress.Enabled = false
 
 			b.SetNginxIngressAddress(address, client)
 
@@ -338,7 +338,7 @@ var _ = Describe("addons", func() {
 
 			BeforeEach(func() {
 				b.ShootState = shootState
-				b.Shoot.Info.Status = gardencorev1beta1.ShootStatus{
+				b.Shoot.GetInfo().Status = gardencorev1beta1.ShootStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
 						Type: gardencorev1beta1.LastOperationTypeRestore,
 					},

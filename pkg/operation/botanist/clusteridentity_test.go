@@ -146,7 +146,7 @@ var _ = Describe("ClusterIdentity", func() {
 
 	Describe("#DeployClusterIdentity", func() {
 		BeforeEach(func() {
-			botanist.Shoot.Info.Status.ClusterIdentity = &expectedShootClusterIdentity
+			botanist.Shoot.GetInfo().Status.ClusterIdentity = &expectedShootClusterIdentity
 			clusterIdentity.EXPECT().SetIdentity(expectedShootClusterIdentity)
 		})
 

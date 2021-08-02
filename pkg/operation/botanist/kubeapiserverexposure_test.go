@@ -97,7 +97,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			BeforeEach(func() {
 				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
 				botanist.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
-				botanist.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+				botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 				botanist.Shoot.ExternalClusterDomain = pointer.String("baz")
 				botanist.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 			})

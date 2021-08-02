@@ -44,13 +44,13 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), namespace, func() error {
 		namespace.Annotations = map[string]string{
-			v1beta1constants.ShootUID: string(b.Shoot.Info.Status.UID),
+			v1beta1constants.ShootUID: string(b.Shoot.GetInfo().Status.UID),
 		}
 		namespace.Labels = map[string]string{
 			v1beta1constants.GardenRole:              v1beta1constants.GardenRoleShoot,
 			v1beta1constants.LabelSeedProvider:       b.Seed.Info.Spec.Provider.Type,
-			v1beta1constants.LabelShootProvider:      b.Shoot.Info.Spec.Provider.Type,
-			v1beta1constants.LabelNetworkingProvider: b.Shoot.Info.Spec.Networking.Type,
+			v1beta1constants.LabelShootProvider:      b.Shoot.GetInfo().Spec.Provider.Type,
+			v1beta1constants.LabelNetworkingProvider: b.Shoot.GetInfo().Spec.Networking.Type,
 			v1beta1constants.LabelBackupProvider:     b.Seed.Info.Spec.Provider.Type,
 		}
 

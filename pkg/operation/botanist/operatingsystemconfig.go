@@ -65,7 +65,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 		&operatingsystemconfig.Values{
 			Namespace:         b.Shoot.SeedNamespace,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
-			Workers:           b.Shoot.Info.Spec.Provider.Workers,
+			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
 			DownloaderValues: operatingsystemconfig.DownloaderValues{
 				APIServerURL: fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)),
 			},
@@ -73,8 +73,8 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 				ClusterDNSAddress:       clusterDNSAddress,
 				ClusterDomain:           gardencorev1beta1.DefaultDomain,
 				Images:                  images,
-				KubeletConfigParameters: components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(b.Shoot.Info.Spec.Kubernetes.Kubelet),
-				KubeletCLIFlags:         components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(b.Shoot.Info.Spec.Kubernetes.Kubelet),
+				KubeletConfigParameters: components.KubeletConfigParametersFromCoreV1beta1KubeletConfig(b.Shoot.GetInfo().Spec.Kubernetes.Kubelet),
+				KubeletCLIFlags:         components.KubeletCLIFlagsFromCoreV1beta1KubeletConfig(b.Shoot.GetInfo().Spec.Kubernetes.Kubelet),
 				MachineTypes:            b.Shoot.CloudProfile.Spec.MachineTypes,
 			},
 		},
@@ -160,7 +160,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 
 	var (
 		managedResource                  = managedresources.NewForShoot(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName, false)
-		managedResourceSecretsCount      = len(b.Shoot.Info.Spec.Provider.Workers) + 1
+		managedResourceSecretsCount      = len(b.Shoot.GetInfo().Spec.Provider.Workers) + 1
 		managedResourceSecretLabels      = map[string]string{SecretLabelKeyManagedResource: CloudConfigExecutionManagedResourceName}
 		managedResourceSecretNamesWanted = sets.NewString()
 		managedResourceSecretNameToData  = make(map[string]map[string][]byte, managedResourceSecretsCount)
@@ -172,7 +172,7 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 	)
 
 	// Generate cloud-config user-data executor scripts for all worker pools.
-	for _, worker := range b.Shoot.Info.Spec.Provider.Workers {
+	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
 		oscData, ok := workerNameToOperatingSystemConfigMaps[worker.Name]
 		if !ok {
 			return fmt.Errorf("did not find osc data for worker pool %q", worker.Name)

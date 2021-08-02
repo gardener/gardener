@@ -203,7 +203,9 @@ func (b *Builder) WithShootFromCluster(gardenClient, seedClient kubernetes.Inter
 		if err != nil {
 			return nil, err
 		}
-		shoot.Info.Status = s.Status
+		// It's OK to modify the value returned by GetInfo() here because at this point there
+		// can be no concurrent reads or writes
+		shoot.GetInfo().Status = s.Status
 		return shoot, nil
 	}
 	return b
@@ -304,22 +306,22 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 
 	// Get the ManagedSeed object for this shoot, if it exists.
 	// Also read the managed seed API server settings from the managed-seed-api-server annotation.
-	operation.ManagedSeed, err = kutil.GetManagedSeed(ctx, gardenClient.GardenSeedManagement(), shoot.Info.Namespace, shoot.Info.Name)
+	operation.ManagedSeed, err = kutil.GetManagedSeed(ctx, gardenClient.GardenSeedManagement(), shoot.GetInfo().Namespace, shoot.GetInfo().Name)
 	if err != nil {
-		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.Info.Namespace, shoot.Info.Name, err)
+		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 	}
-	operation.ManagedSeedAPIServer, err = gardencorev1beta1helper.ReadManagedSeedAPIServer(shoot.Info)
+	operation.ManagedSeedAPIServer, err = gardencorev1beta1helper.ReadManagedSeedAPIServer(shoot.GetInfo())
 	if err != nil {
-		return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+		return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 	}
 
 	// If the managed-seed-api-server annotation is not present, try to read the managed seed API server settings
 	// from the use-as-seed annotation. This is done to avoid re-annotating a shoot annotated with the use-as-seed annotation
 	// by the shooted seed registration controller.
 	if operation.ManagedSeedAPIServer == nil {
-		shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot.Info)
+		shootedSeed, err := gardencorev1beta1helper.ReadShootedSeed(shoot.GetInfo())
 		if err != nil {
-			return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.Info.Namespace, shoot.Info.Name, err)
+			return nil, fmt.Errorf("could not read managed seed API server settings of shoot %s/%s: %+v", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 		}
 		if shootedSeed != nil {
 			operation.ManagedSeedAPIServer = shootedSeed.APIServer
@@ -366,7 +368,7 @@ func (o *Operation) InitializeShootClients(ctx context.Context) error {
 		}
 	}
 
-	shootClient, err := o.ClientMap.GetClient(ctx, keys.ForShoot(o.Shoot.Info))
+	shootClient, err := o.ClientMap.GetClient(ctx, keys.ForShoot(o.Shoot.GetInfo()))
 	if err != nil {
 		return err
 	}
@@ -419,12 +421,9 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		description    = makeDescription(stats)
 		progress       = stats.ProgressPercent()
 		lastUpdateTime = metav1.Now()
-		shoot          = o.Shoot.Info.DeepCopy()
 	)
 
-	if err := func() error {
-		statusPatch := client.StrategicMergeFrom(shoot.DeepCopy())
-
+	if err := o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), func(shoot *gardencorev1beta1.Shoot) error {
 		if shoot.Status.LastOperation == nil {
 			return fmt.Errorf("last operation of Shoot %s/%s is unset", shoot.Namespace, shoot.Name)
 		}
@@ -436,45 +435,36 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		}
 		shoot.Status.LastOperation.Progress = progress
 		shoot.Status.LastOperation.LastUpdateTime = lastUpdateTime
-
-		return o.K8sGardenClient.Client().Status().Patch(ctx, shoot, statusPatch)
-	}(); err != nil {
+		return nil
+	}); err != nil {
 		o.Logger.Errorf("Could not report shoot progress: %v", err)
-		return
 	}
-
-	o.Shoot.Info = shoot
 }
 
 // CleanShootTaskErrorAndUpdateStatusLabel removes the error with taskID from the Shoot's status.LastErrors array.
 // If the status.LastErrors array is empty then status.LastErrors is also removed. It also re-evaluates the shoot status
 // in case the last error list is empty now, and if necessary, updates the status label on the shoot.
 func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context, taskID string) {
-	shoot := o.Shoot.Info.DeepCopy()
-
-	statusPatch := client.MergeFrom(shoot.DeepCopy())
-	// LastErrors doesn't have patchMergeKey as TaskID is optional, so strategic merge wouldn't make a difference.
-	// This will effectively overwrite the whole LastErrors array. Though, this should be fine, as this controller is
-	// supposed to be the exclusive owner of this field.
-	shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
-	if err := o.K8sGardenClient.Client().Status().Patch(ctx, shoot, statusPatch); err != nil {
-		o.Logger.Errorf("Could not update shoot's %s/%s last errors: %v", shoot.Namespace, shoot.Name, err)
+	if err := o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), func(shoot *gardencorev1beta1.Shoot) error {
+		shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
+		return nil
+	}); err != nil {
+		o.Logger.Errorf("Could not update shoot's %s/%s last errors: %v", o.Shoot.GetInfo().Namespace, o.Shoot.GetInfo().Name, err)
 		return
 	}
-	o.Shoot.Info = shoot
 
-	if len(shoot.Status.LastErrors) == 0 {
-		metaPatch := client.MergeFrom(shoot.DeepCopy())
-		kutil.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(shootpkg.ComputeStatus(
-			shoot.Status.LastOperation,
-			shoot.Status.LastErrors,
-			shoot.Status.Conditions...,
-		)))
-		if err := o.K8sGardenClient.Client().Patch(ctx, shoot, metaPatch); err != nil {
-			o.Logger.Errorf("Could not update shoot's %s/%s status label after removing an erroneous task: %v", shoot.Namespace, shoot.Name, err)
+	if len(o.Shoot.GetInfo().Status.LastErrors) == 0 {
+		if err := o.Shoot.UpdateInfo(ctx, o.K8sGardenClient.Client(), func(shoot *gardencorev1beta1.Shoot) error {
+			kutil.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(shootpkg.ComputeStatus(
+				shoot.Status.LastOperation,
+				shoot.Status.LastErrors,
+				shoot.Status.Conditions...,
+			)))
+			return nil
+		}); err != nil {
+			o.Logger.Errorf("Could not update shoot's %s/%s status label after removing an erroneous task: %v", o.Shoot.GetInfo().Namespace, o.Shoot.GetInfo().Name, err)
 			return
 		}
-		o.Shoot.Info = shoot
 	}
 }
 
@@ -485,7 +475,7 @@ func (o *Operation) SeedVersion() string {
 
 // ShootVersion is a shorthand for the desired kubernetes version of the operation's shoot.
 func (o *Operation) ShootVersion() string {
-	return o.Shoot.Info.Spec.Kubernetes.Version
+	return o.Shoot.GetInfo().Spec.Kubernetes.Version
 }
 
 // InjectSeedSeedImages injects images that shall run on the Seed and target the Seed's Kubernetes version.
@@ -509,8 +499,8 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 		err        error
 		shootState = &gardencorev1alpha1.ShootState{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      o.Shoot.Info.Name,
-				Namespace: o.Shoot.Info.Namespace,
+				Name:      o.Shoot.GetInfo().Name,
+				Namespace: o.Shoot.GetInfo().Namespace,
 			},
 		}
 	)
@@ -533,8 +523,8 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 func (o *Operation) DeleteShootState(ctx context.Context) error {
 	shootState := &gardencorev1alpha1.ShootState{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      o.Shoot.Info.Name,
-			Namespace: o.Shoot.Info.Namespace,
+			Name:      o.Shoot.GetInfo().Name,
+			Namespace: o.Shoot.GetInfo().Namespace,
 		},
 	}
 
@@ -625,7 +615,7 @@ func (o *Operation) ComputeLokiHost() string {
 
 // ComputeIngressHost computes the host for a given prefix.
 func (o *Operation) ComputeIngressHost(prefix string) string {
-	shortID := strings.Replace(o.Shoot.Info.Status.TechnicalID, shootpkg.TechnicalIDPrefix, "", 1)
+	shortID := strings.Replace(o.Shoot.GetInfo().Status.TechnicalID, shootpkg.TechnicalIDPrefix, "", 1)
 	return fmt.Sprintf("%s-%s.%s", prefix, shortID, o.Seed.IngressDomain())
 }
 

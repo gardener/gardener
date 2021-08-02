@@ -142,7 +142,7 @@ var _ = Describe("Extensions", func() {
 
 		DescribeTable("#DefaultExtension",
 			func(registrations []gardencorev1beta1.ControllerRegistration, extensions []gardencorev1beta1.Extension, conditionMatcher gomegatypes.GomegaMatcher) {
-				botanist.Shoot.Info.Spec.Extensions = extensions
+				botanist.Shoot.GetInfo().Spec.Extensions = extensions
 				gardenClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerRegistrationList{})).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 					(&gardencorev1beta1.ControllerRegistrationList{Items: registrations}).DeepCopyInto(list.(*gardencorev1beta1.ControllerRegistrationList))
 					return nil

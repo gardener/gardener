@@ -86,7 +86,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		kubeAPIServerDeploymentFound = true
 	)
 
-	for _, lastError := range o.Shoot.Info.Status.LastErrors {
+	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
 		if lastError.TaskID != nil {
 			tasksWithErrors = append(tasksWithErrors, *lastError.TaskID)
 		}
@@ -145,7 +145,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 	var (
 		nonTerminatingNamespace = botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
-		wakeupRequired          = (o.Shoot.Info.Status.IsHibernated || (!o.Shoot.Info.Status.IsHibernated && o.Shoot.HibernationEnabled)) && cleanupShootResources
+		wakeupRequired          = (o.Shoot.GetInfo().Status.IsHibernated || (!o.Shoot.GetInfo().Status.IsHibernated && o.Shoot.HibernationEnabled)) && cleanupShootResources
 		defaultTimeout          = 10 * time.Minute
 		defaultInterval         = 5 * time.Second
 
@@ -295,11 +295,11 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 		ErrorContext:     errorContext,
 		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
 	}); err != nil {
-		o.Logger.Errorf("Failed to prepare Shoot %q for migration: %+v", o.Shoot.Info.Name, err)
+		o.Logger.Errorf("Failed to prepare Shoot %q for migration: %+v", o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
-	o.Logger.Infof("Successfully prepared Shoot's control plane for migration %q", o.Shoot.Info.Name)
+	o.Logger.Infof("Successfully prepared Shoot's control plane for migration %q", o.Shoot.GetInfo().Name)
 	return nil
 }
 

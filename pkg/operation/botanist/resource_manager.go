@@ -55,7 +55,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	// grm is scaled down later on as part of the HibernateControlPlane step, so we only specify replicas=0 if
 	// the shoot is already hibernated.
 	replicas := int32(1)
-	if b.Shoot.HibernationEnabled && b.Shoot.Info.Status.IsHibernated {
+	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated {
 		replicas = 0
 	}
 

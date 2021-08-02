@@ -55,7 +55,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		err                                  error
 	)
 
-	for _, lastError := range o.Shoot.Info.Status.LastErrors {
+	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
 		if lastError.TaskID != nil {
 			tasksWithErrors = append(tasksWithErrors, *lastError.TaskID)
 		}
@@ -158,7 +158,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound && infrastructure != nil
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
-		staticNodesCIDR         = o.Shoot.Info.Spec.Networking.Nodes != nil
+		staticNodesCIDR         = o.Shoot.GetInfo().Spec.Networking.Nodes != nil
 		useSNI                  = botanist.APIServerSNIEnabled()
 		sniPhase                = botanist.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase
 
@@ -351,7 +351,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		cleanExtendedAPIs = g.Add(flow.Task{
 			Name:         "Cleaning extended API groups",
-			Fn:           flow.TaskFn(botanist.CleanExtendedAPIs).Timeout(10 * time.Minute).DoIf(cleanupShootResources && !metav1.HasAnnotation(o.Shoot.Info.ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup)),
+			Fn:           flow.TaskFn(botanist.CleanExtendedAPIs).Timeout(10 * time.Minute).DoIf(cleanupShootResources && !metav1.HasAnnotation(o.Shoot.GetInfo().ObjectMeta, v1beta1constants.AnnotationShootSkipCleanup)),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deleteClusterAutoscaler, waitForControllersToBeActive),
 		})
 
@@ -581,17 +581,17 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
 		ErrorContext:     errorContext,
 	}); err != nil {
-		o.Logger.Errorf("Error deleting Shoot %q: %+v", o.Shoot.Info.Name, err)
+		o.Logger.Errorf("Error deleting Shoot %q: %+v", o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
 	// ensure that shoot client is invalidated after it has been deleted
-	if err := o.ClientMap.InvalidateClient(keys.ForShoot(o.Shoot.Info)); err != nil {
+	if err := o.ClientMap.InvalidateClient(keys.ForShoot(o.Shoot.GetInfo())); err != nil {
 		err = fmt.Errorf("failed to invalidate shoot client: %w", err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 	}
 
-	o.Logger.Infof("Successfully deleted Shoot %q", o.Shoot.Info.Name)
+	o.Logger.Infof("Successfully deleted Shoot %q", o.Shoot.GetInfo().Name)
 	return nil
 }
 
@@ -626,7 +626,7 @@ func (c *Controller) removeFinalizerFrom(ctx context.Context, gardenClient kuber
 func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, kubeAPIServerDeploymentFound bool, infrastructure *extensionsv1alpha1.Infrastructure) (bool, error) {
 	var (
 		namespace = o.Shoot.SeedNamespace
-		name      = o.Shoot.Info.Name
+		name      = o.Shoot.GetInfo().Name
 	)
 
 	// If the `ControlPlane` resource and the kube-apiserver deployment do no longer exist then we don't want to re-deploy it.

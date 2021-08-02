@@ -44,7 +44,7 @@ var NewEtcd = etcd.New
 
 // DefaultEtcd returns a deployer for the etcd.
 func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, error) {
-	defragmentationSchedule, err := determineDefragmentationSchedule(b.Shoot.Info, b.ManagedSeed, class)
+	defragmentationSchedule, err := determineDefragmentationSchedule(b.Shoot.GetInfo(), b.ManagedSeed, class)
 	if err != nil {
 		return nil, err
 	}
@@ -67,13 +67,13 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 
 	scaleDownUpdateMode := hvpav1alpha1.UpdateModeMaintenanceWindow
 	if (class == etcd.ClassImportant && b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction) ||
-		(metav1.HasAnnotation(b.Shoot.Info.ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled)) {
+		(metav1.HasAnnotation(b.Shoot.GetInfo().ObjectMeta, v1beta1constants.ShootAlphaControlPlaneScaleDownDisabled)) {
 		scaleDownUpdateMode = hvpav1alpha1.UpdateModeOff
 	}
 
 	e.SetHVPAConfig(&etcd.HVPAConfig{
 		Enabled:               hvpaEnabled,
-		MaintenanceTimeWindow: *b.Shoot.Info.Spec.Maintenance.TimeWindow,
+		MaintenanceTimeWindow: *b.Shoot.GetInfo().Spec.Maintenance.TimeWindow,
 		ScaleDownUpdateMode:   &scaleDownUpdateMode,
 	})
 
@@ -97,7 +97,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 			return err
 		}
 
-		snapshotSchedule, err := determineBackupSchedule(b.Shoot.Info)
+		snapshotSchedule, err := determineBackupSchedule(b.Shoot.GetInfo())
 		if err != nil {
 			return err
 		}

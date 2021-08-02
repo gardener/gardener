@@ -77,8 +77,8 @@ func (h *Health) Check(
 	conditions []gardencorev1beta1.Condition,
 ) []gardencorev1beta1.Condition {
 	updatedConditions := h.healthChecks(ctx, thresholdMappings, healthCheckOutdatedThreshold, conditions)
-	lastOp := h.shoot.Info.Status.LastOperation
-	lastErrors := h.shoot.Info.Status.LastErrors
+	lastOp := h.shoot.GetInfo().Status.LastOperation
+	lastErrors := h.shoot.GetInfo().Status.LastErrors
 	return PardonConditions(updatedConditions, lastOp, lastErrors)
 }
 
@@ -175,7 +175,7 @@ func (h *Health) healthChecks(
 	healthCheckOutdatedThreshold *metav1.Duration,
 	conditions []gardencorev1beta1.Condition,
 ) []gardencorev1beta1.Condition {
-	if h.shoot.HibernationEnabled || h.shoot.Info.Status.IsHibernated {
+	if h.shoot.HibernationEnabled || h.shoot.GetInfo().Status.IsHibernated {
 		return shootHibernatedConditions(conditions)
 	}
 
@@ -199,7 +199,7 @@ func (h *Health) healthChecks(
 	}
 
 	var (
-		checker               = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, h.shoot.Info.Status.LastOperation, h.shoot.KubernetesVersion)
+		checker               = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion)
 		seedDeploymentLister  = makeDeploymentLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
 		seedStatefulSetLister = makeStatefulSetLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
 		seedEtcdLister        = makeEtcdLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace)
@@ -209,7 +209,7 @@ func (h *Health) healthChecks(
 	shootClient, apiServerRunning, err := h.initializeShootClients()
 	if err != nil || !apiServerRunning {
 		// don't execute health checks if API server has already been deleted or has not been created yet
-		message := shootControlPlaneNotRunningMessage(h.shoot.Info.Status.LastOperation)
+		message := shootControlPlaneNotRunningMessage(h.shoot.GetInfo().Status.LastOperation)
 		if err != nil {
 			message = fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
 			h.logger.Error(message)
@@ -264,7 +264,7 @@ func (h *Health) checkControlPlane(
 	seedWorkerLister kutil.WorkerLister,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckControlPlane(h.shoot.Info, h.shoot.SeedNamespace, condition, seedDeploymentLister, seedEtcdLister, seedWorkerLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckControlPlane(h.shoot.GetInfo(), h.shoot.SeedNamespace, condition, seedDeploymentLister, seedEtcdLister, seedWorkerLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 
@@ -338,7 +338,7 @@ func (h *Health) checkClusterNodes(
 	condition gardencorev1beta1.Condition,
 	extensionConditions []ExtensionCondition,
 ) (*gardencorev1beta1.Condition, error) {
-	if exitCondition, err := checker.CheckClusterNodes(ctx, shootClient, h.shoot.Info.Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckClusterNodes(ctx, shootClient, h.shoot.GetInfo().Spec.Provider.Workers, condition); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition := checker.CheckExtensionCondition(condition, extensionConditions); exitCondition != nil {

@@ -392,7 +392,7 @@ func retrieveSeedConditions(ctx context.Context, operation *operation.Operation)
 	}
 
 	seed := &gardencorev1beta1.Seed{}
-	if err := operation.K8sGardenClient.Client().Get(ctx, kutil.Key(operation.Shoot.Info.Name), seed); client.IgnoreNotFound(err) != nil {
+	if err := operation.K8sGardenClient.Client().Get(ctx, kutil.Key(operation.Shoot.GetInfo().Name), seed); client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
 	return seed.Status.Conditions, nil

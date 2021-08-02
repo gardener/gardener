@@ -35,7 +35,7 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 		b.Shoot.SeedNamespace,
 		image.String(),
 		b.Shoot.GetReplicas(1),
-		b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler,
+		b.Shoot.GetInfo().Spec.Kubernetes.ClusterAutoscaler,
 	), nil
 }
 

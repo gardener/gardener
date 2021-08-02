@@ -76,8 +76,8 @@ func (c *Constraint) Check(
 	constraints []gardencorev1beta1.Condition,
 ) []gardencorev1beta1.Condition {
 	updatedConstraints := c.constraintsChecks(ctx, constraints)
-	lastOp := c.shoot.Info.Status.LastOperation
-	lastErrors := c.shoot.Info.Status.LastErrors
+	lastOp := c.shoot.GetInfo().Status.LastOperation
+	lastErrors := c.shoot.GetInfo().Status.LastErrors
 	return PardonConditions(updatedConstraints, lastOp, lastErrors)
 }
 
@@ -85,7 +85,7 @@ func (c *Constraint) constraintsChecks(
 	ctx context.Context,
 	constraints []gardencorev1beta1.Condition,
 ) []gardencorev1beta1.Condition {
-	if c.shoot.HibernationEnabled || c.shoot.Info.Status.IsHibernated {
+	if c.shoot.HibernationEnabled || c.shoot.GetInfo().Status.IsHibernated {
 		return shootHibernatedConstraints(constraints...)
 	}
 

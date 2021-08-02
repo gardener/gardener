@@ -35,9 +35,9 @@ const (
 func (b *Botanist) DeployReferencedResources(ctx context.Context) error {
 	// Read referenced objects into a slice of unstructured objects
 	var unstructuredObjs []*unstructured.Unstructured
-	for _, resource := range b.Shoot.Info.Spec.Resources {
+	for _, resource := range b.Shoot.GetInfo().Spec.Resources {
 		// Read the resource from the Garden cluster
-		obj, err := unstructuredutils.GetObjectByRef(ctx, b.K8sGardenClient.Client(), &resource.ResourceRef, b.Shoot.Info.Namespace)
+		obj, err := unstructuredutils.GetObjectByRef(ctx, b.K8sGardenClient.Client(), &resource.ResourceRef, b.Shoot.GetInfo().Namespace)
 		if err != nil {
 			return err
 		}

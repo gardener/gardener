@@ -230,7 +230,7 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]compo
 	additionalProviders := map[string]component.DeployWaiter{}
 
 	if b.NeedsAdditionalDNSProviders() {
-		for i, provider := range b.Shoot.Info.Spec.DNS.Providers {
+		for i, provider := range b.Shoot.GetInfo().Spec.DNS.Providers {
 			p := provider
 			if p.Primary != nil && *p.Primary {
 				continue
@@ -265,7 +265,7 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]compo
 			secret := &corev1.Secret{}
 			if err := b.K8sGardenClient.Client().Get(
 				ctx,
-				kutil.Key(b.Shoot.Info.Namespace, *secretName),
+				kutil.Key(b.Shoot.GetInfo().Namespace, *secretName),
 				secret,
 			); err != nil {
 				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *secretName, err)
@@ -328,8 +328,8 @@ func (b *Botanist) AdditionalDNSProviders(ctx context.Context) (map[string]compo
 // NeedsExternalDNS returns true if the Shoot cluster needs external DNS.
 func (b *Botanist) NeedsExternalDNS() bool {
 	return !b.Shoot.DisableDNS &&
-		b.Shoot.Info.Spec.DNS != nil &&
-		b.Shoot.Info.Spec.DNS.Domain != nil &&
+		b.Shoot.GetInfo().Spec.DNS != nil &&
+		b.Shoot.GetInfo().Spec.DNS.Domain != nil &&
 		b.Shoot.ExternalClusterDomain != nil &&
 		!strings.HasSuffix(*b.Shoot.ExternalClusterDomain, ".nip.io") &&
 		b.Shoot.ExternalDomain != nil &&
@@ -347,8 +347,8 @@ func (b *Botanist) NeedsInternalDNS() bool {
 // are needed.
 func (b *Botanist) NeedsAdditionalDNSProviders() bool {
 	return !b.Shoot.DisableDNS &&
-		b.Shoot.Info.Spec.DNS != nil &&
-		len(b.Shoot.Info.Spec.DNS.Providers) > 0
+		b.Shoot.GetInfo().Spec.DNS != nil &&
+		len(b.Shoot.GetInfo().Spec.DNS.Providers) > 0
 }
 
 // APIServerSNIPodMutatorEnabled returns false if the value of the Shoot annotation
@@ -360,7 +360,7 @@ func (b *Botanist) APIServerSNIPodMutatorEnabled() bool {
 		return false
 	}
 
-	vs, ok := b.Shoot.Info.GetAnnotations()[v1beta1constants.AnnotationShootAPIServerSNIPodInjector]
+	vs, ok := b.Shoot.GetInfo().GetAnnotations()[v1beta1constants.AnnotationShootAPIServerSNIPodInjector]
 	if !ok {
 		return true
 	}
@@ -506,7 +506,7 @@ func (d dnsRestoreDeployer) Destroy(_ context.Context) error { return nil }
 
 func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {
 	if b.NeedsInternalDNS() {
-		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSInternalName
+		ownerID := *b.Shoot.GetInfo().Status.ClusterIdentity + "-" + DNSInternalName
 
 		b.Shoot.Components.Extensions.DNS.InternalOwner = dns.NewOwner(
 			b.K8sSeedClient.Client(),
@@ -535,7 +535,7 @@ func (b *Botanist) newDNSComponentsTargetingAPIServerAddress() {
 	}
 
 	if b.NeedsExternalDNS() {
-		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + DNSExternalName
+		ownerID := *b.Shoot.GetInfo().Status.ClusterIdentity + "-" + DNSExternalName
 
 		b.Shoot.Components.Extensions.DNS.ExternalOwner = dns.NewOwner(
 			b.K8sSeedClient.Client(),

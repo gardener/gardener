@@ -146,12 +146,12 @@ var _ = Describe("Infrastructure", func() {
 			kubernetesGardenInterface.EXPECT().Client().Return(kubernetesGardenClient)
 			updatedShoot := shoot.DeepCopy()
 			updatedShoot.Spec.Networking.Nodes = nodesCIDR
-			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.StrategicMergePatchType)
+			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.MergePatchType)
 
 			kubernetesSeedInterface.EXPECT().Client().Return(kubernetesSeedClient)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
-			Expect(botanist.Shoot.Info).To(Equal(updatedShoot))
+			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot))
 		})
 
 		It("should successfully wait (w/o provider status, w/o nodes cidr)", func() {
@@ -159,14 +159,14 @@ var _ = Describe("Infrastructure", func() {
 			infrastructure.EXPECT().NodesCIDR()
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
-			Expect(botanist.Shoot.Info).To(Equal(shoot))
+			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))
 		})
 
 		It("should return the error during wait", func() {
 			infrastructure.EXPECT().Wait(ctx).Return(fakeErr)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(MatchError(fakeErr))
-			Expect(botanist.Shoot.Info).To(Equal(shoot))
+			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))
 		})
 
 		It("should return the error during nodes cidr update", func() {
@@ -176,10 +176,10 @@ var _ = Describe("Infrastructure", func() {
 			kubernetesGardenInterface.EXPECT().Client().Return(kubernetesGardenClient)
 			updatedShoot := shoot.DeepCopy()
 			updatedShoot.Spec.Networking.Nodes = nodesCIDR
-			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.StrategicMergePatchType, fakeErr)
+			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.MergePatchType, fakeErr)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(MatchError(fakeErr))
-			Expect(botanist.Shoot.Info).To(Equal(shoot))
+			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))
 		})
 	})
 })
