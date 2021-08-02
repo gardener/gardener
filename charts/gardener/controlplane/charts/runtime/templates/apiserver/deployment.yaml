@@ -190,6 +190,11 @@ spec:
         - --etcd-servers=http://localhost:2379
         {{- else }}
         - --etcd-servers={{ required ".Values.global.apiserver.etcd.servers is required" .Values.global.apiserver.etcd.servers }}
+        {{- if .Values.global.apiserver.etcd.tlsSecretName }}
+        - --etcd-cafile=/etc/gardener-apiserver/srv/etcd/ca.crt
+        - --etcd-certfile=/etc/gardener-apiserver/srv/etcd/tls.crt
+        - --etcd-keyfile=/etc/gardener-apiserver/srv/etcd/tls.key
+        {{- else}}
         {{- if .Values.global.apiserver.etcd.caBundle }}
         - --etcd-cafile=/etc/gardener-apiserver/srv/etcd-client-ca.crt
         {{- end }}
@@ -198,6 +203,7 @@ spec:
         {{- end }}
         {{- if .Values.global.apiserver.etcd.tls }}
         - --etcd-keyfile=/etc/gardener-apiserver/srv/etcd-client.key
+        {{- end }}
         {{- end }}
         {{- end }}
         {{- include "gardener-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
@@ -287,6 +293,11 @@ spec:
           mountPath: /etc/gardener-apiserver/srv/tls
           readOnly: true
         {{- end }}
+        {{- if .Values.global.apiserver.etcd.tlsSecretName }}
+        - name: gardener-etcd-client-tls
+          mountPath: /etc/gardener-apiserver/srv/etcd/
+          readOnly: true
+        {{- end }}
         {{- if .Values.global.apiserver.kubeconfig }}
         - name: gardener-apiserver-kubeconfig
           mountPath: /etc/gardener-apiserver/kubeconfig
@@ -362,6 +373,11 @@ spec:
       - name: gardener-apiserver-tls
         secret:
           secretName: {{ .Values.global.apiserver.tlsSecretName }}
+      {{- end }}
+      {{- if .Values.global.apiserver.etcd.tlsSecretName }}
+      - name: gardener-etcd-client-tls
+        secret:
+          secretName: {{ .Values.global.apiserver.etcd.tlsSecretName }}
       {{- end }}
       {{- if .Values.global.apiserver.kubeconfig }}
       - name: gardener-apiserver-kubeconfig
