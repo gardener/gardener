@@ -304,7 +304,7 @@ var _ = Describe("KubeAPIServer", func() {
 								},
 								ScaleDown: hvpav1alpha1.ScaleType{
 									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: &expectedScaleDownUpdateMode,
+										UpdateMode: pointer.StringPtr("Auto"),
 									},
 								},
 								Template: hvpav1alpha1.HpaTemplate{
