@@ -196,7 +196,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	if err != nil {
 		return nil, err
 	}
-	shoot.Info = shootObject
+	shoot.info = shootObject
 
 	cloudProfile, err := b.cloudProfileFunc(ctx, shootObject.Spec.CloudProfileName)
 	if err != nil {
@@ -257,7 +257,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 
 	kubernetesVersionGeq118 := versionConstraintK8sGreaterEqual118.Check(kubernetesVersion)
 	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN) && kubernetesVersionGeq118
-	if reversedVPNEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil && kubernetesVersionGeq118 {
+	if reversedVPNEnabled, err := strconv.ParseBool(shoot.info.Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil && kubernetesVersionGeq118 {
 		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 			shoot.ReversedVPNEnabled = reversedVPNEnabled
 		}
@@ -276,7 +276,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.Networks = networks
 
 	shoot.NodeLocalDNSEnabled = false
-	if nodeLocalDNSEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationNodeLocalDNS]); err == nil {
+	if nodeLocalDNSEnabled, err := strconv.ParseBool(shoot.info.Annotations[v1beta1constants.AnnotationNodeLocalDNS]); err == nil {
 		shoot.NodeLocalDNSEnabled = nodeLocalDNSEnabled
 	}
 
@@ -292,30 +292,44 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	return shoot, nil
 }
 
-// GetInfo returns the shoot resource managed by this operation.
-// This method is protected by a RW mutex, so it will block on all concurrent UpdateInfo or UpdateInfoStatus
+// GetInfo returns the shoot resource managed by this operation in a concurrency safe way.
+// This method is protected by a RW mutex, so it will block on all concurrent SetInfo, UpdateInfo, or UpdateInfoStatus
 // executions, but not on concurrent GetInfo executions.
-// This method is intended to be used only for reading the data of the returned shoot resource. The returned shoot
-// resource MUST NOT BE MODIFIED (except in test code) since this will interfere with other concurrent reads and writes.
-// To modify the shoot resource managed by this operation, use the UpdateInfo and UpdateInfoStatus methods.
+// This method should be used only for reading the data of the returned shoot resource. The returned shoot
+// resource MUST NOT BE MODIFIED (except in test code) since this might interfere with other concurrent reads and writes.
+// To properly update the shoot resource managed by this operation use UpdateInfo or UpdateInfoStatus.
 func (s *Shoot) GetInfo() *gardencorev1beta1.Shoot {
-	s.InfoMutex.RLock()
-	defer s.InfoMutex.RUnlock()
+	s.infoMutex.RLock()
+	defer s.infoMutex.RUnlock()
 
-	return s.Info
+	return s.info
+}
+
+// SetInfo sets the shoot resource managed by this operation in a concurrency safe way.
+// This method is protected by a RW mutex, so only a single SetInfo, UpdateInfo, or UpdateInfoStatus operation can be
+// executed at any point in time.
+// This method does not update the shoot resource in the cluster and so should be used only in exceptional situations,
+// or as a convenience in test code. The shoot passed as a parameter MUST NOT BE MODIFIED after the call to SetInfo
+// (except in test code) since this might interfere with other concurrent reads and writes.
+// To properly update the shoot resource managed by this operation use UpdateInfo or UpdateInfoStatus.
+func (s *Shoot) SetInfo(shoot *gardencorev1beta1.Shoot) {
+	s.infoMutex.Lock()
+	defer s.infoMutex.Unlock()
+
+	s.info = shoot
 }
 
 // UpdateInfo updates the shoot resource managed by this operation in a concurrency safe way,
 // using the given context, client, and mutate function.
 // It performs a patch using client.MergeFrom rather than client.StrategicMergeFrom, so any changes to list fields
 // will overwrite the changed fields rather than using the specified patch strategy.
-// This method is protected by a RW mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
+// This method is protected by a RW mutex, so only a single SetInfo, UpdateInfo, or UpdateInfoStatus operation can be
 // executed at any point in time.
 func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, f func(*gardencorev1beta1.Shoot) error) error {
-	s.InfoMutex.Lock()
-	defer s.InfoMutex.Unlock()
+	s.infoMutex.Lock()
+	defer s.infoMutex.Unlock()
 
-	shoot := s.Info.DeepCopy()
+	shoot := s.info.DeepCopy()
 	patch := client.MergeFrom(shoot.DeepCopy())
 	if err := f(shoot); err != nil {
 		return err
@@ -323,7 +337,7 @@ func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, f func(*gardenc
 	if err := c.Patch(ctx, shoot, patch); err != nil {
 		return err
 	}
-	s.Info = shoot
+	s.info = shoot
 	return nil
 }
 
@@ -331,13 +345,13 @@ func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, f func(*gardenc
 // using the given context, client, and mutate function.
 // It performs a patch using client.MergeFrom rather than client.StrategicMergeFrom, so any changes to list fields
 // will overwrite the changed fields rather than using the specified patch strategy.
-// This method is protected by a RW mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
+// This method is protected by a RW mutex, so only a single SetInfo, UpdateInfo or UpdateInfoStatus operation can be
 // executed at any point in time.
 func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, f func(*gardencorev1beta1.Shoot) error) error {
-	s.InfoMutex.Lock()
-	defer s.InfoMutex.Unlock()
+	s.infoMutex.Lock()
+	defer s.infoMutex.Unlock()
 
-	shoot := s.Info.DeepCopy()
+	shoot := s.info.DeepCopy()
 	patch := client.MergeFrom(shoot.DeepCopy())
 	if err := f(shoot); err != nil {
 		return err
@@ -345,7 +359,7 @@ func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, f func(*g
 	if err := c.Status().Patch(ctx, shoot, patch); err != nil {
 		return err
 	}
-	s.Info = shoot
+	s.info = shoot
 	return nil
 }
 
@@ -377,22 +391,22 @@ func (s *Shoot) GetDNSRecordComponentsForMigration() []component.DeployMigrateWa
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Shoot cluster. The
 // end result is '<subDomain>.<ingressPrefix>.<clusterDomain>'.
 func (s *Shoot) GetIngressFQDN(subDomain string) string {
-	s.InfoMutex.RLock()
-	defer s.InfoMutex.RUnlock()
+	s.infoMutex.RLock()
+	defer s.infoMutex.RUnlock()
 
-	if s.Info.Spec.DNS == nil || s.Info.Spec.DNS.Domain == nil {
+	if s.info.Spec.DNS == nil || s.info.Spec.DNS.Domain == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s.%s.%s", subDomain, gutil.IngressPrefix, *(s.Info.Spec.DNS.Domain))
+	return fmt.Sprintf("%s.%s.%s", subDomain, gutil.IngressPrefix, *(s.info.Spec.DNS.Domain))
 }
 
 // GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
 func (s *Shoot) GetWorkerNames() []string {
-	s.InfoMutex.RLock()
-	defer s.InfoMutex.RUnlock()
+	s.infoMutex.RLock()
+	defer s.infoMutex.RUnlock()
 
 	var workerNames []string
-	for _, worker := range s.Info.Spec.Provider.Workers {
+	for _, worker := range s.info.Spec.Provider.Workers {
 		workerNames = append(workerNames, worker.Name)
 	}
 	return workerNames
@@ -400,11 +414,11 @@ func (s *Shoot) GetWorkerNames() []string {
 
 // GetMinNodeCount returns the sum of all 'minimum' fields of all worker groups of the Shoot.
 func (s *Shoot) GetMinNodeCount() int32 {
-	s.InfoMutex.RLock()
-	defer s.InfoMutex.RUnlock()
+	s.infoMutex.RLock()
+	defer s.infoMutex.RUnlock()
 
 	var nodeCount int32
-	for _, worker := range s.Info.Spec.Provider.Workers {
+	for _, worker := range s.info.Spec.Provider.Workers {
 		nodeCount += worker.Minimum
 	}
 	return nodeCount
@@ -412,11 +426,11 @@ func (s *Shoot) GetMinNodeCount() int32 {
 
 // GetMaxNodeCount returns the sum of all 'maximum' fields of all worker groups of the Shoot.
 func (s *Shoot) GetMaxNodeCount() int32 {
-	s.InfoMutex.RLock()
-	defer s.InfoMutex.RUnlock()
+	s.infoMutex.RLock()
+	defer s.infoMutex.RUnlock()
 
 	var nodeCount int32
-	for _, worker := range s.Info.Spec.Provider.Workers {
+	for _, worker := range s.info.Spec.Provider.Workers {
 		nodeCount += worker.Maximum
 	}
 	return nodeCount
@@ -426,10 +440,10 @@ func (s *Shoot) GetMaxNodeCount() int32 {
 // controller has generated a nodes network then this CIDR will take priority. Otherwise, the nodes network
 // CIDR specified in the shoot will be returned (if possible). If no CIDR was specified then nil is returned.
 func (s *Shoot) GetNodeNetwork() *string {
-	s.InfoMutex.RLock()
-	defer s.InfoMutex.RUnlock()
+	s.infoMutex.RLock()
+	defer s.infoMutex.RUnlock()
 
-	if val := s.Info.Spec.Networking.Nodes; val != nil {
+	if val := s.info.Spec.Networking.Nodes; val != nil {
 		return val
 	}
 	return nil
@@ -456,14 +470,14 @@ func (s *Shoot) ComputeInClusterAPIServerAddress(runsInShootNamespace bool) stri
 // ComputeOutOfClusterAPIServerAddress returns the external address for the shoot API server depending on whether
 // the caller wants to use the internal cluster domain and whether DNS is disabled on this seed.
 func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, useInternalClusterDomain bool) string {
-	s.InfoMutex.RLock()
-	defer s.InfoMutex.RUnlock()
+	s.infoMutex.RLock()
+	defer s.infoMutex.RUnlock()
 
 	if s.DisableDNS {
 		return apiServerAddress
 	}
 
-	if gardencorev1beta1helper.ShootUsesUnmanagedDNS(s.Info) {
+	if gardencorev1beta1helper.ShootUsesUnmanagedDNS(s.info) {
 		return gutil.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
@@ -476,12 +490,12 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, use
 
 // IPVSEnabled returns true if IPVS is enabled for the shoot.
 func (s *Shoot) IPVSEnabled() bool {
-	s.InfoMutex.RLock()
-	defer s.InfoMutex.RUnlock()
+	s.infoMutex.RLock()
+	defer s.infoMutex.RUnlock()
 
-	return s.Info.Spec.Kubernetes.KubeProxy != nil &&
-		s.Info.Spec.Kubernetes.KubeProxy.Mode != nil &&
-		*s.Info.Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS
+	return s.info.Spec.Kubernetes.KubeProxy != nil &&
+		s.info.Spec.Kubernetes.KubeProxy.Mode != nil &&
+		*s.info.Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS
 }
 
 // IsLoggingEnabled return true if the Shoot controlplane logging is enabled

@@ -59,8 +59,9 @@ type Builder struct {
 
 // Shoot is an object containing information about a Shoot cluster.
 type Shoot struct {
-	Info         *gardencorev1beta1.Shoot
-	InfoMutex    sync.RWMutex
+	info      *gardencorev1beta1.Shoot
+	infoMutex sync.RWMutex
+
 	Secret       *corev1.Secret
 	CloudProfile *gardencorev1beta1.CloudProfile
 

@@ -70,9 +70,9 @@ var _ = Describe("KubeControllerManager", func() {
 			botanist.Logger = logger.NewFieldLogger(logger.NewNopLogger(), "", "")
 			botanist.K8sSeedClient = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
-				Info:     &gardencorev1beta1.Shoot{},
 				Networks: &shootpkg.Networks{},
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 
 		It("should successfully create a kube-controller-manager interface", func() {
@@ -129,9 +129,9 @@ var _ = Describe("KubeControllerManager", func() {
 						KubeControllerManager: kubeControllerManager,
 					},
 				},
-				Info:          &gardencorev1beta1.Shoot{},
 				SeedNamespace: namespace,
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 
 		Context("successfully deployment", func() {

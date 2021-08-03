@@ -70,7 +70,6 @@ var _ = Describe("KubeAPIServer", func() {
 				K8sSeedClient: k8sSeedClient,
 				Garden:        &gardenpkg.Garden{},
 				Shoot: &shootpkg.Shoot{
-					Info:          &gardencorev1beta1.Shoot{},
 					SeedNamespace: shootNamespace,
 					Components: &shootpkg.Components{
 						ControlPlane: &shootpkg.ControlPlane{
@@ -80,6 +79,7 @@ var _ = Describe("KubeAPIServer", func() {
 				},
 			},
 		}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
 	AfterEach(func() {

@@ -247,15 +247,15 @@ var _ = Describe("Shoot Care Control", func() {
 					WithClientSetForKey(keys.ForSeedWithName(seedName), seedClientSet).
 					Build()
 
-				operationFunc = opFunc(&operation.Operation{
+				op := &operation.Operation{
 					K8sGardenClient: gardenClientSet,
 					K8sSeedClient:   seedClientSet,
 					ManagedSeed:     managedSeed,
-					Shoot: &operationshoot.Shoot{
-						Info: shoot,
-					},
-					Logger: logger.NewNopLogger().WithContext(context.Background()),
-				}, nil)
+					Shoot:           &operationshoot.Shoot{},
+					Logger:          logger.NewNopLogger().WithContext(context.Background()),
+				}
+				op.Shoot.SetInfo(shoot)
+				operationFunc = opFunc(op, nil)
 
 				revertFns = append(revertFns,
 					test.WithVar(&NewOperation, operationFunc),

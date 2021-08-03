@@ -69,15 +69,14 @@ var _ = Describe("operation", func() {
 				Seed: &operationseed.Seed{
 					Info: seed,
 				},
-				Shoot: &operationshoot.Shoot{
-					Info: shoot,
-				},
+				Shoot: &operationshoot.Shoot{},
 			}
 		)
 
 		shoot.Status = gardencorev1beta1.ShootStatus{
 			TechnicalID: operationshoot.ComputeTechnicalID(projectName, shoot),
 		}
+		o.Shoot.SetInfo(shoot)
 
 		Expect(o.ComputeIngressHost(prefix)).To(matcher)
 	},
@@ -121,10 +120,9 @@ var _ = Describe("operation", func() {
 			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 			o = &Operation{
 				K8sGardenClient: gardenClient,
-				Shoot: &operationshoot.Shoot{
-					Info: shoot,
-				},
+				Shoot:           &operationshoot.Shoot{},
 			}
+			o.Shoot.SetInfo(shoot)
 		})
 
 		Describe("#EnsureShootStateExists", func() {

@@ -81,7 +81,6 @@ var _ = Describe("Networkpolicies", func() {
 					},
 				},
 				Shoot: &shootpkg.Shoot{
-					Info: &gardencorev1beta1.Shoot{},
 					Networks: &shootpkg.Networks{
 						CoreDNS: []byte{20, 0, 0, 10},
 					},
@@ -89,6 +88,7 @@ var _ = Describe("Networkpolicies", func() {
 				},
 			},
 		}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
 	DescribeTable("#DefaultNetworkPolicies",

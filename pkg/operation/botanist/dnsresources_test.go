@@ -17,13 +17,13 @@ package botanist_test
 import (
 	"context"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	"k8s.io/utils/pointer"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
@@ -75,20 +75,6 @@ var _ = Describe("dnsrecord", func() {
 		b = &Botanist{
 			Operation: &operation.Operation{
 				Shoot: &shoot.Shoot{
-					Info: &gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							DNS: &gardencorev1beta1.DNS{
-								Domain: pointer.String(externalDomain),
-							},
-							Addons: &gardencorev1beta1.Addons{
-								NginxIngress: &gardencorev1beta1.NginxIngress{
-									Addon: gardencorev1beta1.Addon{
-										Enabled: true,
-									},
-								},
-							},
-						},
-					},
 					ExternalClusterDomain: pointer.String(externalDomain),
 					ExternalDomain: &garden.Domain{
 						Provider: externalProvider,
@@ -119,6 +105,20 @@ var _ = Describe("dnsrecord", func() {
 				Logger: logrus.NewEntry(logger.NewNopLogger()),
 			},
 		}
+		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				DNS: &gardencorev1beta1.DNS{
+					Domain: pointer.String(externalDomain),
+				},
+				Addons: &gardencorev1beta1.Addons{
+					NginxIngress: &gardencorev1beta1.NginxIngress{
+						Addon: gardencorev1beta1.Addon{
+							Enabled: true,
+						},
+					},
+				},
+			},
+		})
 	})
 
 	AfterEach(func() {

@@ -89,13 +89,13 @@ var _ = Describe("Infrastructure", func() {
 
 		Context("restore", func() {
 			BeforeEach(func() {
-				botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{
 							Type: gardencorev1beta1.LastOperationTypeRestore,
 						},
 					},
-				}
+				})
 			})
 
 			It("should restore successfully", func() {
@@ -136,7 +136,7 @@ var _ = Describe("Infrastructure", func() {
 
 			botanist.K8sGardenClient = kubernetesGardenInterface
 			botanist.K8sSeedClient = kubernetesSeedInterface
-			botanist.Shoot.Info = shoot
+			botanist.Shoot.SetInfo(shoot)
 		})
 
 		It("should successfully wait (w/ provider status, w/ nodes cidr)", func() {

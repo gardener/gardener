@@ -61,7 +61,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 			kubernetesClient.EXPECT().Version()
 
 			botanist.K8sSeedClient = kubernetesClient
-			botanist.Shoot = &shootpkg.Shoot{Info: &gardencorev1beta1.Shoot{}}
+			botanist.Shoot = &shootpkg.Shoot{}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 
 		It("should successfully create a cluster-autoscaler interface", func() {

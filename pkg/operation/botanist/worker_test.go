@@ -112,13 +112,13 @@ var _ = Describe("Worker", func() {
 
 		Context("restore", func() {
 			BeforeEach(func() {
-				botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{
 							Type: gardencorev1beta1.LastOperationTypeRestore,
 						},
 					},
-				}
+				})
 			})
 
 			It("should restore successfully", func() {
@@ -327,7 +327,7 @@ var _ = Describe("Worker", func() {
 			defer func() { TimeoutWaitCloudConfigUpdated = oldTimeout }()
 			TimeoutWaitCloudConfigUpdated = time.Millisecond
 
-			botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Provider: gardencorev1beta1.Provider{
 						Workers: []gardencorev1beta1.Worker{
@@ -335,7 +335,7 @@ var _ = Describe("Worker", func() {
 						},
 					},
 				},
-			}
+			})
 
 			gomock.InOrder(
 				seedInterface.EXPECT().Client().Return(seedClient),
@@ -391,7 +391,7 @@ var _ = Describe("Worker", func() {
 			defer func() { TimeoutWaitCloudConfigUpdated = oldTimeout }()
 			TimeoutWaitCloudConfigUpdated = time.Millisecond
 
-			botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Provider: gardencorev1beta1.Provider{
 						Workers: []gardencorev1beta1.Worker{
@@ -399,7 +399,7 @@ var _ = Describe("Worker", func() {
 						},
 					},
 				},
-			}
+			})
 
 			gomock.InOrder(
 				seedInterface.EXPECT().Client().Return(seedClient),

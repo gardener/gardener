@@ -78,9 +78,6 @@ var _ = Describe("dns", func() {
 					},
 				},
 				Shoot: &shootpkg.Shoot{
-					Info: &gardencorev1beta1.Shoot{
-						ObjectMeta: metav1.ObjectMeta{Namespace: shootNS},
-					},
 					Components: &shootpkg.Components{
 						Extensions: &shootpkg.Extensions{
 							DNS: &shootpkg.DNS{},
@@ -92,6 +89,9 @@ var _ = Describe("dns", func() {
 				Logger: logrus.NewEntry(logger.NewNopLogger()),
 			},
 		}
+		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{Namespace: shootNS},
+		})
 
 		s = runtime.NewScheme()
 		Expect(dnsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())

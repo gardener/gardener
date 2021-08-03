@@ -108,7 +108,6 @@ var _ = Describe("ClusterIdentity", func() {
 				K8sGardenClient: gardenInterface,
 				K8sSeedClient:   seedInterface,
 				Shoot: &shootpkg.Shoot{
-					Info:          shoot,
 					SeedNamespace: shootSeedNamespace,
 					Components: &shootpkg.Components{
 						SystemComponents: &shootpkg.SystemComponents{
@@ -119,6 +118,7 @@ var _ = Describe("ClusterIdentity", func() {
 				GardenClusterIdentity: gardenClusterIdentity,
 			},
 		}
+		botanist.Shoot.SetInfo(shoot)
 	})
 
 	AfterEach(func() {

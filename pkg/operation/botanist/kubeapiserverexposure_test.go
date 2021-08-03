@@ -66,13 +66,13 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			Operation: &operation.Operation{
 				K8sSeedClient: fakeClientSet,
 				Shoot: &shoot.Shoot{
-					Info:          &gardencorev1beta1.Shoot{},
 					SeedNamespace: namespace,
 				},
 				Garden: &garden.Garden{},
 				Logger: logrus.NewEntry(logger.NewNopLogger()),
 			},
 		}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
 	AfterEach(func() {

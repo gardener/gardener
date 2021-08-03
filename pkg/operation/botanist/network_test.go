@@ -75,13 +75,13 @@ var _ = Describe("Network", func() {
 
 		Context("restore", func() {
 			BeforeEach(func() {
-				botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{
 							Type: gardencorev1beta1.LastOperationTypeRestore,
 						},
 					},
-				}
+				})
 			})
 
 			It("should restore successfully", func() {

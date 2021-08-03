@@ -90,7 +90,7 @@ var _ = Describe("Namespaces", func() {
 					},
 				},
 			}}
-			botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Provider: gardencorev1beta1.Provider{
 						Type: shootProviderType,
@@ -102,7 +102,7 @@ var _ = Describe("Namespaces", func() {
 				Status: gardencorev1beta1.ShootStatus{
 					UID: uid,
 				},
-			}
+			})
 
 			obj = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{

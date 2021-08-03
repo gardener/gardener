@@ -110,17 +110,6 @@ var _ = Describe("dnsrecord", func() {
 					},
 				},
 				Shoot: &shoot.Shoot{
-					Info: &gardencorev1beta1.Shoot{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      shootName,
-							Namespace: shootNamespace,
-						},
-						Spec: gardencorev1beta1.ShootSpec{
-							DNS: &gardencorev1beta1.DNS{
-								Domain: pointer.String(externalDomain),
-							},
-						},
-					},
 					SeedNamespace:         seedNamespace,
 					ExternalClusterDomain: pointer.String(externalDomain),
 					ExternalDomain: &garden.Domain{
@@ -152,6 +141,17 @@ var _ = Describe("dnsrecord", func() {
 				Logger: logrus.NewEntry(logger.NewNopLogger()),
 			},
 		}
+		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: shootNamespace,
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				DNS: &gardencorev1beta1.DNS{
+					Domain: pointer.String(externalDomain),
+				},
+			},
+		})
 
 		renderer := cr.NewWithServerVersion(&version.Info{})
 		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(client, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))

@@ -93,15 +93,15 @@ var _ = Describe("Etcd", func() {
 				Info: &gardencorev1beta1.Seed{},
 			}
 			botanist.Shoot = &shootpkg.Shoot{
-				Info: &gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Maintenance: &gardencorev1beta1.Maintenance{
-							TimeWindow: &maintenanceTimeWindow,
-						},
-					},
-				},
 				SeedNamespace: namespace,
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: &gardencorev1beta1.Maintenance{
+						TimeWindow: &maintenanceTimeWindow,
+					},
+				},
+			})
 		})
 
 		Context("no shooted seed", func() {
@@ -266,20 +266,20 @@ var _ = Describe("Etcd", func() {
 						EtcdEvents: etcdEvents,
 					},
 				},
-				Info: &gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Maintenance: &gardencorev1beta1.Maintenance{
-							TimeWindow: &maintenanceTimeWindow,
-						},
-					},
-					Status: gardencorev1beta1.ShootStatus{
-						TechnicalID: namespace,
-						UID:         shootUID,
-					},
-				},
 				SeedNamespace:   namespace,
 				BackupEntryName: namespace + "--" + string(shootUID),
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: &gardencorev1beta1.Maintenance{
+						TimeWindow: &maintenanceTimeWindow,
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					TechnicalID: namespace,
+					UID:         shootUID,
+				},
+			})
 
 			etcdMain.EXPECT().SetSecrets(etcd.Secrets{
 				CA:     component.Secret{Name: secretNameCA, Checksum: checksumCA},
