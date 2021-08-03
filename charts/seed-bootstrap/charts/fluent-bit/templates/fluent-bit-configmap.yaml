@@ -192,16 +192,20 @@ data:
 {{ if .Values.additionalFilters }}
 {{- toString .Values.additionalFilters | indent 4 }}
 {{- end }}
+
+    [FILTER]
+        Name record_modifier
+        Match {{ .Values.exposedComponentsTagPrefix }}.*
+        Record gardenuser user
+
+    [FILTER]
+        Name                rewrite_tag
+        Match               {{ .Values.exposedComponentsTagPrefix }}.*
+        Rule                $tag ^.+? kubernetes.$TAG false
     # Scripts
     [FILTER]
         Name                lua
         Match               kubernetes.*
-        script              modify_severity.lua
-        call                cb_modify
-
-    [FILTER]
-        Name                lua
-        Match               {{ .Values.exposedComponentsTagPrefix }}.kubernetes.*
         script              modify_severity.lua
         call                cb_modify
 

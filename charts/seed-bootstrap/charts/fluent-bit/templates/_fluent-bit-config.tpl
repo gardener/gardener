@@ -95,24 +95,25 @@
         LogLevel info
         BatchWait 40s
         BatchSize 30720
-        Labels {test="fluent-bit-go"}
+        Labels {origin="seed"}
         LineFormat json
         SortByTimestamp true
         DropSingleKey false
         AutoKubernetesLabels false
         LabelSelector gardener.cloud/role:shoot
-        RemoveKeys kubernetes,stream,time,tag
+        RemoveKeys kubernetes,stream,time,tag,gardenuser
         LabelMapPath /fluent-bit/etc/kubernetes_label_map.json
         DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
         DynamicHostPrefix http://loki.
         DynamicHostSuffix .svc:3100/loki/api/v1/push
         DynamicHostRegex ^shoot-
+        DynamicTenant user gardenuser user
         MaxRetries 3
         Timeout 10s
         MinBackoff 30s
         Buffer true
         BufferType dque
-        QueueDir  /fluent-bit/buffers/operator
+        QueueDir  /fluent-bit/buffers/seed
         QueueSegmentSize 300
         QueueSync normal
         QueueName gardener-kubernetes-operator
@@ -124,42 +125,6 @@
         ControllerSyncTimeout 120s
         NumberOfBatchIDs 5
         TenantID operator
-    
-    [Output]
-        Name gardenerloki
-        Match {{ .Values.exposedComponentsTagPrefix }}.kubernetes.*
-        Url http://loki.garden.svc:3100/loki/api/v1/push
-        LogLevel info
-        BatchWait 40s
-        BatchSize 30720
-        Labels {test="fluent-bit-go", lang="Golang"}
-        LineFormat json
-        SortByTimestamp true
-        DropSingleKey false
-        AutoKubernetesLabels true
-        LabelSelector gardener.cloud/role:shoot
-        RemoveKeys kubernetes,stream,type,time,tag
-        LabelMapPath /fluent-bit/etc/kubernetes_label_map.json
-        DynamicHostPath {"kubernetes": {"namespace_name": "namespace"}}
-        DynamicHostPrefix http://loki.
-        DynamicHostSuffix .svc:3100/loki/api/v1/push
-        DynamicHostRegex ^shoot-
-        MaxRetries 3
-        Timeout 10s
-        MinBackoff 30s
-        Buffer true
-        BufferType dque
-        QueueDir  /fluent-bit/buffers/user
-        QueueSegmentSize 300
-        QueueSync normal
-        QueueName gardener-kubernetes-user
-        FallbackToTagWhenMetadataIsMissing true
-        SendDeletedClustersLogsToDefaultClient true
-        TagKey tag
-        DropLogEntryWithoutK8sMetadata true
-        ControllerSyncTimeout 120s
-        NumberOfBatchIDs 5
-        TenantID user
 
     [Output]
         Name gardenerloki
@@ -168,7 +133,7 @@
         LogLevel info
         BatchWait 60s
         BatchSize 30720
-        Labels {test="fluent-bit-go"}
+        Labels {origin="seed-journald"}
         LineFormat json
         SortByTimestamp true
         DropSingleKey false
@@ -182,7 +147,7 @@
         QueueDir  /fluent-bit/buffers
         QueueSegmentSize 300
         QueueSync normal
-        QueueName gardener-journald
+        QueueName seed-journald
         NumberOfBatchIDs 5
 {{ end }}
 {{- end }}
