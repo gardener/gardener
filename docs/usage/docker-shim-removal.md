@@ -13,14 +13,8 @@ At this point in time, we have no plans to support other container runtimes, suc
     
 ## What should I do?
 As a gardener operator:
-- add `containerd` and `docker` to `.spec.machineImages[].versions[].cri.name` in your CloudProfile to allow users selecting a container runtime for their Shoots (see below). **Note:** [not all operating systems support all container runtimes](#differences-in-operating-systems)
-- update your cloud provider extensions to avoid a node rollout when a Shoot is configured from `cri=nil` to `cri.name: docker`:
-  - Alicloud 1.26.0
-  - AWS 1.27.0
-  - Azure 1.21.0
-  - GCP 1.18.0
-  - OpenStack 1.21.0
-  - vSphere 0.11.0
+- add `containerd` and `docker` to `.spec.machineImages[].versions[].cri.name` in your CloudProfile to allow users selecting a container runtime for their Shoots (see below). **Note:** Please take a look at our detailed information regarding [container runtime support in Gardener Operating System Extensions](#container-runtime-support-in-gardener-operating-system-extensions)
+- update your cloud provider extensions to avoid a node rollout when a Shoot is configured from `cri: nil` to `cri.name: docker`. **Note:** Please take a look at our detailed information regarding [stable Worker node hash support in Gardener Provider Extensions](#stable-worker-node-hash-support-in-gardener-provider-extensions)
 
 As a shoot owner:
 - [check if you have dependencies to the `docker` container runtime](https://kubernetes.io/docs/tasks/administer-cluster/migrating-from-dockershim/check-if-dockershim-deprecation-affects-you/#find-docker-dependencies). **Note:** This is not only about your actual workload, but also concerns ops tooling as well as logging, monitoring and metric agents installed on the nodes
@@ -36,12 +30,28 @@ As a shoot owner:
   - **2021-12-07:** Kubernetes v1.23 released. Shoots using this version can no longer select `docker` as container runtime.
   - **~2022-05:** Kubernetes v1.22 goes out of maintenance. This is the last version that you can use with `docker` as container runtime. Make sure you have removed any dependencies to `docker` as container runtime!
 
-## Differences in Operating Systems
-Support matrix for container runtimes in the supported Gardener operating systems
+## Container Runtime support in Gardener Operating System Extensions
 
 | Operating System | docker support     | containerd support | 
 |------------------|--------------------|--------------------|
-| GardenLinux      | :white_check_mark: | :white_check_mark: |
-| Ubuntu           | :white_check_mark: | :white_check_mark: |
+| GardenLinux      | :white_check_mark: | >= v0.3.0 |
+| Ubuntu           | :white_check_mark: | >= v1.4.0 |
 | SuSE CHost       | :white_check_mark: | [in progress](https://github.com/gardener/gardener-extension-os-suse-chost/issues/42) |
 | CoreOS/FlatCar   | :white_check_mark: | [in progress](https://github.com/gardener/gardener-extension-os-coreos/issues/26) |
+
+**Note**: If you're using a different Operating System Extension, start evaluating now if it provides support for `containerd`. Please refer to [our documentation of the `operatingsystemconfig` contract](https://github.com/gardener/gardener/blob/master/docs/extensions/operatingsystemconfig.md#cri-support) to understand how to support `containerd` for an Operating System Extension.
+
+## Stable Worker node hash support in Gardener Provider Extensions
+
+Upgrade to these versions to avoid a node rollout when a Shoot is configured from `cri: nil` to `cri.name: docker`.
+
+| Provider Extension | Stable worker hash support |
+|--------------------|----------------------------|
+| Alicloud           | >= 1.26.0                  |
+| AWS                | >= 1.27.0                  |
+| Azure              | >= 1.21.0                  |
+| GCP                | >= 1.18.0                  |
+| OpenStack          | >= 1.21.0                  |
+| vSphere            | >= 0.11.0                  |
+
+**Note**: If you're using a different Provider Extension, start evaluating now if it keeps the worker hash stable when switching from `.spec.provider.workers[].cri: nil` to `.spec.provider.workers[].cri.name: docker`. This doesn't impact functional correctness, however, a node rollout will be triggered when users decide to configure `docker` for their shoots.
