@@ -321,16 +321,20 @@ func (s *Shoot) SetInfo(shoot *gardencorev1beta1.Shoot) {
 
 // UpdateInfo updates the shoot resource managed by this operation in a concurrency safe way,
 // using the given context, client, and mutate function.
-// It performs a patch using client.MergeFrom rather than client.StrategicMergeFrom, so any changes to list fields
-// will overwrite the changed fields rather than using the specified patch strategy.
+// It performs a patch using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
 // This method is protected by a RW mutex, so only a single SetInfo, UpdateInfo, or UpdateInfoStatus operation can be
 // executed at any point in time.
-func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, f func(*gardencorev1beta1.Shoot) error) error {
+func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Shoot) error) error {
 	s.infoMutex.Lock()
 	defer s.infoMutex.Unlock()
 
 	shoot := s.info.DeepCopy()
-	patch := client.MergeFrom(shoot.DeepCopy())
+	var patch client.Patch
+	if useStrategicMerge {
+		patch = client.StrategicMergeFrom(shoot.DeepCopy())
+	} else {
+		patch = client.MergeFrom(shoot.DeepCopy())
+	}
 	if err := f(shoot); err != nil {
 		return err
 	}
@@ -343,16 +347,20 @@ func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, f func(*gardenc
 
 // UpdateInfoStatus updates the status of the shoot resource managed by this operation in a concurrency safe way,
 // using the given context, client, and mutate function.
-// It performs a patch using client.MergeFrom rather than client.StrategicMergeFrom, so any changes to list fields
-// will overwrite the changed fields rather than using the specified patch strategy.
+// It performs a patch using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
 // This method is protected by a RW mutex, so only a single SetInfo, UpdateInfo or UpdateInfoStatus operation can be
 // executed at any point in time.
-func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, f func(*gardencorev1beta1.Shoot) error) error {
+func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Shoot) error) error {
 	s.infoMutex.Lock()
 	defer s.infoMutex.Unlock()
 
 	shoot := s.info.DeepCopy()
-	patch := client.MergeFrom(shoot.DeepCopy())
+	var patch client.Patch
+	if useStrategicMerge {
+		patch = client.StrategicMergeFrom(shoot.DeepCopy())
+	} else {
+		patch = client.MergeFrom(shoot.DeepCopy())
+	}
 	if err := f(shoot); err != nil {
 		return err
 	}

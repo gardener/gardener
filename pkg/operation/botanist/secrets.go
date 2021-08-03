@@ -59,7 +59,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 	}
 
 	// remove operation annotation
-	if err := b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), func(shoot *gardencorev1beta1.Shoot) error {
+	if err := b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
 		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
 		return nil
 	}); err != nil {

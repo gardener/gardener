@@ -545,7 +545,7 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 		return nil
 	}
 
-	return o.Shoot.UpdateInfo(ctx, o.K8sGardenClient.Client(), func(shoot *gardencorev1beta1.Shoot) error {
+	return o.Shoot.UpdateInfo(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
 		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})

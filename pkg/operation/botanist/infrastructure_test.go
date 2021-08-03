@@ -146,7 +146,7 @@ var _ = Describe("Infrastructure", func() {
 			kubernetesGardenInterface.EXPECT().Client().Return(kubernetesGardenClient)
 			updatedShoot := shoot.DeepCopy()
 			updatedShoot.Spec.Networking.Nodes = nodesCIDR
-			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.MergePatchType)
+			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.StrategicMergePatchType)
 
 			kubernetesSeedInterface.EXPECT().Client().Return(kubernetesSeedClient)
 
@@ -176,7 +176,7 @@ var _ = Describe("Infrastructure", func() {
 			kubernetesGardenInterface.EXPECT().Client().Return(kubernetesGardenClient)
 			updatedShoot := shoot.DeepCopy()
 			updatedShoot.Spec.Networking.Nodes = nodesCIDR
-			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.MergePatchType, fakeErr)
+			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.StrategicMergePatchType, fakeErr)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(MatchError(fakeErr))
 			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))

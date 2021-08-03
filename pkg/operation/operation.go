@@ -423,7 +423,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 		lastUpdateTime = metav1.Now()
 	)
 
-	if err := o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), func(shoot *gardencorev1beta1.Shoot) error {
+	if err := o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), true, func(shoot *gardencorev1beta1.Shoot) error {
 		if shoot.Status.LastOperation == nil {
 			return fmt.Errorf("last operation of Shoot %s/%s is unset", shoot.Namespace, shoot.Name)
 		}
@@ -445,7 +445,7 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 // If the status.LastErrors array is empty then status.LastErrors is also removed. It also re-evaluates the shoot status
 // in case the last error list is empty now, and if necessary, updates the status label on the shoot.
 func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context, taskID string) {
-	if err := o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), func(shoot *gardencorev1beta1.Shoot) error {
+	if err := o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
 		shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
 		return nil
 	}); err != nil {
@@ -454,7 +454,7 @@ func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context,
 	}
 
 	if len(o.Shoot.GetInfo().Status.LastErrors) == 0 {
-		if err := o.Shoot.UpdateInfo(ctx, o.K8sGardenClient.Client(), func(shoot *gardencorev1beta1.Shoot) error {
+		if err := o.Shoot.UpdateInfo(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
 			kutil.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(shootpkg.ComputeStatus(
 				shoot.Status.LastOperation,
 				shoot.Status.LastErrors,
