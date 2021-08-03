@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"runtime/pprof"
 	"strings"
 	"time"
 
@@ -896,6 +897,10 @@ func runCreateSeedFlow(
 	seedLogger *logrus.Entry,
 	anySNI bool,
 ) error {
+	checkCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go checkSeedStatus(checkCtx, seed, seedLogger)
+
 	kubernetesVersion, err := semver.NewVersion(sc.Version())
 	if err != nil {
 		return err
@@ -1015,6 +1020,10 @@ func runCreateSeedFlow(
 
 // RunDeleteSeedFlow deletes certain resources from the seed cluster.
 func RunDeleteSeedFlow(ctx context.Context, sc, gc kubernetes.Interface, seed *Seed, seedLogger *logrus.Entry) error {
+	checkCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go checkSeedStatus(checkCtx, seed, seedLogger)
+
 	kubernetesVersion, err := semver.NewVersion(sc.Version())
 	if err != nil {
 		return err
@@ -1623,4 +1632,22 @@ func cleanupOrphanExposureClassHandlerResources(ctx context.Context, c client.Cl
 	}
 
 	return nil
+}
+
+func checkSeedStatus(ctx context.Context, seed *Seed, logger *logrus.Entry) {
+	logger.Infof("Started checking seed status")
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Infof("Stopped checking seed status")
+			return
+		default:
+			status := seed.Info.Status
+			if status.ClusterIdentity == nil {
+				logger.Errorf("Empty fields in seed.Info.Status: %+v", status)
+				_ = pprof.Lookup("goroutine").WriteTo(logger.Logger.Out, 1)
+				panic(fmt.Sprintf("Empty fields in seed.Info.Status: %+v", status))
+			}
+		}
+	}
 }

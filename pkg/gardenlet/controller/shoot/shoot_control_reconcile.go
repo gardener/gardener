@@ -17,6 +17,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"runtime/pprof"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -36,6 +37,10 @@ import (
 // runReconcileShootFlow reconciles the Shoot cluster's state.
 // It receives an Operation object <o> which stores the Shoot object.
 func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+	checkCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go checkShootStatus(checkCtx, o)
+
 	// We create the botanists (which will do the actual work).
 	var (
 		botanist        *botanistpkg.Botanist
@@ -549,4 +554,22 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
 		return nil
 	})
+}
+
+func checkShootStatus(ctx context.Context, o *operation.Operation) {
+	o.Logger.Infof("Started checking shoot status")
+	for {
+		select {
+		case <-ctx.Done():
+			o.Logger.Infof("Stopped checking shoot status")
+			return
+		default:
+			status := o.Shoot.GetInfo().Status
+			if len(status.UID) == 0 || len(status.TechnicalID) == 0 {
+				o.Logger.Errorf("Empty fields in o.Shoot.GetInfo().Status: %+v", status)
+				_ = pprof.Lookup("goroutine").WriteTo(o.Logger.Logger.Out, 1)
+				panic(fmt.Sprintf("empty fields in o.Shoot.GetInfo().Status: %+v", status))
+			}
+		}
+	}
 }

@@ -44,6 +44,10 @@ import (
 // runDeleteShootFlow deletes a Shoot cluster entirely.
 // It receives an Operation object <o> which stores the Shoot object and an ErrorContext which contains error from the previous operation.
 func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+	checkCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go checkShootStatus(checkCtx, o)
+
 	var (
 		botanist                             *botanistpkg.Botanist
 		kubeAPIServerDeploymentFound         = true
