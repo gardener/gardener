@@ -169,7 +169,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: "kube-apiserver",
 
-				CommonName:   user.APIServerUser,
+				CommonName:   v1beta1constants.DeploymentNameKubeAPIServer,
 				Organization: nil,
 				DNSNames:     apiServerCertDNSNames,
 				IPAddresses:  apiServerIPAddresses,
