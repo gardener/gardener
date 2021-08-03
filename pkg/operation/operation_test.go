@@ -66,9 +66,7 @@ var _ = Describe("operation", func() {
 				},
 			}
 			o = &Operation{
-				Seed: &operationseed.Seed{
-					Info: seed,
-				},
+				Seed:  &operationseed.Seed{},
 				Shoot: &operationshoot.Shoot{},
 			}
 		)
@@ -76,6 +74,8 @@ var _ = Describe("operation", func() {
 		shoot.Status = gardencorev1beta1.ShootStatus{
 			TechnicalID: operationshoot.ComputeTechnicalID(projectName, shoot),
 		}
+
+		o.Seed.SetInfo(seed)
 		o.Shoot.SetInfo(shoot)
 
 		Expect(o.ComputeIngressHost(prefix)).To(matcher)

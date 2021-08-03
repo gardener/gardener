@@ -79,7 +79,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		defaultTimeout                 = 30 * time.Second
 		defaultInterval                = 5 * time.Second
 		dnsEnabled                     = !o.Shoot.DisableDNS
-		allowBackup                    = o.Seed.Info.Spec.Backup != nil
+		allowBackup                    = o.Seed.GetInfo().Spec.Backup != nil
 		staticNodesCIDR                = o.Shoot.GetInfo().Spec.Networking.Nodes != nil
 		useSNI                         = botanist.APIServerSNIEnabled()
 		generation                     = o.Shoot.GetInfo().Generation

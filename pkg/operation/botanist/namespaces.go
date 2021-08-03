@@ -52,10 +52,10 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 		}
 		namespace.Labels = map[string]string{
 			v1beta1constants.GardenRole:              v1beta1constants.GardenRoleShoot,
-			v1beta1constants.LabelSeedProvider:       b.Seed.Info.Spec.Provider.Type,
+			v1beta1constants.LabelSeedProvider:       b.Seed.GetInfo().Spec.Provider.Type,
 			v1beta1constants.LabelShootProvider:      b.Shoot.GetInfo().Spec.Provider.Type,
 			v1beta1constants.LabelNetworkingProvider: b.Shoot.GetInfo().Spec.Networking.Type,
-			v1beta1constants.LabelBackupProvider:     b.Seed.Info.Spec.Provider.Type,
+			v1beta1constants.LabelBackupProvider:     b.Seed.GetInfo().Spec.Provider.Type,
 		}
 
 		requiredExtensions, err := getShootRequiredExtensionTypes(ctx, b)
@@ -67,8 +67,8 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 			namespace.Labels[v1beta1constants.LabelExtensionPrefix+extensionType] = "true"
 		}
 
-		if b.Seed.Info.Spec.Backup != nil {
-			namespace.Labels[v1beta1constants.LabelBackupProvider] = b.Seed.Info.Spec.Backup.Provider
+		if b.Seed.GetInfo().Spec.Backup != nil {
+			namespace.Labels[v1beta1constants.LabelBackupProvider] = b.Seed.GetInfo().Spec.Backup.Provider
 		}
 
 		return nil

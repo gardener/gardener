@@ -236,8 +236,8 @@ func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) exten
 		values.Region = b.Shoot.GetInfo().Spec.Region
 
 	case extensionsv1alpha1.Exposure:
-		values.Type = b.Seed.Info.Spec.Provider.Type
-		values.Region = b.Seed.Info.Spec.Provider.Region
+		values.Type = b.Seed.GetInfo().Spec.Provider.Type
+		values.Region = b.Seed.GetInfo().Spec.Provider.Region
 	}
 
 	return extensionscontrolplane.New(

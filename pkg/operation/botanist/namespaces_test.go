@@ -107,6 +107,7 @@ var _ = Describe("Namespaces", func() {
 		botanist = &Botanist{Operation: &operation.Operation{
 			K8sSeedClient:   seedKubernetesClient,
 			K8sGardenClient: gardenKubernetesClient,
+			Seed:            &seed.Seed{},
 			Shoot:           &shoot.Shoot{SeedNamespace: namespace},
 			Garden:          &garden.Garden{},
 		}}
@@ -128,7 +129,7 @@ var _ = Describe("Namespaces", func() {
 		)
 
 		BeforeEach(func() {
-			botanist.Seed = &seed.Seed{Info: &gardencorev1beta1.Seed{
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 				Spec: gardencorev1beta1.SeedSpec{
 					Provider: gardencorev1beta1.SeedProvider{
 						Type: seedProviderType,
@@ -139,7 +140,7 @@ var _ = Describe("Namespaces", func() {
 						},
 					},
 				},
-			}}
+			})
 
 			defaultShootInfo = &gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
@@ -200,7 +201,7 @@ var _ = Describe("Namespaces", func() {
 		})
 
 		It("should successfully deploy the namespace w/ dedicated backup provider", func() {
-			botanist.Seed.Info.Spec.Backup = &gardencorev1beta1.SeedBackup{Provider: backupProviderType}
+			botanist.Seed.GetInfo().Spec.Backup = &gardencorev1beta1.SeedBackup{Provider: backupProviderType}
 			obj.Labels["backup.gardener.cloud/provider"] = backupProviderType
 
 			gomock.InOrder(

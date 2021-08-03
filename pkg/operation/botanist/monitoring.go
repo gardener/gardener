@@ -135,7 +135,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"enabled": b.Shoot.NodeLocalDNSEnabled,
 			},
 			"ingress": map[string]interface{}{
-				"class":           getIngressClass(b.Seed.Info.Spec.Ingress),
+				"class":           getIngressClass(b.Seed.GetInfo().Spec.Ingress),
 				"basicAuthSecret": basicAuth,
 				"hosts":           hosts,
 			},
@@ -146,8 +146,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"apiserverServiceIP": b.Shoot.Networks.APIServer.String(),
 			"seed": map[string]interface{}{
 				"apiserver": b.K8sSeedClient.RESTConfig().Host,
-				"region":    b.Seed.Info.Spec.Provider.Region,
-				"provider":  b.Seed.Info.Spec.Provider.Type,
+				"region":    b.Seed.GetInfo().Spec.Provider.Region,
+				"provider":  b.Seed.GetInfo().Spec.Provider.Type,
 			},
 			"rules": map[string]interface{}{
 				"optional": map[string]interface{}{
@@ -265,7 +265,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 		alertManagerValues, err := b.InjectSeedShootImages(map[string]interface{}{
 			"ingress": map[string]interface{}{
-				"class":           getIngressClass(b.Seed.Info.Spec.Ingress),
+				"class":           getIngressClass(b.Seed.GetInfo().Spec.Ingress),
 				"basicAuthSecret": basicAuthUsers,
 				"hosts":           hosts,
 			},
@@ -425,7 +425,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 
 	values, err := b.InjectSeedShootImages(map[string]interface{}{
 		"ingress": map[string]interface{}{
-			"class":           getIngressClass(b.Seed.Info.Spec.Ingress),
+			"class":           getIngressClass(b.Seed.GetInfo().Spec.Ingress),
 			"basicAuthSecret": basicAuth,
 			"hosts":           hosts,
 		},

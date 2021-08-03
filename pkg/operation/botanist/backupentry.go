@@ -38,7 +38,7 @@ func (b *Botanist) DefaultCoreBackupEntry() component.DeployMigrateWaiter {
 			ShootPurpose:   b.Shoot.GetInfo().Spec.Purpose,
 			OwnerReference: ownerRef,
 			SeedName:       b.Shoot.GetInfo().Spec.SeedName,
-			BucketName:     string(b.Seed.Info.UID),
+			BucketName:     string(b.Seed.GetInfo().UID),
 		},
 		corebackupentry.DefaultInterval,
 		corebackupentry.DefaultTimeout,

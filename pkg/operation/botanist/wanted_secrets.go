@@ -151,7 +151,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		endUserCrtValidity = common.EndUserCrtValidity
 	)
 
-	if !b.Seed.Info.Spec.Settings.ShootDNS.Enabled {
+	if !b.Seed.GetInfo().Spec.Settings.ShootDNS.Enabled {
 		if addr := net.ParseIP(b.APIServerAddress); addr != nil {
 			apiServerIPAddresses = append(apiServerIPAddresses, addr)
 		} else {

@@ -182,11 +182,11 @@ func (b *Botanist) RequiredExtensionsReady(ctx context.Context) error {
 		return err
 	}
 
-	requiredExtensions := shootpkg.ComputeRequiredExtensions(b.Shoot.GetInfo(), b.Seed.Info, controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain,
+	requiredExtensions := shootpkg.ComputeRequiredExtensions(b.Shoot.GetInfo(), b.Seed.GetInfo(), controllerRegistrationList, b.Garden.InternalDomain, b.Shoot.ExternalDomain,
 		gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords))
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
-		if controllerInstallation.Spec.SeedRef.Name != b.Seed.Info.Name {
+		if controllerInstallation.Spec.SeedRef.Name != b.Seed.GetInfo().Name {
 			continue
 		}
 

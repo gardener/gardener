@@ -39,7 +39,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 
 	cfg := resourcemanager.Values{
 		AlwaysUpdate:               pointer.Bool(true),
-		ClusterIdentity:            b.Seed.Info.Status.ClusterIdentity,
+		ClusterIdentity:            b.Seed.GetInfo().Status.ClusterIdentity,
 		ConcurrentSyncs:            pointer.Int32(20),
 		HealthSyncPeriod:           utils.DurationPtr(time.Minute),
 		MaxConcurrentHealthWorkers: pointer.Int32(10),

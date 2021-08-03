@@ -178,7 +178,7 @@ func (b *Builder) WithShootFromCluster(gardenClient, seedClient kubernetes.Inter
 			WithShootSecretFrom(gardenClient.Client()).
 			WithProjectName(gardenObj.Project.Name).
 			WithExposureClassFrom(gardenClient.Client()).
-			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
+			WithDisableDNS(!seedObj.GetInfo().Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
 			Build(ctx, c)
@@ -321,7 +321,7 @@ func (o *Operation) InitializeSeedClients(ctx context.Context) error {
 		return nil
 	}
 
-	seedClient, err := o.ClientMap.GetClient(ctx, keys.ForSeed(o.Seed.Info))
+	seedClient, err := o.ClientMap.GetClient(ctx, keys.ForSeed(o.Seed.GetInfo()))
 	if err != nil {
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}

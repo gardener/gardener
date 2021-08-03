@@ -16,6 +16,7 @@ package seed
 
 import (
 	"context"
+	"sync"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
@@ -27,6 +28,8 @@ type Builder struct {
 
 // Seed is an object containing information about a Seed cluster.
 type Seed struct {
-	Info                           *gardencorev1beta1.Seed
+	info      *gardencorev1beta1.Seed
+	infoMutex sync.RWMutex
+
 	LoadBalancerServiceAnnotations map[string]string
 }

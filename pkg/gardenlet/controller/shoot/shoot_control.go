@@ -277,7 +277,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger logrus.Fiel
 		WithShootSecretFrom(gardenClient.Client()).
 		WithProjectName(project.Name).
 		WithExposureClassFrom(gardenClient.Client()).
-		WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
+		WithDisableDNS(!seed.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
 		Build(ctx, gardenClient.Client())
@@ -507,7 +507,7 @@ func (c *Controller) reconcileShoot(ctx context.Context, logger logrus.FieldLogg
 	}
 
 	c.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "Reconciled Shoot cluster state")
-	if err := c.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), o, shoot, o.Shoot.SeedNamespace, &o.Seed.Info.Name, operationType); err != nil {
+	if err := c.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), o, shoot, o.Shoot.SeedNamespace, &seed.Name, operationType); err != nil {
 		return reconcile.Result{}, err
 	}
 
