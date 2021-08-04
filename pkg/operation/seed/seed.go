@@ -124,42 +124,33 @@ func (b *Builder) Build(ctx context.Context) (*Seed, error) {
 }
 
 // GetInfo returns the seed resource of this Seed in a concurrency safe way.
-// This method is protected by a RW mutex, so it will block on all concurrent SetInfo, UpdateInfo, or UpdateInfoStatus
-// executions, but not on concurrent GetInfo executions.
 // This method should be used only for reading the data of the returned seed resource. The returned seed
 // resource MUST NOT BE MODIFIED (except in test code) since this might interfere with other concurrent reads and writes.
 // To properly update the seed resource of this Seed use UpdateInfo or UpdateInfoStatus.
 func (s *Seed) GetInfo() *gardencorev1beta1.Seed {
-	s.infoMutex.RLock()
-	defer s.infoMutex.RUnlock()
-
-	return s.info
+	return s.info.Load().(*gardencorev1beta1.Seed)
 }
 
 // SetInfo sets the seed resource of this Seed in a concurrency safe way.
-// This method is protected by a RW mutex, so only a single SetInfo, UpdateInfo, or UpdateInfoStatus operation can be
-// executed at any point in time.
-// This method does not update the seed resource in the cluster and so should be used only in exceptional situations,
-// or as a convenience in test code. The seed passed as a parameter MUST NOT BE MODIFIED after the call to SetInfo
-// (except in test code) since this might interfere with other concurrent reads and writes.
+// This method is not protected by a mutex and does not update the seed resource in the cluster and so
+// should be used only in exceptional situations, or as a convenience in test code. The seed passed as a parameter
+// MUST NOT BE MODIFIED after the call to SetInfo (except in test code) since this might interfere with other concurrent reads and writes.
 // To properly update the seed resource of this Seed use UpdateInfo or UpdateInfoStatus.
 func (s *Seed) SetInfo(seed *gardencorev1beta1.Seed) {
-	s.infoMutex.Lock()
-	defer s.infoMutex.Unlock()
-
-	s.info = seed
+	s.info.Store(seed)
 }
 
 // UpdateInfo updates the seed resource of this Seed in a concurrency safe way,
 // using the given context, client, and mutate function.
-// It performs a patch using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
-// This method is protected by a RW mutex, so only a single SetInfo, UpdateInfo, or UpdateInfoStatus operation can be
+// It copies the current seed resource and then uses the copy to patch the resource in the cluster
+// using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
+// This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
 // executed at any point in time.
 func (s *Seed) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Seed) error) error {
 	s.infoMutex.Lock()
 	defer s.infoMutex.Unlock()
 
-	seed := s.info.DeepCopy()
+	seed := s.info.Load().(*gardencorev1beta1.Seed).DeepCopy()
 	var patch client.Patch
 	if useStrategicMerge {
 		patch = client.StrategicMergeFrom(seed.DeepCopy())
@@ -172,20 +163,21 @@ func (s *Seed) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerg
 	if err := c.Patch(ctx, seed, patch); err != nil {
 		return err
 	}
-	s.info = seed
+	s.info.Store(seed)
 	return nil
 }
 
 // UpdateInfoStatus updates the status of the seed resource of this Seed in a concurrency safe way,
 // using the given context, client, and mutate function.
-// It performs a patch using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
-// This method is protected by a RW mutex, so only a single SetInfo, UpdateInfo or UpdateInfoStatus operation can be
+// It copies the current seed resource and then uses the copy to patch the resource in the cluster
+// using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
+// This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
 // executed at any point in time.
 func (s *Seed) UpdateInfoStatus(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Seed) error) error {
 	s.infoMutex.Lock()
 	defer s.infoMutex.Unlock()
 
-	seed := s.info.DeepCopy()
+	seed := s.info.Load().(*gardencorev1beta1.Seed).DeepCopy()
 	var patch client.Patch
 	if useStrategicMerge {
 		patch = client.StrategicMergeFrom(seed.DeepCopy())
@@ -198,7 +190,7 @@ func (s *Seed) UpdateInfoStatus(ctx context.Context, c client.Client, useStrateg
 	if err := c.Status().Patch(ctx, seed, patch); err != nil {
 		return err
 	}
-	s.info = seed
+	s.info.Store(seed)
 	return nil
 }
 
@@ -1460,13 +1452,11 @@ func (s *Seed) GetIngressFQDN(subDomain string) string {
 
 // IngressDomain returns the ingress domain for the seed.
 func (s *Seed) IngressDomain() string {
-	s.infoMutex.RLock()
-	defer s.infoMutex.RUnlock()
-
-	if s.info.Spec.DNS.IngressDomain != nil {
-		return *s.info.Spec.DNS.IngressDomain
-	} else if s.info.Spec.Ingress != nil {
-		return s.info.Spec.Ingress.Domain
+	seed := s.GetInfo()
+	if seed.Spec.DNS.IngressDomain != nil {
+		return *seed.Spec.DNS.IngressDomain
+	} else if seed.Spec.Ingress != nil {
+		return seed.Spec.Ingress.Domain
 	}
 	return ""
 }
@@ -1488,16 +1478,14 @@ func (s *Seed) CheckMinimumK8SVersion(version string) (string, error) {
 // GetValidVolumeSize is to get a valid volume size.
 // If the given size is smaller than the minimum volume size permitted by cloud provider on which seed cluster is running, it will return the minimum size.
 func (s *Seed) GetValidVolumeSize(size string) string {
-	s.infoMutex.RLock()
-	defer s.infoMutex.RUnlock()
-
-	if s.info.Spec.Volume == nil || s.info.Spec.Volume.MinimumSize == nil {
+	seed := s.GetInfo()
+	if seed.Spec.Volume == nil || seed.Spec.Volume.MinimumSize == nil {
 		return size
 	}
 
 	qs, err := resource.ParseQuantity(size)
-	if err == nil && qs.Cmp(*s.info.Spec.Volume.MinimumSize) < 0 {
-		return s.info.Spec.Volume.MinimumSize.String()
+	if err == nil && qs.Cmp(*seed.Spec.Volume.MinimumSize) < 0 {
+		return seed.Spec.Volume.MinimumSize.String()
 	}
 
 	return size
