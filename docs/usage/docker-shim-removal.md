@@ -37,7 +37,7 @@ As a shoot owner:
 | GardenLinux      | :white_check_mark: | >= v0.3.0 |
 | Ubuntu           | :white_check_mark: | >= v1.4.0 |
 | SuSE CHost       | :white_check_mark: | [in progress](https://github.com/gardener/gardener-extension-os-suse-chost/issues/42) |
-| CoreOS/FlatCar   | :white_check_mark: | [in progress](https://github.com/gardener/gardener-extension-os-coreos/issues/26) |
+| CoreOS/FlatCar   | :white_check_mark: | >= v1.8.0 |
 
 **Note**: If you're using a different Operating System Extension, start evaluating now if it provides support for `containerd`. Please refer to [our documentation of the `operatingsystemconfig` contract](https://github.com/gardener/gardener/blob/master/docs/extensions/operatingsystemconfig.md#cri-support) to understand how to support `containerd` for an Operating System Extension.
 
