@@ -147,11 +147,6 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		// continue execution to allow the kubernetes version update
 		shootLogger.Error(fmt.Sprintf("Could not maintain machine image version: %s", err.Error()))
 	}
-	for _, reason := range reasonForImageUpdatePerPool {
-		r.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventImageVersionMaintenance, "%s",
-			fmt.Sprintf("Updated %s.", reason))
-		shootLogger.Debugf("[SHOOT MAINTENANCE] Updating %s", reason)
-	}
 
 	updatedKubernetesVersion, reasonForKubernetesUpdate, err := MaintainKubernetesVersion(shoot, cloudProfile, shootLogger)
 	if err != nil {
@@ -200,6 +195,12 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 	if err := gardenClient.Update(ctx, shoot); err != nil {
 		shootLogger.Errorf("Failed to update Shoot spec: %+v", err)
 		return err
+	}
+
+	for _, reason := range reasonForImageUpdatePerPool {
+		r.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventImageVersionMaintenance, "%s",
+			fmt.Sprintf("Updated %s.", reason))
+		shootLogger.Debugf("[SHOOT MAINTENANCE] Updating %s", reason)
 	}
 
 	if updatedKubernetesVersion != nil {
