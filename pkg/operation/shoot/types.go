@@ -18,6 +18,7 @@ import (
 	"context"
 	"net"
 	"sync"
+	"sync/atomic"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -59,8 +60,8 @@ type Builder struct {
 
 // Shoot is an object containing information about a Shoot cluster.
 type Shoot struct {
-	info      *gardencorev1beta1.Shoot
-	infoMutex sync.RWMutex
+	info      atomic.Value
+	infoMutex sync.Mutex
 
 	Secret       *corev1.Secret
 	CloudProfile *gardencorev1beta1.CloudProfile

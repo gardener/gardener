@@ -72,6 +72,7 @@ var _ = Describe("controlplane", func() {
 				},
 			},
 		}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
 	AfterEach(func() {

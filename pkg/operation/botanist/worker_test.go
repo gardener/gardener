@@ -82,6 +82,7 @@ var _ = Describe("Worker", func() {
 			},
 			ShootState: shootState,
 		}}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
 	AfterEach(func() {

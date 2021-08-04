@@ -64,6 +64,7 @@ var _ = Describe("Infrastructure", func() {
 			},
 			ShootState: shootState,
 		}}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
 	AfterEach(func() {
