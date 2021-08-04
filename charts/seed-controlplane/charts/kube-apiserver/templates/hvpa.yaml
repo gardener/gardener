@@ -22,7 +22,7 @@ spec:
         updateMode: "Auto"
     scaleDown:
       updatePolicy:
-        updateMode: {{ .Values.scaleDownUpdateMode | quote }}
+        updateMode: "Auto" # HPA does not work with update mode 'Off' and needs to be always 'Auto' even though scale down is disabled.
     template:
       metadata:
         labels:
