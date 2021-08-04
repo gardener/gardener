@@ -71,11 +71,9 @@ var (
 		string(core.CRINameContainerD),
 		string(core.CRINameDocker),
 	)
-	// https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
+
+	// assymetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
 	availableOIDCSigningAlgs = sets.NewString(
-		"HS256",
-		"HS384",
-		"HS512",
 		"RS256",
 		"RS384",
 		"RS512",
