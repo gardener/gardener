@@ -36,11 +36,7 @@ or with regex:
     * Kubernetes Pods
 
 ### Expose logs for component to User Grafana
-Exposing logs for a new component to the User's Grafana happens with adding a new `extensions.observedPods` section into: charts/seed-monitoring/charts/grafana/values.yaml
-
-* PodPrefix: The prefix of the pod e.g. `kube-apiserver`
-* IsExposedToUser: It is true when the component should be exposed to the end user
-
+Exposing logs for a new component to the User's Grafana is described [here](../extensions/logging-and-monitoring.md#how-to-expose-logs-to-the-users)
 ### Configuration
 #### Fluent-bit
 
