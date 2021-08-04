@@ -292,12 +292,12 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	return shoot, nil
 }
 
-// GetInfo returns the shoot resource managed by this operation in a concurrency safe way.
+// GetInfo returns the shoot resource of this Shoot in a concurrency safe way.
 // This method is protected by a RW mutex, so it will block on all concurrent SetInfo, UpdateInfo, or UpdateInfoStatus
 // executions, but not on concurrent GetInfo executions.
 // This method should be used only for reading the data of the returned shoot resource. The returned shoot
 // resource MUST NOT BE MODIFIED (except in test code) since this might interfere with other concurrent reads and writes.
-// To properly update the shoot resource managed by this operation use UpdateInfo or UpdateInfoStatus.
+// To properly update the shoot resource of this Shoot use UpdateInfo or UpdateInfoStatus.
 func (s *Shoot) GetInfo() *gardencorev1beta1.Shoot {
 	s.infoMutex.RLock()
 	defer s.infoMutex.RUnlock()
@@ -305,13 +305,13 @@ func (s *Shoot) GetInfo() *gardencorev1beta1.Shoot {
 	return s.info
 }
 
-// SetInfo sets the shoot resource managed by this operation in a concurrency safe way.
+// SetInfo sets the shoot resource of this Shoot in a concurrency safe way.
 // This method is protected by a RW mutex, so only a single SetInfo, UpdateInfo, or UpdateInfoStatus operation can be
 // executed at any point in time.
 // This method does not update the shoot resource in the cluster and so should be used only in exceptional situations,
 // or as a convenience in test code. The shoot passed as a parameter MUST NOT BE MODIFIED after the call to SetInfo
 // (except in test code) since this might interfere with other concurrent reads and writes.
-// To properly update the shoot resource managed by this operation use UpdateInfo or UpdateInfoStatus.
+// To properly update the shoot resource of this Shoot use UpdateInfo or UpdateInfoStatus.
 func (s *Shoot) SetInfo(shoot *gardencorev1beta1.Shoot) {
 	s.infoMutex.Lock()
 	defer s.infoMutex.Unlock()
@@ -319,7 +319,7 @@ func (s *Shoot) SetInfo(shoot *gardencorev1beta1.Shoot) {
 	s.info = shoot
 }
 
-// UpdateInfo updates the shoot resource managed by this operation in a concurrency safe way,
+// UpdateInfo updates the shoot resource of this Shoot in a concurrency safe way,
 // using the given context, client, and mutate function.
 // It performs a patch using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
 // This method is protected by a RW mutex, so only a single SetInfo, UpdateInfo, or UpdateInfoStatus operation can be
@@ -345,7 +345,7 @@ func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMer
 	return nil
 }
 
-// UpdateInfoStatus updates the status of the shoot resource managed by this operation in a concurrency safe way,
+// UpdateInfoStatus updates the status of the shoot resource of this Shoot in a concurrency safe way,
 // using the given context, client, and mutate function.
 // It performs a patch using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
 // This method is protected by a RW mutex, so only a single SetInfo, UpdateInfo or UpdateInfoStatus operation can be
