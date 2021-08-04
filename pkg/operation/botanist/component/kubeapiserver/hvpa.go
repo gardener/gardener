@@ -125,7 +125,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 			},
 			ScaleDown: hvpav1alpha1.ScaleType{
 				UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-					UpdateMode: &scaleDownUpdateMode,
+					UpdateMode: &updateModeAuto, // HPA does not work with update mode 'Off' and needs to be always 'Auto' even though scale down is disabled.
 				},
 			},
 			Template: hvpav1alpha1.HpaTemplate{
