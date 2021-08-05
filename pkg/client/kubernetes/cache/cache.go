@@ -47,9 +47,7 @@ func (c *aggregator) cacheForObject(obj runtime.Object) cache.Cache {
 
 func (c *aggregator) cacheForKind(kind schema.GroupVersionKind) cache.Cache {
 	gvk := kind
-	if strings.HasSuffix(gvk.Kind, "List") {
-		gvk.Kind = gvk.Kind[:len(gvk.Kind)-4]
-	}
+	gvk.Kind = strings.TrimSuffix(gvk.Kind, "List")
 
 	cache, ok := c.gvkToCache[gvk]
 	if !ok {
