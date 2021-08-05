@@ -21,7 +21,7 @@ echo "> Installing requirements"
 GO111MODULE=off go get -u golang.org/x/tools/cmd/goimports
 
 export GO111MODULE=on
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.41.1
 curl -s "https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3" | bash -s -- --version 'v3.5.4'
 
 platform=$(uname -s)
