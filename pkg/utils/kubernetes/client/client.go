@@ -70,7 +70,7 @@ func NewObjectsRemaining(obj runtime.Object) error {
 		}
 		return r
 	case client.Object:
-		return objectsRemaining{remaining.(client.Object)}
+		return objectsRemaining{remaining}
 	}
 	return fmt.Errorf("type %T does neither implement client.Object nor client.ObjectList", obj)
 }
