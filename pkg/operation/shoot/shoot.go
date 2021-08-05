@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Masterminds/semver"
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -38,9 +40,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	"github.com/Masterminds/semver"
-	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -197,7 +196,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	if err != nil {
 		return nil, err
 	}
-	shoot.Info = shootObject
+	shoot.SetInfo(shootObject)
 
 	cloudProfile, err := b.cloudProfileFunc(ctx, shootObject.Spec.CloudProfileName)
 	if err != nil {
@@ -258,7 +257,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 
 	kubernetesVersionGeq118 := versionConstraintK8sGreaterEqual118.Check(kubernetesVersion)
 	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN) && kubernetesVersionGeq118
-	if reversedVPNEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil && kubernetesVersionGeq118 {
+	if reversedVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil && kubernetesVersionGeq118 {
 		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {
 			shoot.ReversedVPNEnabled = reversedVPNEnabled
 		}
@@ -277,7 +276,7 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.Networks = networks
 
 	shoot.NodeLocalDNSEnabled = false
-	if nodeLocalDNSEnabled, err := strconv.ParseBool(shoot.Info.Annotations[v1beta1constants.AnnotationNodeLocalDNS]); err == nil {
+	if nodeLocalDNSEnabled, err := strconv.ParseBool(shoot.GetInfo().Annotations[v1beta1constants.AnnotationNodeLocalDNS]); err == nil {
 		shoot.NodeLocalDNSEnabled = nodeLocalDNSEnabled
 	}
 
@@ -291,6 +290,77 @@ func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
 	shoot.BackupEntryName = backupEntryName
 
 	return shoot, nil
+}
+
+// GetInfo returns the shoot resource of this Shoot in a concurrency safe way.
+// This method should be used only for reading the data of the returned shoot resource. The returned shoot
+// resource MUST NOT BE MODIFIED (except in test code) since this might interfere with other concurrent reads and writes.
+// To properly update the shoot resource of this Shoot use UpdateInfo or UpdateInfoStatus.
+func (s *Shoot) GetInfo() *gardencorev1beta1.Shoot {
+	return s.info.Load().(*gardencorev1beta1.Shoot)
+}
+
+// SetInfo sets the shoot resource of this Shoot in a concurrency safe way.
+// This method is not protected by a mutex and does not update the shoot resource in the cluster and so
+// should be used only in exceptional situations, or as a convenience in test code. The shoot passed as a parameter
+// MUST NOT BE MODIFIED after the call to SetInfo (except in test code) since this might interfere with other concurrent reads and writes.
+// To properly update the shoot resource of this Shoot use UpdateInfo or UpdateInfoStatus.
+func (s *Shoot) SetInfo(shoot *gardencorev1beta1.Shoot) {
+	s.info.Store(shoot)
+}
+
+// UpdateInfo updates the shoot resource of this Shoot in a concurrency safe way,
+// using the given context, client, and mutate function.
+// It copies the current shoot resource and then uses the copy to patch the resource in the cluster
+// using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
+// This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
+// executed at any point in time.
+func (s *Shoot) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Shoot) error) error {
+	s.infoMutex.Lock()
+	defer s.infoMutex.Unlock()
+
+	shoot := s.info.Load().(*gardencorev1beta1.Shoot).DeepCopy()
+	var patch client.Patch
+	if useStrategicMerge {
+		patch = client.StrategicMergeFrom(shoot.DeepCopy())
+	} else {
+		patch = client.MergeFrom(shoot.DeepCopy())
+	}
+	if err := f(shoot); err != nil {
+		return err
+	}
+	if err := c.Patch(ctx, shoot, patch); err != nil {
+		return err
+	}
+	s.info.Store(shoot)
+	return nil
+}
+
+// UpdateInfoStatus updates the status of the shoot resource of this Shoot in a concurrency safe way,
+// using the given context, client, and mutate function.
+// It copies the current shoot resource and then uses the copy to patch the resource in the cluster
+// using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
+// This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
+// executed at any point in time.
+func (s *Shoot) UpdateInfoStatus(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Shoot) error) error {
+	s.infoMutex.Lock()
+	defer s.infoMutex.Unlock()
+
+	shoot := s.info.Load().(*gardencorev1beta1.Shoot).DeepCopy()
+	var patch client.Patch
+	if useStrategicMerge {
+		patch = client.StrategicMergeFrom(shoot.DeepCopy())
+	} else {
+		patch = client.MergeFrom(shoot.DeepCopy())
+	}
+	if err := f(shoot); err != nil {
+		return err
+	}
+	if err := c.Status().Patch(ctx, shoot, patch); err != nil {
+		return err
+	}
+	s.info.Store(shoot)
+	return nil
 }
 
 // GetExtensionComponentsForMigration returns a list of component.DeployMigrateWaiters of extension components that
@@ -321,16 +391,17 @@ func (s *Shoot) GetDNSRecordComponentsForMigration() []component.DeployMigrateWa
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Shoot cluster. The
 // end result is '<subDomain>.<ingressPrefix>.<clusterDomain>'.
 func (s *Shoot) GetIngressFQDN(subDomain string) string {
-	if s.Info.Spec.DNS == nil || s.Info.Spec.DNS.Domain == nil {
+	shoot := s.GetInfo()
+	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s.%s.%s", subDomain, gutil.IngressPrefix, *(s.Info.Spec.DNS.Domain))
+	return fmt.Sprintf("%s.%s.%s", subDomain, gutil.IngressPrefix, *shoot.Spec.DNS.Domain)
 }
 
 // GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
 func (s *Shoot) GetWorkerNames() []string {
 	var workerNames []string
-	for _, worker := range s.Info.Spec.Provider.Workers {
+	for _, worker := range s.GetInfo().Spec.Provider.Workers {
 		workerNames = append(workerNames, worker.Name)
 	}
 	return workerNames
@@ -339,7 +410,7 @@ func (s *Shoot) GetWorkerNames() []string {
 // GetMinNodeCount returns the sum of all 'minimum' fields of all worker groups of the Shoot.
 func (s *Shoot) GetMinNodeCount() int32 {
 	var nodeCount int32
-	for _, worker := range s.Info.Spec.Provider.Workers {
+	for _, worker := range s.GetInfo().Spec.Provider.Workers {
 		nodeCount += worker.Minimum
 	}
 	return nodeCount
@@ -348,7 +419,7 @@ func (s *Shoot) GetMinNodeCount() int32 {
 // GetMaxNodeCount returns the sum of all 'maximum' fields of all worker groups of the Shoot.
 func (s *Shoot) GetMaxNodeCount() int32 {
 	var nodeCount int32
-	for _, worker := range s.Info.Spec.Provider.Workers {
+	for _, worker := range s.GetInfo().Spec.Provider.Workers {
 		nodeCount += worker.Maximum
 	}
 	return nodeCount
@@ -358,7 +429,7 @@ func (s *Shoot) GetMaxNodeCount() int32 {
 // controller has generated a nodes network then this CIDR will take priority. Otherwise, the nodes network
 // CIDR specified in the shoot will be returned (if possible). If no CIDR was specified then nil is returned.
 func (s *Shoot) GetNodeNetwork() *string {
-	if val := s.Info.Spec.Networking.Nodes; val != nil {
+	if val := s.GetInfo().Spec.Networking.Nodes; val != nil {
 		return val
 	}
 	return nil
@@ -389,7 +460,7 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, use
 		return apiServerAddress
 	}
 
-	if gardencorev1beta1helper.ShootUsesUnmanagedDNS(s.Info) {
+	if gardencorev1beta1helper.ShootUsesUnmanagedDNS(s.GetInfo()) {
 		return gutil.GetAPIServerDomain(s.InternalClusterDomain)
 	}
 
@@ -402,9 +473,10 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, use
 
 // IPVSEnabled returns true if IPVS is enabled for the shoot.
 func (s *Shoot) IPVSEnabled() bool {
-	return s.Info.Spec.Kubernetes.KubeProxy != nil &&
-		s.Info.Spec.Kubernetes.KubeProxy.Mode != nil &&
-		*s.Info.Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS
+	shoot := s.GetInfo()
+	return shoot.Spec.Kubernetes.KubeProxy != nil &&
+		shoot.Spec.Kubernetes.KubeProxy.Mode != nil &&
+		*shoot.Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS
 }
 
 // IsLoggingEnabled return true if the Shoot controlplane logging is enabled

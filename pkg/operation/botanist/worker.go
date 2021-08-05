@@ -40,10 +40,10 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 		b.K8sSeedClient.Client(),
 		&worker.Values{
 			Namespace:         b.Shoot.SeedNamespace,
-			Name:              b.Shoot.Info.Name,
-			Type:              b.Shoot.Info.Spec.Provider.Type,
-			Region:            b.Shoot.Info.Spec.Region,
-			Workers:           b.Shoot.Info.Spec.Provider.Workers,
+			Name:              b.Shoot.GetInfo().Name,
+			Type:              b.Shoot.GetInfo().Spec.Provider.Type,
+			Region:            b.Shoot.GetInfo().Spec.Region,
+			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 		},
 		worker.DefaultInterval,
@@ -163,7 +163,7 @@ func (b *Botanist) WaitUntilCloudConfigUpdatedForAllWorkerPools(ctx context.Cont
 			return retry.SevereError(err)
 		}
 
-		if err := CloudConfigUpdatedForAllWorkerPools(b.Shoot.Info.Spec.Provider.Workers, workerPoolToNodes, workerPoolToCloudConfigSecretChecksum); err != nil {
+		if err := CloudConfigUpdatedForAllWorkerPools(b.Shoot.GetInfo().Spec.Provider.Workers, workerPoolToNodes, workerPoolToCloudConfigSecretChecksum); err != nil {
 			return retry.MinorError(err)
 		}
 

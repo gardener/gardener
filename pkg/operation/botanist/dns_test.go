@@ -78,9 +78,6 @@ var _ = Describe("dns", func() {
 					},
 				},
 				Shoot: &shootpkg.Shoot{
-					Info: &gardencorev1beta1.Shoot{
-						ObjectMeta: metav1.ObjectMeta{Namespace: shootNS},
-					},
 					Components: &shootpkg.Components{
 						Extensions: &shootpkg.Extensions{
 							DNS: &shootpkg.DNS{},
@@ -92,6 +89,9 @@ var _ = Describe("dns", func() {
 				Logger: logrus.NewEntry(logger.NewNopLogger()),
 			},
 		}
+		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{Namespace: shootNS},
+		})
 
 		s = runtime.NewScheme()
 		Expect(dnsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
@@ -116,7 +116,7 @@ var _ = Describe("dns", func() {
 	Context("DefaultExternalDNSProvider", func() {
 		It("should create when calling Deploy and dns is enabled", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 
@@ -314,7 +314,7 @@ var _ = Describe("dns", func() {
 
 		It("should return error when provider is without Type", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
 				Providers: []gardencorev1beta1.DNSProvider{{}},
 			}
 
@@ -325,7 +325,7 @@ var _ = Describe("dns", func() {
 
 		It("should return error when provider is without secretName", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
 				Providers: []gardencorev1beta1.DNSProvider{{
 					Type: pointer.String("foo"),
 				}},
@@ -338,7 +338,7 @@ var _ = Describe("dns", func() {
 
 		It("should return error when provider is without secret", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
 				Providers: []gardencorev1beta1.DNSProvider{{
 					Type:       pointer.String("foo"),
 					SecretName: pointer.String("not-existing-secret"),
@@ -352,7 +352,7 @@ var _ = Describe("dns", func() {
 
 		It("should add providers", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
 				Providers: []gardencorev1beta1.DNSProvider{
 					{
 						Type:    pointer.String("primary-skip"),
@@ -452,33 +452,33 @@ var _ = Describe("dns", func() {
 
 		It("should be false when Shoot's DNS is nil", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = nil
+			b.Shoot.GetInfo().Spec.DNS = nil
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot DNS's domain is nil", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: nil}
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: nil}
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot ExternalClusterDomain is nil", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = nil
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot ExternalClusterDomain is in nip.io", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("foo.nip.io")
 			Expect(b.NeedsExternalDNS()).To(BeFalse())
 		})
 
 		It("should be false when Shoot ExternalDomain is nil", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = nil
 
@@ -487,7 +487,7 @@ var _ = Describe("dns", func() {
 
 		It("should be false when Shoot ExternalDomain provider is unamanaged", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "unmanaged"}
 
@@ -496,7 +496,7 @@ var _ = Describe("dns", func() {
 
 		It("should be true when Shoot ExternalDomain provider is valid", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 
@@ -537,19 +537,19 @@ var _ = Describe("dns", func() {
 
 		It("should be false when Shoot's DNS is nil", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = nil
+			b.Shoot.GetInfo().Spec.DNS = nil
 			Expect(b.NeedsAdditionalDNSProviders()).To(BeFalse())
 		})
 
 		It("should be false when there are no Shoot DNS Providers", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{}
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{}
 			Expect(b.NeedsAdditionalDNSProviders()).To(BeFalse())
 		})
 
 		It("should be true when there are Shoot DNS Providers", func() {
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
 				Providers: []gardencorev1beta1.DNSProvider{
 					{Type: pointer.String("foo")},
 					{Type: pointer.String("bar")},
@@ -573,7 +573,7 @@ var _ = Describe("dns", func() {
 		It("returns true when feature gate is enabled", func() {
 			Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
 			b.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 
@@ -596,25 +596,25 @@ var _ = Describe("dns", func() {
 			BeforeEach(func() {
 				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
 				b.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
-				b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+				b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 				b.Shoot.ExternalClusterDomain = pointer.String("baz")
 				b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 			})
 
 			It("returns true when Shoot annotations are nil", func() {
-				b.Shoot.Info.Annotations = nil
+				b.Shoot.GetInfo().Annotations = nil
 
 				Expect(b.APIServerSNIPodMutatorEnabled()).To(BeTrue())
 			})
 
 			It("returns true when Shoot annotations does not have the annotation", func() {
-				b.Shoot.Info.Annotations = map[string]string{"foo": "bar"}
+				b.Shoot.GetInfo().Annotations = map[string]string{"foo": "bar"}
 
 				Expect(b.APIServerSNIPodMutatorEnabled()).To(BeTrue())
 			})
 
 			It("returns true when Shoot annotations exist, but it's not a 'disable", func() {
-				b.Shoot.Info.Annotations = map[string]string{
+				b.Shoot.GetInfo().Annotations = map[string]string{
 					"alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector": "not-disable",
 				}
 
@@ -622,7 +622,7 @@ var _ = Describe("dns", func() {
 			})
 
 			It("returns false when Shoot annotations exist and it's a disable", func() {
-				b.Shoot.Info.Annotations = map[string]string{
+				b.Shoot.GetInfo().Annotations = map[string]string{
 					"alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector": "disable",
 				}
 
@@ -664,9 +664,9 @@ var _ = Describe("dns", func() {
 		})
 
 		It("sets owners and entries which create DNSOwner and DNSEntry", func() {
-			b.Shoot.Info.Status.ClusterIdentity = pointer.String("shoot-cluster-identity")
+			b.Shoot.GetInfo().Status.ClusterIdentity = pointer.String("shoot-cluster-identity")
 			b.Shoot.DisableDNS = false
-			b.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+			b.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 			b.Shoot.InternalClusterDomain = "bar"
 			b.Shoot.ExternalClusterDomain = pointer.String("baz")
 			b.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}

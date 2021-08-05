@@ -54,7 +54,7 @@ func NewGarbageCollection(op *operation.Operation, shootClientInit ShootClientIn
 // objects. It receives a botanist object <botanist> which stores the Shoot object.
 func (g *GarbageCollection) Collect(ctx context.Context) {
 	var (
-		qualifiedShootName = fmt.Sprintf("%s/%s", g.shoot.Info.Namespace, g.shoot.Info.Name)
+		qualifiedShootName = fmt.Sprintf("%s/%s", g.shoot.GetInfo().Namespace, g.shoot.GetInfo().Name)
 		wg                 sync.WaitGroup
 	)
 
@@ -99,7 +99,7 @@ func (g *GarbageCollection) performGarbageCollectionSeed(ctx context.Context) er
 // cluster, i.e., it deletes evicted pods (mitigation for https://github.com/kubernetes/kubernetes/issues/55051).
 func (g *GarbageCollection) performGarbageCollectionShoot(ctx context.Context, shootClient client.Client) error {
 	namespace := metav1.NamespaceSystem
-	if g.shoot.Info.DeletionTimestamp != nil {
+	if g.shoot.GetInfo().DeletionTimestamp != nil {
 		namespace = metav1.NamespaceAll
 	}
 

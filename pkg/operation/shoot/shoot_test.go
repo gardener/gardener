@@ -53,9 +53,8 @@ var _ = Describe("shoot", func() {
 			ctrl = gomock.NewController(GinkgoT())
 			c = mockclient.NewMockClient(ctrl)
 
-			shoot = &Shoot{
-				Info: &gardencorev1beta1.Shoot{},
-			}
+			shoot = &Shoot{}
+			shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 
 		AfterEach(func() {
@@ -119,18 +118,18 @@ var _ = Describe("shoot", func() {
 
 		Describe("#IPVSEnabled", func() {
 			It("should return false when KubeProxy is null", func() {
-				shoot.Info.Spec.Kubernetes.KubeProxy = nil
+				shoot.GetInfo().Spec.Kubernetes.KubeProxy = nil
 				Expect(shoot.IPVSEnabled()).To(BeFalse())
 			})
 
 			It("should return false when KubeProxy.Mode is null", func() {
-				shoot.Info.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{}
+				shoot.GetInfo().Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{}
 				Expect(shoot.IPVSEnabled()).To(BeFalse())
 			})
 
 			It("should return false when KubeProxy.Mode is not IPVS", func() {
 				mode := gardencorev1beta1.ProxyModeIPTables
-				shoot.Info.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
+				shoot.GetInfo().Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
 					Mode: &mode,
 				}
 				Expect(shoot.IPVSEnabled()).To(BeFalse())
@@ -138,7 +137,7 @@ var _ = Describe("shoot", func() {
 
 			It("should return true when KubeProxy.Mode is IPVS", func() {
 				mode := gardencorev1beta1.ProxyModeIPVS
-				shoot.Info.Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
+				shoot.GetInfo().Spec.Kubernetes.KubeProxy = &gardencorev1beta1.KubeProxyConfig{
 					Mode: &mode,
 				}
 				Expect(shoot.IPVSEnabled()).To(BeTrue())
@@ -332,16 +331,16 @@ var _ = Describe("shoot", func() {
 				internalDomain := "foo"
 				s := &Shoot{
 					InternalClusterDomain: internalDomain,
-					Info: &gardencorev1beta1.Shoot{
-						Spec: gardencorev1beta1.ShootSpec{
-							DNS: &gardencorev1beta1.DNS{
-								Providers: []gardencorev1beta1.DNSProvider{
-									{Type: &unmanaged},
-								},
+				}
+				s.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						DNS: &gardencorev1beta1.DNS{
+							Providers: []gardencorev1beta1.DNSProvider{
+								{Type: &unmanaged},
 							},
 						},
 					},
-				}
+				})
 
 				Expect(s.ComputeOutOfClusterAPIServerAddress("", false)).To(Equal("api." + internalDomain))
 			})
@@ -350,8 +349,8 @@ var _ = Describe("shoot", func() {
 				internalDomain := "foo"
 				s := &Shoot{
 					InternalClusterDomain: internalDomain,
-					Info:                  &gardencorev1beta1.Shoot{},
 				}
+				s.SetInfo(&gardencorev1beta1.Shoot{})
 
 				Expect(s.ComputeOutOfClusterAPIServerAddress("", true)).To(Equal("api." + internalDomain))
 			})
@@ -360,8 +359,8 @@ var _ = Describe("shoot", func() {
 				externalDomain := "foo"
 				s := &Shoot{
 					ExternalClusterDomain: &externalDomain,
-					Info:                  &gardencorev1beta1.Shoot{},
 				}
+				s.SetInfo(&gardencorev1beta1.Shoot{})
 
 				Expect(s.ComputeOutOfClusterAPIServerAddress("", false)).To(Equal("api." + externalDomain))
 			})

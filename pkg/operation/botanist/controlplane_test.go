@@ -72,6 +72,7 @@ var _ = Describe("controlplane", func() {
 				},
 			},
 		}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
 	AfterEach(func() {
@@ -135,13 +136,13 @@ var _ = Describe("controlplane", func() {
 
 			BeforeEach(func() {
 				botanist.ShootState = shootState
-				botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{
 							Type: gardencorev1beta1.LastOperationTypeRestore,
 						},
 					},
-				}
+				})
 			})
 
 			It("should restore successfully", func() {
@@ -174,13 +175,13 @@ var _ = Describe("controlplane", func() {
 
 			BeforeEach(func() {
 				botanist.ShootState = shootState
-				botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{
 							Type: gardencorev1beta1.LastOperationTypeRestore,
 						},
 					},
-				}
+				})
 			})
 
 			It("should restore successfully", func() {

@@ -60,9 +60,9 @@ var _ = Describe("MetricsServer", func() {
 
 			botanist.K8sSeedClient = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
-				Info:       &gardencorev1beta1.Shoot{},
 				DisableDNS: true,
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 
 		It("should successfully create a metrics-server interface", func() {

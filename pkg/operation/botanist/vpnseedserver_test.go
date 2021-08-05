@@ -68,19 +68,19 @@ var _ = Describe("VPNSeedServer", func() {
 
 			botanist.K8sSeedClient = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
-				Info: &gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Networking: gardencorev1beta1.Networking{
-							Nodes: pointer.String("10.0.0.0/24"),
-						},
-					},
-				},
 				DisableDNS: true,
 				Networks: &shootpkg.Networks{
 					Services: &net.IPNet{IP: net.IP{10, 0, 0, 1}, Mask: net.CIDRMask(10, 24)},
 					Pods:     &net.IPNet{IP: net.IP{10, 0, 0, 2}, Mask: net.CIDRMask(10, 24)},
 				},
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Networking: gardencorev1beta1.Networking{
+						Nodes: pointer.String("10.0.0.0/24"),
+					},
+				},
+			})
 			botanist.Config = &config.GardenletConfiguration{
 				SNI: &config.SNI{
 					Ingress: &config.SNIIngress{

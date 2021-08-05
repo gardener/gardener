@@ -28,9 +28,9 @@ func (b *Botanist) DefaultNetwork() component.DeployMigrateWaiter {
 		b.K8sSeedClient.Client(),
 		&network.Values{
 			Namespace:      b.Shoot.SeedNamespace,
-			Name:           b.Shoot.Info.Name,
-			Type:           b.Shoot.Info.Spec.Networking.Type,
-			ProviderConfig: b.Shoot.Info.Spec.Networking.ProviderConfig,
+			Name:           b.Shoot.GetInfo().Name,
+			Type:           b.Shoot.GetInfo().Spec.Networking.Type,
+			ProviderConfig: b.Shoot.GetInfo().Spec.Networking.ProviderConfig,
 			PodCIDR:        b.Shoot.Networks.Pods,
 			ServiceCIDR:    b.Shoot.Networks.Services,
 		},

@@ -134,7 +134,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			"services": b.Shoot.Networks.Services.String(),
 		}
 		prometheusConfig = map[string]interface{}{
-			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"nodeLocalDNS": map[string]interface{}{
 				"enabled": b.Shoot.NodeLocalDNSEnabled,
 			},
@@ -173,8 +173,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"apiserver":           fmt.Sprintf("https://%s", gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain)),
 				"apiserverServerName": gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 				"sniEnabled":          b.APIServerSNIEnabled(),
-				"provider":            b.Shoot.Info.Spec.Provider.Type,
-				"name":                b.Shoot.Info.Name,
+				"provider":            b.Shoot.GetInfo().Spec.Provider.Type,
+				"name":                b.Shoot.GetInfo().Name,
 				"project":             b.Garden.Project.Name,
 			},
 			"ignoreAlerts":            b.Shoot.IgnoreAlerts,
@@ -217,7 +217,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	coreValues := map[string]interface{}{
 		"global": map[string]interface{}{
 			"shootKubeVersion": map[string]interface{}{
-				"gitVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+				"gitVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			},
 		},
 		"prometheus":               prometheus,
@@ -243,8 +243,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			emailConfigs     = []map[string]interface{}{}
 		)
 
-		if b.Shoot.Info.Spec.Monitoring != nil && b.Shoot.Info.Spec.Monitoring.Alerting != nil {
-			for _, email := range b.Shoot.Info.Spec.Monitoring.Alerting.EmailReceivers {
+		if b.Shoot.GetInfo().Spec.Monitoring != nil && b.Shoot.GetInfo().Spec.Monitoring.Alerting != nil {
+			for _, email := range b.Shoot.GetInfo().Spec.Monitoring.Alerting.EmailReceivers {
 				for _, key := range alertingSMTPKeys {
 					secret := b.Secrets[key]
 

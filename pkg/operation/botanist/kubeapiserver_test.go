@@ -70,7 +70,6 @@ var _ = Describe("KubeAPIServer", func() {
 				K8sSeedClient: k8sSeedClient,
 				Garden:        &gardenpkg.Garden{},
 				Shoot: &shootpkg.Shoot{
-					Info:          &gardencorev1beta1.Shoot{},
 					SeedNamespace: shootNamespace,
 					Components: &shootpkg.Components{
 						ControlPlane: &shootpkg.ControlPlane{
@@ -80,6 +79,7 @@ var _ = Describe("KubeAPIServer", func() {
 				},
 			},
 		}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
 	AfterEach(func() {
@@ -140,7 +140,7 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 				Entry("shoot disables scale down",
 					func() {
-						botanist.Shoot.Info.Annotations = map[string]string{"alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled": "true"}
+						botanist.Shoot.GetInfo().Annotations = map[string]string{"alpha.control-plane.scaling.shoot.gardener.cloud/scale-down-disabled": "true"}
 					},
 					nil, nil,
 					kubeapiserver.AutoscalingConfig{
@@ -257,7 +257,7 @@ var _ = Describe("KubeAPIServer", func() {
 					func() {
 						botanist.Shoot.DisableDNS = false
 						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
-						botanist.Shoot.Info.Spec.DNS = nil
+						botanist.Shoot.GetInfo().Spec.DNS = nil
 					},
 					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
@@ -270,7 +270,7 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
 						botanist.Shoot.ExternalDomain = &gardenpkg.Domain{}
 						botanist.Shoot.ExternalClusterDomain = pointer.StringPtr("some-domain")
-						botanist.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{
+						botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
 							Domain:    pointer.StringPtr("some-domain"),
 							Providers: []gardencorev1beta1.DNSProvider{{}},
 						}
@@ -286,11 +286,11 @@ var _ = Describe("KubeAPIServer", func() {
 						botanist.Garden.InternalDomain = &gardenpkg.Domain{}
 						botanist.Shoot.ExternalDomain = &gardenpkg.Domain{}
 						botanist.Shoot.ExternalClusterDomain = pointer.StringPtr("some-domain")
-						botanist.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{
+						botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{
 							Domain:    pointer.StringPtr("some-domain"),
 							Providers: []gardencorev1beta1.DNSProvider{{}},
 						}
-						botanist.Shoot.Info.Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector": "disable"}
+						botanist.Shoot.GetInfo().Annotations = map[string]string{"alpha.featuregates.shoot.gardener.cloud/apiserver-sni-pod-injector": "disable"}
 					},
 					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
@@ -369,10 +369,10 @@ var _ = Describe("KubeAPIServer", func() {
 
 	Describe("#DeleteKubeAPIServer", func() {
 		It("should properly invalidate the client and destroy the component", func() {
-			clientMap := fakeclientmap.NewClientMap().AddClient(keys.ForShoot(botanist.Shoot.Info), k8sSeedClient)
+			clientMap := fakeclientmap.NewClientMap().AddClient(keys.ForShoot(botanist.Shoot.GetInfo()), k8sSeedClient)
 			botanist.ClientMap = clientMap
 
-			shootClient, err := botanist.ClientMap.GetClient(ctx, keys.ForShoot(botanist.Shoot.Info))
+			shootClient, err := botanist.ClientMap.GetClient(ctx, keys.ForShoot(botanist.Shoot.GetInfo()))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shootClient).To(Equal(k8sSeedClient))
 
@@ -383,7 +383,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 			Expect(botanist.DeleteKubeAPIServer(ctx)).To(Succeed())
 
-			shootClient, err = clientMap.GetClient(ctx, keys.ForShoot(botanist.Shoot.Info))
+			shootClient, err = clientMap.GetClient(ctx, keys.ForShoot(botanist.Shoot.GetInfo()))
 			Expect(err).To(MatchError("clientSet for key \"/\" not found"))
 			Expect(shootClient).To(BeNil())
 

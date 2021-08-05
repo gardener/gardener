@@ -56,7 +56,7 @@ const (
 // the kubernetes-dashboard properly.
 func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, error) {
 	var (
-		enabled = gardencorev1beta1helper.KubernetesDashboardEnabled(b.Shoot.Info.Spec.Addons)
+		enabled = gardencorev1beta1helper.KubernetesDashboardEnabled(b.Shoot.GetInfo().Spec.Addons)
 		values  = map[string]interface{}{}
 	)
 
@@ -64,8 +64,8 @@ func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, 
 		values["kubeAPIServerHost"] = b.outOfClusterAPIServerFQDN()
 	}
 
-	if enabled && b.Shoot.Info.Spec.Addons.KubernetesDashboard.AuthenticationMode != nil {
-		values["authenticationMode"] = *b.Shoot.Info.Spec.Addons.KubernetesDashboard.AuthenticationMode
+	if enabled && b.Shoot.GetInfo().Spec.Addons.KubernetesDashboard.AuthenticationMode != nil {
+		values["authenticationMode"] = *b.Shoot.GetInfo().Spec.Addons.KubernetesDashboard.AuthenticationMode
 	}
 
 	return common.GenerateAddonConfig(values, enabled), nil
@@ -136,14 +136,14 @@ func (b *Botanist) DefaultNginxIngressDNSOwner() component.DeployWaiter {
 
 // NeedsIngressDNS returns true if the Shoot cluster needs ingress DNS.
 func (b *Botanist) NeedsIngressDNS() bool {
-	return b.NeedsExternalDNS() && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.Info.Spec.Addons)
+	return b.NeedsExternalDNS() && gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
 }
 
 // DefaultIngressDNSRecord creates the default deployer for the ingress DNSRecord resource.
 func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:       b.Shoot.Info.Name + "-" + common.ShootDNSIngressName,
-		SecretName: b.Shoot.Info.Name + "-" + DNSExternalName,
+		Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
+		SecretName: b.Shoot.GetInfo().Name + "-" + DNSExternalName,
 		Namespace:  b.Shoot.SeedNamespace,
 		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}
@@ -200,7 +200,7 @@ func (b *Botanist) MigrateIngressDNSRecord(ctx context.Context) error {
 // SetNginxIngressAddress sets the IP address of the API server's LoadBalancer.
 func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Client) {
 	if b.NeedsIngressDNS() {
-		ownerID := *b.Shoot.Info.Status.ClusterIdentity + "-" + common.ShootDNSIngressName
+		ownerID := *b.Shoot.GetInfo().Status.ClusterIdentity + "-" + common.ShootDNSIngressName
 		b.Shoot.Components.Extensions.DNS.NginxOwner = dns.NewOwner(
 			seedClient,
 			b.Shoot.SeedNamespace,
@@ -232,17 +232,17 @@ func (b *Botanist) SetNginxIngressAddress(address string, seedClient client.Clie
 // the nginx-ingress properly.
 func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	var (
-		enabled = gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.Info.Spec.Addons)
+		enabled = gardencorev1beta1helper.NginxIngressEnabled(b.Shoot.GetInfo().Spec.Addons)
 		values  map[string]interface{}
 	)
 
 	if enabled {
 		values = map[string]interface{}{
 			"controller": map[string]interface{}{
-				"customConfig": b.Shoot.Info.Spec.Addons.NginxIngress.Config,
+				"customConfig": b.Shoot.GetInfo().Spec.Addons.NginxIngress.Config,
 				"service": map[string]interface{}{
-					"loadBalancerSourceRanges": b.Shoot.Info.Spec.Addons.NginxIngress.LoadBalancerSourceRanges,
-					"externalTrafficPolicy":    *b.Shoot.Info.Spec.Addons.NginxIngress.ExternalTrafficPolicy,
+					"loadBalancerSourceRanges": b.Shoot.GetInfo().Spec.Addons.NginxIngress.LoadBalancerSourceRanges,
+					"externalTrafficPolicy":    *b.Shoot.GetInfo().Spec.Addons.NginxIngress.ExternalTrafficPolicy,
 				},
 			},
 		}
@@ -281,7 +281,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		kasFQDN         = b.outOfClusterAPIServerFQDN()
 		kubeProxySecret = b.Secrets["kube-proxy"]
 		global          = map[string]interface{}{
-			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"podNetwork":        b.Shoot.Networks.Pods.String(),
 			"vpaEnabled":        b.Shoot.WantsVerticalPodAutoscaler,
 		}
@@ -301,11 +301,11 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		}
 
 		podSecurityPolicies = map[string]interface{}{
-			"allowPrivilegedContainers": *b.Shoot.Info.Spec.Kubernetes.AllowPrivilegedContainers,
+			"allowPrivilegedContainers": *b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers,
 		}
 		kubeProxyConfig = map[string]interface{}{
 			"kubeconfig":        kubeProxySecret.Data["kubeconfig"],
-			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-kube-proxy": b.CheckSums["kube-proxy"],
 			},
@@ -324,14 +324,14 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 
 		shootInfo = map[string]interface{}{
 			"projectName":       b.Garden.Project.Name,
-			"shootName":         b.Shoot.Info.Name,
-			"provider":          b.Shoot.Info.Spec.Provider.Type,
-			"region":            b.Shoot.Info.Spec.Region,
-			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+			"shootName":         b.Shoot.GetInfo().Name,
+			"provider":          b.Shoot.GetInfo().Spec.Provider.Type,
+			"region":            b.Shoot.GetInfo().Spec.Region,
+			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"podNetwork":        b.Shoot.Networks.Pods.String(),
 			"serviceNetwork":    b.Shoot.Networks.Services.String(),
-			"maintenanceBegin":  b.Shoot.Info.Spec.Maintenance.TimeWindow.Begin,
-			"maintenanceEnd":    b.Shoot.Info.Spec.Maintenance.TimeWindow.End,
+			"maintenanceBegin":  b.Shoot.GetInfo().Spec.Maintenance.TimeWindow.Begin,
+			"maintenanceEnd":    b.Shoot.GetInfo().Spec.Maintenance.TimeWindow.End,
 		}
 		nodeExporterConfig        = map[string]interface{}{}
 		blackboxExporterConfig    = map[string]interface{}{}
@@ -365,7 +365,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		verticalPodAutoscaler["admissionController"].(map[string]interface{})["caCert"] = b.Secrets[common.VPASecretName].Data[secrets.DataKeyCertificateCA]
 	}
 
-	proxyConfig := b.Shoot.Info.Spec.Kubernetes.KubeProxy
+	proxyConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy
 	kubeProxyEnabled := true
 	if proxyConfig != nil {
 		kubeProxyConfig["featureGates"] = proxyConfig.FeatureGates
@@ -471,7 +471,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		"podsecuritypolicies":     common.GenerateAddonConfig(podSecurityPolicies, true),
 		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
 		"vertical-pod-autoscaler": common.GenerateAddonConfig(verticalPodAutoscaler, b.Shoot.WantsVerticalPodAutoscaler),
-		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.Info.Status.ClusterIdentity},
+		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.GetInfo().Status.ClusterIdentity},
 	}
 
 	if b.Shoot.ReversedVPNEnabled {
@@ -563,7 +563,7 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 	}
 	kubernetesDashboardImagesToInject := []string{charts.ImageNameKubernetesDashboard}
 
-	k8sVersionLessThan116, err := versionutils.CompareVersions(b.Shoot.Info.Spec.Kubernetes.Version, "<", "1.16")
+	k8sVersionLessThan116, err := versionutils.CompareVersions(b.Shoot.GetInfo().Spec.Kubernetes.Version, "<", "1.16")
 	if err != nil {
 		return nil, err
 	}
@@ -601,7 +601,7 @@ func (b *Botanist) outOfClusterAPIServerFQDN() string {
 
 // getCoreDNSRestartTimestamp returns a timestamp that can potentially restart the CoreDNS deployment.
 func (b *Botanist) getCoreDNSRestartTimestamp(ctx context.Context) (string, error) {
-	if controllerutils.HasTask(b.Shoot.Info.Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
+	if controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
 		return time.Now().UTC().Format(time.RFC3339), nil
 	}
 

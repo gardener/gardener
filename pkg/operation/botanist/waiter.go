@@ -139,7 +139,7 @@ func (b *Botanist) WaitUntilEndpointsDoNotContainPodIPs(ctx context.Context) err
 	b.Logger.Info("waiting until there are no Endpoints containing Pod IPs in the shoot cluster...")
 
 	var podsNetwork *net.IPNet
-	if val := b.Shoot.Info.Spec.Networking.Pods; val != nil {
+	if val := b.Shoot.GetInfo().Spec.Networking.Pods; val != nil {
 		var err error
 		_, podsNetwork, err = net.ParseCIDR(*val)
 		if err != nil {

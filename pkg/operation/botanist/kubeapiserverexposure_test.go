@@ -66,13 +66,13 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			Operation: &operation.Operation{
 				K8sSeedClient: fakeClientSet,
 				Shoot: &shoot.Shoot{
-					Info:          &gardencorev1beta1.Shoot{},
 					SeedNamespace: namespace,
 				},
 				Garden: &garden.Garden{},
 				Logger: logrus.NewEntry(logger.NewNopLogger()),
 			},
 		}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
 	AfterEach(func() {
@@ -97,7 +97,7 @@ var _ = Describe("KubeAPIServerExposure", func() {
 			BeforeEach(func() {
 				Expect(gardenletfeatures.FeatureGate.Set("APIServerSNI=true")).ToNot(HaveOccurred())
 				botanist.Garden.InternalDomain = &garden.Domain{Provider: "some-provider"}
-				botanist.Shoot.Info.Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
+				botanist.Shoot.GetInfo().Spec.DNS = &gardencorev1beta1.DNS{Domain: pointer.String("foo")}
 				botanist.Shoot.ExternalClusterDomain = pointer.String("baz")
 				botanist.Shoot.ExternalDomain = &garden.Domain{Provider: "valid-provider"}
 			})

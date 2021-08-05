@@ -109,7 +109,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		}
 	)
 
-	if verticalPodAutoscaler := b.Shoot.Info.Spec.Kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
+	if verticalPodAutoscaler := b.Shoot.GetInfo().Spec.Kubernetes.VerticalPodAutoscaler; verticalPodAutoscaler != nil {
 		if val := verticalPodAutoscaler.EvictAfterOOMThreshold; val != nil {
 			updater["evictAfterOOMThreshold"] = *val
 		}
@@ -182,7 +182,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 
 	// invalidate shoot client here before scaling down API server
-	if err := b.ClientMap.InvalidateClient(keys.ForShoot(b.Shoot.Info)); err != nil {
+	if err := b.ClientMap.InvalidateClient(keys.ForShoot(b.Shoot.GetInfo())); err != nil {
 		return err
 	}
 	b.K8sShootClient = nil
@@ -224,16 +224,16 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 // DefaultControlPlane creates the default deployer for the ControlPlane custom resource with the given purpose.
 func (b *Botanist) DefaultControlPlane(purpose extensionsv1alpha1.Purpose) extensionscontrolplane.Interface {
 	values := &extensionscontrolplane.Values{
-		Name:      b.Shoot.Info.Name,
+		Name:      b.Shoot.GetInfo().Name,
 		Namespace: b.Shoot.SeedNamespace,
 		Purpose:   purpose,
 	}
 
 	switch purpose {
 	case extensionsv1alpha1.Normal:
-		values.Type = b.Shoot.Info.Spec.Provider.Type
-		values.ProviderConfig = b.Shoot.Info.Spec.Provider.ControlPlaneConfig
-		values.Region = b.Shoot.Info.Spec.Region
+		values.Type = b.Shoot.GetInfo().Spec.Provider.Type
+		values.ProviderConfig = b.Shoot.GetInfo().Spec.Provider.ControlPlaneConfig
+		values.Region = b.Shoot.GetInfo().Spec.Region
 
 	case extensionsv1alpha1.Exposure:
 		values.Type = b.Seed.Info.Spec.Provider.Type
@@ -359,9 +359,9 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 		}
 		defaultValues = map[string]interface{}{
 			"etcdServicePort":           etcd.PortEtcdClient,
-			"kubernetesVersion":         b.Shoot.Info.Spec.Kubernetes.Version,
+			"kubernetesVersion":         b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"priorityClassName":         v1beta1constants.PriorityClassNameShootControlPlane,
-			"enableBasicAuthentication": gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info),
+			"enableBasicAuthentication": gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
 			"probeCredentials":          b.APIServerHealthCheckToken,
 			"securePort":                443,
 			"enableEtcdEncryption":      true,
@@ -369,7 +369,7 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			"reversedVPN": map[string]interface{}{
 				"enabled": b.Shoot.ReversedVPNEnabled,
 			},
-			"enableAnonymousAuthentication": gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.Info.Spec.Kubernetes.KubeAPIServer),
+			"enableAnonymousAuthentication": gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
 		}
 
 		shootNetworks = map[string]interface{}{
@@ -399,7 +399,7 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 		}
 	}
 
-	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
+	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()) {
 		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-"+common.BasicAuthSecretName] = b.CheckSums[common.BasicAuthSecretName]
 	}
 
@@ -438,9 +438,9 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 
 		var cpuRequest, memoryRequest, cpuLimit, memoryLimit string
 		if hvpaEnabled {
-			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMinNodeCount(), b.Shoot.Info.Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
+			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMinNodeCount(), b.Shoot.GetInfo().Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
 		} else {
-			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMaxNodeCount(), b.Shoot.Info.Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
+			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMaxNodeCount(), b.Shoot.GetInfo().Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
 		}
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
@@ -467,8 +467,8 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	}
 
 	var (
-		apiServerConfig              = b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
-		admissionPlugins             = kutil.GetAdmissionPluginsForVersion(b.Shoot.Info.Spec.Kubernetes.Version)
+		apiServerConfig              = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
+		admissionPlugins             = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
 		externalHostname             = b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
 		serviceAccountTokenIssuerURL = fmt.Sprintf("https://%s", externalHostname)
 		serviceAccountConfigVals     = map[string]interface{}{}
@@ -488,7 +488,7 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			}
 
 			if signingKeySecret := serviceAccountConfig.SigningKeySecret; signingKeySecret != nil {
-				signingKey, err := common.GetServiceAccountSigningKeySecret(ctx, b.K8sGardenClient.Client(), b.Shoot.Info.Namespace, signingKeySecret.Name)
+				signingKey, err := common.GetServiceAccountSigningKeySecret(ctx, b.K8sGardenClient.Client(), b.Shoot.GetInfo().Namespace, signingKeySecret.Name)
 				if err != nil {
 					return err
 				}
@@ -521,12 +521,12 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			apiServerConfig.AuditConfig.AuditPolicy != nil &&
 			apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
 
-			auditPolicy, err := b.getAuditPolicy(ctx, apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, b.Shoot.Info.Namespace)
+			auditPolicy, err := b.getAuditPolicy(ctx, apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, b.Shoot.GetInfo().Namespace)
 			if err != nil {
 				// Ignore missing audit configuration on shoot deletion to prevent failing redeployments of the
 				// kube-apiserver in case the end-user deleted the configmap before/simultaneously to the shoot
 				// deletion.
-				if !apierrors.IsNotFound(err) || b.Shoot.Info.DeletionTimestamp == nil {
+				if !apierrors.IsNotFound(err) || b.Shoot.GetInfo().DeletionTimestamp == nil {
 					return fmt.Errorf("retrieving audit policy from the ConfigMap '%v' failed with reason '%w'", apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, err)
 				}
 			} else {

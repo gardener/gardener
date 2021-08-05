@@ -95,27 +95,6 @@ var _ = Describe("addons", func() {
 					},
 				},
 				Shoot: &shoot.Shoot{
-					Info: &gardencorev1beta1.Shoot{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      shootName,
-							Namespace: shootNamespace,
-						},
-						Spec: gardencorev1beta1.ShootSpec{
-							DNS: &gardencorev1beta1.DNS{
-								Domain: pointer.String(externalDomain),
-							},
-							Addons: &gardencorev1beta1.Addons{
-								NginxIngress: &gardencorev1beta1.NginxIngress{
-									Addon: gardencorev1beta1.Addon{
-										Enabled: true,
-									},
-								},
-							},
-						},
-						Status: gardencorev1beta1.ShootStatus{
-							ClusterIdentity: pointer.String("shoot-cluster-identity"),
-						},
-					},
 					SeedNamespace:         seedNamespace,
 					ExternalClusterDomain: pointer.String(externalDomain),
 					ExternalDomain: &garden.Domain{
@@ -137,6 +116,27 @@ var _ = Describe("addons", func() {
 				Logger: logrus.NewEntry(logger.NewNopLogger()),
 			},
 		}
+		b.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: shootNamespace,
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				DNS: &gardencorev1beta1.DNS{
+					Domain: pointer.String(externalDomain),
+				},
+				Addons: &gardencorev1beta1.Addons{
+					NginxIngress: &gardencorev1beta1.NginxIngress{
+						Addon: gardencorev1beta1.Addon{
+							Enabled: true,
+						},
+					},
+				},
+			},
+			Status: gardencorev1beta1.ShootStatus{
+				ClusterIdentity: pointer.String("shoot-cluster-identity"),
+			},
+		})
 
 		renderer := cr.NewWithServerVersion(&version.Info{})
 		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{corev1.SchemeGroupVersion, dnsv1alpha1.SchemeGroupVersion})
@@ -196,7 +196,7 @@ var _ = Describe("addons", func() {
 		})
 
 		It("does nothing when nginx is disabled", func() {
-			b.Shoot.Info.Spec.Addons.NginxIngress.Enabled = false
+			b.Shoot.GetInfo().Spec.Addons.NginxIngress.Enabled = false
 
 			b.SetNginxIngressAddress(address, client)
 
@@ -338,7 +338,7 @@ var _ = Describe("addons", func() {
 
 			BeforeEach(func() {
 				b.ShootState = shootState
-				b.Shoot.Info.Status = gardencorev1beta1.ShootStatus{
+				b.Shoot.GetInfo().Status = gardencorev1beta1.ShootStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
 						Type: gardencorev1beta1.LastOperationTypeRestore,
 					},

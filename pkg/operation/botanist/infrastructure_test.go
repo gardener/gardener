@@ -64,6 +64,7 @@ var _ = Describe("Infrastructure", func() {
 			},
 			ShootState: shootState,
 		}}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
 	AfterEach(func() {
@@ -89,13 +90,13 @@ var _ = Describe("Infrastructure", func() {
 
 		Context("restore", func() {
 			BeforeEach(func() {
-				botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{
 							Type: gardencorev1beta1.LastOperationTypeRestore,
 						},
 					},
-				}
+				})
 			})
 
 			It("should restore successfully", func() {
@@ -136,7 +137,7 @@ var _ = Describe("Infrastructure", func() {
 
 			botanist.K8sGardenClient = kubernetesGardenInterface
 			botanist.K8sSeedClient = kubernetesSeedInterface
-			botanist.Shoot.Info = shoot
+			botanist.Shoot.SetInfo(shoot)
 		})
 
 		It("should successfully wait (w/ provider status, w/ nodes cidr)", func() {
@@ -151,7 +152,7 @@ var _ = Describe("Infrastructure", func() {
 			kubernetesSeedInterface.EXPECT().Client().Return(kubernetesSeedClient)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
-			Expect(botanist.Shoot.Info).To(Equal(updatedShoot))
+			Expect(botanist.Shoot.GetInfo()).To(Equal(updatedShoot))
 		})
 
 		It("should successfully wait (w/o provider status, w/o nodes cidr)", func() {
@@ -159,14 +160,14 @@ var _ = Describe("Infrastructure", func() {
 			infrastructure.EXPECT().NodesCIDR()
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(Succeed())
-			Expect(botanist.Shoot.Info).To(Equal(shoot))
+			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))
 		})
 
 		It("should return the error during wait", func() {
 			infrastructure.EXPECT().Wait(ctx).Return(fakeErr)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(MatchError(fakeErr))
-			Expect(botanist.Shoot.Info).To(Equal(shoot))
+			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))
 		})
 
 		It("should return the error during nodes cidr update", func() {
@@ -179,7 +180,7 @@ var _ = Describe("Infrastructure", func() {
 			test.EXPECTPatch(ctx, kubernetesGardenClient, updatedShoot, shoot, types.StrategicMergePatchType, fakeErr)
 
 			Expect(botanist.WaitForInfrastructure(ctx)).To(MatchError(fakeErr))
-			Expect(botanist.Shoot.Info).To(Equal(shoot))
+			Expect(botanist.Shoot.GetInfo()).To(Equal(shoot))
 		})
 	})
 })

@@ -17,8 +17,10 @@ package botanist
 import (
 	"context"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/infrastructure"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 )
@@ -30,11 +32,11 @@ func (b *Botanist) DefaultInfrastructure() infrastructure.Interface {
 		b.K8sSeedClient.Client(),
 		&infrastructure.Values{
 			Namespace:         b.Shoot.SeedNamespace,
-			Name:              b.Shoot.Info.Name,
-			Type:              b.Shoot.Info.Spec.Provider.Type,
-			ProviderConfig:    b.Shoot.Info.Spec.Provider.InfrastructureConfig,
-			Region:            b.Shoot.Info.Spec.Region,
-			AnnotateOperation: controllerutils.HasTask(b.Shoot.Info.Annotations, v1beta1constants.ShootTaskDeployInfrastructure) || b.isRestorePhase(),
+			Name:              b.Shoot.GetInfo().Name,
+			Type:              b.Shoot.GetInfo().Spec.Provider.Type,
+			ProviderConfig:    b.Shoot.GetInfo().Spec.Provider.InfrastructureConfig,
+			Region:            b.Shoot.GetInfo().Spec.Region,
+			AnnotateOperation: controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskDeployInfrastructure) || b.isRestorePhase(),
 		},
 		infrastructure.DefaultInterval,
 		infrastructure.DefaultSevereThreshold,
@@ -62,11 +64,16 @@ func (b *Botanist) WaitForInfrastructure(ctx context.Context) error {
 	}
 
 	if nodesCIDR := b.Shoot.Components.Extensions.Infrastructure.NodesCIDR(); nodesCIDR != nil {
-		shootCopy := b.Shoot.Info.DeepCopy()
-		return b.UpdateShootAndCluster(ctx, shootCopy, func() error {
-			shootCopy.Spec.Networking.Nodes = nodesCIDR
+		if err := b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), true, func(shoot *gardencorev1beta1.Shoot) error {
+			shoot.Spec.Networking.Nodes = nodesCIDR
 			return nil
-		})
+		}); err != nil {
+			return err
+		}
+
+		if err := extensions.SyncClusterResourceToSeed(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
+			return err
+		}
 	}
 
 	return nil

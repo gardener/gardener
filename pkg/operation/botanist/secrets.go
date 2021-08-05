@@ -46,7 +46,7 @@ import (
 func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener).DeepCopy()
 
-	switch b.Shoot.Info.Annotations[v1beta1constants.GardenerOperation] {
+	switch b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] {
 	case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
 		if err := b.rotateKubeconfigSecrets(ctx, &gardenerResourceDataList); err != nil {
 			return err
@@ -58,7 +58,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		}
 	}
 
-	if b.Shoot.Info.DeletionTimestamp == nil {
+	if b.Shoot.GetInfo().DeletionTimestamp == nil {
 		if b.Shoot.ReversedVPNEnabled {
 			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"); err != nil {
 				return err
@@ -70,7 +70,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		}
 	}
 
-	shootWantsBasicAuth := gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info)
+	shootWantsBasicAuth := gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo())
 	shootHasBasicAuth := gardenerResourceDataList.Get(common.BasicAuthSecretName) != nil
 	if shootWantsBasicAuth != shootHasBasicAuth {
 		if err := b.deleteBasicAuthDependantSecrets(ctx, &gardenerResourceDataList); err != nil {
@@ -114,7 +114,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		b.generateWantedSecretConfigs,
 	)
 
-	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
+	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()) {
 		secretsManager.WithAPIServerBasicAuthConfig(basicAuthSecretAPIServer)
 	}
 
@@ -242,9 +242,11 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 		gardenerResourceDataList.Delete(secretName)
 	}
 
-	oldObj := b.Shoot.Info.DeepCopy()
-	delete(b.Shoot.Info.Annotations, v1beta1constants.GardenerOperation)
-	return b.K8sGardenClient.Client().Patch(ctx, b.Shoot.Info, client.MergeFrom(oldObj))
+	// remove operation annotation
+	return b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+		return nil
+	})
 }
 
 func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
@@ -272,9 +274,10 @@ func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResource
 	gardenerResourceDataList.Delete(v1beta1constants.SecretNameSSHKeyPair)
 
 	// remove operation annotation
-	oldObj := b.Shoot.Info.DeepCopy()
-	delete(b.Shoot.Info.Annotations, v1beta1constants.GardenerOperation)
-	return b.K8sGardenClient.Client().Patch(ctx, b.Shoot.Info, client.MergeFrom(oldObj))
+	return b.Shoot.UpdateInfo(ctx, b.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+		delete(shoot.Annotations, v1beta1constants.GardenerOperation)
+		return nil
+	})
 }
 
 func (b *Botanist) deleteBasicAuthDependantSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
@@ -388,14 +391,14 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 		fns = append(fns, func(ctx context.Context) error {
 			secretObj := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      gutil.ComputeShootProjectSecretName(b.Shoot.Info.Name, s.suffix),
-					Namespace: b.Shoot.Info.Namespace,
+					Name:      gutil.ComputeShootProjectSecretName(b.Shoot.GetInfo().Name, s.suffix),
+					Namespace: b.Shoot.GetInfo().Namespace,
 				},
 			}
 
 			_, err := controllerutils.CreateOrGetAndStrategicMergePatch(ctx, b.K8sGardenClient.Client(), secretObj, func() error {
 				secretObj.OwnerReferences = []metav1.OwnerReference{
-					*metav1.NewControllerRef(b.Shoot.Info, gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
+					*metav1.NewControllerRef(b.Shoot.GetInfo(), gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot")),
 				}
 				secretObj.Annotations = s.annotations
 				secretObj.Labels = s.labels

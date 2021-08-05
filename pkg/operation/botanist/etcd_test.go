@@ -93,15 +93,15 @@ var _ = Describe("Etcd", func() {
 				Info: &gardencorev1beta1.Seed{},
 			}
 			botanist.Shoot = &shootpkg.Shoot{
-				Info: &gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Maintenance: &gardencorev1beta1.Maintenance{
-							TimeWindow: &maintenanceTimeWindow,
-						},
-					},
-				},
 				SeedNamespace: namespace,
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: &gardencorev1beta1.Maintenance{
+						TimeWindow: &maintenanceTimeWindow,
+					},
+				},
+			})
 		})
 
 		Context("no shooted seed", func() {
@@ -223,7 +223,7 @@ var _ = Describe("Etcd", func() {
 
 		It("should return an error because the maintenance time window cannot be parsed", func() {
 			defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.HVPA, true)()
-			botanist.Shoot.Info.Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
+			botanist.Shoot.GetInfo().Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
 				Begin: "foobar",
 				End:   "barfoo",
 			}
@@ -266,20 +266,20 @@ var _ = Describe("Etcd", func() {
 						EtcdEvents: etcdEvents,
 					},
 				},
-				Info: &gardencorev1beta1.Shoot{
-					Spec: gardencorev1beta1.ShootSpec{
-						Maintenance: &gardencorev1beta1.Maintenance{
-							TimeWindow: &maintenanceTimeWindow,
-						},
-					},
-					Status: gardencorev1beta1.ShootStatus{
-						TechnicalID: namespace,
-						UID:         shootUID,
-					},
-				},
 				SeedNamespace:   namespace,
 				BackupEntryName: namespace + "--" + string(shootUID),
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{
+					Maintenance: &gardencorev1beta1.Maintenance{
+						TimeWindow: &maintenanceTimeWindow,
+					},
+				},
+				Status: gardencorev1beta1.ShootStatus{
+					TechnicalID: namespace,
+					UID:         shootUID,
+				},
+			})
 
 			etcdMain.EXPECT().SetSecrets(etcd.Secrets{
 				CA:     component.Secret{Name: secretNameCA, Checksum: checksumCA},
@@ -371,7 +371,7 @@ var _ = Describe("Etcd", func() {
 					backupSecret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
 				})
-				botanist.Shoot.Info.Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
+				botanist.Shoot.GetInfo().Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
 					Begin: "foobar",
 					End:   "barfoo",
 				}

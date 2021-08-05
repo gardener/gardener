@@ -70,9 +70,9 @@ var _ = Describe("KubeControllerManager", func() {
 			botanist.Logger = logger.NewFieldLogger(logger.NewNopLogger(), "", "")
 			botanist.K8sSeedClient = kubernetesClient
 			botanist.Shoot = &shootpkg.Shoot{
-				Info:     &gardencorev1beta1.Shoot{},
 				Networks: &shootpkg.Networks{},
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 
 		It("should successfully create a kube-controller-manager interface", func() {
@@ -129,9 +129,9 @@ var _ = Describe("KubeControllerManager", func() {
 						KubeControllerManager: kubeControllerManager,
 					},
 				},
-				Info:          &gardencorev1beta1.Shoot{},
 				SeedNamespace: namespace,
 			}
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 
 		Context("successfully deployment", func() {
@@ -142,12 +142,12 @@ var _ = Describe("KubeControllerManager", func() {
 
 			Context("last operation is nil or not of type 'create'", func() {
 				BeforeEach(func() {
-					botanist.Shoot.Info.Status.LastOperation = nil
+					botanist.Shoot.GetInfo().Status.LastOperation = nil
 				})
 
 				It("hibernation status unequal (true/false)", func() {
 					botanist.Shoot.HibernationEnabled = true
-					botanist.Shoot.Info.Status.IsHibernated = false
+					botanist.Shoot.GetInfo().Status.IsHibernated = false
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
 
@@ -156,7 +156,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("hibernation status unequal (false/true)", func() {
 					botanist.Shoot.HibernationEnabled = false
-					botanist.Shoot.Info.Status.IsHibernated = true
+					botanist.Shoot.GetInfo().Status.IsHibernated = true
 
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
 
@@ -165,7 +165,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("hibernation status equal (true/true)", func() {
 					botanist.Shoot.HibernationEnabled = true
-					botanist.Shoot.Info.Status.IsHibernated = true
+					botanist.Shoot.GetInfo().Status.IsHibernated = true
 
 					var replicas int32 = 4
 					kubernetesClient.EXPECT().Client().Return(c)
@@ -180,7 +180,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("hibernation status equal (false/false)", func() {
 					botanist.Shoot.HibernationEnabled = false
-					botanist.Shoot.Info.Status.IsHibernated = false
+					botanist.Shoot.GetInfo().Status.IsHibernated = false
 
 					var replicas int32 = 4
 					kubernetesClient.EXPECT().Client().Return(c)
@@ -196,7 +196,7 @@ var _ = Describe("KubeControllerManager", func() {
 
 			Context("last operation is not nil and of type 'create'", func() {
 				BeforeEach(func() {
-					botanist.Shoot.Info.Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}
+					botanist.Shoot.GetInfo().Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}
 				})
 
 				It("hibernation enabled", func() {

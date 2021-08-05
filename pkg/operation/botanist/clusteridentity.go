@@ -18,26 +18,25 @@ import (
 	"context"
 	"fmt"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // EnsureShootClusterIdentity ensures that Shoot's `status.clusterIdentity` field is set and updates the Cluster resource in
 // the seed if necessary.
 func (b *Botanist) EnsureShootClusterIdentity(ctx context.Context) error {
-	if b.Shoot.Info.Status.ClusterIdentity == nil {
-		clusterIdentity := fmt.Sprintf("%s-%s-%s", b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID, b.GardenClusterIdentity)
+	if b.Shoot.GetInfo().Status.ClusterIdentity == nil {
+		clusterIdentity := fmt.Sprintf("%s-%s-%s", b.Shoot.SeedNamespace, b.Shoot.GetInfo().Status.UID, b.GardenClusterIdentity)
 
-		patch := client.MergeFrom(b.Shoot.Info.DeepCopy())
-		b.Shoot.Info.Status.ClusterIdentity = &clusterIdentity
-
-		if err := b.K8sGardenClient.Client().Status().Patch(ctx, b.Shoot.Info, patch); err != nil {
+		if err := b.Shoot.UpdateInfoStatus(ctx, b.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+			shoot.Status.ClusterIdentity = &clusterIdentity
+			return nil
+		}); err != nil {
 			return err
 		}
 
-		if err := extensions.SyncClusterResourceToSeed(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, b.Shoot.Info, nil, nil); err != nil {
+		if err := extensions.SyncClusterResourceToSeed(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, b.Shoot.GetInfo(), nil, nil); err != nil {
 			return err
 		}
 	}
@@ -52,7 +51,7 @@ func (b *Botanist) DefaultClusterIdentity() clusteridentity.Interface {
 
 // DeployClusterIdentity deploys the shoot's cluster-identity.
 func (b *Botanist) DeployClusterIdentity(ctx context.Context) error {
-	if v := b.Shoot.Info.Status.ClusterIdentity; v != nil {
+	if v := b.Shoot.GetInfo().Status.ClusterIdentity; v != nil {
 		b.Shoot.Components.SystemComponents.ClusterIdentity.SetIdentity(*v)
 	}
 

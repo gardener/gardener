@@ -35,10 +35,10 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 	if v := b.Shoot.GetNodeNetwork(); v != nil {
 		shootCIDRNetworks = append(shootCIDRNetworks, *v)
 	}
-	if v := b.Shoot.Info.Spec.Networking.Pods; v != nil {
+	if v := b.Shoot.GetInfo().Spec.Networking.Pods; v != nil {
 		shootCIDRNetworks = append(shootCIDRNetworks, *v)
 	}
-	if v := b.Shoot.Info.Spec.Networking.Services; v != nil {
+	if v := b.Shoot.GetInfo().Spec.Networking.Services; v != nil {
 		shootCIDRNetworks = append(shootCIDRNetworks, *v)
 	}
 

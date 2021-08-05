@@ -60,7 +60,7 @@ func (b *Botanist) runParallelTaskForEachComponent(ctx context.Context, componen
 
 func (b *Botanist) isRestorePhase() bool {
 	return b.Shoot != nil &&
-		b.Shoot.Info != nil &&
-		b.Shoot.Info.Status.LastOperation != nil &&
-		b.Shoot.Info.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
+		b.Shoot.GetInfo() != nil &&
+		b.Shoot.GetInfo().Status.LastOperation != nil &&
+		b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore
 }

@@ -88,11 +88,6 @@ var _ = Describe("operatingsystemconfig", func() {
 					},
 				},
 				Purpose: "development",
-				Info: &gardencorev1beta1.Shoot{
-					Status: gardencorev1beta1.ShootStatus{
-						TechnicalID: "shoot--garden-testing",
-					},
-				},
 			},
 			Seed: &seedpkg.Seed{
 				Info: &gardencorev1beta1.Seed{
@@ -105,6 +100,11 @@ var _ = Describe("operatingsystemconfig", func() {
 			},
 			ShootState: shootState,
 		}}
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			Status: gardencorev1beta1.ShootStatus{
+				TechnicalID: "shoot--garden-testing",
+			},
+		})
 	})
 
 	AfterEach(func() {
@@ -179,13 +179,13 @@ var _ = Describe("operatingsystemconfig", func() {
 
 		Context("restore", func() {
 			BeforeEach(func() {
-				botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{
 							Type: gardencorev1beta1.LastOperationTypeRestore,
 						},
 					},
-				}
+				})
 
 				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
 			})
@@ -260,7 +260,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 			botanist.Shoot.SeedNamespace = namespace
 			botanist.Shoot.KubernetesVersion = semver.MustParse("1.2.3")
-			botanist.Shoot.Info = &gardencorev1beta1.Shoot{
+			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Provider: gardencorev1beta1.Provider{
 						Workers: []gardencorev1beta1.Worker{
@@ -277,7 +277,7 @@ var _ = Describe("operatingsystemconfig", func() {
 						},
 					},
 				},
-			}
+			})
 
 			kubernetesInterfaceShoot.EXPECT().Client().Return(kubernetesClientShoot).AnyTimes()
 			kubernetesInterfaceSeed.EXPECT().Client().Return(kubernetesClientSeed).AnyTimes()

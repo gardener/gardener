@@ -31,8 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // runReconcileShootFlow reconciles the Shoot cluster's state.
@@ -45,7 +43,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		err             error
 	)
 
-	for _, lastError := range o.Shoot.Info.Status.LastErrors {
+	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
 		if lastError.TaskID != nil {
 			tasksWithErrors = append(tasksWithErrors, *lastError.TaskID)
 		}
@@ -82,11 +80,11 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		defaultInterval                = 5 * time.Second
 		dnsEnabled                     = !o.Shoot.DisableDNS
 		allowBackup                    = o.Seed.Info.Spec.Backup != nil
-		staticNodesCIDR                = o.Shoot.Info.Spec.Networking.Nodes != nil
+		staticNodesCIDR                = o.Shoot.GetInfo().Spec.Networking.Nodes != nil
 		useSNI                         = botanist.APIServerSNIEnabled()
-		generation                     = o.Shoot.Info.Generation
+		generation                     = o.Shoot.GetInfo().Generation
 		sniPhase                       = botanist.Shoot.Components.ControlPlane.KubeAPIServerSNIPhase
-		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.Info.Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
+		requestControlPlanePodsRestart = controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartControlPlanePods)
 
 		g                      = flow.NewGraph("Shoot cluster reconciliation")
 		ensureShootStateExists = g.Add(flow.Task{
@@ -354,7 +352,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 				if err := botanist.DeployManagedResourceForAddons(ctx); err != nil {
 					return err
 				}
-				if controllerutils.HasTask(o.Shoot.Info.Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
+				if controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
 					return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskRestartCoreAddons)
 				}
 				return nil
@@ -378,7 +376,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		nginxLBReady = g.Add(flow.Task{
 			Name:         "Waiting until nginx ingress LoadBalancer is ready",
-			Fn:           flow.TaskFn(botanist.WaitUntilNginxIngressServiceIsReady).DoIf(gardencorev1beta1helper.NginxIngressEnabled(botanist.Shoot.Info.Spec.Addons)).SkipIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.WaitUntilNginxIngressServiceIsReady).DoIf(gardencorev1beta1helper.NginxIngressEnabled(botanist.Shoot.GetInfo().Spec.Addons)).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployManagedResourcesForAddons, initializeShootClients, waitUntilWorkerReady, ensureShootClusterIdentity),
 		})
 		deployIngressDomainDNSRecord = g.Add(flow.Task{
@@ -519,19 +517,19 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		ErrorContext:     errorContext,
 		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
 	}); err != nil {
-		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.Info.Name, err)
+		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
 	// ensure that shoot client is invalidated after it has been hibernated
 	if o.Shoot.HibernationEnabled {
-		if err := o.ClientMap.InvalidateClient(keys.ForShoot(o.Shoot.Info)); err != nil {
+		if err := o.ClientMap.InvalidateClient(keys.ForShoot(o.Shoot.GetInfo())); err != nil {
 			err = fmt.Errorf("failed to invalidate shoot client: %w", err)
 			return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 		}
 	}
 
-	o.Logger.Infof("Successfully reconciled Shoot %q", o.Shoot.Info.Name)
+	o.Logger.Infof("Successfully reconciled Shoot %q", o.Shoot.GetInfo().Name)
 	return nil
 }
 
@@ -539,7 +537,7 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 	// Check if shoot generation was changed mid-air, i.e., whether we need to wait for the next reconciliation until we
 	// can safely remove the task annotations to ensure all required tasks are executed.
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := o.K8sGardenClient.APIReader().Get(ctx, kutil.Key(o.Shoot.Info.Namespace, o.Shoot.Info.Name), shoot); err != nil {
+	if err := o.K8sGardenClient.APIReader().Get(ctx, kutil.Key(o.Shoot.GetInfo().Namespace, o.Shoot.GetInfo().Name), shoot); err != nil {
 		return err
 	}
 
@@ -547,7 +545,8 @@ func removeTaskAnnotation(ctx context.Context, o *operation.Operation, generatio
 		return nil
 	}
 
-	oldObj := o.Shoot.Info.DeepCopy()
-	controllerutils.RemoveTasks(o.Shoot.Info.Annotations, tasksToRemove...)
-	return o.K8sGardenClient.Client().Patch(ctx, o.Shoot.Info, client.MergeFrom(oldObj))
+	return o.Shoot.UpdateInfo(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+		controllerutils.RemoveTasks(shoot.Annotations, tasksToRemove...)
+		return nil
+	})
 }
