@@ -391,10 +391,11 @@ func (s *Shoot) GetDNSRecordComponentsForMigration() []component.DeployMigrateWa
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Shoot cluster. The
 // end result is '<subDomain>.<ingressPrefix>.<clusterDomain>'.
 func (s *Shoot) GetIngressFQDN(subDomain string) string {
-	if s.GetInfo().Spec.DNS == nil || s.GetInfo().Spec.DNS.Domain == nil {
+	shoot := s.GetInfo()
+	if shoot.Spec.DNS == nil || shoot.Spec.DNS.Domain == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s.%s.%s", subDomain, gutil.IngressPrefix, *(s.GetInfo().Spec.DNS.Domain))
+	return fmt.Sprintf("%s.%s.%s", subDomain, gutil.IngressPrefix, *shoot.Spec.DNS.Domain)
 }
 
 // GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
@@ -472,9 +473,10 @@ func (s *Shoot) ComputeOutOfClusterAPIServerAddress(apiServerAddress string, use
 
 // IPVSEnabled returns true if IPVS is enabled for the shoot.
 func (s *Shoot) IPVSEnabled() bool {
-	return s.GetInfo().Spec.Kubernetes.KubeProxy != nil &&
-		s.GetInfo().Spec.Kubernetes.KubeProxy.Mode != nil &&
-		*s.GetInfo().Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS
+	shoot := s.GetInfo()
+	return shoot.Spec.Kubernetes.KubeProxy != nil &&
+		shoot.Spec.Kubernetes.KubeProxy.Mode != nil &&
+		*shoot.Spec.Kubernetes.KubeProxy.Mode == gardencorev1beta1.ProxyModeIPVS
 }
 
 // IsLoggingEnabled return true if the Shoot controlplane logging is enabled

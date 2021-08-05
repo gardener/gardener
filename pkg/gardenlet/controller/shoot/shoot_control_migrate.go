@@ -145,7 +145,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation
 	var (
 		nonTerminatingNamespace = botanist.SeedNamespaceObject.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
-		wakeupRequired          = (o.Shoot.GetInfo().Status.IsHibernated || (!o.Shoot.GetInfo().Status.IsHibernated && o.Shoot.HibernationEnabled)) && cleanupShootResources
+		wakeupRequired          = (o.Shoot.GetInfo().Status.IsHibernated || o.Shoot.HibernationEnabled) && cleanupShootResources
 		defaultTimeout          = 10 * time.Minute
 		defaultInterval         = 5 * time.Second
 
