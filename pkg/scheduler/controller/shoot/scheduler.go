@@ -17,6 +17,7 @@ package shoot
 import (
 	"fmt"
 
+	"github.com/gardener/gardener/extensions/pkg/predicate"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 
@@ -55,7 +56,10 @@ func AddToManager(
 	}
 
 	shoot := &gardencorev1beta1.Shoot{}
-	if err := c.Watch(&source.Kind{Type: shoot}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err := c.Watch(&source.Kind{Type: shoot}, &handler.EnqueueRequestForObject{},
+		predicate.ShootIsUnassigned(),
+		predicate.Not(predicate.IsDeleting()),
+	); err != nil {
 		return fmt.Errorf("failed to create watcher for %T: %v", shoot, err)
 	}
 

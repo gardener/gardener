@@ -17,8 +17,6 @@ package predicate
 import (
 	"errors"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsinject "github.com/gardener/gardener/extensions/pkg/inject"
 	gardencore "github.com/gardener/gardener/pkg/api/core"
@@ -30,6 +28,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -303,6 +302,34 @@ func ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder runtime.Decoder
 		},
 		DeleteFunc: func(event event.DeleteEvent) bool {
 			return f(event.Object)
+		},
+	}
+}
+
+// ShootIsUnassigned is a predicate that returns true if a shoot is not assigned to a seed.
+func ShootIsUnassigned() predicate.Predicate {
+	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
+		if shoot, ok := e.Object.(*gardencorev1beta1.Shoot); ok {
+			return shoot.Spec.SeedName == nil
+		}
+		return false
+	}), CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
+}
+
+// Not inverts the passed predicate.
+func Not(p predicate.Predicate) predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(event event.CreateEvent) bool {
+			return !p.Create(event)
+		},
+		UpdateFunc: func(event event.UpdateEvent) bool {
+			return !p.Update(event)
+		},
+		GenericFunc: func(event event.GenericEvent) bool {
+			return !p.Generic(event)
+		},
+		DeleteFunc: func(event event.DeleteEvent) bool {
+			return !p.Delete(event)
 		},
 	}
 }

@@ -36,6 +36,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 var _ = Describe("Predicate", func() {
@@ -338,6 +339,86 @@ var _ = Describe("Predicate", func() {
 			}
 
 			gomega.Expect(mapper.Map(e)).To(gomega.BeTrue())
+		})
+	})
+
+	Describe("#ShootIsUnassigned", func() {
+		var (
+			shoot        *gardencorev1beta1.Shoot
+			createEvent  event.CreateEvent
+			updateEvent  event.UpdateEvent
+			deleteEvent  event.DeleteEvent
+			genericEvent event.GenericEvent
+		)
+
+		BeforeEach(func() {
+			shoot = &gardencorev1beta1.Shoot{
+				Spec: gardencorev1beta1.ShootSpec{},
+			}
+
+			createEvent = event.CreateEvent{
+				Object: shoot,
+			}
+			updateEvent = event.UpdateEvent{
+				ObjectOld: shoot,
+				ObjectNew: shoot,
+			}
+			deleteEvent = event.DeleteEvent{
+				Object: shoot,
+			}
+			genericEvent = event.GenericEvent{
+				Object: shoot,
+			}
+		})
+
+		Context("shoot is unassigned", func() {
+			It("should be true", func() {
+				predicate := ShootIsUnassigned()
+
+				gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
+				gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
+				gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
+				gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
+			})
+		})
+
+		Context("shoot is assigned", func() {
+			BeforeEach(func() {
+				shoot.Spec.SeedName = pointer.String("seed")
+			})
+
+			It("should be false", func() {
+				predicate := ShootIsUnassigned()
+
+				gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
+				gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeFalse())
+				gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeFalse())
+				gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeFalse())
+			})
+		})
+	})
+
+	Describe("#Not", func() {
+		It("should invert predicate", func() {
+			predicate := Not(predicate.Funcs{
+				CreateFunc: func(_ event.CreateEvent) bool {
+					return true
+				},
+				UpdateFunc: func(_ event.UpdateEvent) bool {
+					return true
+				},
+				GenericFunc: func(_ event.GenericEvent) bool {
+					return true
+				},
+				DeleteFunc: func(_ event.DeleteEvent) bool {
+					return true
+				},
+			})
+
+			gomega.Expect(predicate.Create(event.CreateEvent{})).To(gomega.BeFalse())
+			gomega.Expect(predicate.Update(event.UpdateEvent{})).To(gomega.BeFalse())
+			gomega.Expect(predicate.Delete(event.DeleteEvent{})).To(gomega.BeFalse())
+			gomega.Expect(predicate.Generic(event.GenericEvent{})).To(gomega.BeFalse())
 		})
 	})
 })
