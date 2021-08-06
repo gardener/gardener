@@ -55,7 +55,7 @@ type SchedulerConfiguration struct {
 	// settings for the proxy server to use when communicating with the apiserver.
 	ClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"clientConnection,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection LeaderElectionConfiguration `json:"leaderElection,omitempty"`
+	LeaderElection componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string `json:"logLevel,omitempty"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
@@ -107,16 +107,6 @@ type ShootSchedulerConfiguration struct {
 	ConcurrentSyncs int `json:"concurrentSyncs"`
 	// Strategy defines how seeds for shoots, that do not specify a seed explicitly, are being determined
 	Strategy CandidateDeterminationStrategy `json:"candidateDeterminationStrategy"`
-}
-
-// LeaderElectionConfiguration defines the configuration of leader election
-// clients for components that can run with leader election enabled.
-type LeaderElectionConfiguration struct {
-	componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:",inline"`
-	// LockObjectNamespace defines the namespace of the lock object.
-	LockObjectNamespace string `json:"lockObjectNamespace"`
-	// LockObjectName defines the lock object name.
-	LockObjectName string `json:"lockObjectName"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

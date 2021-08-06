@@ -70,17 +70,17 @@ func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.
 }
 
 // SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener controller manager.
-func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
+func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.LeaderElectionConfiguration) {
 	if obj.ResourceLock == "" {
 		obj.ResourceLock = resourcelock.LeasesResourceLock
 	}
 
-	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(&obj.LeaderElectionConfiguration)
+	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(obj)
 
-	if len(obj.LockObjectNamespace) == 0 {
-		obj.LockObjectNamespace = SchedulerDefaultLockObjectNamespace
+	if len(obj.ResourceNamespace) == 0 {
+		obj.ResourceNamespace = SchedulerDefaultLockObjectNamespace
 	}
-	if len(obj.LockObjectName) == 0 {
-		obj.LockObjectName = SchedulerDefaultLockObjectName
+	if len(obj.ResourceName) == 0 {
+		obj.ResourceName = SchedulerDefaultLockObjectName
 	}
 }

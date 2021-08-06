@@ -136,7 +136,7 @@ func runCommand(ctx context.Context, opts *Options) error {
 		MetricsBindAddress:         getAddress(config.MetricsServer),
 		HealthProbeBindAddress:     getHealthAddress(config),
 		LeaderElection:             config.LeaderElection.LeaderElect,
-		LeaderElectionID:           "gardener-scheduler-leader-election",
+		LeaderElectionID:           config.LeaderElection.ResourceName,
 		LeaderElectionNamespace:    config.LeaderElection.ResourceNamespace,
 		LeaderElectionResourceLock: config.LeaderElection.ResourceLock,
 		Logger:                     zapLogr,

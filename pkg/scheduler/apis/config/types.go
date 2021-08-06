@@ -56,7 +56,7 @@ type SchedulerConfiguration struct {
 	// settings for the proxy server to use when communicating with the gardener-apiserver.
 	ClientConnection componentbaseconfig.ClientConnectionConfiguration
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection LeaderElectionConfiguration
+	LeaderElection componentbaseconfig.LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
@@ -117,16 +117,6 @@ type ShootSchedulerConfiguration struct {
 	ConcurrentSyncs int
 	// Strategy defines how seeds for shoots, that do not specify a seed explicitly, are being determined
 	Strategy CandidateDeterminationStrategy
-}
-
-// LeaderElectionConfiguration defines the configuration of leader election
-// clients for components that can run with leader election enabled.
-type LeaderElectionConfiguration struct {
-	componentbaseconfig.LeaderElectionConfiguration
-	// LockObjectNamespace defines the namespace of the lock object.
-	LockObjectNamespace string
-	// LockObjectName defines the lock object name.
-	LockObjectName string
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.
