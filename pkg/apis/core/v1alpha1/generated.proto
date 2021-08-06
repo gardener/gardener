@@ -1630,6 +1630,10 @@ message ProjectStatus {
   // because it's stale/unused.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time staleAutoDeleteTimestamp = 4;
+
+  // LastActivityTimestamp contains the timestamp from the last activity performed in this project.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time lastActivityTimestamp = 5;
 }
 
 // ProjectTolerations contains the tolerations for taints on seed clusters.

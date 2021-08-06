@@ -16,6 +16,7 @@ package project
 
 import (
 	"context"
+	"reflect"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -45,6 +46,19 @@ func (c *Controller) projectUpdate(oldObj, newObj interface{}) {
 	newProject, ok := newObj.(*gardencorev1beta1.Project)
 	if !ok {
 		return
+	}
+	oldProject, ok := oldObj.(*gardencorev1beta1.Project)
+	if !ok {
+		return
+	}
+
+	if reflect.DeepEqual(newProject.Status.LastActivityTimestamp, oldProject.Status.LastActivityTimestamp) {
+		key, err := cache.MetaNamespaceKeyFunc(newObj)
+		if err != nil {
+			logger.Logger.Errorf("Couldn't get key for object %+v: %v", newObj, err)
+			return
+		}
+		c.projectStaleQueue.Add(key)
 	}
 
 	if newProject.Generation == newProject.Status.ObservedGeneration {

@@ -96,6 +96,9 @@ type ProjectStatus struct {
 	// because it's stale/unused.
 	// +optional
 	StaleAutoDeleteTimestamp *metav1.Time `json:"staleAutoDeleteTimestamp,omitempty" protobuf:"bytes,4,opt,name=staleAutoDeleteTimestamp"`
+	// LastActivityTimestamp contains the timestamp from the last activity performed in this project.
+	// +optional
+	LastActivityTimestamp *metav1.Time `json:"lastActivityTimestamp,omitempty" protobuf:"bytes,5,opt,name=lastActivityTimestamp"`
 }
 
 // ProjectMember is a member of a project.

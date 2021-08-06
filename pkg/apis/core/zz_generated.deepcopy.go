@@ -2882,6 +2882,10 @@ func (in *ProjectStatus) DeepCopyInto(out *ProjectStatus) {
 		in, out := &in.StaleAutoDeleteTimestamp, &out.StaleAutoDeleteTimestamp
 		*out = (*in).DeepCopy()
 	}
+	if in.LastActivityTimestamp != nil {
+		in, out := &in.LastActivityTimestamp, &out.LastActivityTimestamp
+		*out = (*in).DeepCopy()
+	}
 	return
 }
 

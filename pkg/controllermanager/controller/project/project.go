@@ -41,14 +41,16 @@ import (
 type Controller struct {
 	gardenClient client.Client
 
-	projectReconciler      reconcile.Reconciler
-	projectStaleReconciler reconcile.Reconciler
-	hasSyncedFuncs         []cache.InformerSynced
+	projectReconciler              reconcile.Reconciler
+	projectStaleReconciler         reconcile.Reconciler
+	projectShootActivityReconciler reconcile.Reconciler
+	hasSyncedFuncs                 []cache.InformerSynced
 
-	projectQueue           workqueue.RateLimitingInterface
-	projectStaleQueue      workqueue.RateLimitingInterface
-	workerCh               chan int
-	numberOfRunningWorkers int
+	projectQueue              workqueue.RateLimitingInterface
+	projectStaleQueue         workqueue.RateLimitingInterface
+	projectShootActivityQueue workqueue.RateLimitingInterface
+	workerCh                  chan int
+	numberOfRunningWorkers    int
 }
 
 // NewProjectController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
@@ -76,14 +78,20 @@ func NewProjectController(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get RoleBinding Informer: %w", err)
 	}
+	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
+	}
 
 	projectController := &Controller{
-		gardenClient:           gardenClient.Client(),
-		projectReconciler:      NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder),
-		projectStaleReconciler: NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client()),
-		projectQueue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
-		projectStaleQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
-		workerCh:               make(chan int),
+		gardenClient:                   gardenClient.Client(),
+		projectReconciler:              NewProjectReconciler(logger.Logger, config.Controllers.Project, gardenClient, recorder),
+		projectStaleReconciler:         NewProjectStaleReconciler(logger.Logger, config.Controllers.Project, gardenClient.Client()),
+		projectShootActivityReconciler: NewActivityReconciler(logger.Logger, gardenClient.Client()),
+		projectQueue:                   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
+		projectStaleQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Stale"),
+		projectShootActivityQueue:      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project Activity"),
+		workerCh:                       make(chan int),
 	}
 
 	projectInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -97,9 +105,14 @@ func NewProjectController(
 		DeleteFunc: func(obj interface{}) { projectController.roleBindingDelete(ctx, obj) },
 	})
 
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: projectController.updateShootActivity,
+	})
+
 	projectController.hasSyncedFuncs = append(projectController.hasSyncedFuncs,
 		projectInformer.HasSynced,
 		roleBindingInformer.HasSynced,
+		shootInformer.HasSynced,
 	)
 
 	return projectController, nil
@@ -127,12 +140,14 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.projectReconciler, &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.projectStaleQueue, "Project Stale", c.projectStaleReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.projectShootActivityQueue, "Project Activity", c.projectShootActivityReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.projectQueue.ShutDown()
 	c.projectStaleQueue.ShutDown()
+	c.projectShootActivityQueue.ShutDown()
 
 	for {
 		if c.projectQueue.Len() == 0 && c.projectStaleQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
