@@ -91,7 +91,7 @@ if [ -z "${SEED_KUBECONFIG:-}" ]; then
   if [ -z "$seedKubeconfigName" ] || [ -z "$seedKubeconfigNamespace" ]; then
     echo "Seed $SEED_NAME does not have a .spec.secretRef with name and namespace set, pointing to a Secret"
     echo "containing the kubeconfig for that seed. Please either update your seed (see docs/development/local_setup.md)"
-    echo "or provide the kuebconfig explicitly via the SEED_KUBECONFIG environment variable."
+    echo "or provide the kubeconfig explicitly via the SEED_KUBECONFIG environment variable."
     exit 1
   fi
 
@@ -101,28 +101,36 @@ if [ -z "${SEED_KUBECONFIG:-}" ]; then
 fi
 
 # generate temporary chart values
-GARDENLET_CHARTS_DIR=charts/gardener/gardenlet
+GARDENLET_CHARTS_DIR=$REPO_ROOT/charts/gardener/gardenlet
 GARDENLET_CHARTS_RUNTIME_DIR="$GARDENLET_CHARTS_DIR/charts/runtime"
-tmpConfig="$DEV_DIR/20-componentconfig-gardenlet-seed-$SEED_NAME-tmp.yaml"
-chartValues="$DEV_DIR/gardenlet-charts-values.yaml"
-$YQ eval 'del(.apiVersion, .kind)' "$configFile" | $YQ eval '{"config": .}' - > "$tmpConfig"
-$YQ eval-all 'select(fi==0).global.gardenlet * select(fi==1)' "$GARDENLET_CHARTS_DIR/values.yaml" "$tmpConfig" | $YQ eval '{"global": {"gardenlet": . }}' - > "$chartValues"
-rm "$tmpConfig"
+tmpConfig="${configFile}.tmp"
+gardenletChartValues="$DEV_DIR/gardenlet-charts-values.yaml"
+$YQ eval 'del(.apiVersion, .kind)' "$configFile" |
+  $YQ eval '{"config": .}' - > "$tmpConfig"
+$YQ eval-all 'select(fi==0).global.gardenlet * select(fi==1)' "$GARDENLET_CHARTS_DIR/values.yaml" "$tmpConfig" |
+  $YQ eval '{"global": {"gardenlet": . }}' - > "$gardenletChartValues"
+rm -f "$tmpConfig"
+
+# garden namespace is required for the gardenlet leader election, service account, roles and role bindings.
+kubectl   --kubeconfig="$SEED_KUBECONFIG" get    namespace garden &>/dev/null || \
+  kubectl --kubeconfig="$SEED_KUBECONFIG" create namespace garden
 
 # apply RBAC resources in seed cluster
-helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -f "$chartValues" | $YQ eval 'select(.apiVersion=="rbac.authorization.k8s.io/v1")' - |
+helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -f "$gardenletChartValues" |
+  $YQ eval 'select(.apiVersion=="rbac.authorization.k8s.io/v1")' - |
   kubectl --kubeconfig="$SEED_KUBECONFIG" auth reconcile --remove-extra-permissions --remove-extra-subjects -f -
-helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/serviceaccount.yaml -f "$chartValues" |
+helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/serviceaccount.yaml -f "$gardenletChartValues" |
   kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
-rm "$chartValues"
+rm -f "$gardenletChartValues"
 
-# backup gardenlet seed kubeconfig
-cp "$SEED_KUBECONFIG" "$DEV_DIR/gardenlet-seed-$SEED_NAME-original.conf"
+# keep original seed kubeconfig as is
+SEED_KUBECONFIG_GARDENLET_TOKEN="$DEV_DIR/gardenlet-seed-$SEED_NAME-token.conf"
+cp "$SEED_KUBECONFIG" "$SEED_KUBECONFIG_GARDENLET_TOKEN"
 
-# replace the token in gardenlet seed kubeconfig with the one from the gardenlet serviceaccount
-secretName=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get serviceaccount gardenlet -o jsonpath='{.secrets[0].name}')
-token=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get secret "$secretName" -o jsonpath='{.data.token}' | base64 --decode)
-TOKEN_VALUE="$token" $YQ eval --inplace '.users[0].user.token = strenv(TOKEN_VALUE)' "$SEED_KUBECONFIG"
+# use the token of the gardenlet service account to authenticated against the seed API
+token=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get secret $(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get serviceaccount gardenlet -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 --decode)
+user=$(kubectl --kubeconfig="$SEED_KUBECONFIG" config view --raw --minify -o json | $YQ eval '.["current-context"] as $currentContext | .contexts[] | select(.name == $currentContext) | .context.user' -)
+USER_VALUE=$user TOKEN_VALUE=$token $YQ eval --inplace '.users = [{"name": strenv(USER_VALUE), "user": {"token": strenv(TOKEN_VALUE)}}]' $SEED_KUBECONFIG_GARDENLET_TOKEN
 
 file_imagevector_overwrite="$(mktemp_imagevector_overwrite github.com/gardener/gardener "$REPO_ROOT" "$REPO_ROOT"/charts)"
 if [ ! -f "$file_imagevector_overwrite" ]; then
@@ -130,13 +138,9 @@ if [ ! -f "$file_imagevector_overwrite" ]; then
 else
   trap cleanup_imagevector_overwrite EXIT
 
-  # garden namespace is required for the gardenlet leader election
-  kubectl   --kubeconfig="$SEED_KUBECONFIG" get    namespace garden &>/dev/null || \
-    kubectl --kubeconfig="$SEED_KUBECONFIG" create namespace garden
-
   echo "Starting gardenlet for seed $SEED_NAME..."
 
-  KUBECONFIG="$SEED_KUBECONFIG" \
+  KUBECONFIG="${SEED_KUBECONFIG_GARDENLET_TOKEN}" \
   GARDEN_KUBECONFIG="$GARDEN_KUBECONFIG" \
   IMAGEVECTOR_OVERWRITE="$file_imagevector_overwrite" \
   GO111MODULE=on \
