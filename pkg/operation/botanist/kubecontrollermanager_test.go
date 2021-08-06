@@ -35,6 +35,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -201,8 +202,33 @@ var _ = Describe("KubeControllerManager", func() {
 
 				It("hibernation enabled", func() {
 					botanist.Shoot.HibernationEnabled = true
-
+					kubernetesClient.EXPECT().Client().Return(c)
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
+						obj.Spec.Replicas = pointer.Int32(0)
+						return nil
+					})
 					kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
+
+					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
+				})
+
+				It("hibernation enabled and kube-controller-manager deployment does not exist", func() {
+					botanist.Shoot.HibernationEnabled = true
+					kubernetesClient.EXPECT().Client().Return(c)
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(apierrors.NewNotFound(appsv1.Resource("Deployment"), "kube-controller-manager"))
+					kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
+
+					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
+				})
+
+				It("hibernation enabled and kube-controller-manager is already scaled up", func() {
+					botanist.Shoot.HibernationEnabled = true
+					kubernetesClient.EXPECT().Client().Return(c)
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
+						obj.Spec.Replicas = pointer.Int32(1)
+						return nil
+					})
+					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
 
 					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
 				})
