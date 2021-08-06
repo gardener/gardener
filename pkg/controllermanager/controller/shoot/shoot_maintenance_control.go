@@ -315,7 +315,7 @@ func hasMaintainNowAnnotation(shoot *gardencorev1beta1.Shoot) bool {
 
 func filterForCRI(machineImageFromCloudProfile *gardencorev1beta1.MachineImage, workerCRI *gardencorev1beta1.CRI) *gardencorev1beta1.MachineImage {
 	if workerCRI == nil {
-		return machineImageFromCloudProfile
+		return filterForCRI(machineImageFromCloudProfile, &gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
 	}
 
 	filteredMachineImages := gardencorev1beta1.MachineImage{Name: machineImageFromCloudProfile.Name,

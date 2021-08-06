@@ -128,12 +128,14 @@ var _ = Describe("Shoot Maintenance", func() {
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 										Version: "1.0.0",
 									},
+									CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
 								},
 								{
 									ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 										Version:        "1.1.1",
 										ExpirationDate: &expirationDateInTheFuture,
 									},
+									CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
 								},
 							},
 						},
@@ -179,12 +181,12 @@ var _ = Describe("Shoot Maintenance", func() {
 			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.1.1")
 		})
 
-		It("updates shoot worker machine image to newest supported version, worker.cri=nil, MachineImageVersion.cri!=nil", func() {
+		It("should treat workers with `cri: nil` like `cri.name: docker` and not update if `docker` is not explicitly supported by the machine image", func() {
 			cloudProfile.Spec.MachineImages[0].Versions[1].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameContainerD}}
 
 			_, err := MaintainMachineImages(testlogger, shoot, cloudProfile)
 			Expect(err).NotTo(HaveOccurred())
-			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.1.1")
+			assertWorkerMachineImageVersion(&shoot.Spec.Provider.Workers[0], "CoreOs", "1.0.0")
 		})
 
 		It("should determine that the shoot worker machine images must be maintained - multiple worker pools", func() {
@@ -195,6 +197,7 @@ var _ = Describe("Shoot Maintenance", func() {
 						ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 							Version: "1.0.0",
 						},
+						CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
 					},
 				},
 			})
@@ -250,11 +253,13 @@ var _ = Describe("Shoot Maintenance", func() {
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 								Version: "1.0.1",
 							},
+							CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
 						},
 						{
 							ExpirableVersion: gardencorev1beta1.ExpirableVersion{
 								Version: highestVersion,
 							},
+							CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
 						},
 					},
 				},
@@ -329,6 +334,7 @@ var _ = Describe("Shoot Maintenance", func() {
 								Version:        "1.1.1",
 								ExpirationDate: &expirationDateInTheFuture,
 							},
+							CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
 						},
 					},
 				},
@@ -346,6 +352,7 @@ var _ = Describe("Shoot Maintenance", func() {
 					Version:        "1.1.2",
 					Classification: &previewClassification,
 				},
+				CRI: []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}},
 			}
 			cloudProfile.Spec.MachineImages[0].Versions = append(cloudProfile.Spec.MachineImages[0].Versions, highestExpiredVersion)
 			shoot.Spec.Provider.Workers[0].Machine.Image.Version = &highestExpiredVersion.Version
