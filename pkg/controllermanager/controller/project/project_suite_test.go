@@ -33,7 +33,7 @@ type fakeQueue struct {
 }
 
 func (f *fakeQueue) Add(item interface{}) {
-	f.items = append(f.items, item.(interface{}))
+	f.items = append(f.items, item)
 }
 
 func (f *fakeQueue) Len() int {
