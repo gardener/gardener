@@ -56,6 +56,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ManagedSeed).NotTo(BeNil())
 			Expect(obj.LeaderElection).NotTo(BeNil())
 			Expect(obj.LogLevel).To(PointTo(Equal("info")))
+			Expect(obj.LogFormat).To(PointTo(Equal("json")))
 			Expect(obj.KubernetesLogLevel).To(PointTo(Equal(klog.Level(0))))
 			Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
 			Expect(obj.Server.HTTPS.Port).To(Equal(2720))
