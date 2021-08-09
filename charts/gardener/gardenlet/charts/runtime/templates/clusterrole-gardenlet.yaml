@@ -358,7 +358,7 @@ rules:
   - get
   - watch
   - update
-# Istio releated rules that are required even when ManagedIstio and APIServerSNI feature gates are not enabled due to clean up logic.
+# Istio related rules that are required even when ManagedIstio and APIServerSNI feature gates are not enabled due to clean up logic.
 - apiGroups:
   - networking.istio.io
   resources:

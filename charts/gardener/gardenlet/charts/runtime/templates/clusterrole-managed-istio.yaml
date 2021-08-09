@@ -1,7 +1,3 @@
-{{- if .Values.global.gardenlet.enabled }}
-{{- if .Values.global.gardenlet.config.featureGates }}
-{{- if .Values.global.gardenlet.config.featureGates.ManagedIstio }}
-# Istio releated rules that are required only when ManagedIstio feature gate is enabled.
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
@@ -14,6 +10,10 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 rules:
+{{- if .Values.global.gardenlet.enabled }}
+{{- if .Values.global.gardenlet.config.featureGates }}
+{{- if .Values.global.gardenlet.config.featureGates.ManagedIstio }}
+# Istio related rules that are required only when ManagedIstio feature gate is enabled.
 - apiGroups:
   - networking.istio.io
   resources:
