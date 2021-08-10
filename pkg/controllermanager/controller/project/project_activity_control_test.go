@@ -99,7 +99,7 @@ var _ = Describe("Project Activity Reconcile", func() {
 			},
 		}
 
-		logger.Logger = logger.NewLogger("info")
+		logger.Logger = logger.NewLogger("info", "")
 		ctrl = gomock.NewController(GinkgoT())
 		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 		reconciler = NewActivityReconciler(logger.NewNopLogger(), k8sGardenRuntimeClient)
