@@ -18,6 +18,7 @@ import (
 	"time"
 
 	. "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/logger"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -85,6 +86,9 @@ var _ = Describe("Defaults", func() {
 
 			Expect(obj.Controllers.ShootReference).NotTo(BeNil())
 			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).To(Equal(5))
+
+			Expect(obj.LogLevel).To(Equal(logger.InfoLevel))
+			Expect(obj.LogFormat).To(Equal(logger.FormatJSON))
 		})
 
 		It("should correctly default the project quota configuration", func() {

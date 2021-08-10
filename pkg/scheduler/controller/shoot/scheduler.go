@@ -17,8 +17,8 @@ package shoot
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/predicate"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/predicate"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -37,19 +37,16 @@ func AddToManager(
 	mgr manager.Manager,
 	config *config.ShootSchedulerConfiguration,
 ) error {
-	logger := mgr.GetLogger()
-
-	reconciler := &reconciler{
-		config:       config,
-		logger:       logger,
-		gardenClient: mgr.GetClient(),
-		recorder:     mgr.GetEventRecorderFor(ControllerName),
-	}
-
 	ctrlOptions := controller.Options{
-		Reconciler:              reconciler,
+		Reconciler: &reconciler{
+			config:       config,
+			logger:       mgr.GetLogger().WithName(ControllerName),
+			gardenClient: mgr.GetClient(),
+			recorder:     mgr.GetEventRecorderFor(ControllerName),
+		},
 		MaxConcurrentReconciles: config.ConcurrentSyncs,
 	}
+
 	c, err := controller.New(ControllerName, mgr, ctrlOptions)
 	if err != nil {
 		return err

@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenpredicate "github.com/gardener/gardener/pkg/predicate"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/go-logr/logr"
@@ -146,12 +147,8 @@ func LastOperationNotSuccessful() predicate.Predicate {
 	}
 }
 
-// IsDeleting is a predicate for objects having a deletion timestamp.
-func IsDeleting() predicate.Predicate {
-	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
-		return e.Object.GetDeletionTimestamp() != nil
-	}), CreateTrigger, UpdateNewTrigger, GenericTrigger)
-}
+// IsDeleting is an alias for a predicate which checks if the passed object has a deletion timestamp.
+var IsDeleting = gardenpredicate.IsDeleting
 
 // AddTypePredicate returns a new slice which contains a type predicate and the given `predicates`.
 // if more than one extensionTypes is given all given types are or combined
@@ -302,34 +299,6 @@ func ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder runtime.Decoder
 		},
 		DeleteFunc: func(event event.DeleteEvent) bool {
 			return f(event.Object)
-		},
-	}
-}
-
-// ShootIsUnassigned is a predicate that returns true if a shoot is not assigned to a seed.
-func ShootIsUnassigned() predicate.Predicate {
-	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
-		if shoot, ok := e.Object.(*gardencorev1beta1.Shoot); ok {
-			return shoot.Spec.SeedName == nil
-		}
-		return false
-	}), CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
-}
-
-// Not inverts the passed predicate.
-func Not(p predicate.Predicate) predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(event event.CreateEvent) bool {
-			return !p.Create(event)
-		},
-		UpdateFunc: func(event event.UpdateEvent) bool {
-			return !p.Update(event)
-		},
-		GenericFunc: func(event event.GenericEvent) bool {
-			return !p.Generic(event)
-		},
-		DeleteFunc: func(event event.DeleteEvent) bool {
-			return !p.Delete(event)
 		},
 	}
 }

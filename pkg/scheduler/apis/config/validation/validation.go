@@ -15,7 +15,7 @@
 package validation
 
 import (
-	"fmt"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/gardener/gardener/pkg/logger"
 	schedulerapi "github.com/gardener/gardener/pkg/scheduler/apis/config"
@@ -23,32 +23,40 @@ import (
 )
 
 // ValidateConfiguration validates the configuration.
-func ValidateConfiguration(config *schedulerapi.SchedulerConfiguration) error {
-	if err := validateStrategy(config.Schedulers.Shoot.Strategy); err != nil {
-		return fmt.Errorf("invalid seed determination strategy: %w", err)
-	}
+func ValidateConfiguration(config *schedulerapi.SchedulerConfiguration) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateStrategy(config.Schedulers.Shoot.Strategy, field.NewPath("schedulers", "shoot", "strategy"))...)
 
 	if config.LogLevel != "" {
 		if !sets.NewString(logger.AllLogLevels...).Has(config.LogLevel) {
-			return fmt.Errorf("invalid log level %q, valid levels are %v", config.LogLevel, logger.AllLogLevels)
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), config.LogLevel, logger.AllLogLevels))
 		}
 	}
 
 	if config.LogFormat != "" {
 		if !sets.NewString(logger.AllLogFormats...).Has(config.LogFormat) {
-			return fmt.Errorf("invalid log format %q, valid formats are %v", config.LogFormat, logger.AllLogFormats)
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), config.LogFormat, logger.AllLogFormats))
 		}
 	}
 
-	return nil
+	return allErrs
 }
 
-func validateStrategy(strategy schedulerapi.CandidateDeterminationStrategy) error {
+func validateStrategy(strategy schedulerapi.CandidateDeterminationStrategy, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs             = field.ErrorList{}
+		supportedStrategies []string
+	)
+
 	for _, s := range schedulerapi.Strategies {
+		supportedStrategies = append(supportedStrategies, string(s))
 		if s == strategy {
-			return nil
+			return allErrs
 		}
 	}
 
-	return fmt.Errorf("strategy %q does not exist, valid strategies are %v", strategy, schedulerapi.Strategies)
+	allErrs = append(allErrs, field.NotSupported(fldPath, strategy, supportedStrategies))
+
+	return allErrs
 }

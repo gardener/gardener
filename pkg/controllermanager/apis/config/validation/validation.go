@@ -15,8 +15,6 @@
 package validation
 
 import (
-	"fmt"
-
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
@@ -30,13 +28,13 @@ func ValidateControllerManagerConfiguration(conf *config.ControllerManagerConfig
 
 	if conf.LogLevel != "" {
 		if !sets.NewString(logger.AllLogLevels...).Has(conf.LogLevel) {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("logLevel"), conf, fmt.Sprintf("invalid log level, valid levels are %v", logger.AllLogLevels)))
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), conf.LogLevel, logger.AllLogLevels))
 		}
 	}
 
 	if conf.LogFormat != "" {
 		if !sets.NewString(logger.AllLogFormats...).Has(conf.LogFormat) {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("logFormat"), conf, fmt.Sprintf("invalid log format, valid formats are %v", logger.AllLogFormats)))
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), conf.LogLevel, logger.AllLogFormats))
 		}
 	}
 

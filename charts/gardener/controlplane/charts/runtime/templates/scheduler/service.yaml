@@ -16,12 +16,8 @@ spec:
     role: scheduler
     release: {{ .Release.Name }}
   ports:
-  - name: http
-    protocol: TCP
-    port: 80
-    targetPort: {{ required ".Values.global.scheduler.config.healthServer.http.port is required" .Values.global.scheduler.config.healthServer.http.port }}
   - name: metrics
     protocol: TCP
     port: 9090
-    targetPort: {{ required ".Values.global.scheduler.config.metricsServer.http.port is required" .Values.global.scheduler.config.metricsServer.http.port }}
+    targetPort: {{ required ".Values.global.scheduler.config.server.metrics.port is required" .Values.global.scheduler.config.server.metrics.port }}
 {{- end }}

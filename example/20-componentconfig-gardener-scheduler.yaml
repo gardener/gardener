@@ -11,16 +11,16 @@ leaderElection:
   retryPeriod: 2s
   resourceLock: leases
   resourceNamespace: garden
+  resourceName: gardener-scheduler-leader-election
 logLevel: info
 logFormat: text
-healthServer:
-  http:
+server:
+  healthProbes:
     bindAddress: 0.0.0.0
     port: 10251
-metricsServer:
-  http:
+  metrics:
     bindAddress: 0.0.0.0
-    port: 19251
+    port: 19252
 #schedulers:
 #  backupBucket:
 #    concurrentSyncs: 5 # defaults to 5

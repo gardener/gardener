@@ -63,14 +63,6 @@ type SchedulerConfiguration struct {
 	// Server defines the configuration of the HTTP server. This is deprecated in favor of
 	// HealthServer.
 	Server ServerConfiguration `json:"server,omitempty"`
-	// HealthServer defines the configuration of the HTTP server providing the health & alive
-	// endpoints.
-	// +optional
-	HealthServer *ServerConfiguration `json:"healthServer,omitempty"`
-	// MetricsServer defines the configuration of the HTTP server that provides the /metrics
-	// endpoint.
-	// +optional
-	MetricsServer *ServerConfiguration `json:"metricsServer,omitempty"`
 	// Scheduler defines the configuration of the schedulers.
 	Schedulers SchedulerControllerConfiguration `json:"schedulers"`
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
@@ -111,8 +103,12 @@ type ShootSchedulerConfiguration struct {
 
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
-	// HTTP is the configuration for the HTTP server.
-	HTTP Server `json:"http"`
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	// +optional
+	HealthProbes *Server `json:"healthProbes,omitempty"`
+	// Metrics is the configuration for serving the metrics endpoint.
+	// +optional
+	Metrics *Server `json:"metrics,omitempty"`
 }
 
 // Server contains information for HTTP(S) server configuration.

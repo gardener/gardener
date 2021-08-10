@@ -59,6 +59,16 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	logger := r.logger.WithValues("shoot", client.ObjectKeyFromObject(shoot))
 
+	if shoot.Spec.SeedName != nil {
+		logger.Info("Shoot already scheduled onto seed, nothing left to do", "seed", *shoot.Spec.SeedName)
+		return reconcile.Result{}, nil
+	}
+
+	if shoot.DeletionTimestamp != nil {
+		logger.Info("Ignoring shoot because it has been marked for deletion")
+		return reconcile.Result{}, nil
+	}
+
 	// If no Seed is referenced, we try to determine an adequate one.
 	seed, err := determineSeed(ctx, r.gardenClient, shoot, r.config.Strategy)
 	if err != nil {

@@ -51,13 +51,13 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 
 	if cfg.LogLevel != nil {
 		if !sets.NewString(logger.AllLogLevels...).Has(*cfg.LogLevel) {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("logLevel"), cfg, fmt.Sprintf("invalid log level, valid levels are %v", logger.AllLogLevels)))
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), cfg.LogLevel, logger.AllLogLevels))
 		}
 	}
 
 	if cfg.LogFormat != nil {
 		if !sets.NewString(logger.AllLogFormats...).Has(*cfg.LogFormat) {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("logFormat"), cfg, fmt.Sprintf("invalid log format, valid formats are %v", logger.AllLogFormats)))
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), cfg.LogFormat, logger.AllLogFormats))
 		}
 	}
 

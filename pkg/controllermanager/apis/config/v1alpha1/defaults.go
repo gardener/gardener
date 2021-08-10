@@ -21,6 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 func addDefaultingFuncs(scheme *runtime.Scheme) error {
@@ -161,6 +163,14 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 				Duration: 30 * time.Minute,
 			},
 		}
+	}
+
+	if obj.LogLevel == "" {
+		obj.LogLevel = logger.InfoLevel
+	}
+
+	if obj.LogFormat == "" {
+		obj.LogFormat = logger.FormatJSON
 	}
 }
 

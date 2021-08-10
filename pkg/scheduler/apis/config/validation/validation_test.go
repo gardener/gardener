@@ -17,7 +17,9 @@ package validation
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	schedulerapi "github.com/gardener/gardener/pkg/scheduler/apis/config"
 )
@@ -42,7 +44,7 @@ var _ = Describe("gardener-scheduler", func() {
 				sameRegionConfiguration.Schedulers.Shoot.Strategy = schedulerapi.SameRegion
 				err := ValidateConfiguration(&sameRegionConfiguration)
 
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(BeEmpty())
 			})
 
 			It("should pass because the Gardener Scheduler Configuration with the 'Minimal Distance' Strategy is a valid configuration", func() {
@@ -50,12 +52,12 @@ var _ = Describe("gardener-scheduler", func() {
 				minimalDistanceConfiguration.Schedulers.Shoot.Strategy = schedulerapi.MinimalDistance
 				err := ValidateConfiguration(&minimalDistanceConfiguration)
 
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(BeEmpty())
 			})
 
 			It("should pass because the Gardener Scheduler Configuration with the default Strategy is a valid configuration", func() {
 				err := ValidateConfiguration(&defaultAdmissionConfiguration)
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(BeEmpty())
 			})
 
 			It("should fail because the Gardener Scheduler Configuration is invalid", func() {
@@ -63,7 +65,10 @@ var _ = Describe("gardener-scheduler", func() {
 				invalidConfiguration.Schedulers.Shoot.Strategy = "invalidStrategy"
 				err := ValidateConfiguration(&invalidConfiguration)
 
-				Expect(err).To(HaveOccurred())
+				Expect(err).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("schedulers.shoot.strategy"),
+				}))))
 			})
 		})
 	})

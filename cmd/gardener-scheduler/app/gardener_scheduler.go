@@ -36,13 +36,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/component-base/version/verflag"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
 // Options has all the context and parameters needed to run a GardenerScheduler.
 type Options struct {
 	// ConfigFile is the location of the GardenerScheduler's configuration file.
 	ConfigFile string
-	config     *config.SchedulerConfiguration
 }
 
 // AddFlags adds flags for a specific Scheduler to the specified FlagSet.
@@ -64,9 +64,7 @@ func (o *Options) validate(args []string) error {
 
 // NewCommandStartGardenerScheduler creates a *cobra.Command object with default parameters
 func NewCommandStartGardenerScheduler() *cobra.Command {
-	opts := &Options{
-		config: new(config.SchedulerConfiguration),
-	}
+	opts := &Options{}
 
 	cmd := &cobra.Command{
 		Use:   "gardener-scheduler",
@@ -92,23 +90,23 @@ func NewCommandStartGardenerScheduler() *cobra.Command {
 
 func runCommand(ctx context.Context, opts *Options) error {
 	// Load config file
-	config, err := configloader.LoadFromFile(opts.ConfigFile)
+	cfg, err := configloader.LoadFromFile(opts.ConfigFile)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
 	// Validate the configuration
-	if err := validation.ValidateConfiguration(config); err != nil {
-		return fmt.Errorf("configuration is invalid: %w", err)
+	if errs := validation.ValidateConfiguration(cfg); len(errs) > 0 {
+		return fmt.Errorf("configuration is invalid: %v", errs)
 	}
 
 	// Add feature flags
-	if err := schedulerfeatures.FeatureGate.SetFromMap(config.FeatureGates); err != nil {
+	if err := schedulerfeatures.FeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
 		return fmt.Errorf("failed to set feature gates: %w", err)
 	}
 
 	// Initialize logger
-	zapLogger, err := logger.NewZapLogger(config.LogLevel, config.LogFormat)
+	zapLogger, err := logger.NewZapLogger(cfg.LogLevel, cfg.LogFormat)
 	if err != nil {
 		return fmt.Errorf("failed to init logger: %w", err)
 	}
@@ -122,27 +120,31 @@ func runCommand(ctx context.Context, opts *Options) error {
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
-		config.ClientConnection.Kubeconfig = kubeconfig
+		cfg.ClientConnection.Kubeconfig = kubeconfig
 	}
 
 	// Prepare REST config
-	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&config.ClientConnection, nil)
+	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create Kubernetes REST configuration: %w", err)
 	}
 
 	// Setup controller-runtime manager
 	mgr, err := manager.New(restCfg, manager.Options{
-		MetricsBindAddress:         getAddress(config.MetricsServer),
-		HealthProbeBindAddress:     getHealthAddress(config),
-		LeaderElection:             config.LeaderElection.LeaderElect,
-		LeaderElectionID:           config.LeaderElection.ResourceName,
-		LeaderElectionNamespace:    config.LeaderElection.ResourceNamespace,
-		LeaderElectionResourceLock: config.LeaderElection.ResourceLock,
+		MetricsBindAddress:         getAddress(cfg.Server.Metrics),
+		HealthProbeBindAddress:     getAddress(cfg.Server.HealthProbes),
+		LeaderElection:             cfg.LeaderElection.LeaderElect,
+		LeaderElectionID:           cfg.LeaderElection.ResourceName,
+		LeaderElectionNamespace:    cfg.LeaderElection.ResourceNamespace,
+		LeaderElectionResourceLock: cfg.LeaderElection.ResourceLock,
 		Logger:                     zapLogr,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create controller manager: %w", err)
+	}
+
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		return err
 	}
 
 	// Add APIs
@@ -151,7 +153,7 @@ func runCommand(ctx context.Context, opts *Options) error {
 	}
 
 	// Add controllers
-	if err := shootcontroller.AddToManager(mgr, config.Schedulers.Shoot); err != nil {
+	if err := shootcontroller.AddToManager(mgr, cfg.Schedulers.Shoot); err != nil {
 		return fmt.Errorf("failed to create shoot scheduler controller: %w", err)
 	}
 
@@ -163,18 +165,9 @@ func runCommand(ctx context.Context, opts *Options) error {
 	return nil
 }
 
-func getHealthAddress(cfg *config.SchedulerConfiguration) string {
-	address := getAddress(cfg.HealthServer)
-	if address == "0" {
-		address = getAddress(&cfg.Server)
-	}
-
-	return address
-}
-
-func getAddress(server *config.ServerConfiguration) string {
-	if server != nil && server.HTTP.Port != 0 {
-		return net.JoinHostPort(server.HTTP.BindAddress, strconv.Itoa(server.HTTP.Port))
+func getAddress(server *config.Server) string {
+	if server != nil && server.Port != 0 {
+		return net.JoinHostPort(server.BindAddress, strconv.Itoa(server.Port))
 	}
 
 	return "0" // 0 means "disabled" in ctrl-runtime speak
