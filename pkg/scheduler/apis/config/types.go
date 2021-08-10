@@ -56,10 +56,13 @@ type SchedulerConfiguration struct {
 	// settings for the proxy server to use when communicating with the gardener-apiserver.
 	ClientConnection componentbaseconfig.ClientConnectionConfiguration
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection LeaderElectionConfiguration
+	LeaderElection componentbaseconfig.LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
-	// Server defines the configuration of the HTTP server.
+	// LogFormat is the output format for the logs. Must be one of [text,json].
+	LogFormat string
+	// Server defines the configuration of the HTTP server. This is deprecated in favor of
+	// HealthServer.
 	Server ServerConfiguration
 	// Scheduler defines the configuration of the schedulers.
 	Schedulers SchedulerControllerConfiguration
@@ -110,20 +113,12 @@ type ShootSchedulerConfiguration struct {
 	Strategy CandidateDeterminationStrategy
 }
 
-// LeaderElectionConfiguration defines the configuration of leader election
-// clients for components that can run with leader election enabled.
-type LeaderElectionConfiguration struct {
-	componentbaseconfig.LeaderElectionConfiguration
-	// LockObjectNamespace defines the namespace of the lock object.
-	LockObjectNamespace string
-	// LockObjectName defines the lock object name.
-	LockObjectName string
-}
-
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
-	// HTTP is the configuration for the HTTP server.
-	HTTP Server
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	HealthProbes *Server
+	// Metrics is the configuration for serving the metrics endpoint.
+	Metrics *Server
 }
 
 // Server contains information for HTTP(S) server configuration.

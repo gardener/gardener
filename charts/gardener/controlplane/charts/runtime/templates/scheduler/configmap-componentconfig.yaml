@@ -36,11 +36,16 @@ data:
       renewDeadline: {{ required ".Values.global.scheduler.config.leaderElection.renewDeadline is required" .Values.global.scheduler.config.leaderElection.renewDeadline }}
       retryPeriod: {{ required ".Values.global.scheduler.config.leaderElection.retryPeriod is required" .Values.global.scheduler.config.leaderElection.retryPeriod }}
       resourceLock: {{ required ".Values.global.scheduler.config.leaderElection.resourceLock is required" .Values.global.scheduler.config.leaderElection.resourceLock }}
+      resourceNamespace: {{ required ".Values.global.scheduler.config.leaderElection.resourceNamespace is required" .Values.global.scheduler.config.leaderElection.resourceNamespace }}
+      resourceName: {{ required ".Values.global.scheduler.config.leaderElection.resourceName is required" .Values.global.scheduler.config.leaderElection.resourceName }}
     logLevel: {{ required ".Values.global.scheduler.config.logLevel is required" .Values.global.scheduler.config.logLevel }}
     server:
-      http:
-        bindAddress: {{ required ".Values.global.scheduler.config.server.http.bindAddress is required" .Values.global.scheduler.config.server.http.bindAddress }}
-        port: {{ required ".Values.global.scheduler.config.server.http.port is required" .Values.global.scheduler.config.server.http.port }}
+      healthProbes:
+        bindAddress: {{ required ".Values.global.scheduler.config.server.healthProbes.bindAddress is required" .Values.global.scheduler.config.server.healthProbes.bindAddress }}
+        port: {{ required ".Values.global.scheduler.config.server.healthProbes.port is required" .Values.global.scheduler.config.server.healthProbes.port }}
+      metrics:
+        bindAddress: {{ required ".Values.global.scheduler.config.server.metrics.bindAddress is required" .Values.global.scheduler.config.server.metrics.bindAddress }}
+        port: {{ required ".Values.global.scheduler.config.server.metrics.port is required" .Values.global.scheduler.config.server.metrics.port }}
     {{- if .Values.global.scheduler.config.schedulers }}
     schedulers:
       {{- if .Values.global.scheduler.config.schedulers.backupBucket }}

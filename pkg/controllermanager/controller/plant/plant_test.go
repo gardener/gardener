@@ -90,7 +90,7 @@ var _ = Describe("Plant", func() {
 			var (
 				discoveryMockclient = mockdiscovery.NewMockDiscoveryInterface(ctrl)
 				runtimeClient       = mockclient.NewMockClient(ctrl)
-				testLogger          = logger.NewFieldLogger(logger.NewLogger("info"), "test", "test-plant")
+				testLogger          = logger.NewFieldLogger(logger.NewLogger("info", ""), "test", "test-plant")
 			)
 
 			runtimeClient.EXPECT().List(context.TODO(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {

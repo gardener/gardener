@@ -22,6 +22,7 @@ import (
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
+	"github.com/gardener/gardener/pkg/logger"
 
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -45,6 +46,18 @@ func ValidateGardenletConfiguration(cfg *config.GardenletConfiguration, fldPath 
 		}
 		if cfg.Controllers.ManagedSeed != nil {
 			allErrs = append(allErrs, ValidateManagedSeedControllerConfiguration(cfg.Controllers.ManagedSeed, fldPath.Child("controllers", "managedSeed"))...)
+		}
+	}
+
+	if cfg.LogLevel != nil {
+		if !sets.NewString(logger.AllLogLevels...).Has(*cfg.LogLevel) {
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), cfg.LogLevel, logger.AllLogLevels))
+		}
+	}
+
+	if cfg.LogFormat != nil {
+		if !sets.NewString(logger.AllLogFormats...).Has(*cfg.LogFormat) {
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), cfg.LogFormat, logger.AllLogFormats))
 		}
 	}
 

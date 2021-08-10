@@ -19,6 +19,7 @@ import (
 	"time"
 
 	. "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/logger"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -55,7 +56,8 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ShootStateSync).NotTo(BeNil())
 			Expect(obj.Controllers.ManagedSeed).NotTo(BeNil())
 			Expect(obj.LeaderElection).NotTo(BeNil())
-			Expect(obj.LogLevel).To(PointTo(Equal("info")))
+			Expect(obj.LogLevel).To(PointTo(Equal(logger.InfoLevel)))
+			Expect(obj.LogFormat).To(PointTo(Equal(logger.FormatJSON)))
 			Expect(obj.KubernetesLogLevel).To(PointTo(Equal(klog.Level(0))))
 			Expect(obj.Server.HTTPS.BindAddress).To(Equal("0.0.0.0"))
 			Expect(obj.Server.HTTPS.Port).To(Equal(2720))

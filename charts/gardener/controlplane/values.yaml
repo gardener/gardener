@@ -454,11 +454,16 @@ global:
         renewDeadline: 10s
         retryPeriod: 2s
         resourceLock: leases
+        resourceNamespace: garden
+        resourceName: gardener-scheduler-leader-election
       logLevel: info
       server:
-        http:
+        healthProbes:
           bindAddress: 0.0.0.0
           port: 10251
+        metrics:
+          bindAddress: 0.0.0.0
+          port: 19251
 #     schedulers:
 #       backupBucket:
 #         concurrentSyncs: 5

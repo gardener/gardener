@@ -531,6 +531,7 @@ func ComputeExpectedGardenletConfiguration(
 		twenty = 20
 
 		logLevelInfo        = "info"
+		logFormatJson       = "json"
 		lockObjectName      = "gardenlet-leader-election"
 		lockObjectNamespace = "garden"
 		kubernetesLogLevel  = new(klog.Level)
@@ -669,6 +670,7 @@ func ComputeExpectedGardenletConfiguration(
 			LockObjectNamespace: &lockObjectNamespace,
 		},
 		LogLevel:           &logLevelInfo,
+		LogFormat:          &logFormatJson,
 		KubernetesLogLevel: kubernetesLogLevel,
 		Server: &gardenletconfigv1alpha1.ServerConfiguration{HTTPS: gardenletconfigv1alpha1.HTTPSServer{
 			Server: gardenletconfigv1alpha1.Server{

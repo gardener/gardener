@@ -708,6 +708,7 @@ func autoConvert_v1alpha1_GardenletConfiguration_To_config_GardenletConfiguratio
 		out.LeaderElection = nil
 	}
 	out.LogLevel = (*string)(unsafe.Pointer(in.LogLevel))
+	out.LogFormat = (*string)(unsafe.Pointer(in.LogFormat))
 	out.KubernetesLogLevel = (*klog.Level)(unsafe.Pointer(in.KubernetesLogLevel))
 	out.Server = (*config.ServerConfiguration)(unsafe.Pointer(in.Server))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
@@ -779,6 +780,7 @@ func autoConvert_config_GardenletConfiguration_To_v1alpha1_GardenletConfiguratio
 		out.LeaderElection = nil
 	}
 	out.LogLevel = (*string)(unsafe.Pointer(in.LogLevel))
+	out.LogFormat = (*string)(unsafe.Pointer(in.LogFormat))
 	out.KubernetesLogLevel = (*klog.Level)(unsafe.Pointer(in.KubernetesLogLevel))
 	out.Server = (*ServerConfiguration)(unsafe.Pointer(in.Server))
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))

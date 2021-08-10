@@ -216,7 +216,7 @@ var _ = Describe("quotavalidator", func() {
 		)
 
 		BeforeSuite(func() {
-			logger.Logger = logger.NewLogger("")
+			logger.Logger = logger.NewLogger("", "")
 		})
 
 		BeforeEach(func() {

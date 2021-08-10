@@ -10,16 +10,20 @@ leaderElection:
   renewDeadline: 10s
   retryPeriod: 2s
   resourceLock: leases
+  resourceNamespace: garden
+  resourceName: gardener-scheduler-leader-election
 logLevel: info
+logFormat: text
 server:
-  http:
+  healthProbes:
     bindAddress: 0.0.0.0
     port: 10251
+  metrics:
+    bindAddress: 0.0.0.0
+    port: 19252
 #schedulers:
 #  backupBucket:
 #    concurrentSyncs: 5 # defaults to 5
 #  shoot:
 #    concurrentSyncs: 5 # defaults to 5
 #    candidateDeterminationStrategy: MinimalDistance # either {SameRegion,MinimalDistance}
-featureGates:
-  CachedRuntimeClients: true

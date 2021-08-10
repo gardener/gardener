@@ -105,7 +105,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shootCurrentImage        *gardencorev1beta1.ShootMachineImage
 			cloudProfile             *gardencorev1beta1.CloudProfile
 			shoot                    *gardencorev1beta1.Shoot
-			testlogger               = logger.NewFieldLogger(logger.NewLogger("info"), "cloudprofile", "test")
+			testlogger               = logger.NewFieldLogger(logger.NewLogger("info", ""), "cloudprofile", "test")
 			previewClassification    = gardencorev1beta1.ClassificationPreview
 			deprecatedClassification = gardencorev1beta1.ClassificationDeprecated
 		)
@@ -332,7 +332,7 @@ var _ = Describe("Shoot Maintenance", func() {
 			shoot                 *gardencorev1beta1.Shoot
 			kubernetesSettings    gardencorev1beta1.KubernetesSettings
 			previewClassification = gardencorev1beta1.ClassificationPreview
-			shootLogger           = logger.NewShootLogger(logger.NewLogger(""), "mock", "mockspace")
+			shootLogger           = logger.NewShootLogger(logger.NewLogger("", ""), "mock", "mockspace")
 		)
 
 		BeforeEach(func() {

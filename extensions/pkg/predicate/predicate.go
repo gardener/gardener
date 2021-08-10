@@ -17,8 +17,6 @@ package predicate
 import (
 	"errors"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionsinject "github.com/gardener/gardener/extensions/pkg/inject"
 	gardencore "github.com/gardener/gardener/pkg/api/core"
@@ -26,10 +24,12 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenpredicate "github.com/gardener/gardener/pkg/predicate"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -147,12 +147,8 @@ func LastOperationNotSuccessful() predicate.Predicate {
 	}
 }
 
-// IsDeleting is a predicate for objects having a deletion timestamp.
-func IsDeleting() predicate.Predicate {
-	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
-		return e.Object.GetDeletionTimestamp() != nil
-	}), CreateTrigger, UpdateNewTrigger, GenericTrigger)
-}
+// IsDeleting is an alias for a predicate which checks if the passed object has a deletion timestamp.
+var IsDeleting = gardenpredicate.IsDeleting
 
 // AddTypePredicate returns a new slice which contains a type predicate and the given `predicates`.
 // if more than one extensionTypes is given all given types are or combined

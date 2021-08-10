@@ -18,41 +18,31 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
+	"strconv"
 
-	"github.com/gardener/gardener/cmd/utils"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
-	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/scheduler"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	configloader "github.com/gardener/gardener/pkg/scheduler/apis/config/loader"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/validation"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
-	"github.com/gardener/gardener/pkg/server"
+	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	kubernetesclientset "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/leaderelection"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version/verflag"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 )
 
 // Options has all the context and parameters needed to run a GardenerScheduler.
 type Options struct {
 	// ConfigFile is the location of the GardenerScheduler's configuration file.
 	ConfigFile string
-	config     *config.SchedulerConfiguration
 }
 
 // AddFlags adds flags for a specific Scheduler to the specified FlagSet.
@@ -72,34 +62,9 @@ func (o *Options) validate(args []string) error {
 	return nil
 }
 
-func (o *Options) run(ctx context.Context) error {
-	if len(o.ConfigFile) > 0 {
-		c, err := configloader.LoadFromFile(o.ConfigFile)
-		if err != nil {
-			return err
-		}
-		o.config = c
-	}
-
-	// Add feature flags
-	if err := schedulerfeatures.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
-		return err
-	}
-	kubernetes.UseCachedRuntimeClients = schedulerfeatures.FeatureGate.Enabled(features.CachedRuntimeClients)
-
-	gardener, err := NewGardenerScheduler(ctx, o.config)
-	if err != nil {
-		return err
-	}
-
-	return gardener.Run(ctx)
-}
-
 // NewCommandStartGardenerScheduler creates a *cobra.Command object with default parameters
 func NewCommandStartGardenerScheduler() *cobra.Command {
-	opts := &Options{
-		config: new(config.SchedulerConfiguration),
-	}
+	opts := &Options{}
 
 	cmd := &cobra.Command{
 		Use:   "gardener-scheduler",
@@ -111,39 +76,46 @@ func NewCommandStartGardenerScheduler() *cobra.Command {
 			if err := opts.validate(args); err != nil {
 				return err
 			}
-			return opts.run(cmd.Context())
+
+			return runCommand(cmd.Context(), opts)
 		},
 	}
 
 	flags := cmd.Flags()
 	verflag.AddFlags(flags)
 	opts.AddFlags(flags)
+
 	return cmd
 }
 
-// GardenerScheduler represents all the parameters required to start the
-// Gardener scheduler.
-type GardenerScheduler struct {
-	Config            *config.SchedulerConfiguration
-	Identity          *gardencorev1beta1.Gardener
-	GardenerNamespace string
-	ClientMap         clientmap.ClientMap
-	Logger            *logrus.Logger
-	Recorder          record.EventRecorder
-	LeaderElection    *leaderelection.LeaderElectionConfig
-}
+func runCommand(ctx context.Context, opts *Options) error {
+	// Load config file
+	cfg, err := configloader.LoadFromFile(opts.ConfigFile)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
 
-// NewGardenerScheduler is the main entry point of instantiating a new Gardener Scheduler.
-func NewGardenerScheduler(ctx context.Context, cfg *config.SchedulerConfiguration) (*GardenerScheduler, error) {
-	// validate the configuration
-	if err := validation.ValidateConfiguration(cfg); err != nil {
-		return nil, err
+	// Validate the configuration
+	if errs := validation.ValidateConfiguration(cfg); len(errs) > 0 {
+		return fmt.Errorf("configuration is invalid: %v", errs)
+	}
+
+	// Add feature flags
+	if err := schedulerfeatures.FeatureGate.SetFromMap(cfg.FeatureGates); err != nil {
+		return fmt.Errorf("failed to set feature gates: %w", err)
 	}
 
 	// Initialize logger
-	logger := logger.NewLogger(cfg.LogLevel)
-	logger.Info("Starting Gardener scheduler ...")
-	logger.Infof("Feature Gates: %s", schedulerfeatures.FeatureGate.String())
+	zapLogger, err := logger.NewZapLogger(cfg.LogLevel, cfg.LogFormat)
+	if err != nil {
+		return fmt.Errorf("failed to init logger: %w", err)
+	}
+
+	// set the logger used by sigs.k8s.io/controller-runtime
+	zapLogr := logger.NewZapLogr(zapLogger)
+	ctrlruntimelog.SetLogger(zapLogr)
+
+	zapLogr.Info("Starting Gardener scheduler ...", "features", schedulerfeatures.FeatureGate.String())
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.
@@ -151,135 +123,52 @@ func NewGardenerScheduler(ctx context.Context, cfg *config.SchedulerConfiguratio
 		cfg.ClientConnection.Kubeconfig = kubeconfig
 	}
 
+	// Prepare REST config
 	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.ClientConnection, nil)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to create Kubernetes REST configuration: %w", err)
 	}
 
-	clientMap, err := clientmapbuilder.
-		NewDelegatingClientMapBuilder().
-		WithGardenClientMapBuilder(clientmapbuilder.NewGardenClientMapBuilder().WithRESTConfig(restCfg)).
-		WithLogger(logger).
-		Build()
+	// Setup controller-runtime manager
+	mgr, err := manager.New(restCfg, manager.Options{
+		MetricsBindAddress:         getAddress(cfg.Server.Metrics),
+		HealthProbeBindAddress:     getAddress(cfg.Server.HealthProbes),
+		LeaderElection:             cfg.LeaderElection.LeaderElect,
+		LeaderElectionID:           cfg.LeaderElection.ResourceName,
+		LeaderElectionNamespace:    cfg.LeaderElection.ResourceNamespace,
+		LeaderElectionResourceLock: cfg.LeaderElection.ResourceLock,
+		Logger:                     zapLogr,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to build ClientMap: %w", err)
+		return fmt.Errorf("failed to create controller manager: %w", err)
 	}
 
-	k8sGardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return nil, fmt.Errorf("failed to get garden client: %w", err)
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		return err
 	}
 
-	// Set up leader election if enabled and prepare event recorder.
-	var (
-		leaderElectionConfig *leaderelection.LeaderElectionConfig
-		recorder             = utils.CreateRecorder(k8sGardenClient.Kubernetes(), "gardener-scheduler")
-	)
-
-	if cfg.LeaderElection.LeaderElect {
-		k8sGardenClientLeaderElection, err := kubernetesclientset.NewForConfig(restCfg)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create garden client for leader election: %w", err)
-		}
-
-		leaderElectionConfig, err = utils.MakeLeaderElectionConfig(
-			cfg.LeaderElection.LeaderElectionConfiguration,
-			cfg.LeaderElection.LockObjectNamespace,
-			cfg.LeaderElection.LockObjectName,
-			k8sGardenClientLeaderElection,
-			recorder,
-		)
-		if err != nil {
-			return nil, err
-		}
+	// Add APIs
+	if err := gardencorev1beta1.AddToScheme(mgr.GetScheme()); err != nil {
+		return fmt.Errorf("failed to register scheme gardencorev1beta1: %w", err)
 	}
 
-	return &GardenerScheduler{
-		Config:         cfg,
-		ClientMap:      clientMap,
-		Logger:         logger,
-		Recorder:       recorder,
-		LeaderElection: leaderElectionConfig,
-	}, nil
-}
-
-// Run runs the Gardener Scheduler. This should never exit.
-func (g *GardenerScheduler) Run(ctx context.Context) error {
-	controllerCtx, controllerCancel := context.WithCancel(ctx)
-	defer controllerCancel()
-
-	// Prepare a reusable run function.
-	run := func(ctx context.Context) {
-		g.startScheduler(ctx)
+	// Add controllers
+	if err := shootcontroller.AddToManager(mgr, cfg.Schedulers.Shoot); err != nil {
+		return fmt.Errorf("failed to create shoot scheduler controller: %w", err)
 	}
 
-	// Initialize /healthz manager.
-	healthManager := healthz.NewDefaultHealthz()
-	healthManager.Start()
-
-	// Start HTTP server.
-	go server.
-		NewBuilder().
-		WithBindAddress(g.Config.Server.HTTP.BindAddress).
-		WithPort(g.Config.Server.HTTP.Port).
-		WithHandler("/metrics", promhttp.Handler()).
-		WithHandlerFunc("/healthz", healthz.HandlerFunc(healthManager)).
-		Build().
-		Start(ctx)
-
-	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
-
-	// If leader election is enabled, run via LeaderElector until done and exit.
-	if g.LeaderElection != nil {
-		g.LeaderElection.Callbacks = leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(_ context.Context) {
-				g.Logger.Info("Acquired leadership, starting scheduler.")
-				run(controllerCtx)
-				leaderElectionCancel()
-			},
-			OnStoppedLeading: func() {
-				g.Logger.Info("Lost leadership, terminating.")
-				controllerCancel()
-			},
-		}
-
-		leaderElector, err := leaderelection.NewLeaderElector(*g.LeaderElection)
-		if err != nil {
-			return fmt.Errorf("couldn't create leader elector: %w", err)
-		}
-
-		leaderElector.Run(leaderElectionCtx)
-		return nil
+	// Start manager and all runnables (the command context is tied to OS signals already)
+	if err := mgr.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start manager: %w", err)
 	}
 
-	// Leader election is disabled, thus run directly until done.
-	leaderElectionCancel()
-	run(controllerCtx)
 	return nil
 }
 
-func (g *GardenerScheduler) startScheduler(ctx context.Context) {
-	if err := g.ClientMap.Start(ctx.Done()); err != nil {
-		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
+func getAddress(server *config.Server) string {
+	if server != nil && server.Port != 0 {
+		return net.JoinHostPort(server.BindAddress, strconv.Itoa(server.Port))
 	}
 
-	shootScheduler, err := shootcontroller.NewGardenerScheduler(ctx, g.ClientMap, g.Config, g.Recorder)
-	if err != nil {
-		panic(fmt.Errorf("failed to create shoot scheduler controller: %+v", err))
-	}
-
-	// Initialize the Controller metrics collection.
-	gardenmetrics.RegisterControllerMetrics(
-		scheduler.ControllerWorkerSum,
-		scheduler.ScrapeFailures,
-		shootScheduler,
-	)
-
-	go shootScheduler.Run(ctx)
-
-	// Shutdown handling
-	<-ctx.Done()
-
-	logger.Logger.Infof("I have received a stop signal and will no longer watch events of the Garden API group.")
-	logger.Logger.Infof("Bye Bye!")
+	return "0" // 0 means "disabled" in ctrl-runtime speak
 }

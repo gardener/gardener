@@ -37,6 +37,8 @@ type ControllerManagerConfiguration struct {
 	LeaderElection LeaderElectionConfiguration `json:"leaderElection"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string `json:"logLevel"`
+	// LogFormat is the output format for the logs. Must be one of [text,json].
+	LogFormat string `json:"logFormat"`
 	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
 	KubernetesLogLevel klog.Level `json:"kubernetesLogLevel"`
 	// Server defines the configuration of the HTTP server.

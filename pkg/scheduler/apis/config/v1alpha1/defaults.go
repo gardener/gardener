@@ -15,6 +15,7 @@
 package v1alpha1
 
 import (
+	"github.com/gardener/gardener/pkg/logger"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,14 +29,11 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 // SetDefaults_SchedulerConfiguration sets defaults for the configuration of the Gardener scheduler.
 func SetDefaults_SchedulerConfiguration(obj *SchedulerConfiguration) {
 	if obj.LogLevel == "" {
-		obj.LogLevel = "info"
+		obj.LogLevel = logger.InfoLevel
 	}
 
-	if len(obj.Server.HTTP.BindAddress) == 0 {
-		obj.Server.HTTP.BindAddress = "0.0.0.0"
-	}
-	if obj.Server.HTTP.Port == 0 {
-		obj.Server.HTTP.Port = 10251
+	if obj.LogFormat == "" {
+		obj.LogFormat = logger.FormatJSON
 	}
 
 	if obj.Schedulers.BackupBucket == nil {
@@ -69,18 +67,45 @@ func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.
 	}
 }
 
-// SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener controller manager.
-func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
+// SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener scheduler.
+func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.LeaderElectionConfiguration) {
 	if obj.ResourceLock == "" {
 		obj.ResourceLock = resourcelock.LeasesResourceLock
 	}
 
-	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(&obj.LeaderElectionConfiguration)
+	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(obj)
 
-	if len(obj.LockObjectNamespace) == 0 {
-		obj.LockObjectNamespace = SchedulerDefaultLockObjectNamespace
+	if len(obj.ResourceNamespace) == 0 {
+		obj.ResourceNamespace = SchedulerDefaultLockObjectNamespace
 	}
-	if len(obj.LockObjectName) == 0 {
-		obj.LockObjectName = SchedulerDefaultLockObjectName
+	if len(obj.ResourceName) == 0 {
+		obj.ResourceName = SchedulerDefaultLockObjectName
+	}
+}
+
+// SetDefaults_ServerConfiguration sets defaults for the server configuration of the Gardener scheduler.
+func SetDefaults_ServerConfiguration(obj *ServerConfiguration) {
+	if obj.HealthProbes == nil {
+		obj.HealthProbes = &Server{}
+	}
+
+	if len(obj.HealthProbes.BindAddress) == 0 {
+		obj.HealthProbes.BindAddress = "0.0.0.0"
+	}
+
+	if obj.HealthProbes.Port == 0 {
+		obj.HealthProbes.Port = 10251
+	}
+
+	if obj.Metrics == nil {
+		obj.Metrics = &Server{}
+	}
+
+	if len(obj.Metrics.BindAddress) == 0 {
+		obj.Metrics.BindAddress = "0.0.0.0"
+	}
+
+	if obj.Metrics.Port == 0 {
+		obj.Metrics.Port = 19251
 	}
 }

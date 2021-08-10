@@ -67,6 +67,7 @@ leaderElection:
   retryPeriod: 2s
   resourceLock: leases
 logLevel: info
+logFormat: text
 kubernetesLogLevel: 0
 server:
   http:

@@ -33,26 +33,34 @@ var Logger *logrus.Logger
 // It uses STDERR as output channel and evaluates the value of the --log-level command line argument in order
 // to set the log level.
 // Example output: time="2017-06-08T13:00:28+02:00" level=info msg="gardener started successfully".
-func NewLogger(logLevel string) *logrus.Logger {
+func NewLogger(logLevel string, format string) *logrus.Logger {
 	var level logrus.Level
 
 	switch logLevel {
-	case "debug":
+	case DebugLevel:
 		level = logrus.DebugLevel
-	case "", "info":
+	case "", InfoLevel:
 		level = logrus.InfoLevel
-	case "error":
+	case ErrorLevel:
 		level = logrus.ErrorLevel
 	default:
 		panic("The specified log level is not supported.")
 	}
 
+	var formatter logrus.Formatter
+	switch format {
+	case FormatText:
+		formatter = &logrus.TextFormatter{DisableColors: true}
+	case "", FormatJSON:
+		formatter = &logrus.JSONFormatter{DisableHTMLEscape: true}
+	default:
+		panic("The specified log format is not supported.")
+	}
+
 	logger := &logrus.Logger{
-		Out:   os.Stderr,
-		Level: level,
-		Formatter: &logrus.TextFormatter{
-			DisableColors: true,
-		},
+		Out:       os.Stderr,
+		Level:     level,
+		Formatter: formatter,
 	}
 	Logger = logger
 	return logger

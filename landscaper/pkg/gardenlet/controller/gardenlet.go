@@ -96,7 +96,7 @@ func NewGardenletLandscaper(imports *imports.Imports, landscaperOperation, compo
 	}
 
 	landscaper := Landscaper{
-		log:                    logger.NewFieldLogger(logger.NewLogger("info"), "landscaper-gardenlet operation", landscaperOperation),
+		log:                    logger.NewFieldLogger(logger.NewLogger("info", ""), "landscaper-gardenlet operation", landscaperOperation),
 		imports:                imports,
 		gardenletConfiguration: gardenletConfig,
 		landscaperOperation:    landscaperOperation,

@@ -54,6 +54,9 @@ type GardenletConfiguration struct {
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	// +optional
 	LogLevel *string `json:"logLevel,omitempty"`
+	// LogFormat is the output format for the logs. Must be one of [text,json].
+	// +optional
+	LogFormat *string `json:"logFormat,omitempty"`
 	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
 	// +optional
 	KubernetesLogLevel *klog.Level `json:"kubernetesLogLevel,omitempty"`

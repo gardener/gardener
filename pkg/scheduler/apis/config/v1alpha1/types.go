@@ -55,10 +55,13 @@ type SchedulerConfiguration struct {
 	// settings for the proxy server to use when communicating with the apiserver.
 	ClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"clientConnection,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection LeaderElectionConfiguration `json:"leaderElection,omitempty"`
+	LeaderElection componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string `json:"logLevel,omitempty"`
-	// Server defines the configuration of the HTTP server.
+	// LogFormat is the output format for the logs. Must be one of [text,json].
+	LogFormat string `json:"logFormat,omitempty"`
+	// Server defines the configuration of the HTTP server. This is deprecated in favor of
+	// HealthServer.
 	Server ServerConfiguration `json:"server,omitempty"`
 	// Scheduler defines the configuration of the schedulers.
 	Schedulers SchedulerControllerConfiguration `json:"schedulers"`
@@ -98,20 +101,14 @@ type ShootSchedulerConfiguration struct {
 	Strategy CandidateDeterminationStrategy `json:"candidateDeterminationStrategy"`
 }
 
-// LeaderElectionConfiguration defines the configuration of leader election
-// clients for components that can run with leader election enabled.
-type LeaderElectionConfiguration struct {
-	componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:",inline"`
-	// LockObjectNamespace defines the namespace of the lock object.
-	LockObjectNamespace string `json:"lockObjectNamespace"`
-	// LockObjectName defines the lock object name.
-	LockObjectName string `json:"lockObjectName"`
-}
-
 // ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
-	// HTTP is the configuration for the HTTP server.
-	HTTP Server `json:"http"`
+	// HealthProbes is the configuration for serving the healthz and readyz endpoints.
+	// +optional
+	HealthProbes *Server `json:"healthProbes,omitempty"`
+	// Metrics is the configuration for serving the metrics endpoint.
+	// +optional
+	Metrics *Server `json:"metrics,omitempty"`
 }
 
 // Server contains information for HTTP(S) server configuration.

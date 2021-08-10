@@ -22,7 +22,6 @@ import (
 	kcache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
 	"github.com/gardener/gardener/pkg/logger"
 
-	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -59,7 +58,7 @@ func NewRuntimeClientWithCache(ctx context.Context, config *rest.Config, options
 
 	go func() {
 		if err := clientCache.Start(ctx); err != nil {
-			logger.NewLogger(fmt.Sprint(logrus.ErrorLevel)).Errorf("cache.Start returned error, which should never happen, ignoring.")
+			logger.NewLogger(logger.ErrorLevel, "").Errorf("cache.Start returned error, which should never happen, ignoring.")
 		}
 	}()
 

@@ -15,17 +15,48 @@
 package validation
 
 import (
-	"fmt"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
+	"github.com/gardener/gardener/pkg/logger"
 	schedulerapi "github.com/gardener/gardener/pkg/scheduler/apis/config"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // ValidateConfiguration validates the configuration.
-func ValidateConfiguration(config *schedulerapi.SchedulerConfiguration) error {
-	for _, strategy := range schedulerapi.Strategies {
-		if strategy == config.Schedulers.Shoot.Strategy {
-			return nil
+func ValidateConfiguration(config *schedulerapi.SchedulerConfiguration) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, validateStrategy(config.Schedulers.Shoot.Strategy, field.NewPath("schedulers", "shoot", "strategy"))...)
+
+	if config.LogLevel != "" {
+		if !sets.NewString(logger.AllLogLevels...).Has(config.LogLevel) {
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("logLevel"), config.LogLevel, logger.AllLogLevels))
 		}
 	}
-	return fmt.Errorf("unknown seed determination strategy configured in gardener scheduler. Strategy: '%s' does not exist. Valid strategies are: %v", config.Schedulers.Shoot.Strategy, schedulerapi.Strategies)
+
+	if config.LogFormat != "" {
+		if !sets.NewString(logger.AllLogFormats...).Has(config.LogFormat) {
+			allErrs = append(allErrs, field.NotSupported(field.NewPath("logFormat"), config.LogFormat, logger.AllLogFormats))
+		}
+	}
+
+	return allErrs
+}
+
+func validateStrategy(strategy schedulerapi.CandidateDeterminationStrategy, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs             = field.ErrorList{}
+		supportedStrategies []string
+	)
+
+	for _, s := range schedulerapi.Strategies {
+		supportedStrategies = append(supportedStrategies, string(s))
+		if s == strategy {
+			return allErrs
+		}
+	}
+
+	allErrs = append(allErrs, field.NotSupported(fldPath, strategy, supportedStrategies))
+
+	return allErrs
 }
