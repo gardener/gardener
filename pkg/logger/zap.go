@@ -68,5 +68,5 @@ func NewZapLogger(logLevel string, format string) (*zap.Logger, error) {
 
 // NewZapLogr wraps a Zap logger into a standard logr-compatible logger.
 func NewZapLogr(logger *zap.Logger) logr.Logger {
-	return zapr.NewLogger(logger.WithOptions(zap.AddCallerSkip(1)))
+	return zapr.NewLogger(logger)
 }
