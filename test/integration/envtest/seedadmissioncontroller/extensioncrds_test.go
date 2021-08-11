@@ -17,7 +17,6 @@ package seedadmissioncontroller_test
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -32,6 +31,7 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -87,10 +87,9 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Expect(kutil.IgnoreAlreadyExists(c.Create(ctx, ns))).NotTo(HaveOccurred())
 
 		By("applying CRDs")
-		applier, err := kubernetes.NewChartApplierForConfig(restConfig)
+		applier, err := kubernetes.NewApplierForConfig(restConfig)
 		Expect(err).NotTo(HaveOccurred())
-		repoRoot := filepath.Join("..", "..", "..", "..")
-		Expect(applier.Apply(ctx, filepath.Join(repoRoot, "charts", "seed-bootstrap", "charts", "extensions"), "extensions", "")).To(Succeed())
+		Expect(crds.NewExtensionsCRD(applier).Deploy(ctx)).To(Succeed())
 
 		Eventually(func() bool {
 			for _, object := range objects {
