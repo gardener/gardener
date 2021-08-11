@@ -20,33 +20,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/logger"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
+
+	"github.com/gardener/gardener/pkg/logger"
 )
-
-// DeprecatedCreateWorker creates and runs a worker thread that just processes items in the
-// specified queue. The worker will run until stopCh is closed. The worker will be
-// added to the wait group when started and marked done when finished.
-// Deprecated: Use CreateWorker instead.
-func DeprecatedCreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler func(key string) error, waitGroup *sync.WaitGroup, workerCh chan int) {
-	CreateWorker(ctx, queue, resourceType, reconcile.Func(func(_ context.Context, req reconcile.Request) (reconcile.Result, error) {
-		meta := kutil.ObjectMeta(req.Namespace, req.Name)
-		key, err := cache.MetaNamespaceKeyFunc(&meta)
-		if err != nil {
-			logger.Logger.WithError(err).Error("Could not create key from meta")
-			return reconcile.Result{}, nil
-		}
-
-		return reconcile.Result{}, reconciler(key)
-	}), waitGroup, workerCh)
-}
 
 // CreateWorker creates and runs a worker thread that just processes items in the
 // specified queue. The worker will run until stopCh is closed. The worker will be
