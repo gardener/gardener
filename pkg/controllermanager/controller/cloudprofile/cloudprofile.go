@@ -17,7 +17,6 @@ package cloudprofile
 import (
 	"context"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
 
@@ -26,7 +25,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
+
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
