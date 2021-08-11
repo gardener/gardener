@@ -145,9 +145,8 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	}
 
 	var (
-		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace, f.gardenClusterIdentity)
-		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.healthManager, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
-		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
+		seedController  = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.healthManager, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
+		shootController = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
 	)
 
 	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, f.clientMap, f.cfg, f.recorder)
@@ -165,7 +164,12 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	networkpolicyController, err := networkpolicycontroller.NewController(ctx, seedClient, logger.Logger, f.recorder, f.cfg.SeedConfig.Name)
+	controllerInstallationController, err := controllerinstallationcontroller.NewController(ctx, f.clientMap, f.cfg, f.recorder, gardenNamespace, f.gardenClusterIdentity)
+	if err != nil {
+		return fmt.Errorf("failed initializing ControllerInstallation controller: %w", err)
+	}
+
+	networkPolicyController, err := networkpolicycontroller.NewController(ctx, seedClient, logger.Logger, f.recorder, f.cfg.SeedConfig.Name)
 	if err != nil {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
@@ -185,23 +189,23 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		backupEntryController,
 		bastionController,
 		controllerInstallationController,
+		extensionsController,
+		managedSeedController,
+		networkPolicyController,
 		seedController,
 		shootController,
-		managedSeedController,
-		networkpolicyController,
-		extensionsController,
 	)
 
 	controllerCtx, cancel := context.WithCancel(ctx)
 
-	go networkpolicyController.Run(controllerCtx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go backupBucketController.Run(controllerCtx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
 	go backupEntryController.Run(controllerCtx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs)
 	go bastionController.Run(controllerCtx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)
 	go controllerInstallationController.Run(controllerCtx, *f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs, *f.cfg.Controllers.ControllerInstallationCare.ConcurrentSyncs)
+	go managedSeedController.Run(controllerCtx, *f.cfg.Controllers.ManagedSeed.ConcurrentSyncs)
+	go networkPolicyController.Run(controllerCtx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go seedController.Run(controllerCtx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(controllerCtx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs)
-	go managedSeedController.Run(controllerCtx, *f.cfg.Controllers.ManagedSeed.ConcurrentSyncs)
 
 	if err := retry.Until(ctx, 10*time.Second, func(ctx context.Context) (bool, error) {
 		if err := extensionsController.Initialize(ctx, seedClient); err != nil {

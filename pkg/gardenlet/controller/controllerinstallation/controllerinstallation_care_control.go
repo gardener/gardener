@@ -21,20 +21,19 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/sirupsen/logrus"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	resourceshealth "github.com/gardener/gardener-resource-manager/pkg/health"
+	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (c *Controller) controllerInstallationCareAdd(obj interface{}) {
@@ -49,13 +48,11 @@ func newCareReconciler(
 	clientMap clientmap.ClientMap,
 	l logrus.FieldLogger,
 	config *config.ControllerInstallationCareControllerConfiguration,
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister,
 ) reconcile.Reconciler {
 	return &careReconciler{
-		clientMap:                    clientMap,
-		logger:                       l,
-		config:                       config,
-		controllerInstallationLister: controllerInstallationLister,
+		clientMap: clientMap,
+		logger:    l,
+		config:    config,
 	}
 }
 
@@ -63,8 +60,6 @@ type careReconciler struct {
 	clientMap clientmap.ClientMap
 	logger    logrus.FieldLogger
 	config    *config.ControllerInstallationCareControllerConfiguration
-
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 }
 
 func (r *careReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -76,8 +71,8 @@ func (r *careReconciler) Reconcile(ctx context.Context, request reconcile.Reques
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	controllerInstallation, err := r.controllerInstallationLister.Get(request.Name)
-	if err != nil {
+	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, controllerInstallation); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Infof("[CONTROLLERINSTALLATION CARE] stopping care operations for ControllerInstallation since it has been deleted")
 			return reconcile.Result{}, nil

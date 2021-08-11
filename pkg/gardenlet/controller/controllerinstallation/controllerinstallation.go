@@ -16,12 +16,13 @@ package controllerinstallation
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -44,55 +45,37 @@ type Controller struct {
 	reconciler     reconcile.Reconciler
 	careReconciler reconcile.Reconciler
 
-	seedQueue  workqueue.RateLimitingInterface
-	seedLister gardencorelisters.SeedLister
-
-	controllerInstallationQueue  workqueue.RateLimitingInterface
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister
-
+	controllerInstallationQueue     workqueue.RateLimitingInterface
 	controllerInstallationCareQueue workqueue.RateLimitingInterface
 
-	hasSyncedFuncs []cache.InformerSynced
-
+	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
 
 // NewController instantiates a new ControllerInstallation controller.
-func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.GardenletConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace, gardenClusterIdentity string) *Controller {
-	var (
-		gardenCoreInformer = gardenCoreInformerFactory.Core().V1beta1()
+func NewController(ctx context.Context, clientMap clientmap.ClientMap, config *config.GardenletConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace, gardenClusterIdentity string) (*Controller, error) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
+	}
 
-		seedInformer = gardenCoreInformer.Seeds()
-		seedLister   = seedInformer.Lister()
-		seedQueue    = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed")
-
-		controllerRegistrationInformer = gardenCoreInformer.ControllerRegistrations()
-		controllerRegistrationLister   = controllerRegistrationInformer.Lister()
-
-		controllerInstallationInformer = gardenCoreInformer.ControllerInstallations()
-		controllerInstallationLister   = controllerInstallationInformer.Lister()
-		controllerInstallationQueue    = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation")
-
-		controllerInstallationCareQueue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation-care")
-	)
+	controllerInstallationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
+	}
 
 	controller := &Controller{
-		reconciler:     newReconciler(clientMap, recorder, logger.Logger, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace, gardenClusterIdentity),
-		careReconciler: newCareReconciler(clientMap, logger.Logger, config.Controllers.ControllerInstallationCare, controllerInstallationLister),
+		reconciler:     newReconciler(clientMap, recorder, logger.Logger, gardenNamespace, gardenClusterIdentity),
+		careReconciler: newCareReconciler(clientMap, logger.Logger, config.Controllers.ControllerInstallationCare),
 
-		seedLister: seedLister,
-		seedQueue:  seedQueue,
-
-		controllerInstallationLister: controllerInstallationLister,
-		controllerInstallationQueue:  controllerInstallationQueue,
-
-		controllerInstallationCareQueue: controllerInstallationCareQueue,
+		controllerInstallationQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation"),
+		controllerInstallationCareQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "controllerinstallation-care"),
 
 		workerCh: make(chan int),
 	}
 
-	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	controllerInstallationInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    controller.controllerInstallationAdd,
@@ -101,7 +84,8 @@ func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gard
 		},
 	})
 
-	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	// TODO: add a watch for ManagedResources and run the care reconciler on changed to the MR conditions
+	controllerInstallationInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: controller.controllerInstallationCareAdd,
@@ -109,12 +93,10 @@ func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gard
 	})
 
 	controller.hasSyncedFuncs = []cache.InformerSynced{
-		seedInformer.Informer().HasSynced,
-		controllerRegistrationInformer.Informer().HasSynced,
-		controllerInstallationInformer.Informer().HasSynced,
+		controllerInstallationInformer.HasSynced,
 	}
 
-	return controller
+	return controller, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.

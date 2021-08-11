@@ -24,7 +24,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -32,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -43,6 +41,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const installationTypeHelm = "helm"
@@ -86,33 +85,24 @@ func newReconciler(
 	clientMap clientmap.ClientMap,
 	recorder record.EventRecorder,
 	l logrus.FieldLogger,
-	seedLister gardencorelisters.SeedLister,
-	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister,
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister,
 	gardenNamespace *corev1.Namespace,
 	gardenClusterIdentity string,
 ) reconcile.Reconciler {
 	return &reconciler{
-		clientMap:                    clientMap,
-		recorder:                     recorder,
-		logger:                       l,
-		seedLister:                   seedLister,
-		controllerRegistrationLister: controllerRegistrationLister,
-		controllerInstallationLister: controllerInstallationLister,
-		gardenNamespace:              gardenNamespace,
-		gardenClusterIdentity:        gardenClusterIdentity,
+		clientMap:             clientMap,
+		recorder:              recorder,
+		logger:                l,
+		gardenNamespace:       gardenNamespace,
+		gardenClusterIdentity: gardenClusterIdentity,
 	}
 }
 
 type reconciler struct {
-	clientMap                    clientmap.ClientMap
-	recorder                     record.EventRecorder
-	logger                       logrus.FieldLogger
-	seedLister                   gardencorelisters.SeedLister
-	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister
-	gardenNamespace              *corev1.Namespace
-	gardenClusterIdentity        string
+	clientMap             clientmap.ClientMap
+	recorder              record.EventRecorder
+	logger                logrus.FieldLogger
+	gardenNamespace       *corev1.Namespace
+	gardenClusterIdentity string
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -123,8 +113,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	controllerInstallation, err := r.controllerInstallationLister.Get(request.Name)
-	if err != nil {
+	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, controllerInstallation); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Debugf("[CONTROLLERINSTALLATION RECONCILE] skipping because ControllerInstallation has been deleted")
 			return reconcile.Result{}, nil
@@ -159,8 +149,8 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		}
 	}()
 
-	controllerRegistration, err := r.controllerRegistrationLister.Get(controllerInstallation.Spec.RegistrationRef.Name)
-	if err != nil {
+	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "RegistrationNotFound", fmt.Sprintf("Referenced ControllerRegistration does not exist: %+v", err))
 		} else {
@@ -169,8 +159,8 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		return err
 	}
 
-	seed, err := r.seedLister.Get(controllerInstallation.Spec.SeedRef.Name)
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.SeedRef.Name}, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
 		} else {
@@ -295,8 +285,8 @@ func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, con
 		}
 	}()
 
-	seed, err := r.seedLister.Get(controllerInstallation.Spec.SeedRef.Name)
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.SeedRef.Name}, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
 		} else {
@@ -362,8 +352,8 @@ func (r *reconciler) isResponsible(ctx context.Context, c client.Client, control
 	}
 
 	// Continue with the ControllerRegistration which can directly contain a deployment specification.
-	controllerRegistration, err := r.controllerRegistrationLister.Get(controllerInstallation.Spec.RegistrationRef.Name)
-	if err != nil {
+	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+	if err := c.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
 		return false, err
 	}
 
