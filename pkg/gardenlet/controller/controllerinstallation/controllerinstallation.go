@@ -33,6 +33,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // FinalizerName is the name of the ControllerInstallation finalizer.
@@ -40,12 +41,8 @@ const FinalizerName = "core.gardener.cloud/controllerinstallation"
 
 // Controller controls ControllerInstallation.
 type Controller struct {
-	config *config.GardenletConfiguration
-
-	controllerInstallationControl ControlInterface
-	careControl                   CareControlInterface
-
-	recorder record.EventRecorder
+	reconciler     reconcile.Reconciler
+	careReconciler reconcile.Reconciler
 
 	seedQueue  workqueue.RateLimitingInterface
 	seedLister gardencorelisters.SeedLister
@@ -81,11 +78,8 @@ func NewController(clientMap clientmap.ClientMap, gardenCoreInformerFactory gard
 	)
 
 	controller := &Controller{
-		controllerInstallationControl: NewDefaultControllerInstallationControl(clientMap, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace, gardenClusterIdentity),
-		careControl:                   NewDefaultCareControl(clientMap, config),
-
-		config:   config,
-		recorder: recorder,
+		reconciler:     newReconciler(clientMap, recorder, logger.Logger, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace, gardenClusterIdentity),
+		careReconciler: newCareReconciler(clientMap, logger.Logger, config.Controllers.ControllerInstallationCare, controllerInstallationLister),
 
 		seedLister: seedLister,
 		seedQueue:  seedQueue,
@@ -142,11 +136,11 @@ func (c *Controller) Run(ctx context.Context, workers, careWorkers int) {
 	logger.Logger.Info("ControllerInstallation controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.controllerInstallationQueue, "ControllerInstallation", c.reconcileControllerInstallationKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.controllerInstallationQueue, "ControllerInstallation", c.reconciler, &waitGroup, c.workerCh)
 	}
 
 	for i := 0; i < careWorkers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.controllerInstallationCareQueue, "ControllerInstallation Care", c.reconcileControllerInstallationCareKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.controllerInstallationCareQueue, "ControllerInstallation Care", c.careReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
