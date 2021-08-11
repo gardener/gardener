@@ -36,7 +36,7 @@ import (
 func (c *Controller) cloudProfileAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 	c.cloudProfileQueue.Add(key)
@@ -49,7 +49,7 @@ func (c *Controller) cloudProfileUpdate(_, newObj interface{}) {
 func (c *Controller) cloudProfileDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 	c.cloudProfileQueue.Add(key)
@@ -81,7 +81,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, err
 	}
 
-	cloudProfileLogger := logger.NewFieldLogger(logger.Logger, "cloudprofile", cloudProfile.Name)
+	cloudProfileLogger := logger.NewFieldLogger(r.logger, "cloudprofile", cloudProfile.Name)
 
 	// The deletionTimestamp labels the CloudProfile as intended to get deleted. Before deletion, it has to be ensured that
 	// no Shoots and Seed are assigned to the CloudProfile anymore. If this is the case then the controller will remove
@@ -101,7 +101,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 			cloudProfileLogger.Infof("No Shoots are referencing the CloudProfile. Deletion accepted.")
 
 			if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); client.IgnoreNotFound(err) != nil {
-				logger.Logger.Errorf("could not remove finalizer from CloudProfile: %s", err.Error())
+				cloudProfileLogger.Errorf("could not remove finalizer from CloudProfile: %s", err.Error())
 				return reconcile.Result{}, err
 			}
 			return reconcile.Result{}, nil
@@ -115,7 +115,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 	}
 
 	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
-		logger.Logger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
+		cloudProfileLogger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
 		return reconcile.Result{}, err
 	}
 

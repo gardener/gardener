@@ -17,6 +17,7 @@ package cloudprofile
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"sync"
 	"time"
 
@@ -25,8 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -42,6 +41,8 @@ type Controller struct {
 	cloudProfileQueue      workqueue.RateLimitingInterface
 	workerCh               chan int
 	numberOfRunningWorkers int
+
+	logger *logrus.Logger
 }
 
 // NewCloudProfileController takes a Kubernetes client <k8sGardenClient> and a <k8sGardenCoreInformers> for the Garden clusters.
@@ -50,6 +51,7 @@ func NewCloudProfileController(
 	ctx context.Context,
 	clientMap clientmap.ClientMap,
 	recorder record.EventRecorder,
+	logger *logrus.Logger,
 ) (
 	*Controller,
 	error,
@@ -66,8 +68,9 @@ func NewCloudProfileController(
 
 	cloudProfileController := &Controller{
 		cloudProfileQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "cloudprofile"),
-		reconciler:        NewCloudProfileReconciler(logger.Logger, gardenClient.Client(), recorder),
+		reconciler:        NewCloudProfileReconciler(logger, gardenClient.Client(), recorder),
 		workerCh:          make(chan int),
+		logger:            logger,
 	}
 
 	cloudProfileInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -87,18 +90,18 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	// Check if informers cache has been populated
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
-		logger.Logger.Error("Time out waiting for caches to sync")
+		c.logger.Error("Time out waiting for caches to sync")
 		return
 	}
 
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			logger.Logger.Debugf("Current number of running CloudProfile workers is %d", c.numberOfRunningWorkers)
+			c.logger.Debugf("Current number of running CloudProfile workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
-	logger.Logger.Info("CloudProfile controller initialized.")
+	c.logger.Info("CloudProfile controller initialized.")
 
 	// Start the workers
 	for i := 0; i < workers; i++ {
@@ -110,10 +113,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.cloudProfileQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Debug("No running CloudProfile worker and no items left in the queues. Terminated CloudProfile controller...")
+			c.logger.Debug("No running CloudProfile worker and no items left in the queues. Terminated CloudProfile controller...")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d CloudProfile worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.cloudProfileQueue.Len())
+		c.logger.Debugf("Waiting for %d CloudProfile worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.cloudProfileQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

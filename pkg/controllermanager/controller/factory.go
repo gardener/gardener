@@ -104,7 +104,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	}
 	metricsCollectors = append(metricsCollectors, bastionController)
 
-	cloudProfileController, err := cloudprofilecontroller.NewCloudProfileController(ctx, f.clientMap, f.recorder)
+	cloudProfileController, err := cloudprofilecontroller.NewCloudProfileController(ctx, f.clientMap, f.recorder, logger.Logger)
 	if err != nil {
 		return fmt.Errorf("failed initializing CloudProfile controller: %w", err)
 	}
