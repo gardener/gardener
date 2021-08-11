@@ -22,7 +22,6 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
@@ -34,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
@@ -43,15 +43,12 @@ import (
 )
 
 func defaultEtcdDruid(
-	sc kubernetes.Interface,
+	c client.Client,
+	seedVersion string,
 	imageVector imagevector.ImageVector,
-	kubernetesVersion *semver.Version,
 	imageVectorOverwrites map[string]string,
-) (
-	component.DeployWaiter,
-	error,
-) {
-	image, err := imageVector.FindImage(charts.ImageNameEtcdDruid, imagevector.RuntimeVersion(sc.Version()), imagevector.TargetVersion(sc.Version()))
+) (component.DeployWaiter, error) {
+	image, err := imageVector.FindImage(charts.ImageNameEtcdDruid, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
 	if err != nil {
 		return nil, err
 	}
@@ -61,23 +58,16 @@ func defaultEtcdDruid(
 		imageVectorOverwrite = &val
 	}
 
-	return etcd.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, image.String(), kubernetesVersion, imageVectorOverwrite), nil
+	return etcd.NewBootstrapper(c, v1beta1constants.GardenNamespace, image.String(), imageVectorOverwrite), nil
 }
 
-func defaultKubeScheduler(
-	sc kubernetes.Interface,
-	imageVector imagevector.ImageVector,
-	kubernetesVersion *semver.Version,
-) (
-	component.DeployWaiter,
-	error,
-) {
+func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(charts.ImageNameKubeScheduler, imagevector.TargetVersion(kubernetesVersion.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	scheduler, err := gardenerkubescheduler.Bootstrap(sc.Client(), v1beta1constants.GardenNamespace, image, kubernetesVersion)
+	scheduler, err := gardenerkubescheduler.Bootstrap(c, v1beta1constants.GardenNamespace, image, kubernetesVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -85,14 +75,7 @@ func defaultKubeScheduler(
 	return scheduler, nil
 }
 
-func defaultGardenerSeedAdmissionController(
-	sc kubernetes.Interface,
-	imageVector imagevector.ImageVector,
-	kubernetesVersion *semver.Version,
-) (
-	component.DeployWaiter,
-	error,
-) {
+func defaultGardenerSeedAdmissionController(c client.Client, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(charts.ImageNameGardenerSeedAdmissionController)
 	if err != nil {
 		return nil, err
@@ -104,16 +87,16 @@ func defaultGardenerSeedAdmissionController(
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	return seedadmissioncontroller.New(sc.Client(), v1beta1constants.GardenNamespace, image.String(), kubernetesVersion), nil
+	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, image.String()), nil
 }
 
-func defaultGardenerResourceManager(sc kubernetes.Interface, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
-	image, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager, imagevector.RuntimeVersion(sc.Version()), imagevector.TargetVersion(sc.Version()))
+func defaultGardenerResourceManager(c client.Client, seedVersion string, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
+	image, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
 	if err != nil {
 		return nil, err
 	}
 
-	return resourcemanager.New(sc.Client(), v1beta1constants.GardenNamespace, image.String(), 1, resourcemanager.Values{
+	return resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), 1, resourcemanager.Values{
 		ConcurrentSyncs:  pointer.Int32(20),
 		HealthSyncPeriod: utils.DurationPtr(time.Minute),
 		ResourceClass:    pointer.String(v1beta1constants.SeedResourceManagerClass),
@@ -121,14 +104,7 @@ func defaultGardenerResourceManager(sc kubernetes.Interface, imageVector imageve
 	}), nil
 }
 
-func defaultNetworkPolicies(
-	sc kubernetes.Interface,
-	seed *gardencorev1beta1.Seed,
-	sniEnabled bool,
-) (
-	component.DeployWaiter,
-	error,
-) {
+func defaultNetworkPolicies(c client.Client, seed *gardencorev1beta1.Seed, sniEnabled bool) (component.DeployWaiter, error) {
 	networks := []string{seed.Spec.Networks.Pods, seed.Spec.Networks.Services}
 	if v := seed.Spec.Networks.Nodes; v != nil {
 		networks = append(networks, *v)
@@ -147,7 +123,7 @@ func defaultNetworkPolicies(
 		return nil, fmt.Errorf("cannot calculate CoreDNS ClusterIP: %v", err)
 	}
 
-	return networkpolicies.NewBootstrapper(sc.Client(), v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{
+	return networkpolicies.NewBootstrapper(c, v1beta1constants.GardenNamespace, networkpolicies.GlobalValues{
 		SNIEnabled:           sniEnabled,
 		DenyAllTraffic:       false,
 		PrivateNetworkPeers:  privateNetworkPeers,
@@ -157,7 +133,8 @@ func defaultNetworkPolicies(
 }
 
 func defaultDependencyWatchdogs(
-	sc kubernetes.Interface,
+	c client.Client,
+	seedVersion string,
 	imageVector imagevector.ImageVector,
 ) (
 	dwdEndpoint component.DeployWaiter,
@@ -202,17 +179,17 @@ func defaultDependencyWatchdogs(
 		dependencyWatchdogProbeConfigurations.Probes = append(dependencyWatchdogProbeConfigurations.Probes, dwdConfig...)
 	}
 
-	image, err := imageVector.FindImage(charts.ImageNameDependencyWatchdog, imagevector.RuntimeVersion(sc.Version()), imagevector.TargetVersion(sc.Version()))
+	image, err := imageVector.FindImage(charts.ImageNameDependencyWatchdog, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	dwdEndpoint = dependencywatchdog.New(sc.Client(), v1beta1constants.GardenNamespace, dependencywatchdog.Values{
+	dwdEndpoint = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dependencywatchdog.Values{
 		Role:           dependencywatchdog.RoleEndpoint,
 		Image:          image.String(),
 		ValuesEndpoint: dependencywatchdog.ValuesEndpoint{ServiceDependants: dependencyWatchdogEndpointConfigurations},
 	})
-	dwdProbe = dependencywatchdog.New(sc.Client(), v1beta1constants.GardenNamespace, dependencywatchdog.Values{
+	dwdProbe = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dependencywatchdog.Values{
 		Role:        dependencywatchdog.RoleProbe,
 		Image:       image.String(),
 		ValuesProbe: dependencywatchdog.ValuesProbe{ProbeDependantsList: dependencyWatchdogProbeConfigurations},

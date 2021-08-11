@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -41,14 +42,12 @@ import (
 
 // Controller controls Seeds.
 type Controller struct {
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	clientMap clientmap.ClientMap
 
 	config        *config.GardenletConfiguration
 	healthManager healthz.Manager
-	recorder      record.EventRecorder
 
-	control               ControlInterface
+	reconciler            reconcile.Reconciler
 	extensionCheckControl ExtensionCheckControlInterface
 	seedLeaseControl      lease.Controller
 
@@ -89,11 +88,9 @@ func NewSeedController(
 
 	seedController := &Controller{
 		clientMap:               clientMap,
-		k8sGardenCoreInformers:  gardenCoreInformerFactory,
 		config:                  config,
 		healthManager:           healthManager,
-		recorder:                recorder,
-		control:                 NewDefaultControl(clientMap, gardenCoreInformerFactory, imageVector, componentImageVectors, identity, recorder, config, seedLister),
+		reconciler:              newReconciler(clientMap, recorder, logger.Logger, imageVector, componentImageVectors, identity, config, seedLister),
 		extensionCheckControl:   NewDefaultExtensionCheckControl(clientMap, controllerInstallationLister, metav1.Now),
 		seedLeaseControl:        lease.NewLeaseController(time.Now, clientMap, LeaseResyncSeconds, gardencorev1beta1.GardenerSeedLeaseNamespace),
 		seedLister:              seedLister,
@@ -156,7 +153,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("Seed controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconciler, &waitGroup, c.workerCh)
 		controllerutils.DeprecatedCreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.reconcileSeedLeaseKey, &waitGroup, c.workerCh)
 		controllerutils.DeprecatedCreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.reconcileSeedExtensionCheckKey, &waitGroup, c.workerCh)
 	}

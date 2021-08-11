@@ -56,14 +56,14 @@ func (s *Secrets) Deploy(
 	}
 
 	// Generate CAs
-	_, cas, err := GenerateCertificateAuthorities(ctx, gcs, existingSecrets, s.CertificateSecretConfigs, namespace)
+	_, cas, err := GenerateCertificateAuthorities(ctx, gcs.Client(), existingSecrets, s.CertificateSecretConfigs, namespace)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate CA secrets in namespace '%s': %w", namespace, err)
 	}
 
 	// Generate cluster secrets
 	secretConfigs := s.SecretConfigsFunc(cas, namespace)
-	clusterSecrets, err := GenerateClusterSecrets(ctx, gcs, existingSecrets, secretConfigs, namespace)
+	clusterSecrets, err := GenerateClusterSecrets(ctx, gcs.Client(), existingSecrets, secretConfigs, namespace)
 	if err != nil {
 		return nil, fmt.Errorf("could not generate cluster secrets in namespace '%s': %w", namespace, err)
 	}

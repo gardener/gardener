@@ -26,7 +26,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
@@ -51,7 +50,6 @@ var _ = Describe("Etcd", func() {
 		ctx                       = context.TODO()
 		fakeErr                   = fmt.Errorf("fake error")
 		namespace                 = "shoot--foo--bar"
-		seedVersion               = semver.MustParse("1.17.0")
 		etcdDruidImage            = "etcd/druid:1.2.3"
 		imageVectorOverwriteEmpty *string
 		imageVectorOverwriteFull  = pointer.String("some overwrite")
@@ -63,7 +61,7 @@ var _ = Describe("Etcd", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
-		bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteEmpty)
+		bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, imageVectorOverwriteEmpty)
 	})
 
 	AfterEach(func() {
@@ -399,7 +397,7 @@ status: {}
 		})
 
 		It("should successfully deploy all the resources (w/ image vector overwrite)", func() {
-			bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, seedVersion, imageVectorOverwriteFull)
+			bootstrapper = NewBootstrapper(c, namespace, etcdDruidImage, imageVectorOverwriteFull)
 
 			managedResourceSecret.Data["configmap__shoot--foo--bar__etcd-druid-imagevector-overwrite.yaml"] = []byte(configMapImageVectorOverwriteYAML)
 			managedResourceSecret.Data["deployment__shoot--foo--bar__etcd-druid.yaml"] = []byte(deploymentWithImageVectorOverwriteYAML)

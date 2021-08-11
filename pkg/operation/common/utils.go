@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -106,50 +107,39 @@ func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string
 }
 
 // DeleteHvpa delete all resources required for the HVPA in the given namespace.
-func DeleteHvpa(ctx context.Context, k8sClient kubernetes.Interface, namespace string) error {
-	if k8sClient == nil {
-		return fmt.Errorf("require kubernetes client")
-	}
-
-	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=%s", v1beta1constants.GardenRole, v1beta1constants.GardenRoleHvpa),
-	}
+func DeleteHvpa(ctx context.Context, c client.Client, namespace string) error {
+	labelSelectorHVPA := client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleHvpa}
 
 	// Delete all CRDs with label "gardener.cloud/role=hvpa"
 	// Workaround: Due to https://github.com/gardener/gardener/issues/2257, we first list the HVPA CRDs and then remove
 	// them one by one.
-	crdList, err := k8sClient.APIExtension().ApiextensionsV1beta1().CustomResourceDefinitions().List(ctx, listOptions)
-	if err != nil {
+	crdList := &apiextensionsv1beta1.CustomResourceDefinitionList{}
+	if err := c.List(ctx, crdList, labelSelectorHVPA); err != nil {
 		return err
 	}
 	for _, crd := range crdList.Items {
-		if err := k8sClient.APIExtension().ApiextensionsV1beta1().CustomResourceDefinitions().Delete(ctx, crd.Name, metav1.DeleteOptions{}); client.IgnoreNotFound(err) != nil {
+		if err := c.Delete(ctx, &crd); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
 
 	// Delete all Deployments with label "gardener.cloud/role=hvpa"
-	deletePropagation := metav1.DeletePropagationForeground
-	if err := k8sClient.Kubernetes().AppsV1().Deployments(namespace).DeleteCollection(ctx, metav1.DeleteOptions{PropagationPolicy: &deletePropagation}, listOptions); client.IgnoreNotFound(err) != nil {
+	if err := c.DeleteAllOf(ctx, &appsv1.Deployment{}, client.InNamespace(namespace), labelSelectorHVPA, client.PropagationPolicy(metav1.DeletePropagationForeground)); err != nil {
 		return err
 	}
 
 	// Delete all ClusterRoles with label "gardener.cloud/role=hvpa"
-	if err := k8sClient.Kubernetes().RbacV1().ClusterRoles().DeleteCollection(ctx, metav1.DeleteOptions{}, listOptions); client.IgnoreNotFound(err) != nil {
+	if err := c.DeleteAllOf(ctx, &rbacv1.ClusterRole{}, labelSelectorHVPA); err != nil {
 		return err
 	}
 
 	// Delete all ClusterRoleBindings with label "gardener.cloud/role=hvpa"
-	if err := k8sClient.Kubernetes().RbacV1().ClusterRoleBindings().DeleteCollection(ctx, metav1.DeleteOptions{}, listOptions); client.IgnoreNotFound(err) != nil {
+	if err := c.DeleteAllOf(ctx, &rbacv1.ClusterRoleBinding{}, labelSelectorHVPA); err != nil {
 		return err
 	}
 
 	// Delete all ServiceAccounts with label "gardener.cloud/role=hvpa"
-	if err := k8sClient.Kubernetes().CoreV1().ServiceAccounts(namespace).DeleteCollection(ctx, metav1.DeleteOptions{}, listOptions); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
-	return nil
+	return c.DeleteAllOf(ctx, &corev1.ServiceAccount{}, client.InNamespace(namespace), labelSelectorHVPA)
 }
 
 // DeleteVpa delete all resources required for the VPA in the given namespace.

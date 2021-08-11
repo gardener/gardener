@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,8 +26,8 @@ import (
 
 // GenerateClusterSecrets try to deploy in the k8s cluster each secret in the wantedSecretsList. If the secret already exist it jumps to the next one.
 // The function returns a map with all of the successfully deployed wanted secrets plus those already deployed (only from the wantedSecretsList).
-func GenerateClusterSecrets(ctx context.Context, k8sClusterClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []ConfigInterface, namespace string) (map[string]*corev1.Secret, error) {
-	return GenerateClusterSecretsWithFunc(ctx, k8sClusterClient.Client(), existingSecretsMap, wantedSecretsList, namespace, func(s ConfigInterface) (DataInterface, error) {
+func GenerateClusterSecrets(ctx context.Context, c client.Client, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []ConfigInterface, namespace string) (map[string]*corev1.Secret, error) {
+	return GenerateClusterSecretsWithFunc(ctx, c, existingSecretsMap, wantedSecretsList, namespace, func(s ConfigInterface) (DataInterface, error) {
 		return s.Generate()
 	})
 }
