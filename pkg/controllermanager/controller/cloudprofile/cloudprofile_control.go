@@ -111,7 +111,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 		cloudProfileLogger.Info(message)
 		r.recorder.Event(cloudProfile, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 
-		return reconcile.Result{}, fmt.Errorf("CloudProfile %q still has references", cloudProfile.Name)
+		return reconcile.Result{}, fmt.Errorf("Cannot delete CloudProfile %q, because the following Shoots are still referencing it: %+v", cloudProfile.Name, associatedShoots)
 	}
 
 	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
