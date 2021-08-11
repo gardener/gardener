@@ -109,8 +109,11 @@ func getEmptyPriorityClass() *schedulingv1.PriorityClass {
 func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLabels map[string]string, serviceAccountName string, featureGates map[string]bool) {
 	// ClusterRoles
 	gardenletClusterRole := getGardenletClusterRole(expectedLabels)
+	apiServerSNIEnabled, ok := featureGates[string(features.APIServerSNI)]
+	apiServerSNIClusterRole := getAPIServerSNIClusterRole(expectedLabels, !ok || apiServerSNIEnabled)
 	expectedClusterRoles := map[types.NamespacedName]*rbacv1.ClusterRole{
-		{Name: gardenletClusterRole.Name}: gardenletClusterRole,
+		{Name: gardenletClusterRole.Name}:    gardenletClusterRole,
+		{Name: apiServerSNIClusterRole.Name}: apiServerSNIClusterRole,
 	}
 	if featureGates[string(features.ManagedIstio)] {
 		managedIstioClusterRole := getManagedIstioClusterRole(expectedLabels)
@@ -126,8 +129,10 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 
 	// ClusterRoleBindings
 	gardenletClusterRoleBinding := getGardenletClusterRoleBinding(expectedLabels, serviceAccountName)
+	apiServerSNIClusterRoleBinding := getAPIServerSNIClusterRoleBinding(expectedLabels, serviceAccountName)
 	expectedClusterRoleBindings := map[types.NamespacedName]*rbacv1.ClusterRoleBinding{
-		{Name: gardenletClusterRoleBinding.Name}: gardenletClusterRoleBinding,
+		{Name: gardenletClusterRoleBinding.Name}:    gardenletClusterRoleBinding,
+		{Name: apiServerSNIClusterRoleBinding.Name}: apiServerSNIClusterRoleBinding,
 	}
 	if featureGates[string(features.ManagedIstio)] {
 		managedIstioClusterRoleBinding := getManagedIstioClusterRoleBinding(expectedLabels, serviceAccountName)
@@ -349,6 +354,55 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 	}
 }
 
+func getAPIServerSNIClusterRole(labels map[string]string, apiServerSNIEnabled bool) *rbacv1.ClusterRole {
+	clusterRole := rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRole", APIVersion: rbacv1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "gardener.cloud:system:gardenlet:apiserver-sni",
+			Labels:          labels,
+			ResourceVersion: "1",
+		},
+	}
+
+	if apiServerSNIEnabled {
+		clusterRole.Rules = []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{"networking.istio.io"},
+				Resources: []string{"envoyfilters", "gateways", "virtualservices"},
+				Verbs:     []string{"create"},
+			},
+			{
+				APIGroups:     []string{"networking.istio.io"},
+				Resources:     []string{"envoyfilters", "gateways"},
+				ResourceNames: []string{"proxy-protocol"},
+				Verbs:         []string{"get", "patch", "update"},
+			},
+			{
+				APIGroups:     []string{"networking.istio.io"},
+				Resources:     []string{"virtualservices"},
+				ResourceNames: []string{"proxy-protocol-blackhole"},
+				Verbs:         []string{"get", "patch", "update"},
+			},
+		}
+	} else {
+		clusterRole.Rules = []rbacv1.PolicyRule{
+			{
+				APIGroups:     []string{"networking.istio.io"},
+				Resources:     []string{"envoyfilters", "gateways"},
+				ResourceNames: []string{"proxy-protocol"},
+				Verbs:         []string{"delete"},
+			},
+			{
+				APIGroups:     []string{"networking.istio.io"},
+				Resources:     []string{"virtualservices"},
+				ResourceNames: []string{"proxy-protocol-blackhole"},
+				Verbs:         []string{"delete"},
+			},
+		}
+	}
+	return &clusterRole
+}
+
 func getManagedIstioClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{Kind: "ClusterRole", APIVersion: rbacv1.SchemeGroupVersion.String()},
@@ -396,6 +450,29 @@ func getGardenletClusterRoleBinding(labels map[string]string, serviceAccountName
 			APIGroup: rbacv1.SchemeGroupVersion.Group,
 			Kind:     "ClusterRole",
 			Name:     "gardener.cloud:system:gardenlet",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccountName,
+				Namespace: gardencorev1beta1constants.GardenNamespace,
+			},
+		},
+	}
+}
+
+func getAPIServerSNIClusterRoleBinding(labels map[string]string, serviceAccountName string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{Kind: "ClusterRoleBinding", APIVersion: rbacv1.SchemeGroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "gardener.cloud:system:gardenlet:apiserver-sni",
+			Labels:          labels,
+			ResourceVersion: "1",
+		},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.SchemeGroupVersion.Group,
+			Kind:     "ClusterRole",
+			Name:     "gardener.cloud:system:gardenlet:apiserver-sni",
 		},
 		Subjects: []rbacv1.Subject{
 			{
