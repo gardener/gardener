@@ -57,7 +57,6 @@ type Controller struct {
 	imageVector                   imagevector.ImageVector
 	shootReconciliationDueTracker *reconciliationDueTracker
 
-	seedLister  gardencorelisters.SeedLister
 	shootLister gardencorelisters.ShootLister
 
 	shootCareQueue        workqueue.RateLimitingInterface
@@ -79,9 +78,6 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 	var (
 		gardenCoreV1beta1Informer = k8sGardenCoreInformers.Core().V1beta1()
 
-		seedInformer = gardenCoreV1beta1Informer.Seeds()
-		seedLister   = seedInformer.Lister()
-
 		shootInformer = gardenCoreV1beta1Informer.Shoots()
 		shootLister   = shootInformer.Lister()
 	)
@@ -99,7 +95,6 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		imageVector:                   imageVector,
 		shootReconciliationDueTracker: newReconciliationDueTracker(),
 
-		seedLister:  seedLister,
 		shootLister: shootLister,
 
 		shootCareQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
@@ -138,7 +133,6 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 	})
 
 	shootController.hasSyncedFuncs = []cache.InformerSynced{
-		seedInformer.Informer().HasSynced,
 		shootInformer.Informer().HasSynced,
 	}
 

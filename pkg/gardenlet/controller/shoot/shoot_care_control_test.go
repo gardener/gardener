@@ -53,6 +53,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// TODO(timebertt): some of these tests are broken in this commit
+//  they will be fixed in a later commit, once listers are completely eliminated in the care controller
 var _ = Describe("Shoot Care Control", func() {
 	var (
 		careControl   reconcile.Reconciler

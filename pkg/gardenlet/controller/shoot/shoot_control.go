@@ -128,11 +128,6 @@ func (c *Controller) checkSeedAndSyncClusterResource(ctx context.Context, shoot 
 		return nil
 	}
 
-	seed, err := c.seedLister.Get(*seedName)
-	if err != nil {
-		return fmt.Errorf("could not find seed %s: %w", *seedName, err)
-	}
-
 	// Don't wait for the Seed to be ready if it is already marked for deletion. In this case
 	// it will never get ready because the bootstrap loop is never executed again.
 	// Don't block the Shoot deletion flow in this case to allow proper cleanup.
@@ -172,6 +167,11 @@ func (c *Controller) deleteClusterResourceFromSeed(ctx context.Context, shoot *g
 func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logger.NewShootLogger(logger.Logger, req.Name, req.Namespace)
 
+	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
 	shoot, err := c.shootLister.Shoots(req.Namespace).Get(req.Name)
 	if apierrors.IsNotFound(err) {
 		log.Debug("Skipping because Shoot has been deleted")
@@ -179,11 +179,6 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 	}
 	if err != nil {
 		return reconcile.Result{}, err
-	}
-
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
 	// fetch related objects required for shoot operation
@@ -197,8 +192,8 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	seed, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(*shoot.Spec.SeedName)
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Spec.SeedName}, seed); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -225,8 +220,8 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 			return reconcile.Result{}, errors.New("Shoot has still Bastions")
 		}
 
-		sourceSeed, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(*shoot.Status.SeedName)
-		if err != nil {
+		sourceSeed := &gardencorev1beta1.Seed{}
+		if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Status.SeedName}, seed); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -250,7 +245,7 @@ func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
 const taskID = "initializeOperation"
 
 func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
-	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Client(), c.seedLister, gutil.ComputeGardenNamespace(seed.Name))
+	gardenSecrets, err := garden.ReadGardenSecretsFromReader(ctx, gardenClient.Client(), gutil.ComputeGardenNamespace(seed.Name))
 	if err != nil {
 		return nil, err
 	}
