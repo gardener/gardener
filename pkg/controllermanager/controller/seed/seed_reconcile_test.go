@@ -20,7 +20,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	"github.com/gardener/gardener/pkg/logger"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
@@ -40,7 +39,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
-	k8scoreinformers "k8s.io/client-go/informers"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -72,7 +70,6 @@ var _ = Describe("SeedReconciler", func() {
 
 			control reconcile.Reconciler
 
-			secrets   []*corev1.Secret
 			seed      *gardencorev1beta1.Seed
 			namespace *corev1.Namespace
 		)
@@ -96,15 +93,6 @@ var _ = Describe("SeedReconciler", func() {
 		})
 
 		JustBeforeEach(func() {
-			gardenInformerFactory := gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			Expect(gardenInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
-
-			coreInformerFactory := k8scoreinformers.NewSharedInformerFactory(nil, 0)
-			for _, s := range secrets {
-				secret := s
-				Expect(coreInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(secret)).To(Succeed())
-			}
-
 			control = NewDefaultControl(logger.NewNopLogger(), cl)
 		})
 
@@ -129,7 +117,7 @@ var _ = Describe("SeedReconciler", func() {
 
 		Context("when seed exists", func() {
 			var (
-				addedSecret, oldSecret, newSecret, deletedSecret *corev1.Secret
+				addedSecret, oldSecret, deletedSecret *corev1.Secret
 			)
 
 			BeforeEach(func() {
@@ -144,10 +132,8 @@ var _ = Describe("SeedReconciler", func() {
 				corev1If.EXPECT().Namespaces().Return(namespaceIf).AnyTimes()
 
 				oldSecret = createSecret("existing", namespace.Name, "old", "role", []byte("data"))
-				newSecret = createSecret("existing", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar"))
 				addedSecret = createSecret("new", v1beta1constants.GardenNamespace, "foo", "role", []byte("bar"))
 				deletedSecret = createSecret("stale", namespace.Name, "foo", "role", []byte("bar"))
-				secrets = []*corev1.Secret{addedSecret, newSecret, oldSecret, deletedSecret}
 
 				cl.EXPECT().Get(ctx, kutil.Key(seed.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
 					*obj = *seed
