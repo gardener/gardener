@@ -37,6 +37,8 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+// TODO(timebertt): these tests are broken in this commit
+//  they will be fixed in a later commit, once the controller switched from listers to c-r clients
 var _ = Describe("ExtensionControlReconcile", func() {
 	const seedName = "test"
 

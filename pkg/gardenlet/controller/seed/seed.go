@@ -47,9 +47,9 @@ type Controller struct {
 	config        *config.GardenletConfiguration
 	healthManager healthz.Manager
 
-	reconciler            reconcile.Reconciler
-	extensionCheckControl ExtensionCheckControlInterface
-	seedLeaseControl      lease.Controller
+	reconciler               reconcile.Reconciler
+	seedLeaseControl         lease.Controller
+	extensionCheckReconciler reconcile.Reconciler
 
 	seedLister gardencorelisters.SeedLister
 
@@ -87,12 +87,15 @@ func NewSeedController(
 	)
 
 	seedController := &Controller{
-		clientMap:               clientMap,
-		config:                  config,
-		healthManager:           healthManager,
-		reconciler:              newReconciler(clientMap, recorder, logger.Logger, imageVector, componentImageVectors, identity, config, seedLister),
-		extensionCheckControl:   NewDefaultExtensionCheckControl(clientMap, controllerInstallationLister, metav1.Now),
-		seedLeaseControl:        lease.NewLeaseController(time.Now, clientMap, LeaseResyncSeconds, gardencorev1beta1.GardenerSeedLeaseNamespace),
+		clientMap:        clientMap,
+		config:           config,
+		healthManager:    healthManager,
+		reconciler:       newReconciler(clientMap, recorder, logger.Logger, imageVector, componentImageVectors, identity, config, seedLister),
+		seedLeaseControl: lease.NewLeaseController(time.Now, clientMap, LeaseResyncSeconds, gardencorev1beta1.GardenerSeedLeaseNamespace),
+
+		// TODO: move this reconciler to controller-manager and let it run once for all Seeds, no Seed specifics required here
+		extensionCheckReconciler: NewExtensionCheckReconciler(clientMap, logger.Logger, seedLister, controllerInstallationLister, metav1.Now),
+
 		seedLister:              seedLister,
 		seedQueue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		seedLeaseQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),
@@ -155,7 +158,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconciler, &waitGroup, c.workerCh)
 		controllerutils.DeprecatedCreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.reconcileSeedLeaseKey, &waitGroup, c.workerCh)
-		controllerutils.DeprecatedCreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.reconcileSeedExtensionCheckKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.extensionCheckReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
