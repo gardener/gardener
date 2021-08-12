@@ -123,7 +123,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			return a.authorize(seedName, graph.VertexTypeCertificateSigningRequest, attrs,
 				[]string{"get"},
 				[]string{"create"},
-				nil,
+				[]string{"seedclient"},
 			)
 		case cloudProfileResource:
 			return a.authorizeRead(seedName, graph.VertexTypeCloudProfile, attrs)
