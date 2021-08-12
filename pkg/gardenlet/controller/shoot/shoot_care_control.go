@@ -268,7 +268,7 @@ func (s *careReconciler) care(ctx context.Context, shootObj *gardencorev1beta1.S
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if s.gardenSecrets == nil {
-		secrets, err := garden.ReadGardenSecretsFromReader(careCtx, gardenClient.Client(), gutil.ComputeGardenNamespace(*shoot.Spec.SeedName))
+		secrets, err := garden.ReadGardenSecrets(careCtx, gardenClient.Client(), gutil.ComputeGardenNamespace(*shoot.Spec.SeedName))
 		if err != nil {
 			return fmt.Errorf("error reading Garden secrets: %w", err)
 		}

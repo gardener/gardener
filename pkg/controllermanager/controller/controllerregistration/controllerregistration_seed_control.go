@@ -103,7 +103,7 @@ func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, re
 		return reconcile.Result{}, err
 	}
 
-	secrets, err := gardenpkg.ReadGardenSecretsFromReader(ctx, r.gardenClient.Client(), gutil.ComputeGardenNamespace(seed.Name))
+	secrets, err := gardenpkg.ReadGardenSecrets(ctx, r.gardenClient.Client(), gutil.ComputeGardenNamespace(seed.Name))
 	if err != nil {
 		return reconcile.Result{}, err
 	}
