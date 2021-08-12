@@ -81,7 +81,7 @@ func (b *Builder) WithDefaultDomains(defaultDomains []*Domain) *Builder {
 	return b
 }
 
-// WithDefaultDomains sets the defaultDomainsFunc attribute at the Builder based on the given secrets map.
+// WithDefaultDomainsFromSecrets sets the defaultDomainsFunc attribute at the Builder based on the given secrets map.
 func (b *Builder) WithDefaultDomainsFromSecrets(secrets map[string]*corev1.Secret) *Builder {
 	b.defaultDomainsFunc = func() ([]*Domain, error) { return GetDefaultDomains(secrets) }
 	return b
@@ -222,6 +222,7 @@ type (
 
 var gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
 
+// TODO(timebertt): simplify this and only use client.Reader, once listers are eliminated
 func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFunc, seedLister listSeedsFunc, namespace string) (map[string]*corev1.Secret, error) {
 	var (
 		logInfo                             []string

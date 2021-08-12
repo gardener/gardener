@@ -31,7 +31,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -58,19 +57,17 @@ const (
 type leaseReconciler struct {
 	clientMap     clientmap.ClientMap
 	logger        logrus.FieldLogger
-	seedLister    gardencorelisters.SeedLister
 	healthManager healthz.Manager
 	nowFunc       func() time.Time
 }
 
 // NewLeaseReconciler creates a new reconciler that periodically renews the gardenlet's lease.
-func NewLeaseReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger, seedLister gardencorelisters.SeedLister, healthManager healthz.Manager, nowFunc func() time.Time) reconcile.Reconciler {
+func NewLeaseReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger, healthManager healthz.Manager, nowFunc func() time.Time) reconcile.Reconciler {
 	return &leaseReconciler{
 		clientMap:     clientMap,
 		logger:        l,
 		nowFunc:       nowFunc,
 		healthManager: healthManager,
-		seedLister:    seedLister,
 	}
 }
 
@@ -82,8 +79,8 @@ func (r *leaseReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	seed, err := r.seedLister.Get(request.Name)
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Infof("[SEED LEASE] Stopping lease operations for Seed since it has been deleted")
 

@@ -23,7 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -88,7 +87,6 @@ func newReconciler(
 	componentImageVectors imagevector.ComponentImageVectors,
 	identity *gardencorev1beta1.Gardener,
 	config *config.GardenletConfiguration,
-	seedLister gardencorelisters.SeedLister,
 ) reconcile.Reconciler {
 	return &reconciler{
 		clientMap:             clientMap,
@@ -98,7 +96,6 @@ func newReconciler(
 		componentImageVectors: componentImageVectors,
 		identity:              identity,
 		config:                config,
-		seedLister:            seedLister,
 	}
 }
 
@@ -110,7 +107,6 @@ type reconciler struct {
 	componentImageVectors imagevector.ComponentImageVectors
 	identity              *gardencorev1beta1.Gardener
 	config                *config.GardenletConfiguration
-	seedLister            gardencorelisters.SeedLister
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -121,8 +117,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	seed, err := r.seedLister.Get(request.Name)
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Debugf("[SEED RECONCILE] skipping because Seed has been deleted")
 
@@ -312,10 +308,9 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		return err
 	}
 
-	gardenSecrets, err := garden.ReadGardenSecrets(
+	gardenSecrets, err := garden.ReadGardenSecretsFromReader(
 		ctx,
 		gardenClient,
-		r.seedLister,
 		gutil.ComputeGardenNamespace(seed.Name),
 	)
 	if err != nil {

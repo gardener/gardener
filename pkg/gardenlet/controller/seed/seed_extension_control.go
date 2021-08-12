@@ -21,13 +21,12 @@ import (
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 )
@@ -50,28 +49,18 @@ func (c *Controller) controllerInstallationOfSeedDelete(obj interface{}) {
 
 // NewExtensionCheckReconciler creates a new reconciler that maintains the ExtensionsReady condition of Seeds
 // according to the observed changes to ControllerInstallations.
-func NewExtensionCheckReconciler(
-	clientMap clientmap.ClientMap,
-	l logrus.FieldLogger,
-	seedLister gardencorelisters.SeedLister,
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister,
-	nowFunc func() metav1.Time,
-) reconcile.Reconciler {
+func NewExtensionCheckReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger, nowFunc func() metav1.Time) reconcile.Reconciler {
 	return &extensionCheckReconciler{
-		clientMap:                    clientMap,
-		logger:                       l,
-		seedLister:                   seedLister,
-		controllerInstallationLister: controllerInstallationLister,
-		nowFunc:                      nowFunc,
+		clientMap: clientMap,
+		logger:    l,
+		nowFunc:   nowFunc,
 	}
 }
 
 type extensionCheckReconciler struct {
-	clientMap                    clientmap.ClientMap
-	logger                       logrus.FieldLogger
-	seedLister                   gardencorelisters.SeedLister
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister
-	nowFunc                      func() metav1.Time
+	clientMap clientmap.ClientMap
+	logger    logrus.FieldLogger
+	nowFunc   func() metav1.Time
 }
 
 func (r *extensionCheckReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -82,8 +71,8 @@ func (r *extensionCheckReconciler) Reconcile(ctx context.Context, request reconc
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	seed, err := r.seedLister.Get(request.Name)
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Debugf("[SEED EXTENSION CHECK] skipping because Seed has been deleted")
 			return reconcile.Result{}, nil
@@ -96,8 +85,8 @@ func (r *extensionCheckReconciler) Reconcile(ctx context.Context, request reconc
 }
 
 func (r *extensionCheckReconciler) reconcile(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) error {
-	controllerInstallationList, err := r.controllerInstallationLister.List(labels.Everything())
-	if err != nil {
+	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+	if err := gardenClient.List(ctx, controllerInstallationList, client.MatchingFields{core.SeedRefName: seed.Name}); err != nil {
 		return err
 	}
 
@@ -107,11 +96,7 @@ func (r *extensionCheckReconciler) reconcile(ctx context.Context, gardenClient c
 		notHealthy   = make(map[string]string)
 	)
 
-	for _, controllerInstallation := range controllerInstallationList {
-		if controllerInstallation.Spec.SeedRef.Name != seed.Name {
-			continue
-		}
-
+	for _, controllerInstallation := range controllerInstallationList.Items {
 		if len(controllerInstallation.Status.Conditions) == 0 {
 			notInstalled[controllerInstallation.Name] = "extension was not yet installed"
 			continue
