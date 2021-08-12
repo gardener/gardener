@@ -320,6 +320,10 @@ func validateMachineImages(machineImages []core.MachineImage, fldPath *field.Pat
 				allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use a semantic version. In case there is no semantic version for this image use the extensibility provider (define mapping in the CloudProfile) to map to the actual non semantic version"))
 			}
 
+			if machineVersion.CRI == nil {
+				allErrs = append(allErrs, field.Required(versionsPath.Child("cri"), fmt.Sprintf("must provide at least one supported container runtime for machine image %q", image.Name)))
+			}
+
 			allErrs = append(allErrs, validateExpirableVersion(machineVersion.ExpirableVersion, helper.ToExpirableVersions(image.Versions), versionsPath)...)
 			allErrs = append(allErrs, validateContainerRuntimesInterfaces(machineVersion.CRI, versionsPath.Child("cri"))...)
 		}

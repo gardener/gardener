@@ -202,6 +202,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 										ExpirableVersion: core.ExpirableVersion{
 											Version: "1.2.3",
 										},
+										CRI: []core.CRI{{Name: core.CRINameDocker}},
 									},
 								},
 							},
@@ -407,6 +408,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 										Version:        "3.4.6",
 										Classification: &supportedClassification,
 									},
+									CRI: []core.CRI{{Name: core.CRINameDocker}},
 								},
 							},
 						},
@@ -418,6 +420,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 										Version:        "3.4.5",
 										Classification: &previewClassification,
 									},
+									CRI: []core.CRI{{Name: core.CRINameDocker}},
 								},
 							},
 						},
@@ -457,6 +460,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 										Version:        "0.1.2",
 										Classification: &supportedClassification,
 									},
+									CRI: []core.CRI{{Name: core.CRINameDocker}},
 								},
 							},
 						},
@@ -468,6 +472,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 										Version:        "a.b.c",
 										Classification: &supportedClassification,
 									},
+									CRI: []core.CRI{{Name: core.CRINameDocker}},
 								},
 							},
 						},
@@ -484,6 +489,41 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 					}))))
 				})
 
+				It("should forbid machine image versions without a list of supported CRIs", func() {
+					cloudProfile.Spec.MachineImages = []core.MachineImage{
+						{
+							Name: "some-machineimage",
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "2.0.0",
+										Classification: &supportedClassification,
+									},
+									CRI: []core.CRI{{Name: core.CRINameDocker}},
+								},
+							},
+						},
+						{
+							Name: "xy",
+							Versions: []core.MachineImageVersion{
+								{
+									ExpirableVersion: core.ExpirableVersion{
+										Version:        "1.0.0",
+										Classification: &supportedClassification,
+									},
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(cloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.machineImages[1].versions[0].cri"),
+					}))))
+				})
+
 				It("should allow expiration date on latest machine image version", func() {
 					expirationDate := &metav1.Time{Time: time.Now().AddDate(0, 0, 1)}
 					cloudProfile.Spec.MachineImages = []core.MachineImage{
@@ -496,12 +536,14 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 										ExpirationDate: expirationDate,
 										Classification: &previewClassification,
 									},
+									CRI: []core.CRI{{Name: core.CRINameDocker}},
 								},
 								{
 									ExpirableVersion: core.ExpirableVersion{
 										Version:        "0.1.1",
 										Classification: &supportedClassification,
 									},
+									CRI: []core.CRI{{Name: core.CRINameDocker}},
 								},
 							},
 						},
@@ -514,6 +556,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 										ExpirationDate: expirationDate,
 										Classification: &supportedClassification,
 									},
+									CRI: []core.CRI{{Name: core.CRINameDocker}},
 								},
 							},
 						},
@@ -534,6 +577,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 										Version:        "0.1.2",
 										Classification: &classification,
 									},
+									CRI: []core.CRI{{Name: core.CRINameDocker}},
 								},
 							},
 						},
@@ -831,6 +875,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 										Version:        "1.2.3",
 										Classification: &supportedClassification,
 									},
+									CRI: []core.CRI{{Name: core.CRINameDocker}},
 								},
 							},
 						},
@@ -881,6 +926,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							Version:        "2135.6.2",
 							Classification: &deprecatedClassification,
 						},
+						CRI: []core.CRI{{Name: core.CRINameDocker}},
 					},
 					{
 						ExpirableVersion: core.ExpirableVersion{
@@ -888,6 +934,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							Classification: &deprecatedClassification,
 							ExpirationDate: dateInThePast,
 						},
+						CRI: []core.CRI{{Name: core.CRINameDocker}},
 					},
 					{
 						ExpirableVersion: core.ExpirableVersion{
@@ -895,6 +942,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 							Classification: &deprecatedClassification,
 							ExpirationDate: dateInThePast,
 						},
+						CRI: []core.CRI{{Name: core.CRINameDocker}},
 					},
 				}
 				cloudProfileNew.Spec.MachineImages[0].Versions = versions[0:1]
@@ -961,6 +1009,7 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 									ExpirableVersion: core.ExpirableVersion{
 										Version: "1.2.3",
 									},
+									CRI: []core.CRI{{Name: core.CRINameDocker}},
 								},
 							},
 						},
@@ -1006,12 +1055,14 @@ var _ = Describe("CloudProfile Validation Tests ", func() {
 						ExpirableVersion: core.ExpirableVersion{
 							Version: "1.17.2",
 						},
+						CRI: []core.CRI{{Name: core.CRINameDocker}},
 					},
 					{
 						ExpirableVersion: core.ExpirableVersion{
 							Version:        "1.17.1",
 							ExpirationDate: dateInThePast,
 						},
+						CRI: []core.CRI{{Name: core.CRINameDocker}},
 					},
 				}
 				cloudProfile.Spec.MachineImages[0].Versions = versions
