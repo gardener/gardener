@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/lease"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -44,11 +43,10 @@ import (
 type Controller struct {
 	clientMap clientmap.ClientMap
 
-	config        *config.GardenletConfiguration
-	healthManager healthz.Manager
+	config *config.GardenletConfiguration
 
 	reconciler               reconcile.Reconciler
-	seedLeaseControl         lease.Controller
+	leaseReconciler          reconcile.Reconciler
 	extensionCheckReconciler reconcile.Reconciler
 
 	seedLister gardencorelisters.SeedLister
@@ -87,11 +85,10 @@ func NewSeedController(
 	)
 
 	seedController := &Controller{
-		clientMap:        clientMap,
-		config:           config,
-		healthManager:    healthManager,
-		reconciler:       newReconciler(clientMap, recorder, logger.Logger, imageVector, componentImageVectors, identity, config, seedLister),
-		seedLeaseControl: lease.NewLeaseController(time.Now, clientMap, LeaseResyncSeconds, gardencorev1beta1.GardenerSeedLeaseNamespace),
+		clientMap:       clientMap,
+		config:          config,
+		reconciler:      newReconciler(clientMap, recorder, logger.Logger, imageVector, componentImageVectors, identity, config, seedLister),
+		leaseReconciler: NewLeaseReconciler(clientMap, logger.Logger, seedLister, healthManager, time.Now),
 
 		// TODO: move this reconciler to controller-manager and let it run once for all Seeds, no Seed specifics required here
 		extensionCheckReconciler: NewExtensionCheckReconciler(clientMap, logger.Logger, seedLister, controllerInstallationLister, metav1.Now),
@@ -157,7 +154,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconciler, &waitGroup, c.workerCh)
-		controllerutils.DeprecatedCreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.reconcileSeedLeaseKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.leaseReconciler, &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.extensionCheckReconciler, &waitGroup, c.workerCh)
 	}
 
