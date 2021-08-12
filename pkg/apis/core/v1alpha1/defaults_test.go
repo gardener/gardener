@@ -532,6 +532,26 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("#SetDefaults_ClusterAutoscaler", func() {
+		var obj *ClusterAutoscaler
+
+		BeforeEach(func() {
+			obj = &ClusterAutoscaler{}
+		})
+
+		It("should correctly default the ClusterAutoscaler", func() {
+			SetDefaults_ClusterAutoscaler(obj)
+
+			Expect(obj.ScaleDownDelayAfterAdd).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
+			Expect(obj.ScaleDownDelayAfterDelete).To(PointTo(Equal(metav1.Duration{Duration: 0})))
+			Expect(obj.ScaleDownDelayAfterFailure).To(PointTo(Equal(metav1.Duration{Duration: 3 * time.Minute})))
+			Expect(obj.ScaleDownUnneededTime).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Minute})))
+			Expect(obj.ScanInterval).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Second})))
+			Expect(obj.MaxNodeProvisionTime).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
+			Expect(obj.Expander).To(PointTo(Equal("least-waste")))
+		})
+	})
+
 	Describe("#SetDefaults_VerticalPodAutoscaler", func() {
 		var obj *VerticalPodAutoscaler
 

@@ -339,8 +339,14 @@ func (c *clusterAutoscaler) emptyManagedResourceSecret() *corev1.Secret {
 
 func (c *clusterAutoscaler) computeCommand() []string {
 	var (
-		scaleDownUnneededTime  = metav1.Duration{Duration: 30 * time.Minute}
-		scaleDownDelayAfterAdd = metav1.Duration{Duration: time.Hour}
+		expander                      = "least-waste"
+		scaleDownUtilizationThreshold = 0.5
+		maxNodeProvisionTime          = metav1.Duration{Duration: 20 * time.Minute}
+		scaleDownUnneededTime         = metav1.Duration{Duration: 30 * time.Minute}
+		scaleDownDelayAfterAdd        = metav1.Duration{Duration: time.Hour}
+		scaleDownDelayAfterFailure    = metav1.Duration{Duration: 3 * time.Minute}
+		scaleDownDelayAfterDelete     = metav1.Duration{Duration: 0}
+		scanInterval                  = metav1.Duration{Duration: 10 * time.Second}
 
 		command = []string{
 			"./cluster-autoscaler",
@@ -350,7 +356,6 @@ func (c *clusterAutoscaler) computeCommand() []string {
 			"--stderrthreshold=info",
 			"--skip-nodes-with-system-pods=false",
 			"--skip-nodes-with-local-storage=false",
-			"--expander=least-waste",
 			"--expendable-pods-priority-cutoff=-10",
 			"--balance-similar-node-groups=true",
 			"--v=2",
@@ -358,8 +363,14 @@ func (c *clusterAutoscaler) computeCommand() []string {
 	)
 
 	if c.config != nil {
+		if val := c.config.Expander; val != nil {
+			expander = *val
+		}
+		if val := c.config.MaxNodeProvisionTime; val != nil {
+			maxNodeProvisionTime = *val
+		}
 		if val := c.config.ScaleDownUtilizationThreshold; val != nil {
-			command = append(command, fmt.Sprintf("--scale-down-utilization-threshold=%f", *val))
+			scaleDownUtilizationThreshold = *val
 		}
 		if val := c.config.ScaleDownUnneededTime; val != nil {
 			scaleDownUnneededTime = *val
@@ -368,19 +379,25 @@ func (c *clusterAutoscaler) computeCommand() []string {
 			scaleDownDelayAfterAdd = *val
 		}
 		if val := c.config.ScaleDownDelayAfterFailure; val != nil {
-			command = append(command, fmt.Sprintf("--scale-down-delay-after-failure=%s", val.Duration))
+			scaleDownDelayAfterFailure = *val
 		}
 		if val := c.config.ScaleDownDelayAfterDelete; val != nil {
-			command = append(command, fmt.Sprintf("--scale-down-delay-after-delete=%s", val.Duration))
+			scaleDownDelayAfterDelete = *val
 		}
 		if val := c.config.ScanInterval; val != nil {
-			command = append(command, fmt.Sprintf("--scan-interval=%s", val.Duration))
+			scanInterval = *val
 		}
 	}
 
 	command = append(command,
+		fmt.Sprintf("--expander=%s", expander),
+		fmt.Sprintf("--max-node-provision-time=%s", maxNodeProvisionTime.Duration),
+		fmt.Sprintf("--scale-down-utilization-threshold=%f", scaleDownUtilizationThreshold),
 		fmt.Sprintf("--scale-down-unneeded-time=%s", scaleDownUnneededTime.Duration),
 		fmt.Sprintf("--scale-down-delay-after-add=%s", scaleDownDelayAfterAdd.Duration),
+		fmt.Sprintf("--scale-down-delay-after-delete=%s", scaleDownDelayAfterDelete.Duration),
+		fmt.Sprintf("--scale-down-delay-after-failure=%s", scaleDownDelayAfterFailure.Duration),
+		fmt.Sprintf("--scan-interval=%s", scanInterval.Duration),
 	)
 
 	for _, machineDeployment := range c.machineDeployments {

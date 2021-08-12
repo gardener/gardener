@@ -394,6 +394,13 @@ type ClusterAutoscaler struct {
 	// ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).
 	// +optional
 	ScanInterval *metav1.Duration `json:"scanInterval,omitempty" protobuf:"bytes,6,opt,name=scanInterval"`
+	// Expander defines the algorithm to use during scale up (default: least-waste).
+	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.
+	// +optional
+	Expander *string `json:"expander,omitempty" protobuf:"bytes,7,opt,name=expander"`
+	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
+	// +optional
+	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty" protobuf:"bytes,8,opt,name=maxNodeProvisionTime"`
 }
 
 // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.

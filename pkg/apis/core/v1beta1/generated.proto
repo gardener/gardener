@@ -335,6 +335,15 @@ message ClusterAutoscaler {
   // ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration scanInterval = 6;
+
+  // Expander defines the algorithm to use during scale up (default: least-waste).
+  // See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.
+  // +optional
+  optional string expander = 7;
+
+  // MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxNodeProvisionTime = 8;
 }
 
 // ClusterInfo contains information about the Plant cluster

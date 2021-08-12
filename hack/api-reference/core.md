@@ -2643,6 +2643,33 @@ Kubernetes meta/v1.Duration
 <p>ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>expander</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Expander defines the algorithm to use during scale up (default: least-waste).
+See: <a href="https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders">https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxNodeProvisionTime</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ClusterInfo">ClusterInfo

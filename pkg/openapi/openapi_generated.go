@@ -1701,6 +1701,19 @@ func schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref common.ReferenceCallbac
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"expander": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Expander defines the algorithm to use during scale up (default: least-waste). See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"maxNodeProvisionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},
@@ -8680,6 +8693,19 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					"scanInterval": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"expander": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Expander defines the algorithm to use during scale up (default: least-waste). See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"maxNodeProvisionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
