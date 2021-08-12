@@ -4,21 +4,18 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	authenticationapiv1alpha1 "github.com/gardener/gardener/pkg/apis/authentication/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	"k8s.io/apimachinery/pkg/util/validation/field"
-
-	"k8s.io/apimachinery/pkg/runtime"
-
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/extensions/validation"
 
+	"github.com/go-logr/logr"
 	v1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -26,16 +23,50 @@ import (
 // WebhookPath is the HTTP handler path for this admission webhook handler.
 const WebhookPath = "/webhooks/validate-extension-resources"
 
-// TODO: fix this
 var (
 	gvk = schema.GroupVersionKind{
 		Group:   authenticationapiv1alpha1.SchemeGroupVersion.Group,
 		Version: authenticationapiv1alpha1.SchemeGroupVersion.Version,
-		Kind:    "AdminKubeconfigRequest",
+		Kind:    "ValidatingWebhookForExternalResources",
 	}
 
-	// todo make this sync.Map
 	artifacts = map[string]artifact{
+		extensionsv1alpha1.BackupBucketResource: {
+			newEntity: func() interface{} { return new(extensionsv1alpha1.BackupBucket) },
+			validateResource: func(n, _ interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.BackupBucket)
+				return validation.ValidateBackupBucket(new)
+			},
+			validateResourceUpdate: func(n, o interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.BackupBucket)
+				old := o.(*extensionsv1alpha1.BackupBucket)
+				return validation.ValidateBackupBucketUpdate(new, old)
+			},
+		},
+		extensionsv1alpha1.BackupEntryResource: {
+			newEntity: func() interface{} { return new(extensionsv1alpha1.BackupEntry) },
+			validateResource: func(n, o interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.BackupEntry)
+				return validation.ValidateBackupEntry(new)
+			},
+			validateResourceUpdate: func(n, o interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.BackupEntry)
+				old := n.(*extensionsv1alpha1.BackupEntry)
+				return validation.ValidateBackupEntryUpdate(new, old)
+			},
+		},
+		extensionsv1alpha1.ControlPlaneResource: {
+			newEntity: func() interface{} { return new(extensionsv1alpha1.ControlPlane) },
+			validateResource: func(n, _ interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.ControlPlane)
+				return validation.ValidateControlPlane(new)
+			},
+			validateResourceUpdate: func(n, o interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.ControlPlane)
+				old := o.(*extensionsv1alpha1.ControlPlane)
+				return validation.ValidateControlPlaneUpdate(new, old)
+			},
+		},
 		extensionsv1alpha1.DNSRecordResource: {
 			newEntity: func() interface{} { return new(extensionsv1alpha1.DNSRecord) },
 			validateResource: func(n, _ interface{}) field.ErrorList {
@@ -46,6 +77,66 @@ var (
 				new := n.(*extensionsv1alpha1.DNSRecord)
 				old := o.(*extensionsv1alpha1.DNSRecord)
 				return validation.ValidateDNSRecordUpdate(new, old)
+			},
+		},
+		extensionsv1alpha1.ExtensionResource: {
+			newEntity: func() interface{} { return new(extensionsv1alpha1.Extension) },
+			validateResource: func(n, _ interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.Extension)
+				return validation.ValidateExtension(new)
+			},
+			validateResourceUpdate: func(n, o interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.Extension)
+				old := o.(*extensionsv1alpha1.Extension)
+				return validation.ValidateExtensionUpdate(new, old)
+			},
+		},
+		extensionsv1alpha1.InfrastructureResource: {
+			newEntity: func() interface{} { return new(extensionsv1alpha1.Infrastructure) },
+			validateResource: func(n, _ interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.Infrastructure)
+				return validation.ValidateInfrastructure(new)
+			},
+			validateResourceUpdate: func(n, o interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.Infrastructure)
+				old := o.(*extensionsv1alpha1.Infrastructure)
+				return validation.ValidateInfrastructureUpdate(new, old)
+			},
+		},
+		extensionsv1alpha1.NetworkResource: {
+			newEntity: func() interface{} { return new(extensionsv1alpha1.Network) },
+			validateResource: func(n, _ interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.Network)
+				return validation.ValidateNetwork(new)
+			},
+			validateResourceUpdate: func(n, o interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.Network)
+				old := o.(*extensionsv1alpha1.Network)
+				return validation.ValidateNetworkUpdate(new, old)
+			},
+		},
+		extensionsv1alpha1.OperatingSystemConfigResource: {
+			newEntity: func() interface{} { return new(extensionsv1alpha1.OperatingSystemConfig) },
+			validateResource: func(n, _ interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.OperatingSystemConfig)
+				return validation.ValidateOperatingSystemConfig(new)
+			},
+			validateResourceUpdate: func(n, o interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.OperatingSystemConfig)
+				old := o.(*extensionsv1alpha1.OperatingSystemConfig)
+				return validation.ValidateOperatingSystemConfigUpdate(new, old)
+			},
+		},
+		extensionsv1alpha1.WorkerResource: {
+			newEntity: func() interface{} { return new(extensionsv1alpha1.Worker) },
+			validateResource: func(n, _ interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.Worker)
+				return validation.ValidateWorker(new)
+			},
+			validateResourceUpdate: func(n, o interface{}) field.ErrorList {
+				new := n.(*extensionsv1alpha1.Worker)
+				old := o.(*extensionsv1alpha1.Worker)
+				return validation.ValidateWorkerUpdate(new, old)
 			},
 		},
 	}
@@ -76,6 +167,9 @@ func (h *handler) InjectDecoder(d *admission.Decoder) error {
 }
 
 func (h *handler) Handle(ctx context.Context, ar admission.Request) admission.Response {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	artifact := artifacts[ar.Kind.Kind]
 
 	switch ar.Operation {
@@ -86,23 +180,12 @@ func (h *handler) Handle(ctx context.Context, ar admission.Request) admission.Re
 	default:
 		return admission.Allowed("operation is not CREATE or UPDATE")
 	}
-
-	return admission.Allowed("")
 }
 
 type artifact struct {
-	// map[ar.Kind.Kind]artifact
-	// artifact{ newobjfunc -> return from the correct type (DNSRecord)
-	//         ar.Object
-	//         ar.OldObject
-	//         func() -> ValidateCRD.. ? all have same signiture
-	//         func() -> ValidateCRDUpdate.. ? all have same signiture
-
-	newEntity func() interface{}
-	//object                 runtime.RawExtension
-	//oldObject              runtime.RawExtension
-	validateResource       func(o, n interface{}) field.ErrorList
-	validateResourceUpdate func(o, n interface{}) field.ErrorList
+	newEntity              func() interface{}
+	validateResource       func(n, o interface{}) field.ErrorList
+	validateResourceUpdate func(n, o interface{}) field.ErrorList
 }
 
 func (h handler) handleValidation(object, oldObject runtime.RawExtension, newEntity func() interface{}, validate func(o, n interface{}) field.ErrorList) admission.Response {
