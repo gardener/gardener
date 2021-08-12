@@ -58,11 +58,11 @@ type leaseReconciler struct {
 	clientMap     clientmap.ClientMap
 	logger        logrus.FieldLogger
 	healthManager healthz.Manager
-	nowFunc       func() time.Time
+	nowFunc       func() metav1.Time
 }
 
 // NewLeaseReconciler creates a new reconciler that periodically renews the gardenlet's lease.
-func NewLeaseReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger, healthManager healthz.Manager, nowFunc func() time.Time) reconcile.Reconciler {
+func NewLeaseReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger, healthManager healthz.Manager, nowFunc func() metav1.Time) reconcile.Reconciler {
 	return &leaseReconciler{
 		clientMap:     clientMap,
 		logger:        l,
@@ -128,7 +128,7 @@ func (r *leaseReconciler) reconcile(ctx context.Context, gardenClient client.Cli
 	bldr.WithReason("GardenletReady")
 	bldr.WithMessage("Gardenlet is posting ready status.")
 
-	newCondition, needsUpdate := bldr.WithNowFunc(metav1.Now).Build()
+	newCondition, needsUpdate := bldr.WithNowFunc(r.nowFunc).Build()
 	if !needsUpdate {
 		return nil
 	}
@@ -195,7 +195,7 @@ func (r *leaseReconciler) newOrRenewedLease(lease *coordinationv1.Lease, holderI
 	lease.Spec = coordinationv1.LeaseSpec{
 		HolderIdentity:       pointer.String(holderIdentity),
 		LeaseDurationSeconds: pointer.Int32(LeaseDurationSeconds),
-		RenewTime:            &metav1.MicroTime{Time: r.nowFunc()},
+		RenewTime:            &metav1.MicroTime{Time: r.nowFunc().Time},
 	}
 	return lease
 }

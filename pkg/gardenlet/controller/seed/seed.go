@@ -83,7 +83,7 @@ func NewSeedController(
 
 	seedController := &Controller{
 		reconciler:      newReconciler(clientMap, recorder, logger.Logger, imageVector, componentImageVectors, identity, config),
-		leaseReconciler: NewLeaseReconciler(clientMap, logger.Logger, healthManager, time.Now),
+		leaseReconciler: NewLeaseReconciler(clientMap, logger.Logger, healthManager, metav1.Now),
 
 		// TODO: move this reconciler to controller-manager and let it run once for all Seeds, no Seed specifics required here
 		extensionCheckReconciler: NewExtensionCheckReconciler(clientMap, logger.Logger, metav1.Now),
