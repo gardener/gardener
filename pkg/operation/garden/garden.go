@@ -23,13 +23,13 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -170,7 +170,7 @@ var gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, select
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
-func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string) (map[string]*corev1.Secret, error) {
+func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, log logrus.FieldLogger) (map[string]*corev1.Secret, error) {
 	var (
 		logInfo                             []string
 		secretsMap                          = make(map[string]*corev1.Secret)
@@ -190,7 +190,7 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string) (
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
 			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
-				logger.Logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
+				log.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
 				continue
 			}
 			defaultDomainSecret := secret
@@ -203,7 +203,7 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string) (
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
 			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
-				logger.Logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
+				log.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
 				continue
 			}
 			internalDomainSecret := secret
@@ -285,7 +285,7 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string) (
 		return nil, fmt.Errorf("can only accept at most one alerting secret, but found %d", numberOfAlertingSecrets)
 	}
 
-	logger.Logger.Infof("Found secrets in namespace %q: %s", namespace, strings.Join(logInfo, ", "))
+	log.Infof("Found secrets in namespace %q: %s", namespace, strings.Join(logInfo, ", "))
 
 	return secretsMap, nil
 }

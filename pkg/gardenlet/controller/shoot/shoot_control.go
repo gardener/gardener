@@ -244,8 +244,8 @@ func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
 
 const taskID = "initializeOperation"
 
-func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
-	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Client(), gutil.ComputeGardenNamespace(seed.Name))
+func (c *Controller) initializeOperation(ctx context.Context, logger logrus.FieldLogger, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
+	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Client(), gutil.ComputeGardenNamespace(seed.Name), logger)
 	if err != nil {
 		return nil, err
 	}

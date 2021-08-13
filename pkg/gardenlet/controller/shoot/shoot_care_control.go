@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
@@ -39,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
@@ -102,6 +102,7 @@ func shootReconciliationFinishedSuccessful(oldShoot, newShoot *gardencorev1beta1
 // on shoots, e.g., health checks or garbage collection.
 func NewCareReconciler(
 	clientMap clientmap.ClientMap,
+	l logrus.FieldLogger,
 	imageVector imagevector.ImageVector,
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
@@ -109,6 +110,7 @@ func NewCareReconciler(
 ) reconcile.Reconciler {
 	return &careReconciler{
 		clientMap:             clientMap,
+		logger:                l,
 		imageVector:           imageVector,
 		identity:              identity,
 		gardenClusterIdentity: gardenClusterIdentity,
@@ -118,6 +120,7 @@ func NewCareReconciler(
 
 type careReconciler struct {
 	clientMap             clientmap.ClientMap
+	logger                logrus.FieldLogger
 	imageVector           imagevector.ImageVector
 	identity              *gardencorev1beta1.Gardener
 	gardenClusterIdentity string
@@ -183,6 +186,8 @@ func careSetupFailure(ctx context.Context, gardenClient client.Client, shoot *ga
 }
 
 func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := r.logger.WithField("shoot", req.String())
+
 	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
@@ -191,10 +196,10 @@ func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := gardenClient.Client().Get(ctx, req.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {
-			logger.Logger.Infof("[SHOOT CARE] Stopping care operations for Shoot %s/%s since it has been deleted", req.Namespace, req.Name)
+			log.Infof("[SHOOT CARE] Stopping care operations for Shoot since it has been deleted")
 			return reconcile.Result{}, nil
 		}
-		logger.Logger.Infof("[SHOOT CARE] %s - unable to retrieve object from store: %s/%s", req.Namespace, req.Name, err)
+		log.Infof("[SHOOT CARE] unable to retrieve object from store: %+v", err)
 		return reconcile.Result{}, err
 	}
 
@@ -208,7 +213,7 @@ func (r *careReconciler) Reconcile(ctx context.Context, req reconcile.Request) (
 		return reconcile.Result{}, nil
 	}
 
-	if err := r.care(ctx, gardenClient, shoot); err != nil {
+	if err := r.care(ctx, gardenClient, shoot, log); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -226,15 +231,12 @@ var (
 	NewGarbageCollector = defaultNewGarbageCollector
 )
 
-func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
-	var (
-		gardenClient    = gardenClientSet.Client()
-		shootLogger     = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
-		careCtx, cancel = context.WithTimeout(ctx, r.config.Controllers.ShootCare.SyncPeriod.Duration)
-	)
+func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.Interface, shoot *gardencorev1beta1.Shoot, log logrus.FieldLogger) error {
+	careCtx, cancel := context.WithTimeout(ctx, r.config.Controllers.ShootCare.SyncPeriod.Duration)
 	defer cancel()
 
-	shootLogger.Debugf("[SHOOT CARE] %s/%s", shoot.Namespace, shoot.Name)
+	gardenClient := gardenClientSet.Client()
+	log.Debugf("[SHOOT CARE]")
 
 	// Initialize conditions based on the current status.
 	var conditions []gardencorev1beta1.Condition
@@ -258,17 +260,17 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 
 	seedClient, err := r.clientMap.GetClient(careCtx, keys.ForSeedWithName(*shoot.Spec.SeedName))
 	if err != nil {
-		shootLogger.Errorf("seedClient cannot be constructed: %s", err.Error())
+		log.Errorf("seedClient cannot be constructed: %s", err.Error())
 
 		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: seed client cannot be constructed", conditions, constraints); err != nil {
-			shootLogger.Error(err)
+			log.Error(err)
 		}
 		return nil
 	}
 
 	// Only read Garden secrets once because we don't rely on up-to-date secrets for health checks.
 	if r.gardenSecrets == nil {
-		secrets, err := garden.ReadGardenSecrets(careCtx, gardenClient, gutil.ComputeGardenNamespace(*shoot.Spec.SeedName))
+		secrets, err := garden.ReadGardenSecrets(careCtx, gardenClient, gutil.ComputeGardenNamespace(*shoot.Spec.SeedName), log)
 		if err != nil {
 			return fmt.Errorf("error reading Garden secrets: %w", err)
 		}
@@ -286,22 +288,22 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 		r.imageVector,
 		r.clientMap,
 		shoot,
-		shootLogger,
+		log,
 	)
 	if err != nil {
-		shootLogger.Errorf("could not initialize a new operation: %s", err.Error())
+		log.Errorf("could not initialize a new operation: %s", err.Error())
 
 		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: operation could not be initialized", conditions, constraints); err != nil {
-			shootLogger.Error(err)
+			log.Error(err)
 		}
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
 	if err := operation.InitializeSeedClients(careCtx); err != nil {
-		shootLogger.Errorf("Health checks cannot be performed: %s", err.Error())
+		log.Errorf("Health checks cannot be performed: %s", err.Error())
 
 		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: seed client cannot be constructed", conditions, constraints); err != nil {
-			shootLogger.Error(err)
+			log.Error(err)
 		}
 		return nil
 	}

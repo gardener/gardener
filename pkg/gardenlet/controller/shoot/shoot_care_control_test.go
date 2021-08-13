@@ -53,12 +53,13 @@ import (
 
 var _ = Describe("Shoot Care Control", func() {
 	var (
+		log           logrus.FieldLogger
 		careControl   reconcile.Reconciler
 		gardenletConf *config.GardenletConfiguration
 	)
 
 	BeforeSuite(func() {
-		logger.Logger = logger.NewNopLogger()
+		log = logger.NewNopLogger()
 	})
 
 	AfterEach(func() {
@@ -169,7 +170,7 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
-					careControl = NewCareReconciler(clientMapBuilder.Build(), nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), log, nil, nil, "", gardenletConf)
 
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
@@ -188,7 +189,7 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
-					careControl = NewCareReconciler(clientMapBuilder.Build(), nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), log, nil, nil, "", gardenletConf)
 
 					_, err := careControl.Reconcile(ctx, req)
 					Expect(err).To(MatchError("error reading Garden secrets: need an internal domain secret but found none"))
@@ -209,7 +210,7 @@ var _ = Describe("Shoot Care Control", func() {
 				})
 
 				It("should report a setup failure", func() {
-					careControl = NewCareReconciler(clientMapBuilder.Build(), nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), log, nil, nil, "", gardenletConf)
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
 					updatedShoot := &gardencorev1beta1.Shoot{}
@@ -255,7 +256,7 @@ var _ = Describe("Shoot Care Control", func() {
 					test.WithVar(&NewOperation, operationFunc),
 					test.WithVar(&NewGarbageCollector, nopGarbageCollectorFunc()),
 				)
-				careControl = NewCareReconciler(clientMap, nil, nil, "", gardenletConf)
+				careControl = NewCareReconciler(clientMap, log, nil, nil, "", gardenletConf)
 			})
 
 			AfterEach(func() {
@@ -669,7 +670,7 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 		_ imagevector.ImageVector,
 		_ clientmap.ClientMap,
 		_ *gardencorev1beta1.Shoot,
-		_ *logrus.Entry,
+		_ logrus.FieldLogger,
 	) (*operation.Operation, error) {
 		return op, err
 	}

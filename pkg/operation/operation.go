@@ -66,7 +66,7 @@ func NewBuilder() *Builder {
 		imageVectorFunc: func() (imagevector.ImageVector, error) {
 			return nil, fmt.Errorf("image vector is required but not set")
 		},
-		loggerFunc: func() (*logrus.Entry, error) {
+		loggerFunc: func() (logrus.FieldLogger, error) {
 			return nil, fmt.Errorf("logger is required but not set")
 		},
 		secretsFunc: func() (map[string]*corev1.Secret, error) {
@@ -128,8 +128,8 @@ func (b *Builder) WithImageVector(imageVector imagevector.ImageVector) *Builder 
 }
 
 // WithLogger sets the loggerFunc attribute at the Builder.
-func (b *Builder) WithLogger(logger *logrus.Entry) *Builder {
-	b.loggerFunc = func() (*logrus.Entry, error) { return logger, nil }
+func (b *Builder) WithLogger(logger logrus.FieldLogger) *Builder {
+	b.loggerFunc = func() (logrus.FieldLogger, error) { return logger, nil }
 	return b
 }
 

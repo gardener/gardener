@@ -82,7 +82,7 @@ type NewOperationFunc func(
 	imageVector imagevector.ImageVector,
 	clientMap clientmap.ClientMap,
 	shoot *gardencorev1beta1.Shoot,
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 ) (
 	*operation.Operation,
 	error,
@@ -99,7 +99,7 @@ var defaultNewOperationFunc = func(
 	imageVector imagevector.ImageVector,
 	clientMap clientmap.ClientMap,
 	shoot *gardencorev1beta1.Shoot,
-	logger *logrus.Entry,
+	logger logrus.FieldLogger,
 ) (
 	*operation.Operation,
 	error,
