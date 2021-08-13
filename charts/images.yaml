@@ -188,10 +188,6 @@ images:
   tag: "0.9.0"
 
 # Miscellaenous
-- name: busybox
-  sourceRepository: github.com/mirror/busybox
-  repository: busybox
-  tag: "1.29.2"
 - name: alpine
   repository: alpine
   tag: "3.10.3"
