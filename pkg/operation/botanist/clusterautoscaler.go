@@ -43,7 +43,7 @@ func (b *Botanist) DefaultClusterAutoscaler() (clusterautoscaler.Interface, erro
 func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 	if b.Shoot.WantsClusterAutoscaler {
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetSecrets(clusterautoscaler.Secrets{
-			Kubeconfig: component.Secret{Name: clusterautoscaler.SecretName, Checksum: b.CheckSums[clusterautoscaler.SecretName]},
+			Kubeconfig: component.Secret{Name: clusterautoscaler.SecretName, Checksum: b.LoadCheckSum(clusterautoscaler.SecretName)},
 		})
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetNamespaceUID(b.SeedNamespaceObject.UID)
 		b.Shoot.Components.ControlPlane.ClusterAutoscaler.SetMachineDeployments(b.Shoot.Components.Extensions.Worker.MachineDeployments())
