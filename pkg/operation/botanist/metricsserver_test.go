@@ -101,10 +101,8 @@ var _ = Describe("MetricsServer", func() {
 		BeforeEach(func() {
 			metricsServer = mockmetricsserver.NewMockInterface(ctrl)
 
-			botanist.CheckSums = map[string]string{
-				secretCAName:     secretCAChecksum,
-				secretServerName: secretServerChecksum,
-			}
+			botanist.StoreCheckSum(secretCAName, secretCAChecksum)
+			botanist.StoreCheckSum(secretServerName, secretServerChecksum)
 			botanist.Secrets = map[string]*corev1.Secret{
 				secretCAName:     {},
 				secretServerName: {},

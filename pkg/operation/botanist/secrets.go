@@ -145,7 +145,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 			b.Secrets[name] = secret
 		}
 		for name, secret := range b.Secrets {
-			b.CheckSums[name] = utils.ComputeSecretChecksum(secret.Data)
+			b.StoreCheckSum(name, utils.ComputeSecretChecksum(secret.Data))
 		}
 	}()
 
@@ -204,7 +204,7 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	defer b.mutex.Unlock()
 
 	b.Secrets[v1beta1constants.SecretNameCloudProvider] = b.Shoot.Secret
-	b.CheckSums[v1beta1constants.SecretNameCloudProvider] = checksum
+	b.StoreCheckSum(v1beta1constants.SecretNameCloudProvider, checksum)
 
 	return nil
 }
@@ -335,7 +335,7 @@ func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *s
 			return err
 		}
 
-		b.CheckSums[secretName] = utils.ComputeSecretChecksum(secret.Data)
+		b.StoreCheckSum(secretName, utils.ComputeSecretChecksum(secret.Data))
 	}
 
 	return nil

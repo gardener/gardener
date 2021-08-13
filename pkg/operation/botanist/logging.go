@@ -58,7 +58,7 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 
 	if b.isShootNodeLoggingEnabled() {
 		lokiValues["rbacSidecarEnabled"] = true
-		lokiValues["kubeRBACProxyKubeconfigCheckSum"] = b.CheckSums[logging.SecretNameLokiKubeRBACProxyKubeconfig]
+		lokiValues["kubeRBACProxyKubeconfigCheckSum"] = b.LoadCheckSum(logging.SecretNameLokiKubeRBACProxyKubeconfig)
 		lokiValues["ingress"] = map[string]interface{}{
 			"class": getIngressClass(b.Seed.Info.Spec.Ingress),
 			"hosts": []map[string]interface{}{
