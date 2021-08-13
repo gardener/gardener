@@ -19,7 +19,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
@@ -81,7 +80,6 @@ type NewOperationFunc func(
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
 	imageVector imagevector.ImageVector,
-	k8sGardenCoreInformers v1beta1.Interface,
 	clientMap clientmap.ClientMap,
 	shoot *gardencorev1beta1.Shoot,
 	logger *logrus.Entry,
@@ -99,7 +97,6 @@ var defaultNewOperationFunc = func(
 	gardenClusterIdentity string,
 	secrets map[string]*corev1.Secret,
 	imageVector imagevector.ImageVector,
-	k8sGardenCoreInformers v1beta1.Interface,
 	clientMap clientmap.ClientMap,
 	shoot *gardencorev1beta1.Shoot,
 	logger *logrus.Entry,
@@ -116,7 +113,7 @@ var defaultNewOperationFunc = func(
 		WithSecrets(secrets).
 		WithImageVector(imageVector).
 		WithGardenFrom(gardenClient.Client(), shoot.Namespace).
-		WithSeedFrom(k8sGardenCoreInformers, *shoot.Spec.SeedName).
+		WithSeedFrom(gardenClient.Client(), *shoot.Spec.SeedName).
 		WithShootFromCluster(gardenClient, seedClient, shoot).
 		Build(ctx, clientMap)
 }

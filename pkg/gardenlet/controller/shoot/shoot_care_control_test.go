@@ -24,7 +24,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	"github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
@@ -669,7 +668,6 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 		_ string,
 		_ map[string]*corev1.Secret,
 		_ imagevector.ImageVector,
-		_ v1beta1.Interface,
 		_ clientmap.ClientMap,
 		_ *gardencorev1beta1.Shoot,
 		_ *logrus.Entry,

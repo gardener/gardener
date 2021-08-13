@@ -25,7 +25,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
@@ -76,7 +75,7 @@ func NewBuilder() *Builder {
 		seedFunc: func(context.Context) (*seed.Seed, error) {
 			return nil, fmt.Errorf("seed object is required but not set")
 		},
-		shootFunc: func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shootpkg.Shoot, error) {
+		shootFunc: func(context.Context, client.Reader, *garden.Garden, *seed.Seed) (*shootpkg.Shoot, error) {
 			return nil, fmt.Errorf("shoot object is required but not set")
 		},
 		exposureClassFunc: func(string) (*config.ExposureClassHandler, error) {
@@ -102,7 +101,7 @@ func (b *Builder) WithGardenFrom(reader client.Reader, namespace string) *Builde
 	b.gardenFunc = func(ctx context.Context, secrets map[string]*corev1.Secret) (*garden.Garden, error) {
 		return garden.
 			NewBuilder().
-			WithProjectFromReader(reader, namespace).
+			WithProjectFrom(reader, namespace).
 			WithInternalDomainFromSecrets(secrets).
 			WithDefaultDomainsFromSecrets(secrets).
 			Build(ctx)
@@ -147,38 +146,20 @@ func (b *Builder) WithSeed(s *seed.Seed) *Builder {
 }
 
 // WithSeedFrom sets the seedFunc attribute at the Builder which will build a new Seed object.
-func (b *Builder) WithSeedFrom(k8sGardenCoreInformers gardencoreinformers.Interface, seedName string) *Builder {
+func (b *Builder) WithSeedFrom(gardenClient client.Reader, seedName string) *Builder {
 	b.seedFunc = func(ctx context.Context) (*seed.Seed, error) {
 		return seed.
 			NewBuilder().
-			WithSeedObjectFromLister(k8sGardenCoreInformers.Seeds().Lister(), seedName).
-			Build()
+			WithSeedObjectFrom(gardenClient, seedName).
+			Build(ctx)
 	}
 	return b
 }
 
 // WithShoot sets the shootFunc attribute at the Builder.
 func (b *Builder) WithShoot(s *shootpkg.Shoot) *Builder {
-	b.shootFunc = func(_ context.Context, _ client.Client, _ *garden.Garden, _ *seed.Seed) (*shootpkg.Shoot, error) {
+	b.shootFunc = func(_ context.Context, _ client.Reader, _ *garden.Garden, _ *seed.Seed) (*shootpkg.Shoot, error) {
 		return s, nil
-	}
-	return b
-}
-
-// WithShootFrom sets the shootFunc attribute at the Builder which will build a new Shoot object.
-func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Interface, gardenClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
-	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
-		return shootpkg.
-			NewBuilder().
-			WithShootObject(s).
-			WithCloudProfileObjectFromReader(gardenClient.Client()).
-			WithShootSecretFromReader(gardenClient.Client()).
-			WithProjectName(gardenObj.Project.Name).
-			WithExposureClassFromReader(gardenClient.Client()).
-			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
-			WithInternalDomain(gardenObj.InternalDomain).
-			WithDefaultDomains(gardenObj.DefaultDomains).
-			Build(ctx, c)
 	}
 	return b
 }
@@ -186,16 +167,16 @@ func (b *Builder) WithShootFrom(k8sGardenCoreInformers gardencoreinformers.Inter
 // WithShootFromCluster sets the shootFunc attribute at the Builder which will build a new Shoot object constructed from the cluster resource.
 // The shoot status is still taken from the passed `shoot`, though.
 func (b *Builder) WithShootFromCluster(gardenClient, seedClient kubernetes.Interface, s *gardencorev1beta1.Shoot) *Builder {
-	b.shootFunc = func(ctx context.Context, c client.Client, gardenObj *garden.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
+	b.shootFunc = func(ctx context.Context, c client.Reader, gardenObj *garden.Garden, seedObj *seed.Seed) (*shootpkg.Shoot, error) {
 		shootNamespace := shootpkg.ComputeTechnicalID(gardenObj.Project.Name, s)
 
 		shoot, err := shootpkg.
 			NewBuilder().
 			WithShootObjectFromCluster(seedClient, shootNamespace).
 			WithCloudProfileObjectFromCluster(seedClient, shootNamespace).
-			WithShootSecretFromReader(gardenClient.Client()).
+			WithShootSecretFrom(gardenClient.Client()).
 			WithProjectName(gardenObj.Project.Name).
-			WithExposureClassFromReader(gardenClient.Client()).
+			WithExposureClassFrom(gardenClient.Client()).
 			WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 			WithInternalDomain(gardenObj.InternalDomain).
 			WithDefaultDomains(gardenObj.DefaultDomains).
@@ -220,7 +201,7 @@ func (b *Builder) WithExposureClassHandlerFromConfig(cfg *config.GardenletConfig
 				return &handler, nil
 			}
 		}
-		return nil, fmt.Errorf("No exposure class handler with name %q found", handlerName)
+		return nil, fmt.Errorf("no exposure class handler with name %q found", handlerName)
 	}
 	return b
 }

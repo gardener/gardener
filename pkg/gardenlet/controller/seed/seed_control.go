@@ -175,7 +175,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 	seedObj, err := seedpkg.
 		NewBuilder().
 		WithSeedObject(seed).
-		Build()
+		Build(ctx)
 	if err != nil {
 		message := fmt.Sprintf("Failed to create a Seed object (%s).", err.Error())
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message)

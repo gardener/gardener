@@ -53,8 +53,8 @@ func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
 	return b
 }
 
-// WithProjectFromReader sets the projectFunc attribute after fetching it from the lister.
-func (b *Builder) WithProjectFromReader(reader client.Reader, namespace string) *Builder {
+// WithProjectFrom sets the projectFunc attribute after fetching it from the given reader.
+func (b *Builder) WithProjectFrom(reader client.Reader, namespace string) *Builder {
 	b.projectFunc = func(ctx context.Context) (*gardencorev1beta1.Project, error) {
 		project, _, err := gutil.ProjectAndNamespaceFromReader(ctx, reader, namespace)
 		return project, err

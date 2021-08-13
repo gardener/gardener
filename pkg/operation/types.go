@@ -46,7 +46,7 @@ type Builder struct {
 	loggerFunc                func() (*logrus.Entry, error)
 	secretsFunc               func() (map[string]*corev1.Secret, error)
 	seedFunc                  func(context.Context) (*seed.Seed, error)
-	shootFunc                 func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
+	shootFunc                 func(context.Context, client.Reader, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
 }
 
 // Operation contains all data required to perform an operation on a Shoot cluster.

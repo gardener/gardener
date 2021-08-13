@@ -27,7 +27,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/features"
@@ -86,27 +85,32 @@ import (
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
 	return &Builder{
-		seedObjectFunc: func() (*gardencorev1beta1.Seed, error) { return nil, fmt.Errorf("seed object is required but not set") },
+		seedObjectFunc: func(_ context.Context) (*gardencorev1beta1.Seed, error) {
+			return nil, fmt.Errorf("seed object is required but not set")
+		},
 	}
 }
 
 // WithSeedObject sets the seedObjectFunc attribute at the Builder.
 func (b *Builder) WithSeedObject(seedObject *gardencorev1beta1.Seed) *Builder {
-	b.seedObjectFunc = func() (*gardencorev1beta1.Seed, error) { return seedObject, nil }
+	b.seedObjectFunc = func(ctx context.Context) (*gardencorev1beta1.Seed, error) { return seedObject, nil }
 	return b
 }
 
-// WithSeedObjectFromLister sets the seedObjectFunc attribute at the Builder after fetching it from the given lister.
-func (b *Builder) WithSeedObjectFromLister(seedLister gardencorelisters.SeedLister, seedName string) *Builder {
-	b.seedObjectFunc = func() (*gardencorev1beta1.Seed, error) { return seedLister.Get(seedName) }
+// WithSeedObjectFrom sets the seedObjectFunc attribute at the Builder after fetching it from the given lister.
+func (b *Builder) WithSeedObjectFrom(gardenClient client.Reader, seedName string) *Builder {
+	b.seedObjectFunc = func(ctx context.Context) (*gardencorev1beta1.Seed, error) {
+		seed := &gardencorev1beta1.Seed{}
+		return seed, gardenClient.Get(ctx, client.ObjectKey{Name: seedName}, seed)
+	}
 	return b
 }
 
 // Build initializes a new Seed object.
-func (b *Builder) Build() (*Seed, error) {
+func (b *Builder) Build(ctx context.Context) (*Seed, error) {
 	seed := &Seed{}
 
-	seedObject, err := b.seedObjectFunc()
+	seedObject, err := b.seedObjectFunc(ctx)
 	if err != nil {
 		return nil, err
 	}

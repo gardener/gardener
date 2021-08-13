@@ -263,7 +263,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 	seedObj, err := seedpkg.
 		NewBuilder().
 		WithSeedObject(seed).
-		Build()
+		Build(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -272,9 +272,9 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		NewBuilder().
 		WithShootObject(shoot).
 		WithCloudProfileObject(cloudProfile).
-		WithShootSecretFromReader(gardenClient.Client()).
+		WithShootSecretFrom(gardenClient.Client()).
 		WithProjectName(project.Name).
-		WithExposureClassFromReader(gardenClient.Client()).
+		WithExposureClassFrom(gardenClient.Client()).
 		WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).

@@ -284,7 +284,6 @@ func (s *careReconciler) care(ctx context.Context, shootObj *gardencorev1beta1.S
 		s.gardenClusterIdentity,
 		s.gardenSecrets,
 		s.imageVector,
-		s.k8sGardenCoreInformers,
 		s.clientMap,
 		shoot,
 		shootLogger,
