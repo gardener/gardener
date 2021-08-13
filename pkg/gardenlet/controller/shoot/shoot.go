@@ -52,7 +52,7 @@ type Controller struct {
 	gardenClusterIdentity         string
 	identity                      *gardencorev1beta1.Gardener
 	careReconciler                reconcile.Reconciler
-	seedRegistrationControl       SeedRegistrationControlInterface
+	seedRegistrationReconciler    reconcile.Reconciler
 	recorder                      record.EventRecorder
 	imageVector                   imagevector.ImageVector
 	shootReconciliationDueTracker *reconciliationDueTracker
@@ -90,7 +90,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		identity:                      identity,
 		gardenClusterIdentity:         gardenClusterIdentity,
 		careReconciler:                NewCareReconciler(clientMap, imageVector, identity, gardenClusterIdentity, config),
-		seedRegistrationControl:       NewDefaultSeedRegistrationControl(clientMap, recorder, logger.Logger),
+		seedRegistrationReconciler:    NewSeedRegistrationReconciler(clientMap, recorder, logger.Logger),
 		recorder:                      recorder,
 		imageVector:                   imageVector,
 		shootReconciliationDueTracker: newReconciliationDueTracker(),
@@ -193,7 +193,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int
 	}
 	for i := 0; i < shootWorkers/2+1; i++ {
 		controllerutils.CreateWorker(ctx, c.shootSeedQueue, "Shooted Seeds Reconciliation", reconcile.Func(c.reconcileShootRequest), &waitGroup, c.workerCh)
-		controllerutils.CreateWorker(ctx, c.seedRegistrationQueue, "Shooted Seeds Registration", reconcile.Func(c.reconcileShootedSeedRegistrationKey), &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedRegistrationQueue, "Shooted Seeds Registration", c.seedRegistrationReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
