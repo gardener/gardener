@@ -279,7 +279,7 @@ func (b *Botanist) DeployManagedResourceForAddons(ctx context.Context) error {
 func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.RenderedChart, error) {
 	var (
 		kasFQDN         = b.outOfClusterAPIServerFQDN()
-		kubeProxySecret = b.Secrets["kube-proxy"]
+		kubeProxySecret = b.LoadSecret("kube-proxy")
 		global          = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"podNetwork":        b.Shoot.Networks.Pods.String(),
@@ -361,8 +361,8 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		}
 	}
 
-	if _, ok := b.Secrets[common.VPASecretName]; ok {
-		verticalPodAutoscaler["admissionController"].(map[string]interface{})["caCert"] = b.Secrets[common.VPASecretName].Data[secrets.DataKeyCertificateCA]
+	if vpaSecret := b.LoadSecret(common.VPASecretName); vpaSecret != nil {
+		verticalPodAutoscaler["admissionController"].(map[string]interface{})["caCert"] = vpaSecret.Data[secrets.DataKeyCertificateCA]
 	}
 
 	proxyConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy
@@ -441,7 +441,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"port": "8443",
 		},
 		"webhook": map[string]interface{}{
-			"caBundle": b.Secrets[v1beta1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA],
+			"caBundle": b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secrets.DataKeyCertificateCA],
 		},
 		"podMutatorEnabled": b.APIServerSNIPodMutatorEnabled(),
 	}
@@ -476,8 +476,8 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 
 	if b.Shoot.ReversedVPNEnabled {
 		var (
-			vpnTLSAuthSecret = b.Secrets[vpnseedserver.VpnSeedServerTLSAuth]
-			vpnShootSecret   = b.Secrets[vpnseedserver.VpnShootSecretName]
+			vpnTLSAuthSecret = b.LoadSecret(vpnseedserver.VpnSeedServerTLSAuth)
+			vpnShootSecret   = b.LoadSecret(vpnseedserver.VpnShootSecretName)
 			vpnShootConfig   = map[string]interface{}{
 				"endpoint":       b.outOfClusterAPIServerFQDN(),
 				"port":           "8132",
@@ -510,8 +510,8 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		values["vpn-shoot"] = common.GenerateAddonConfig(vpnShoot, true)
 	} else {
 		var (
-			vpnTLSAuthSecret = b.Secrets["vpn-seed-tlsauth"]
-			vpnShootSecret   = b.Secrets["vpn-shoot"]
+			vpnTLSAuthSecret = b.LoadSecret("vpn-seed-tlsauth")
+			vpnShootSecret   = b.LoadSecret("vpn-shoot")
 			vpnShootConfig   = map[string]interface{}{
 				"podNetwork":     b.Shoot.Networks.Pods.String(),
 				"serviceNetwork": b.Shoot.Networks.Services.String(),
@@ -531,7 +531,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		)
 
 		// OpenVPN related values
-		if openvpnDiffieHellmanSecret, ok := b.Secrets[v1beta1constants.GardenRoleOpenVPNDiffieHellman]; ok {
+		if openvpnDiffieHellmanSecret := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); openvpnDiffieHellmanSecret != nil {
 			vpnShootConfig["diffieHellmanKey"] = openvpnDiffieHellmanSecret.Data["dh2048.pem"]
 		}
 

@@ -55,11 +55,13 @@ type Operation struct {
 	checkSumsMutex sync.RWMutex
 	checkSums      map[string]string
 
+	secrets      map[string]*corev1.Secret
+	secretsMutex sync.RWMutex
+
 	Config                    *config.GardenletConfiguration
 	Logger                    *logrus.Entry
 	GardenerInfo              *gardencorev1beta1.Gardener
 	GardenClusterIdentity     string
-	Secrets                   map[string]*corev1.Secret
 	ImageVector               imagevector.ImageVector
 	Garden                    *garden.Garden
 	Seed                      *seed.Seed

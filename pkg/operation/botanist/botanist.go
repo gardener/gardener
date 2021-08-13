@@ -59,7 +59,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 		for _, key := range defaultDomainKeys {
 			defaultDomain := strings.SplitAfter(key, prefix)[1]
 			if strings.HasSuffix(*(o.Shoot.GetInfo().Spec.DNS.Domain), defaultDomain) {
-				b.DefaultDomainSecret = b.Secrets[prefix+defaultDomain]
+				b.DefaultDomainSecret = b.LoadSecret(prefix + defaultDomain)
 				break
 			}
 		}
