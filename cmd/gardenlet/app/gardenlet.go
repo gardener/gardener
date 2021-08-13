@@ -31,7 +31,6 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	clientmapbuilder "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/builder"
@@ -218,16 +217,15 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Gardenlet represents all the parameters required to start the
 // Gardenlet.
 type Gardenlet struct {
-	Config                 *config.GardenletConfiguration
-	Identity               *gardencorev1beta1.Gardener
-	GardenClusterIdentity  string
-	ClientMap              clientmap.ClientMap
-	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	Logger                 *logrus.Logger
-	Recorder               record.EventRecorder
-	LeaderElection         *leaderelection.LeaderElectionConfig
-	HealthManager          healthz.Manager
-	CertificateManager     *certificate.Manager
+	Config                *config.GardenletConfiguration
+	Identity              *gardencorev1beta1.Gardener
+	GardenClusterIdentity string
+	ClientMap             clientmap.ClientMap
+	Logger                *logrus.Logger
+	Recorder              record.EventRecorder
+	LeaderElection        *leaderelection.LeaderElectionConfig
+	HealthManager         healthz.Manager
+	CertificateManager    *certificate.Manager
 }
 
 // NewGardenlet is the main entry point of instantiating a new Gardenlet.
@@ -400,15 +398,14 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}
 
 	return &Gardenlet{
-		Identity:               identity,
-		GardenClusterIdentity:  clusterIdentity,
-		Config:                 cfg,
-		Logger:                 logger,
-		Recorder:               recorder,
-		ClientMap:              clientMap,
-		K8sGardenCoreInformers: gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
-		LeaderElection:         leaderElectionConfig,
-		CertificateManager:     certificateManager,
+		Identity:              identity,
+		GardenClusterIdentity: clusterIdentity,
+		Config:                cfg,
+		Logger:                logger,
+		Recorder:              recorder,
+		ClientMap:             clientMap,
+		LeaderElection:        leaderElectionConfig,
+		CertificateManager:    certificateManager,
 	}, nil
 }
 
@@ -498,7 +495,6 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 func (g *Gardenlet) startControllers(ctx context.Context) error {
 	return controller.NewGardenletControllerFactory(
 		g.ClientMap,
-		g.K8sGardenCoreInformers,
 		g.Config,
 		g.Identity,
 		g.GardenClusterIdentity,

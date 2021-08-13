@@ -71,26 +71,26 @@ func NewGardenControllerFactory(clientMap clientmap.ClientMap, cfg *config.Contr
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenControllerFactory) Run(ctx context.Context) error {
-	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
+	gardenClientSet, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		panic(fmt.Errorf("failed to get garden client: %+v", err))
+		return fmt.Errorf("failed to get garden client: %+v", err)
 	}
 
-	if err := addAllFieldIndexes(ctx, k8sGardenClient.Cache()); err != nil {
+	if err := addAllFieldIndexes(ctx, gardenClientSet.Cache()); err != nil {
 		return err
 	}
 
 	if err := f.clientMap.Start(ctx.Done()); err != nil {
-		panic(fmt.Errorf("failed to start ClientMap: %+v", err))
+		return fmt.Errorf("failed to start ClientMap: %+v", err)
 	}
 
 	// Delete legacy (and meanwhile unused) ConfigMap after https://github.com/gardener/gardener/pull/3756.
 	// TODO: This code can be removed in a future release.
-	if err := kutil.DeleteObject(ctx, k8sGardenClient.Client(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-controller-manager-internal-config", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
+	if err := kutil.DeleteObject(ctx, gardenClientSet.Client(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "gardener-controller-manager-internal-config", Namespace: v1beta1constants.GardenNamespace}}); err != nil {
 		return err
 	}
 
-	runtime.Must(garden.BootstrapCluster(ctx, k8sGardenClient))
+	runtime.Must(garden.BootstrapCluster(ctx, gardenClientSet))
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
 
 	// Initialize the workqueue metrics collection.
