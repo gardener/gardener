@@ -114,7 +114,7 @@ elif name == 'vpn2':
 elif name == 'external-dns-management':
     names = ['dns-controller-manager']
 elif name == 'logging':
-    names = ['fluent-bit-plugin-installer', 'loki-curator']
+    names = ['fluent-bit-plugin-installer', 'loki-curator', 'telegraf']
 elif name == 'etcd-custom-image':
     names = ['etcd']
 else:
