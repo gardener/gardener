@@ -606,9 +606,8 @@ func (c *Controller) removeFinalizerFrom(ctx context.Context, gardenClient kuber
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
-	return retryutils.UntilTimeout(ctx, time.Second, 30*time.Second, func(context.Context) (done bool, err error) {
-		// TODO(timebertt): switch to c-r cache here, once shoot controller uses c-r informers
-		shoot, err := c.shootLister.Shoots(shoot.Namespace).Get(shoot.Name)
+	return retryutils.UntilTimeout(ctx, time.Second, 30*time.Second, func(context.Context) (bool, error) {
+		err := c.gardenCache.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		if apierrors.IsNotFound(err) {
 			return retryutils.Ok()
 		}

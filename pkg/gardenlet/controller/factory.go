@@ -185,7 +185,10 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}
 
-	shootController := shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
+	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, logger.Logger, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing Shoot controller: %w", err)
+	}
 
 	// Initialize the Controller metrics collection.
 	gardenmetrics.RegisterControllerMetrics(
