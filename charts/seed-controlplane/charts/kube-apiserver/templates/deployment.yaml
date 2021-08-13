@@ -167,7 +167,7 @@ spec:
         - --token-auth-file=/srv/kubernetes/token/static_tokens.csv
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
-        - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
+        - --tls-cipher-suites={{ .Values.tlsCipherSuites | join "," }}
         {{- include "kube-apiserver.apiAudiences" . | indent 8 }}
         {{- include "kube-apiserver.serviceAccountConfig" . | indent 8 }}
         - --v=2

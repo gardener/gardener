@@ -369,6 +369,7 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 				"enabled": b.Shoot.ReversedVPNEnabled,
 			},
 			"enableAnonymousAuthentication": gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
+			"tlsCipherSuites":               kutil.TLSCipherSuites(b.Shoot.KubernetesVersion),
 		}
 
 		shootNetworks = map[string]interface{}{
