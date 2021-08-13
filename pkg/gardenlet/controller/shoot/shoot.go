@@ -89,7 +89,7 @@ func NewShootController(clientMap clientmap.ClientMap, k8sGardenCoreInformers ga
 		config:                        config,
 		identity:                      identity,
 		gardenClusterIdentity:         gardenClusterIdentity,
-		careReconciler:                NewCareReconciler(clientMap, gardenCoreV1beta1Informer, imageVector, identity, gardenClusterIdentity, config),
+		careReconciler:                NewCareReconciler(clientMap, imageVector, identity, gardenClusterIdentity, config),
 		seedRegistrationControl:       NewDefaultSeedRegistrationControl(clientMap, recorder, logger.Logger),
 		recorder:                      recorder,
 		imageVector:                   imageVector,
