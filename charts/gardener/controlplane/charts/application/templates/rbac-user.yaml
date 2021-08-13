@@ -176,7 +176,6 @@ aggregationRule:
       gardener.cloud/role: project-viewer
 rules: []
 
-
 # Cluster role with cluster role binding allowing all authenticated users to read some global resources
 ---
 apiVersion: {{ include "rbacversion" . }}
