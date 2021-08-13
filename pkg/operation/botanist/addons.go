@@ -307,7 +307,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"kubeconfig":        kubeProxySecret.Data["kubeconfig"],
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 			"podAnnotations": map[string]interface{}{
-				"checksum/secret-kube-proxy": b.CheckSums["kube-proxy"],
+				"checksum/secret-kube-proxy": b.LoadCheckSum("kube-proxy"),
 			},
 			"enableIPVS": b.Shoot.IPVSEnabled(),
 		}
@@ -493,7 +493,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 					"enabled": true,
 				},
 				"podAnnotations": map[string]interface{}{
-					"checksum/secret-vpn-shoot-client": b.CheckSums[vpnseedserver.VpnShootSecretName],
+					"checksum/secret-vpn-shoot-client": b.LoadCheckSum(vpnseedserver.VpnShootSecretName),
 				},
 			}
 		)
@@ -525,7 +525,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 					"enabled": false,
 				},
 				"podAnnotations": map[string]interface{}{
-					"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
+					"checksum/secret-vpn-shoot": b.LoadCheckSum("vpn-shoot"),
 				},
 			}
 		)

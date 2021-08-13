@@ -239,7 +239,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			charts.ImageNameBlackboxExporter,
 		}
 		podAnnotations = map[string]interface{}{
-			"checksum/secret-prometheus": b.CheckSums["prometheus"],
+			"checksum/secret-prometheus": b.LoadCheckSum("prometheus"),
 		}
 	)
 

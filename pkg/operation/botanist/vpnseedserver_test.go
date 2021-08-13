@@ -133,11 +133,9 @@ var _ = Describe("VPNSeedServer", func() {
 		BeforeEach(func() {
 			vpnSeedServer = mockvpnseedserver.NewMockInterface(ctrl)
 
-			botanist.CheckSums = map[string]string{
-				secretNameTLSAuth: secretChecksumTLSAuth,
-				secretNameServer:  secretChecksumServer,
-				secretNameDH:      secretChecksumDH,
-			}
+			botanist.StoreCheckSum(secretNameTLSAuth, secretChecksumTLSAuth)
+			botanist.StoreCheckSum(secretNameServer, secretChecksumServer)
+			botanist.StoreCheckSum(secretNameDH, secretChecksumDH)
 			botanist.Secrets = map[string]*corev1.Secret{
 				secretNameTLSAuth: {},
 				secretNameServer:  {},

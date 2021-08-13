@@ -62,8 +62,8 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		admissionController = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-tls-certs":            b.CheckSums[common.VPASecretName],
-				"checksum/secret-vpa-admission-controller": b.CheckSums["vpa-admission-controller"],
+				"checksum/secret-vpa-tls-certs":            b.LoadCheckSum(common.VPASecretName),
+				"checksum/secret-vpa-admission-controller": b.LoadCheckSum("vpa-admission-controller"),
 			},
 			"podLabels": utils.MergeMaps(podLabels, map[string]interface{}{
 				v1beta1constants.LabelNetworkPolicyFromShootAPIServer: "allowed",
@@ -77,7 +77,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		recommender = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-recommender": b.CheckSums["vpa-recommender"],
+				"checksum/secret-vpa-recommender": b.LoadCheckSum("vpa-recommender"),
 			},
 			"podLabels":                    podLabels,
 			"enableServiceAccount":         false,
@@ -87,7 +87,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		updater = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
-				"checksum/secret-vpa-updater": b.CheckSums["vpa-updater"],
+				"checksum/secret-vpa-updater": b.LoadCheckSum("vpa-updater"),
 			},
 			"podLabels":              podLabels,
 			"enableServiceAccount":   false,
@@ -346,16 +346,16 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 
 	var (
 		podAnnotations = map[string]interface{}{
-			"checksum/secret-ca":                     b.CheckSums[v1beta1constants.SecretNameCACluster],
-			"checksum/secret-ca-front-proxy":         b.CheckSums[v1beta1constants.SecretNameCAFrontProxy],
-			"checksum/secret-kube-apiserver":         b.CheckSums[v1beta1constants.DeploymentNameKubeAPIServer],
-			"checksum/secret-kube-aggregator":        b.CheckSums["kube-aggregator"],
-			"checksum/secret-kube-apiserver-kubelet": b.CheckSums["kube-apiserver-kubelet"],
-			"checksum/secret-static-token":           b.CheckSums[common.StaticTokenSecretName],
-			"checksum/secret-service-account-key":    b.CheckSums["service-account-key"],
-			"checksum/secret-etcd-ca":                b.CheckSums[etcd.SecretNameCA],
-			"checksum/secret-etcd-client-tls":        b.CheckSums[etcd.SecretNameClient],
-			"checksum/secret-etcd-encryption":        b.CheckSums[common.EtcdEncryptionSecretName],
+			"checksum/secret-ca":                     b.LoadCheckSum(v1beta1constants.SecretNameCACluster),
+			"checksum/secret-ca-front-proxy":         b.LoadCheckSum(v1beta1constants.SecretNameCAFrontProxy),
+			"checksum/secret-kube-apiserver":         b.LoadCheckSum(v1beta1constants.DeploymentNameKubeAPIServer),
+			"checksum/secret-kube-aggregator":        b.LoadCheckSum("kube-aggregator"),
+			"checksum/secret-kube-apiserver-kubelet": b.LoadCheckSum("kube-apiserver-kubelet"),
+			"checksum/secret-static-token":           b.LoadCheckSum(common.StaticTokenSecretName),
+			"checksum/secret-service-account-key":    b.LoadCheckSum("service-account-key"),
+			"checksum/secret-etcd-ca":                b.LoadCheckSum(etcd.SecretNameCA),
+			"checksum/secret-etcd-client-tls":        b.LoadCheckSum(etcd.SecretNameClient),
+			"checksum/secret-etcd-encryption":        b.LoadCheckSum(common.EtcdEncryptionSecretName),
 		}
 		defaultValues = map[string]interface{}{
 			"etcdServicePort":           etcd.PortEtcdClient,
@@ -379,10 +379,10 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	)
 
 	if b.Shoot.ReversedVPNEnabled {
-		podAnnotations["checksum/secret-"+vpnseedserver.VpnSeedServerTLSAuth] = b.CheckSums[vpnseedserver.VpnSeedServerTLSAuth]
+		podAnnotations["checksum/secret-"+vpnseedserver.VpnSeedServerTLSAuth] = b.LoadCheckSum(vpnseedserver.VpnSeedServerTLSAuth)
 	} else {
-		podAnnotations["checksum/secret-vpn-seed"] = b.CheckSums["vpn-seed"]
-		podAnnotations["checksum/secret-vpn-seed-tlsauth"] = b.CheckSums["vpn-seed-tlsauth"]
+		podAnnotations["checksum/secret-vpn-seed"] = b.LoadCheckSum("vpn-seed")
+		podAnnotations["checksum/secret-vpn-seed-tlsauth"] = b.LoadCheckSum("vpn-seed-tlsauth")
 	}
 
 	if v := b.Shoot.GetNodeNetwork(); v != nil {
@@ -400,7 +400,7 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	}
 
 	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.Info) {
-		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-"+common.BasicAuthSecretName] = b.CheckSums[common.BasicAuthSecretName]
+		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-"+common.BasicAuthSecretName] = b.LoadCheckSum(common.BasicAuthSecretName)
 	}
 
 	foundDeployment := true

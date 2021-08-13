@@ -92,10 +92,8 @@ var _ = Describe("KubeScheduler", func() {
 		BeforeEach(func() {
 			kubeScheduler = mockkubescheduler.NewMockInterface(ctrl)
 
-			botanist.CheckSums = map[string]string{
-				secretName:       checksum,
-				secretNameServer: checksumServer,
-			}
+			botanist.StoreCheckSum(secretName, checksum)
+			botanist.StoreCheckSum(secretNameServer, checksumServer)
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
