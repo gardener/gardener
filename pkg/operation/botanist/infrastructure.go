@@ -47,7 +47,7 @@ func (b *Botanist) DefaultInfrastructure() infrastructure.Interface {
 // DeployInfrastructure deploys the Infrastructure custom resource and triggers the restore operation in case
 // the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
-	b.Shoot.Components.Extensions.Infrastructure.SetSSHPublicKey(b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys])
+	b.Shoot.Components.Extensions.Infrastructure.SetSSHPublicKey(b.LoadSecret(v1beta1constants.SecretNameSSHKeyPair).Data[secrets.DataKeySSHAuthorizedKeys])
 
 	if b.isRestorePhase() {
 		return b.Shoot.Components.Extensions.Infrastructure.Restore(ctx, b.ShootState)

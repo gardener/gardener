@@ -138,16 +138,12 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		}
 	}
 
-	func() {
-		b.mutex.Lock()
-		defer b.mutex.Unlock()
-		for name, secret := range secretsManager.DeployedSecrets {
-			b.Secrets[name] = secret
-		}
-		for name, secret := range b.Secrets {
-			b.StoreCheckSum(name, utils.ComputeSecretChecksum(secret.Data))
-		}
-	}()
+	for name, secret := range secretsManager.DeployedSecrets {
+		b.StoreSecret(name, secret)
+	}
+	for _, name := range b.AllSecretKeys() {
+		b.StoreCheckSum(name, utils.ComputeSecretChecksum(b.LoadSecret(name).Data))
+	}
 
 	wildcardCert, err := seed.GetWildcardCertificate(ctx, b.K8sSeedClient.Client())
 	if err != nil {
@@ -200,10 +196,7 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 		return err
 	}
 
-	b.mutex.Lock()
-	defer b.mutex.Unlock()
-
-	b.Secrets[v1beta1constants.SecretNameCloudProvider] = b.Shoot.Secret
+	b.StoreSecret(v1beta1constants.SecretNameCloudProvider, b.Shoot.Secret)
 	b.StoreCheckSum(v1beta1constants.SecretNameCloudProvider, checksum)
 
 	return nil
@@ -403,7 +396,7 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 				secretObj.Annotations = s.annotations
 				secretObj.Labels = s.labels
 				secretObj.Type = corev1.SecretTypeOpaque
-				secretObj.Data = b.Secrets[s.secretName].Data
+				secretObj.Data = b.LoadSecret(s.secretName).Data
 				return nil
 			})
 			return err
