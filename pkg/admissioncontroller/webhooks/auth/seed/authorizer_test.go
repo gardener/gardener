@@ -1730,8 +1730,9 @@ var _ = Describe("Seed", func() {
 			})
 
 			DescribeTable("should allow without consulting the graph because verb is create",
-				func(verb string) {
+				func(verb, subresource string) {
 					attrs.Verb = verb
+					attrs.Subresource = subresource
 
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
 					Expect(err).NotTo(HaveOccurred())
@@ -1739,7 +1740,8 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(BeEmpty())
 				},
 
-				Entry("create", "create"),
+				Entry("create", "create", ""),
+				Entry("create with subresource", "create", "seedclient"),
 			)
 
 			DescribeTable("should deny because verb is not allowed",
@@ -1767,12 +1769,13 @@ var _ = Describe("Seed", func() {
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
-				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
+				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [seedclient]"))
 			})
 
 			DescribeTable("should return correct result if path exists",
-				func(verb string) {
+				func(verb, subresource string) {
 					attrs.Verb = verb
+					attrs.Subresource = subresource
 
 					graph.EXPECT().HasPathFrom(graphpkg.VertexTypeCertificateSigningRequest, "", name, graphpkg.VertexTypeSeed, "", seedName).Return(true)
 					decision, reason, err := authorizer.Authorize(ctx, attrs)
@@ -1787,7 +1790,8 @@ var _ = Describe("Seed", func() {
 					Expect(reason).To(ContainSubstring("no relationship found"))
 				},
 
-				Entry("get", "get"),
+				Entry("get", "get", ""),
+				Entry("get with subresource", "get", "seedclient"),
 			)
 
 			It("should allow because seed name is ambiguous", func() {
