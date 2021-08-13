@@ -83,9 +83,9 @@ func (b *Botanist) DefaultEtcd(role string, class etcd.Class) (etcd.Interface, e
 // DeployEtcd deploys the etcd main and events.
 func (b *Botanist) DeployEtcd(ctx context.Context) error {
 	secrets := etcd.Secrets{
-		CA:     component.Secret{Name: etcd.SecretNameCA, Checksum: b.CheckSums[etcd.SecretNameCA]},
-		Server: component.Secret{Name: etcd.SecretNameServer, Checksum: b.CheckSums[etcd.SecretNameServer]},
-		Client: component.Secret{Name: etcd.SecretNameClient, Checksum: b.CheckSums[etcd.SecretNameClient]},
+		CA:     component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
+		Server: component.Secret{Name: etcd.SecretNameServer, Checksum: b.LoadCheckSum(etcd.SecretNameServer)},
+		Client: component.Secret{Name: etcd.SecretNameClient, Checksum: b.LoadCheckSum(etcd.SecretNameClient)},
 	}
 
 	b.Shoot.Components.ControlPlane.EtcdMain.SetSecrets(secrets)

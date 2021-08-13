@@ -118,12 +118,10 @@ var _ = Describe("KubeControllerManager", func() {
 			kubeControllerManager = mockkubecontrollermanager.NewMockInterface(ctrl)
 
 			botanist.K8sSeedClient = kubernetesClient
-			botanist.CheckSums = map[string]string{
-				secretName:                  checksum,
-				secretNameServer:            checksumServer,
-				secretNameCA:                checksumCA,
-				secretNameServiceAccountKey: checksumServiceAccountKey,
-			}
+			botanist.StoreCheckSum(secretName, checksum)
+			botanist.StoreCheckSum(secretNameServer, checksumServer)
+			botanist.StoreCheckSum(secretNameCA, checksumCA)
+			botanist.StoreCheckSum(secretNameServiceAccountKey, checksumServiceAccountKey)
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{

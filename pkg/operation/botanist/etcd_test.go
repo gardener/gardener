@@ -251,11 +251,9 @@ var _ = Describe("Etcd", func() {
 			etcdMain, etcdEvents = mocketcd.NewMockInterface(ctrl), mocketcd.NewMockInterface(ctrl)
 
 			botanist.K8sSeedClient = kubernetesClient
-			botanist.CheckSums = map[string]string{
-				secretNameCA:     checksumCA,
-				secretNameServer: checksumServer,
-				secretNameClient: checksumClient,
-			}
+			botanist.StoreCheckSum(secretNameCA, checksumCA)
+			botanist.StoreCheckSum(secretNameServer, checksumServer)
+			botanist.StoreCheckSum(secretNameClient, checksumClient)
 			botanist.Seed = &seedpkg.Seed{
 				Info: &gardencorev1beta1.Seed{},
 			}

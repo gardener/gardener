@@ -16,6 +16,7 @@ package operation
 
 import (
 	"context"
+	"sync"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -51,12 +52,14 @@ type Builder struct {
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
 type Operation struct {
+	checkSumsMutex sync.RWMutex
+	checkSums      map[string]string
+
 	Config                    *config.GardenletConfiguration
 	Logger                    *logrus.Entry
 	GardenerInfo              *gardencorev1beta1.Gardener
 	GardenClusterIdentity     string
 	Secrets                   map[string]*corev1.Secret
-	CheckSums                 map[string]string
 	ImageVector               imagevector.ImageVector
 	Garden                    *garden.Garden
 	Seed                      *seed.Seed

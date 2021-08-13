@@ -72,9 +72,7 @@ var _ = Describe("ResourceManager", func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 			c = mockclient.NewMockClient(ctrl)
 
-			botanist.CheckSums = map[string]string{
-				secretName: checksum,
-			}
+			botanist.StoreCheckSum(secretName, checksum)
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
