@@ -103,10 +103,8 @@ var _ = Describe("MetricsServer", func() {
 
 			botanist.StoreCheckSum(secretCAName, secretCAChecksum)
 			botanist.StoreCheckSum(secretServerName, secretServerChecksum)
-			botanist.Secrets = map[string]*corev1.Secret{
-				secretCAName:     {},
-				secretServerName: {},
-			}
+			botanist.StoreSecret(secretCAName, &corev1.Secret{})
+			botanist.StoreSecret(secretServerName, &corev1.Secret{})
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					SystemComponents: &shootpkg.SystemComponents{

@@ -68,9 +68,6 @@ var _ = Describe("Worker", func() {
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
 		infrastructure = mockinfrastructure.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
-			Secrets: map[string]*corev1.Secret{
-				"ssh-keypair": {Data: map[string][]byte{"id_rsa.pub": sshPublicKey}},
-			},
 			Shoot: &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					Extensions: &shootpkg.Extensions{
@@ -82,6 +79,7 @@ var _ = Describe("Worker", func() {
 			},
 			ShootState: shootState,
 		}}
+		botanist.StoreSecret("ssh-keypair", &corev1.Secret{Data: map[string][]byte{"id_rsa.pub": sshPublicKey}})
 	})
 
 	AfterEach(func() {
