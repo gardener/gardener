@@ -53,8 +53,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	var (
-		credentials           = b.Secrets[common.MonitoringIngressCredentials]
-		credentialsUsers      = b.Secrets[common.MonitoringIngressCredentialsUsers]
+		credentials           = b.LoadSecret[common.MonitoringIngressCredentials]
+		credentialsUsers      = b.LoadSecret[common.MonitoringIngressCredentialsUsers]
 		basicAuth             = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
 		basicAuthUsers        = utils.CreateSHA1Secret(credentialsUsers.Data[secrets.DataKeyUserName], credentialsUsers.Data[secrets.DataKeyPassword])
 		alertingRules         = strings.Builder{}
@@ -286,7 +286,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		if b.Shoot.Info.Spec.Monitoring != nil && b.Shoot.Info.Spec.Monitoring.Alerting != nil {
 			for _, email := range b.Shoot.Info.Spec.Monitoring.Alerting.EmailReceivers {
 				for _, key := range alertingSMTPKeys {
-					secret := b.Secrets[key]
+					secret := b.LoadSecret(key)
 
 					if string(secret.Data["auth_type"]) != "smtp" {
 						continue
@@ -353,7 +353,7 @@ func (b *Botanist) getCustomAlertingConfigs(ctx context.Context, alertingSecretK
 	}
 
 	for _, key := range alertingSecretKeys {
-		secret := b.Secrets[key]
+		secret := b.LoadSecret(key)
 
 		if string(secret.Data["auth_type"]) == "none" {
 

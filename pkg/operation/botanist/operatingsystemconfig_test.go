@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -72,11 +74,6 @@ var _ = Describe("operatingsystemconfig", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
-			Secrets: map[string]*corev1.Secret{
-				"ca":          {Data: map[string][]byte{"ca.crt": ca}},
-				"ca-kubelet":  {Data: map[string][]byte{"ca.crt": caKubelet}},
-				"ssh-keypair": {Data: map[string][]byte{"id_rsa.pub": sshPublicKey}},
-			},
 			Shoot: &shootpkg.Shoot{
 				CloudProfile: &gardencorev1beta1.CloudProfile{},
 				Components: &shootpkg.Components{
@@ -102,6 +99,9 @@ var _ = Describe("operatingsystemconfig", func() {
 			},
 			ShootState: shootState,
 		}}
+		botanist.StoreSecret(v1beta1constants.SecretNameCACluster, &corev1.Secret{Data: map[string][]byte{"ca.crt": ca}})
+		botanist.StoreSecret(v1beta1constants.SecretNameCAKubelet, &corev1.Secret{Data: map[string][]byte{"ca.crt": caKubelet}})
+		botanist.StoreSecret(v1beta1constants.SecretNameSSHKeyPair, &corev1.Secret{Data: map[string][]byte{"id_rsa.pub": sshPublicKey}})
 	})
 
 	AfterEach(func() {
@@ -116,7 +116,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 		Context("deploy", func() {
 			It("should deploy successfully (no CA)", func() {
-				botanist.Secrets["ca"].Data["ca.crt"] = nil
+				botanist.LoadSecret("ca").Data["ca.crt"] = nil
 				operatingSystemConfig.EXPECT().SetCABundle(nil)
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
@@ -132,7 +132,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 			It("should deploy successfully (only CloudProfile CA)", func() {
 				botanist.Shoot.CloudProfile.Spec.CABundle = &caCloudProfile
-				botanist.Secrets["ca"].Data["ca.crt"] = nil
+				botanist.LoadSecret("ca").Data["ca.crt"] = nil
 				operatingSystemConfig.EXPECT().SetCABundle(&caCloudProfile)
 
 				operatingSystemConfig.EXPECT().Deploy(ctx)
