@@ -94,6 +94,21 @@ metadata:
 rules:
 - apiGroups:
   - core.gardener.cloud
+  resources:
+  - backupbuckets
+  - backupentries
+  - cloudprofiles
+  - controllerinstallations
+  - plants
+  - quotas
+  - projects
+  - seeds
+  - shoots
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - seedmanagement.gardener.cloud
   - dashboard.gardener.cloud
   - settings.gardener.cloud
