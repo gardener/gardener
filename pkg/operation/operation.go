@@ -685,7 +685,7 @@ func (o *Operation) DeleteCheckSum(key string) {
 	delete(o.checkSums, key)
 }
 
-// StoreCheckSum stores the passed secret under the given key from the operation. Calling this function is thread-safe.
+// StoreSecret stores the passed secret under the given key from the operation. Calling this function is thread-safe.
 func (o *Operation) StoreSecret(key string, secret *corev1.Secret) {
 	o.secretsMutex.Lock()
 	defer o.secretsMutex.Unlock()
@@ -709,7 +709,9 @@ func (o *Operation) AllSecretKeys() []string {
 	return keys
 }
 
-// LoadCheckSum loads the secret under the given key from the operation. Calling this function is thread-safe.
+// LoadSecret loads the secret under the given key from the operation. Calling this function is thread-safe.
+// Be aware that the returned pointer and the underlying secret map refer to the same secret object.
+// If you need to modify the returned secret, copy it first and store the changes via `StoreSecret`.
 func (o *Operation) LoadSecret(key string) *corev1.Secret {
 	o.secretsMutex.RLock()
 	defer o.secretsMutex.RUnlock()
