@@ -1,0 +1,65 @@
+{{- if .Values.global.gardenlet.enabled }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: gardener.cloud:system:gardenlet:apiserver-sni
+  labels:
+    app: gardener
+    role: gardenlet
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+{{- if eq (include "gardenlet.apiserver-sni-enabled" .) "true" }}
+# Istio related rules that are required only when APIServerSNI feature gate is enabled.
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - envoyfilters
+  - gateways
+  - virtualservices
+  verbs:
+  - create
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - envoyfilters
+  - gateways
+  resourceNames:
+  - proxy-protocol
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - virtualservices
+  resourceNames:
+  - proxy-protocol-blackhole
+  verbs:
+  - get
+  - patch
+  - update
+{{- else }}
+# Istio related rules that are required only when APIServerSNI feature gate is disabled.
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - envoyfilters
+  - gateways
+  resourceNames:
+  - proxy-protocol
+  verbs:
+  - delete
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - virtualservices
+  resourceNames:
+  - proxy-protocol-blackhole
+  verbs:
+  - delete
+{{- end }}
+{{- end }}

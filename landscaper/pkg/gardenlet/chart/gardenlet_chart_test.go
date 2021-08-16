@@ -439,6 +439,8 @@ var _ = Describe("#Gardenlet Chart Test", func() {
 			VPA: pointer.Bool(true),
 		}, nil, nil, nil),
 		Entry("verify Gardenlet RBACs when ManagedIstio is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.ManagedIstio): true}),
+		Entry("verify Gardenlet RBACs when APIServerSNI is enabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.APIServerSNI): true}),
+		Entry("verify Gardenlet RBACs when APIServerSNI is disabled", nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, map[string]bool{string(features.APIServerSNI): false}),
 	)
 })
 
