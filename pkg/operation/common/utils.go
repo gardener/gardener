@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -38,6 +37,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
@@ -113,7 +113,7 @@ func DeleteHvpa(ctx context.Context, c client.Client, namespace string) error {
 	// Delete all CRDs with label "gardener.cloud/role=hvpa"
 	// Workaround: Due to https://github.com/gardener/gardener/issues/2257, we first list the HVPA CRDs and then remove
 	// them one by one.
-	crdList := &apiextensionsv1beta1.CustomResourceDefinitionList{}
+	crdList := &apiextensionsv1.CustomResourceDefinitionList{}
 	if err := c.List(ctx, crdList, labelSelectorHVPA); err != nil {
 		return err
 	}
