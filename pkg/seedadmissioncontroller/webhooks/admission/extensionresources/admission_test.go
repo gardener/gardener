@@ -3,52 +3,26 @@ package extensionresources_test
 import (
 	"context"
 	"fmt"
+	"net/http"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/golang/mock/gomock"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
-	"k8s.io/apimachinery/pkg/runtime"
-
-	gomegatypes "github.com/onsi/gomega/types"
-
 	"github.com/go-logr/logr"
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	admissionv1 "k8s.io/api/admission/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-var dnsrecordfmt = `
-{
-  "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "DNSRecord",
-  "metadata": {
-    "name": "dnsrecord-external",
-	%s
-    "namespace": "prjswebhooks"
-  },
-  "spec": {
-    "type": "google-clouddns",
-    "secretRef": {
-      "name": %q,
-      "namespace": "prjswebhooks"
-    },
-    "name": "api.gcp.foobar.shoot.example.com",
-    "recordType": %q,
-    "values": [
-      "1.2.3.4"
-    ]
-  }
-}
-`
 
 var _ = Describe("handler", func() {
 	Describe("#validateExternalResources", func() {
@@ -89,81 +63,150 @@ var _ = Describe("handler", func() {
 			ctrl.Finish()
 		})
 
+		// TODO request for other reource
 		Context("ignored requests", func() {
 			It("should ignore DELETE operations", func() {
-				request = newRequest(dummyResource{operation: admissionv1.Delete})
+				request = newRequest(admissionv1.Delete, "dnsrecords", "", "")
 				expectAllowed(handler.Handle(ctx, *request), ContainSubstring("operation is not CREATE or UPDATE"))
 			})
+
 			It("should ignore CONNECT operations", func() {
-				request = newRequest(dummyResource{operation: admissionv1.Connect})
+				request = newRequest(admissionv1.Connect, "dnsrecords", "", "")
 				expectAllowed(handler.Handle(ctx, *request), ContainSubstring("operation is not CREATE or UPDATE"))
+			})
+
+			It("should ignore different resources", func() {
+				request = newRequest(admissionv1.Create, "customresourcedefinitions", "", "")
+				expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation not found for the given resource"))
 			})
 		})
 
 		Context("create resources", func() {
-
-			var (
-				dnsrecordObj = fmt.Sprintf(dnsrecordfmt, "", "dnsrecord-external", "A")
-			)
-
-			BeforeEach(func() {
-				resources = []dummyResource{
-					//				 "backupbuckets"
-					//				 "backupentries"
-					//				 "containerruntimes"
-					//				 "controlplanes"
-					//				 "dnsrecords"
-					{
-						operation: admissionv1.Create,
-						kind:      extensionsv1alpha1.DNSRecordResource,
-						obj:       runtime.RawExtension{Raw: []byte(dnsrecordObj)},
-					},
-					//				 "extensions"
-					//				 "infrastructures"
-					//				 "networks"
-					//				 "operatingsystemconfigs"
-					//				 "workers"
-				}
-			})
+			var resources = []dummyResource{
+				{
+					kind: "backupbuckets",
+					obj:  fmt.Sprintf(backupBucketFmt, "", "gcp", "backupprovider"),
+				},
+				{
+					kind: "backupentries",
+					obj:  fmt.Sprintf(backupEntryFmt, "", "gcp", "backupentry"),
+				},
+				{
+					kind: "controlplanes",
+					obj:  fmt.Sprintf(controlPlaneFmt, "", "gcp", "cloudprovider"),
+				},
+				{
+					kind: "dnsrecords",
+					obj:  fmt.Sprintf(dnsrecordFmt, "", "dnsrecord-external", "A"),
+				},
+				{
+					kind: "extensions",
+					obj:  fmt.Sprintf(extensionsFmt, "", "gcp", "seed-gcp"),
+				},
+				{
+					kind: "infrastructures",
+					obj:  fmt.Sprintf(infrastructureFmt, "", "gcp", "seed-gcp"),
+				},
+				{
+					kind: "networks",
+					obj:  fmt.Sprintf(networksFmt, "", "calico", "seed-gcp"),
+				},
+				{
+					kind: "operatingsystemconfigs",
+					obj:  fmt.Sprintf(operatingsysconfigFmt, "", "gcp", "seed-gcp"),
+				},
+				{
+					kind: "workers",
+					obj:  fmt.Sprintf(workerFmt, "", "gcp", "seed-gcp"),
+				},
+			}
 
 			It("should create successfully the resources", func() {
 				for _, r := range resources {
-					request = newRequest(r)
-					expectAllowed(handler.Handle(ctx, *request), ContainSubstring(""))
+					request = newRequest(admissionv1.Create, r.kind, r.obj, "")
+					expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation successful"), resourceToId(request.Resource))
 				}
+			})
+
+			It("decoding of new dns record should fail", func() {
+				dns := fmt.Sprintf(dnsrecordFmt, `"resourceVersion" "1",`, "name", "A")
+				request = newRequest(admissionv1.Create, "dnsrecords", dns, "")
+				expectErrored(handler.Handle(ctx, *request), ContainSubstring("could not decode ar"), BeEquivalentTo(http.StatusUnprocessableEntity))
 			})
 		})
 
 		Context("update resources", func() {
 			BeforeEach(func() {
-				var (
-					dnsrecordObj    = fmt.Sprintf(dnsrecordfmt, `"resourceVersion": "2",`, "dnsrecord-external", "A")
-					dnsrecordOldObj = fmt.Sprintf(dnsrecordfmt, `"resourceVersion": "1",`, "dnsrecord-external-2", "A")
-				)
 
 				resources = []dummyResource{
-					//				 "backupbuckets"
-					//				 "backupentries"
-					//				 "containerruntimes"
-					//				 "controlplanes"
-					{ //	"dnsrecords"
-						operation: admissionv1.Update,
-						kind:      extensionsv1alpha1.DNSRecordResource,
-						obj:       runtime.RawExtension{Raw: []byte(dnsrecordObj)},
-						oldobj:    runtime.RawExtension{Raw: []byte(dnsrecordOldObj)},
+					{
+						kind:     "backupbuckets",
+						obj:      fmt.Sprintf(backupBucketFmt, `"resourceVersion": "2",`, "gcp", "backupprovider"),
+						oldobj:   fmt.Sprintf(backupBucketFmt, `"resourceVersion": "1",`, "gcp", "backupprovider"),
+						wrongobj: fmt.Sprintf(backupBucketFmt, `"resourceVersion": "1",`, "azure", "backupprovider"),
 					},
-					//				 "extensions"
-					//				 "infrastructures"
-					//				 "networks"
-					//				 "operatingsystemconfigs"
-					//				 "workers"
+					{
+						kind:     "backupentries",
+						obj:      fmt.Sprintf(backupEntryFmt, `"resourceVersion": "2",`, "gcp", "backupentry-2"),
+						oldobj:   fmt.Sprintf(backupEntryFmt, `"resourceVersion": "1",`, "gcp", "backupentry"),
+						wrongobj: fmt.Sprintf(backupEntryFmt, `"resourceVersion": "1",`, "azure", "backupentry-2"),
+					},
+					{
+						kind:     "controlplanes",
+						obj:      fmt.Sprintf(controlPlaneFmt, `"resourceVersion": "2",`, "gcp", "cloudprovider-2"),
+						oldobj:   fmt.Sprintf(controlPlaneFmt, `"resourceVersion": "1",`, "gcp", "cloudprovider"),
+						wrongobj: fmt.Sprintf(controlPlaneFmt, `"resourceVersion": "1",`, "azure", "cloudprovider-2"),
+					},
+					{
+						kind:     "dnsrecords",
+						obj:      fmt.Sprintf(dnsrecordFmt, `"resourceVersion": "2",`, "dnsrecord-2", "A"),
+						oldobj:   fmt.Sprintf(dnsrecordFmt, `"resourceVersion": "1",`, "dnsrecord", "A"),
+						wrongobj: fmt.Sprintf(dnsrecordFmt, `"resourceVersion": "1",`, "dnsrecord-2", "TXT"),
+					},
+					{
+						kind:     "extensions",
+						obj:      fmt.Sprintf(extensionsFmt, `"resourceVersion": "2",`, "gcp", "cloudprovider-2"),
+						oldobj:   fmt.Sprintf(extensionsFmt, `"resourceVersion": "1",`, "gcp", "cloudprovider"),
+						wrongobj: fmt.Sprintf(extensionsFmt, `"resourceVersion": "1",`, "azure", "cloudprovider-2"),
+					},
+					{
+						kind:     "infrastructures",
+						obj:      fmt.Sprintf(infrastructureFmt, `"resourceVersion": "2",`, "gcp", "seed-gcp-2"),
+						oldobj:   fmt.Sprintf(infrastructureFmt, `"resourceVersion": "1",`, "gcp", "seed-gcp"),
+						wrongobj: fmt.Sprintf(infrastructureFmt, `"resourceVersion": "1",`, "azure", "seed-gcp-2"),
+					},
+					{
+						kind:     "networks",
+						obj:      fmt.Sprintf(networksFmt, `"resourceVersion": "2",`, "calico", "seed-gcp-2"),
+						oldobj:   fmt.Sprintf(networksFmt, `"resourceVersion": "1",`, "calico", "seed-gcp"),
+						wrongobj: fmt.Sprintf(networksFmt, `"resourceVersion": "1",`, "provisioner", "seed-gcp-2"),
+					},
+					{
+						kind:     "operatingsystemconfigs",
+						obj:      fmt.Sprintf(operatingsysconfigFmt, `"resourceVersion": "2",`, "gcp", "seed-gcp-2"),
+						oldobj:   fmt.Sprintf(operatingsysconfigFmt, `"resourceVersion": "1",`, "gcp", "seed-gcp"),
+						wrongobj: fmt.Sprintf(operatingsysconfigFmt, `"resourceVersion": "1",`, "azure", "seed-gcp-2"),
+					},
+					{
+						kind:     "workers",
+						obj:      fmt.Sprintf(workerFmt, `"resourceVersion": "2",`, "gcp", "seed-gcp-2"),
+						oldobj:   fmt.Sprintf(workerFmt, `"resourceVersion": "1",`, "gcp", "seed-gcp"),
+						wrongobj: fmt.Sprintf(workerFmt, `"resourceVersion": "1",`, "azure", "seed-gcp-2"),
+					},
 				}
 			})
 
 			It("should update successfully the resources", func() {
 				for _, r := range resources {
-					request = newRequest(r)
-					expectAllowed(handler.Handle(ctx, *request), ContainSubstring(""))
+					request = newRequest(admissionv1.Update, r.kind, r.obj, r.oldobj)
+					expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation successful"), resourceToId(request.Resource))
+				}
+			})
+
+			It("update should fail", func() {
+				for _, r := range resources {
+					request = newRequest(admissionv1.Update, r.kind, r.wrongobj, r.oldobj)
+					expectDenied(handler.Handle(ctx, *request), ContainSubstring(""), resourceToId(request.Resource))
 				}
 			})
 		})
@@ -171,22 +214,49 @@ var _ = Describe("handler", func() {
 })
 
 type dummyResource struct {
-	operation admissionv1.Operation
-	kind      string
-	obj       runtime.RawExtension
-	oldobj    runtime.RawExtension
+	// kind of the object eg `dnsrecords`
+	kind string
+
+	// obj is valid object
+	obj string
+
+	// oldobj is fmt used for describing existing objects
+	oldobj string
+
+	// wrongobj is semantically wrong object (e.g. while updating fields that are not meant to)
+	wrongobj string
 }
 
-func newRequest(dr dummyResource) *admission.Request {
+func newRequest(operation admissionv1.Operation, kind, obj, oldobj string) *admission.Request {
 	r := new(admission.Request)
-	r.Operation = dr.operation
-	r.Kind.Kind = dr.kind
-	r.Object = dr.obj
-	r.OldObject = dr.oldobj
+
+	r.Operation = operation
+	r.Resource = metav1.GroupVersionResource{
+		Group:    extensionsv1alpha1.SchemeGroupVersion.Group,
+		Version:  extensionsv1alpha1.SchemeGroupVersion.Version,
+		Resource: kind}
+	r.Object = runtime.RawExtension{Raw: []byte(obj)}
+	r.OldObject = runtime.RawExtension{Raw: []byte(oldobj)}
+
 	return r
 }
 
-func expectAllowed(r admission.Response, reason gomegatypes.GomegaMatcher) {
-	Expect(r.Allowed).To(BeTrue())
-	Expect(string(r.Result.Reason)).To(reason)
+func expectAllowed(r admission.Response, reason gomegatypes.GomegaMatcher, description ...interface{}) {
+	Expect(string(r.Result.Reason)).To(reason, description...)
+	Expect(r.Allowed).To(BeTrue(), description...)
+}
+
+func expectErrored(r admission.Response, reason, code gomegatypes.GomegaMatcher, description ...interface{}) {
+	Expect(r.Result.Message).To(reason, description...)
+	Expect(r.Result.Code).To(code, description...)
+	Expect(r.Allowed).To(BeFalse(), description...)
+}
+
+func expectDenied(r admission.Response, reason gomegatypes.GomegaMatcher, description ...interface{}) {
+	Expect(r.Result.Message).To(reason, description...)
+	Expect(r.Allowed).To(BeFalse(), description...)
+}
+
+func resourceToId(resource metav1.GroupVersionResource) string {
+	return fmt.Sprintf("%s/%s/%s", resource.Group, resource.Version, resource.Resource)
 }
