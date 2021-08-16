@@ -239,7 +239,7 @@ spec:
         - --cert-dir=/home/certdir
         - --secure-port=8443
         - --kubelet-insecure-tls
-        - --kubelet-preferred-address-types=[Hostname,InternalDNS,InternalIP,ExternalDNS,ExternalIP]
+        - --kubelet-preferred-address-types=Hostname,InternalDNS,InternalIP,ExternalDNS,ExternalIP
         - --tls-cert-file=/srv/metrics-server/tls/tls.crt
         - --tls-private-key-file=/srv/metrics-server/tls/tls.key
         image: ` + image + `
@@ -329,7 +329,7 @@ spec:
         - --cert-dir=/home/certdir
         - --secure-port=8443
         - --kubelet-insecure-tls
-        - --kubelet-preferred-address-types=[Hostname,InternalDNS,InternalIP,ExternalDNS,ExternalIP]
+        - --kubelet-preferred-address-types=Hostname,InternalDNS,InternalIP,ExternalDNS,ExternalIP
         - --tls-cert-file=/srv/metrics-server/tls/tls.crt
         - --tls-private-key-file=/srv/metrics-server/tls/tls.key
         env:
