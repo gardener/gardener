@@ -77,7 +77,7 @@ var (
 // New creates a new ValidateShoot admission plugin.
 func New() (*ValidateShoot, error) {
 	return &ValidateShoot{
-		Handler: admission.NewHandler(admission.Create, admission.Update),
+		Handler: admission.NewHandler(admission.Create, admission.Update, admission.Delete),
 	}, nil
 }
 
@@ -156,15 +156,26 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		return nil
 	}
 
-	shoot, ok := a.GetObject().(*core.Shoot)
-	if !ok {
+	var (
+		shoot               = &core.Shoot{}
+		oldShoot            = &core.Shoot{}
+		convertIsSuccessful bool
+	)
+
+	if a.GetOperation() == admission.Delete {
+		shoot, convertIsSuccessful = a.GetOldObject().(*core.Shoot)
+	} else {
+		shoot, convertIsSuccessful = a.GetObject().(*core.Shoot)
+	}
+
+	if !convertIsSuccessful {
 		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))
 	}
 
 	// We only want to validate fields in the Shoot against the CloudProfile/Seed constraints which have changed.
 	// On CREATE operations we just use an empty Shoot object, forcing the validator functions to always validate.
 	// On UPDATE operations we fetch the current Shoot object.
-	var oldShoot = &core.Shoot{}
+	// On DELETE operations we want to verify that the Shoot is not in Restore or Migrate phase
 
 	// Exit early if shoot spec hasn't changed
 	if a.GetOperation() == admission.Update {
@@ -226,6 +237,11 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 			return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' in project '%s' already marked for deletion", shoot.Name, project.Name))
 		}
 		addInfrastructureDeploymentTask(shoot)
+	case admission.Delete:
+		if shoot.Status.LastOperation != nil && ((shoot.Status.LastOperation.Type == core.LastOperationTypeRestore &&
+			shoot.Status.LastOperation.State != core.LastOperationStateSucceeded) || shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate) {
+			return admission.NewForbidden(a, fmt.Errorf("cannot mark shoot %s/%s for deletion during %s operation that is in state %s", shoot.Namespace, shoot.Name, shoot.Status.LastOperation.Type, shoot.Status.LastOperation.State))
+		}
 	}
 
 	mustCheckIfTaintsTolerated := a.GetOperation() == admission.Create || (a.GetOperation() == admission.Update && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName))
