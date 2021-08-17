@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -41,14 +42,13 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 var _ = Describe("New", func() {
-	const (
-		deployNS = "test-namespace"
-	)
+	const deployNS = "test-namespace"
 
 	var (
 		ctx                                              context.Context
@@ -103,10 +103,14 @@ var _ = Describe("New", func() {
 	})
 
 	Context("succeeds", func() {
-		var managedResourceSecret *corev1.Secret
+		var (
+			managedResourceSecret *corev1.Secret
+			configMapName         string
+		)
 
 		BeforeEach(func() {
 			managedResourceSecret = &corev1.Secret{}
+			configMapName = "gardener-kube-scheduler-f7581b50"
 		})
 
 		JustBeforeEach(func() {
@@ -176,7 +180,7 @@ var _ = Describe("New", func() {
 				Expect(actual).To(DeepDerivativeEqual(expected))
 			})
 
-			It("does not overwrite already existing lables on the namespace", func() {
+			It("does not overwrite already existing labels on the namespace", func() {
 				actual := &corev1.Namespace{}
 				Expect(c.Get(ctx, types.NamespacedName{Name: deployNS}, actual)).To(Succeed(), "can get namespace")
 				actual.Labels["foo"] = "bar"
@@ -418,10 +422,8 @@ var _ = Describe("New", func() {
 						Selector:             &metav1.LabelSelector{MatchLabels: expectedLabels},
 						Template: corev1.PodTemplateSpec{
 							ObjectMeta: metav1.ObjectMeta{
-								Labels: expectedLabels,
-								Annotations: map[string]string{
-									"checksum/configmap-componentconfig": "hash",
-								},
+								Labels:      expectedLabels,
+								Annotations: map[string]string{},
 							},
 							Spec: corev1.PodSpec{
 								Affinity: &corev1.Affinity{
@@ -493,7 +495,7 @@ var _ = Describe("New", func() {
 										VolumeSource: corev1.VolumeSource{
 											ConfigMap: &corev1.ConfigMapVolumeSource{
 												LocalObjectReference: corev1.LocalObjectReference{
-													Name: "gardener-kube-scheduler",
+													Name: configMapName,
 												},
 											},
 										},
@@ -503,6 +505,7 @@ var _ = Describe("New", func() {
 						},
 					},
 				}
+				Expect(references.InjectAnnotations(expected)).To(Succeed())
 
 				Expect(managedResourceSecret.Data).To(HaveKey(key))
 				_, _, err := codec.UniversalDecoder().Decode(managedResourceSecret.Data[key], nil, actual)
@@ -512,14 +515,17 @@ var _ = Describe("New", func() {
 			})
 
 			It("configmap is created", func() {
-				const key = "configmap__test-namespace__gardener-kube-scheduler.yaml"
+				var key = "configmap__test-namespace__" + configMapName + ".yaml"
 				actual := &corev1.ConfigMap{}
 				expected := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gardener-kube-scheduler",
+						Name:      configMapName,
 						Namespace: deployNS,
-						Labels:    expectedLabels,
+						Labels: utils.MergeStringMaps(expectedLabels, map[string]string{
+							"resources.gardener.cloud/garbage-collectable-reference": "true",
+						}),
 					},
+					Immutable: pointer.Bool(true),
 				}
 
 				Expect(managedResourceSecret.Data).To(HaveKey(key))
@@ -612,6 +618,6 @@ type dummyConfigurator struct {
 	err error
 }
 
-func (d *dummyConfigurator) Config() (string, string, error) {
-	return "dummy", "hash", d.err
+func (d *dummyConfigurator) Config() (string, error) {
+	return "dummy", d.err
 }

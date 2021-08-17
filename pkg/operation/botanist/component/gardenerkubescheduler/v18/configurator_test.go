@@ -40,7 +40,7 @@ var _ = Describe("NewConfigurator", func() {
 })
 
 var _ = Describe("Config", func() {
-	var output, sha256 string
+	var output string
 
 	JustBeforeEach(func() {
 		c, err := v18.NewConfigurator("baz", "test", &v1alpha2.KubeSchedulerConfiguration{
@@ -54,7 +54,7 @@ var _ = Describe("Config", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c).NotTo(BeNil())
 
-		output, sha256, err = c.Config()
+		output, err = c.Config()
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -82,9 +82,5 @@ podMaxBackoffSeconds: null
 profiles:
 - schedulerName: test
 `))
-	})
-
-	It("returns correct hash", func() {
-		Expect(sha256).To(Equal("963561865568f3d43baf03ff2b57a9a8b74e314dd2e6a63acc65ed3552268488"))
 	})
 })

@@ -82,9 +82,7 @@ var _ = Describe("Bootstrap", func() {
 	})
 
 	Context("succeeds", func() {
-		const (
-			deployNS = "gardener-kube-scheduler"
-		)
+		const deployNS = "gardener-kube-scheduler"
 
 		var (
 			managedResourceSecret *corev1.Secret
@@ -124,11 +122,14 @@ var _ = Describe("Bootstrap", func() {
 		})
 
 		Context("with supported version", func() {
-			var config string
+			var (
+				config            string
+				configMapDataHash string
+			)
 
 			JustBeforeEach(func() {
-				const (
-					cmKey  = "configmap__gardener-kube-scheduler__gardener-kube-scheduler.yaml"
+				var (
+					cmKey  = "configmap__gardener-kube-scheduler__gardener-kube-scheduler-" + configMapDataHash + ".yaml"
 					mwcKey = "mutatingwebhookconfiguration____kube-scheduler.scheduling.gardener.cloud.yaml"
 				)
 
@@ -177,26 +178,31 @@ var _ = Describe("Bootstrap", func() {
 				BeforeEach(func() {
 					version, err = semver.NewVersion("1.18.3")
 					Expect(err).ToNot(HaveOccurred())
+					configMapDataHash = "7f566643"
 				})
 
 				It("has correct config", func() {
 					Expect(config).To(Equal(expectedV18Config))
 				})
 			})
+
 			Context("v1.19", func() {
 				BeforeEach(func() {
 					version, err = semver.NewVersion("1.19.3")
 					Expect(err).ToNot(HaveOccurred())
+					configMapDataHash = "add26c73"
 				})
 
 				It("has correct config", func() {
 					Expect(config).To(Equal(expectedV19Config))
 				})
 			})
+
 			Context("v1.20", func() {
 				BeforeEach(func() {
 					version, err = semver.NewVersion("1.20.3")
 					Expect(err).ToNot(HaveOccurred())
+					configMapDataHash = "add26c73"
 				})
 
 				It("has correct config", func() {

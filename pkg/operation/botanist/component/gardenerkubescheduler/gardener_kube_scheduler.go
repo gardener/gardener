@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -110,11 +112,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return errors.New("config is required")
 	}
 
-	componentConfigYAML, componentConfigChecksum, err := k.config.Config()
-	if err != nil {
-		return fmt.Errorf("generate component config failed: %w", err)
-	}
-
 	if k.image == nil || len(k.image.String()) == 0 {
 		return errors.New("image is required")
 	}
@@ -122,6 +119,21 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	if k.webhookClientConfig == nil {
 		return errors.New("webhookClientConfig is required")
 	}
+
+	componentConfigYAML, err := k.config.Config()
+	if err != nil {
+		return fmt.Errorf("generate component config failed: %w", err)
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      Name,
+			Namespace: k.namespace,
+			Labels:    getLabels(),
+		},
+		Data: map[string]string{dataKeyComponentConfig: componentConfigYAML},
+	}
+	utilruntime.Must(kutil.MakeUnique(configMap))
 
 	const (
 		port             int32  = 10259
@@ -168,14 +180,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				Namespace: k.namespace,
 			}},
 		}
-		configMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      Name,
-				Namespace: k.namespace,
-				Labels:    getLabels(),
-			},
-			Data: map[string]string{dataKeyComponentConfig: componentConfigYAML},
-		}
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      Name,
@@ -188,9 +192,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				Selector:             &metav1.LabelSelector{MatchLabels: getLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							"checksum/configmap-componentconfig": componentConfigChecksum,
-						},
 						Labels: getLabels(),
 					},
 					Spec: corev1.PodSpec{
@@ -357,6 +358,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 	)
+
+	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, namespace, func() error {
 		namespace.Labels = utils.MergeStringMaps(namespace.Labels, getLabels())

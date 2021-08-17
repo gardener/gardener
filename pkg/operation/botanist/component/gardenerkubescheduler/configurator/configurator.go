@@ -16,7 +16,7 @@ package configurator
 
 // Configurator provides config to the scheduler.
 type Configurator interface {
-	Config() (config string, sha256Hash string, err error)
+	Config() (config string, err error)
 }
 
 // NoOp does nothing.
@@ -24,4 +24,4 @@ func NoOp() Configurator { return &noOp{} }
 
 type noOp struct{}
 
-func (n *noOp) Config() (string, string, error) { return "", "", nil }
+func (n *noOp) Config() (string, error) { return "", nil }
