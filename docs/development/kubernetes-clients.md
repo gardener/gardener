@@ -53,7 +53,7 @@ var (
   shoot *gardencorev1beta1.Shoot      // "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
-updatedDeployment, err := c.CoreV1beta1().Shoots("garden-my-project").Update(ctx, shoot, metav1.UpdateOptions{})
+updatedShoot, err := c.CoreV1beta1().Shoots("garden-my-project").Update(ctx, shoot, metav1.UpdateOptions{})
 ```
 
 ### Controller-Runtime Clients
