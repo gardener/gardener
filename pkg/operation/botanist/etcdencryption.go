@@ -96,11 +96,7 @@ func (b *Botanist) ApplyEncryptionConfiguration(ctx context.Context) error {
 		return err
 	}
 
-	func() {
-		b.mutex.Lock()
-		defer b.mutex.Unlock()
-		b.CheckSums[common.EtcdEncryptionSecretName] = checksum
-	}()
+	b.StoreCheckSum(common.EtcdEncryptionSecretName, checksum)
 
 	return nil
 }
@@ -122,11 +118,7 @@ func (b *Botanist) RewriteShootSecretsIfEncryptionConfigurationChanged(ctx conte
 		return nil
 	}
 
-	checksum := func() string {
-		b.mutex.RLock()
-		defer b.mutex.RUnlock()
-		return b.CheckSums[common.EtcdEncryptionSecretName]
-	}()
+	checksum := b.LoadCheckSum(common.EtcdEncryptionSecretName)
 	shortChecksum := kutil.TruncateLabelValue(checksum)
 
 	// Add checksum label to all secrets in shoot so that they get rewritten now, and also so that we don't rewrite them again in

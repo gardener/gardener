@@ -49,8 +49,8 @@ func (b *Botanist) DefaultMetricsServer() (metricsserver.Interface, error) {
 // DeployMetricsServer deploys the metrics-server.
 func (b *Botanist) DeployMetricsServer(ctx context.Context) error {
 	b.Shoot.Components.SystemComponents.MetricsServer.SetSecrets(metricsserver.Secrets{
-		CA:     component.Secret{Name: metricsserver.SecretNameCA, Checksum: b.CheckSums[metricsserver.SecretNameCA], Data: b.Secrets[metricsserver.SecretNameCA].Data},
-		Server: component.Secret{Name: metricsserver.SecretNameServer, Checksum: b.CheckSums[metricsserver.SecretNameServer], Data: b.Secrets[metricsserver.SecretNameServer].Data},
+		CA:     component.Secret{Name: metricsserver.SecretNameCA, Checksum: b.LoadCheckSum(metricsserver.SecretNameCA), Data: b.LoadSecret(metricsserver.SecretNameCA).Data},
+		Server: component.Secret{Name: metricsserver.SecretNameServer, Checksum: b.LoadCheckSum(metricsserver.SecretNameServer), Data: b.LoadSecret(metricsserver.SecretNameServer).Data},
 	})
 
 	return b.Shoot.Components.SystemComponents.MetricsServer.Deploy(ctx)

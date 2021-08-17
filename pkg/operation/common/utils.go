@@ -55,6 +55,17 @@ func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string 
 	return result
 }
 
+// FilterEntriesByPrefix returns a list of strings which begin with the given prefix.
+func FilterEntriesByPrefix(prefix string, entries []string) []string {
+	var result []string
+	for _, entry := range entries {
+		if strings.HasPrefix(entry, prefix) {
+			result = append(result, entry)
+		}
+	}
+	return result
+}
+
 // ComputeOffsetIP parses the provided <subnet> and offsets with the value of <offset>.
 // For example, <subnet> = 100.64.0.0/11 and <offset> = 10 the result would be 100.64.0.10
 // IPv6 and IPv4 is supported.
