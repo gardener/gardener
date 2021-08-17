@@ -212,11 +212,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	switch a.GetOperation() {
 	case admission.Create:
 		addInfrastructureDeploymentTask(shoot)
-	case admission.Delete:
-		if shoot.Status.LastOperation != nil && ((shoot.Status.LastOperation.Type == core.LastOperationTypeRestore &&
-			shoot.Status.LastOperation.State != core.LastOperationStateSucceeded) || shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate) {
-			return admission.NewForbidden(a, fmt.Errorf("cannot mark shoot %s/%s for deletion during %s operation that is in state %s", shoot.Namespace, shoot.Name, shoot.Status.LastOperation.Type, shoot.Status.LastOperation.State))
-		}
 	}
 
 	if shoot.Spec.Provider.Type != cloudProfile.Spec.Type {
@@ -242,36 +237,12 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		return err
 	}
 
-	// Allow removal of `gardener` finalizer only if the Shoot deletion has completed successfully
-	if len(shoot.Status.TechnicalID) > 0 && shoot.Status.LastOperation != nil {
-		oldFinalizers := sets.NewString(oldShoot.Finalizers...)
-		newFinalizers := sets.NewString(shoot.Finalizers...)
-
-		if oldFinalizers.Has(core.GardenerName) && !newFinalizers.Has(core.GardenerName) {
-			lastOperation := shoot.Status.LastOperation
-			deletionSucceeded := lastOperation.Type == core.LastOperationTypeDelete && lastOperation.State == core.LastOperationStateSucceeded && lastOperation.Progress == 100
-
-			if !deletionSucceeded {
-				return admission.NewForbidden(a, fmt.Errorf("finalizer %q cannot be removed because shoot deletion has not completed successfully yet", core.GardenerName))
-			}
-		}
+	if err := validationContext.validateDeletion(a); err != nil {
+		return err
 	}
 
-	// Prevent Shoots from getting hibernated in case they have problematic webhooks.
-	// Otherwise, we can never wake up this shoot cluster again.
-	oldIsHibernated := oldShoot.Spec.Hibernation != nil && oldShoot.Spec.Hibernation.Enabled != nil && *oldShoot.Spec.Hibernation.Enabled
-	newIsHibernated := shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled
-
-	if !oldIsHibernated && newIsHibernated {
-		if hibernationConstraint := helper.GetCondition(shoot.Status.Constraints, core.ShootHibernationPossible); hibernationConstraint != nil {
-			if hibernationConstraint.Status != core.ConditionTrue {
-				return admission.NewForbidden(a, fmt.Errorf(hibernationConstraint.Message))
-			}
-		}
-	}
-
-	if !newIsHibernated && oldIsHibernated {
-		addInfrastructureDeploymentTask(shoot)
+	if err := validationContext.validateShootHibernation(a); err != nil {
+		return err
 	}
 
 	if seed != nil {
@@ -440,6 +411,54 @@ func (c *validationContext) validateScheduling(a admission.Attributes, seedListe
 		if !apiequality.Semantic.DeepEqual(c.shoot.Spec, c.oldShoot.Spec) {
 			return admission.NewForbidden(a, fmt.Errorf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", c.shoot.Name, c.seed.Name))
 		}
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateDeletion(a admission.Attributes) error {
+	if a.GetOperation() == admission.Delete {
+		if c.shoot.Status.LastOperation != nil &&
+			((c.shoot.Status.LastOperation.Type == core.LastOperationTypeRestore && c.shoot.Status.LastOperation.State != core.LastOperationStateSucceeded) ||
+				c.shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate) {
+			return admission.NewForbidden(a, fmt.Errorf("cannot mark shoot for deletion during %s operation that is in state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
+		}
+	}
+
+	// Allow removal of `gardener` finalizer only if the Shoot deletion has completed successfully
+	if len(c.shoot.Status.TechnicalID) > 0 && c.shoot.Status.LastOperation != nil {
+		oldFinalizers := sets.NewString(c.oldShoot.Finalizers...)
+		newFinalizers := sets.NewString(c.shoot.Finalizers...)
+
+		if oldFinalizers.Has(core.GardenerName) && !newFinalizers.Has(core.GardenerName) {
+			lastOperation := c.shoot.Status.LastOperation
+			deletionSucceeded := lastOperation.Type == core.LastOperationTypeDelete && lastOperation.State == core.LastOperationStateSucceeded && lastOperation.Progress == 100
+
+			if !deletionSucceeded {
+				return admission.NewForbidden(a, fmt.Errorf("finalizer %q cannot be removed because shoot deletion has not completed successfully yet", core.GardenerName))
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateShootHibernation(a admission.Attributes) error {
+	// Prevent Shoots from getting hibernated in case they have problematic webhooks.
+	// Otherwise, we can never wake up this shoot cluster again.
+	oldIsHibernated := c.oldShoot.Spec.Hibernation != nil && c.oldShoot.Spec.Hibernation.Enabled != nil && *c.oldShoot.Spec.Hibernation.Enabled
+	newIsHibernated := c.shoot.Spec.Hibernation != nil && c.shoot.Spec.Hibernation.Enabled != nil && *c.shoot.Spec.Hibernation.Enabled
+
+	if !oldIsHibernated && newIsHibernated {
+		if hibernationConstraint := helper.GetCondition(c.shoot.Status.Constraints, core.ShootHibernationPossible); hibernationConstraint != nil {
+			if hibernationConstraint.Status != core.ConditionTrue {
+				return admission.NewForbidden(a, fmt.Errorf(hibernationConstraint.Message))
+			}
+		}
+	}
+
+	if !newIsHibernated && oldIsHibernated {
+		addInfrastructureDeploymentTask(c.shoot)
 	}
 
 	return nil
