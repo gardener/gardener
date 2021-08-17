@@ -208,68 +208,40 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
 	}
 
-	switch a.GetOperation() {
-	case admission.Create:
-		addInfrastructureDeploymentTask(shoot)
+	// begin of validation code
+	validationContext := &validationContext{
+		cloudProfile: cloudProfile,
+		project:      project,
+		seed:         seed,
+		shoot:        shoot,
+		oldShoot:     oldShoot,
 	}
-
-	var (
-		validationContext = &validationContext{
-			cloudProfile: cloudProfile,
-			project:      project,
-			seed:         seed,
-			shoot:        shoot,
-			oldShoot:     oldShoot,
-		}
-		allErrs field.ErrorList
-	)
 
 	if err := validationContext.validateProjectMembership(a); err != nil {
 		return err
 	}
-
 	if err := validationContext.validateScheduling(a, v.seedLister); err != nil {
 		return err
 	}
-
 	if err := validationContext.validateDeletion(a); err != nil {
 		return err
 	}
-
 	if err := validationContext.validateShootHibernation(a); err != nil {
 		return err
 	}
-
-	if !reflect.DeepEqual(oldShoot.Spec.Provider.InfrastructureConfig, shoot.Spec.Provider.InfrastructureConfig) {
-		addInfrastructureDeploymentTask(shoot)
+	if err := validationContext.ensureMachineImages(); err != nil {
+		return err
 	}
 
-	if shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateSSHKeypair {
-		addInfrastructureDeploymentTask(shoot)
-	}
+	validationContext.addMetadataAnnotations(a)
 
-	if shoot.Spec.Maintenance != nil && utils.IsTrue(shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
-		!apiequality.Semantic.DeepEqual(oldShoot.Spec, shoot.Spec) &&
-		shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == core.LastOperationStateFailed {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.FailedShootNeedsRetryOperation, "true")
-	}
-
-	if shoot.DeletionTimestamp == nil {
-		for idx, worker := range shoot.Spec.Provider.Workers {
-			image, err := ensureMachineImage(oldShoot.Spec.Provider.Workers, worker, cloudProfile.Spec.MachineImages)
-			if err != nil {
-				return err
-			}
-			shoot.Spec.Provider.Workers[idx].Machine.Image = image
-		}
-	}
-
+	var allErrs field.ErrorList
 	allErrs = append(allErrs, validationContext.defaultOrValidateShootNetworks()...)
 	allErrs = append(allErrs, validationContext.validateKubernetes()...)
 	allErrs = append(allErrs, validateRegion(validationContext.cloudProfile.Spec.Regions, validationContext.shoot.Spec.Region, validationContext.oldShoot.Spec.Region, field.NewPath("spec", "region"))...)
 	allErrs = append(allErrs, validationContext.validateProvider()...)
 
-	dnsErrors, err := validateDNSDomainUniqueness(v.shootLister, shoot.Name, shoot.Spec.DNS)
+	dnsErrors, err := validationContext.validateDNSDomainUniqueness(v.shootLister)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
@@ -434,9 +406,43 @@ func (c *validationContext) validateShootHibernation(a admission.Attributes) err
 	return nil
 }
 
+func (c *validationContext) ensureMachineImages() error {
+	if c.shoot.DeletionTimestamp == nil {
+		for idx, worker := range c.shoot.Spec.Provider.Workers {
+			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfile.Spec.MachineImages)
+			if err != nil {
+				return err
+			}
+			c.shoot.Spec.Provider.Workers[idx].Machine.Image = image
+		}
+	}
+
+	return nil
+}
+
+func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
+	if a.GetOperation() == admission.Create {
+		addInfrastructureDeploymentTask(c.shoot)
+	}
+
+	if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) {
+		addInfrastructureDeploymentTask(c.shoot)
+	}
+
+	if c.shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateSSHKeypair {
+		addInfrastructureDeploymentTask(c.shoot)
+	}
+
+	if c.shoot.Spec.Maintenance != nil && utils.IsTrue(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
+		!apiequality.Semantic.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) &&
+		c.shoot.Status.LastOperation != nil && c.shoot.Status.LastOperation.State == core.LastOperationStateFailed {
+		metav1.SetMetaDataAnnotation(&c.shoot.ObjectMeta, v1beta1constants.FailedShootNeedsRetryOperation, "true")
+	}
+}
+
 func (c *validationContext) defaultOrValidateShootNetworks() field.ErrorList {
 	var (
-		allErrs = field.ErrorList{}
+		allErrs field.ErrorList
 		path    = field.NewPath("spec", "networking")
 	)
 
@@ -476,7 +482,7 @@ func (c *validationContext) defaultOrValidateShootNetworks() field.ErrorList {
 
 func (c *validationContext) validateKubernetes() field.ErrorList {
 	var (
-		allErrs = field.ErrorList{}
+		allErrs field.ErrorList
 		path    = field.NewPath("spec", "kubernetes")
 	)
 
@@ -496,7 +502,7 @@ func (c *validationContext) validateKubernetes() field.ErrorList {
 
 func (c *validationContext) validateProvider() field.ErrorList {
 	var (
-		allErrs = field.ErrorList{}
+		allErrs field.ErrorList
 		path    = field.NewPath("spec", "provider")
 	)
 
@@ -579,9 +585,10 @@ func validateVolumeSize(volumeTypeConstraints []core.VolumeType, machineTypeCons
 	return true, ""
 }
 
-func validateDNSDomainUniqueness(shootLister corelisters.ShootLister, name string, dns *core.DNS) (field.ErrorList, error) {
+func (c *validationContext) validateDNSDomainUniqueness(shootLister corelisters.ShootLister) (field.ErrorList, error) {
 	var (
-		allErrs = field.ErrorList{}
+		allErrs field.ErrorList
+		dns     = c.shoot.Spec.DNS
 		dnsPath = field.NewPath("spec", "dns", "domain")
 	)
 
@@ -595,7 +602,7 @@ func validateDNSDomainUniqueness(shootLister corelisters.ShootLister, name strin
 	}
 
 	for _, shoot := range shoots {
-		if shoot.Name == name {
+		if shoot.Name == c.shoot.Name {
 			continue
 		}
 
