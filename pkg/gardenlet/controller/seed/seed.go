@@ -16,6 +16,7 @@ package seed
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -24,16 +25,15 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/lease"
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -41,25 +41,15 @@ import (
 
 // Controller controls Seeds.
 type Controller struct {
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-
-	config        *config.GardenletConfiguration
-	healthManager healthz.Manager
-	recorder      record.EventRecorder
-
-	control               ControlInterface
-	extensionCheckControl ExtensionCheckControlInterface
-	seedLeaseControl      lease.Controller
-
-	seedLister gardencorelisters.SeedLister
-
-	hasSyncedFuncs []cache.InformerSynced
+	reconciler               reconcile.Reconciler
+	leaseReconciler          reconcile.Reconciler
+	extensionCheckReconciler reconcile.Reconciler
 
 	seedQueue               workqueue.RateLimitingInterface
 	seedLeaseQueue          workqueue.RateLimitingInterface
 	seedExtensionCheckQueue workqueue.RateLimitingInterface
 
+	hasSyncedFuncs         []cache.InformerSynced
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
@@ -68,42 +58,43 @@ type Controller struct {
 // holding information about the acting Gardener, a <seedInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
 func NewSeedController(
+	ctx context.Context,
 	clientMap clientmap.ClientMap,
-	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	healthManager healthz.Manager,
 	imageVector imagevector.ImageVector,
 	componentImageVectors imagevector.ComponentImageVectors,
 	identity *gardencorev1beta1.Gardener,
 	config *config.GardenletConfiguration,
 	recorder record.EventRecorder,
-) *Controller {
-	var (
-		gardenCoreV1beta1Informer = gardenCoreInformerFactory.Core().V1beta1()
+) (*Controller, error) {
+	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
+	if err != nil {
+		return nil, err
+	}
 
-		controllerInstallationInformer = gardenCoreV1beta1Informer.ControllerInstallations()
-		seedInformer                   = gardenCoreV1beta1Informer.Seeds()
-
-		controllerInstallationLister = controllerInstallationInformer.Lister()
-		seedLister                   = seedInformer.Lister()
-	)
+	seedInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Seed{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Seed Informer: %w", err)
+	}
+	controllerInstallationInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.ControllerInstallation{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ControllerInstallation Informer: %w", err)
+	}
 
 	seedController := &Controller{
-		clientMap:               clientMap,
-		k8sGardenCoreInformers:  gardenCoreInformerFactory,
-		config:                  config,
-		healthManager:           healthManager,
-		recorder:                recorder,
-		control:                 NewDefaultControl(clientMap, gardenCoreInformerFactory, imageVector, componentImageVectors, identity, recorder, config, seedLister),
-		extensionCheckControl:   NewDefaultExtensionCheckControl(clientMap, controllerInstallationLister, metav1.Now),
-		seedLeaseControl:        lease.NewLeaseController(time.Now, clientMap, LeaseResyncSeconds, gardencorev1beta1.GardenerSeedLeaseNamespace),
-		seedLister:              seedLister,
+		reconciler:      newReconciler(clientMap, recorder, logger.Logger, imageVector, componentImageVectors, identity, config),
+		leaseReconciler: NewLeaseReconciler(clientMap, logger.Logger, healthManager, metav1.Now),
+
+		// TODO: move this reconciler to controller-manager and let it run once for all Seeds, no Seed specifics required here
+		extensionCheckReconciler: NewExtensionCheckReconciler(clientMap, logger.Logger, metav1.Now),
+
 		seedQueue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		seedLeaseQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.NewItemExponentialFailureRateLimiter(time.Millisecond, 2*time.Second), "seed-lease"),
 		seedExtensionCheckQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed-extension-check"),
 		workerCh:                make(chan int),
 	}
 
-	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	seedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    seedController.seedAdd,
@@ -112,14 +103,14 @@ func NewSeedController(
 		},
 	})
 
-	seedInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	seedInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.SeedFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: seedController.seedLeaseAdd,
 		},
 	})
 
-	controllerInstallationInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
+	controllerInstallationInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: controllerutils.ControllerInstallationFilterFunc(confighelper.SeedNameFromSeedConfig(config.SeedConfig)),
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc:    seedController.controllerInstallationOfSeedAdd,
@@ -129,11 +120,11 @@ func NewSeedController(
 	})
 
 	seedController.hasSyncedFuncs = []cache.InformerSynced{
-		seedInformer.Informer().HasSynced,
-		controllerInstallationInformer.Informer().HasSynced,
+		seedInformer.HasSynced,
+		controllerInstallationInformer.HasSynced,
 	}
 
-	return seedController
+	return seedController, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
@@ -156,9 +147,9 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("Seed controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
-		controllerutils.DeprecatedCreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.reconcileSeedLeaseKey, &waitGroup, c.workerCh)
-		controllerutils.DeprecatedCreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.reconcileSeedExtensionCheckKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedLeaseQueue, "Seed Lease", c.leaseReconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedExtensionCheckQueue, "Seed Extension Check", c.extensionCheckReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

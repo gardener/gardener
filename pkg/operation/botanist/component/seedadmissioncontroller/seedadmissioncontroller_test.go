@@ -26,7 +26,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -45,11 +44,10 @@ var _ = Describe("SeedAdmission", func() {
 		c             *mockclient.MockClient
 		seedAdmission component.DeployWaiter
 
-		ctx               = context.TODO()
-		fakeErr           = fmt.Errorf("fake error")
-		namespace         = "shoot--foo--bar"
-		image             = "gsac:v1.2.3"
-		kubernetesVersion = semver.MustParse("v1.15.2")
+		ctx       = context.TODO()
+		fakeErr   = fmt.Errorf("fake error")
+		namespace = "shoot--foo--bar"
+		image     = "gsac:v1.2.3"
 
 		clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -332,7 +330,7 @@ status: {}
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
-		seedAdmission = New(c, namespace, image, kubernetesVersion)
+		seedAdmission = New(c, namespace, image)
 
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

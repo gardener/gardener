@@ -24,12 +24,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -44,6 +41,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const installationTypeHelm = "helm"
@@ -58,16 +56,16 @@ func (c *Controller) controllerInstallationAdd(obj interface{}) {
 }
 
 func (c *Controller) controllerInstallationUpdate(oldObj, newObj interface{}) {
-	old, ok1 := oldObj.(*gardencorev1beta1.ControllerInstallation)
-	new, ok2 := newObj.(*gardencorev1beta1.ControllerInstallation)
+	oldCtrlInst, ok1 := oldObj.(*gardencorev1beta1.ControllerInstallation)
+	newCtrlInst, ok2 := newObj.(*gardencorev1beta1.ControllerInstallation)
 	if !ok1 || !ok2 {
 		return
 	}
 
-	if new.DeletionTimestamp == nil &&
-		reflect.DeepEqual(old.Spec.DeploymentRef, new.Spec.DeploymentRef) &&
-		old.Spec.RegistrationRef.ResourceVersion == new.Spec.RegistrationRef.ResourceVersion &&
-		old.Spec.SeedRef.ResourceVersion == new.Spec.SeedRef.ResourceVersion {
+	if newCtrlInst.DeletionTimestamp == nil &&
+		reflect.DeepEqual(oldCtrlInst.Spec.DeploymentRef, newCtrlInst.Spec.DeploymentRef) &&
+		oldCtrlInst.Spec.RegistrationRef.ResourceVersion == newCtrlInst.Spec.RegistrationRef.ResourceVersion &&
+		oldCtrlInst.Spec.SeedRef.ResourceVersion == newCtrlInst.Spec.SeedRef.ResourceVersion {
 		return
 	}
 
@@ -83,73 +81,59 @@ func (c *Controller) controllerInstallationDelete(obj interface{}) {
 	c.controllerInstallationQueue.Add(key)
 }
 
-func (c *Controller) reconcileControllerInstallationKey(key string) error {
-	_, name, err := cache.SplitMetaNamespaceKey(key)
+func newReconciler(
+	clientMap clientmap.ClientMap,
+	recorder record.EventRecorder,
+	l logrus.FieldLogger,
+	gardenNamespace *corev1.Namespace,
+	gardenClusterIdentity string,
+) reconcile.Reconciler {
+	return &reconciler{
+		clientMap:             clientMap,
+		recorder:              recorder,
+		logger:                l,
+		gardenNamespace:       gardenNamespace,
+		gardenClusterIdentity: gardenClusterIdentity,
+	}
+}
+
+type reconciler struct {
+	clientMap             clientmap.ClientMap
+	recorder              record.EventRecorder
+	logger                logrus.FieldLogger
+	gardenNamespace       *corev1.Namespace
+	gardenClusterIdentity string
+}
+
+func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := r.logger.WithField("controllerInstallation", request.Name)
+
+	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		return err
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	controllerInstallation, err := c.controllerInstallationLister.Get(name)
-	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[CONTROLLERINSTALLATION RECONCILE] %s - skipping because ControllerInstallation has been deleted", key)
-		return nil
-	}
-	if err != nil {
-		logger.Logger.Infof("[CONTROLLERINSTALLATION RECONCILE] %s - unable to retrieve object from store: %v", key, err)
-		return err
-	}
-
-	return c.controllerInstallationControl.Reconcile(controllerInstallation)
-}
-
-// ControlInterface implements the control logic for updating ControllerInstallations. It is implemented as an interface to allow
-// for extensions that provide different semantics. Currently, there is only one implementation.
-type ControlInterface interface {
-	Reconcile(*gardencorev1beta1.ControllerInstallation) error
-}
-
-// NewDefaultControllerInstallationControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for ControllerInstallations. You should use an instance returned from
-// NewDefaultControllerInstallationControl() for any scenario other than testing.
-func NewDefaultControllerInstallationControl(clientMap clientmap.ClientMap, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.GardenletConfiguration, seedLister gardencorelisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, gardenNamespace *corev1.Namespace, gardenClusterIdentity string) ControlInterface {
-	return &defaultControllerInstallationControl{clientMap, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace, gardenClusterIdentity}
-}
-
-type defaultControllerInstallationControl struct {
-	clientMap                    clientmap.ClientMap
-	k8sGardenCoreInformers       gardencoreinformers.SharedInformerFactory
-	recorder                     record.EventRecorder
-	config                       *config.GardenletConfiguration
-	seedLister                   gardencorelisters.SeedLister
-	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister
-	gardenNamespace              *corev1.Namespace
-	gardenClusterIdentity        string
-}
-
-func (c *defaultControllerInstallationControl) Reconcile(obj *gardencorev1beta1.ControllerInstallation) error {
-	var (
-		controllerInstallation = obj.DeepCopy()
-		logger                 = logger.NewFieldLogger(logger.Logger, "controllerinstallation", controllerInstallation.Name)
-		ctx                    = context.TODO()
-	)
-
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
+	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, controllerInstallation); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Debugf("[CONTROLLERINSTALLATION RECONCILE] skipping because ControllerInstallation has been deleted")
+			return reconcile.Result{}, nil
+		}
+		log.Errorf("[CONTROLLERINSTALLATION RECONCILE] unable to retrieve object from store: %v", err)
+		return reconcile.Result{}, err
 	}
 
-	if isResponsible, err := c.isResponsible(ctx, gardenClient.Client(), controllerInstallation); !isResponsible || err != nil {
-		return err
+	if isResponsible, err := r.isResponsible(ctx, gardenClient.Client(), controllerInstallation); !isResponsible || err != nil {
+		return reconcile.Result{}, err
 	}
 
 	if controllerInstallation.DeletionTimestamp != nil {
-		return c.delete(ctx, gardenClient.Client(), controllerInstallation, logger)
+		return reconcile.Result{}, r.delete(ctx, gardenClient.Client(), controllerInstallation, log)
 	}
-	return c.reconcile(ctx, gardenClient.Client(), controllerInstallation, logger)
+	return reconcile.Result{}, r.reconcile(ctx, gardenClient.Client(), controllerInstallation, log)
 }
 
-func (c *defaultControllerInstallationControl) reconcile(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, logger logrus.FieldLogger) error {
+func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, log logrus.FieldLogger) error {
 	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient, controllerInstallation, FinalizerName); err != nil {
 		return err
 	}
@@ -161,12 +145,12 @@ func (c *defaultControllerInstallationControl) reconcile(ctx context.Context, ga
 
 	defer func() {
 		if err := patchConditions(ctx, gardenClient, controllerInstallation, conditionValid, conditionInstalled); err != nil {
-			logger.Errorf("Failed to patch ControllerInstallation conditions: %+v", err)
+			log.Errorf("Failed to patch ControllerInstallation conditions: %+v", err)
 		}
 	}()
 
-	controllerRegistration, err := c.controllerRegistrationLister.Get(controllerInstallation.Spec.RegistrationRef.Name)
-	if err != nil {
+	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "RegistrationNotFound", fmt.Sprintf("Referenced ControllerRegistration does not exist: %+v", err))
 		} else {
@@ -175,8 +159,8 @@ func (c *defaultControllerInstallationControl) reconcile(ctx context.Context, ga
 		return err
 	}
 
-	seed, err := c.seedLister.Get(controllerInstallation.Spec.SeedRef.Name)
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.SeedRef.Name}, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
 		} else {
@@ -185,7 +169,7 @@ func (c *defaultControllerInstallationControl) reconcile(ctx context.Context, ga
 		return err
 	}
 
-	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(seed.Name))
+	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(seed.Name))
 	if err != nil {
 		conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Failed to get Seed client for referenced Seed: %+v", err))
 		return fmt.Errorf("failed to get seed client: %w", err)
@@ -244,8 +228,8 @@ func (c *defaultControllerInstallationControl) reconcile(ctx context.Context, ga
 	gardenerValues := map[string]interface{}{
 		"gardener": map[string]interface{}{
 			"garden": map[string]interface{}{
-				"identity":        c.gardenNamespace.UID, // 'identity' value is deprecated to be replaced by 'clusterIdentity'. Should be removed in a future version.
-				"clusterIdentity": c.gardenClusterIdentity,
+				"identity":        r.gardenNamespace.UID, // 'identity' value is deprecated to be replaced by 'clusterIdentity'. Should be removed in a future version.
+				"clusterIdentity": r.gardenClusterIdentity,
 			},
 			"seed": map[string]interface{}{
 				"identity":        seed.Name, // 'identity' value is deprecated to be replaced by 'clusterIdentity'. Should be removed in a future version.
@@ -288,7 +272,7 @@ func (c *defaultControllerInstallationControl) reconcile(ctx context.Context, ga
 	return nil
 }
 
-func (c *defaultControllerInstallationControl) delete(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, logger logrus.FieldLogger) error {
+func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, log logrus.FieldLogger) error {
 	var (
 		newConditions      = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, gardencorev1beta1helper.InitCondition(gardencorev1beta1.ControllerInstallationValid), gardencorev1beta1helper.InitCondition(gardencorev1beta1.ControllerInstallationInstalled))
 		conditionValid     = newConditions[0]
@@ -297,12 +281,12 @@ func (c *defaultControllerInstallationControl) delete(ctx context.Context, garde
 
 	defer func() {
 		if err := patchConditions(ctx, gardenClient, controllerInstallation, conditionValid, conditionInstalled); client.IgnoreNotFound(err) != nil {
-			logger.Errorf("Failed to patch ControllerInstallation conditions: %+v", err)
+			log.Errorf("Failed to patch ControllerInstallation conditions: %+v", err)
 		}
 	}()
 
-	seed, err := c.seedLister.Get(controllerInstallation.Spec.SeedRef.Name)
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.SeedRef.Name}, seed); err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
 		} else {
@@ -311,7 +295,7 @@ func (c *defaultControllerInstallationControl) delete(ctx context.Context, garde
 		return err
 	}
 
-	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(seed.Name))
+	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(seed.Name))
 	if err != nil {
 		conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Failed to get Seed client for referenced Seed: %+v", err))
 		return fmt.Errorf("failed to get seed client: %w", err)
@@ -357,19 +341,19 @@ func patchConditions(ctx context.Context, c client.StatusClient, controllerInsta
 	return c.Status().Patch(ctx, controllerInstallation, patch)
 }
 
-func (c *defaultControllerInstallationControl) isResponsible(ctx context.Context, cl client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation) (bool, error) {
+func (r *reconciler) isResponsible(ctx context.Context, c client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation) (bool, error) {
 	// First check if a ControllerDeployment is used for the affected installation.
 	if deploymentName := controllerInstallation.Spec.DeploymentRef; deploymentName != nil {
 		controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
-		if err := cl.Get(ctx, kutil.Key(deploymentName.Name), controllerDeployment); err != nil {
+		if err := c.Get(ctx, kutil.Key(deploymentName.Name), controllerDeployment); err != nil {
 			return false, err
 		}
 		return controllerDeployment.Type == installationTypeHelm, nil
 	}
 
 	// Continue with the ControllerRegistration which can directly contain a deployment specification.
-	controllerRegistration, err := c.controllerRegistrationLister.Get(controllerInstallation.Spec.RegistrationRef.Name)
-	if err != nil {
+	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
+	if err := c.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
 		return false, err
 	}
 

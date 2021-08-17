@@ -839,7 +839,7 @@ var _ = Describe("kubernetes", func() {
 					}),
 			)
 
-			actual, err := WaitUntilLoadBalancerIsReady(ctx, k8sShootClient, metav1.NamespaceSystem, "load-balancer", 1*time.Second, logger)
+			actual, err := WaitUntilLoadBalancerIsReady(ctx, k8sShootClient.Client(), metav1.NamespaceSystem, "load-balancer", 1*time.Second, logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal("cluster.local"))
 		})
@@ -880,7 +880,7 @@ var _ = Describe("kubernetes", func() {
 					}),
 			)
 
-			actual, err := WaitUntilLoadBalancerIsReady(ctx, k8sShootClient, metav1.NamespaceSystem, "load-balancer", 1*time.Second, logger)
+			actual, err := WaitUntilLoadBalancerIsReady(ctx, k8sShootClient.Client(), metav1.NamespaceSystem, "load-balancer", 1*time.Second, logger)
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("-> Events:\n* service-controller reported"))
 			Expect(err.Error()).To(ContainSubstring("Error syncing load balancer: an error occurred"))

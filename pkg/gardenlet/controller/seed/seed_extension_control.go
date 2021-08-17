@@ -18,19 +18,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-
+	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/logger"
 )
 
 func (c *Controller) controllerInstallationOfSeedAdd(obj interface{}) {
@@ -41,7 +39,7 @@ func (c *Controller) controllerInstallationOfSeedAdd(obj interface{}) {
 	c.seedExtensionCheckQueue.Add(controllerInstallation.Spec.SeedRef.Name)
 }
 
-func (c *Controller) controllerInstallationOfSeedUpdate(oldObj, newObj interface{}) {
+func (c *Controller) controllerInstallationOfSeedUpdate(_, newObj interface{}) {
 	c.controllerInstallationOfSeedAdd(newObj)
 }
 
@@ -49,77 +47,59 @@ func (c *Controller) controllerInstallationOfSeedDelete(obj interface{}) {
 	c.controllerInstallationOfSeedAdd(obj)
 }
 
-func (c *Controller) reconcileSeedExtensionCheckKey(key string) error {
-	_, name, err := cache.SplitMetaNamespaceKey(key)
-	if err != nil {
-		return err
-	}
-
-	seed, err := c.seedLister.Get(name)
-	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[SEED EXTENSION CHECK] %s - skipping because Seed has been deleted", key)
-		return nil
-	}
-	if err != nil {
-		logger.Logger.Infof("[SEED EXTENSION CHECK] %s - unable to retrieve object from store: %v", key, err)
-		return err
-	}
-
-	return c.extensionCheckControl.ReconcileExtensionCheckFor(seed)
-}
-
-// ExtensionCheckControlInterface implements the control logic for updating Seeds. It is implemented as an interface to allow
-// for extensions that provide different semantics. Currently, there is only one implementation.
-type ExtensionCheckControlInterface interface {
-	// ReconcileExtensionCheckFor implements the control logic for Seed extension checks.
-	// If an implementation returns a non-nil error, the invocation will be retried using a rate-limited strategy.
-	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
-	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
-	ReconcileExtensionCheckFor(seed *gardencorev1beta1.Seed) error
-}
-
-// NewDefaultExtensionCheckControl returns a new instance of the default implementation ExtensionCheckControlInterface that
-// implements the documented semantics for Seeds. You should use an instance returned from NewDefaultExtensionCheckControl() for any
-// scenario other than testing.
-func NewDefaultExtensionCheckControl(
-	clientMap clientmap.ClientMap,
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister,
-	nowFunc func() metav1.Time,
-) ExtensionCheckControlInterface {
-	return &defaultExtensionCheckControl{
-		clientMap,
-		controllerInstallationLister,
-		nowFunc,
+// NewExtensionCheckReconciler creates a new reconciler that maintains the ExtensionsReady condition of Seeds
+// according to the observed changes to ControllerInstallations.
+func NewExtensionCheckReconciler(clientMap clientmap.ClientMap, l logrus.FieldLogger, nowFunc func() metav1.Time) reconcile.Reconciler {
+	return &extensionCheckReconciler{
+		clientMap: clientMap,
+		logger:    l,
+		nowFunc:   nowFunc,
 	}
 }
 
-type defaultExtensionCheckControl struct {
-	clientMap                    clientmap.ClientMap
-	controllerInstallationLister gardencorelisters.ControllerInstallationLister
-	nowFunc                      func() metav1.Time
+type extensionCheckReconciler struct {
+	clientMap clientmap.ClientMap
+	logger    logrus.FieldLogger
+	nowFunc   func() metav1.Time
 }
 
-func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencorev1beta1.Seed) error {
-	ctx := context.TODO()
+func (r *extensionCheckReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := r.logger.WithField("seed", request.Name)
 
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
+	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	controllerInstallationList, err := c.controllerInstallationLister.List(labels.Everything())
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, seed); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Debugf("[SEED EXTENSION CHECK] skipping because Seed has been deleted")
+			return reconcile.Result{}, nil
+		}
+		log.Infof("[SEED EXTENSION CHECK] unable to retrieve object from store: %v", err)
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, r.reconcile(ctx, gardenClient.Client(), seed)
+}
+
+func (r *extensionCheckReconciler) reconcile(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) error {
+	controllerInstallationList := &gardencorev1beta1.ControllerInstallationList{}
+	if err := gardenClient.List(ctx, controllerInstallationList, client.MatchingFields{core.SeedRefName: seed.Name}); err != nil {
 		return err
 	}
 
 	var (
-		seed         = obj.DeepCopy()
 		notValid     = make(map[string]string)
 		notInstalled = make(map[string]string)
 		notHealthy   = make(map[string]string)
 	)
 
-	for _, controllerInstallation := range controllerInstallationList {
+	for _, controllerInstallation := range controllerInstallationList.Items {
+		// not needed for real client, but fake client doesn't support field selector
+		// see https://github.com/kubernetes-sigs/controller-runtime/issues/1376
+		// could be solved by switching from fake client to real client against envtest
 		if controllerInstallation.Spec.SeedRef.Name != seed.Name {
 			continue
 		}
@@ -171,8 +151,8 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 		return err
 	}
 
-	if c := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedExtensionsReady); c != nil {
-		bldr.WithOldCondition(*c)
+	if condition := helper.GetCondition(seed.Status.Conditions, gardencorev1beta1.SeedExtensionsReady); condition != nil {
+		bldr.WithOldCondition(*condition)
 	}
 
 	switch {
@@ -186,13 +166,13 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 		bldr.
 			WithStatus(gardencorev1beta1.ConditionFalse).
 			WithReason("NotAllExtensionsInstalled").
-			WithMessage(fmt.Sprintf("Some extensions are not installed: +%v", notInstalled))
+			WithMessage(fmt.Sprintf("Some extensions are not installed: %+v", notInstalled))
 
 	case len(notHealthy) != 0:
 		bldr.
 			WithStatus(gardencorev1beta1.ConditionFalse).
 			WithReason("NotAllExtensionsHealthy").
-			WithMessage(fmt.Sprintf("Some extensions are not healthy: +%v", notHealthy))
+			WithMessage(fmt.Sprintf("Some extensions are not healthy: %+v", notHealthy))
 
 	default:
 		bldr.
@@ -201,12 +181,12 @@ func (c *defaultExtensionCheckControl) ReconcileExtensionCheckFor(obj *gardencor
 			WithMessage("All extensions installed into the seed cluster are ready and healthy.")
 	}
 
-	newCondition, update := bldr.WithNowFunc(c.nowFunc).Build()
-	if !update {
+	// patch ExtensionsReady condition
+	patch := client.StrategicMergeFrom(seed.DeepCopy())
+	newCondition, needsUpdate := bldr.WithNowFunc(r.nowFunc).Build()
+	if !needsUpdate {
 		return nil
 	}
 	seed.Status.Conditions = helper.MergeConditions(seed.Status.Conditions, newCondition)
-
-	_, err = gardenClient.GardenCore().CoreV1beta1().Seeds().UpdateStatus(ctx, seed, kubernetes.DefaultUpdateOptions())
-	return err
+	return gardenClient.Status().Patch(ctx, seed, patch)
 }

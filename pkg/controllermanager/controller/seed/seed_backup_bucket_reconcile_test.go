@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	. "github.com/gardener/gardener/pkg/controllermanager/controller/seed"
 	"github.com/gardener/gardener/pkg/logger"
@@ -59,8 +58,7 @@ var _ = Describe("BackupBucketReconciler", func() {
 			seed, seedPatch *gardencorev1beta1.Seed
 			bbs             []gardencorev1beta1.BackupBucket
 
-			control             reconcile.Reconciler
-			coreInformerFactory coreinformers.SharedInformerFactory
+			control reconcile.Reconciler
 		)
 
 		BeforeEach(func() {
@@ -87,9 +85,6 @@ var _ = Describe("BackupBucketReconciler", func() {
 					Expect(json.Unmarshal(patchData, seedPatch)).To(Succeed())
 					return nil
 				})
-
-			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
-			Expect(coreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
 
 			control = NewDefaultBackupBucketControl(logger.NewNopLogger(), k8sGardenClient)
 

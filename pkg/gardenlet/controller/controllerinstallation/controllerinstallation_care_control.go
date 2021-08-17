@@ -29,8 +29,11 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	resourceshealth "github.com/gardener/gardener-resource-manager/pkg/health"
+	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (c *Controller) controllerInstallationCareAdd(obj interface{}) {
@@ -41,94 +44,84 @@ func (c *Controller) controllerInstallationCareAdd(obj interface{}) {
 	c.controllerInstallationCareQueue.Add(key)
 }
 
-func (c *Controller) reconcileControllerInstallationCareKey(key string) error {
-	_, name, err := cache.SplitMetaNamespaceKey(key)
+func newCareReconciler(
+	clientMap clientmap.ClientMap,
+	l logrus.FieldLogger,
+	config *config.ControllerInstallationCareControllerConfiguration,
+) reconcile.Reconciler {
+	return &careReconciler{
+		clientMap: clientMap,
+		logger:    l,
+		config:    config,
+	}
+}
+
+type careReconciler struct {
+	clientMap clientmap.ClientMap
+	logger    logrus.FieldLogger
+	config    *config.ControllerInstallationCareControllerConfiguration
+}
+
+func (r *careReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logger.NewFieldLogger(r.logger, "controllerInstallation", request.Name)
+
+	log.Debugf("[CONTROLLERINSTALLATION CARE]")
+	gardenClient, err := r.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
-		return err
+		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
 	}
 
-	controllerInstallation, err := c.controllerInstallationLister.Get(name)
-	if apierrors.IsNotFound(err) {
-		logger.Logger.Infof("[CONTROLLERINSTALLATION CARE] Stopping care operations for ControllerInstallation %s since it has been deleted", key)
-		c.controllerInstallationCareQueue.Done(key)
-		return nil
-	}
-	if err != nil {
-		logger.Logger.Infof("[CONTROLLERINSTALLATION CARE] %s - unable to retrieve object from store: %v", key, err)
-		return err
+	controllerInstallation := &gardencorev1beta1.ControllerInstallation{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, controllerInstallation); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Infof("[CONTROLLERINSTALLATION CARE] stopping care operations for ControllerInstallation since it has been deleted")
+			return reconcile.Result{}, nil
+		}
+		log.Infof("[CONTROLLERINSTALLATION CARE] unable to retrieve object from store: %v", err)
+		return reconcile.Result{}, err
 	}
 
 	if controllerInstallation.DeletionTimestamp != nil {
-		return nil
+		return reconcile.Result{}, nil
 	}
 
-	if err := c.careControl.Care(controllerInstallation, key); err != nil {
-		return err
-	}
+	r.care(ctx, gardenClient.Client(), controllerInstallation, log)
 
-	c.controllerInstallationCareQueue.AddAfter(key, c.config.Controllers.ControllerInstallationCare.SyncPeriod.Duration)
-	return nil
+	return reconcile.Result{RequeueAfter: r.config.SyncPeriod.Duration}, nil
 }
 
-// CareControlInterface implements the control logic for caring for ControllerInstallations. It is implemented as an interface to allow
-// for extensions that provide different semantics. Currently, there is only one implementation.
-type CareControlInterface interface {
-	Care(controllerInstallation *gardencorev1beta1.ControllerInstallation, key string) error
-}
-
-// NewDefaultCareControl returns a new instance of the default implementation CareControlInterface that
-// implements the documented semantics for caring for ControllerInstallations. You should use an instance returned from NewDefaultCareControl()
-// for any scenario other than testing.
-func NewDefaultCareControl(clientMap clientmap.ClientMap, config *config.GardenletConfiguration) CareControlInterface {
-	return &defaultCareControl{clientMap, config}
-}
-
-type defaultCareControl struct {
-	clientMap clientmap.ClientMap
-	config    *config.GardenletConfiguration
-}
-
-func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.ControllerInstallation, key string) error {
+func (r *careReconciler) care(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, log logrus.FieldLogger) {
+	// We don't return an error from this func. There is no meaningful way to handle it, because we do not want to run
+	// in the exponential backoff for the condition checks.
 	var (
-		ctx = context.TODO()
-
-		controllerInstallation       = controllerInstallationObj.DeepCopy()
-		controllerInstallationLogger = logger.NewFieldLogger(logger.Logger, "controllerinstallation-care", controllerInstallation.Name)
-
 		conditionControllerInstallationInstalled = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationInstalled)
 		conditionControllerInstallationHealthy   = gardencorev1beta1helper.GetOrInitCondition(controllerInstallation.Status.Conditions, gardencorev1beta1.ControllerInstallationHealthy)
 	)
 
-	controllerInstallationLogger.Debugf("[CONTROLLERINSTALLATION CARE] %s", key)
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return fmt.Errorf("failed to get garden client: %w", err)
-	}
-
 	defer func() {
-		if err := patchConditions(ctx, gardenClient.Client(), controllerInstallation, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled); err != nil {
-			controllerInstallationLogger.Errorf("Failed to patch ControllerInstallation status: %+v", err.Error())
+		if err := patchConditions(ctx, gardenClient, controllerInstallation, conditionControllerInstallationHealthy, conditionControllerInstallationInstalled); err != nil {
+			log.Error("Failed to patch ControllerInstallation status: %+v", err.Error())
 		}
 	}()
 
-	seedClient, err := c.clientMap.GetClient(ctx, keys.ForSeedWithName(controllerInstallation.Spec.SeedRef.Name))
+	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(controllerInstallation.Spec.SeedRef.Name))
 	if err != nil {
 		msg := fmt.Sprintf("Failed to get seed client: %s", err.Error())
-		controllerInstallationLogger.Errorf(msg)
+		log.Error(msg)
 
 		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
 		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
-		return nil // We do not want to run in the exponential backoff for the condition checks.
+		return
 	}
 
 	managedResource := &resourcesv1alpha1.ManagedResource{}
 	if err := seedClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, controllerInstallation.Name), managedResource); err != nil {
 		msg := fmt.Sprintf("Failed to get ManagedResource for ControllerInstallation: %s", err.Error())
-		controllerInstallationLogger.Errorf(msg)
+		log.Error(msg)
 
 		conditionControllerInstallationInstalled = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationInstalled, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
 		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionUnknown, "SeedReadError", msg)
-		return nil // We do not want to run in the exponential backoff for the condition checks.
+		return
 	}
 
 	if err := resourceshealth.CheckManagedResourceApplied(managedResource); err != nil {
@@ -142,6 +135,4 @@ func (c *defaultCareControl) Care(controllerInstallationObj *gardencorev1beta1.C
 	} else {
 		conditionControllerInstallationHealthy = gardencorev1beta1helper.UpdatedCondition(conditionControllerInstallationHealthy, gardencorev1beta1.ConditionTrue, "ControllerHealthy", "The controller running in the seed cluster is healthy.")
 	}
-
-	return nil
 }

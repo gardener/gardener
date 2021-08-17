@@ -33,7 +33,7 @@ import (
 func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) error {
 	const timeout = 10 * time.Minute
 
-	loadBalancerIngress, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.K8sShootClient, metav1.NamespaceSystem, "addons-nginx-ingress-controller", timeout, b.Logger)
+	loadBalancerIngress, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.K8sShootClient.Client(), metav1.NamespaceSystem, "addons-nginx-ingress-controller", timeout, b.Logger)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (b *Botanist) WaitUntilNginxIngressServiceIsReady(ctx context.Context) erro
 func (b *Botanist) WaitUntilVpnShootServiceIsReady(ctx context.Context) error {
 	const timeout = 10 * time.Minute
 
-	_, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.K8sShootClient, metav1.NamespaceSystem, "vpn-shoot", timeout, b.Logger)
+	_, err := kutil.WaitUntilLoadBalancerIsReady(ctx, b.K8sShootClient.Client(), metav1.NamespaceSystem, "vpn-shoot", timeout, b.Logger)
 	return err
 }
 

@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/charts"
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -57,6 +58,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -98,23 +100,25 @@ func NewGardenletControllerFactory(
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	var (
-		controllerRegistrationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerRegistrations().Informer()
-		controllerInstallationInformer = f.k8sGardenCoreInformers.Core().V1beta1().ControllerInstallations().Informer()
-		seedInformer                   = f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Informer()
-		shootInformer                  = f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Informer()
+		seedInformer  = f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Informer()
+		shootInformer = f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Informer()
 	)
-
-	if err := f.clientMap.Start(ctx.Done()); err != nil {
-		return fmt.Errorf("failed to start ClientMap: %+v", err)
-	}
 
 	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return fmt.Errorf("failed to get garden client: %+v", err)
 	}
 
+	if err := addAllFieldIndexes(ctx, k8sGardenClient.Cache()); err != nil {
+		return err
+	}
+
+	if err := f.clientMap.Start(ctx.Done()); err != nil {
+		return fmt.Errorf("failed to start ClientMap: %+v", err)
+	}
+
 	f.k8sGardenCoreInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), seedInformer.HasSynced, shootInformer.HasSynced) {
 		return fmt.Errorf("timed out waiting for Garden core caches to sync")
 	}
 
@@ -144,12 +148,6 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to get seed client: %w", err)
 	}
 
-	var (
-		controllerInstallationController = controllerinstallationcontroller.NewController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace, f.gardenClusterIdentity)
-		seedController                   = seedcontroller.NewSeedController(f.clientMap, f.k8sGardenCoreInformers, f.healthManager, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
-		shootController                  = shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
-	)
-
 	backupBucketController, err := backupbucketcontroller.NewBackupBucketController(ctx, f.clientMap, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing BackupBucket controller: %w", err)
@@ -165,17 +163,29 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}
 
-	networkpolicyController, err := networkpolicycontroller.NewController(ctx, seedClient, logger.Logger, f.recorder, f.cfg.SeedConfig.Name)
+	controllerInstallationController, err := controllerinstallationcontroller.NewController(ctx, f.clientMap, f.cfg, f.recorder, gardenNamespace, f.gardenClusterIdentity)
 	if err != nil {
-		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
+		return fmt.Errorf("failed initializing ControllerInstallation controller: %w", err)
 	}
 
 	extensionsController := extensionscontroller.NewController(k8sGardenClient, seedClient, f.cfg.SeedConfig.Name, logger.Logger, f.recorder)
 
 	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, f.clientMap, f.cfg, imageVector, f.recorder, logger.Logger)
 	if err != nil {
-		return fmt.Errorf("failed initializing managed seed controller: %w", err)
+		return fmt.Errorf("failed initializing ManagedSeed controller: %w", err)
 	}
+
+	networkPolicyController, err := networkpolicycontroller.NewController(ctx, seedClient, logger.Logger, f.recorder, f.cfg.SeedConfig.Name)
+	if err != nil {
+		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
+	}
+
+	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.healthManager, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing Seed controller: %w", err)
+	}
+
+	shootController := shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
 
 	// Initialize the Controller metrics collection.
 	gardenmetrics.RegisterControllerMetrics(
@@ -185,23 +195,23 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		backupEntryController,
 		bastionController,
 		controllerInstallationController,
+		extensionsController,
+		managedSeedController,
+		networkPolicyController,
 		seedController,
 		shootController,
-		managedSeedController,
-		networkpolicyController,
-		extensionsController,
 	)
 
 	controllerCtx, cancel := context.WithCancel(ctx)
 
-	go networkpolicyController.Run(controllerCtx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go backupBucketController.Run(controllerCtx, *f.cfg.Controllers.BackupBucket.ConcurrentSyncs)
 	go backupEntryController.Run(controllerCtx, *f.cfg.Controllers.BackupEntry.ConcurrentSyncs)
 	go bastionController.Run(controllerCtx, *f.cfg.Controllers.Bastion.ConcurrentSyncs)
 	go controllerInstallationController.Run(controllerCtx, *f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs, *f.cfg.Controllers.ControllerInstallationCare.ConcurrentSyncs)
+	go managedSeedController.Run(controllerCtx, *f.cfg.Controllers.ManagedSeed.ConcurrentSyncs)
+	go networkPolicyController.Run(controllerCtx, *f.cfg.Controllers.SeedAPIServerNetworkPolicy.ConcurrentSyncs)
 	go seedController.Run(controllerCtx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(controllerCtx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs)
-	go managedSeedController.Run(controllerCtx, *f.cfg.Controllers.ManagedSeed.ConcurrentSyncs)
 
 	if err := retry.Until(ctx, 10*time.Second, func(ctx context.Context) (bool, error) {
 		if err := extensionsController.Initialize(ctx, seedClient); err != nil {
@@ -269,4 +279,20 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 
 	// Verify that seed namespace exists.
 	return gardenClient.Client().Get(ctx, kutil.Key(gutil.ComputeGardenNamespace(f.cfg.SeedConfig.Name)), &corev1.Namespace{})
+}
+
+// addAllFieldIndexes adds all field indexes used by gardenlet to the given FieldIndexer (i.e. cache).
+// field indexes have to be added before the cache is started (i.e. before the clientmap is started)
+func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error {
+	if err := indexer.IndexField(ctx, &gardencorev1beta1.ControllerInstallation{}, gardencore.SeedRefName, func(obj client.Object) []string {
+		controllerInstallation, ok := obj.(*gardencorev1beta1.ControllerInstallation)
+		if !ok {
+			return []string{""}
+		}
+		return []string{controllerInstallation.Spec.SeedRef.Name}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to ControllerInstallation Informer: %w", err)
+	}
+
+	return nil
 }

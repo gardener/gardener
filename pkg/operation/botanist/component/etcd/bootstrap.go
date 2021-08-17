@@ -27,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
-	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -61,18 +60,11 @@ const (
 )
 
 // NewBootstrapper creates a new instance of DeployWaiter for the etcd bootstrapper.
-func NewBootstrapper(
-	client client.Client,
-	namespace string,
-	image string,
-	kubernetesVersion *semver.Version,
-	imageVectorOverwrite *string,
-) component.DeployWaiter {
+func NewBootstrapper(c client.Client, namespace string, image string, imageVectorOverwrite *string) component.DeployWaiter {
 	return &bootstrapper{
-		client:               client,
+		client:               c,
 		namespace:            namespace,
 		image:                image,
-		kubernetesVersion:    kubernetesVersion,
 		imageVectorOverwrite: imageVectorOverwrite,
 	}
 }
@@ -81,7 +73,6 @@ type bootstrapper struct {
 	client               client.Client
 	namespace            string
 	image                string
-	kubernetesVersion    *semver.Version
 	imageVectorOverwrite *string
 }
 

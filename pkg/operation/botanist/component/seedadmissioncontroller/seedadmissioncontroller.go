@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Masterminds/semver"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -64,25 +63,18 @@ const (
 )
 
 // New creates a new instance of DeployWaiter for the gardener-seed-admission-controller.
-func New(
-	client client.Client,
-	namespace string,
-	image string,
-	kubernetesVersion *semver.Version,
-) component.DeployWaiter {
+func New(c client.Client, namespace string, image string) component.DeployWaiter {
 	return &gardenerSeedAdmissionController{
-		client:            client,
-		namespace:         namespace,
-		image:             image,
-		kubernetesVersion: kubernetesVersion,
+		client:    c,
+		namespace: namespace,
+		image:     image,
 	}
 }
 
 type gardenerSeedAdmissionController struct {
-	client            client.Client
-	namespace         string
-	image             string
-	kubernetesVersion *semver.Version
+	client    client.Client
+	namespace string
+	image     string
 }
 
 func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
