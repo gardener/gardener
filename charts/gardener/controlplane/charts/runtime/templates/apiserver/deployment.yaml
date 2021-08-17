@@ -285,7 +285,7 @@ spec:
         - name: gardener-apiserver-encryption-config
           mountPath: /etc/gardener-apiserver/encryption
         {{- end }}
-        {{- if not and .Values.global.apiserver.tlsSecretName }}
+        {{- if not .Values.global.apiserver.tlsSecretName }}
         {{- if not .Values.global.apiserver.etcd.tlsSecretName }}
         - name: gardener-apiserver-cert
           mountPath: /etc/gardener-apiserver/srv
