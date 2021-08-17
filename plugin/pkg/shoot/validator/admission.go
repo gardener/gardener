@@ -211,31 +211,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 
 	switch a.GetOperation() {
 	case admission.Create:
-		// We currently use the identifier "shoot-<project-name>-<shoot-name> in nearly all places for old Shoots, but have
-		// changed that to "shoot--<project-name>-<shoot-name>": when creating infrastructure resources, Kubernetes resources,
-		// DNS names, etc., then this identifier is used to tag/name the resources. Some of those resources have length
-		// constraints that this identifier must not exceed 30 characters, thus we need to check whether Shoots do not exceed
-		// this limit. The project name is a label on the namespace. If it is not found, the namespace name itself is used as
-		// project name. These checks should only be performed for CREATE operations (we do not want to reject changes to existing
-		// Shoots in case the limits are changed in the future).
-		var lengthLimit = 21
-		if len(shoot.Name) == 0 && len(shoot.GenerateName) > 0 {
-			var randomLength = 5
-			if len(project.Name+shoot.GenerateName) > lengthLimit-randomLength {
-				return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, project.Name, shoot.GenerateName))
-			}
-		} else {
-			if len(project.Name+shoot.Name) > lengthLimit {
-				return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, project.Name, shoot.Name))
-			}
-		}
-		if strings.Contains(project.Name, "--") {
-			return apierrors.NewBadRequest(fmt.Sprintf("the project name must not contain two consecutive hyphens (project: %s)", project.Name))
-		}
-		// We don't want new Shoots to be created in Projects which were already marked for deletion.
-		if project.DeletionTimestamp != nil {
-			return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' in project '%s' already marked for deletion", shoot.Name, project.Name))
-		}
 		addInfrastructureDeploymentTask(shoot)
 	case admission.Delete:
 		if shoot.Status.LastOperation != nil && ((shoot.Status.LastOperation.Type == core.LastOperationTypeRestore &&
@@ -251,12 +226,17 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	var (
 		validationContext = &validationContext{
 			cloudProfile: cloudProfile,
+			project:      project,
 			seed:         seed,
 			shoot:        shoot,
 			oldShoot:     oldShoot,
 		}
 		allErrs field.ErrorList
 	)
+
+	if err := validationContext.validateProjectMembership(a); err != nil {
+		return err
+	}
 
 	if err := validationContext.validateScheduling(a, v.seedLister); err != nil {
 		return err
@@ -363,9 +343,43 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 
 type validationContext struct {
 	cloudProfile *core.CloudProfile
+	project      *core.Project
 	seed         *core.Seed
 	shoot        *core.Shoot
 	oldShoot     *core.Shoot
+}
+
+func (c *validationContext) validateProjectMembership(a admission.Attributes) error {
+	if a.GetOperation() == admission.Create {
+		// We currently use the identifier "shoot-<project-name>-<shoot-name> in nearly all places for old Shoots, but have
+		// changed that to "shoot--<project-name>-<shoot-name>": when creating infrastructure resources, Kubernetes resources,
+		// DNS names, etc., then this identifier is used to tag/name the resources. Some of those resources have length
+		// constraints that this identifier must not exceed 30 characters, thus we need to check whether Shoots do not exceed
+		// this limit. The project name is a label on the namespace. If it is not found, the namespace name itself is used as
+		// project name. These checks should only be performed for CREATE operations (we do not want to reject changes to existing
+		// Shoots in case the limits are changed in the future).
+		var lengthLimit = 21
+		if len(c.shoot.Name) == 0 && len(c.shoot.GenerateName) > 0 {
+			var randomLength = 5
+			if len(c.project.Name+c.shoot.GenerateName) > lengthLimit-randomLength {
+				return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, c.project.Name, c.shoot.GenerateName))
+			}
+		} else {
+			if len(c.project.Name+c.shoot.Name) > lengthLimit {
+				return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, c.project.Name, c.shoot.Name))
+			}
+		}
+		// TODO: move this to static project validation?
+		if strings.Contains(c.project.Name, "--") {
+			return apierrors.NewBadRequest(fmt.Sprintf("the project name must not contain two consecutive hyphens (project: %s)", c.project.Name))
+		}
+
+		if c.project.DeletionTimestamp != nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' in project '%s' that is already marked for deletion", c.shoot.Name, c.project.Name))
+		}
+	}
+
+	return nil
 }
 
 func (c *validationContext) validateScheduling(a admission.Attributes, seedLister corelisters.SeedLister) error {
