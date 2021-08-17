@@ -31,7 +31,7 @@ var _ = Describe("TLS Cipher Suites", func() {
 
 		Context("when Kubernetes version is <= 1.22", func() {
 			BeforeEach(func() {
-				version, err = semver.NewVersion("1.21")
+				version, err = semver.NewVersion("1.21.1")
 				Expect(err).To(BeNil())
 			})
 
@@ -50,7 +50,7 @@ var _ = Describe("TLS Cipher Suites", func() {
 
 		Context("when Kubernetes version is 1.22", func() {
 			BeforeEach(func() {
-				version, err = semver.NewVersion("1.22")
+				version, err = semver.NewVersion("1.22.1")
 				Expect(err).To(BeNil())
 			})
 

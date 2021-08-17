@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
@@ -98,7 +99,7 @@ func Config(kubernetesVersion *semver.Version, clusterDNSAddress, clusterDomain 
 		VolumeStatsAggPeriod:             metav1.Duration{Duration: time.Minute},
 	}
 
-	if !versionConstraintK8sLess119.Check(kubernetesVersion) {
+	if !version.ConstraintK8sLess119.Check(kubernetesVersion) {
 		config.VolumePluginDir = pathVolumePluginDirectory
 	}
 

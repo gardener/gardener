@@ -24,7 +24,6 @@ import (
 	"github.com/Masterminds/semver"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -44,16 +43,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
-
-var versionConstraintK8sGreaterEqual118 *semver.Constraints
-
-func init() {
-	var err error
-
-	versionConstraintK8sGreaterEqual118, err = semver.NewConstraint(">= 1.18")
-	utilruntime.Must(err)
-}
 
 // NewBuilder returns a new Builder.
 func NewBuilder() *Builder {
@@ -247,7 +238,7 @@ func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	}
 	shoot.GardenerVersion = gardenerVersion
 
-	kubernetesVersionGeq118 := versionConstraintK8sGreaterEqual118.Check(kubernetesVersion)
+	kubernetesVersionGeq118 := version.ConstraintK8sGreaterEqual118.Check(kubernetesVersion)
 	shoot.ReversedVPNEnabled = gardenletfeatures.FeatureGate.Enabled(features.ReversedVPN) && kubernetesVersionGeq118
 	if reversedVPNEnabled, err := strconv.ParseBool(shoot.GetInfo().Annotations[v1beta1constants.AnnotationReversedVPN]); err == nil && kubernetesVersionGeq118 {
 		if gardenletfeatures.FeatureGate.Enabled(features.APIServerSNI) {

@@ -17,17 +17,8 @@ package kubernetes
 import (
 	"github.com/Masterminds/semver"
 
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"github.com/gardener/gardener/pkg/utils/version"
 )
-
-var versionConstraintK8sLowerEqual121 *semver.Constraints
-
-func init() {
-	var err error
-
-	versionConstraintK8sLowerEqual121, err = semver.NewConstraint("<= 1.21")
-	utilruntime.Must(err)
-}
 
 // TLSCipherSuites returns the wanted and acceptable cipher suits depending on the passed Kubernetes version.
 func TLSCipherSuites(k8sVersion *semver.Version) []string {
@@ -36,7 +27,7 @@ func TLSCipherSuites(k8sVersion *semver.Version) []string {
 		"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
 	}
 
-	if versionConstraintK8sLowerEqual121.Check(k8sVersion) {
+	if version.ConstraintK8sLessEqual121.Check(k8sVersion) {
 		return append(commonSuites,
 			"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305",
 			"TLS_RSA_WITH_AES_128_CBC_SHA",

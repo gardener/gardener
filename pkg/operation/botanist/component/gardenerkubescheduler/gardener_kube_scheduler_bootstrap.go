@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/version"
 	schedulerconfigv18v1alpha2 "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1alpha2"
 	schedulerconfigv19v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v19/v1beta1"
 	schedulerconfigv20v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v20/v1beta1"
@@ -62,7 +63,7 @@ func Bootstrap(
 	)
 
 	switch {
-	case versionConstraintEqual118.Check(seedVersion):
+	case version.ConstraintK8sEqual118.Check(seedVersion):
 		config, err = schedulerconfigv18.NewConfigurator(Name, Name, &schedulerconfigv18v1alpha2.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv18v1alpha2.KubeSchedulerProfile{{
 				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
@@ -79,7 +80,7 @@ func Bootstrap(
 				},
 			}},
 		})
-	case versionConstraintEqual119.Check(seedVersion):
+	case version.ConstraintK8sEqual119.Check(seedVersion):
 		config, err = schedulerconfigv19.NewConfigurator(Name, Name, &schedulerconfigv19v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv19v1beta1.KubeSchedulerProfile{{
 				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
@@ -96,7 +97,7 @@ func Bootstrap(
 				},
 			}},
 		})
-	case versionConstraintEqual120.Check(seedVersion):
+	case version.ConstraintK8sEqual120.Check(seedVersion):
 		config, err = schedulerconfigv20.NewConfigurator(Name, Name, &schedulerconfigv20v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv20v1beta1.KubeSchedulerProfile{{
 				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
