@@ -220,7 +220,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if err := validationContext.validateProjectMembership(a); err != nil {
 		return err
 	}
-	if err := validationContext.validateScheduling(a, v.seedLister); err != nil {
+	if err := validationContext.validateScheduling(a, v.shootLister, v.seedLister); err != nil {
 		return err
 	}
 	if err := validationContext.validateDeletion(a); err != nil {
@@ -295,7 +295,7 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 	return nil
 }
 
-func (c *validationContext) validateScheduling(a admission.Attributes, seedLister corelisters.SeedLister) error {
+func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister) error {
 	var (
 		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
 		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
@@ -309,6 +309,17 @@ func (c *validationContext) validateScheduling(a admission.Attributes, seedListe
 
 		if !helper.TaintsAreTolerated(c.seed.Spec.Taints, c.shoot.Spec.Tolerations) {
 			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seeds whose taints are not tolerated by the shoot"))
+		}
+
+		if allocatableShoots, ok := c.seed.Status.Allocatable[core.ResourceShoots]; ok {
+			scheduledShoots, err := getNumberOfShootsOnSeed(shootLister, c.seed.Name)
+			if err != nil {
+				return apierrors.NewInternalError(err)
+			}
+
+			if scheduledShoots >= allocatableShoots.Value() {
+				return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' that already has the maximum number of shoots scheduled on it (%d)", c.shoot.Name, c.seed.Name, allocatableShoots.Value()))
+			}
 		}
 	}
 
@@ -356,6 +367,21 @@ func (c *validationContext) validateScheduling(a admission.Attributes, seedListe
 	}
 
 	return nil
+}
+
+func getNumberOfShootsOnSeed(shootLister corelisters.ShootLister, seedName string) (int64, error) {
+	allShoots, err := shootLister.Shoots(metav1.NamespaceAll).List(labels.Everything())
+	if err != nil {
+		return 0, fmt.Errorf("could not list all shoots: %w", err)
+	}
+
+	count := int64(0)
+	for _, shoot := range allShoots {
+		if seed := shoot.Spec.SeedName; seed != nil && *seed == seedName {
+			count++
+		}
+	}
+	return count, nil
 }
 
 func (c *validationContext) validateDeletion(a admission.Attributes) error {

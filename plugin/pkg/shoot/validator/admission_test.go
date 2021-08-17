@@ -922,6 +922,94 @@ var _ = Describe("validator", func() {
 						Expect(err).ToNot(HaveOccurred())
 					})
 				})
+
+				Context("seed capacity", func() {
+					var (
+						allocatableShoots resource.Quantity
+					)
+
+					BeforeEach(func() {
+						allocatableShoots = *resource.NewQuantity(1, resource.DecimalSI)
+
+						shoot.Spec.DNS = nil
+					})
+
+					It("should pass because seed allocatable capacity is not set", func() {
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should pass because seed allocatable capacity is not exhausted", func() {
+						seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
+
+						otherShoot := shoot.DeepCopy()
+						otherShoot.Name = "other-shoot-1"
+						otherShoot.Spec.SeedName = pointer.String("other-seed")
+						Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
+
+						otherShoot = shoot.DeepCopy()
+						otherShoot.Name = "other-shoot-2"
+						otherShoot.Spec.SeedName = nil
+						Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("should reject because seed allocatable capacity is exhausted", func() {
+						seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
+
+						otherShoot := shoot.DeepCopy()
+						otherShoot.Name = "other-shoot-1"
+						otherShoot.Spec.SeedName = &seedName
+						Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
+
+						otherShoot = shoot.DeepCopy()
+						otherShoot.Name = "other-shoot-2"
+						otherShoot.Spec.SeedName = nil
+						Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).To(MatchError(ContainSubstring("already has the maximum number of shoots scheduled on it")))
+					})
+
+					It("should reject because seed allocatable capacity is over-exhausted", func() {
+						seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
+
+						otherShoot := shoot.DeepCopy()
+						otherShoot.Name = "other-shoot-1"
+						otherShoot.Spec.SeedName = &seedName
+						Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
+
+						otherShoot = shoot.DeepCopy()
+						otherShoot.Name = "other-shoot-2"
+						otherShoot.Spec.SeedName = &seedName
+						Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).To(MatchError(ContainSubstring("already has the maximum number of shoots scheduled on it")))
+					})
+				})
 			})
 
 			Context("networking settings checks", func() {
