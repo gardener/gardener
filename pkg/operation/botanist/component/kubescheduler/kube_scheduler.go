@@ -31,9 +31,11 @@ import (
 
 	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -59,6 +61,7 @@ const (
 	portNameMetrics        = "metrics"
 	dataKeyComponentConfig = "config.yaml"
 
+	volumeNameConfig          = "kube-scheduler-config"
 	volumeMountPathKubeconfig = "/var/lib/kube-scheduler"
 	volumeMountPathServer     = "/var/lib/kube-scheduler-server"
 	volumeMountPathConfig     = "/var/lib/kube-scheduler-config"
@@ -117,8 +120,21 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return fmt.Errorf("missing server secret information")
 	}
 
+	componentConfigYAML, err := k.computeComponentConfig()
+	if err != nil {
+		return err
+	}
+
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kube-scheduler-config",
+			Namespace: k.namespace,
+		},
+		Data: map[string]string{dataKeyComponentConfig: componentConfigYAML},
+	}
+	utilruntime.Must(kutil.MakeUnique(configMap))
+
 	var (
-		configMap  = k.emptyConfigMap()
 		vpa        = k.emptyVPA()
 		service    = k.emptyService()
 		deployment = k.emptyDeployment()
@@ -131,15 +147,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		command              = k.computeCommand(port)
 	)
 
-	componentConfigYAML, componentConfigChecksum, err := k.computeComponentConfig()
-	if err != nil {
-		return err
-	}
-
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, configMap, func() error {
-		configMap.Data = map[string]string{dataKeyComponentConfig: componentConfigYAML}
-		return nil
-	}); err != nil {
+	if err := k.client.Create(ctx, configMap); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
@@ -170,7 +178,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					"checksum/configmap-componentconfig":           componentConfigChecksum,
 					"checksum/secret-" + k.secrets.Kubeconfig.Name: k.secrets.Kubeconfig.Checksum,
 					"checksum/secret-" + k.secrets.Server.Name:     k.secrets.Server.Checksum,
 				},
@@ -232,7 +239,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 								MountPath: volumeMountPathServer,
 							},
 							{
-								Name:      configMap.Name,
+								Name:      volumeNameConfig,
 								MountPath: volumeMountPathConfig,
 							},
 						},
@@ -256,7 +263,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						},
 					},
 					{
-						Name: configMap.Name,
+						Name: volumeNameConfig,
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
 								LocalObjectReference: corev1.LocalObjectReference{
@@ -268,6 +275,8 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				},
 			},
 		}
+
+		utilruntime.Must(references.InjectAnnotations(deployment))
 		return nil
 	}); err != nil {
 		return err
@@ -298,7 +307,12 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return k.reconcileShootResources(ctx)
+	if err := k.reconcileShootResources(ctx); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObject(ctx, k.client, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-config", Namespace: k.namespace}})
 }
 
 func getLabels() map[string]string {
@@ -312,10 +326,6 @@ func (k *kubeScheduler) Destroy(_ context.Context) error     { return nil }
 func (k *kubeScheduler) Wait(_ context.Context) error        { return nil }
 func (k *kubeScheduler) WaitCleanup(_ context.Context) error { return nil }
 func (k *kubeScheduler) SetSecrets(secrets Secrets)          { k.secrets = secrets }
-
-func (k *kubeScheduler) emptyConfigMap() *corev1.ConfigMap {
-	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-config", Namespace: k.namespace}}
-}
 
 func (k *kubeScheduler) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-vpa", Namespace: k.namespace}}
@@ -351,7 +361,7 @@ func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {
 	return nil
 }
 
-func (k *kubeScheduler) computeComponentConfig() (string, string, error) {
+func (k *kubeScheduler) computeComponentConfig() (string, error) {
 	var apiVersion string
 	if versionConstraintK8sGreaterEqual119.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
@@ -363,10 +373,10 @@ func (k *kubeScheduler) computeComponentConfig() (string, string, error) {
 
 	var componentConfigYAML bytes.Buffer
 	if err := componentConfigTemplate.Execute(&componentConfigYAML, map[string]string{"apiVersion": apiVersion}); err != nil {
-		return "", "", err
+		return "", err
 	}
 
-	return componentConfigYAML.String(), utils.ComputeSHA256Hex(componentConfigYAML.Bytes()), nil
+	return componentConfigYAML.String(), nil
 }
 
 func (k *kubeScheduler) computeCommand(port int32) []string {
