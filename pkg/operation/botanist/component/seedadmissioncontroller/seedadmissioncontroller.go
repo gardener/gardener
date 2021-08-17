@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,6 +44,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
@@ -82,6 +85,20 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      Name + "-tls",
+			Namespace: g.namespace,
+			Labels:    getLabels(),
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       []byte(tlsServerCert),
+			corev1.TLSPrivateKeyKey: []byte(tlsServerKey),
+		},
+	}
+	utilruntime.Must(kutil.MakeUnique(secret))
 
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
@@ -157,19 +174,6 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromInt(port),
 				}},
-			},
-		}
-
-		secret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      Name + "-tls",
-				Namespace: g.namespace,
-				Labels:    getLabels(),
-			},
-			Type: corev1.SecretTypeTLS,
-			Data: map[string][]byte{
-				corev1.TLSCertKey:       []byte(tlsServerCert),
-				corev1.TLSPrivateKeyKey: []byte(tlsServerKey),
 			},
 		}
 
@@ -293,6 +297,8 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 		}
 		validatingWebhookConfiguration = GetValidatingWebhookConfig(webhookClientConfig)
 	)
+
+	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	resources, err := registry.AddAllAndSerialize(
 		serviceAccount,
