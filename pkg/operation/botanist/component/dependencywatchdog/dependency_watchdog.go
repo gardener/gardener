@@ -23,16 +23,19 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -113,6 +116,16 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 		vpaMinAllowedMemory = "50Mi"
 	}
 
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      d.name() + "-config",
+			Namespace: d.namespace,
+			Labels:    map[string]string{v1beta1constants.LabelApp: d.name()},
+		},
+		Data: map[string]string{configFileName: config},
+	}
+	utilruntime.Must(kutil.MakeUnique(configMap))
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 
@@ -177,15 +190,6 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 			}},
 		}
 
-		configMap = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      d.name() + "-config",
-				Namespace: d.namespace,
-				Labels:    map[string]string{v1beta1constants.LabelApp: d.name()},
-			},
-			Data: map[string]string{configFileName: config},
-		}
-
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      d.name(),
@@ -198,8 +202,7 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 				Selector:             &metav1.LabelSelector{MatchLabels: d.getLabels()},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{"checksum/configmap-dep-config": utils.ComputeSHA256Hex([]byte(config))},
-						Labels:      d.podLabels(),
+						Labels: d.podLabels(),
 					},
 					Spec: corev1.PodSpec{
 						ServiceAccountName:            serviceAccount.Name,
@@ -272,6 +275,8 @@ func (d *dependencyWatchdog) Deploy(ctx context.Context) error {
 			},
 		}
 	)
+
+	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	resources, err := registry.AddAllAndSerialize(
 		serviceAccount,
