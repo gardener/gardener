@@ -266,6 +266,30 @@ spec:
                   upgrade_configs:
                   - connect_config: {}
                     upgrade_type: CONNECT
+  - applyTo: HTTP_FILTER
+    match:
+      context: GATEWAY
+      listener:
+        name: 0.0.0.0_8132
+        portNumber: 8132
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+            subFilter:
+              name: "envoy.filters.http.router"
+    patch:
+      operation: INSERT_BEFORE
+      filterClass: AUTHZ # This filter will run *after* the Istio authz filter.
+      value:
+        name: envoy.filters.http.ext_authz
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+          transport_api_version: V3
+          grpc_service:
+            envoy_grpc:
+              cluster_name: outbound|9001||auth-server.garden.svc.cluster.local
+            timeout: 0.250s
   workloadSelector:
     labels:
 {{ .Values.labels | toYaml | indent 6 }}
+

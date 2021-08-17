@@ -121,4 +121,6 @@ const (
 	ImageNameVpnShoot = "vpn-shoot"
 	// ImageNameVpnShootClient is a constant for an image in the image vector with name 'vpn-shoot-client'.
 	ImageNameVpnShootClient = "vpn-shoot-client"
+	// ImageNameExtAuthzServer is a constant for an image in the image vector with name 'ext-authz-server'.
+	ImageNameExtAuthzServer = "ext-authz-server"
 )
