@@ -16,4 +16,4 @@ spec:
     -shoot-namespace=$PROJECT_NAMESPACE
     -kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
     -mr-exclude-list="$MR_EXCLUDE_LIST"
-  image: eu.gcr.io/gardener-project/3rd/golang:1.16.6
+  image: eu.gcr.io/gardener-project/3rd/golang:1.16.7
