@@ -94,10 +94,10 @@ var _ = Describe("resolver", func() {
 
 		Eventually(func() bool { //nolint:unlambda
 			return r.HasSynced()
-		}, time.Millisecond*10, time.Millisecond).Should(BeTrue(), "HasSync should be true after start")
+		}).Should(BeTrue(), "HasSync should be true after start")
 		Eventually(func() uint8 { //nolint:unlambda
 			return updateCount
-		}, time.Millisecond*10, time.Millisecond).Should(BeEquivalentTo(1), "update should be called once")
+		}).Should(BeEquivalentTo(1), "update should be called once")
 
 		Expect(r.Subset()).To(ConsistOf(corev1.EndpointSubset{
 			Addresses: []corev1.EndpointAddress{
@@ -127,10 +127,10 @@ var _ = Describe("resolver", func() {
 
 		Eventually(func() bool { //nolint:unlambda
 			return r.HasSynced()
-		}, time.Millisecond*10, time.Millisecond).Should(BeFalse(), "HasSync should always be false")
+		}).Should(BeFalse(), "HasSync should always be false")
 		Eventually(func() uint8 { //nolint:unlambda
 			return updateCount
-		}, time.Millisecond*10, time.Millisecond).Should(BeZero(), "update should never be called")
+		}).Should(BeZero(), "update should never be called")
 
 		close(done)
 	})
@@ -142,15 +142,15 @@ var _ = Describe("resolver", func() {
 
 		Eventually(func() bool { //nolint:unlambda
 			return r.HasSynced()
-		}, time.Millisecond*50, time.Millisecond).Should(BeTrue(), "HasSync should be true after start")
+		}).Should(BeTrue(), "HasSync should be true after start")
 
 		Eventually(func() uint8 { //nolint:unlambda
 			return updateCount
-		}, time.Millisecond*10, time.Millisecond).Should(BeEquivalentTo(1), "update should be called")
+		}).Should(BeEquivalentTo(1), "update should be called")
 
 		Consistently(func() []corev1.EndpointSubset { //nolint:unlambda
 			return r.Subset()
-		}, time.Millisecond*10, time.Millisecond).Should(ConsistOf(corev1.EndpointSubset{
+		}).Should(ConsistOf(corev1.EndpointSubset{
 			Addresses: []corev1.EndpointAddress{
 				{IP: "1.2.3.4"}, {IP: "5.6.7.8"},
 			},
@@ -161,7 +161,7 @@ var _ = Describe("resolver", func() {
 
 		Eventually(func() []corev1.EndpointSubset { //nolint:unlambda
 			return r.Subset()
-		}, time.Millisecond*10, time.Millisecond).Should(ConsistOf(corev1.EndpointSubset{
+		}).Should(ConsistOf(corev1.EndpointSubset{
 			Addresses: []corev1.EndpointAddress{{IP: "5.6.7.8"}},
 			Ports:     []corev1.EndpointPort{{Protocol: corev1.ProtocolTCP, Port: 1234}},
 		}))
