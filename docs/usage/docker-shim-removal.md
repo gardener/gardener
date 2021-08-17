@@ -27,7 +27,7 @@ As a shoot owner:
 ## Timeline
   - **2021-08:** Kubernetes v1.22 released. Shoots using this version get `containerd` as default container runtime. Shoots can still select `docker` explicitly if needed.
   - **2021-12:** Kubernetes v1.23 released. Shoots using this version can no longer select `docker` as container runtime.
-  - **2022-04:** Kubernetes v1.21 goes out of maintenance. This is the last version not affected by these changes. Make sure you have tested thoroughly and set the correct configuration for your Shoots!
+  - **2022-06:** Kubernetes v1.21 goes out of maintenance. This is the last version not affected by these changes. Make sure you have tested thoroughly and set the correct configuration for your Shoots!
   - **2022-10:** Kubernetes v1.22 goes out of maintenance. This is the last version that you can use with `docker` as container runtime. Make sure you have removed any dependencies to `docker` as container runtime!
 
 See [the official kubernetes documentation](https://kubernetes.io/releases/) for the exact dates for all releases.
