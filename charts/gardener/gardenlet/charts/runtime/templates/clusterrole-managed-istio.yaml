@@ -11,8 +11,7 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 rules:
-{{- if .Values.global.gardenlet.config.featureGates }}
-{{- if .Values.global.gardenlet.config.featureGates.ManagedIstio }}
+{{- if eq (include "gardenlet.managed-istio-enabled" .) "true" }}
 # Istio related rules that are required only when ManagedIstio feature gate is enabled.
 - apiGroups:
   - networking.istio.io
@@ -55,6 +54,5 @@ rules:
   - get
   - patch
   - update
-{{- end }}
 {{- end }}
 {{- end }}
