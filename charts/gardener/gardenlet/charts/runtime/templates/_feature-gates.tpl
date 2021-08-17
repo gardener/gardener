@@ -10,14 +10,14 @@ true
 {{- end -}}
 {{- end -}}
 
-{{- define "gardenlet.managed-istio-enabled" }}
-{{- if .Values.global.gardenlet.config.featureGates }}
-{{- if hasKey .Values.global.gardenlet.config.featureGates "ManagedIstio" }}
-{{ .Values.global.gardenlet.config.featureGates.ManagedIstio }}
-{{- else }}
+{{- define "gardenlet.managed-istio-enabled" -}}
+{{- if .Values.global.gardenlet.config.featureGates -}}
+{{- if hasKey .Values.global.gardenlet.config.featureGates "ManagedIstio" -}}
+{{- .Values.global.gardenlet.config.featureGates.ManagedIstio -}}
+{{- else -}}
 true
-{{- end }}
-{{- else }}
+{{- end -}}
+{{- else -}}
 true
-{{- end }}
+{{- end -}}
 {{- end -}}
