@@ -241,138 +241,6 @@ var _ = Describe("validator", func() {
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 		})
 
-		AfterEach(func() {
-			shoot.Spec.Kubernetes = core.Kubernetes{
-				KubeControllerManager: nil,
-			}
-		})
-
-		// The verification of protection is independent of the Cloud Provider (being checked before).
-		Context("VALIDATION: Shoot references a Seed already - validate user provided seed regarding protection", func() {
-			var (
-				oldShoot *core.Shoot
-			)
-
-			BeforeEach(func() {
-				cloudProfile = *cloudProfileBase.DeepCopy()
-				shoot = *shootBase.DeepCopy()
-
-				// set seed name
-				shoot.Spec.SeedName = &seedName
-
-				// set old shoot for update
-				oldShoot = shoot.DeepCopy()
-				oldShoot.Spec.SeedName = nil
-			})
-
-			It("create should pass because the Seed specified in shoot manifest does not have any taints", func() {
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("update should pass because the Seed specified in shoot manifest does not have any taints", func() {
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("update should pass because the Seed has new non-tolerated taints that were added after the shoot was scheduled to it", func() {
-				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-				oldShoot.Spec.SeedName = shoot.Spec.SeedName
-				shoot.Spec.Provider.Workers[0].Maximum++
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("create should fail because the Seed specified in shoot manifest has non-tolerated taints", func() {
-				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(BeForbiddenError())
-			})
-
-			It("update should fail because the new Seed specified in shoot manifest has non-tolerated taints", func() {
-				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("create should pass because shoot tolerates all taints of the seed", func() {
-				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
-				shoot.Spec.Tolerations = []core.Toleration{{Key: core.SeedTaintProtected}}
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("update should pass because shoot tolerates all taints of the seed", func() {
-				seed.Spec.Taints = []core.SeedTaint{{Key: "foo"}}
-				shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.String("bar")}}
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("update should pass because validation of network disjointedness should not be executed", func() {
-				// set shoot pod cidr to overlap with vpn pod cidr
-				shoot.Spec.Networking.Pods = pointer.String(v1beta1constants.DefaultVpnRange)
-				oldShoot.Spec.SeedName = shoot.Spec.SeedName
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			It("update should fail because validation of network disjointedness is executed", func() {
-				// set shoot pod cidr to overlap with vpn pod cidr
-				shoot.Spec.Networking.Pods = pointer.String(v1beta1constants.DefaultVpnRange)
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-				Expect(err).To(BeForbiddenError())
-			})
-		})
-
 		Context("name/project length checks", func() {
 			It("should reject Shoot resources with two consecutive hyphens in project name", func() {
 				twoConsecutiveHyphensName := "n--o"
@@ -959,8 +827,136 @@ var _ = Describe("validator", func() {
 		})
 
 		Context("tests for unknown provider", func() {
+			Context("scheduling checks", func() {
+				var (
+					oldShoot *core.Shoot
+				)
+
+				BeforeEach(func() {
+					oldShoot = shoot.DeepCopy()
+					oldShoot.Spec.SeedName = nil
+				})
+
+				Context("taints and tolerations", func() {
+					It("create should pass because the Seed specified in shoot manifest does not have any taints", func() {
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).ToNot(HaveOccurred())
+					})
+
+					It("update should pass because the Seed specified in shoot manifest does not have any taints", func() {
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).ToNot(HaveOccurred())
+					})
+
+					It("update should pass because the Seed has new non-tolerated taints that were added after the shoot was scheduled to it", func() {
+						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+						oldShoot.Spec.SeedName = shoot.Spec.SeedName
+						shoot.Spec.Provider.Workers[0].Maximum++
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).ToNot(HaveOccurred())
+					})
+
+					It("create should fail because the Seed specified in shoot manifest has non-tolerated taints", func() {
+						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).To(BeForbiddenError())
+					})
+
+					It("update should fail because the new Seed specified in shoot manifest has non-tolerated taints", func() {
+						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).To(HaveOccurred())
+					})
+
+					It("create should pass because shoot tolerates all taints of the seed", func() {
+						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+						shoot.Spec.Tolerations = []core.Toleration{{Key: core.SeedTaintProtected}}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).ToNot(HaveOccurred())
+					})
+
+					It("update should pass because shoot tolerates all taints of the seed", func() {
+						seed.Spec.Taints = []core.SeedTaint{{Key: "foo"}}
+						shoot.Spec.Tolerations = []core.Toleration{{Key: "foo", Value: pointer.String("bar")}}
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).ToNot(HaveOccurred())
+					})
+				})
+			})
 
 			Context("networking settings checks", func() {
+				var (
+					oldShoot *core.Shoot
+				)
+
+				BeforeEach(func() {
+					oldShoot = shoot.DeepCopy()
+					oldShoot.Spec.SeedName = nil
+				})
+
+				It("update should pass because validation of network disjointedness should not be executed", func() {
+					// set shoot pod cidr to overlap with vpn pod cidr
+					shoot.Spec.Networking.Pods = pointer.String(v1beta1constants.DefaultVpnRange)
+					oldShoot.Spec.SeedName = shoot.Spec.SeedName
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("update should fail because validation of network disjointedness is executed", func() {
+					// set shoot pod cidr to overlap with vpn pod cidr
+					shoot.Spec.Networking.Pods = pointer.String(v1beta1constants.DefaultVpnRange)
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+					Expect(err).To(BeForbiddenError())
+				})
+
 				It("should reject because shoot pods network is missing", func() {
 					shoot.Spec.Networking.Pods = nil
 
