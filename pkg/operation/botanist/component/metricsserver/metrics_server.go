@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -34,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
 	"k8s.io/utils/pointer"
@@ -128,6 +130,16 @@ func (m *metricsServer) ServiceDNSNames() []string {
 }
 
 func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "metrics-server",
+			Namespace: metav1.NamespaceSystem,
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: m.secrets.Server.Data,
+	}
+	utilruntime.Must(kutil.MakeUnique(secret))
+
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -209,15 +221,6 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 			}},
 		}
 
-		secret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "metrics-server",
-				Namespace: metav1.NamespaceSystem,
-			},
-			Type: corev1.SecretTypeTLS,
-			Data: m.secrets.Server.Data,
-		}
-
 		service = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
@@ -281,10 +284,6 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 							v1beta1constants.LabelNetworkPolicyShootToKubelet:   v1beta1constants.LabelNetworkPolicyAllowed,
 							v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 						}),
-						Annotations: map[string]string{
-							"scheduler.alpha.kubernetes.io/critical-pod": "",
-							"checksum/secret-" + secret.Name:             m.secrets.Server.Checksum,
-						},
 					},
 					Spec: corev1.PodSpec{
 						Tolerations: []corev1.Toleration{{
@@ -412,6 +411,8 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 			},
 		}
 	}
+
+	utilruntime.Must(references.InjectAnnotations(deployment))
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
