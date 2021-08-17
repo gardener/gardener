@@ -679,7 +679,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("cannot create shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name)))
+				Expect(err.Error()).To(ContainSubstring(fmt.Sprintf("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", shoot.Name, seed.Name)))
 			})
 
 			It("should allow no-op updates", func() {

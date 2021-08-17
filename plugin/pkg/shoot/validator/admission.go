@@ -244,31 +244,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 	}
 
-	mustCheckIfTaintsTolerated := a.GetOperation() == admission.Create || (a.GetOperation() == admission.Update && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName))
-	if mustCheckIfTaintsTolerated && seed != nil && !helper.TaintsAreTolerated(seed.Spec.Taints, shoot.Spec.Tolerations) {
-		return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seeds whose taints are not tolerated by the shoot"))
-	}
-
-	// We don't allow shoot to be created on the seed which is already marked to be deleted.
-	if seed != nil && seed.DeletionTimestamp != nil && a.GetOperation() == admission.Create {
-		return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name))
-	}
-
-	if oldShoot.Spec.SeedName != nil && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName) &&
-		seed != nil {
-		if seed.Spec.Backup == nil {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name, because seed backup is not configured, for shoot %q", shoot.Name))
-		}
-
-		oldSeed, err := v.seedLister.Get(*oldShoot.Spec.SeedName)
-		if err != nil {
-			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
-		}
-		if oldSeed.Spec.Provider.Type != seed.Spec.Provider.Type {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name, because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
-		}
-	}
-
 	if shoot.Spec.Provider.Type != cloudProfile.Spec.Type {
 		return apierrors.NewBadRequest(fmt.Sprintf("cloud provider in shoot (%s) is not equal to cloud provider in profile (%s)", shoot.Spec.Provider.Type, cloudProfile.Spec.Type))
 	}
@@ -283,32 +258,8 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		allErrs field.ErrorList
 	)
 
-	if seed != nil && seed.DeletionTimestamp != nil {
-		newMeta := shoot.ObjectMeta
-		oldMeta := *oldShoot.ObjectMeta.DeepCopy()
-
-		// disallow any changes to the annotations of a shoot that references a seed which is already marked for deletion
-		// except changes to the deletion confirmation annotation
-		if !reflect.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-			newConfirmation, newHasConfirmation := newMeta.Annotations[gutil.ConfirmationDeletion]
-
-			// copy the new confirmation value to the old annotations to see if
-			// anything else was changed other than the confirmation annotation
-			if newHasConfirmation {
-				if oldMeta.Annotations == nil {
-					oldMeta.Annotations = make(map[string]string)
-				}
-				oldMeta.Annotations[gutil.ConfirmationDeletion] = newConfirmation
-			}
-
-			if !reflect.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-				return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", shoot.Name, seed.Name, gutil.ConfirmationDeletion))
-			}
-		}
-
-		if !reflect.DeepEqual(shoot.Spec, oldShoot.Spec) {
-			return admission.NewForbidden(a, fmt.Errorf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name))
-		}
+	if err := validationContext.validateScheduling(a, v.seedLister); err != nil {
+		return err
 	}
 
 	// Allow removal of `gardener` finalizer only if the Shoot deletion has completed successfully
@@ -395,7 +346,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	}
 
 	allErrs = append(allErrs, validateRegion(validationContext.cloudProfile.Spec.Regions, validationContext.shoot.Spec.Region, validationContext.oldShoot.Spec.Region, field.NewPath("spec", "region"))...)
-	allErrs = append(allErrs, validateProvider(validationContext)...)
+	allErrs = append(allErrs, validationContext.validateProvider()...)
 
 	dnsErrors, err := validateDNSDomainUniqueness(v.shootLister, shoot.Name, shoot.Spec.DNS)
 	if err != nil {
@@ -417,7 +368,70 @@ type validationContext struct {
 	oldShoot     *core.Shoot
 }
 
-func validateProvider(c *validationContext) field.ErrorList {
+func (c *validationContext) validateScheduling(a admission.Attributes, seedLister corelisters.SeedLister) error {
+	var (
+		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
+		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
+		mustCheckSchedulingConstraints = shootIsBeingScheduled || shootIsBeingRescheduled
+	)
+
+	if mustCheckSchedulingConstraints {
+		if c.seed.DeletionTimestamp != nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", c.shoot.Name, c.seed.Name))
+		}
+
+		if !helper.TaintsAreTolerated(c.seed.Spec.Taints, c.shoot.Spec.Tolerations) {
+			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seeds whose taints are not tolerated by the shoot"))
+		}
+	}
+
+	if shootIsBeingRescheduled {
+		// TODO: this should be checked on both old and new Seed?
+		if c.seed.Spec.Backup == nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because seed backup is not configured for shoot %q", c.shoot.Name))
+		}
+
+		oldSeed, err := seedLister.Get(*c.oldShoot.Spec.SeedName)
+		if err != nil {
+			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
+		}
+		if oldSeed.Spec.Provider.Type != c.seed.Spec.Provider.Type {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change Seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", c.seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
+		}
+	}
+
+	if c.seed != nil && c.seed.DeletionTimestamp != nil {
+		newMeta := c.shoot.ObjectMeta
+		oldMeta := *c.oldShoot.ObjectMeta.DeepCopy()
+
+		// disallow any changes to the annotations of a shoot that references a seed which is already marked for deletion
+		// except changes to the deletion confirmation annotation
+		if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
+			newConfirmation, newHasConfirmation := newMeta.Annotations[gutil.ConfirmationDeletion]
+
+			// copy the new confirmation value to the old annotations to see if
+			// anything else was changed other than the confirmation annotation
+			if newHasConfirmation {
+				if oldMeta.Annotations == nil {
+					oldMeta.Annotations = make(map[string]string)
+				}
+				oldMeta.Annotations[gutil.ConfirmationDeletion] = newConfirmation
+			}
+
+			if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
+				return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", c.shoot.Name, c.seed.Name, gutil.ConfirmationDeletion))
+			}
+		}
+
+		if !apiequality.Semantic.DeepEqual(c.shoot.Spec, c.oldShoot.Spec) {
+			return admission.NewForbidden(a, fmt.Errorf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", c.shoot.Name, c.seed.Name))
+		}
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateProvider() field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 		path    = field.NewPath("spec", "provider")
