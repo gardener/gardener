@@ -23,7 +23,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -35,15 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-
-	"github.com/Masterminds/semver"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/admission"
 )
 
 const (
@@ -214,10 +213,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		addInfrastructureDeploymentTask(shoot)
 	}
 
-	if shoot.Spec.Provider.Type != cloudProfile.Spec.Type {
-		return apierrors.NewBadRequest(fmt.Sprintf("cloud provider in shoot (%s) is not equal to cloud provider in profile (%s)", shoot.Spec.Provider.Type, cloudProfile.Spec.Type))
-	}
-
 	var (
 		validationContext = &validationContext{
 			cloudProfile: cloudProfile,
@@ -245,15 +240,6 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		return err
 	}
 
-	if seed != nil {
-		if shoot.Spec.Networking.Pods == nil && seed.Spec.Networks.ShootDefaults != nil {
-			shoot.Spec.Networking.Pods = seed.Spec.Networks.ShootDefaults.Pods
-		}
-		if shoot.Spec.Networking.Services == nil && seed.Spec.Networks.ShootDefaults != nil {
-			shoot.Spec.Networking.Services = seed.Spec.Networks.ShootDefaults.Services
-		}
-	}
-
 	if !reflect.DeepEqual(oldShoot.Spec.Provider.InfrastructureConfig, shoot.Spec.Provider.InfrastructureConfig) {
 		addInfrastructureDeploymentTask(shoot)
 	}
@@ -278,24 +264,8 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 	}
 
-	if seed != nil {
-		if shoot.Spec.Networking.Pods == nil {
-			if seed.Spec.Networks.ShootDefaults != nil {
-				shoot.Spec.Networking.Pods = seed.Spec.Networks.ShootDefaults.Pods
-			} else {
-				allErrs = append(allErrs, field.Required(field.NewPath("spec", "networking", "pods"), "pods is required"))
-			}
-		}
-
-		if shoot.Spec.Networking.Services == nil {
-			if seed.Spec.Networks.ShootDefaults != nil {
-				shoot.Spec.Networking.Services = seed.Spec.Networks.ShootDefaults.Services
-			} else {
-				allErrs = append(allErrs, field.Required(field.NewPath("spec", "networking", "services"), "services is required"))
-			}
-		}
-	}
-
+	allErrs = append(allErrs, validationContext.defaultOrValidateShootNetworks()...)
+	allErrs = append(allErrs, validationContext.validateKubernetes()...)
 	allErrs = append(allErrs, validateRegion(validationContext.cloudProfile.Spec.Regions, validationContext.shoot.Spec.Region, validationContext.oldShoot.Spec.Region, field.NewPath("spec", "region"))...)
 	allErrs = append(allErrs, validationContext.validateProvider()...)
 
@@ -464,33 +434,76 @@ func (c *validationContext) validateShootHibernation(a admission.Attributes) err
 	return nil
 }
 
-func (c *validationContext) validateProvider() field.ErrorList {
+func (c *validationContext) defaultOrValidateShootNetworks() field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
-		path    = field.NewPath("spec", "provider")
+		path    = field.NewPath("spec", "networking")
 	)
 
-	if c.seed != nil && !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
-		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
-			path.Child("networks"),
-			c.shoot.Spec.Networking.Nodes,
-			c.shoot.Spec.Networking.Pods,
-			c.shoot.Spec.Networking.Services,
-			c.seed.Spec.Networks.Nodes,
-			c.seed.Spec.Networks.Pods,
-			c.seed.Spec.Networks.Services,
-		)...)
+	if c.seed != nil {
+		if c.shoot.Spec.Networking.Pods == nil {
+			if c.seed.Spec.Networks.ShootDefaults != nil {
+				c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
+			} else {
+				allErrs = append(allErrs, field.Required(path.Child("pods"), "pods is required"))
+			}
+		}
+
+		if c.shoot.Spec.Networking.Services == nil {
+			if c.seed.Spec.Networks.ShootDefaults != nil {
+				c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
+			} else {
+				allErrs = append(allErrs, field.Required(path.Child("services"), "services is required"))
+			}
+		}
+
+		// validate network disjointedness with seed networks if shoot is being (re)scheduled
+		if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
+			allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+				path,
+				c.shoot.Spec.Networking.Nodes,
+				c.shoot.Spec.Networking.Pods,
+				c.shoot.Spec.Networking.Services,
+				c.seed.Spec.Networks.Nodes,
+				c.seed.Spec.Networks.Pods,
+				c.seed.Spec.Networks.Services,
+			)...)
+		}
 	}
+
+	return allErrs
+}
+
+func (c *validationContext) validateKubernetes() field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+		path    = field.NewPath("spec", "kubernetes")
+	)
 
 	ok, isDefaulted, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
-		err := field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions)
+		err := field.NotSupported(path.Child("version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions)
 		if isDefaulted {
 			err.Detail = fmt.Sprintf("unable to default version - couldn't find a suitable patch version for %s. Suitable patch versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly -  %s", c.shoot.Spec.Kubernetes.Version, err.Detail)
 		}
 		allErrs = append(allErrs, err)
 	} else if versionDefault != nil {
 		c.shoot.Spec.Kubernetes.Version = versionDefault.String()
+	}
+
+	return allErrs
+}
+
+func (c *validationContext) validateProvider() field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+		path    = field.NewPath("spec", "provider")
+	)
+
+	if c.shoot.Spec.Provider.Type != c.cloudProfile.Spec.Type {
+		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must equal provider type of referenced CloudProfile: %q", c.cloudProfile.Spec.Type)))
+		// exit early, all other validation errors will be misleading
+		return allErrs
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {

@@ -771,7 +771,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(BeBadRequestError())
+				Expect(err).To(BeForbiddenError())
 			})
 
 			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
@@ -961,6 +961,52 @@ var _ = Describe("validator", func() {
 		Context("tests for unknown provider", func() {
 
 			Context("networking settings checks", func() {
+				It("should reject because shoot pods network is missing", func() {
+					shoot.Spec.Networking.Pods = nil
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+				})
+
+				It("should reject because shoot services network is missing", func() {
+					shoot.Spec.Networking.Services = nil
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+				})
+
+				It("should default shoot networks if seed provides ShootDefaults", func() {
+					seed.Spec.Networks.ShootDefaults = &core.ShootNetworks{
+						Pods:     &podsCIDR,
+						Services: &servicesCIDR,
+					}
+					shoot.Spec.Networking.Pods = nil
+					shoot.Spec.Networking.Services = nil
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(shoot.Spec.Networking.Pods).To(Equal(&podsCIDR))
+					Expect(shoot.Spec.Networking.Services).To(Equal(&servicesCIDR))
+				})
+
 				It("should reject because the shoot node and the seed node networks intersect", func() {
 					shoot.Spec.Networking.Nodes = &seedNodesCIDR
 
