@@ -433,11 +433,6 @@ func RunReconcileSeedFlow(
 			}
 		}
 
-		// TODO: Remove after next release
-		if err := deletePriorityClassIfValueNotTheSame(ctx, seedClient, "fluent-bit", 150); err != nil {
-			return err
-		}
-
 		if hvpaEnabled {
 			shootInfo := &corev1.ConfigMap{}
 			maintenanceBegin := "220000-0000"
@@ -876,6 +871,13 @@ func RunReconcileSeedFlow(
 	})
 
 	if err := chartApplier.Apply(ctx, filepath.Join(charts.Path, chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	if err := kutil.DeleteObjects(ctx, seedClient,
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "fluent-bit-config"}},
+	); err != nil {
 		return err
 	}
 

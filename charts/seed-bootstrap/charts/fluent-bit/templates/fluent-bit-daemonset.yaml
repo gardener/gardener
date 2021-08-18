@@ -1,3 +1,7 @@
+{{- define "fluent-bit.daemonset.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "fluent-bit.config.name" . | sha256sum | trunc 8 }}: {{ include "fluent-bit.config.name" . }}
+{{- end -}}
+---
 apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
 metadata:
@@ -5,6 +9,8 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
 {{ toYaml .Values.labels | indent 4 }}
+  annotations:
+{{ include "fluent-bit.daemonset.annotations" . | indent 4 }}
 spec:
   serviceName: fluent-bit
   selector:
@@ -13,7 +19,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/fluent-bit-configmap: {{ include (print $.Template.BasePath "/fluent-bit-configmap.yaml") . | sha256sum }}
+{{ include "fluent-bit.daemonset.annotations" . | indent 8 }}
       labels:
 {{ toYaml .Values.labels | indent 8 }}
         networking.gardener.cloud/to-dns: allowed
@@ -113,7 +119,7 @@ spec:
       volumes:
       - name: template-config
         configMap:
-          name: fluent-bit-config
+          name: {{ include "fluent-bit.config.name" . }}
       - name: config-dir
         emptyDir: {}
       - name: varlog
