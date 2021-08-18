@@ -1841,6 +1841,14 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
+		var (
+			negativeDuration   = metav1.Duration{Duration: -time.Second}
+			expanderLeastWaste = core.ClusterAutoscalerExpanderLeastWaste
+			expanderMostPods   = core.ClusterAutoscalerExpanderMostPods
+			expanderPriority   = core.ClusterAutoscalerExpanderPriority
+			expanderRandom     = core.ClusterAutoscalerExpanderRandom
+		)
+
 		Context("ClusterAutoscaler validation", func() {
 			DescribeTable("cluster autoscaler values",
 				func(clusterAutoscaler core.ClusterAutoscaler, matcher gomegatypes.GomegaMatcher) {
@@ -1856,10 +1864,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("invalid > 1 threshold", core.ClusterAutoscaler{
 					ScaleDownUtilizationThreshold: pointer.Float64(1.5),
 				}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
+				Entry("valid with maxNodeProvisionTime", core.ClusterAutoscaler{
+					MaxNodeProvisionTime: &metav1.Duration{Duration: time.Minute},
+				}, BeEmpty()),
+				Entry("invalid with negative maxNodeProvisionTime", core.ClusterAutoscaler{
+					MaxNodeProvisionTime: &negativeDuration,
+				}, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
+				Entry("valid with expander least waste", core.ClusterAutoscaler{
+					Expander: &expanderLeastWaste,
+				}, BeEmpty()),
+				Entry("valid with expander most pods", core.ClusterAutoscaler{
+					Expander: &expanderMostPods,
+				}, BeEmpty()),
+				Entry("valid with expander priority", core.ClusterAutoscaler{
+					Expander: &expanderPriority,
+				}, BeEmpty()),
+				Entry("valid with expander random", core.ClusterAutoscaler{
+					Expander: &expanderRandom,
+				}, BeEmpty()),
 			)
 		})
-
-		negativeDuration := metav1.Duration{Duration: -time.Second}
 
 		Context("VerticalPodAutoscaler validation", func() {
 			DescribeTable("verticalPod autoscaler values",

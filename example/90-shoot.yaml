@@ -118,9 +118,9 @@ spec:
     # - europe-central-1a
     # - europe-central-1b
     # machineControllerManager: # optional, it allows to configure the machine-controller settings.
-    #   machineDrainTimeout: 10m
+    #   machineDrainTimeout: 2h
     #   machineHealthTimeout: 10m
-    #   machineCreationTimeout: 10m
+    #   machineCreationTimeout: 20m
     #   maxEvictRetries: 10
     #   nodeConditions:
     #   - ReadonlyFilesystem
@@ -231,11 +231,13 @@ spec:
   #   featureGates:
   #     SomeKubernetesFeature: true
   # clusterAutoscaler:
+  #   expander: "least-waste" # see: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders
+  #   maxNodeProvisionTime: 20m
   #   scaleDownUtilizationThreshold: 0.5
   #   scaleDownUnneededTime: 30m
-  #   scaleDownDelayAfterAdd: 60m
-  #   scaleDownDelayAfterFailure: 10m
-  #   scaleDownDelayAfterDelete: 10s
+  #   scaleDownDelayAfterAdd: 1h
+  #   scaleDownDelayAfterFailure: 3m
+  #   scaleDownDelayAfterDelete: 0s
   #   scanInterval: 10s
   # verticalPodAutoscaler:
   #   enabled: true

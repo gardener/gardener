@@ -532,6 +532,53 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("#SetDefaults_ClusterAutoscaler", func() {
+		var (
+			obj                *ClusterAutoscaler
+			expanderRandom     = ClusterAutoscalerExpanderRandom
+			expanderLeastWaste = ClusterAutoscalerExpanderLeastWaste
+		)
+
+		BeforeEach(func() {
+			obj = &ClusterAutoscaler{}
+		})
+
+		It("should correctly default the ClusterAutoscaler", func() {
+			SetDefaults_ClusterAutoscaler(obj)
+
+			Expect(obj.ScaleDownDelayAfterAdd).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
+			Expect(obj.ScaleDownDelayAfterDelete).To(PointTo(Equal(metav1.Duration{Duration: 0})))
+			Expect(obj.ScaleDownDelayAfterFailure).To(PointTo(Equal(metav1.Duration{Duration: 3 * time.Minute})))
+			Expect(obj.ScaleDownUnneededTime).To(PointTo(Equal(metav1.Duration{Duration: 30 * time.Minute})))
+			Expect(obj.ScanInterval).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Second})))
+			Expect(obj.MaxNodeProvisionTime).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
+			Expect(obj.Expander).To(PointTo(Equal(expanderLeastWaste)))
+		})
+
+		It("should correctly override values the ClusterAutoscaler on setting them", func() {
+			obj = &ClusterAutoscaler{
+				ScaleDownDelayAfterAdd:        &metav1.Duration{Duration: 1 * time.Hour},
+				ScaleDownDelayAfterDelete:     &metav1.Duration{Duration: 2 * time.Hour},
+				ScaleDownDelayAfterFailure:    &metav1.Duration{Duration: 3 * time.Hour},
+				ScaleDownUnneededTime:         &metav1.Duration{Duration: 4 * time.Hour},
+				ScaleDownUtilizationThreshold: pointer.Float64(0.8),
+				ScanInterval:                  &metav1.Duration{Duration: 5 * time.Hour},
+				Expander:                      &expanderRandom,
+				MaxNodeProvisionTime:          &metav1.Duration{Duration: 6 * time.Hour},
+			}
+
+			SetDefaults_ClusterAutoscaler(obj)
+
+			Expect(obj.ScaleDownDelayAfterAdd).To(PointTo(Equal(metav1.Duration{Duration: 1 * time.Hour})))
+			Expect(obj.ScaleDownDelayAfterDelete).To(PointTo(Equal(metav1.Duration{Duration: 2 * time.Hour})))
+			Expect(obj.ScaleDownDelayAfterFailure).To(PointTo(Equal(metav1.Duration{Duration: 3 * time.Hour})))
+			Expect(obj.ScaleDownUnneededTime).To(PointTo(Equal(metav1.Duration{Duration: 4 * time.Hour})))
+			Expect(obj.ScanInterval).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Hour})))
+			Expect(obj.MaxNodeProvisionTime).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
+			Expect(obj.Expander).To(PointTo(Equal(ClusterAutoscalerExpanderRandom)))
+		})
+	})
+
 	Describe("#SetDefaults_VerticalPodAutoscaler", func() {
 		var obj *VerticalPodAutoscaler
 

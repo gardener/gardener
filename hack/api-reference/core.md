@@ -2586,7 +2586,7 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to ScanInterval).</p>
+<p>ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (default: 0 secs).</p>
 </td>
 </tr>
 <tr>
@@ -2626,7 +2626,7 @@ float64
 </td>
 <td>
 <em>(Optional)</em>
-<p>ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed</p>
+<p>ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed (default: 0.5).</p>
 </td>
 </tr>
 <tr>
@@ -2641,6 +2641,35 @@ Kubernetes meta/v1.Duration
 <td>
 <em>(Optional)</em>
 <p>ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>expander</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.ExpanderMode">
+ExpanderMode
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Expander defines the algorithm to use during scale up (default: least-waste).
+See: <a href="https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders">https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxNodeProvisionTime</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).</p>
 </td>
 </tr>
 </tbody>
@@ -3530,6 +3559,15 @@ string
 </p>
 <p>
 <p>ErrorCode is a string alias.</p>
+</p>
+<h3 id="core.gardener.cloud/v1beta1.ExpanderMode">ExpanderMode
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ClusterAutoscaler">ClusterAutoscaler</a>)
+</p>
+<p>
+<p>ExpanderMode is type used for Expander values</p>
 </p>
 <h3 id="core.gardener.cloud/v1beta1.ExpirableVersion">ExpirableVersion
 </h3>

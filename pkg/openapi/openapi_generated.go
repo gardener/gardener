@@ -1672,7 +1672,7 @@ func schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref common.ReferenceCallbac
 					},
 					"scaleDownDelayAfterDelete": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to ScanInterval).",
+							Description: "ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (default: 0 secs).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -1690,7 +1690,7 @@ func schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref common.ReferenceCallbac
 					},
 					"scaleDownUtilizationThreshold": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed",
+							Description: "ScaleDownUtilizationThreshold defines the threshold in decimal (0.0 - 1.0) under which a node is being removed (default: 0.5).",
 							Type:        []string{"number"},
 							Format:      "double",
 						},
@@ -1698,6 +1698,19 @@ func schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref common.ReferenceCallbac
 					"scanInterval": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"expander": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Expander defines the algorithm to use during scale up (default: least-waste). See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"maxNodeProvisionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -8654,7 +8667,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					},
 					"scaleDownDelayAfterDelete": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to ScanInterval).",
+							Description: "ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (default: 0 secs).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -8672,7 +8685,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					},
 					"scaleDownUtilizationThreshold": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed",
+							Description: "ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed (default: 0.5).",
 							Type:        []string{"number"},
 							Format:      "double",
 						},
@@ -8680,6 +8693,19 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					"scanInterval": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"expander": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Expander defines the algorithm to use during scale up (default: least-waste). See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"maxNodeProvisionTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},

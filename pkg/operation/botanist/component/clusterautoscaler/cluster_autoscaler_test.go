@@ -67,6 +67,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 			{Name: machineDeployment2Name, Minimum: machineDeployment2Min, Maximum: machineDeployment2Max},
 		}
 
+		configExpander                      = gardencorev1beta1.ClusterAutoscalerExpanderRandom
+		configMaxNodeProvisionTime          = &metav1.Duration{Duration: time.Second}
 		configScaleDownDelayAfterAdd        = &metav1.Duration{Duration: time.Second}
 		configScaleDownDelayAfterDelete     = &metav1.Duration{Duration: time.Second}
 		configScaleDownDelayAfterFailure    = &metav1.Duration{Duration: time.Second}
@@ -74,6 +76,8 @@ var _ = Describe("ClusterAutoscaler", func() {
 		configScaleDownUtilizationThreshold = pointer.Float64(1.2345)
 		configScanInterval                  = &metav1.Duration{Duration: time.Second}
 		configFull                          = &gardencorev1beta1.ClusterAutoscaler{
+			Expander:                      &configExpander,
+			MaxNodeProvisionTime:          configMaxNodeProvisionTime,
 			ScaleDownDelayAfterAdd:        configScaleDownDelayAfterAdd,
 			ScaleDownDelayAfterDelete:     configScaleDownDelayAfterDelete,
 			ScaleDownDelayAfterFailure:    configScaleDownDelayAfterFailure,
@@ -177,17 +181,25 @@ var _ = Describe("ClusterAutoscaler", func() {
 			var commandConfigFlags []string
 			if !withConfig {
 				commandConfigFlags = append(commandConfigFlags,
+					"--expander=least-waste",
+					"--max-node-provision-time=20m0s",
+					"--scale-down-utilization-threshold=0.500000",
 					"--scale-down-unneeded-time=30m0s",
 					"--scale-down-delay-after-add=1h0m0s",
+					"--scale-down-delay-after-delete=0s",
+					"--scale-down-delay-after-failure=3m0s",
+					"--scan-interval=10s",
 				)
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
+					fmt.Sprintf("--expander=%s", string(configExpander)),
+					fmt.Sprintf("--max-node-provision-time=%s", configMaxNodeProvisionTime.Duration),
 					fmt.Sprintf("--scale-down-utilization-threshold=%f", *configScaleDownUtilizationThreshold),
-					fmt.Sprintf("--scale-down-delay-after-failure=%s", configScaleDownDelayAfterFailure.Duration),
-					fmt.Sprintf("--scale-down-delay-after-delete=%s", configScaleDownDelayAfterDelete.Duration),
-					fmt.Sprintf("--scan-interval=%s", configScanInterval.Duration),
 					fmt.Sprintf("--scale-down-unneeded-time=%s", configScaleDownUnneededTime.Duration),
 					fmt.Sprintf("--scale-down-delay-after-add=%s", configScaleDownDelayAfterAdd.Duration),
+					fmt.Sprintf("--scale-down-delay-after-delete=%s", configScaleDownDelayAfterDelete.Duration),
+					fmt.Sprintf("--scale-down-delay-after-failure=%s", configScaleDownDelayAfterFailure.Duration),
+					fmt.Sprintf("--scan-interval=%s", configScanInterval.Duration),
 				)
 			}
 
@@ -199,7 +211,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 				"--stderrthreshold=info",
 				"--skip-nodes-with-system-pods=false",
 				"--skip-nodes-with-local-storage=false",
-				"--expander=least-waste",
 				"--expendable-pods-priority-cutoff=-10",
 				"--balance-similar-node-groups=true",
 				"--v=2",

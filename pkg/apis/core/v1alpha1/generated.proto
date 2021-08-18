@@ -317,7 +317,7 @@ message ClusterAutoscaler {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration scaleDownDelayAfterAdd = 1;
 
-  // ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to ScanInterval).
+  // ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (default: 0 secs).
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration scaleDownDelayAfterDelete = 2;
 
@@ -329,13 +329,22 @@ message ClusterAutoscaler {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration scaleDownUnneededTime = 4;
 
-  // ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed
+  // ScaleDownUtilizationThreshold defines the threshold in decimal (0.0 - 1.0) under which a node is being removed (default: 0.5).
   // +optional
   optional double scaleDownUtilizationThreshold = 5;
 
   // ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration scanInterval = 6;
+
+  // Expander defines the algorithm to use during scale up (default: least-waste).
+  // See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.
+  // +optional
+  optional string expander = 7;
+
+  // MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxNodeProvisionTime = 8;
 }
 
 // ClusterInfo contains information about the Plant cluster

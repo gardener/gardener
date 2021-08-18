@@ -1937,6 +1937,8 @@ func autoConvert_v1beta1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *Cluster
 	out.ScaleDownUnneededTime = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownUnneededTime))
 	out.ScaleDownUtilizationThreshold = (*float64)(unsafe.Pointer(in.ScaleDownUtilizationThreshold))
 	out.ScanInterval = (*metav1.Duration)(unsafe.Pointer(in.ScanInterval))
+	out.Expander = (*core.ExpanderMode)(unsafe.Pointer(in.Expander))
+	out.MaxNodeProvisionTime = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeProvisionTime))
 	return nil
 }
 
@@ -1952,6 +1954,8 @@ func autoConvert_core_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *core.Cl
 	out.ScaleDownUnneededTime = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownUnneededTime))
 	out.ScaleDownUtilizationThreshold = (*float64)(unsafe.Pointer(in.ScaleDownUtilizationThreshold))
 	out.ScanInterval = (*metav1.Duration)(unsafe.Pointer(in.ScanInterval))
+	out.Expander = (*ExpanderMode)(unsafe.Pointer(in.Expander))
+	out.MaxNodeProvisionTime = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeProvisionTime))
 	return nil
 }
 
