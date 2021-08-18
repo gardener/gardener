@@ -17,7 +17,6 @@ package project
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"time"
 
@@ -51,8 +50,7 @@ var _ = Describe("Project Activity Reconcile", func() {
 
 		reconciler reconcile.Reconciler
 
-		request      reconcile.Request
-		errorRequest reconcile.Request
+		request reconcile.Request
 
 		ctrl                   *gomock.Controller
 		k8sGardenRuntimeClient *mockclient.MockClient
@@ -60,7 +58,6 @@ var _ = Describe("Project Activity Reconcile", func() {
 	)
 
 	BeforeEach(func() {
-
 		project = &gardencorev1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      projectName,
@@ -104,7 +101,6 @@ var _ = Describe("Project Activity Reconcile", func() {
 		k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 		reconciler = NewActivityReconciler(logger.NewNopLogger(), k8sGardenRuntimeClient)
 		request = reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: shoot.Namespace}}
-		errorRequest = reconcile.Request{NamespacedName: types.NamespacedName{Name: errorShoot.Name, Namespace: errorShoot.Namespace}}
 		k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ProjectList{}), gomock.Any()).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ProjectList, opts client.MatchingFields) error {
 			if reflect.DeepEqual(opts[core.ProjectNamespace], *project.Spec.Namespace) {
 				*obj = gardencorev1beta1.ProjectList{Items: []gardencorev1beta1.Project{*project}}
@@ -127,60 +123,64 @@ var _ = Describe("Project Activity Reconcile", func() {
 			}
 			return apierrors.NewNotFound(gardencorev1beta1.Resource("Project"), "<unknown>")
 		})
+	})
 
-		k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), gomock.Any()).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
-			obj.Items = []gardencorev1beta1.Shoot{*shoot, *shootWithoutProject, *errorShoot}
-
-			return nil
+	Describe("LastActivityTimestamp updates", func() {
+		BeforeEach(func() {
+			k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}), gomock.Any()).DoAndReturn(
+				func(_ context.Context, prj *gardencorev1beta1.Project, _ client.Patch, _ ...client.PatchOption) error {
+					*project = *prj
+					return nil
+				},
+			).AnyTimes()
+			k8sGardenRuntimeClient.EXPECT().Status().Return(k8sGardenRuntimeClient).AnyTimes()
 		})
 
-		k8sGardenRuntimeClient.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Project{}), gomock.Any()).DoAndReturn(
-			func(_ context.Context, prj *gardencorev1beta1.Project, _ client.Patch, _ ...client.PatchOption) error {
-				*project = *prj
+		It("should update the creation timestamp", func() {
+			shoot.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, 2, 1, 1, 1, 1, time.UTC)}
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(shoot.CreationTimestamp).To(Equal(*project.Status.LastActivityTimestamp))
+		})
+
+		It("the empty LastActivityTimestamp should be set to the newest shoot", func() {
+			k8sGardenRuntimeClient.EXPECT().List(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ShootList{}), gomock.Any()).DoAndReturn(func(_ context.Context, obj *gardencorev1beta1.ShootList, _ ...client.ListOption) error {
+				obj.Items = []gardencorev1beta1.Shoot{*shoot, *shootWithoutProject, *errorShoot}
 				return nil
-			},
-		).AnyTimes()
-		k8sGardenRuntimeClient.EXPECT().Status().Return(k8sGardenRuntimeClient).AnyTimes()
+			})
+			project.Status.LastActivityTimestamp = nil
+			reconcileResult, err := reconciler.Reconcile(ctx, request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(reconcileResult).To(Equal(reconcile.Result{}))
+			Expect(errorShoot.CreationTimestamp).To(Equal(*project.Status.LastActivityTimestamp))
+		})
+
+		It("should not update the creation timestamp since the shoot is not part of this project", func() {
+			reconcileResult, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: shootWithoutProject.Name, Namespace: shootWithoutProject.Namespace}})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(reconcileResult).To(Equal(reconcile.Result{Requeue: false}))
+			Expect(shoot.CreationTimestamp).ToNot(Equal(*project.Status.LastActivityTimestamp))
+		})
 	})
 
-	It("Should update the creation timestamp", func() {
-		shoot.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, 2, 1, 1, 1, 1, time.UTC)}
-		_, result := reconciler.Reconcile(ctx, request)
-		fmt.Printf("%v", project.Status)
-		Expect(result).To(Succeed())
-		Expect(shoot.CreationTimestamp).To(Equal(*project.Status.LastActivityTimestamp))
-	})
+	Describe("Unsuccessful reconciles due to different errors", func() {
+		It("should not update the creation timestamp since the shoot is created before the last activity", func() {
+			shoot.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, 0, 1, 0, 0, 0, time.UTC)}
+			_, err := reconciler.Reconcile(ctx, request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(shoot.CreationTimestamp).ToNot(Equal(*project.Status.LastActivityTimestamp))
+		})
 
-	It("Should NOT update the creation timestamp since the shoot is created before the last activity", func() {
-		shoot.CreationTimestamp = metav1.Time{Time: time.Date(1, 1, 0, 1, 0, 0, 0, time.UTC)}
-		_, result := reconciler.Reconcile(ctx, request)
-		Expect(result).To(Succeed())
-		Expect(shoot.CreationTimestamp).ToNot(Equal(*project.Status.LastActivityTimestamp))
-	})
+		It("should not update the creation timestamp since the shoot does not exist", func() {
+			reconcileResult, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: "empty"}})
+			Expect(err).To(HaveOccurred())
+			Expect(reconcileResult).To(Equal(reconcile.Result{}))
+		})
 
-	It("Should NOT update the creation timestamp since the shoot is not part of this project", func() {
-		reconcileResult, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: shootWithoutProject.Name, Namespace: shootWithoutProject.Namespace}})
-		Expect(err).ToNot(HaveOccurred())
-		Expect(reconcileResult).To(Equal(reconcile.Result{Requeue: false}))
-		Expect(shoot.CreationTimestamp).ToNot(Equal(*project.Status.LastActivityTimestamp))
-	})
-
-	It("Should NOT update the creation timestamp since the shoot does not exist", func() {
-		reconcileResult, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: shoot.Name, Namespace: "empty"}})
-		Expect(err).To(HaveOccurred())
-		Expect(reconcileResult).To(Equal(reconcile.Result{}))
-	})
-
-	It("Reconcile should fail since the projects can not be listed ", func() {
-		reconcileResult, err := reconciler.Reconcile(ctx, errorRequest)
-		Expect(err).To(HaveOccurred())
-		Expect(reconcileResult).To(Equal(reconcile.Result{}))
-	})
-	It("The empty LastActivityTimestamp should be set to the newest shoot", func() {
-		project.Status.LastActivityTimestamp = nil
-		reconcileResult, err := reconciler.Reconcile(ctx, request)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(reconcileResult).To(Equal(reconcile.Result{}))
-		Expect(errorShoot.CreationTimestamp).To(Equal(*project.Status.LastActivityTimestamp))
+		It("should fail the reconcile since the projects can not be listed ", func() {
+			reconcileResult, err := reconciler.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Name: errorShoot.Name, Namespace: errorShoot.Namespace}})
+			Expect(err).To(HaveOccurred())
+			Expect(reconcileResult).To(Equal(reconcile.Result{}))
+		})
 	})
 })

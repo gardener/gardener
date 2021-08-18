@@ -71,7 +71,7 @@ This reconciler is enabled by default and works as following:
     1. `BackupEntry` resources.
     1. `Secret` resources that are referenced by a `SecretBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
     1. `Quota` resources that are referenced by a `SecretBinding` that is in use by a `Shoot` (not necessarily in the same namespace).
-    1. The time period when the projet was used for the last time (`Project.Status.LastActivityTimestamp`) is longer than the configured `minimumLifetimeDays`
+    1. The time period when the projet was used for the last time (`status.lastActivityTimestamp`) is longer than the configured `minimumLifetimeDays`
 
 If a project is considered "stale" then its `.status.staleSinceTimestamp` will be set to the time when it was first detected to be stale.
 If it gets actively used again this timestamp will be removed.
@@ -89,7 +89,7 @@ The component configuration of the Gardener Controller Manager offers to configu
 
 Since the other two reconcilers are unable to actively monitor the relevant objects that are used in a `Project` (`Shoot`, `Plant`, etc.), there could be a situation where the user creates and deletes objects in a short period of time. In that case the `Stale Project Reconciler` could not see that there was any activity on that project and it will still mark it as a `Stale`, even though it is actively used.
 
-The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any acitivity (Currently only for `Shoots`) and then it will update the `Project.Status.LastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
+The `Project Activity Reconciler` is implemented to take care of such cases. An event handler will notify the reconciler for any acitivity (Currently only for `Shoots`) and then it will update the `status.lastActivityTimestamp`. This update will also trigger the `Stale Project Reconciler`.
 
 ### Event Controller
 
