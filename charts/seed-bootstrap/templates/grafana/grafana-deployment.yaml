@@ -1,3 +1,8 @@
+{{- define "grafana.deployment.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "grafana.providers.name" . | sha256sum | trunc 8 }}: {{ include "grafana.providers.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "grafana.datasources.name" . | sha256sum | trunc 8 }}: {{ include "grafana.datasources.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "grafana.dashboards.name" . | sha256sum | trunc 8 }}: {{ include "grafana.dashboards.name" . }}
+{{- end -}}
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
@@ -7,6 +12,8 @@ metadata:
   labels:
     role: monitoring
     component: grafana
+  annotations:
+{{ include "grafana.deployment.annotations" . | indent 4 }}
 spec:
   revisionHistoryLimit: 1
   replicas: 1
@@ -16,9 +23,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-dashboards: {{ include (print $.Template.BasePath "/grafana/grafana-dashboards-configmap.yaml") . | sha256sum }}
-        checksum/configmap-datasources: {{ include (print $.Template.BasePath "/grafana/grafana-datasources-configmap.yaml") . | sha256sum }}
-        checksum/configmap-dashboard-providers: {{ include (print $.Template.BasePath "/grafana/grafana-dashboard-providers-configmap.yaml") . | sha256sum }}
+{{ include "grafana.deployment.annotations" . | indent 8 }}
       labels:
         role: monitoring
         networking.gardener.cloud/to-dns: allowed
@@ -67,10 +72,10 @@ spec:
         emptyDir: {}
       - name: grafana-dashboards
         configMap:
-          name: grafana-dashboards
+          name: {{ include "grafana.dashboards.name" . }}
       - name: grafana-datasources
         configMap:
-          name: grafana-datasources
+          name: {{ include "grafana.datasources.name" . }}
       - name: grafana-dashboard-providers
         configMap:
-          name: grafana-dashboard-providers
+          name: {{ include "grafana.providers.name" . }}
