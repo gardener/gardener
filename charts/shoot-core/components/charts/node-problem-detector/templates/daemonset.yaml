@@ -26,7 +26,6 @@ spec:
         networking.gardener.cloud/to-apiserver: allowed
         networking.gardener.cloud/to-dns: allowed
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/custom-config-configmap.yaml") . | sha256sum }}
         scheduler.alpha.kubernetes.io/critical-pod: ''
 {{- if .Values.annotations }}
 {{ toYaml .Values.annotations | indent 8 }}
@@ -66,9 +65,6 @@ spec:
             - name: kmsg
               mountPath: /dev/kmsg
               readOnly: true
-            - name: custom-config
-              mountPath: /custom-config
-              readOnly: true
           ports:
             - containerPort: {{ .Values.settings.prometheus_port }}
               name: exporter
@@ -107,6 +103,3 @@ spec:
         - name: kmsg
           hostPath:
             path: /dev/kmsg
-        - name: custom-config
-          configMap:
-            name: node-problem-detector-custom-config
