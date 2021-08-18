@@ -13,6 +13,7 @@ spec:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       k8s-app: kube-dns
@@ -104,7 +105,11 @@ spec:
             path: /ready
             port: 8181
             scheme: HTTP
-          initialDelaySeconds: 5
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 1
       dnsPolicy: Default
       volumes:
         - name: config-volume
