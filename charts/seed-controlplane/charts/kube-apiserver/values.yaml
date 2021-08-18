@@ -112,9 +112,6 @@ sni:
   podMutatorEnabled: false
   # apiserverFQDN: foo.bar.
 
-mountHostCADirectories:
-  enabled: false
-
 # watchCacheSizes:
 #   default: 100
 #   resources:

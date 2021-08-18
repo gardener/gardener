@@ -95,7 +95,6 @@ featureGates:
   ManagedIstio: true
   APIServerSNI: true
   CachedRuntimeClients: true
-  MountHostCADirectories: true
   SeedKubeScheduler: false
   ReversedVPN: false
   UseDNSRecords: false

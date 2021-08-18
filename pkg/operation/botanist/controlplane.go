@@ -335,8 +335,7 @@ func getResourcesForAPIServer(nodeCount int32, scalingClass string) (string, str
 
 func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	var (
-		hvpaEnabled            = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-		mountHostCADirectories = gardenletfeatures.FeatureGate.Enabled(features.MountHostCADirectories)
+		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
 	)
 
 	if b.ManagedSeed != nil {
@@ -555,10 +554,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	serviceAccountConfigVals["issuer"] = serviceAccountTokenIssuerURL
 	defaultValues["serviceAccountConfig"] = serviceAccountConfigVals
 	defaultValues["admissionPlugins"] = admissionPlugins
-
-	defaultValues["mountHostCADirectories"] = map[string]interface{}{
-		"enabled": mountHostCADirectories,
-	}
 
 	values, err := b.InjectSeedShootImages(defaultValues,
 		charts.ImageNameVpnSeed,
