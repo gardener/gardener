@@ -88,8 +88,8 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 // case the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle())
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetKubeletCACertificate(string(b.LoadSecret[v1beta1constants.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]))
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKey(string(b.LoadSecret[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]))
+	b.Shoot.Components.Extensions.OperatingSystemConfig.SetKubeletCACertificate(string(b.LoadSecret(v1beta1constants.SecretNameCAKubelet).Data[secrets.DataKeyCertificateCA]))
+	b.Shoot.Components.Extensions.OperatingSystemConfig.SetSSHPublicKey(string(b.LoadSecret(v1beta1constants.SecretNameSSHKeyPair).Data[secrets.DataKeySSHAuthorizedKeys]))
 
 	if b.isShootNodeLoggingEnabled() {
 		b.Shoot.Components.Extensions.OperatingSystemConfig.SetPromtailRBACAuthToken(b.PromtailRBACAuthToken)

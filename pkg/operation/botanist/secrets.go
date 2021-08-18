@@ -136,7 +136,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		b.StoreSecret(name, secret)
 	}
 	for _, name := range b.AllSecretKeys() {
-		b.StoreCheckSum(name, utils.ComputeSecretChecksum(b.LoadSecret(name).Data))
+		b.StoreCheckSum(name, utils.ComputeSecretCheckSum(b.LoadSecret(name).Data))
 	}
 
 	wildcardCert, err := seed.GetWildcardCertificate(ctx, b.K8sSeedClient.Client())
@@ -289,11 +289,7 @@ func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *s
 			return err
 		}
 
-<<<<<<< HEAD
-		b.CheckSums[secretName] = utils.ComputeSecretCheckSum(secret.Data)
-=======
-		b.StoreCheckSum(secretName, utils.ComputeSecretChecksum(secret.Data))
->>>>>>> Make CheckSums map thread-safe
+		b.StoreCheckSum(secretName, utils.ComputeSecretCheckSum(secret.Data))
 	}
 
 	return nil
