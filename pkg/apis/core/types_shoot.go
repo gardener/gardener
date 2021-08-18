@@ -315,7 +315,7 @@ type Kubernetes struct {
 type ClusterAutoscaler struct {
 	// ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 1 hour).
 	ScaleDownDelayAfterAdd *metav1.Duration
-	// ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to ScanInterval).
+	// ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (default: 0 secs).
 	ScaleDownDelayAfterDelete *metav1.Duration
 	// ScaleDownDelayAfterFailure how long after scale down failure that scale down evaluation resumes (default: 3 mins).
 	ScaleDownDelayAfterFailure *metav1.Duration

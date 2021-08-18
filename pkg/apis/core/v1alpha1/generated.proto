@@ -317,7 +317,7 @@ message ClusterAutoscaler {
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration scaleDownDelayAfterAdd = 1;
 
-  // ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to ScanInterval).
+  // ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (default: 0 secs).
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration scaleDownDelayAfterDelete = 2;
 

@@ -555,7 +555,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Expander).To(PointTo(Equal(expanderLeastWaste)))
 		})
 
-		It("should correctly override values the ClusterAutoscaler on setting them", func() {
+		It("should not default explicitly set fields", func() {
 			obj = &ClusterAutoscaler{
 				ScaleDownDelayAfterAdd:        &metav1.Duration{Duration: 1 * time.Hour},
 				ScaleDownDelayAfterDelete:     &metav1.Duration{Duration: 2 * time.Hour},

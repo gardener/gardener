@@ -237,7 +237,7 @@ spec:
   #   scaleDownUnneededTime: 30m
   #   scaleDownDelayAfterAdd: 1h
   #   scaleDownDelayAfterFailure: 3m
-  #   scaleDownDelayAfterDelete: 10s
+  #   scaleDownDelayAfterDelete: 0s
   #   scanInterval: 10s
   # verticalPodAutoscaler:
   #   enabled: true
