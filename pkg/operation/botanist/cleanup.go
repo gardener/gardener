@@ -35,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	storagev1 "k8s.io/api/storage/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -212,9 +213,15 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 		return err
 	}
 
+	var crdList client.ObjectList = &apiextensionsv1.CustomResourceDefinitionList{}
+
+	if version.ConstraintK8sLessEqual115.Check(b.Shoot.KubernetesVersion) {
+		crdList = &apiextensionsv1beta1.CustomResourceDefinitionList{}
+	}
+
 	return flow.Parallel(
 		cleanResourceFn(defaultOps, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, cleanOptions),
-		cleanResourceFn(crdCleanOps, c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOption, cleanOptions),
+		cleanResourceFn(crdCleanOps, c, crdList, CustomResourceDefinitionCleanOption, cleanOptions),
 	)(ctx)
 }
 
