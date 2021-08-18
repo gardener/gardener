@@ -138,11 +138,6 @@ func migrateMachineImageVersionCRISupport(cloudProfile *gardencorev1beta1.CloudP
 	var migrationHappened bool
 	for i, image := range cloudProfile.Spec.MachineImages {
 		for j, version := range image.Versions {
-			if version.CRI == nil {
-				cloudProfile.Spec.MachineImages[i].Versions[j].CRI = []gardencorev1beta1.CRI{{Name: gardencorev1beta1.CRINameDocker}}
-				migrationHappened = true
-				continue
-			}
 			if containsDockerCRIName(version.CRI) {
 				continue
 			}
