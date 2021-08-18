@@ -56,7 +56,7 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 // DeployWorker deploys the Worker custom resource and triggers the restore operation in case
 // the Shoot is in the restore phase of the control plane migration
 func (b *Botanist) DeployWorker(ctx context.Context) error {
-	b.Shoot.Components.Extensions.Worker.SetSSHPublicKey(b.Secrets[v1beta1constants.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys])
+	b.Shoot.Components.Extensions.Worker.SetSSHPublicKey(b.LoadSecret(v1beta1constants.SecretNameSSHKeyPair).Data[secrets.DataKeySSHAuthorizedKeys])
 	b.Shoot.Components.Extensions.Worker.SetInfrastructureProviderStatus(b.Shoot.Components.Extensions.Infrastructure.ProviderStatus())
 	b.Shoot.Components.Extensions.Worker.SetWorkerNameToOperatingSystemConfigsMap(b.Shoot.Components.Extensions.OperatingSystemConfig.WorkerNameToOperatingSystemConfigsMap())
 
