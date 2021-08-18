@@ -1,3 +1,7 @@
+{{- define "blackbox-exporter.deployment.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "blackbox-exporter.config.name" . | sha256sum | trunc 8 }}: {{ include "blackbox-exporter.config.name" . }}
+{{- end -}}
+---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
@@ -7,6 +11,8 @@ metadata:
     gardener.cloud/role: monitoring
     component: blackbox-exporter
     origin: gardener
+  annotations:
+{{ include "blackbox-exporter.deployment.annotations" . | indent 4 }}
 spec:
   revisionHistoryLimit: 1
   replicas: 1
@@ -16,7 +22,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-blackbox-exporter-config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+{{ include "blackbox-exporter.deployment.annotations" . | indent 8 }}
       labels:
         origin: gardener
         gardener.cloud/role: monitoring
@@ -70,4 +76,4 @@ spec:
       volumes:
       - name: blackbox-exporter-config
         configMap:
-          name: blackbox-exporter-config
+          name: {{ include "blackbox-exporter.config.name" . }}

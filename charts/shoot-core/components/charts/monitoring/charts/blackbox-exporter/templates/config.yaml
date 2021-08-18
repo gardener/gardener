@@ -1,22 +1,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: blackbox-exporter-config
+  name: {{ include "blackbox-exporter.config.name" . }}
   namespace: kube-system
   labels:
     app: prometheus
     role: monitoring
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+immutable: true
 data:
-  blackbox.yaml: |
-    modules:
-      http_kubernetes_service:
-        prober: http
-        timeout: 10s
-        http:
-          headers:
-            Accept: "*/*"
-            Accept-Language: "en-US"
-          tls_config:
-            ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-          bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-          preferred_ip_protocol: "ip4"
+{{ include "blackbox-exporter.config.data" . | indent 2 }}
