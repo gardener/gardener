@@ -88,14 +88,14 @@ func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 
 	checkSumDH := diffieHellmanKeyChecksum
 	openvpnDiffieHellmanSecret := map[string][]byte{"dh2048.pem": []byte(diffieHellmanKey)}
-	if dh, ok := b.Secrets[v1beta1constants.GardenRoleOpenVPNDiffieHellman]; ok {
+	if dh := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); dh != nil {
 		openvpnDiffieHellmanSecret = dh.Data
-		checkSumDH = b.CheckSums[v1beta1constants.GardenRoleOpenVPNDiffieHellman]
+		checkSumDH = b.LoadCheckSum(v1beta1constants.GardenRoleOpenVPNDiffieHellman)
 	}
 
 	b.Shoot.Components.ControlPlane.VPNSeedServer.SetSecrets(vpnseedserver.Secrets{
-		TLSAuth:          component.Secret{Name: vpnseedserver.VpnSeedServerTLSAuth, Checksum: b.CheckSums[vpnseedserver.VpnSeedServerTLSAuth], Data: b.Secrets[vpnseedserver.VpnSeedServerTLSAuth].Data},
-		Server:           component.Secret{Name: vpnseedserver.DeploymentName, Checksum: b.CheckSums[vpnseedserver.DeploymentName], Data: b.Secrets[vpnseedserver.DeploymentName].Data},
+		TLSAuth:          component.Secret{Name: vpnseedserver.VpnSeedServerTLSAuth, Checksum: b.LoadCheckSum(vpnseedserver.VpnSeedServerTLSAuth), Data: b.LoadSecret(vpnseedserver.VpnSeedServerTLSAuth).Data},
+		Server:           component.Secret{Name: vpnseedserver.DeploymentName, Checksum: b.LoadCheckSum(vpnseedserver.DeploymentName), Data: b.LoadSecret(vpnseedserver.DeploymentName).Data},
 		DiffieHellmanKey: component.Secret{Name: v1beta1constants.GardenRoleOpenVPNDiffieHellman, Checksum: checkSumDH, Data: openvpnDiffieHellmanSecret},
 	})
 
