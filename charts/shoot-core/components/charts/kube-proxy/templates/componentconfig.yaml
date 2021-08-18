@@ -2,23 +2,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: kube-proxy-config
+  name: {{ include "kube-proxy.componentconfig.name" . }}
   namespace: kube-system
+  labels:
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+immutable: true
 data:
-  config.yaml: |-
-    ---
-    apiVersion: {{ include "proxycomponentconfigversion" . }}
-    kind: KubeProxyConfiguration
-    clientConnection:
-      kubeconfig: /var/lib/kube-proxy-kubeconfig/kubeconfig
-{{- if not .Values.enableIPVS }}
-    clusterCIDR: {{ .Values.global.podNetwork }}
-{{- end }}
-    metricsBindAddress: 0.0.0.0:{{ .Values.ports.metrics }}
-    mode: {{ include "kube-proxy.mode" . }}
-    conntrack:
-      maxPerCore: 524288
-    {{- if .Values.featureGates }}
-    featureGates:
-{{ toYaml .Values.featureGates | indent 6 }}
-    {{- end }}
+{{ include "kube-proxy.componentconfig.data" . | indent 2 }}

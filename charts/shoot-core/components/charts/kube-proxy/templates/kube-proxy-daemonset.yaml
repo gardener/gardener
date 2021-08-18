@@ -1,3 +1,9 @@
+{{- define "kube-proxy.daemonset.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "kube-proxy.componentconfig.name" . | sha256sum | trunc 8 }}: {{ include "kube-proxy.componentconfig.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "kube-proxy.cleanup-script.name" . | sha256sum | trunc 8 }}: {{ include "kube-proxy.cleanup-script.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "kube-proxy.conntrack-fix-script.name" . | sha256sum | trunc 8 }}: {{ include "kube-proxy.conntrack-fix-script.name" . }}
+reference.resources.gardener.cloud/secret-{{ include "kube-proxy.secret-kubeconfig.name" . | sha256sum | trunc 8 }}: {{ include "kube-proxy.secret-kubeconfig.name" . }}
+{{- end -}}
 ---
 apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
@@ -7,6 +13,8 @@ metadata:
   labels:
     gardener.cloud/role: system-component
     origin: gardener
+  annotations:
+{{ include "kube-proxy.daemonset.annotations" . | indent 4 }}
 spec:
   updateStrategy:
     type: RollingUpdate
@@ -18,10 +26,7 @@ spec:
     metadata:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
-        checksum/secret-kube-proxy: {{ include (print $.Template.BasePath "/kube-proxy-secret.yaml") . | sha256sum }}
-        checksum/configmap-componentconfig: {{ include (print $.Template.BasePath "/componentconfig.yaml") . | sha256sum }}
-        checksum/configmap-kube-proxy-cleanup-script: {{ include (print $.Template.BasePath "/kube-proxy-cleanup-script.yaml") . | sha256sum }}
-        checksum/configmap-conntrack-fix-script: {{ include (print $.Template.BasePath "/conntrack-fix-script.yaml") . | sha256sum }}
+{{ include "kube-proxy.daemonset.annotations" . | indent 8 }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
@@ -130,10 +135,10 @@ spec:
       volumes:
       - name: kubeconfig
         secret:
-          secretName: kube-proxy
+          secretName: {{ include "kube-proxy.secret-kubeconfig.name" . }}
       - name: kube-proxy-config
         configMap:
-          name: kube-proxy-config
+          name: {{ include "kube-proxy.componentconfig.name" . }}
       - name: ssl-certs-hosts
         hostPath:
           path: /usr/share/ca-certificates
@@ -145,7 +150,7 @@ spec:
           path: /lib/modules
       - name: kube-proxy-cleanup-script
         configMap:
-          name: kube-proxy-cleanup-script
+          name: {{ include "kube-proxy.cleanup-script.name" . }}
           defaultMode: 0777
       - name: kube-proxy-dir
         hostPath:
@@ -157,5 +162,5 @@ spec:
           type: FileOrCreate
       - name: conntrack-fix-script
         configMap:
-          name: conntrack-fix-script
+          name: {{ include "kube-proxy.conntrack-fix-script.name" . }}
 
