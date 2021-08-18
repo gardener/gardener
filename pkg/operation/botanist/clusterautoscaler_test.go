@@ -99,9 +99,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			clusterAutoscaler = mockclusterautoscaler.NewMockInterface(ctrl)
 			worker = mockworker.NewMockInterface(ctrl)
 
-			botanist.CheckSums = map[string]string{
-				secretName: checksum,
-			}
+			botanist.StoreCheckSum(secretName, checksum)
 			botanist.SeedNamespaceObject = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: namespaceUID,

@@ -227,7 +227,6 @@ func (b *Builder) WithExposureClassHandlerFromConfig(cfg *config.GardenletConfig
 func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Operation, error) {
 	operation := &Operation{
 		ClientMap: clientMap,
-		CheckSums: make(map[string]string),
 	}
 
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
@@ -250,7 +249,7 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 	for k, v := range secretsMap {
 		secrets[k] = v
 	}
-	operation.Secrets = secrets
+	operation.secrets = secrets
 
 	garden, err := b.gardenFunc(ctx, secrets)
 	if err != nil {
@@ -399,7 +398,7 @@ func (o *Operation) IsAPIServerRunning(ctx context.Context) (bool, error) {
 // GetSecretKeysOfRole returns a list of keys which are present in the Garden Secrets map and which
 // are prefixed with <kind>.
 func (o *Operation) GetSecretKeysOfRole(kind string) []string {
-	return common.GetSecretKeysWithPrefix(kind, o.Secrets)
+	return common.FilterEntriesByPrefix(kind, o.AllSecretKeys())
 }
 
 func makeDescription(stats *flow.Stats) string {
@@ -655,4 +654,76 @@ func (o *Operation) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedA
 	}
 
 	return addresses
+}
+
+// StoreCheckSum stores the passed checksum under the given key from the operation. Calling this function is thread-safe.
+func (o *Operation) StoreCheckSum(key, value string) {
+	o.checkSumsMutex.Lock()
+	defer o.checkSumsMutex.Unlock()
+
+	if o.checkSums == nil {
+		o.checkSums = make(map[string]string)
+	}
+
+	o.checkSums[key] = value
+}
+
+// LoadCheckSum loads the checksum value under the given key from the operation. Calling this function is thread-safe.
+func (o *Operation) LoadCheckSum(key string) string {
+	o.checkSumsMutex.RLock()
+	defer o.checkSumsMutex.RUnlock()
+
+	val := o.checkSums[key]
+	return val
+}
+
+// DeleteCheckSum deletes the checksum entry under the given key from the operation. Calling this function is thread-safe.
+func (o *Operation) DeleteCheckSum(key string) {
+	o.checkSumsMutex.Lock()
+	defer o.checkSumsMutex.Unlock()
+
+	delete(o.checkSums, key)
+}
+
+// StoreSecret stores the passed secret under the given key from the operation. Calling this function is thread-safe.
+func (o *Operation) StoreSecret(key string, secret *corev1.Secret) {
+	o.secretsMutex.Lock()
+	defer o.secretsMutex.Unlock()
+
+	if o.secrets == nil {
+		o.secrets = make(map[string]*corev1.Secret)
+	}
+
+	o.secrets[key] = secret
+}
+
+// AllSecretKeys returns all stored secret keys from the operation. Calling this function is thread-safe.
+func (o *Operation) AllSecretKeys() []string {
+	o.secretsMutex.RLock()
+	defer o.secretsMutex.RUnlock()
+
+	var keys []string
+	for key := range o.secrets {
+		keys = append(keys, key)
+	}
+	return keys
+}
+
+// LoadSecret loads the secret under the given key from the operation. Calling this function is thread-safe.
+// Be aware that the returned pointer and the underlying secret map refer to the same secret object.
+// If you need to modify the returned secret, copy it first and store the changes via `StoreSecret`.
+func (o *Operation) LoadSecret(key string) *corev1.Secret {
+	o.secretsMutex.RLock()
+	defer o.secretsMutex.RUnlock()
+
+	val := o.secrets[key]
+	return val
+}
+
+// DeleteSecret deleted the secret under the given key from the operation. Calling this function is thread-safe.
+func (o *Operation) DeleteSecret(key string) {
+	o.secretsMutex.Lock()
+	defer o.secretsMutex.Unlock()
+
+	delete(o.secrets, key)
 }

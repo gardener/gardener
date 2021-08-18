@@ -389,4 +389,48 @@ var _ = Describe("common", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
+
+	Describe("#FilterEntriesByPrefix", func() {
+		var (
+			prefix  string
+			entries []string
+		)
+
+		BeforeEach(func() {
+			prefix = "role"
+			entries = []string{
+				"foo",
+				"bar",
+			}
+		})
+
+		It("should only return entries with prefix", func() {
+			expectedEntries := []string{
+				fmt.Sprintf("%s-%s", prefix, "foo"),
+				fmt.Sprintf("%s-%s", prefix, "bar"),
+			}
+
+			entries = append(entries, expectedEntries...)
+
+			result := FilterEntriesByPrefix(prefix, entries)
+			Expect(result).To(ContainElements(expectedEntries))
+		})
+
+		It("should return all entries", func() {
+			expectedEntries := []string{
+				fmt.Sprintf("%s-%s", prefix, "foo"),
+				fmt.Sprintf("%s-%s", prefix, "bar"),
+			}
+
+			entries = expectedEntries
+
+			result := FilterEntriesByPrefix(prefix, entries)
+			Expect(result).To(ContainElements(expectedEntries))
+		})
+
+		It("should return no entries", func() {
+			result := FilterEntriesByPrefix(prefix, entries)
+			Expect(result).To(BeEmpty())
+		})
+	})
 })
