@@ -1,41 +1,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-{{ .Values.role }}-dashboards
+  name: {{ include "grafana.dashboards.name" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     component: grafana
     role: {{ .Values.role }}
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+immutable: true
 data:
-{{- if .Values.sni.enabled }}
-  {{ range $name, $bytes := .Files.Glob "dashboards/operators/istio/**.json" }}
-  {{ base $name }}: |-
-{{ toString $bytes | indent 4}}
-{{- end }}
-{{- end }}
-{{- if .Values.nodeLocalDNS.enabled }}
-  {{ range $name, $bytes := .Files.Glob "dashboards/dns/**.json" }}
-  {{ base $name }}: |-
-{{ toString $bytes | indent 4}}
-{{- end }}
-{{- end }}
-{{ if eq .Values.role "users" }}
-{{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
-{{ if not (and (eq $name "dashboards/owners/shoot-vpa-dashboard.json") (eq $.Values.vpaEnabled false)) }}
-  {{ base $name }}: |-
-{{ toString $bytes | indent 4}}
-{{ end }}
-{{ end }}
-{{ else }}
-{{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
-  {{ base $name }}: |-
-{{ toString $bytes | indent 4}}
-{{ end }}
-{{ range $name, $bytes := .Files.Glob "dashboards/operators/**.json" }}
-  {{ base $name }}: |-
-{{ toString $bytes | indent 4}}
-  {{ end }}
-{{ end }}
-{{- if .Values.extensions.dashboards }}
-{{- toString .Values.extensions.dashboards | indent 2 }}
-{{ end }}
+{{ include "grafana.dashboards.data" . | indent 2 }}

@@ -1,37 +1,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-{{ .Values.role }}-datasources
+  name: {{ include "grafana.datasources.name" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     component: grafana
     role: {{ .Values.role }}
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+immutable: true
 data:
-  datasources.yaml: |-
-    # config file version
-    apiVersion: 1
-
-    # list of datasources that should be deleted from the database
-    deleteDatasources:
-    - name: Graphite
-      orgId: 1
-
-    # list of datasources to insert/update depending
-    # whats available in the database
-    datasources:
-    - name: prometheus
-      type: prometheus
-      access: proxy
-      url: http://prometheus-web:80
-      basicAuth: false
-      isDefault: true
-      version: 1
-      editable: false
-      jsonData:
-        timeInterval: 1m
-    - name: loki
-      type: loki
-      access: proxy
-      url: http://loki.{{ .Release.Namespace }}.svc:3100
-      jsonData:
-        maxLines: 1000
+{{ include "grafana.datasources.data" . | indent 2 }}
