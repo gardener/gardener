@@ -1,12 +1,22 @@
+{{- define "loki.statefulset.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "loki.config.name" . | sha256sum | trunc 8 }}: {{ include "loki.config.name" . }}
+{{- if .Values.rbacSidecarEnabled }}
+reference.resources.gardener.cloud/configmap-{{ include "telegraf.config.name" . | sha256sum | trunc 8 }}: {{ include "telegraf.config.name" . }}
+{{- end }}
+{{- end -}}
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: loki
   namespace: {{ .Release.Namespace }}
+  annotations:
+{{ include "loki.statefulset.annotations" . | indent 4 }}
+{{- if .Values.annotations }}
+{{ toYaml .Values.annotations | indent 4 }}
+{{- end }}
   labels:
 {{ toYaml .Values.labels | indent 4 }}
-  annotations:
-{{ toYaml .Values.annotations | indent 4 }}
 spec:
   replicas: {{ .Values.replicas }}
   selector:
@@ -22,11 +32,10 @@ spec:
 {{- end}}
 {{ toYaml .Values.labels | indent 8 }}
       annotations:
-        checksum/configmap-loki-config: {{ include (print $.Template.BasePath "/loki-configmap.yaml") . | sha256sum }}
+{{ include "loki.statefulset.annotations" . | indent 8 }}
 {{- if .Values.rbacSidecarEnabled }}
         checksum/kube-rbac-proxy-kubeconfig: {{ .Values.kubeRBACProxyKubeconfigCheckSum }}
-        checksum/configmap-telegraf-config: {{ include (print $.Template.BasePath "/telegraf-config.yaml") . | sha256sum }}
-{{- end}}
+{{- end }}
     spec:
       serviceAccountName: loki
       securityContext:
@@ -136,14 +145,14 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: loki-config
+            name: {{ include "loki.config.name" . }}
 {{- if .Values.rbacSidecarEnabled }}
         - name: kubeconfig
           secret:
             secretName: kube-rbac-proxy-kubeconfig
         - name: telegraf-config-volume
           configMap:
-            name: telegraf-config
+            name: {{ include "telegraf.config.name" . }}
 {{- end }}
   volumeClaimTemplates:
     - metadata:

@@ -877,6 +877,8 @@ func RunReconcileSeedFlow(
 	// TODO(rfranzke): Remove in a future release.
 	if err := kutil.DeleteObjects(ctx, seedClient,
 		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "fluent-bit-config"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "loki-config"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "telegraf-config"}},
 	); err != nil {
 		return err
 	}
