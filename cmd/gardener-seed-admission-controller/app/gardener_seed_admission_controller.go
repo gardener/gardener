@@ -18,7 +18,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -35,6 +34,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 )
 
