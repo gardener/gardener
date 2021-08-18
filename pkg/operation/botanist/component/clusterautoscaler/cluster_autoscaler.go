@@ -17,7 +17,6 @@ package clusterautoscaler
 import (
 	"context"
 	"fmt"
-	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -339,15 +338,6 @@ func (c *clusterAutoscaler) emptyManagedResourceSecret() *corev1.Secret {
 
 func (c *clusterAutoscaler) computeCommand() []string {
 	var (
-		expander                      = "least-waste"
-		scaleDownUtilizationThreshold = 0.5
-		maxNodeProvisionTime          = metav1.Duration{Duration: 20 * time.Minute}
-		scaleDownUnneededTime         = metav1.Duration{Duration: 30 * time.Minute}
-		scaleDownDelayAfterAdd        = metav1.Duration{Duration: time.Hour}
-		scaleDownDelayAfterFailure    = metav1.Duration{Duration: 3 * time.Minute}
-		scaleDownDelayAfterDelete     = metav1.Duration{Duration: 0}
-		scanInterval                  = metav1.Duration{Duration: 10 * time.Second}
-
 		command = []string{
 			"./cluster-autoscaler",
 			fmt.Sprintf("--address=:%d", portMetrics),
@@ -362,42 +352,20 @@ func (c *clusterAutoscaler) computeCommand() []string {
 		}
 	)
 
-	if c.config != nil {
-		if val := c.config.Expander; val != nil {
-			expander = *val
-		}
-		if val := c.config.MaxNodeProvisionTime; val != nil {
-			maxNodeProvisionTime = *val
-		}
-		if val := c.config.ScaleDownUtilizationThreshold; val != nil {
-			scaleDownUtilizationThreshold = *val
-		}
-		if val := c.config.ScaleDownUnneededTime; val != nil {
-			scaleDownUnneededTime = *val
-		}
-		if val := c.config.ScaleDownDelayAfterAdd; val != nil {
-			scaleDownDelayAfterAdd = *val
-		}
-		if val := c.config.ScaleDownDelayAfterFailure; val != nil {
-			scaleDownDelayAfterFailure = *val
-		}
-		if val := c.config.ScaleDownDelayAfterDelete; val != nil {
-			scaleDownDelayAfterDelete = *val
-		}
-		if val := c.config.ScanInterval; val != nil {
-			scanInterval = *val
-		}
+	if c.config == nil {
+		c.config = &gardencorev1beta1.ClusterAutoscaler{}
 	}
+	gardencorev1beta1.SetDefaults_ClusterAutoscaler(c.config)
 
 	command = append(command,
-		fmt.Sprintf("--expander=%s", expander),
-		fmt.Sprintf("--max-node-provision-time=%s", maxNodeProvisionTime.Duration),
-		fmt.Sprintf("--scale-down-utilization-threshold=%f", scaleDownUtilizationThreshold),
-		fmt.Sprintf("--scale-down-unneeded-time=%s", scaleDownUnneededTime.Duration),
-		fmt.Sprintf("--scale-down-delay-after-add=%s", scaleDownDelayAfterAdd.Duration),
-		fmt.Sprintf("--scale-down-delay-after-delete=%s", scaleDownDelayAfterDelete.Duration),
-		fmt.Sprintf("--scale-down-delay-after-failure=%s", scaleDownDelayAfterFailure.Duration),
-		fmt.Sprintf("--scan-interval=%s", scanInterval.Duration),
+		fmt.Sprintf("--expander=%s", *c.config.Expander),
+		fmt.Sprintf("--max-node-provision-time=%s", c.config.MaxNodeProvisionTime.Duration),
+		fmt.Sprintf("--scale-down-utilization-threshold=%f", *c.config.ScaleDownUtilizationThreshold),
+		fmt.Sprintf("--scale-down-unneeded-time=%s", c.config.ScaleDownUnneededTime.Duration),
+		fmt.Sprintf("--scale-down-delay-after-add=%s", c.config.ScaleDownDelayAfterAdd.Duration),
+		fmt.Sprintf("--scale-down-delay-after-delete=%s", c.config.ScaleDownDelayAfterDelete.Duration),
+		fmt.Sprintf("--scale-down-delay-after-failure=%s", c.config.ScaleDownDelayAfterFailure.Duration),
+		fmt.Sprintf("--scan-interval=%s", c.config.ScanInterval.Duration),
 	)
 
 	for _, machineDeployment := range c.machineDeployments {

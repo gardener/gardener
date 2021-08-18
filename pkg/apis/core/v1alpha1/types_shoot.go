@@ -381,7 +381,7 @@ type ClusterAutoscaler struct {
 	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 30 mins).
 	// +optional
 	ScaleDownUnneededTime *metav1.Duration `json:"scaleDownUnneededTime,omitempty" protobuf:"bytes,4,opt,name=scaleDownUnneededTime"`
-	// ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed
+	// ScaleDownUtilizationThreshold defines the threshold in decimal (0.0 - 1.0) under which a node is being removed (default: 0.5).
 	// +optional
 	ScaleDownUtilizationThreshold *float64 `json:"scaleDownUtilizationThreshold,omitempty" protobuf:"fixed64,5,opt,name=scaleDownUtilizationThreshold"`
 	// ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).
@@ -390,28 +390,31 @@ type ClusterAutoscaler struct {
 	// Expander defines the algorithm to use during scale up (default: least-waste).
 	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders.
 	// +optional
-	Expander *string `json:"expander,omitempty" protobuf:"bytes,7,opt,name=expander"`
+	Expander *ExpanderMode `json:"expander,omitempty" protobuf:"bytes,7,opt,name=expander"`
 	// MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
 	// +optional
 	MaxNodeProvisionTime *metav1.Duration `json:"maxNodeProvisionTime,omitempty" protobuf:"bytes,8,opt,name=maxNodeProvisionTime"`
 }
+
+// ExpanderMode is type used for Expander values
+type ExpanderMode string
 
 const (
 	// ClusterAutoscalerExpanderLeastWaste selects the node group that will have the least idle CPU (if tied, unused memory) after scale-up.
 	// This is useful when you have different classes of nodes, for example, high CPU or high memory nodes, and
 	// only want to expand those when there are pending pods that need a lot of those resources.
 	// This is the default value.
-	ClusterAutoscalerExpanderLeastWaste = "least-waste"
+	ClusterAutoscalerExpanderLeastWaste ExpanderMode = "least-waste"
 	// ClusterAutoscalerExpanderRandom selects the node group that would be able to schedule the most pods when scaling up.
 	// This is useful when you are using nodeSelector to make sure certain pods land on certain nodes.
 	// Note that this won't cause the autoscaler to select bigger nodes vs. smaller, as it can add multiple smaller nodes at once.
-	ClusterAutoscalerExpanderMostPods = "most-pods"
+	ClusterAutoscalerExpanderMostPods ExpanderMode = "most-pods"
 	// ClusterAutoscalerExpanderRandom selects the node group that has the highest priority assigned by the user. For configurations,
 	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/expander/priority/readme.md
-	ClusterAutoscalerExpanderPriority = "priority"
+	ClusterAutoscalerExpanderPriority ExpanderMode = "priority"
 	// ClusterAutoscalerExpanderRandom should be used when you don't have a particular need
 	// for the node groups to scale differently.
-	ClusterAutoscalerExpanderRandom = "random"
+	ClusterAutoscalerExpanderRandom ExpanderMode = "random"
 )
 
 // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.

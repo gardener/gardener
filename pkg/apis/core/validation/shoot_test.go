@@ -1841,7 +1841,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 			})
 		})
 
-		negativeDuration := metav1.Duration{Duration: -time.Second}
+		var (
+			negativeDuration   = metav1.Duration{Duration: -time.Second}
+			expanderLeastWaste = core.ClusterAutoscalerExpanderLeastWaste
+			expanderMostPods   = core.ClusterAutoscalerExpanderMostPods
+			expanderPriority   = core.ClusterAutoscalerExpanderPriority
+			expanderRandom     = core.ClusterAutoscalerExpanderRandom
+		)
 
 		Context("ClusterAutoscaler validation", func() {
 			DescribeTable("cluster autoscaler values",
@@ -1865,25 +1871,17 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxNodeProvisionTime: &negativeDuration,
 				}, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
 				Entry("valid with expander least waste", core.ClusterAutoscaler{
-					Expander: pointer.String(core.ClusterAutoscalerExpanderLeastWaste),
+					Expander: &expanderLeastWaste,
 				}, BeEmpty()),
 				Entry("valid with expander most pods", core.ClusterAutoscaler{
-					Expander: pointer.String(core.ClusterAutoscalerExpanderMostPods),
+					Expander: &expanderMostPods,
 				}, BeEmpty()),
 				Entry("valid with expander priority", core.ClusterAutoscaler{
-					Expander: pointer.String(core.ClusterAutoscalerExpanderPriority),
+					Expander: &expanderPriority,
 				}, BeEmpty()),
 				Entry("valid with expander random", core.ClusterAutoscaler{
-					Expander: pointer.String(core.ClusterAutoscalerExpanderRandom),
+					Expander: &expanderRandom,
 				}, BeEmpty()),
-				Entry("invalid with expander test", core.ClusterAutoscaler{
-					Expander: pointer.String("test"),
-				}, ConsistOf(field.NotSupported(field.NewPath("expander"), "test", []string{
-					core.ClusterAutoscalerExpanderLeastWaste,
-					core.ClusterAutoscalerExpanderMostPods,
-					core.ClusterAutoscalerExpanderPriority,
-					core.ClusterAutoscalerExpanderRandom,
-				}))),
 			)
 		})
 

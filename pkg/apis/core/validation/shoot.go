@@ -72,10 +72,10 @@ var (
 		string(core.CRINameDocker),
 	)
 	availableClusterAutoscalerExpanderModes = sets.NewString(
-		core.ClusterAutoscalerExpanderLeastWaste,
-		core.ClusterAutoscalerExpanderMostPods,
-		core.ClusterAutoscalerExpanderPriority,
-		core.ClusterAutoscalerExpanderRandom,
+		string(core.ClusterAutoscalerExpanderLeastWaste),
+		string(core.ClusterAutoscalerExpanderMostPods),
+		string(core.ClusterAutoscalerExpanderPriority),
+		string(core.ClusterAutoscalerExpanderRandom),
 	)
 
 	// assymetric algorithms from https://datatracker.ietf.org/doc/html/rfc7518#section-3.1
@@ -802,7 +802,7 @@ func ValidateClusterAutoscaler(autoScaler core.ClusterAutoscaler, fldPath *field
 	if maxNodeProvisionTime := autoScaler.MaxNodeProvisionTime; maxNodeProvisionTime != nil && maxNodeProvisionTime.Duration < 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxNodeProvisionTime"), *maxNodeProvisionTime, "can not be negative"))
 	}
-	if expander := autoScaler.Expander; expander != nil && !availableClusterAutoscalerExpanderModes.Has(*expander) {
+	if expander := autoScaler.Expander; expander != nil && !availableClusterAutoscalerExpanderModes.Has(string(*expander)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("expander"), *expander, availableClusterAutoscalerExpanderModes.List()))
 	}
 

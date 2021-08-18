@@ -2626,7 +2626,7 @@ float64
 </td>
 <td>
 <em>(Optional)</em>
-<p>ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed</p>
+<p>ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed (default: 0.5).</p>
 </td>
 </tr>
 <tr>
@@ -2647,7 +2647,9 @@ Kubernetes meta/v1.Duration
 <td>
 <code>expander</code></br>
 <em>
-string
+<a href="#core.gardener.cloud/v1beta1.ExpanderMode">
+ExpanderMode
+</a>
 </em>
 </td>
 <td>
@@ -3557,6 +3559,15 @@ string
 </p>
 <p>
 <p>ErrorCode is a string alias.</p>
+</p>
+<h3 id="core.gardener.cloud/v1beta1.ExpanderMode">ExpanderMode
+(<code>string</code> alias)</p></h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ClusterAutoscaler">ClusterAutoscaler</a>)
+</p>
+<p>
+<p>ExpanderMode is type used for Expander values</p>
 </p>
 <h3 id="core.gardener.cloud/v1beta1.ExpirableVersion">ExpirableVersion
 </h3>

@@ -629,7 +629,7 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 	}
 	if in.Expander != nil {
 		in, out := &in.Expander, &out.Expander
-		*out = new(string)
+		*out = new(ExpanderMode)
 		**out = **in
 	}
 	if in.MaxNodeProvisionTime != nil {

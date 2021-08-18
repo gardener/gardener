@@ -1690,7 +1690,7 @@ func schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref common.ReferenceCallbac
 					},
 					"scaleDownUtilizationThreshold": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed",
+							Description: "ScaleDownUtilizationThreshold defines the threshold in decimal (0.0 - 1.0) under which a node is being removed (default: 0.5).",
 							Type:        []string{"number"},
 							Format:      "double",
 						},
@@ -8685,7 +8685,7 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 					},
 					"scaleDownUtilizationThreshold": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed",
+							Description: "ScaleDownUtilizationThreshold defines the threshold in fraction (0.0 - 1.0) under which a node is being removed (default: 0.5).",
 							Type:        []string{"number"},
 							Format:      "double",
 						},
