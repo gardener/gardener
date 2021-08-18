@@ -44,10 +44,10 @@ type Builder struct {
 	gardenClusterIdentityFunc func() (string, error)
 	imageVectorFunc           func() (imagevector.ImageVector, error)
 	exposureClassFunc         func(string) (*config.ExposureClassHandler, error)
-	loggerFunc                func() (*logrus.Entry, error)
+	loggerFunc                func() (logrus.FieldLogger, error)
 	secretsFunc               func() (map[string]*corev1.Secret, error)
 	seedFunc                  func(context.Context) (*seed.Seed, error)
-	shootFunc                 func(context.Context, client.Client, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
+	shootFunc                 func(context.Context, client.Reader, *garden.Garden, *seed.Seed) (*shoot.Shoot, error)
 }
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
@@ -59,7 +59,7 @@ type Operation struct {
 	secretsMutex sync.RWMutex
 
 	Config                    *config.GardenletConfiguration
-	Logger                    *logrus.Entry
+	Logger                    logrus.FieldLogger
 	GardenerInfo              *gardencorev1beta1.Gardener
 	GardenClusterIdentity     string
 	ImageVector               imagevector.ImageVector

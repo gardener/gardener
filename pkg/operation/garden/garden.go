@@ -21,16 +21,15 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -54,8 +53,8 @@ func (b *Builder) WithProject(project *gardencorev1beta1.Project) *Builder {
 	return b
 }
 
-// WithProjectFromReader sets the projectFunc attribute after fetching it from the lister.
-func (b *Builder) WithProjectFromReader(reader client.Reader, namespace string) *Builder {
+// WithProjectFrom sets the projectFunc attribute after fetching it from the given reader.
+func (b *Builder) WithProjectFrom(reader client.Reader, namespace string) *Builder {
 	b.projectFunc = func(ctx context.Context) (*gardencorev1beta1.Project, error) {
 		project, _, err := gutil.ProjectAndNamespaceFromReader(ctx, reader, namespace)
 		return project, err
@@ -167,63 +166,11 @@ func DomainIsDefaultDomain(domain string, defaultDomains []*Domain) *Domain {
 	return nil
 }
 
-// ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
-// The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
-func ReadGardenSecrets(ctx context.Context, rd client.Reader, seedLister gardencorelisters.SeedLister, namespace string) (map[string]*corev1.Secret, error) {
-	return readGardenSecretsFromCache(
-		ctx,
-		func(ctx context.Context, namespace string, selector labels.Selector) ([]corev1.Secret, error) {
-			secrets := &corev1.SecretList{}
-			if err := rd.List(ctx, secrets, &client.MatchingLabelsSelector{Selector: selector}, client.InNamespace(namespace)); err != nil {
-				return nil, err
-			}
-			return secrets.Items, nil
-		},
-		func(_ context.Context) ([]*gardencorev1beta1.Seed, error) {
-			return seedLister.List(labels.Everything())
-		},
-		namespace,
-	)
-}
-
-// ReadGardenSecretsFromReader reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
-// The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
-func ReadGardenSecretsFromReader(ctx context.Context, rd client.Reader, namespace string) (map[string]*corev1.Secret, error) {
-	return readGardenSecretsFromCache(
-		ctx,
-		func(ctx context.Context, namespace string, selector labels.Selector) ([]corev1.Secret, error) {
-			secretList := &corev1.SecretList{}
-			if err := rd.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: selector}); err != nil {
-				return nil, err
-			}
-
-			return secretList.Items, nil
-		},
-		func(ctx context.Context) ([]*gardencorev1beta1.Seed, error) {
-			seedList := &gardencorev1beta1.SeedList{}
-			if err := rd.List(ctx, seedList); err != nil {
-				return nil, err
-			}
-
-			out := make([]*gardencorev1beta1.Seed, 0, len(seedList.Items))
-			for _, seed := range seedList.Items {
-				out = append(out, seed.DeepCopy())
-			}
-			return out, nil
-		},
-		namespace,
-	)
-}
-
-type (
-	listSecretsFunc func(ctx context.Context, namespace string, selector labels.Selector) ([]corev1.Secret, error)
-	listSeedsFunc   func(ctx context.Context) ([]*gardencorev1beta1.Seed, error)
-)
-
 var gardenRoleReq = utils.MustNewRequirement(v1beta1constants.GardenRole, selection.Exists)
 
-// TODO(timebertt): simplify this and only use client.Reader, once listers are eliminated
-func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFunc, seedLister listSeedsFunc, namespace string) (map[string]*corev1.Secret, error) {
+// ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
+// The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
+func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, log logrus.FieldLogger) (map[string]*corev1.Secret, error) {
 	var (
 		logInfo                             []string
 		secretsMap                          = make(map[string]*corev1.Secret)
@@ -232,18 +179,18 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		numberOfAlertingSecrets             = 0
 	)
 
-	secretsGardenRole, err := secretLister(ctx, namespace, labels.NewSelector().Add(gardenRoleReq))
-	if err != nil {
+	secretList := &corev1.SecretList{}
+	if err := c.List(ctx, secretList, client.InNamespace(namespace), client.MatchingLabelsSelector{Selector: labels.NewSelector().Add(gardenRoleReq)}); err != nil {
 		return nil, err
 	}
 
-	for _, secret := range secretsGardenRole {
+	for _, secret := range secretList.Items {
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleDefaultDomain {
 			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
-				logger.Logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
+				log.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
 				continue
 			}
 			defaultDomainSecret := secret
@@ -256,7 +203,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleInternalDomain {
 			_, domain, _, _, _, err := gutil.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
-				logger.Logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
+				log.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
 				continue
 			}
 			internalDomainSecret := secret
@@ -301,11 +248,11 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 	}
 
 	// Check if an internal domain secret is required
-	seeds, err := seedLister(ctx)
-	if err != nil {
+	seedList := &gardencorev1beta1.SeedList{}
+	if err := c.List(ctx, seedList); err != nil {
 		return nil, err
 	}
-	for _, seed := range seeds {
+	for _, seed := range seedList.Items {
 		if !seed.Spec.Settings.ShootDNS.Enabled {
 			continue
 		}
@@ -338,7 +285,7 @@ func readGardenSecretsFromCache(ctx context.Context, secretLister listSecretsFun
 		return nil, fmt.Errorf("can only accept at most one alerting secret, but found %d", numberOfAlertingSecrets)
 	}
 
-	logger.Logger.Infof("Found secrets in namespace %q: %s", namespace, strings.Join(logInfo, ", "))
+	log.Infof("Found secrets in namespace %q: %s", namespace, strings.Join(logInfo, ", "))
 
 	return secretsMap, nil
 }

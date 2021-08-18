@@ -25,8 +25,6 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -55,7 +53,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,19 +64,17 @@ const DefaultImageVector = "images.yaml"
 
 // GardenletControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenletControllerFactory struct {
-	cfg                    *config.GardenletConfiguration
-	gardenClusterIdentity  string
-	identity               *gardencorev1beta1.Gardener
-	clientMap              clientmap.ClientMap
-	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	recorder               record.EventRecorder
-	healthManager          healthz.Manager
+	clientMap             clientmap.ClientMap
+	cfg                   *config.GardenletConfiguration
+	identity              *gardencorev1beta1.Gardener
+	gardenClusterIdentity string
+	recorder              record.EventRecorder
+	healthManager         healthz.Manager
 }
 
 // NewGardenletControllerFactory creates a new factory for controllers for the Garden API group.
 func NewGardenletControllerFactory(
 	clientMap clientmap.ClientMap,
-	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	cfg *config.GardenletConfiguration,
 	identity *gardencorev1beta1.Gardener,
 	gardenClusterIdentity string,
@@ -87,29 +82,23 @@ func NewGardenletControllerFactory(
 	healthManager healthz.Manager,
 ) *GardenletControllerFactory {
 	return &GardenletControllerFactory{
-		cfg:                    cfg,
-		identity:               identity,
-		gardenClusterIdentity:  gardenClusterIdentity,
-		clientMap:              clientMap,
-		k8sGardenCoreInformers: gardenCoreInformerFactory,
-		recorder:               recorder,
-		healthManager:          healthManager,
+		clientMap:             clientMap,
+		cfg:                   cfg,
+		identity:              identity,
+		gardenClusterIdentity: gardenClusterIdentity,
+		recorder:              recorder,
+		healthManager:         healthManager,
 	}
 }
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenletControllerFactory) Run(ctx context.Context) error {
-	var (
-		seedInformer  = f.k8sGardenCoreInformers.Core().V1beta1().Seeds().Informer()
-		shootInformer = f.k8sGardenCoreInformers.Core().V1beta1().Shoots().Informer()
-	)
-
-	k8sGardenClient, err := f.clientMap.GetClient(ctx, keys.ForGarden())
+	gardenClientSet, err := f.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return fmt.Errorf("failed to get garden client: %+v", err)
 	}
 
-	if err := addAllFieldIndexes(ctx, k8sGardenClient.Cache()); err != nil {
+	if err := addAllFieldIndexes(ctx, gardenClientSet.Cache()); err != nil {
 		return err
 	}
 
@@ -117,13 +106,8 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to start ClientMap: %+v", err)
 	}
 
-	f.k8sGardenCoreInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), seedInformer.HasSynced, shootInformer.HasSynced) {
-		return fmt.Errorf("timed out waiting for Garden core caches to sync")
-	}
-
 	// Register Seed object
-	if err := f.registerSeed(ctx, k8sGardenClient); err != nil {
+	if err := f.registerSeed(ctx, gardenClientSet.Client()); err != nil {
 		return fmt.Errorf("failed to register the seed: %+v", err)
 	}
 
@@ -137,7 +121,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	}
 
 	gardenNamespace := &corev1.Namespace{}
-	runtime.Must(k8sGardenClient.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
+	runtime.Must(gardenClientSet.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
 
 	// Initialize the workqueue metrics collection.
 	gardenmetrics.RegisterWorkqueMetrics()
@@ -168,7 +152,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing ControllerInstallation controller: %w", err)
 	}
 
-	extensionsController := extensionscontroller.NewController(k8sGardenClient, seedClient, f.cfg.SeedConfig.Name, logger.Logger, f.recorder)
+	extensionsController := extensionscontroller.NewController(gardenClientSet, seedClient, f.cfg.SeedConfig.Name, logger.Logger, f.recorder)
 
 	managedSeedController, err := managedseedcontroller.NewManagedSeedController(ctx, f.clientMap, f.cfg, imageVector, f.recorder, logger.Logger)
 	if err != nil {
@@ -185,7 +169,10 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}
 
-	shootController := shootcontroller.NewShootController(f.clientMap, f.k8sGardenCoreInformers, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
+	shootController, err := shootcontroller.NewShootController(ctx, f.clientMap, logger.Logger, f.cfg, f.identity, f.gardenClusterIdentity, imageVector, f.recorder)
+	if err != nil {
+		return fmt.Errorf("failed initializing Shoot controller: %w", err)
+	}
 
 	// Initialize the Controller metrics collection.
 	gardenmetrics.RegisterControllerMetrics(
@@ -244,7 +231,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 }
 
 // registerSeed reconciles the seed resource if gardenlet is configured to take care about it.
-func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenClient kubernetes.Interface) error {
+func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenClient client.Client) error {
 	seed := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: f.cfg.SeedConfig.Name,
@@ -257,7 +244,7 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 		return fmt.Errorf("could not convert gardenlet configuration: %+v", err)
 	}
 
-	operationResult, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient.Client(), seed, func() error {
+	operationResult, err := controllerutils.GetAndCreateOrMergePatch(ctx, gardenClient, seed, func() error {
 		seed.Labels = utils.MergeStringMaps(map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleSeed,
 		}, f.cfg.SeedConfig.Labels)
@@ -278,7 +265,7 @@ func (f *GardenletControllerFactory) registerSeed(ctx context.Context, gardenCli
 	}
 
 	// Verify that seed namespace exists.
-	return gardenClient.Client().Get(ctx, kutil.Key(gutil.ComputeGardenNamespace(f.cfg.SeedConfig.Name)), &corev1.Namespace{})
+	return gardenClient.Get(ctx, kutil.Key(gutil.ComputeGardenNamespace(f.cfg.SeedConfig.Name)), &corev1.Namespace{})
 }
 
 // addAllFieldIndexes adds all field indexes used by gardenlet to the given FieldIndexer (i.e. cache).

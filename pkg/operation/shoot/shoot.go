@@ -23,13 +23,17 @@ import (
 
 	"github.com/Masterminds/semver"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerextensions "github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/features"
@@ -40,10 +44,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	corev1 "k8s.io/api/core/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var versionConstraintK8sGreaterEqual118 *semver.Constraints
@@ -91,23 +91,15 @@ func (b *Builder) WithShootObjectFromCluster(seedClient kubernetes.Interface, sh
 	return b
 }
 
-// WithShootObjectFromLister sets the shootObjectFunc attribute at the Builder after fetching it from the given lister.
-func (b *Builder) WithShootObjectFromLister(shootLister gardencorelisters.ShootLister, namespace, name string) *Builder {
-	b.shootObjectFunc = func(context.Context) (*gardencorev1beta1.Shoot, error) {
-		return shootLister.Shoots(namespace).Get(name)
-	}
-	return b
-}
-
 // WithCloudProfileObject sets the cloudProfileFunc attribute at the Builder.
 func (b *Builder) WithCloudProfileObject(cloudProfileObject *gardencorev1beta1.CloudProfile) *Builder {
 	b.cloudProfileFunc = func(context.Context, string) (*gardencorev1beta1.CloudProfile, error) { return cloudProfileObject, nil }
 	return b
 }
 
-// WithCloudProfileObjectFromReader sets the cloudProfileFunc attribute at the Builder after fetching it from the
-// given API reader.
-func (b *Builder) WithCloudProfileObjectFromReader(reader client.Reader) *Builder {
+// WithCloudProfileObjectFrom sets the cloudProfileFunc attribute at the Builder after fetching it from the
+// given reader.
+func (b *Builder) WithCloudProfileObjectFrom(reader client.Reader) *Builder {
 	b.cloudProfileFunc = func(ctx context.Context, name string) (*gardencorev1beta1.CloudProfile, error) {
 		obj := &gardencorev1beta1.CloudProfile{}
 		return obj, reader.Get(ctx, kutil.Key(name), obj)
@@ -133,8 +125,8 @@ func (b *Builder) WithShootSecret(secret *corev1.Secret) *Builder {
 	return b
 }
 
-// WithShootSecretFromReader sets the shootSecretFunc attribute at the Builder after fetching it from the given reader.
-func (b *Builder) WithShootSecretFromReader(c client.Reader) *Builder {
+// WithShootSecretFrom sets the shootSecretFunc attribute at the Builder after fetching it from the given reader.
+func (b *Builder) WithShootSecretFrom(c client.Reader) *Builder {
 	b.shootSecretFunc = func(ctx context.Context, namespace, secretBindingName string) (*corev1.Secret, error) {
 		binding := &gardencorev1beta1.SecretBinding{}
 		if err := c.Get(ctx, kutil.Key(namespace, secretBindingName), binding); err != nil {
@@ -151,9 +143,9 @@ func (b *Builder) WithShootSecretFromReader(c client.Reader) *Builder {
 	return b
 }
 
-// WithExposureClassFromReader sets the exposureClassFunc attribute at the Builder after fetching
-// the exposure class with the given API reader.
-func (b *Builder) WithExposureClassFromReader(c client.Reader) *Builder {
+// WithExposureClassFrom sets the exposureClassFunc attribute at the Builder after fetching
+// the exposure class with the given reader.
+func (b *Builder) WithExposureClassFrom(c client.Reader) *Builder {
 	b.exposureClassFunc = func(ctx context.Context, exposureClassName string) (*gardencorev1alpha1.ExposureClass, error) {
 		exposureClass := &gardencorev1alpha1.ExposureClass{}
 		if err := c.Get(ctx, kutil.Key(exposureClassName), exposureClass); err != nil {
@@ -189,7 +181,7 @@ func (b *Builder) WithDefaultDomains(defaultDomains []*garden.Domain) *Builder {
 }
 
 // Build initializes a new Shoot object.
-func (b *Builder) Build(ctx context.Context, c client.Client) (*Shoot, error) {
+func (b *Builder) Build(ctx context.Context, c client.Reader) (*Shoot, error) {
 	shoot := &Shoot{}
 
 	shootObject, err := b.shootObjectFunc(ctx)
@@ -528,7 +520,7 @@ func ConstructExternalClusterDomain(shoot *gardencorev1beta1.Shoot) *string {
 
 // ConstructExternalDomain constructs an object containing all relevant information of the external domain that
 // shall be used for a shoot cluster - based on the configuration of the Garden cluster and the shoot itself.
-func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *gardencorev1beta1.Shoot, shootSecret *corev1.Secret, defaultDomains []*garden.Domain) (*garden.Domain, error) {
+func ConstructExternalDomain(ctx context.Context, c client.Reader, shoot *gardencorev1beta1.Shoot, shootSecret *corev1.Secret, defaultDomains []*garden.Domain) (*garden.Domain, error) {
 	externalClusterDomain := ConstructExternalClusterDomain(shoot)
 	if externalClusterDomain == nil {
 		return nil, nil
@@ -553,7 +545,7 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 	case primaryProvider != nil:
 		if primaryProvider.SecretName != nil {
 			secret := &corev1.Secret{}
-			if err := client.Get(ctx, kutil.Key(shoot.Namespace, *primaryProvider.SecretName), secret); err != nil {
+			if err := c.Get(ctx, kutil.Key(shoot.Namespace, *primaryProvider.SecretName), secret); err != nil {
 				return nil, fmt.Errorf("could not get dns provider secret %q: %+v", *shoot.Spec.DNS.Providers[0].SecretName, err)
 			}
 			externalDomain.SecretData = secret.Data

@@ -57,7 +57,7 @@ import (
 func (c *Controller) shootAdd(obj interface{}, resetRateLimiting bool) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 
@@ -71,7 +71,7 @@ func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 	var (
 		oldShoot    = oldObj.(*gardencorev1beta1.Shoot)
 		newShoot    = newObj.(*gardencorev1beta1.Shoot)
-		shootLogger = logger.NewShootLogger(logger.Logger, newShoot.ObjectMeta.Name, newShoot.ObjectMeta.Namespace)
+		shootLogger = logger.NewShootLogger(c.logger, newShoot.ObjectMeta.Name, newShoot.ObjectMeta.Namespace)
 	)
 
 	// If the generation did not change for an update event (i.e., no changes to the .spec section have
@@ -92,7 +92,7 @@ func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 func (c *Controller) shootDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 
@@ -126,11 +126,6 @@ func (c *Controller) checkSeedAndSyncClusterResource(ctx context.Context, shoot 
 	seedName := shoot.Spec.SeedName
 	if seedName == nil || seed == nil {
 		return nil
-	}
-
-	seed, err := c.seedLister.Get(*seedName)
-	if err != nil {
-		return fmt.Errorf("could not find seed %s: %w", *seedName, err)
 	}
 
 	// Don't wait for the Seed to be ready if it is already marked for deletion. In this case
@@ -169,21 +164,23 @@ func (c *Controller) deleteClusterResourceFromSeed(ctx context.Context, shoot *g
 	return client.IgnoreNotFound(seedClient.Client().Delete(ctx, cluster))
 }
 
-func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := logger.NewShootLogger(logger.Logger, req.Name, req.Namespace)
-
-	shoot, err := c.shootLister.Shoots(req.Namespace).Get(req.Name)
-	if apierrors.IsNotFound(err) {
-		log.Debug("Skipping because Shoot has been deleted")
-		return reconcile.Result{}, nil
-	}
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+func (c *Controller) reconcileShootRequest(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+	log := logger.NewShootLogger(c.logger, request.Name, request.Namespace)
 
 	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get garden client: %w", err)
+	}
+
+	shoot := &gardencorev1beta1.Shoot{}
+	if err := gardenClient.Client().Get(ctx, request.NamespacedName, shoot); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Debug("Skipping because Shoot has been deleted")
+			return reconcile.Result{}, nil
+		}
+
+		log.Errorf("unable to retrieve object from store: %+v", err)
+		return reconcile.Result{}, err
 	}
 
 	// fetch related objects required for shoot operation
@@ -197,8 +194,8 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	seed, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(*shoot.Spec.SeedName)
-	if err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Spec.SeedName}, seed); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -225,8 +222,8 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, req reconcile.Re
 			return reconcile.Result{}, errors.New("Shoot has still Bastions")
 		}
 
-		sourceSeed, err := c.k8sGardenCoreInformers.Core().V1beta1().Seeds().Lister().Get(*shoot.Status.SeedName)
-		if err != nil {
+		sourceSeed := &gardencorev1beta1.Seed{}
+		if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Status.SeedName}, seed); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -249,8 +246,8 @@ func shouldPrepareShootForMigration(shoot *gardencorev1beta1.Shoot) bool {
 
 const taskID = "initializeOperation"
 
-func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
-	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Client(), c.seedLister, gutil.ComputeGardenNamespace(seed.Name))
+func (c *Controller) initializeOperation(ctx context.Context, logger logrus.FieldLogger, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (*operation.Operation, error) {
+	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient.Client(), gutil.ComputeGardenNamespace(seed.Name), logger)
 	if err != nil {
 		return nil, err
 	}
@@ -268,7 +265,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 	seedObj, err := seedpkg.
 		NewBuilder().
 		WithSeedObject(seed).
-		Build()
+		Build(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -277,9 +274,9 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		NewBuilder().
 		WithShootObject(shoot).
 		WithCloudProfileObject(cloudProfile).
-		WithShootSecretFromReader(gardenClient.Client()).
+		WithShootSecretFrom(gardenClient.Client()).
 		WithProjectName(project.Name).
-		WithExposureClassFromReader(gardenClient.Client()).
+		WithExposureClassFrom(gardenClient.Client()).
 		WithDisableDNS(!seedObj.Info.Spec.Settings.ShootDNS.Enabled).
 		WithInternalDomain(gardenObj.InternalDomain).
 		WithDefaultDomains(gardenObj.DefaultDomains).
@@ -303,7 +300,7 @@ func (c *Controller) initializeOperation(ctx context.Context, logger *logrus.Ent
 		Build(ctx, c.clientMap)
 }
 
-func (c *Controller) deleteShoot(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
+func (c *Controller) deleteShoot(ctx context.Context, logger logrus.FieldLogger, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
 	var (
 		err error
 
@@ -413,7 +410,7 @@ func (c *Controller) shootHasBastions(ctx context.Context, shoot *gardencorev1be
 	return len(bastionList.Items) > 0, nil
 }
 
-func (c *Controller) reconcileShoot(ctx context.Context, logger *logrus.Entry, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
+func (c *Controller) reconcileShoot(ctx context.Context, logger logrus.FieldLogger, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
 	var (
 		key                                        = shootKey(shoot)
 		operationType                              = v1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
@@ -542,7 +539,7 @@ func (c *Controller) durationUntilNextShootSync(shoot *gardencorev1beta1.Shoot, 
 	return window.RandomDurationUntilNext(now, regularReconciliationIsDue)
 }
 
-func patchShootStatusAndRequeueOnSyncError(ctx context.Context, c client.StatusClient, shoot *gardencorev1beta1.Shoot, logger *logrus.Entry, err error) (reconcile.Result, error) {
+func patchShootStatusAndRequeueOnSyncError(ctx context.Context, c client.StatusClient, shoot *gardencorev1beta1.Shoot, logger logrus.FieldLogger, err error) (reconcile.Result, error) {
 	msg := fmt.Sprintf("Shoot cannot be synced with Seed: %v", err)
 	logger.Error(err)
 

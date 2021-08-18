@@ -23,8 +23,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	"github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
@@ -55,12 +53,13 @@ import (
 
 var _ = Describe("Shoot Care Control", func() {
 	var (
+		log           logrus.FieldLogger
 		careControl   reconcile.Reconciler
 		gardenletConf *config.GardenletConfiguration
 	)
 
 	BeforeSuite(func() {
-		logger.Logger = logger.NewNopLogger()
+		log = logger.NewNopLogger()
 	})
 
 	AfterEach(func() {
@@ -71,9 +70,8 @@ var _ = Describe("Shoot Care Control", func() {
 		var (
 			ctx context.Context
 
-			gardenClient              client.Client
-			gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory
-			careSyncPeriod            time.Duration
+			gardenClient   client.Client
+			careSyncPeriod time.Duration
 
 			gardenSecrets                       []corev1.Secret
 			seed                                *gardencorev1beta1.Seed
@@ -139,14 +137,11 @@ var _ = Describe("Shoot Care Control", func() {
 					},
 				},
 			}
-
-			gardenCoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
-			Expect(gardenCoreInformerFactory.Core().V1beta1().Seeds().Informer().GetStore().Add(seed)).To(Succeed())
-			Expect(gardenCoreInformerFactory.Core().V1beta1().Shoots().Informer().GetStore().Add(shoot)).To(Succeed())
 		})
 
 		JustBeforeEach(func() {
 			Expect(gardenClient.Create(ctx, shoot)).To(Succeed())
+			Expect(gardenClient.Create(ctx, seed)).To(Succeed())
 
 			for _, secret := range gardenSecrets {
 				Expect(gardenClient.Create(ctx, secret.DeepCopy())).To(Succeed())
@@ -175,7 +170,7 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
-					careControl = NewCareReconciler(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), log, nil, nil, "", gardenletConf)
 
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
@@ -194,7 +189,7 @@ var _ = Describe("Shoot Care Control", func() {
 				It("should report a setup failure", func() {
 					operationFunc := opFunc(nil, errors.New("foo"))
 					defer test.WithVars(&NewOperation, operationFunc)()
-					careControl = NewCareReconciler(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), log, nil, nil, "", gardenletConf)
 
 					_, err := careControl.Reconcile(ctx, req)
 					Expect(err).To(MatchError("error reading Garden secrets: need an internal domain secret but found none"))
@@ -209,13 +204,13 @@ var _ = Describe("Shoot Care Control", func() {
 							Namespace: shootNamespace,
 						},
 						Spec: gardencorev1beta1.ShootSpec{
-							SeedName: &shootName,
+							SeedName: &seedName,
 						},
 					}
 				})
 
 				It("should report a setup failure", func() {
-					careControl = NewCareReconciler(clientMapBuilder.Build(), gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
+					careControl = NewCareReconciler(clientMapBuilder.Build(), log, nil, nil, "", gardenletConf)
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
 
 					updatedShoot := &gardencorev1beta1.Shoot{}
@@ -261,7 +256,7 @@ var _ = Describe("Shoot Care Control", func() {
 					test.WithVar(&NewOperation, operationFunc),
 					test.WithVar(&NewGarbageCollector, nopGarbageCollectorFunc()),
 				)
-				careControl = NewCareReconciler(clientMap, gardenCoreInformerFactory.Core().V1beta1(), nil, nil, "", gardenletConf)
+				careControl = NewCareReconciler(clientMap, log, nil, nil, "", gardenletConf)
 			})
 
 			AfterEach(func() {
@@ -447,7 +442,6 @@ var _ = Describe("Shoot Care Control", func() {
 
 				Context("when shoot is a seed", func() {
 					var (
-						seed           *gardencorev1beta1.Seed
 						seedConditions []gardencorev1beta1.Condition
 					)
 
@@ -465,9 +459,16 @@ var _ = Describe("Shoot Care Control", func() {
 							},
 						}
 
-						seed = &gardencorev1beta1.Seed{
+						managedSeedSeed := &gardencorev1beta1.Seed{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: shootName,
+							},
+							Spec: gardencorev1beta1.SeedSpec{
+								Settings: &gardencorev1beta1.SeedSettings{
+									ShootDNS: &gardencorev1beta1.SeedSettingShootDNS{
+										Enabled: true,
+									},
+								},
 							},
 							Status: gardencorev1beta1.SeedStatus{
 								Conditions: seedConditions,
@@ -476,7 +477,7 @@ var _ = Describe("Shoot Care Control", func() {
 
 						managedSeed = &seedmanagementv1alpha1.ManagedSeed{}
 
-						Expect(gardenClient.Create(ctx, seed)).To(Succeed())
+						Expect(gardenClient.Create(ctx, managedSeedSeed)).To(Succeed())
 					})
 
 					AfterEach(func() {
@@ -667,10 +668,9 @@ func opFunc(op *operation.Operation, err error) NewOperationFunc {
 		_ string,
 		_ map[string]*corev1.Secret,
 		_ imagevector.ImageVector,
-		_ v1beta1.Interface,
 		_ clientmap.ClientMap,
 		_ *gardencorev1beta1.Shoot,
-		_ *logrus.Entry,
+		_ logrus.FieldLogger,
 	) (*operation.Operation, error) {
 		return op, err
 	}

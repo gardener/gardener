@@ -175,7 +175,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 	seedObj, err := seedpkg.
 		NewBuilder().
 		WithSeedObject(seed).
-		Build()
+		Build(ctx)
 	if err != nil {
 		message := fmt.Sprintf("Failed to create a Seed object (%s).", err.Error())
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError, message)
@@ -308,11 +308,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		return err
 	}
 
-	gardenSecrets, err := garden.ReadGardenSecretsFromReader(
-		ctx,
-		gardenClient,
-		gutil.ComputeGardenNamespace(seed.Name),
-	)
+	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient, gutil.ComputeGardenNamespace(seed.Name), log)
 	if err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "GardenSecretsError", err.Error())
 		_ = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped)
