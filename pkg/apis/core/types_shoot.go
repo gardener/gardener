@@ -332,6 +332,24 @@ type ClusterAutoscaler struct {
 	MaxNodeProvisionTime *metav1.Duration
 }
 
+const (
+	// ClusterAutoscalerExpanderLeastWaste selects the node group that will have the least idle CPU (if tied, unused memory) after scale-up.
+	// This is useful when you have different classes of nodes, for example, high CPU or high memory nodes, and
+	// only want to expand those when there are pending pods that need a lot of those resources.
+	// This is the default value.
+	ClusterAutoscalerExpanderLeastWaste = "least-waste"
+	// ClusterAutoscalerExpanderRandom selects the node group that would be able to schedule the most pods when scaling up.
+	// This is useful when you are using nodeSelector to make sure certain pods land on certain nodes.
+	// Note that this won't cause the autoscaler to select bigger nodes vs. smaller, as it can add multiple smaller nodes at once.
+	ClusterAutoscalerExpanderMostPods = "most-pods"
+	// ClusterAutoscalerExpanderRandom selects the node group that has the highest priority assigned by the user. For configurations,
+	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/expander/priority/readme.md
+	ClusterAutoscalerExpanderPriority = "priority"
+	// ClusterAutoscalerExpanderRandom should be used when you don't have a particular need
+	// for the node groups to scale differently.
+	ClusterAutoscalerExpanderRandom = "random"
+)
+
 // VerticalPodAutoscaler contains the configuration flags for the Kubernetes vertical pod autoscaler.
 type VerticalPodAutoscaler struct {
 	// Enabled specifies whether the Kubernetes VPA shall be enabled for the shoot cluster.

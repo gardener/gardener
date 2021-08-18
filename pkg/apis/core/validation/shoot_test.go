@@ -1864,6 +1864,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("invalid with negative maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &negativeDuration,
 				}, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
+				Entry("valid with expander least waste", core.ClusterAutoscaler{
+					Expander: pointer.String(core.ClusterAutoscalerExpanderLeastWaste),
+				}, BeEmpty()),
+				Entry("valid with expander most pods", core.ClusterAutoscaler{
+					Expander: pointer.String(core.ClusterAutoscalerExpanderMostPods),
+				}, BeEmpty()),
+				Entry("valid with expander priority", core.ClusterAutoscaler{
+					Expander: pointer.String(core.ClusterAutoscalerExpanderPriority),
+				}, BeEmpty()),
+				Entry("valid with expander random", core.ClusterAutoscaler{
+					Expander: pointer.String(core.ClusterAutoscalerExpanderRandom),
+				}, BeEmpty()),
+				Entry("invalid with expander test", core.ClusterAutoscaler{
+					Expander: pointer.String("test"),
+				}, ConsistOf(field.NotSupported(field.NewPath("expander"), "test", []string{
+					core.ClusterAutoscalerExpanderLeastWaste,
+					core.ClusterAutoscalerExpanderMostPods,
+					core.ClusterAutoscalerExpanderPriority,
+					core.ClusterAutoscalerExpanderRandom,
+				}))),
 			)
 		})
 

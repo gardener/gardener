@@ -342,7 +342,7 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 		obj.ScanInterval = &metav1.Duration{Duration: 10 * time.Second}
 	}
 	if obj.Expander == nil {
-		obj.Expander = pointer.String("least-waste")
+		obj.Expander = pointer.String(ClusterAutoscalerExpanderLeastWaste)
 	}
 	if obj.MaxNodeProvisionTime == nil {
 		obj.MaxNodeProvisionTime = &metav1.Duration{Duration: 20 * time.Minute}
