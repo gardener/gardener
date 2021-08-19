@@ -49,7 +49,7 @@ var _ = Describe("Promtail", func() {
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					charts.PromtailImageName: promtailImage,
+					charts.ImageNamePromtail: promtailImage,
 				},
 				LokiIngress:           lokiIngress,
 				PromtailRBACAuthToken: promtailRBACAuthToken,
@@ -139,7 +139,7 @@ ExecStart=/opt/bin/promtail -config.file=` + PathPromtailConfig)},
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					charts.PromtailImageName: promtailImage,
+					charts.ImageNamePromtail: promtailImage,
 				},
 				LokiIngress:           lokiIngress,
 				PromtailRBACAuthToken: "",
@@ -183,7 +183,7 @@ ExecStart=/bin/sh -c "echo service ` + UnitName + ` is removed!; while true; do 
 				CABundle:      &cABundle,
 				ClusterDomain: clusterDomain,
 				Images: map[string]*imagevector.Image{
-					charts.PromtailImageName: promtailImage,
+					charts.ImageNamePromtail: promtailImage,
 				},
 				LokiIngress:           "",
 				PromtailRBACAuthToken: promtailRBACAuthToken,
