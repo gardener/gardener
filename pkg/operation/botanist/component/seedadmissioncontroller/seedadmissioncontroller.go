@@ -385,6 +385,33 @@ func GetValidatingWebhookConfig(clientConfig admissionregistrationv1.WebhookClie
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
 			TimeoutSeconds:          pointer.Int32(10),
+		}, {
+			Name: "validation.extensions.seed.admission.core.gardener.cloud",
+			Rules: []admissionregistrationv1beta1.RuleWithOperations{{
+				Rule: admissionregistrationv1beta1.Rule{
+					APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+					APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+					Resources: []string{
+						"backupbuckets",
+						"backupentries",
+						"bastions",
+						"containerruntimes",
+						"controlplanes",
+						"dnsrecords",
+						"extensions",
+						"infrastructures",
+						"networks",
+						"operatingsystemconfigs",
+						"workers",
+					},
+				},
+				Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update},
+			}},
+			FailurePolicy:           &failurePolicy,
+			NamespaceSelector:       &metav1.LabelSelector{},
+			ClientConfig:            clientConfig,
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			TimeoutSeconds:          pointer.Int32(10),
 		}},
 	}
 }
