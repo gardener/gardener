@@ -65,13 +65,6 @@ const (
 	// alpha: v1.7.0
 	CachedRuntimeClients featuregate.Feature = "CachedRuntimeClients"
 
-	// MountHostCADirectories enables mounting common CA certificate directories in the Shoot API server pod that might be required for webhooks or OIDC.
-	// owner @danielfoehrKn
-	// alpha: v1.11.0
-	// beta: v1.26.0
-	// GA: v1.27.0
-	MountHostCADirectories featuregate.Feature = "MountHostCADirectories"
-
 	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
 	// in order to trigger shoot control plane migration.
 	// owner: @stoyanr

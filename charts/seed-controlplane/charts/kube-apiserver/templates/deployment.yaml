@@ -268,7 +268,6 @@ spec:
         # locations are taken from
         # https://github.com/golang/go/blob/1bb247a469e306c57a5e0eaba788efb8b3b1acef/src/crypto/x509/root_linux.go#L7-L15
         # we cannot be sure on which Node OS the Seed Cluster is running so, it's safer to mount them all
-          {{- if .Values.mountHostCADirectories.enabled }}
         - name: fedora-rhel6-openelec-cabundle
           mountPath: /etc/pki/tls
           readOnly: true
@@ -281,26 +280,6 @@ spec:
         - name: usr-share-cacerts
           mountPath: /usr/share/ca-certificates
           readOnly: true
-          {{- else }}
-        - name: debian-family-cabundle
-          mountPath: /etc/ssl/certs/ca-certificates.crt
-          readOnly: true
-        - name: fedora-rhel6-cabundle
-          mountPath: /etc/pki/tls/certs/ca-bundle.crt
-          readOnly: true
-        - name: opensuse-cabundle
-          mountPath: /etc/ssl/ca-bundle.pem
-          readOnly: true
-        - name: openelec-cabundle
-          mountPath: /etc/pki/tls/cacert.pem
-          readOnly: true
-        - name: centos-rhel7-cabundle
-          mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
-          readOnly: true
-        - name:  alpine-linux-cabundle
-          mountPath: /etc/ssl/cert.pem
-          readOnly: true
-          {{- end }}
         {{- end }}
       {{- if .Values.sni.podMutatorEnabled }}
       - name: apiserver-proxy-pod-mutator
@@ -445,7 +424,6 @@ spec:
       # locations are taken from
       # https://github.com/golang/go/blob/1bb247a469e306c57a5e0eaba788efb8b3b1acef/src/crypto/x509/root_linux.go#L7-L15
       # we cannot be sure on which Node OS the Seed Cluster is running so, it's safer to mount them all
-        {{- if .Values.mountHostCADirectories.enabled }}
       - hostPath:
           path: /etc/pki/tls
           type: "DirectoryOrCreate"
@@ -462,24 +440,4 @@ spec:
           path: /usr/share/ca-certificates
           type: "DirectoryOrCreate"
         name: usr-share-cacerts
-        {{- else }}
-      - name: debian-family-cabundle
-        hostPath:
-          path: /etc/ssl/certs/ca-certificates.crt
-      - name: fedora-rhel6-cabundle
-        hostPath:
-          path: /etc/pki/tls/certs/ca-bundle.crt
-      - name: opensuse-cabundle
-        hostPath:
-          path: /etc/ssl/ca-bundle.pem
-      - name: openelec-cabundle
-        hostPath:
-          path: /etc/pki/tls/cacert.pem
-      - name: centos-rhel7-cabundle
-        hostPath:
-          path: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
-      - name: alpine-linux-cabundle
-        hostPath:
-          path: /etc/ssl/cert.pem
-        {{- end }}
       {{- end }}

@@ -45,6 +45,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | MountHostCADirectories | `false` | `Alpha` | `1.11` | `1.25` |
 | MountHostCADirectories | `true` | `Beta` | `1.26` | `1.27` |
 | MountHostCADirectories | `true` | `GA` | `1.27` | |
+| MountHostCADirectories | | `Removed` | `1.30` | |
 
 ## Using a feature
 
