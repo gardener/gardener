@@ -36,7 +36,7 @@ import (
 func (c *Controller) cloudProfileAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 	c.cloudProfileQueue.Add(key)
@@ -49,7 +49,7 @@ func (c *Controller) cloudProfileUpdate(_, newObj interface{}) {
 func (c *Controller) cloudProfileDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 	c.cloudProfileQueue.Add(key)
@@ -81,7 +81,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, err
 	}
 
-	cloudProfileLogger := logger.NewFieldLogger(logger.Logger, "cloudprofile", cloudProfile.Name)
+	cloudProfileLogger := logger.NewFieldLogger(r.logger, "cloudprofile", cloudProfile.Name)
 
 	// The deletionTimestamp labels the CloudProfile as intended to get deleted. Before deletion, it has to be ensured that
 	// no Shoots and Seed are assigned to the CloudProfile anymore. If this is the case then the controller will remove
@@ -101,7 +101,7 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 			cloudProfileLogger.Infof("No Shoots are referencing the CloudProfile. Deletion accepted.")
 
 			if err := controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); client.IgnoreNotFound(err) != nil {
-				logger.Logger.Errorf("could not remove finalizer from CloudProfile: %s", err.Error())
+				cloudProfileLogger.Errorf("could not remove finalizer from CloudProfile: %s", err.Error())
 				return reconcile.Result{}, err
 			}
 			return reconcile.Result{}, nil
@@ -111,13 +111,48 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 		cloudProfileLogger.Info(message)
 		r.recorder.Event(cloudProfile, corev1.EventTypeNormal, v1beta1constants.EventResourceReferenced, message)
 
-		return reconcile.Result{}, fmt.Errorf("CloudProfile %q still has references", cloudProfile.Name)
+		return reconcile.Result{}, fmt.Errorf("Cannot delete CloudProfile %q, because the following Shoots are still referencing it: %+v", cloudProfile.Name, associatedShoots)
 	}
 
 	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
-		logger.Logger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
+		cloudProfileLogger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
 		return reconcile.Result{}, err
 	}
 
+	// TODO voelzmo - this migration step ensures that all MachineImageVersions in the Cloud Profile contain `docker` in their list of supported Container Runtimes
+	// This can be removed in a couple of versions. Note that while this is still in here, it is impossible to add an image without `docker` support!
+	migrationHappened := migrateMachineImageVersionCRISupport(cloudProfile)
+
+	if migrationHappened {
+		cloudProfileLogger.Infof("migrated Machine Image Versions to explicitly contain `docker` as supported CRI")
+		if err := r.gardenClient.Update(ctx, cloudProfile); err != nil {
+			cloudProfileLogger.Errorf("failed to update Cloud Profile spec: %+v", err)
+			return reconcile.Result{}, err
+		}
+	}
+
 	return reconcile.Result{}, nil
+}
+
+func migrateMachineImageVersionCRISupport(cloudProfile *gardencorev1beta1.CloudProfile) bool {
+	var migrationHappened bool
+	for i, image := range cloudProfile.Spec.MachineImages {
+		for j, version := range image.Versions {
+			if containsDockerCRIName(version.CRI) {
+				continue
+			}
+			cloudProfile.Spec.MachineImages[i].Versions[j].CRI = append(version.CRI, gardencorev1beta1.CRI{Name: gardencorev1beta1.CRINameDocker})
+			migrationHappened = true
+		}
+	}
+	return migrationHappened
+}
+
+func containsDockerCRIName(cris []gardencorev1beta1.CRI) bool {
+	for _, cri := range cris {
+		if cri.Name == gardencorev1beta1.CRINameDocker {
+			return true
+		}
+	}
+	return false
 }
