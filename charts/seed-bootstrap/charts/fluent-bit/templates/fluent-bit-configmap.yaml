@@ -9,5 +9,3 @@ metadata:
 immutable: true
 data:
 {{ include "fluent-bit.config.data" . | indent 2 }}
-
-

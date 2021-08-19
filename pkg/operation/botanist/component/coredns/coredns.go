@@ -28,6 +28,9 @@ import (
 const (
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-coredns"
+
+	deploymentName = "coredns"
+	containerName  = "coredns"
 )
 
 // New creates a new instance of DeployWaiter for coredns.
