@@ -44,8 +44,6 @@ import (
 const (
 	// SecretLabelKeyManagedResource is a key for a label on a secret with the value 'managed-resource'.
 	SecretLabelKeyManagedResource = "managed-resource"
-	// gardenerRestartedAtKey is annotation key for timestamp used to restart components.
-	gardenerRestartedAtKey = "gardener.cloud/restarted-at"
 )
 
 // GenerateKubernetesDashboardConfig generates the values which are required to render the chart of
@@ -281,17 +279,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"podNetwork":        b.Shoot.Networks.Pods.String(),
 			"vpaEnabled":        b.Shoot.WantsVerticalPodAutoscaler,
 		}
-		coreDNSConfig = map[string]interface{}{
-			"nodeNetwork": b.Shoot.GetNodeNetwork(),
-			"service": map[string]interface{}{
-				"clusterDNS": b.Shoot.Networks.CoreDNS.String(),
-				// TODO: resolve conformance test issue before changing:
-				// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
-				"domain": map[string]interface{}{
-					"clusterDomain": gardencorev1beta1.DefaultDomain,
-				},
-			},
-		}
 		nodeLocalDNSConfig = map[string]interface{}{
 			"domain": gardencorev1beta1.DefaultDomain,
 		}
@@ -348,7 +335,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 
 	if b.APIServerSNIEnabled() {
-		coreDNSConfig["kubeAPIServerHost"] = kasFQDN
 		nodeProblemDetectorConfig["env"] = []interface{}{
 			map[string]interface{}{
 				"name":  "KUBERNETES_SERVICE_HOST",
@@ -378,11 +364,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		extensions = append(extensions, extensionType)
 	}
 	shootInfo["extensions"] = strings.Join(extensions, ",")
-
-	coreDNS, err := b.InjectShootShootImages(coreDNSConfig, charts.ImageNameCoredns)
-	if err != nil {
-		return nil, err
-	}
 
 	// The node-local-dns interface cannot bind the kube-dns cluster IP since the interface
 	// used for IPVS load-balancing already uses this address.
@@ -439,7 +420,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 
 	values := map[string]interface{}{
 		"global":                 global,
-		"coredns":                coreDNS,
+		"coredns":                common.GenerateAddonConfig(nil, true),
 		"node-local-dns":         common.GenerateAddonConfig(nodelocalDNS, b.Shoot.NodeLocalDNSEnabled),
 		"kube-apiserver-kubelet": common.GenerateAddonConfig(nil, true),
 		"apiserver-proxy":        common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
