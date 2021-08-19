@@ -3033,7 +3033,8 @@ string
 <td>
 <em>(Optional)</em>
 <p>Type is the deployment type.
-Deprecated: Declare type via <code>ControllerDeployment</code> instead.</p>
+Deprecated: Declare type via <code>ControllerDeployment</code> instead.
+ATTENTION: This field will be deleted with Gardener v1.32.</p>
 </td>
 </tr>
 <tr>
@@ -3048,7 +3049,8 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <em>(Optional)</em>
 <p>ProviderConfig contains type-specific configuration.
-Deprecated: Use <code>DeploymentRefs</code> instead.</p>
+Deprecated: Use <code>DeploymentRefs</code> instead.
+ATTENTION: This field will be deleted with Gardener v1.32.</p>
 </td>
 </tr>
 <tr>

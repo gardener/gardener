@@ -85,10 +85,12 @@ type DeploymentRef struct {
 type ControllerRegistrationDeployment struct {
 	// Type is the deployment type.
 	// Deprecated: Declare type via `ControllerDeployment` instead.
+	// ATTENTION: This field will be deleted with Gardener v1.32.
 	// +optional
 	Type *string `json:"type,omitempty" protobuf:"bytes,1,opt,name=type"`
 	// ProviderConfig contains type-specific configuration.
 	// Deprecated: Use `DeploymentRefs` instead.
+	// ATTENTION: This field will be deleted with Gardener v1.32.
 	// +optional
 	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
