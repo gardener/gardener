@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/sirupsen/logrus"
-	authorizationv1beta1 "k8s.io/api/authorization/v1beta1"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
@@ -100,7 +100,7 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 
 	csrLogger.Infof("[CSR APPROVER] %s", csr.Name)
 
-	approved, err := authorize(ctx, r.gardenClient.Client(), csr, authorizationv1beta1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
+	approved, err := authorize(ctx, r.gardenClient.Client(), csr, authorizationv1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -122,14 +122,14 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 	return reconcile.Result{}, fmt.Errorf(message)
 }
 
-func authorize(ctx context.Context, c client.Client, csr *certificatesv1beta1.CertificateSigningRequest, resourceAttributes authorizationv1beta1.ResourceAttributes) (bool, error) {
-	extra := make(map[string]authorizationv1beta1.ExtraValue)
+func authorize(ctx context.Context, c client.Client, csr *certificatesv1beta1.CertificateSigningRequest, resourceAttributes authorizationv1.ResourceAttributes) (bool, error) {
+	extra := make(map[string]authorizationv1.ExtraValue)
 	for k, v := range csr.Spec.Extra {
-		extra[k] = authorizationv1beta1.ExtraValue(v)
+		extra[k] = authorizationv1.ExtraValue(v)
 	}
 
-	sar := &authorizationv1beta1.SubjectAccessReview{
-		Spec: authorizationv1beta1.SubjectAccessReviewSpec{
+	sar := &authorizationv1.SubjectAccessReview{
+		Spec: authorizationv1.SubjectAccessReviewSpec{
 			User:               csr.Spec.Username,
 			UID:                csr.Spec.UID,
 			Groups:             csr.Spec.Groups,

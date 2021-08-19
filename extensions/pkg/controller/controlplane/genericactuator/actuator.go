@@ -516,7 +516,7 @@ func marshalWebhooks(webhooks []admissionregistrationv1.MutatingWebhook, name st
 		}
 	)
 
-	if version.VersionConstraintK8sLessEqual115.Check(k8sVersion) {
+	if version.ConstraintK8sLessEqual115.Check(k8sVersion) {
 		u := &unstructured.Unstructured{}
 		if err := clientkubernetes.ShootScheme.Convert(mutatingWebhookConfiguration, u, nil); err != nil {
 			return nil, err
