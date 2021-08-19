@@ -52,14 +52,12 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	var (
-		credentials         = b.LoadSecret(common.MonitoringIngressCredentials)
-		credentialsUsers    = b.LoadSecret(common.MonitoringIngressCredentialsUsers)
-		basicAuth           = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
-		basicAuthUsers      = utils.CreateSHA1Secret(credentialsUsers.Data[secrets.DataKeyUserName], credentialsUsers.Data[secrets.DataKeyPassword])
-		alertingRules       = strings.Builder{}
-		scrapeConfigs       = strings.Builder{}
-		operatorsDashboards = strings.Builder{}
-		usersDashboards     = strings.Builder{}
+		credentials      = b.LoadSecret(common.MonitoringIngressCredentials)
+		credentialsUsers = b.LoadSecret(common.MonitoringIngressCredentialsUsers)
+		basicAuth        = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
+		basicAuthUsers   = utils.CreateSHA1Secret(credentialsUsers.Data[secrets.DataKeyUserName], credentialsUsers.Data[secrets.DataKeyPassword])
+		alertingRules    = strings.Builder{}
+		scrapeConfigs    = strings.Builder{}
 	)
 
 	// Fetch component-specific monitoring configuration
@@ -107,8 +105,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	for _, cm := range existingConfigMaps.Items {
 		alertingRules.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapAlertingRules]))
 		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapScrapeConfig]))
-		operatorsDashboards.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.GrafanaConfigMapOperatorDashboard]))
-		usersDashboards.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.GrafanaConfigMapUserDashboard]))
 	}
 
 	alerting, err := b.getCustomAlertingConfigs(ctx, b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting))
@@ -228,14 +224,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	if err := b.deployGrafanaCharts(ctx, common.GrafanaOperatorsRole, operatorsDashboards.String(), basicAuth, common.GrafanaOperatorsPrefix); err != nil {
-		return err
-	}
-
-	if err := b.deployGrafanaCharts(ctx, common.GrafanaUsersRole, usersDashboards.String(), basicAuthUsers, common.GrafanaUsersPrefix); err != nil {
-		return err
-	}
-
 	// Check if we want to deploy an alertmanager into the shoot namespace.
 	if b.Shoot.WantsAlertmanager {
 		var (
@@ -298,6 +286,44 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
+	var (
+		credentials         = b.LoadSecret(common.MonitoringIngressCredentials)
+		credentialsUsers    = b.LoadSecret(common.MonitoringIngressCredentialsUsers)
+		basicAuth           = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
+		basicAuthUsers      = utils.CreateSHA1Secret(credentialsUsers.Data[secrets.DataKeyUserName], credentialsUsers.Data[secrets.DataKeyPassword])
+		operatorsDashboards = strings.Builder{}
+		usersDashboards     = strings.Builder{}
+	)
+
+	// Fetch extensions provider-specific monitoring configuration
+	existingConfigMaps := &corev1.ConfigMapList{}
+	if err := b.K8sSeedClient.Client().List(ctx, existingConfigMaps,
+		client.InNamespace(b.Shoot.SeedNamespace),
+		client.MatchingLabels{v1beta1constants.LabelExtensionConfiguration: v1beta1constants.LabelMonitoring}); err != nil {
+		return err
+	}
+
+	// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
+	kutil.ByName().Sort(existingConfigMaps)
+
+	// Read extension monitoring configurations
+	for _, cm := range existingConfigMaps.Items {
+		if operatorsDashboard, ok := cm.Data[v1beta1constants.GrafanaConfigMapOperatorDashboard]; ok && operatorsDashboard != "" {
+			operatorsDashboards.WriteString(fmt.Sprintln(operatorsDashboard))
+		}
+		if usersDashboard, ok := cm.Data[v1beta1constants.GrafanaConfigMapUserDashboard]; ok && usersDashboard != "" {
+			usersDashboards.WriteString(fmt.Sprintln(usersDashboard))
+		}
+	}
+
+	if err := b.deployGrafanaCharts(ctx, common.GrafanaOperatorsRole, operatorsDashboards.String(), basicAuth, common.GrafanaOperatorsPrefix); err != nil {
+		return err
+	}
+
+	return b.deployGrafanaCharts(ctx, common.GrafanaUsersRole, usersDashboards.String(), basicAuthUsers, common.GrafanaUsersPrefix)
 }
 
 func getIngressClass(ingress *gardencorev1beta1.Ingress) string {
@@ -415,7 +441,7 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 		"nodeLocalDNS": map[string]interface{}{
 			"enabled": b.Shoot.NodeLocalDNSEnabled,
 		},
-	}, charts.ImageNameGrafana, charts.ImageNameBusybox)
+	}, charts.ImageNameGrafana)
 	if err != nil {
 		return err
 	}

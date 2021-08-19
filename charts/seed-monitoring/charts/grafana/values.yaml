@@ -1,6 +1,5 @@
 images:
   grafana: image-repository:image-tag
-  busybox: image-repository:image-tag
 
 ingress:
   class: nginx
