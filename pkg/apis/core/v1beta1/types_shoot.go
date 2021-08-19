@@ -412,11 +412,11 @@ const (
 	// only want to expand those when there are pending pods that need a lot of those resources.
 	// This is the default value.
 	ClusterAutoscalerExpanderLeastWaste ExpanderMode = "least-waste"
-	// ClusterAutoscalerExpanderRandom selects the node group that would be able to schedule the most pods when scaling up.
+	// ClusterAutoscalerExpanderMostPods selects the node group that would be able to schedule the most pods when scaling up.
 	// This is useful when you are using nodeSelector to make sure certain pods land on certain nodes.
 	// Note that this won't cause the autoscaler to select bigger nodes vs. smaller, as it can add multiple smaller nodes at once.
 	ClusterAutoscalerExpanderMostPods ExpanderMode = "most-pods"
-	// ClusterAutoscalerExpanderRandom selects the node group that has the highest priority assigned by the user. For configurations,
+	// ClusterAutoscalerExpanderPriority selects the node group that has the highest priority assigned by the user. For configurations,
 	// See: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/expander/priority/readme.md
 	ClusterAutoscalerExpanderPriority ExpanderMode = "priority"
 	// ClusterAutoscalerExpanderRandom should be used when you don't have a particular need
