@@ -71,6 +71,8 @@ const (
 	ImageNameKubeControllerManager = "kube-controller-manager"
 	// ImageNameKubeProxy is a constant for an image in the image vector with name 'kube-proxy'.
 	ImageNameKubeProxy = "kube-proxy"
+	// ImageNameKubeRbacProxy is a constant for an image in the image vector with name 'kube-rbac-proxy'.
+	ImageNameKubeRbacProxy = "kube-rbac-proxy"
 	// ImageNameKubeScheduler is a constant for an image in the image vector with name 'kube-scheduler'.
 	ImageNameKubeScheduler = "kube-scheduler"
 	// ImageNameKubeStateMetrics is a constant for an image in the image vector with name 'kube-state-metrics'.
@@ -83,12 +85,6 @@ const (
 	ImageNameLoki = "loki"
 	// ImageNameLokiCurator is a constant for an image in the image vector with name 'loki-curator'.
 	ImageNameLokiCurator = "loki-curator"
-	// ImageNameKubeRBACKProxy is a constant for an image in the image vector with name 'kube-rbac-proxy'.
-	ImageNameKubeRBACKProxy = "kube-rbac-proxy"
-	// PromtailImageName is the image of grafana/promtail image
-	PromtailImageName = "promtail"
-	// ImageNameTelegraf is a constant for an image in the image vector with name 'telegraf'.
-	ImageNameTelegraf = "telegraf"
 	// ImageNameMetricsServer is a constant for an image in the image vector with name 'metrics-server'.
 	ImageNameMetricsServer = "metrics-server"
 	// ImageNameNginxIngressController is a constant for an image in the image vector with name 'nginx-ingress-controller'.
@@ -105,6 +101,10 @@ const (
 	ImageNamePauseContainer = "pause-container"
 	// ImageNamePrometheus is a constant for an image in the image vector with name 'prometheus'.
 	ImageNamePrometheus = "prometheus"
+	// ImageNamePromtail is a constant for an image in the image vector with name 'promtail'.
+	ImageNamePromtail = "promtail"
+	// ImageNameTelegraf is a constant for an image in the image vector with name 'telegraf'.
+	ImageNameTelegraf = "telegraf"
 	// ImageNameVpaAdmissionController is a constant for an image in the image vector with name 'vpa-admission-controller'.
 	ImageNameVpaAdmissionController = "vpa-admission-controller"
 	// ImageNameVpaExporter is a constant for an image in the image vector with name 'vpa-exporter'.

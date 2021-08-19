@@ -82,7 +82,7 @@ func (component) Config(ctx components.Context) ([]extensionsv1alpha1.Unit, []ex
 
 	return []extensionsv1alpha1.Unit{
 			*getPromtailUnit(
-				execStartPreCopyBinaryFromContainer("promtail", ctx.Images[charts.PromtailImageName]),
+				execStartPreCopyBinaryFromContainer("promtail", ctx.Images[charts.ImageNamePromtail]),
 				"/bin/sh "+PathSetActiveJournalFileScript,
 				v1beta1constants.OperatingSystemConfigFilePathBinaries+`/promtail -config.file=`+PathPromtailConfig),
 		},
