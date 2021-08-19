@@ -31,14 +31,23 @@ const (
 
 	deploymentName = "coredns"
 	containerName  = "coredns"
+	serviceName    = "kube-dns" // this is due to legacy reasons
+
+	portNameMetrics = "metrics"
 )
+
+// Interface contains functions for a CoreDNS deployer.
+type Interface interface {
+	component.DeployWaiter
+	component.MonitoringComponent
+}
 
 // New creates a new instance of DeployWaiter for coredns.
 func New(
 	client client.Client,
 	namespace string,
 	image string,
-) component.DeployWaiter {
+) Interface {
 	return &coreDNS{
 		client:    client,
 		namespace: namespace,

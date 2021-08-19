@@ -53,7 +53,7 @@ allowedMetrics:
   - container_memory_working_set_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
-  coredns:
+  nodeLocalDNS:
   - coredns_build_info
   - coredns_cache_entries
   - coredns_cache_hits_total

@@ -16,13 +16,12 @@ package botanist
 
 import (
 	"github.com/gardener/gardener/charts"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
 // DefaultCoreDNS returns a deployer for the CoredNS.
-func (b *Botanist) DefaultCoreDNS() (component.DeployWaiter, error) {
+func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 	image, err := b.ImageVector.FindImage(charts.ImageNameCoredns, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return nil, err
