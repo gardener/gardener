@@ -194,7 +194,7 @@ func (h *handler) InjectDecoder(d *admission.Decoder) error {
 }
 
 func (h *handler) Handle(ctx context.Context, ar admission.Request) admission.Response {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	_, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	artifact, ok := h.artifacts[ar.Resource]
