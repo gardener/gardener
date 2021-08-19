@@ -56,6 +56,8 @@ type Interface interface {
 type Values struct {
 	// Autoscaling contains information for configuring autoscaling settings for the kube-apiserver.
 	Autoscaling AutoscalingConfig
+	// ReversedVPNEnabled states whether the 'ReversedVPN' feature gate is enabled.
+	ReversedVPNEnabled bool
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
 	// Version is the Kubernetes version for the kube-apiserver.
@@ -110,6 +112,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		hvpa                                 = k.emptyHVPA()
 		networkPolicyAllowFromShootAPIServer = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
 		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
+		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -136,6 +139,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := k.reconcileNetworkPolicyAllowKubeAPIServer(ctx, networkPolicyAllowKubeAPIServer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -148,6 +155,7 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyDeployment(),
 		k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer),
 		k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer),
+		k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer),
 	)
 }
 

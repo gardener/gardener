@@ -65,6 +65,7 @@ var _ = Describe("KubeAPIServer", func() {
 		podDisruptionBudget                  *policyv1beta1.PodDisruptionBudget
 		networkPolicyAllowFromShootAPIServer *networkingv1.NetworkPolicy
 		networkPolicyAllowToShootAPIServer   *networkingv1.NetworkPolicy
+		networkPolicyAllowKubeAPIServer      *networkingv1.NetworkPolicy
 	)
 
 	BeforeEach(func() {
@@ -113,6 +114,13 @@ var _ = Describe("KubeAPIServer", func() {
 		networkPolicyAllowToShootAPIServer = &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "allow-to-shoot-apiserver",
+				Namespace: namespace,
+			},
+		}
+
+		networkPolicyAllowKubeAPIServer = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "allow-kube-apiserver",
 				Namespace: namespace,
 			},
 		}
@@ -639,6 +647,192 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				}))
 			})
+
+			Context("should successfully deploy the allow-kube-apiserver NetworkPolicy resource", func() {
+				var (
+					protocol             = corev1.ProtocolTCP
+					portAPIServer        = intstr.FromInt(443)
+					portBlackboxExporter = intstr.FromInt(9115)
+					portEtcd             = intstr.FromInt(2379)
+					portVPNSeedServer    = intstr.FromInt(9443)
+				)
+
+				It("w/o ReversedVPN", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(Succeed())
+					Expect(networkPolicyAllowKubeAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: networkingv1.SchemeGroupVersion.String(),
+							Kind:       "NetworkPolicy",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            networkPolicyAllowKubeAPIServer.Name,
+							Namespace:       networkPolicyAllowKubeAPIServer.Namespace,
+							ResourceVersion: "1",
+							Annotations: map[string]string{
+								"gardener.cloud/description": "Allows Ingress to the Shoot's Kubernetes API Server from " +
+									"pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' and " +
+									"Prometheus, and Egress to etcd pods.",
+							},
+						},
+						Spec: networkingv1.NetworkPolicySpec{
+							PodSelector: metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app":                     "kubernetes",
+									"garden.sapcloud.io/role": "controlplane",
+									"role":                    "apiserver",
+								},
+							},
+							Egress: []networkingv1.NetworkPolicyEgressRule{{
+								To: []networkingv1.NetworkPolicyPeer{{
+									PodSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"app":                     "etcd-statefulset",
+											"garden.sapcloud.io/role": "controlplane",
+										},
+									},
+								}},
+								Ports: []networkingv1.NetworkPolicyPort{{
+									Protocol: &protocol,
+									Port:     &portEtcd,
+								}},
+							}},
+							Ingress: []networkingv1.NetworkPolicyIngressRule{
+								{
+									From: []networkingv1.NetworkPolicyPeer{
+										{PodSelector: &metav1.LabelSelector{}},
+										{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+									},
+									Ports: []networkingv1.NetworkPolicyPort{{
+										Protocol: &protocol,
+										Port:     &portAPIServer,
+									}},
+								},
+								{
+									From: []networkingv1.NetworkPolicyPeer{{
+										PodSelector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												"garden.sapcloud.io/role": "monitoring",
+												"app":                     "prometheus",
+												"role":                    "monitoring",
+											},
+										},
+									}},
+									Ports: []networkingv1.NetworkPolicyPort{
+										{
+											Protocol: &protocol,
+											Port:     &portBlackboxExporter,
+										},
+										{
+											Protocol: &protocol,
+											Port:     &portAPIServer,
+										},
+									},
+								},
+							},
+							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+						},
+					}))
+				})
+
+				It("w/ ReversedVPN", func() {
+					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true})
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(Succeed())
+					Expect(networkPolicyAllowKubeAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: networkingv1.SchemeGroupVersion.String(),
+							Kind:       "NetworkPolicy",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            networkPolicyAllowKubeAPIServer.Name,
+							Namespace:       networkPolicyAllowKubeAPIServer.Namespace,
+							ResourceVersion: "1",
+							Annotations: map[string]string{
+								"gardener.cloud/description": "Allows Ingress to the Shoot's Kubernetes API Server from " +
+									"pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' and " +
+									"Prometheus, and Egress to etcd pods.",
+							},
+						},
+						Spec: networkingv1.NetworkPolicySpec{
+							PodSelector: metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app":                     "kubernetes",
+									"garden.sapcloud.io/role": "controlplane",
+									"role":                    "apiserver",
+								},
+							},
+							Egress: []networkingv1.NetworkPolicyEgressRule{
+								{
+									To: []networkingv1.NetworkPolicyPeer{{
+										PodSelector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												"app":                     "etcd-statefulset",
+												"garden.sapcloud.io/role": "controlplane",
+											},
+										},
+									}},
+									Ports: []networkingv1.NetworkPolicyPort{{
+										Protocol: &protocol,
+										Port:     &portEtcd,
+									}},
+								},
+								{
+									To: []networkingv1.NetworkPolicyPeer{{
+										PodSelector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												"gardener.cloud/role": "controlplane",
+												"app":                 "vpn-seed-server",
+											},
+										},
+									}},
+									Ports: []networkingv1.NetworkPolicyPort{{
+										Protocol: &protocol,
+										Port:     &portVPNSeedServer,
+									}},
+								},
+							},
+							Ingress: []networkingv1.NetworkPolicyIngressRule{
+								{
+									From: []networkingv1.NetworkPolicyPeer{
+										{PodSelector: &metav1.LabelSelector{}},
+										{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+									},
+									Ports: []networkingv1.NetworkPolicyPort{{
+										Protocol: &protocol,
+										Port:     &portAPIServer,
+									}},
+								},
+								{
+									From: []networkingv1.NetworkPolicyPeer{{
+										PodSelector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												"garden.sapcloud.io/role": "monitoring",
+												"app":                     "prometheus",
+												"role":                    "monitoring",
+											},
+										},
+									}},
+									Ports: []networkingv1.NetworkPolicyPort{
+										{
+											Protocol: &protocol,
+											Port:     &portBlackboxExporter,
+										},
+										{
+											Protocol: &protocol,
+											Port:     &portAPIServer,
+										},
+									},
+								},
+							},
+							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+						},
+					}))
+				})
+			})
 		})
 	})
 
@@ -651,6 +845,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(c.Create(ctx, podDisruptionBudget)).To(Succeed())
 			Expect(c.Create(ctx, networkPolicyAllowFromShootAPIServer)).To(Succeed())
 			Expect(c.Create(ctx, networkPolicyAllowToShootAPIServer)).To(Succeed())
+			Expect(c.Create(ctx, networkPolicyAllowKubeAPIServer)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
@@ -659,6 +854,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(Succeed())
 
 			Expect(kapi.Destroy(ctx)).To(Succeed())
 
@@ -669,6 +865,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1beta1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowFromShootAPIServer.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowToShootAPIServer.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
 		})
 	})
 
