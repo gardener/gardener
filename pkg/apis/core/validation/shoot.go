@@ -986,7 +986,7 @@ const (
 )
 
 // ValidateWorker validates the worker object.
-func ValidateWorker(worker core.Worker, version string, fldPath *field.Path, inTemplate bool) field.ErrorList {
+func ValidateWorker(worker core.Worker, kubernetesVersion string, fldPath *field.Path, inTemplate bool) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateDNS1123Label(worker.Name, fldPath.Child("name"))...)
@@ -1029,7 +1029,7 @@ func ValidateWorker(worker core.Worker, version string, fldPath *field.Path, inT
 		allErrs = append(allErrs, validateTaints(worker.Taints, fldPath.Child("taints"))...)
 	}
 	if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
-		allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, version, fldPath.Child("kubernetes", "kubelet"))...)
+		allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, kubernetesVersion, fldPath.Child("kubernetes", "kubelet"))...)
 	}
 
 	if worker.CABundle != nil {
@@ -1086,7 +1086,7 @@ func ValidateWorker(worker core.Worker, version string, fldPath *field.Path, inT
 	}
 
 	if worker.CRI != nil {
-		allErrs = append(allErrs, ValidateCRI(worker.CRI, fldPath.Child("cri"))...)
+		allErrs = append(allErrs, ValidateCRI(worker.CRI, kubernetesVersion, fldPath.Child("cri"))...)
 	}
 
 	return allErrs
@@ -1480,8 +1480,14 @@ func IsNotMoreThan100Percent(intOrStringValue *intstr.IntOrString, fldPath *fiel
 }
 
 // ValidateCRI validates container runtime interface name and its container runtimes
-func ValidateCRI(CRI *core.CRI, fldPath *field.Path) field.ErrorList {
+func ValidateCRI(CRI *core.CRI, kubernetesVersion string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	k8sVersionIs123OrGreater, _ := versionutils.CompareVersions(kubernetesVersion, ">=", "1.23")
+
+	if k8sVersionIs123OrGreater && CRI.Name == core.CRINameDocker {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("name"), "'docker' is only allowed for kubernetes versions < 1.23"))
+	}
 
 	if !availableWorkerCRINames.Has(string(CRI.Name)) {
 		allErrs = append(allErrs, field.NotSupported(fldPath.Child("name"), CRI.Name, availableWorkerCRINames.List()))
