@@ -145,6 +145,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	// system components
 	o.Shoot.Components.SystemComponents.ClusterIdentity = b.DefaultClusterIdentity()
 	o.Shoot.Components.SystemComponents.Namespaces = b.DefaultShootNamespaces()
+	o.Shoot.Components.SystemComponents.CoreDNS, err = b.DefaultCoreDNS()
+	if err != nil {
+		return nil, err
+	}
 	o.Shoot.Components.SystemComponents.MetricsServer, err = b.DefaultMetricsServer()
 	if err != nil {
 		return nil, err

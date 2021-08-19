@@ -136,6 +136,7 @@ type Extensions struct {
 type SystemComponents struct {
 	ClusterIdentity clusteridentity.Interface
 	Namespaces      component.DeployWaiter
+	CoreDNS         component.DeployWaiter
 	MetricsServer   metricsserver.Interface
 }
 
