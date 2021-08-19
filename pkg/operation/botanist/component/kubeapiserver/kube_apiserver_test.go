@@ -64,6 +64,7 @@ var _ = Describe("KubeAPIServer", func() {
 		hvpa                                 *hvpav1alpha1.Hvpa
 		podDisruptionBudget                  *policyv1beta1.PodDisruptionBudget
 		networkPolicyAllowFromShootAPIServer *networkingv1.NetworkPolicy
+		networkPolicyAllowToShootAPIServer   *networkingv1.NetworkPolicy
 	)
 
 	BeforeEach(func() {
@@ -105,6 +106,13 @@ var _ = Describe("KubeAPIServer", func() {
 		networkPolicyAllowFromShootAPIServer = &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "allow-from-shoot-apiserver",
+				Namespace: namespace,
+			},
+		}
+
+		networkPolicyAllowToShootAPIServer = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "allow-to-shoot-apiserver",
 				Namespace: namespace,
 			},
 		}
@@ -583,6 +591,54 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				}))
 			})
+
+			It("should successfully deploy the allow-to-shoot-apiserver NetworkPolicy resource", func() {
+				var (
+					protocol = corev1.ProtocolTCP
+					port     = intstr.FromInt(443)
+				)
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowToShootAPIServer.Name)))
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(Succeed())
+				Expect(networkPolicyAllowToShootAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: networkingv1.SchemeGroupVersion.String(),
+						Kind:       "NetworkPolicy",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            networkPolicyAllowToShootAPIServer.Name,
+						Namespace:       networkPolicyAllowToShootAPIServer.Namespace,
+						ResourceVersion: "1",
+						Annotations: map[string]string{
+							"gardener.cloud/description": "Allows Egress from pods labeled with " +
+								"'networking.gardener.cloud/to-shoot-apiserver=allowed' to talk to Shoot's Kubernetes " +
+								"API Server.",
+						},
+					},
+					Spec: networkingv1.NetworkPolicySpec{
+						PodSelector: metav1.LabelSelector{
+							MatchLabels: map[string]string{"networking.gardener.cloud/to-shoot-apiserver": "allowed"},
+						},
+						Egress: []networkingv1.NetworkPolicyEgressRule{{
+							To: []networkingv1.NetworkPolicyPeer{{
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"app":                     "kubernetes",
+										"garden.sapcloud.io/role": "controlplane",
+										"role":                    "apiserver",
+									},
+								},
+							}},
+							Ports: []networkingv1.NetworkPolicyPort{{
+								Protocol: &protocol,
+								Port:     &port,
+							}},
+						}},
+						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
+					},
+				}))
+			})
 		})
 	})
 
@@ -594,6 +650,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(c.Create(ctx, hvpa)).To(Succeed())
 			Expect(c.Create(ctx, podDisruptionBudget)).To(Succeed())
 			Expect(c.Create(ctx, networkPolicyAllowFromShootAPIServer)).To(Succeed())
+			Expect(c.Create(ctx, networkPolicyAllowToShootAPIServer)).To(Succeed())
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
@@ -601,6 +658,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(Succeed())
 
 			Expect(kapi.Destroy(ctx)).To(Succeed())
 
@@ -610,6 +668,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: hvpav1alpha1.SchemeGroupVersionHvpa.Group, Resource: "hvpas"}, hvpa.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1beta1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowFromShootAPIServer.Name)))
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowToShootAPIServer.Name)))
 		})
 	})
 

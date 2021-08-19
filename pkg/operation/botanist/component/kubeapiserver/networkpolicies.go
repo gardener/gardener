@@ -21,12 +21,15 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
 	networkPolicyNameAllowFromShootAPIServer = "allow-from-shoot-apiserver"
+	networkPolicyNameAllowToShootAPIServer   = "allow-to-shoot-apiserver"
 )
 
 func (k *kubeAPIServer) emptyNetworkPolicy(name string) *networkingv1.NetworkPolicy {
@@ -54,6 +57,42 @@ func (k *kubeAPIServer) reconcileNetworkPolicyAllowFromShootAPIServer(ctx contex
 				}},
 			}},
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+		}
+		return nil
+	})
+	return err
+}
+
+func (k *kubeAPIServer) reconcileNetworkPolicyAllowToShootAPIServer(ctx context.Context, networkPolicy *networkingv1.NetworkPolicy) error {
+	var (
+		protocol = corev1.ProtocolTCP
+		port     = intstr.FromInt(Port)
+	)
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), networkPolicy, func() error {
+		networkPolicy.Annotations = map[string]string{
+			v1beta1constants.GardenerDescription: fmt.Sprintf("Allows Egress from pods labeled with '%s=%s' to "+
+				"talk to Shoot's Kubernetes API Server.", v1beta1constants.LabelNetworkPolicyToShootAPIServer,
+				v1beta1constants.LabelNetworkPolicyAllowed),
+		}
+		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+				},
+			},
+			Egress: []networkingv1.NetworkPolicyEgressRule{{
+				To: []networkingv1.NetworkPolicyPeer{{
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: GetLabels(),
+					},
+				}},
+				Ports: []networkingv1.NetworkPolicyPort{{
+					Protocol: &protocol,
+					Port:     &port,
+				}},
+			}},
+			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 		}
 		return nil
 	})

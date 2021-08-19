@@ -109,6 +109,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		verticalPodAutoscaler                = k.emptyVerticalPodAutoscaler()
 		hvpa                                 = k.emptyHVPA()
 		networkPolicyAllowFromShootAPIServer = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
+		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -131,6 +132,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := k.reconcileNetworkPolicyAllowToShootAPIServer(ctx, networkPolicyAllowToShootAPIServer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -142,6 +147,7 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyPodDisruptionBudget(),
 		k.emptyDeployment(),
 		k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer),
+		k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer),
 	)
 }
 
