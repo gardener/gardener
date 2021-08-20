@@ -19,6 +19,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -203,10 +204,10 @@ func getGlobalNetworkPolicyTransformers(values GlobalValues) []networkPolicyTran
 								},
 							}},
 							Ports: []networkingv1.NetworkPolicyPort{
-								{Protocol: protocolPtr(corev1.ProtocolUDP), Port: intStrPtr(53)},
-								{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(53)},
-								{Protocol: protocolPtr(corev1.ProtocolUDP), Port: intStrPtr(8053)},
-								{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(8053)},
+								{Protocol: protocolPtr(corev1.ProtocolUDP), Port: intStrPtr(coredns.PortServiceServer)},
+								{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(coredns.PortServiceServer)},
+								{Protocol: protocolPtr(corev1.ProtocolUDP), Port: intStrPtr(coredns.PortServer)},
+								{Protocol: protocolPtr(corev1.ProtocolTCP), Port: intStrPtr(coredns.PortServer)},
 							},
 						}},
 						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},

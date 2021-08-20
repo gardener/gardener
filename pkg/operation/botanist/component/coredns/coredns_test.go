@@ -43,6 +43,7 @@ var _ = Describe("CoreDNS", func() {
 
 		managedResourceName = "shoot-core-coredns"
 		namespace           = "some-namespace"
+		clusterDomain       = "foo.bar"
 		image               = "some-image:some-tag"
 
 		c         client.Client
@@ -54,7 +55,10 @@ var _ = Describe("CoreDNS", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		component = New(c, namespace, image)
+		component = New(c, namespace, Values{
+			ClusterDomain: clusterDomain,
+			Image:         image,
+		})
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -126,6 +130,36 @@ subjects:
   name: coredns
   namespace: kube-system
 `
+				configMapYAML = `apiVersion: v1
+data:
+  Corefile: |
+    .:8053 {
+      errors
+      log . {
+          class error
+      }
+      health
+      ready
+      kubernetes ` + clusterDomain + ` in-addr.arpa ip6.arpa {
+          pods insecure
+          fallthrough in-addr.arpa ip6.arpa
+          ttl 30
+      }
+      prometheus 0.0.0.0:9153
+      forward . /etc/resolv.conf
+      cache 30
+      loop
+      reload
+      loadbalance round_robin
+      import custom/*.override
+    }
+    import custom/*.server
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: coredns
+  namespace: kube-system
+`
 			)
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -156,10 +190,11 @@ subjects:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(3))
+			Expect(managedResourceSecret.Data).To(HaveLen(4))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_coredns.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns.yaml"])).To(Equal(clusterRoleBindingYAML))
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns.yaml"])).To(Equal(configMapYAML))
 		})
 	})
 

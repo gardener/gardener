@@ -28,7 +28,7 @@ var _ = Describe("Monitoring", func() {
 	var component component.MonitoringComponent
 
 	BeforeEach(func() {
-		component = New(nil, "", "")
+		component = New(nil, "", Values{})
 	})
 
 	It("should successfully test the scrape config", func() {

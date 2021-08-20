@@ -16,6 +16,7 @@ package coredns
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -32,12 +33,17 @@ import (
 const (
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-coredns"
+	// PortServiceServer is the target port used for the DNS server.
+	PortServiceServer = 53
+	// PortServer is the service port used for the DNS server.
+	PortServer = 8053
 
 	deploymentName = "coredns"
 	containerName  = "coredns"
 	serviceName    = "kube-dns" // this is due to legacy reasons
 
 	portNameMetrics = "metrics"
+	portMetrics     = 9153
 )
 
 // Interface contains functions for a CoreDNS deployer.
@@ -46,23 +52,30 @@ type Interface interface {
 	component.MonitoringComponent
 }
 
+type Values struct {
+	// ClusterDomain is the domain used for cluster-wide DNS records handled by CoreDNS.
+	ClusterDomain string
+	// Image is the container image used for CoreDNS.
+	Image string
+}
+
 // New creates a new instance of DeployWaiter for coredns.
 func New(
 	client client.Client,
 	namespace string,
-	image string,
+	values Values,
 ) Interface {
 	return &coreDNS{
 		client:    client,
 		namespace: namespace,
-		image:     image,
+		values:    values,
 	}
 }
 
 type coreDNS struct {
 	client    client.Client
 	namespace string
-	image     string
+	values    Values
 }
 
 func (c *coreDNS) Deploy(ctx context.Context) error {
@@ -146,11 +159,45 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 				Namespace: serviceAccount.Namespace,
 			}},
 		}
+
+		// We don't need to make this ConfigMap immutable since CoreDNS provides the "reload" plugins which does an
+		// auto-reload if the config changes.
+		configMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "coredns",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Data: map[string]string{
+				"Corefile": `.:` + strconv.Itoa(PortServer) + ` {
+  errors
+  log . {
+      class error
+  }
+  health
+  ready
+  kubernetes ` + c.values.ClusterDomain + ` in-addr.arpa ip6.arpa {
+      pods insecure
+      fallthrough in-addr.arpa ip6.arpa
+      ttl 30
+  }
+  prometheus 0.0.0.0:` + strconv.Itoa(portMetrics) + `
+  forward . /etc/resolv.conf
+  cache 30
+  loop
+  reload
+  loadbalance round_robin
+  import custom/*.override
+}
+import custom/*.server
+`,
+			},
+		}
 	)
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
 		clusterRole,
 		clusterRoleBinding,
+		configMap,
 	)
 }

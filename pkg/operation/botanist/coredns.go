@@ -16,11 +16,12 @@ package botanist
 
 import (
 	"github.com/gardener/gardener/charts"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 )
 
-// DefaultCoreDNS returns a deployer for the CoredNS.
+// DefaultCoreDNS returns a deployer for the CoreDNS.
 func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 	image, err := b.ImageVector.FindImage(charts.ImageNameCoredns, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
@@ -30,6 +31,9 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 	return coredns.New(
 		b.K8sSeedClient.Client(),
 		b.Shoot.SeedNamespace,
-		image.String(),
+		coredns.Values{
+			ClusterDomain: gardencorev1beta1.DefaultDomain, // resolve conformance test issue (https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44) before changing:
+			Image:         image.String(),
+		},
 	), nil
 }
