@@ -15,28 +15,6 @@
 package extensionresources_test
 
 var (
-	dnsrecordFmt = `
-{ "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "DNSRecord",
-  "metadata": {
-    "name": "dnsrecord-external",
-	%s
-    "namespace": "prjswebhooks"
-  },
-  "spec": {
-    "type": "google-clouddns",
-    "secretRef": {
-      "name": %q,
-      "namespace": "prjswebhooks"
-    },
-    "name": "api.gcp.foobar.shoot.example.com",
-    "recordType": %q,
-    "values": [
-      "1.2.3.4"
-    ]
-  }
-}`
-
 	backupBucketFmt = `
 { "apiVersion": "extensions.gardener.cloud/v1alpha1",
 "kind": "BackupBucket",
@@ -74,8 +52,37 @@ var (
       "namespace": "garden"
     }
   }
-}
-`
+}`
+
+	bastionFmt = `
+{
+  "apiVersion": "extensions.gardener.cloud/v1alpha1",
+  "kind": "Bastion",
+  "metadata": {
+    "generateName": "cli-",
+    %s
+    "name": "cli-abcdef",
+    "namespace": "garden-myproject"
+  },
+  "spec": {
+    "type": %q,
+    "shootRef": {
+      "name": %q
+    },
+    "userData": "data",
+    "seedName": "aws-eu2",
+    "sshPublicKey": "c3NoLXJzYSAuLi4K",
+    "providerType": "gcp",
+    "ingress": [
+      {
+        "ipBlock": {
+          "cidr": "1.2.3.4/32"
+        }
+      }
+    ]
+  }
+}`
+
 	controlPlaneFmt = `
 {
   "apiVersion": "extensions.gardener.cloud/v1alpha1",
@@ -93,27 +100,29 @@ var (
       "namespace": "shoot--foobar--gcp"
     }
   }
-}
-`
-	workerFmt = `
-{
-  "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "Worker",
+}`
+
+	dnsrecordFmt = `
+{ "apiVersion": "extensions.gardener.cloud/v1alpha1",
+  "kind": "DNSRecord",
   "metadata": {
-    "name": "worker",
+    "name": "dnsrecord-external",
 	%s
-    "namespace": "shoot--foobar--gcp"
+    "namespace": "prjswebhooks"
   },
   "spec": {
-    "type": %q,
-    "region": "europe-west1",
+    "type": "google-clouddns",
     "secretRef": {
       "name": %q,
-      "namespace": "shoot--foobar--gcp"
-    }
+      "namespace": "prjswebhooks"
+    },
+    "name": "api.gcp.foobar.shoot.example.com",
+    "recordType": %q,
+    "values": [
+      "1.2.3.4"
+    ]
   }
-}
-`
+}`
 
 	extensionsFmt = `
 {
@@ -159,28 +168,7 @@ var (
       }
     }
   }
-}
-`
-
-	operatingsysconfigFmt = `
-{
-  "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "OperatingSystemConfig",
-  "metadata": {
-    "name": "gcp-osc",
-	%s
-    "namespace": "prjwebhooks"
-  },
-  "spec": {
-    "type": %q,
-    "purpose": "provision",
-   "secretRef": {
-      "namespace": "shoot--foobar--gcp",
-      "name": %q
-    }
-  }
-}
-`
+}`
 
 	networksFmt = `
 {
@@ -200,6 +188,43 @@ var (
        "name": %q
     }
   }
-}
-`
+}`
+
+	operatingsysconfigFmt = `
+{
+  "apiVersion": "extensions.gardener.cloud/v1alpha1",
+  "kind": "OperatingSystemConfig",
+  "metadata": {
+    "name": "gcp-osc",
+	%s
+    "namespace": "prjwebhooks"
+  },
+  "spec": {
+    "type": %q,
+    "purpose": "provision",
+   "secretRef": {
+      "namespace": "shoot--foobar--gcp",
+      "name": %q
+    }
+  }
+}`
+
+	workerFmt = `
+{
+  "apiVersion": "extensions.gardener.cloud/v1alpha1",
+  "kind": "Worker",
+  "metadata": {
+    "name": "worker",
+	%s
+    "namespace": "shoot--foobar--gcp"
+  },
+  "spec": {
+    "type": %q,
+    "region": "europe-west1",
+    "secretRef": {
+      "name": %q,
+      "namespace": "shoot--foobar--gcp"
+    }
+  }
+}`
 )

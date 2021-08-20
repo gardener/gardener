@@ -20,14 +20,14 @@ import (
 	"strings"
 	"time"
 
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
-	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -319,7 +319,7 @@ webhooks:
     service:
       name: gardener-seed-admission-controller
       namespace: shoot--foo--bar
-      path: /webhooks/validate-extension-crd-deletion
+      path: /webhooks/validate-extension-resources
   failurePolicy: Fail
   name: validation.extensions.seed.admission.core.gardener.cloud
   namespaceSelector: {}

@@ -21,7 +21,6 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 
 	"github.com/go-logr/logr"
@@ -33,7 +32,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -49,7 +47,6 @@ var _ = Describe("handler", func() {
 			request *admission.Request
 
 			ctrl *gomock.Controller
-			c    *mockclient.MockClient
 
 			resources []dummyResource
 		)
@@ -59,14 +56,12 @@ var _ = Describe("handler", func() {
 			logger = logzap.New(logzap.WriteTo(GinkgoWriter))
 
 			ctrl = gomock.NewController(GinkgoT())
-			c = mockclient.NewMockClient(ctrl)
 
 			var err error
 			decoder, err = admission.NewDecoder(kubernetes.SeedScheme)
 			Expect(err).NotTo(HaveOccurred())
 
 			handler = extensionresources.New(logger)
-			Expect(inject.APIReaderInto(c, handler)).To(BeTrue())
 			Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
 			request = nil
@@ -76,7 +71,6 @@ var _ = Describe("handler", func() {
 			ctrl.Finish()
 		})
 
-		// TODO request for other reource
 		Context("ignored requests", func() {
 			It("should ignore DELETE operations", func() {
 				request = newRequest(admissionv1.Delete, "dnsrecords", "", "")
@@ -103,6 +97,10 @@ var _ = Describe("handler", func() {
 				{
 					kind: "backupentries",
 					obj:  fmt.Sprintf(backupEntryFmt, "", "gcp", "backupentry"),
+				},
+				{
+					kind: "bastions",
+					obj:  fmt.Sprintf(bastionFmt, "", "gcp", "shoot-ref-2"),
 				},
 				{
 					kind: "controlplanes",
@@ -154,57 +152,63 @@ var _ = Describe("handler", func() {
 				resources = []dummyResource{
 					{
 						kind:     "backupbuckets",
-						obj:      fmt.Sprintf(backupBucketFmt, `"resourceVersion": "2",`, "gcp", "backupprovider"),
+						obj:      fmt.Sprintf(backupBucketFmt, `"resourceVersion": "2",`, "gcp", "backupprovider-2"),
 						oldobj:   fmt.Sprintf(backupBucketFmt, `"resourceVersion": "1",`, "gcp", "backupprovider"),
-						wrongobj: fmt.Sprintf(backupBucketFmt, `"resourceVersion": "1",`, "azure", "backupprovider"),
+						wrongobj: fmt.Sprintf(backupBucketFmt, `"resourceVersion": "2",`, "azure", "backupprovider"),
 					},
 					{
 						kind:     "backupentries",
 						obj:      fmt.Sprintf(backupEntryFmt, `"resourceVersion": "2",`, "gcp", "backupentry-2"),
 						oldobj:   fmt.Sprintf(backupEntryFmt, `"resourceVersion": "1",`, "gcp", "backupentry"),
-						wrongobj: fmt.Sprintf(backupEntryFmt, `"resourceVersion": "1",`, "azure", "backupentry-2"),
+						wrongobj: fmt.Sprintf(backupEntryFmt, `"resourceVersion": "2",`, "azure", "backupentry-2"),
+					},
+					{
+						kind:     "bastions",
+						obj:      fmt.Sprintf(bastionFmt, `"resourceVersion": "2",`, "gcp", "shoot-ref-2"),
+						oldobj:   fmt.Sprintf(bastionFmt, `"resourceVersion": "1",`, "gcp", "shoot-ref"),
+						wrongobj: fmt.Sprintf(bastionFmt, `"resourceVersion": "2",`, "azure", "shoot-ref-2"),
 					},
 					{
 						kind:     "controlplanes",
 						obj:      fmt.Sprintf(controlPlaneFmt, `"resourceVersion": "2",`, "gcp", "cloudprovider-2"),
 						oldobj:   fmt.Sprintf(controlPlaneFmt, `"resourceVersion": "1",`, "gcp", "cloudprovider"),
-						wrongobj: fmt.Sprintf(controlPlaneFmt, `"resourceVersion": "1",`, "azure", "cloudprovider-2"),
+						wrongobj: fmt.Sprintf(controlPlaneFmt, `"resourceVersion": "2",`, "azure", "cloudprovider-2"),
 					},
 					{
 						kind:     "dnsrecords",
 						obj:      fmt.Sprintf(dnsrecordFmt, `"resourceVersion": "2",`, "dnsrecord-2", "A"),
 						oldobj:   fmt.Sprintf(dnsrecordFmt, `"resourceVersion": "1",`, "dnsrecord", "A"),
-						wrongobj: fmt.Sprintf(dnsrecordFmt, `"resourceVersion": "1",`, "dnsrecord-2", "TXT"),
+						wrongobj: fmt.Sprintf(dnsrecordFmt, `"resourceVersion": "2",`, "dnsrecord-2", "TXT"),
 					},
 					{
 						kind:     "extensions",
 						obj:      fmt.Sprintf(extensionsFmt, `"resourceVersion": "2",`, "gcp", "cloudprovider-2"),
 						oldobj:   fmt.Sprintf(extensionsFmt, `"resourceVersion": "1",`, "gcp", "cloudprovider"),
-						wrongobj: fmt.Sprintf(extensionsFmt, `"resourceVersion": "1",`, "azure", "cloudprovider-2"),
+						wrongobj: fmt.Sprintf(extensionsFmt, `"resourceVersion": "2",`, "azure", "cloudprovider-2"),
 					},
 					{
 						kind:     "infrastructures",
 						obj:      fmt.Sprintf(infrastructureFmt, `"resourceVersion": "2",`, "gcp", "seed-gcp-2"),
 						oldobj:   fmt.Sprintf(infrastructureFmt, `"resourceVersion": "1",`, "gcp", "seed-gcp"),
-						wrongobj: fmt.Sprintf(infrastructureFmt, `"resourceVersion": "1",`, "azure", "seed-gcp-2"),
+						wrongobj: fmt.Sprintf(infrastructureFmt, `"resourceVersion": "2",`, "azure", "seed-gcp-2"),
 					},
 					{
 						kind:     "networks",
 						obj:      fmt.Sprintf(networksFmt, `"resourceVersion": "2",`, "calico", "seed-gcp-2"),
 						oldobj:   fmt.Sprintf(networksFmt, `"resourceVersion": "1",`, "calico", "seed-gcp"),
-						wrongobj: fmt.Sprintf(networksFmt, `"resourceVersion": "1",`, "provisioner", "seed-gcp-2"),
+						wrongobj: fmt.Sprintf(networksFmt, `"resourceVersion": "2",`, "provisioner", "seed-gcp-2"),
 					},
 					{
 						kind:     "operatingsystemconfigs",
 						obj:      fmt.Sprintf(operatingsysconfigFmt, `"resourceVersion": "2",`, "gcp", "seed-gcp-2"),
 						oldobj:   fmt.Sprintf(operatingsysconfigFmt, `"resourceVersion": "1",`, "gcp", "seed-gcp"),
-						wrongobj: fmt.Sprintf(operatingsysconfigFmt, `"resourceVersion": "1",`, "azure", "seed-gcp-2"),
+						wrongobj: fmt.Sprintf(operatingsysconfigFmt, `"resourceVersion": "2",`, "azure", "seed-gcp-2"),
 					},
 					{
 						kind:     "workers",
 						obj:      fmt.Sprintf(workerFmt, `"resourceVersion": "2",`, "gcp", "seed-gcp-2"),
 						oldobj:   fmt.Sprintf(workerFmt, `"resourceVersion": "1",`, "gcp", "seed-gcp"),
-						wrongobj: fmt.Sprintf(workerFmt, `"resourceVersion": "1",`, "azure", "seed-gcp-2"),
+						wrongobj: fmt.Sprintf(workerFmt, `"resourceVersion": "2",`, "azure", "seed-gcp-2"),
 					},
 				}
 			})

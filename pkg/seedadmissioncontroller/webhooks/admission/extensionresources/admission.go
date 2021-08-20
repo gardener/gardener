@@ -24,7 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/extensions/validation"
 
 	"github.com/go-logr/logr"
-	v1 "k8s.io/api/admission/v1"
+	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -74,6 +74,19 @@ func New(logger logr.Logger) *handler {
 				new := n.(*extensionsv1alpha1.BackupEntry)
 				old := o.(*extensionsv1alpha1.BackupEntry)
 				return validation.ValidateBackupEntryUpdate(new, old)
+			}})
+
+	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "bastions"},
+		artifact{
+			newEntity: func() client.Object { return new(extensionsv1alpha1.Bastion) },
+			validateResource: func(n, o client.Object) field.ErrorList {
+				new := n.(*extensionsv1alpha1.Bastion)
+				return validation.ValidateBastion(new)
+			},
+			validateResourceUpdate: func(n, o client.Object) field.ErrorList {
+				new := n.(*extensionsv1alpha1.Bastion)
+				old := o.(*extensionsv1alpha1.Bastion)
+				return validation.ValidateBastionUpdate(new, old)
 			}})
 
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "controlplanes"},
@@ -171,7 +184,6 @@ func New(logger logr.Logger) *handler {
 }
 
 type handler struct {
-	reader    client.Reader
 	decoder   *admission.Decoder
 	logger    logr.Logger
 	artifacts map[metav1.GroupVersionResource]artifact
@@ -182,11 +194,6 @@ func (h *handler) addResource(gvr metav1.GroupVersionResource, art artifact) {
 }
 
 var _ admission.Handler = &handler{}
-
-func (h *handler) InjectAPIReader(reader client.Reader) error {
-	h.reader = reader
-	return nil
-}
 
 func (h *handler) InjectDecoder(d *admission.Decoder) error {
 	h.decoder = d
@@ -203,9 +210,9 @@ func (h *handler) Handle(ctx context.Context, ar admission.Request) admission.Re
 	}
 
 	switch ar.Operation {
-	case v1.Create:
+	case admissionv1.Create:
 		return h.handleValidation(ar.Object, ar.OldObject, artifact.newEntity, artifact.validateResource)
-	case v1.Update:
+	case admissionv1.Update:
 		return h.handleValidation(ar.Object, ar.OldObject, artifact.newEntity, artifact.validateResourceUpdate)
 	default:
 		return admission.Allowed("operation is not CREATE or UPDATE")
@@ -230,7 +237,7 @@ type artifact struct {
 func (h handler) handleValidation(object, oldObject runtime.RawExtension, newEntity newEntity, validate validate) admission.Response {
 	obj := newEntity()
 	if err := h.decoder.DecodeRaw(object, obj); err != nil {
-		h.logger.Error(err, "could not decode ar", "ar", object)
+		h.logger.Error(err, "could not decode object", "object", object)
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("could not decode ar %v: %w", object, err))
 	}
 
@@ -243,11 +250,10 @@ func (h handler) handleValidation(object, oldObject runtime.RawExtension, newEnt
 	}
 
 	errors := validate(obj, oldObj)
-	if len(errors) == 0 {
-		return admission.Allowed("validation successful")
+	if len(errors) != 0 {
+		err := apierrors.NewInvalid(gvk.GroupKind(), "", errors)
+		return admission.Denied(err.Error())
 	}
 
-	var err = apierrors.NewInvalid(gvk.GroupKind(), "", errors)
-
-	return admission.Denied(err.Error())
+	return admission.Allowed("validation successful")
 }

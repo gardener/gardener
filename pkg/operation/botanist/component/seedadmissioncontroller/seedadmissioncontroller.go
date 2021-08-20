@@ -43,6 +43,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -407,9 +408,16 @@ func GetValidatingWebhookConfig(clientConfig admissionregistrationv1.WebhookClie
 				},
 				Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update},
 			}},
-			FailurePolicy:           &failurePolicy,
-			NamespaceSelector:       &metav1.LabelSelector{},
-			ClientConfig:            clientConfig,
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
+				CABundle: clientConfig.CABundle,
+				Service: &admissionregistrationv1beta1.ServiceReference{
+					Name:      clientConfig.Service.Name,
+					Namespace: clientConfig.Service.Namespace,
+					Path:      pointer.String(extensionresources.WebhookPath),
+				},
+			},
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			TimeoutSeconds:          pointer.Int32(10),
 		}},
