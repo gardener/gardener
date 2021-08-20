@@ -30,6 +30,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -148,8 +149,8 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 		portMetricsEndpoint = intstr.FromInt(portMetrics)
 		protocolTCP         = corev1.ProtocolTCP
 		protocolUDP         = corev1.ProtocolUDP
-		maxSurge            = intstr.FromInt(1)
-		maxUnavailable      = intstr.FromInt(0)
+		intStrOne           = intstr.FromInt(1)
+		intStrZero          = intstr.FromInt(0)
 
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -330,8 +331,8 @@ import custom/*.server
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RollingUpdateDeploymentStrategyType,
 					RollingUpdate: &appsv1.RollingUpdateDeployment{
-						MaxSurge:       &maxSurge,
-						MaxUnavailable: &maxUnavailable,
+						MaxSurge:       &intStrOne,
+						MaxUnavailable: &intStrZero,
 					},
 				},
 				Selector: &metav1.LabelSelector{
@@ -488,6 +489,18 @@ import custom/*.server
 				},
 			},
 		}
+
+		podDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "coredns",
+				Namespace: metav1.NamespaceSystem,
+				Labels:    map[string]string{LabelKey: LabelValue},
+			},
+			Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				MaxUnavailable: &intStrOne,
+				Selector:       deployment.Spec.Selector,
+			},
+		}
 	)
 
 	if c.values.APIServerHost != nil {
@@ -512,6 +525,7 @@ import custom/*.server
 		service,
 		networkPolicy,
 		deployment,
+		podDisruptionBudget,
 	)
 }
 
