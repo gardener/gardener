@@ -72,6 +72,16 @@ var _ = Describe("CoreDNS", func() {
 
 	Describe("#Deploy", func() {
 		It("should successfully deploy all resources", func() {
+			var (
+				serviceAccountYAML = `apiVersion: v1
+kind: ServiceAccount
+metadata:
+  creationTimestamp: null
+  name: coredns
+  namespace: kube-system
+`
+			)
+
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
@@ -100,7 +110,8 @@ var _ = Describe("CoreDNS", func() {
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(0))
+			Expect(managedResourceSecret.Data).To(HaveLen(1))
+			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns.yaml"])).To(Equal(serviceAccountYAML))
 		})
 	})
 

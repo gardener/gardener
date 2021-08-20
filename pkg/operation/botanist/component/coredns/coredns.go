@@ -22,6 +22,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -95,7 +97,16 @@ func (c *coreDNS) WaitCleanup(ctx context.Context) error {
 func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		serviceAccount = &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "coredns",
+				Namespace: metav1.NamespaceSystem,
+			},
+		}
 	)
 
-	return registry.AddAllAndSerialize()
+	return registry.AddAllAndSerialize(
+		serviceAccount,
+	)
 }
