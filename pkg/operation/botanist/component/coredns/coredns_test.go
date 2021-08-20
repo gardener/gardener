@@ -160,6 +160,18 @@ metadata:
   name: coredns
   namespace: kube-system
 `
+				configMapCustomYAML = `apiVersion: v1
+data:
+  changeme.override: '# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns.md'
+  changeme.server: '# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns.md'
+kind: ConfigMap
+metadata:
+  annotations:
+    resources.gardener.cloud/ignore: "true"
+  creationTimestamp: null
+  name: coredns-custom
+  namespace: kube-system
+`
 			)
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -190,11 +202,12 @@ metadata:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(4))
+			Expect(managedResourceSecret.Data).To(HaveLen(5))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_coredns.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns.yaml"])).To(Equal(configMapYAML))
+			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns-custom.yaml"])).To(Equal(configMapCustomYAML))
 		})
 	})
 

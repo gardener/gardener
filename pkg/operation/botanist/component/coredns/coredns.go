@@ -192,6 +192,18 @@ import custom/*.server
 `,
 			},
 		}
+
+		configMapCustom = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "coredns-custom",
+				Namespace:   metav1.NamespaceSystem,
+				Annotations: map[string]string{resourcesv1alpha1.Ignore: "true"},
+			},
+			Data: map[string]string{
+				"changeme.server":   "# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns.md",
+				"changeme.override": "# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns.md",
+			},
+		}
 	)
 
 	return registry.AddAllAndSerialize(
@@ -199,5 +211,6 @@ import custom/*.server
 		clusterRole,
 		clusterRoleBinding,
 		configMap,
+		configMapCustom,
 	)
 }
