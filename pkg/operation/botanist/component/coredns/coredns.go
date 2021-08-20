@@ -23,14 +23,18 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -46,28 +50,40 @@ const (
 	PortServiceServer = 53
 	// PortServer is the service port used for the DNS server.
 	PortServer = 8053
+	// DeploymentName is the name of the coredns Deployment.
+	DeploymentName = "coredns"
 
-	deploymentName = "coredns"
-	containerName  = "coredns"
-	serviceName    = "kube-dns" // this is due to legacy reasons
+	containerName = "coredns"
+	serviceName   = "kube-dns" // this is due to legacy reasons
 
 	portNameMetrics = "metrics"
 	portMetrics     = 9153
+
+	configDataKey               = "Corefile"
+	volumeNameConfig            = "config-volume"
+	volumeNameConfigCustom      = "custom-config-volume"
+	volumeMountPathConfig       = "/etc/coredns"
+	volumeMountPathConfigCustom = "/etc/coredns/custom"
 )
 
 // Interface contains functions for a CoreDNS deployer.
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
+	SetPodAnnotations(map[string]string)
 }
 
 type Values struct {
+	// APIServerHost is the host of the kube-apiserver.
+	APIServerHost *string
 	// ClusterDomain is the domain used for cluster-wide DNS records handled by CoreDNS.
 	ClusterDomain string
 	// ClusterIP is the IP address which should be used as `.spec.clusterIP` in the Service spec.
 	ClusterIP string
 	// Image is the container image used for CoreDNS.
 	Image string
+	// PodAnnotations is the set of additional annotations to be used for the pods.
+	PodAnnotations map[string]string
 	// PodNetworkCIDR is the CIDR of the pod network.
 	PodNetworkCIDR string
 	// NodeNetworkCIDR is the CIDR of the node network.
@@ -132,6 +148,8 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 		portMetricsEndpoint = intstr.FromInt(portMetrics)
 		protocolTCP         = corev1.ProtocolTCP
 		protocolUDP         = corev1.ProtocolUDP
+		maxSurge            = intstr.FromInt(1)
+		maxUnavailable      = intstr.FromInt(0)
 
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
@@ -190,7 +208,7 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 				Namespace: metav1.NamespaceSystem,
 			},
 			Data: map[string]string{
-				"Corefile": `.:` + strconv.Itoa(PortServer) + ` {
+				configDataKey: `.:` + strconv.Itoa(PortServer) + ` {
   errors
   log . {
       class error
@@ -300,7 +318,184 @@ import custom/*.server
 				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 			},
 		}
+
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      DeploymentName,
+				Namespace: metav1.NamespaceSystem,
+				Labels:    getLabels(),
+			},
+			Spec: appsv1.DeploymentSpec{
+				RevisionHistoryLimit: pointer.Int32(1),
+				Strategy: appsv1.DeploymentStrategy{
+					Type: appsv1.RollingUpdateDeploymentStrategyType,
+					RollingUpdate: &appsv1.RollingUpdateDeployment{
+						MaxSurge:       &maxSurge,
+						MaxUnavailable: &maxUnavailable,
+					},
+				},
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{LabelKey: LabelValue},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: utils.MergeStringMaps(c.values.PodAnnotations, map[string]string{
+							"scheduler.alpha.kubernetes.io/critical-pod": "",
+						}),
+						Labels: getLabels(),
+					},
+					Spec: corev1.PodSpec{
+						Affinity: &corev1.Affinity{
+							PodAntiAffinity: &corev1.PodAntiAffinity{
+								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
+									Weight: 1,
+									PodAffinityTerm: corev1.PodAffinityTerm{
+										TopologyKey: corev1.LabelHostname,
+										LabelSelector: &metav1.LabelSelector{
+											MatchExpressions: []metav1.LabelSelectorRequirement{{
+												Key:      LabelKey,
+												Operator: metav1.LabelSelectorOpIn,
+												Values:   []string{LabelValue},
+											}},
+										},
+									},
+								}},
+							},
+						},
+						PriorityClassName:  "system-cluster-critical",
+						ServiceAccountName: serviceAccount.Name,
+						NodeSelector:       map[string]string{v1beta1constants.LabelWorkerPoolSystemComponents: "true"},
+						DNSPolicy:          corev1.DNSDefault,
+						SecurityContext: &corev1.PodSecurityContext{
+							RunAsNonRoot: pointer.Bool(true),
+							RunAsUser:    pointer.Int64(65534),
+						},
+						Tolerations: []corev1.Toleration{{
+							Key:      "CriticalAddonsOnly",
+							Operator: corev1.TolerationOpExists,
+						}},
+						Containers: []corev1.Container{{
+							Name:            containerName,
+							Image:           c.values.Image,
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Args: []string{"" +
+								"-conf",
+								volumeMountPathConfig + "/" + configDataKey,
+							},
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          "dns-udp",
+									Protocol:      protocolUDP,
+									ContainerPort: PortServer,
+								},
+								{
+									Name:          "dns-tcp",
+									Protocol:      protocolTCP,
+									ContainerPort: PortServer,
+								},
+								{
+									Name:          portNameMetrics,
+									Protocol:      protocolTCP,
+									ContainerPort: portMetrics,
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								AllowPrivilegeEscalation: pointer.Bool(false),
+								Capabilities: &corev1.Capabilities{
+									Drop: []corev1.Capability{"all"},
+								},
+								ReadOnlyRootFilesystem: pointer.Bool(true),
+							},
+							LivenessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/health",
+										Scheme: corev1.URISchemeHTTP,
+										Port:   intstr.FromInt(8080),
+									},
+								},
+								SuccessThreshold:    1,
+								FailureThreshold:    5,
+								InitialDelaySeconds: 60,
+								TimeoutSeconds:      5,
+							},
+							ReadinessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/ready",
+										Scheme: corev1.URISchemeHTTP,
+										Port:   intstr.FromInt(8181),
+									},
+								},
+								SuccessThreshold:    1,
+								FailureThreshold:    1,
+								InitialDelaySeconds: 30,
+								TimeoutSeconds:      2,
+								PeriodSeconds:       10,
+							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("50m"),
+									corev1.ResourceMemory: resource.MustParse("15Mi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("250m"),
+									corev1.ResourceMemory: resource.MustParse("500Mi"),
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      volumeNameConfig,
+									MountPath: volumeMountPathConfig,
+									ReadOnly:  true,
+								},
+								{
+									Name:      volumeNameConfigCustom,
+									MountPath: volumeMountPathConfigCustom,
+									ReadOnly:  true,
+								},
+							},
+						}},
+						Volumes: []corev1.Volume{
+							{
+								Name: volumeNameConfig,
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: configMap.Name,
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  configDataKey,
+											Path: configDataKey,
+										}},
+									},
+								},
+							},
+							{
+								Name: volumeNameConfigCustom,
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: configMapCustom.Name,
+										},
+										DefaultMode: pointer.Int32(420),
+										Optional:    pointer.Bool(true),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
 	)
+
+	if c.values.APIServerHost != nil {
+		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
+			Name:  "KUBERNETES_SERVICE_HOST",
+			Value: *c.values.APIServerHost,
+		})
+	}
 
 	if c.values.NodeNetworkCIDR != nil {
 		networkPolicy.Spec.Ingress[0].From = append(networkPolicy.Spec.Ingress[0].From, networkingv1.NetworkPolicyPeer{
@@ -316,5 +511,18 @@ import custom/*.server
 		configMapCustom,
 		service,
 		networkPolicy,
+		deployment,
 	)
+}
+
+func (c *coreDNS) SetPodAnnotations(v map[string]string) {
+	c.values.PodAnnotations = v
+}
+
+func getLabels() map[string]string {
+	return map[string]string{
+		"origin":                    "gardener",
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleSystemComponent,
+		LabelKey:                    LabelValue,
+	}
 }

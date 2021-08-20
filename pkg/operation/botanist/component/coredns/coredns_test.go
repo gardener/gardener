@@ -50,6 +50,7 @@ var _ = Describe("CoreDNS", func() {
 		nodeNetworkCIDR     = "10.11.12.13/14"
 
 		c         client.Client
+		values    Values
 		component component.DeployWaiter
 
 		managedResource       *resourcesv1alpha1.ManagedResource
@@ -58,13 +59,14 @@ var _ = Describe("CoreDNS", func() {
 
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
-		component = New(c, namespace, Values{
+		values = Values{
 			ClusterDomain:   clusterDomain,
 			ClusterIP:       clusterIP,
 			Image:           image,
 			PodNetworkCIDR:  podNetworkCIDR,
 			NodeNetworkCIDR: &nodeNetworkCIDR,
-		})
+		}
+		component = New(c, namespace, values)
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -81,16 +83,15 @@ var _ = Describe("CoreDNS", func() {
 	})
 
 	Describe("#Deploy", func() {
-		It("should successfully deploy all resources", func() {
-			var (
-				serviceAccountYAML = `apiVersion: v1
+		var (
+			serviceAccountYAML = `apiVersion: v1
 kind: ServiceAccount
 metadata:
   creationTimestamp: null
   name: coredns
   namespace: kube-system
 `
-				clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+			clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
@@ -120,7 +121,7 @@ rules:
   - list
   - watch
 `
-				clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+			clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   annotations:
@@ -136,7 +137,7 @@ subjects:
   name: coredns
   namespace: kube-system
 `
-				configMapYAML = `apiVersion: v1
+			configMapYAML = `apiVersion: v1
 data:
   Corefile: |
     .:8053 {
@@ -166,7 +167,7 @@ metadata:
   name: coredns
   namespace: kube-system
 `
-				configMapCustomYAML = `apiVersion: v1
+			configMapCustomYAML = `apiVersion: v1
 data:
   changeme.override: '# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns.md'
   changeme.server: '# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns.md'
@@ -178,7 +179,7 @@ metadata:
   name: coredns-custom
   namespace: kube-system
 `
-				serviceYAML = `apiVersion: v1
+			serviceYAML = `apiVersion: v1
 kind: Service
 metadata:
   creationTimestamp: null
@@ -207,7 +208,7 @@ spec:
 status:
   loadBalancer: {}
 `
-				networkPolicyYAML = `apiVersion: networking.k8s.io/v1
+			networkPolicyYAML = `apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   annotations:
@@ -251,8 +252,151 @@ spec:
   - Ingress
   - Egress
 `
-			)
+			deploymentYAMLFor = func(apiserverHost string, podAnnotations map[string]string) string {
+				out := `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    gardener.cloud/role: system-component
+    k8s-app: kube-dns
+    origin: gardener
+  name: coredns
+  namespace: kube-system
+spec:
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+`
 
+				for k, v := range podAnnotations {
+					out += `        ` + k + `: ` + v + `
+`
+				}
+
+				out += `        scheduler.alpha.kubernetes.io/critical-pod: ""
+      creationTimestamp: null
+      labels:
+        gardener.cloud/role: system-component
+        k8s-app: kube-dns
+        origin: gardener
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: k8s-app
+                  operator: In
+                  values:
+                  - kube-dns
+              topologyKey: kubernetes.io/hostname
+            weight: 1
+      containers:
+      - args:
+        - -conf
+        - /etc/coredns/Corefile
+`
+
+				if apiserverHost != "" {
+					out += `        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: ` + apiserverHost + `
+`
+				}
+
+				out += `        image: ` + image + `
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          successThreshold: 1
+          timeoutSeconds: 5
+        name: coredns
+        ports:
+        - containerPort: 8053
+          name: dns-udp
+          protocol: UDP
+        - containerPort: 8053
+          name: dns-tcp
+          protocol: TCP
+        - containerPort: 9153
+          name: metrics
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 1
+          httpGet:
+            path: /ready
+            port: 8181
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources:
+          limits:
+            cpu: 250m
+            memory: 500Mi
+          requests:
+            cpu: 50m
+            memory: 15Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - all
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /etc/coredns
+          name: config-volume
+          readOnly: true
+        - mountPath: /etc/coredns/custom
+          name: custom-config-volume
+          readOnly: true
+      dnsPolicy: Default
+      nodeSelector:
+        worker.gardener.cloud/system-components: "true"
+      priorityClassName: system-cluster-critical
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+      serviceAccountName: coredns
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      volumes:
+      - configMap:
+          items:
+          - key: Corefile
+            path: Corefile
+          name: coredns
+        name: config-volume
+      - configMap:
+          defaultMode: 420
+          name: coredns-custom
+          optional: true
+        name: custom-config-volume
+status: {}
+`
+				return out
+			}
+		)
+
+		JustBeforeEach(func() {
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 
@@ -281,7 +425,7 @@ spec:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(7))
+			Expect(managedResourceSecret.Data).To(HaveLen(8))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_coredns.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns.yaml"])).To(Equal(clusterRoleBindingYAML))
@@ -289,6 +433,29 @@ spec:
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns-custom.yaml"])).To(Equal(configMapCustomYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-dns.yaml"])).To(Equal(networkPolicyYAML))
+		})
+
+		Context("w/o apiserver host, w/o pod annotations", func() {
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor("", nil)))
+			})
+		})
+
+		Context("w/ apiserver host, w/ pod annotations", func() {
+			var (
+				apiserverHost  = "apiserver.host"
+				podAnnotations = map[string]string{"foo": "bar"}
+			)
+
+			BeforeEach(func() {
+				values.APIServerHost = &apiserverHost
+				values.PodAnnotations = podAnnotations
+				component = New(c, namespace, values)
+			})
+
+			It("should successfully deploy all resources", func() {
+				Expect(string(managedResourceSecret.Data["deployment__kube-system__coredns.yaml"])).To(Equal(deploymentYAMLFor(apiserverHost, podAnnotations)))
+			})
 		})
 	})
 

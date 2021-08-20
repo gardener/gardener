@@ -358,8 +358,16 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilOperatingSystemConfigReady),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying CoreDNS system component",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.SystemComponents.CoreDNS.Deploy).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Name: "Deploying CoreDNS system component",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				if err := botanist.DeployCoreDNS(ctx); err != nil {
+					return err
+				}
+				if controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
+					return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskRestartCoreAddons)
+				}
+				return nil
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilOperatingSystemConfigReady),
 		})
 		_ = g.Add(flow.Task{
@@ -368,16 +376,8 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilOperatingSystemConfigReady),
 		})
 		deployManagedResourcesForAddons = g.Add(flow.Task{
-			Name: "Deploying managed resources for system components and optional addons",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if err := botanist.DeployManagedResourceForAddons(ctx); err != nil {
-					return err
-				}
-				if controllerutils.HasTask(o.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
-					return removeTaskAnnotation(ctx, o, generation, v1beta1constants.ShootTaskRestartCoreAddons)
-				}
-				return nil
-			}).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
+			Name:         "Deploying managed resources for system components and optional addons",
+			Fn:           flow.TaskFn(botanist.DeployManagedResourceForAddons).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, ensureShootClusterIdentity),
 		})
 		deployManagedResourceForCloudConfigExecutor = g.Add(flow.Task{

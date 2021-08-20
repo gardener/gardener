@@ -39,7 +39,7 @@ const (
 `
 	loggingFilter = `[FILTER]
     Name                parser
-    Match               kubernetes.*` + deploymentName + `*` + containerName + `*
+    Match               kubernetes.*` + DeploymentName + `*` + containerName + `*
     Key_Name            log
     Parser              ` + loggingParser1Name + `
     Parser              ` + loggingParser2Name + `
