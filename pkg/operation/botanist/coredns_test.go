@@ -15,6 +15,8 @@
 package botanist_test
 
 import (
+	"net"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
@@ -49,7 +51,11 @@ var _ = Describe("CoreDNS", func() {
 			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
 
 			botanist.K8sSeedClient = kubernetesClient
-			botanist.Shoot = &shootpkg.Shoot{}
+			botanist.Shoot = &shootpkg.Shoot{
+				Networks: &shootpkg.Networks{
+					CoreDNS: net.ParseIP("18.19.20.21"),
+				},
+			}
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		})
 

@@ -27,10 +27,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
+	// LabelKey is the key of a label used for the identification of CoreDNS pods.
+	LabelKey = "k8s-app"
+	// LabelValue is the value of a label used for the identification of CoreDNS pods (it's 'kube-dns' for legacy
+	// reasons).
+	LabelValue = "kube-dns"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-coredns"
 	// PortServiceServer is the target port used for the DNS server.
@@ -55,6 +61,8 @@ type Interface interface {
 type Values struct {
 	// ClusterDomain is the domain used for cluster-wide DNS records handled by CoreDNS.
 	ClusterDomain string
+	// ClusterIP is the IP address which should be used as `.spec.clusterIP` in the Service spec.
+	ClusterIP string
 	// Image is the container image used for CoreDNS.
 	Image string
 }
@@ -204,6 +212,41 @@ import custom/*.server
 				"changeme.override": "# checkout the docs on how to use: https://github.com/gardener/gardener/blob/master/docs/usage/custom-dns.md",
 			},
 		}
+
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: metav1.NamespaceSystem,
+				Labels: map[string]string{
+					LabelKey:                        LabelValue,
+					"kubernetes.io/cluster-service": "true",
+					"kubernetes.io/name":            "CoreDNS",
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				ClusterIP: c.values.ClusterIP,
+				Selector:  map[string]string{LabelKey: LabelValue},
+				Ports: []corev1.ServicePort{
+					{
+						Name:       "dns",
+						Port:       int32(PortServiceServer),
+						TargetPort: intstr.FromInt(PortServer),
+						Protocol:   corev1.ProtocolUDP,
+					},
+					{
+						Name:       "dns-tcp",
+						Port:       int32(PortServiceServer),
+						TargetPort: intstr.FromInt(PortServer),
+						Protocol:   corev1.ProtocolTCP,
+					},
+					{
+						Name:       "metrics",
+						Port:       int32(portMetrics),
+						TargetPort: intstr.FromInt(portMetrics),
+					},
+				},
+			},
+		}
 	)
 
 	return registry.AddAllAndSerialize(
@@ -212,5 +255,6 @@ import custom/*.server
 		clusterRoleBinding,
 		configMap,
 		configMapCustom,
+		service,
 	)
 }

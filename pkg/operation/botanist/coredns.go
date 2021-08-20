@@ -33,6 +33,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		b.Shoot.SeedNamespace,
 		coredns.Values{
 			ClusterDomain: gardencorev1beta1.DefaultDomain, // resolve conformance test issue (https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44) before changing:
+			ClusterIP:     b.Shoot.Networks.CoreDNS.String(),
 			Image:         image.String(),
 		},
 	), nil
