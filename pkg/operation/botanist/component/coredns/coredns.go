@@ -28,6 +28,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
@@ -501,6 +502,29 @@ import custom/*.server
 				Selector:       deployment.Spec.Selector,
 			},
 		}
+
+		horizontalPodAutoscaler = &autoscalingv2beta1.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "coredns",
+				Namespace: metav1.NamespaceSystem,
+			},
+			Spec: autoscalingv2beta1.HorizontalPodAutoscalerSpec{
+				MinReplicas: pointer.Int32(2),
+				MaxReplicas: 5,
+				Metrics: []autoscalingv2beta1.MetricSpec{{
+					Type: autoscalingv2beta1.ResourceMetricSourceType,
+					Resource: &autoscalingv2beta1.ResourceMetricSource{
+						Name:                     corev1.ResourceCPU,
+						TargetAverageUtilization: pointer.Int32(70),
+					},
+				}},
+				ScaleTargetRef: autoscalingv2beta1.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       deployment.Name,
+				},
+			},
+		}
 	)
 
 	if c.values.APIServerHost != nil {
@@ -526,6 +550,7 @@ import custom/*.server
 		networkPolicy,
 		deployment,
 		podDisruptionBudget,
+		horizontalPodAutoscaler,
 	)
 }
 

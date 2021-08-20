@@ -413,6 +413,30 @@ status:
   disruptionsAllowed: 0
   expectedPods: 0
 `
+			hpaYAML = `apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  creationTimestamp: null
+  name: coredns
+  namespace: kube-system
+spec:
+  maxReplicas: 5
+  metrics:
+  - resource:
+      name: cpu
+      targetAverageUtilization: 70
+    type: Resource
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: coredns
+status:
+  conditions: null
+  currentMetrics: null
+  currentReplicas: 0
+  desiredReplicas: 0
+`
 		)
 
 		JustBeforeEach(func() {
@@ -444,7 +468,7 @@ status:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(9))
+			Expect(managedResourceSecret.Data).To(HaveLen(10))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_coredns.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns.yaml"])).To(Equal(clusterRoleBindingYAML))
@@ -453,6 +477,7 @@ status:
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns.yaml"])).To(Equal(serviceYAML))
 			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-dns.yaml"])).To(Equal(networkPolicyYAML))
 			Expect(string(managedResourceSecret.Data["poddisruptionbudget__kube-system__coredns.yaml"])).To(Equal(pdbYAML))
+			Expect(string(managedResourceSecret.Data["horizontalpodautoscaler__kube-system__coredns.yaml"])).To(Equal(hpaYAML))
 		})
 
 		Context("w/o apiserver host, w/o pod annotations", func() {

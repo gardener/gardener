@@ -1,17 +1,9 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
+---
 apiVersion: {{ include "hpaversion" . }}
 kind: HorizontalPodAutoscaler
 metadata:
   name: coredns
   namespace: {{ .Release.Namespace }}
-spec:
-  maxReplicas: {{ .Values.horizontalPodAutoScaler.spec.maxReplicas }}
-  minReplicas: {{ .Values.horizontalPodAutoScaler.spec.minReplicas }}
-  scaleTargetRef:
-    apiVersion: {{ include "deploymentversion" . }}
-    kind: Deployment
-    name: coredns
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      targetAverageUtilization: {{ .Values.horizontalPodAutoScaler.spec.metrics.targetAverageUtilization }}
+  annotations:
+    resources.gardener.cloud/mode: Ignore
