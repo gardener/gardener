@@ -46,6 +46,8 @@ var _ = Describe("CoreDNS", func() {
 		clusterDomain       = "foo.bar"
 		clusterIP           = "1.2.3.4"
 		image               = "some-image:some-tag"
+		podNetworkCIDR      = "5.6.7.8/9"
+		nodeNetworkCIDR     = "10.11.12.13/14"
 
 		c         client.Client
 		component component.DeployWaiter
@@ -57,9 +59,11 @@ var _ = Describe("CoreDNS", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		component = New(c, namespace, Values{
-			ClusterDomain: clusterDomain,
-			ClusterIP:     clusterIP,
-			Image:         image,
+			ClusterDomain:   clusterDomain,
+			ClusterIP:       clusterIP,
+			Image:           image,
+			PodNetworkCIDR:  podNetworkCIDR,
+			NodeNetworkCIDR: &nodeNetworkCIDR,
 		})
 
 		managedResource = &resourcesv1alpha1.ManagedResource{
@@ -203,6 +207,50 @@ spec:
 status:
   loadBalancer: {}
 `
+				networkPolicyYAML = `apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: Allows CoreDNS to lookup DNS records, talk to the
+      API Server. Also allows CoreDNS to be reachable via its service and its metrics
+      endpoint.
+  creationTimestamp: null
+  name: gardener.cloud--allow-dns
+  namespace: kube-system
+spec:
+  egress:
+  - ports:
+    - port: 443
+      protocol: TCP
+    - port: 53
+      protocol: TCP
+    - port: 53
+      protocol: UDP
+  ingress:
+  - from:
+    - namespaceSelector: {}
+      podSelector: {}
+    - ipBlock:
+        cidr: ` + podNetworkCIDR + `
+    - ipBlock:
+        cidr: ` + nodeNetworkCIDR + `
+    ports:
+    - port: 9153
+      protocol: TCP
+    - port: 8053
+      protocol: TCP
+    - port: 8053
+      protocol: UDP
+  podSelector:
+    matchExpressions:
+    - key: k8s-app
+      operator: In
+      values:
+      - kube-dns
+  policyTypes:
+  - Ingress
+  - Egress
+`
 			)
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
@@ -233,13 +281,14 @@ status:
 
 			Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
 			Expect(managedResourceSecret.Type).To(Equal(corev1.SecretTypeOpaque))
-			Expect(managedResourceSecret.Data).To(HaveLen(6))
+			Expect(managedResourceSecret.Data).To(HaveLen(7))
 			Expect(string(managedResourceSecret.Data["serviceaccount__kube-system__coredns.yaml"])).To(Equal(serviceAccountYAML))
 			Expect(string(managedResourceSecret.Data["clusterrole____system_coredns.yaml"])).To(Equal(clusterRoleYAML))
 			Expect(string(managedResourceSecret.Data["clusterrolebinding____system_coredns.yaml"])).To(Equal(clusterRoleBindingYAML))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns.yaml"])).To(Equal(configMapYAML))
 			Expect(string(managedResourceSecret.Data["configmap__kube-system__coredns-custom.yaml"])).To(Equal(configMapCustomYAML))
 			Expect(string(managedResourceSecret.Data["service__kube-system__kube-dns.yaml"])).To(Equal(serviceYAML))
+			Expect(string(managedResourceSecret.Data["networkpolicy__kube-system__gardener.cloud--allow-dns.yaml"])).To(Equal(networkPolicyYAML))
 		})
 	})
 

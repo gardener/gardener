@@ -11,7 +11,7 @@ Therefore, pods should have labels matching to the selectors of the available ne
 Gardener deploys the following network policies:
 ```
 NAME                                       POD-SELECTOR
-gardener.cloud--allow-dns                  k8s-app in (coredns,kube-dns)
+gardener.cloud--allow-dns                  k8s-app in (kube-dns)
 gardener.cloud--allow-from-seed            networking.gardener.cloud/from-seed=allowed
 gardener.cloud--allow-to-apiserver         networking.gardener.cloud/to-apiserver=allowed
 gardener.cloud--allow-to-dns               networking.gardener.cloud/to-dns=allowed

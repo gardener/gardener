@@ -19,12 +19,15 @@ import (
 	"strconv"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -65,6 +68,10 @@ type Values struct {
 	ClusterIP string
 	// Image is the container image used for CoreDNS.
 	Image string
+	// PodNetworkCIDR is the CIDR of the pod network.
+	PodNetworkCIDR string
+	// NodeNetworkCIDR is the CIDR of the node network.
+	NodeNetworkCIDR *string
 }
 
 // New creates a new instance of DeployWaiter for coredns.
@@ -119,6 +126,13 @@ func (c *coreDNS) WaitCleanup(ctx context.Context) error {
 
 func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
 	var (
+		portAPIServer       = intstr.FromInt(kubeapiserver.Port)
+		portDNSServerHost   = intstr.FromInt(53)
+		portDNSServer       = intstr.FromInt(PortServer)
+		portMetricsEndpoint = intstr.FromInt(portMetrics)
+		protocolTCP         = corev1.ProtocolTCP
+		protocolUDP         = corev1.ProtocolUDP
+
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		serviceAccount = &corev1.ServiceAccount{
@@ -247,7 +261,52 @@ import custom/*.server
 				},
 			},
 		}
+
+		networkPolicy = &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "gardener.cloud--allow-dns",
+				Namespace: metav1.NamespaceSystem,
+				Annotations: map[string]string{
+					v1beta1constants.GardenerDescription: "Allows CoreDNS to lookup DNS records, talk to the API Server. " +
+						"Also allows CoreDNS to be reachable via its service and its metrics endpoint.",
+				},
+			},
+			Spec: networkingv1.NetworkPolicySpec{
+				PodSelector: metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      LabelKey,
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{LabelValue},
+					}},
+				},
+				Egress: []networkingv1.NetworkPolicyEgressRule{{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{Port: &portAPIServer, Protocol: &protocolTCP},     // Allow communication to API Server
+						{Port: &portDNSServerHost, Protocol: &protocolTCP}, // Lookup DNS due to cache miss
+						{Port: &portDNSServerHost, Protocol: &protocolUDP}, // Lookup DNS due to cache miss
+					},
+				}},
+				Ingress: []networkingv1.NetworkPolicyIngressRule{{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{Port: &portMetricsEndpoint, Protocol: &protocolTCP}, // CoreDNS metrics port
+						{Port: &portDNSServer, Protocol: &protocolTCP},       // CoreDNS server port
+						{Port: &portDNSServer, Protocol: &protocolUDP},       // CoreDNS server port
+					},
+					From: []networkingv1.NetworkPolicyPeer{
+						{NamespaceSelector: &metav1.LabelSelector{}, PodSelector: &metav1.LabelSelector{}},
+						{IPBlock: &networkingv1.IPBlock{CIDR: c.values.PodNetworkCIDR}},
+					},
+				}},
+				PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+			},
+		}
 	)
+
+	if c.values.NodeNetworkCIDR != nil {
+		networkPolicy.Spec.Ingress[0].From = append(networkPolicy.Spec.Ingress[0].From, networkingv1.NetworkPolicyPeer{
+			IPBlock: &networkingv1.IPBlock{CIDR: *c.values.NodeNetworkCIDR},
+		})
+	}
 
 	return registry.AddAllAndSerialize(
 		serviceAccount,
@@ -256,5 +315,6 @@ import custom/*.server
 		configMap,
 		configMapCustom,
 		service,
+		networkPolicy,
 	)
 }
