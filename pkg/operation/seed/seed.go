@@ -433,11 +433,6 @@ func RunReconcileSeedFlow(
 			}
 		}
 
-		// TODO: Remove after next release
-		if err := deletePriorityClassIfValueNotTheSame(ctx, seedClient, "fluent-bit", 150); err != nil {
-			return err
-		}
-
 		if hvpaEnabled {
 			shootInfo := &corev1.ConfigMap{}
 			maintenanceBegin := "220000-0000"
