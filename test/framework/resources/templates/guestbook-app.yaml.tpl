@@ -42,6 +42,7 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8080
+{{- if semverCompare "< 1.19-0" .KubeVersion }}
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress
@@ -59,3 +60,25 @@ spec:
           serviceName: guestbook
           servicePort: 80
         path: /
+{{- else -}}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: guestbook
+  namespace: {{ .HelmDeployNamespace }}
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: {{ .ShootDNSHost }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: guestbook
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+{{- end }}

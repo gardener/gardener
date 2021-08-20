@@ -24,12 +24,15 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
-	framework "github.com/gardener/gardener/test/framework"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
+	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
+	"github.com/Masterminds/semver"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apiextensions "k8s.io/api/extensions/v1beta1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -166,9 +169,11 @@ func (t *GuestBookTest) DeployGuestBookApp(ctx context.Context) {
 	ginkgo.By("Deploy the guestbook application")
 	guestBookParams := struct {
 		HelmDeployNamespace string
+		KubeVersion         string
 		ShootDNSHost        string
 	}{
 		t.framework.Namespace,
+		t.framework.Shoot.Spec.Kubernetes.Version,
 		t.guestBookAppHost,
 	}
 	err = t.framework.RenderAndDeployTemplate(ctx, t.framework.ShootClient, templates.GuestbookAppName, guestBookParams)
@@ -245,7 +250,7 @@ func (t *GuestBookTest) Cleanup(ctx context.Context) {
 
 	cleanupGuestbook := func() {
 		var (
-			guestBookIngressToDelete = &apiextensions.Ingress{
+			guestBookIngressToDelete client.Object = &networkingv1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: t.framework.Namespace,
 					Name:      GuestBook,
@@ -266,7 +271,18 @@ func (t *GuestBookTest) Cleanup(ctx context.Context) {
 			}
 		)
 
-		err := deleteResource(ctx, guestBookIngressToDelete)
+		kubernetesVersion, err := semver.NewVersion(t.framework.Shoot.Spec.Kubernetes.Version)
+		framework.ExpectNoError(err)
+
+		if versionutils.ConstraintK8sLess119.Check(kubernetesVersion) {
+			guestBookIngressToDelete = &extensionsv1beta1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: guestBookIngressToDelete.GetNamespace(),
+					Name:      guestBookIngressToDelete.GetName(),
+				}}
+		}
+
+		err = deleteResource(ctx, guestBookIngressToDelete)
 		framework.ExpectNoError(err)
 
 		err = deleteResource(ctx, guestBookDeploymentToDelete)

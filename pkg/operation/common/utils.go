@@ -231,6 +231,7 @@ func DeleteLoki(ctx context.Context, k8sClient client.Client, namespace string) 
 func DeleteShootNodeLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
 	resources := []client.Object{
 		&extensionsv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: logging.SecretNameLokiKubeRBACProxyKubeconfig, Namespace: namespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: LokiTLS, Namespace: namespace}},
 		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: namespace}},
@@ -295,6 +296,12 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 			},
 		},
 		&extensionsv1beta1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager",
+				Namespace: namespace,
+			},
+		},
+		&networkingv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "alertmanager",
 				Namespace: namespace,

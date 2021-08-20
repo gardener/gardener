@@ -34,6 +34,7 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -248,11 +249,16 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		)(ctx)
 	}
 
+	var ingressList client.ObjectList = &networkingv1.IngressList{}
+	if version.ConstraintK8sLess119.Check(b.Shoot.KubernetesVersion) {
+		ingressList = &extensionsv1beta1.IngressList{}
+	}
+
 	return flow.Parallel(
 		cleanResourceFn(ops, c, &batchv1beta1.CronJobList{}, CronJobCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.DeploymentList{}, DeploymentCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &extensionsv1beta1.IngressList{}, IngressCleanOption, cleanOptions),
+		cleanResourceFn(ops, c, ingressList, IngressCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &batchv1.JobList{}, JobCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &corev1.PodList{}, PodCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOption, cleanOptions),
