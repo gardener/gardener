@@ -21,6 +21,8 @@ spec:
     metadata:
       annotations:
         checksum/configmap-gardenlet-config: {{ include (print $.Template.BasePath "/configmap-componentconfig.yaml") . | sha256sum }}
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: {{ .Values.global.gardenlet.config.server.https.port | quote }}
         {{- if .Values.global.gardenlet.config.server.https.tls }}
         checksum/secret-gardenlet-cert: {{ include (print $.Template.BasePath "/secret-cert.yaml") . | sha256sum }}
         {{- end }}

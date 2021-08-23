@@ -309,6 +309,8 @@ const (
 	LabelNetworkPolicyFromPrometheus = "networking.gardener.cloud/from-prometheus"
 	// LabelNetworkPolicyToAggregatePrometheus allows Egress traffic to the aggregate Prometheus.
 	LabelNetworkPolicyToAggregatePrometheus = "networking.gardener.cloud/to-aggregate-prometheus"
+	// LabelNetworkPolicyToSeedPrometheus allows Egress traffic to the seed Prometheus.
+	LabelNetworkPolicyToSeedPrometheus = "networking.gardener.cloud/to-seed-prometheus"
 	// LabelNetworkPolicyShootFromSeed allows Ingress traffic from the seed cluster (where the shoot's kube-apiserver
 	// runs).
 	LabelNetworkPolicyShootFromSeed = "networking.gardener.cloud/from-seed"

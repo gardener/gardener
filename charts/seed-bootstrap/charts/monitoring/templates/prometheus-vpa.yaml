@@ -1,0 +1,19 @@
+---
+apiVersion: "autoscaling.k8s.io/v1beta2"
+kind: VerticalPodAutoscaler
+metadata:
+  name: seed-prometheus-vpa
+  namespace: {{ .Release.Namespace }}
+spec:
+  resourcePolicy:
+    containerPolicies:
+    - containerName: '*'
+      minAllowed:
+        cpu: 100m
+        memory: 400Mi
+  targetRef:
+    apiVersion: {{ include "statefulsetversion" . }}
+    kind: StatefulSet
+    name: seed-prometheus
+  updatePolicy:
+    updateMode: Auto

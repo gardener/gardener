@@ -1,0 +1,16 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: seed-prometheus
+    role: monitoring
+  name: seed-prometheus
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: seed-prometheus
+    namespace: {{ .Release.Namespace }}

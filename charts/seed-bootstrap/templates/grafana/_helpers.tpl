@@ -39,6 +39,15 @@ datasources.yaml: |-
     editable: false
     jsonData:
       timeInterval: 1m
+  - name: seed-prometheus
+    type: prometheus
+    access: proxy
+    url: http://seed-prometheus-web:80
+    basicAuth: false
+    version: 1
+    editable: false
+    jsonData:
+      timeInterval: 1m
   - name: loki
     type: loki
     access: proxy
