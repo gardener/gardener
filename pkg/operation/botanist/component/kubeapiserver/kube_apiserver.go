@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -55,6 +56,8 @@ type Interface interface {
 type Values struct {
 	// Autoscaling contains information for configuring autoscaling settings for the kube-apiserver.
 	Autoscaling AutoscalingConfig
+	// ReversedVPNEnabled states whether the 'ReversedVPN' feature gate is enabled.
+	ReversedVPNEnabled bool
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
 	// Version is the Kubernetes version for the kube-apiserver.
@@ -102,11 +105,14 @@ type kubeAPIServer struct {
 
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	var (
-		deployment              = k.emptyDeployment()
-		podDisruptionBudget     = k.emptyPodDisruptionBudget()
-		horizontalPodAutoscaler = k.emptyHorizontalPodAutoscaler()
-		verticalPodAutoscaler   = k.emptyVerticalPodAutoscaler()
-		hvpa                    = k.emptyHVPA()
+		deployment                           = k.emptyDeployment()
+		podDisruptionBudget                  = k.emptyPodDisruptionBudget()
+		horizontalPodAutoscaler              = k.emptyHorizontalPodAutoscaler()
+		verticalPodAutoscaler                = k.emptyVerticalPodAutoscaler()
+		hvpa                                 = k.emptyHVPA()
+		networkPolicyAllowFromShootAPIServer = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
+		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
+		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -125,6 +131,18 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := k.reconcileNetworkPolicyAllowFromShootAPIServer(ctx, networkPolicyAllowFromShootAPIServer); err != nil {
+		return err
+	}
+
+	if err := k.reconcileNetworkPolicyAllowToShootAPIServer(ctx, networkPolicyAllowToShootAPIServer); err != nil {
+		return err
+	}
+
+	if err := k.reconcileNetworkPolicyAllowKubeAPIServer(ctx, networkPolicyAllowKubeAPIServer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -135,6 +153,9 @@ func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 		k.emptyHVPA(),
 		k.emptyPodDisruptionBudget(),
 		k.emptyDeployment(),
+		k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer),
+		k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer),
+		k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer),
 	)
 }
 
@@ -237,6 +258,13 @@ func (k *kubeAPIServer) GetValues() Values {
 }
 func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
 	k.values.Autoscaling.Replicas = replicas
+}
+
+// GetLabels returns the labels for the kube-apiserver.
+func GetLabels() map[string]string {
+	return utils.MergeStringMaps(getLabels(), map[string]string{
+		v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+	})
 }
 
 func getLabels() map[string]string {

@@ -38,7 +38,8 @@ func (b *Botanist) DefaultKubeAPIServer() (kubeapiserver.Interface, error) {
 		b.K8sSeedClient,
 		b.Shoot.SeedNamespace,
 		kubeapiserver.Values{
-			Autoscaling: b.computeKubeAPIServerAutoscalingConfig(),
+			Autoscaling:        b.computeKubeAPIServerAutoscalingConfig(),
+			ReversedVPNEnabled: b.Shoot.ReversedVPNEnabled,
 			SNI: kubeapiserver.SNIConfig{
 				PodMutatorEnabled: b.APIServerSNIPodMutatorEnabled(),
 			},

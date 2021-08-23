@@ -71,8 +71,8 @@ const (
 	envoyConfigFileName = "envoy.yaml"
 	// envoyTLSConfigDir contains the envoy TLS certificates.
 	envoyTLSConfigDir = "/etc/tls"
-	// envoyPort is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
-	envoyPort = 9443
+	// EnvoyPort is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
+	EnvoyPort = 9443
 	// envoyProxyContainerName is the name of the envoy proxy container.
 	envoyProxyContainerName = "envoy-proxy"
 	// openVPNPort is the port exposed by the OpenVPN server.
@@ -215,10 +215,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		}
 		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
-					v1beta1constants.LabelApp:   DeploymentName,
-				},
+				MatchLabels: GetLabels(),
 			},
 			Ingress: []networkingv1.NetworkPolicyIngressRule{
 				{
@@ -401,14 +398,14 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							ReadinessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
 									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(envoyPort),
+										Port: intstr.FromInt(EnvoyPort),
 									},
 								},
 							},
 							LivenessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
 									TCPSocket: &corev1.TCPSocketAction{
-										Port: intstr.FromInt(envoyPort),
+										Port: intstr.FromInt(EnvoyPort),
 									},
 								},
 							},
@@ -581,8 +578,8 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 			},
 			{
 				Name:       "http-proxy",
-				Port:       envoyPort,
-				TargetPort: intstr.FromInt(envoyPort),
+				Port:       EnvoyPort,
+				TargetPort: intstr.FromInt(EnvoyPort),
 			},
 		}
 		service.Spec.Selector = map[string]string{
@@ -899,6 +896,14 @@ func (v *vpnSeedServer) getIngressGatewaySelectors() map[string]string {
 	return defaulIgwSelectors
 }
 
+// GetLabels returns the labels for the vpn-seed-server
+func GetLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+		v1beta1constants.LabelApp:   DeploymentName,
+	}
+}
+
 var envoyConfig = `static_resources:
   listeners:
   - name: listener_0
@@ -906,7 +911,7 @@ var envoyConfig = `static_resources:
       socket_address:
         protocol: TCP
         address: 0.0.0.0
-        port_value: ` + fmt.Sprintf("%d", envoyPort) + `
+        port_value: ` + fmt.Sprintf("%d", EnvoyPort) + `
     listener_filters:
     - name: "envoy.filters.listener.tls_inspector"
       typed_config: {}
