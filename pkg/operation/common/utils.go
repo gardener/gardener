@@ -36,7 +36,6 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
-	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -278,7 +277,7 @@ func DeleteReserveExcessCapacity(ctx context.Context, k8sClient client.Client) e
 		return err
 	}
 
-	priorityClass := &schedulingv1beta1.PriorityClass{
+	priorityClass := &schedulingv1.PriorityClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "gardener-reserve-excess-capacity",
 		},
