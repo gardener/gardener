@@ -72,6 +72,7 @@
 * [GEP-14: Reversed Cluster VPN](proposals/14-reversed-cluster-vpn.md)
 * [GEP-15: Manage Bastions and SSH Key Pair Rotation](proposals/15-manage-bastions-and-ssh-key-pair-rotation.md)
 * [GEP-16: Dynamic kubeconfig generation for Shoot clusters](proposals/16-adminkubeconfig-subresource.md)
+* [GEP-17: Shoot Control Plane Migration "Bad Case" Scenario](proposals/17-shoot-control-plane-migration-bad-case.md)
 
 ## Development
 
