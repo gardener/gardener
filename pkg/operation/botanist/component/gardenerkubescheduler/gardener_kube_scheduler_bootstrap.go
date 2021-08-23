@@ -97,7 +97,11 @@ func Bootstrap(
 				},
 			}},
 		})
-	case version.ConstraintK8sEqual120.Check(seedVersion):
+	case version.ConstraintK8sEqual120.Check(seedVersion),
+		version.ConstraintK8sEqual121.Check(seedVersion),
+		// Kubernetes 1.22 already has a v1beta2 API which we cannot use here
+		// because plugins NodeResourcesLeastAllocated and NodeResourcesMostAllocated have been removed in this version.
+		version.ConstraintK8sEqual122.Check(seedVersion):
 		config, err = schedulerconfigv20.NewConfigurator(Name, Name, &schedulerconfigv20v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv20v1beta1.KubeSchedulerProfile{{
 				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
