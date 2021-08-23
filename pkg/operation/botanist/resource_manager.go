@@ -23,13 +23,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DefaultResourceManager returns an instance of Gardener Resource Manager with defaults configured for being deployed in a Shoot namespace
@@ -72,14 +70,6 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	kubeCfg := component.Secret{Name: resourcemanager.SecretName, Checksum: b.LoadCheckSum(resourcemanager.SecretName)}
 	b.Shoot.Components.ControlPlane.ResourceManager.SetSecrets(resourcemanager.Secrets{Kubeconfig: kubeCfg})
-
-	// TODO (ialidzhikov): remove in a future version
-	deploymentKeys := []client.ObjectKey{
-		kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameGardenerResourceManager),
-	}
-	if err := common.DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx, b.K8sSeedClient.Client(), deploymentKeys); err != nil {
-		return err
-	}
 
 	return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
 }
