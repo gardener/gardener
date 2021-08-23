@@ -9187,14 +9187,14 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationDeployment(ref common.Re
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type is the deployment type. Deprecated: Declare type via `ControllerDeployment` instead.",
+							Description: "Type is the deployment type. Deprecated: Declare type via `ControllerDeployment` instead. ATTENTION: This field will be deleted with Gardener v1.32.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ProviderConfig contains type-specific configuration. Deprecated: Use `DeploymentRefs` instead.",
+							Description: "ProviderConfig contains type-specific configuration. Deprecated: Use `DeploymentRefs` instead. ATTENTION: This field will be deleted with Gardener v1.32.",
 							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
 						},
 					},
