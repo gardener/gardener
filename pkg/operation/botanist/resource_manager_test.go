@@ -18,9 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -31,12 +28,6 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("ResourceManager", func() {
@@ -56,9 +47,7 @@ var _ = Describe("ResourceManager", func() {
 
 	Describe("#DeployGardenerResourceManager", func() {
 		var (
-			resourceManager  *mockresourcemanager.MockInterface
-			kubernetesClient *mockkubernetes.MockInterface
-			c                *mockclient.MockClient
+			resourceManager *mockresourcemanager.MockInterface
 
 			ctx           = context.TODO()
 			fakeErr       = fmt.Errorf("fake err")
@@ -69,8 +58,6 @@ var _ = Describe("ResourceManager", func() {
 
 		BeforeEach(func() {
 			resourceManager = mockresourcemanager.NewMockInterface(ctrl)
-			kubernetesClient = mockkubernetes.NewMockInterface(ctrl)
-			c = mockclient.NewMockClient(ctrl)
 
 			botanist.StoreCheckSum(secretName, checksum)
 			botanist.Shoot = &shootpkg.Shoot{
@@ -81,32 +68,9 @@ var _ = Describe("ResourceManager", func() {
 				},
 				SeedNamespace: seedNamespace,
 			}
-			botanist.K8sSeedClient = kubernetesClient
 
 			resourceManager.EXPECT().SetSecrets(resourcemanager.Secrets{
 				Kubeconfig: component.Secret{Name: secretName, Checksum: checksum}})
-
-			// Expecting the deletion of Deployments with the deprecated Role labels
-			deploymentWithDeprecatedLabel := &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      v1beta1constants.DeploymentNameGardenerResourceManager,
-					Namespace: seedNamespace,
-				},
-				Spec: appsv1.DeploymentSpec{
-					Selector: &metav1.LabelSelector{
-						MatchLabels: map[string]string{v1beta1constants.DeprecatedGardenRole: "fake"},
-					},
-				},
-			}
-			key := client.ObjectKey{Namespace: seedNamespace, Name: v1beta1constants.DeploymentNameGardenerResourceManager}
-			kubernetesClient.EXPECT().Client().Return(c)
-			c.EXPECT().Get(ctx, key, gomock.AssignableToTypeOf(&appsv1.Deployment{})).
-				DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-					(deploymentWithDeprecatedLabel).DeepCopyInto(obj.(*appsv1.Deployment))
-					return nil
-				})
-			c.EXPECT().Delete(ctx, deploymentWithDeprecatedLabel)
-			c.EXPECT().Get(ctx, key, deploymentWithDeprecatedLabel).Return(apierrors.NewNotFound(schema.GroupResource{}, "fake"))
 		})
 
 		It("should set the secrets and deploy", func() {
