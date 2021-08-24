@@ -56,6 +56,11 @@ func (e *NoopEnsurer) EnsureETCD(ctx context.Context, gctx gcontext.GardenContex
 	return nil
 }
 
+// EnsureVPNSeedServerDeployment ensures that the vpn-seed-server deployment conforms to the provider requirements.
+func (e *NoopEnsurer) EnsureVPNSeedServerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error {
+	return nil
+}
+
 // EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
 func (e *NoopEnsurer) EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcontext.GardenContext, new, old []*unit.UnitOption) ([]*unit.UnitOption, error) {
 	return new, nil

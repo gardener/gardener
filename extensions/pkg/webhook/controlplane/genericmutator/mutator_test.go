@@ -223,6 +223,21 @@ var _ = Describe("Mutator", func() {
 					ensurer.EXPECT().EnsureKubeSchedulerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
 				},
 			),
+			Entry(
+				"EnsureVPNSeedServerDeployment with a vpn-seed-server deployment",
+				func() {
+					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPNSeedServer}}
+					ensurer.EXPECT().EnsureVPNSeedServerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+				},
+			),
+			Entry(
+				"EnsureVPNSeedServerDeployment with a vpn-seed-server deployment and existing deployment",
+				func() {
+					new = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameVPNSeedServer}}
+					old = new.DeepCopyObject().(client.Object)
+					ensurer.EXPECT().EnsureVPNSeedServerDeployment(context.TODO(), gomock.Any(), new, old).Return(nil)
+				},
+			),
 		)
 
 		DescribeTable("EnsureETCD", func(new, old *druidv1alpha1.Etcd) {
