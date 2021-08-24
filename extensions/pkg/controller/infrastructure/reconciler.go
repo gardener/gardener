@@ -20,6 +20,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -36,8 +37,9 @@ import (
 )
 
 type reconciler struct {
-	logger   logr.Logger
-	actuator Actuator
+	logger          logr.Logger
+	actuator        Actuator
+	configValidator ConfigValidator
 
 	client        client.Client
 	reader        client.Reader
@@ -46,20 +48,26 @@ type reconciler struct {
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // infrastructure resources of Gardener's `extensions.gardener.cloud` API group.
-func NewReconciler(actuator Actuator) reconcile.Reconciler {
+func NewReconciler(actuator Actuator, configValidator ConfigValidator) reconcile.Reconciler {
 	logger := log.Log.WithName(ControllerName)
 
 	return extensionscontroller.OperationAnnotationWrapper(
 		func() client.Object { return &extensionsv1alpha1.Infrastructure{} },
 		&reconciler{
-			logger:        logger,
-			actuator:      actuator,
-			statusUpdater: extensionscontroller.NewStatusUpdater(logger),
+			logger:          logger,
+			actuator:        actuator,
+			configValidator: configValidator,
+			statusUpdater:   extensionscontroller.NewStatusUpdater(logger),
 		},
 	)
 }
 
 func (r *reconciler) InjectFunc(f inject.Func) error {
+	if r.configValidator != nil {
+		if err := f(r.configValidator); err != nil {
+			return err
+		}
+	}
 	return f(r.actuator)
 }
 
@@ -116,6 +124,11 @@ func (r *reconciler) reconcile(ctx context.Context, logger logr.Logger, infrastr
 	}
 
 	if err := r.statusUpdater.Processing(ctx, infrastructure, operationType, "Reconciling the infrastructure"); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := r.validateConfig(ctx, infrastructure); err != nil {
+		_ = r.statusUpdater.Error(ctx, infrastructure, err, operationType, "Error checking infrastructure config")
 		return reconcile.Result{}, err
 	}
 
@@ -190,6 +203,11 @@ func (r *reconciler) restore(ctx context.Context, logger logr.Logger, infrastruc
 		return reconcile.Result{}, err
 	}
 
+	if err := r.validateConfig(ctx, infrastructure); err != nil {
+		_ = r.statusUpdater.Error(ctx, infrastructure, err, gardencorev1beta1.LastOperationTypeRestore, "Error checking infrastructure config")
+		return reconcile.Result{}, err
+	}
+
 	if err := r.actuator.Restore(ctx, infrastructure, cluster); err != nil {
 		_ = r.statusUpdater.Error(ctx, infrastructure, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring infrastructure")
 		return extensionscontroller.ReconcileErr(err)
@@ -216,5 +234,20 @@ func (r *reconciler) removeAnnotation(ctx context.Context, logger logr.Logger, i
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, infrastructure, v1beta1constants.GardenerOperation); err != nil {
 		return fmt.Errorf("error removing annotation from infrastructure: %+v", err)
 	}
+	return nil
+}
+
+func (r *reconciler) validateConfig(ctx context.Context, infrastructure *extensionsv1alpha1.Infrastructure) error {
+	if r.configValidator == nil {
+		return nil
+	}
+
+	if allErrs := r.configValidator.Validate(ctx, infrastructure); len(allErrs) > 0 {
+		if internalErrs := allErrs.Filter(field.NewErrorTypeMatcher(field.ErrorTypeInternal)); len(internalErrs) > 0 {
+			return internalErrs.ToAggregate()
+		}
+		return gardencorev1beta1helper.NewErrorWithCodes(allErrs.ToAggregate().Error(), gardencorev1beta1.ErrorConfigurationProblem)
+	}
+
 	return nil
 }
