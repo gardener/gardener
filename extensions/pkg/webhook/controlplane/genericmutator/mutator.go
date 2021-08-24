@@ -56,6 +56,10 @@ type Ensurer interface {
 	// EnsureETCD ensures that the etcds conform to the respective provider requirements.
 	// "old" might be "nil" and must always be checked.
 	EnsureETCD(ctx context.Context, gctx gcontext.GardenContext, new, old *druidv1alpha1.Etcd) error
+	// EnsureVPNSeedServerDeployment ensures that the vpn-seed-server deployment conforms to the provider requirements.
+	// "old" might be "nil" and must always be checked. Please note that the vpn-seed-server deployment will only exist
+	// if the gardenlet's ReversedVPN feature gate is enabeld.
+	EnsureVPNSeedServerDeployment(ctx context.Context, gctx gcontext.GardenContext, new, old *appsv1.Deployment) error
 	// EnsureKubeletServiceUnitOptions ensures that the kubelet.service unit options conform to the provider requirements.
 	EnsureKubeletServiceUnitOptions(ctx context.Context, gctx gcontext.GardenContext, new, old []*unit.UnitOption) ([]*unit.UnitOption, error)
 	// EnsureKubeletConfiguration ensures that the kubelet configuration conforms to the provider requirements.
@@ -157,6 +161,9 @@ func (m *mutator) Mutate(ctx context.Context, new, old client.Object) error {
 		case v1beta1constants.DeploymentNameKubeScheduler:
 			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
 			return m.ensurer.EnsureKubeSchedulerDeployment(ctx, gctx, x, oldDep)
+		case v1beta1constants.DeploymentNameVPNSeedServer:
+			extensionswebhook.LogMutation(m.logger, x.Kind, x.Namespace, x.Name)
+			return m.ensurer.EnsureVPNSeedServerDeployment(ctx, gctx, x, oldDep)
 		}
 	case *druidv1alpha1.Etcd:
 		switch x.Name {

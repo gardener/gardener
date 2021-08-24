@@ -196,6 +196,20 @@ func (mr *MockEnsurerMockRecorder) EnsureKubernetesGeneralConfiguration(arg0, ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureKubernetesGeneralConfiguration", reflect.TypeOf((*MockEnsurer)(nil).EnsureKubernetesGeneralConfiguration), arg0, arg1, arg2, arg3)
 }
 
+// EnsureVPNSeedServerDeployment mocks base method.
+func (m *MockEnsurer) EnsureVPNSeedServerDeployment(arg0 context.Context, arg1 context0.GardenContext, arg2, arg3 *v1.Deployment) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureVPNSeedServerDeployment", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// EnsureVPNSeedServerDeployment indicates an expected call of EnsureVPNSeedServerDeployment.
+func (mr *MockEnsurerMockRecorder) EnsureVPNSeedServerDeployment(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureVPNSeedServerDeployment", reflect.TypeOf((*MockEnsurer)(nil).EnsureVPNSeedServerDeployment), arg0, arg1, arg2, arg3)
+}
+
 // ShouldProvisionKubeletCloudProviderConfig mocks base method.
 func (m *MockEnsurer) ShouldProvisionKubeletCloudProviderConfig(arg0 context.Context, arg1 context0.GardenContext) bool {
 	m.ctrl.T.Helper()
