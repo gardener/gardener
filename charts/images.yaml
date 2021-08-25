@@ -17,6 +17,13 @@ images:
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: gcr.io/google_containers/pause-amd64
   tag: "3.1"
+  labels:
+  - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
+    value:
+      policy: skip
+      comment: >
+        pause-container is not accessible from outside k8s clusters and not
+        interacted with from other containers or other systems
 - name: etcd-druid
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
@@ -173,6 +180,13 @@ images:
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
   tag: "0.22.0"
   targetVersion: "< 1.20"
+  labels:
+  - name: cloud.gardener.cnudie/dso/scanning-hints/binary_id/v1
+    value:
+      policy: skip
+      comment: >
+        not deployed as part of gardener infrastructure. Offered to users for development
+        purposes only, accompanied w/ warning that no support be provided.
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: k8s.gcr.io/ingress-nginx/controller
