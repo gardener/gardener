@@ -263,29 +263,31 @@ type validationContext struct {
 }
 
 func (c *validationContext) validateProjectMembership(a admission.Attributes) error {
-	if a.GetOperation() == admission.Create {
-		// We currently use the identifier "shoot-<project-name>-<shoot-name> in nearly all places for old Shoots, but have
-		// changed that to "shoot--<project-name>-<shoot-name>": when creating infrastructure resources, Kubernetes resources,
-		// DNS names, etc., then this identifier is used to tag/name the resources. Some of those resources have length
-		// constraints that this identifier must not exceed 30 characters, thus we need to check whether Shoots do not exceed
-		// this limit. The project name is a label on the namespace. If it is not found, the namespace name itself is used as
-		// project name. These checks should only be performed for CREATE operations (we do not want to reject changes to existing
-		// Shoots in case the limits are changed in the future).
-		var lengthLimit = 21
-		if len(c.shoot.Name) == 0 && len(c.shoot.GenerateName) > 0 {
-			var randomLength = 5
-			if len(c.project.Name+c.shoot.GenerateName) > lengthLimit-randomLength {
-				return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, c.project.Name, c.shoot.GenerateName))
-			}
-		} else {
-			if len(c.project.Name+c.shoot.Name) > lengthLimit {
-				return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, c.project.Name, c.shoot.Name))
-			}
-		}
+	if a.GetOperation() != admission.Create {
+		return nil
+	}
 
-		if c.project.DeletionTimestamp != nil {
-			return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' in project '%s' that is already marked for deletion", c.shoot.Name, c.project.Name))
+	// We currently use the identifier "shoot-<project-name>-<shoot-name> in nearly all places for old Shoots, but have
+	// changed that to "shoot--<project-name>-<shoot-name>": when creating infrastructure resources, Kubernetes resources,
+	// DNS names, etc., then this identifier is used to tag/name the resources. Some of those resources have length
+	// constraints that this identifier must not exceed 30 characters, thus we need to check whether Shoots do not exceed
+	// this limit. The project name is a label on the namespace. If it is not found, the namespace name itself is used as
+	// project name. These checks should only be performed for CREATE operations (we do not want to reject changes to existing
+	// Shoots in case the limits are changed in the future).
+	var lengthLimit = 21
+	if len(c.shoot.Name) == 0 && len(c.shoot.GenerateName) > 0 {
+		var randomLength = 5
+		if len(c.project.Name+c.shoot.GenerateName) > lengthLimit-randomLength {
+			return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, c.project.Name, c.shoot.GenerateName))
 		}
+	} else {
+		if len(c.project.Name+c.shoot.Name) > lengthLimit {
+			return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, c.project.Name, c.shoot.Name))
+		}
+	}
+
+	if c.project.DeletionTimestamp != nil {
+		return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' in project '%s' that is already marked for deletion", c.shoot.Name, c.project.Name))
 	}
 
 	return nil
