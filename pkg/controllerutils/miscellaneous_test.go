@@ -131,6 +131,7 @@ var _ = Describe("controller", func() {
 
 		Entry("deletion timestamp set", metav1.ObjectMeta{DeletionTimestamp: &deletionTimestamp}, int64(0), nil, time.Duration(0)),
 		Entry("generation not equal observed generation", metav1.ObjectMeta{Generation: int64(1)}, int64(0), nil, time.Duration(0)),
+		Entry("operation annotation is set", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}}, int64(0), nil, time.Duration(0)),
 		Entry("last operation is nil", metav1.ObjectMeta{}, int64(0), nil, time.Duration(0)),
 		Entry("last operation state is succeeded", metav1.ObjectMeta{}, int64(0), &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}, time.Duration(0)),
 		Entry("last operation type is not create or reconcile", metav1.ObjectMeta{}, int64(0), &gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded, Type: gardencorev1beta1.LastOperationTypeRestore}, time.Duration(0)),

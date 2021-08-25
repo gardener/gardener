@@ -19,6 +19,7 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -55,7 +56,7 @@ func (c *Controller) backupEntryUpdate(_, newObj interface{}) {
 	// If the generation did not change for an update event (i.e., no changes to the .spec section have
 	// been made), we do not want to add the BackupEntry to the queue. The periodic reconciliation is handled
 	// elsewhere by adding the BackupEntry to the queue to dedicated times.
-	if newBackupEntry.Generation == newBackupEntry.Status.ObservedGeneration {
+	if newBackupEntry.Generation == newBackupEntry.Status.ObservedGeneration && !v1beta1helper.HasOperationAnnotation(newBackupEntry.ObjectMeta) {
 		backupEntryLogger.Debug("Do not need to do anything as the Update event occurred due to .status field changes")
 		return
 	}
