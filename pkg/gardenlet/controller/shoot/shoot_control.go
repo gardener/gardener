@@ -223,7 +223,7 @@ func (c *Controller) reconcileShootRequest(ctx context.Context, request reconcil
 		}
 
 		sourceSeed := &gardencorev1beta1.Seed{}
-		if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Status.SeedName}, seed); err != nil {
+		if err := gardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Status.SeedName}, sourceSeed); err != nil {
 			return reconcile.Result{}, err
 		}
 
