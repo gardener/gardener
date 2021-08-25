@@ -394,6 +394,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		}
 	}
 
+	allErrs = append(allErrs, validateRegion(validationContext.cloudProfile.Spec.Regions, validationContext.shoot.Spec.Region, validationContext.oldShoot.Spec.Region, field.NewPath("spec", "region"))...)
 	allErrs = append(allErrs, validateProvider(validationContext)...)
 
 	dnsErrors, err := validateDNSDomainUniqueness(v.shootLister, shoot.Name, shoot.Spec.DNS)
@@ -741,6 +742,23 @@ top:
 	}
 
 	return false, validValues
+}
+
+func validateRegion(constraints []core.Region, region, oldRegion string, fldPath *field.Path) field.ErrorList {
+	var validValues []string
+
+	if region == oldRegion {
+		return nil
+	}
+
+	for _, r := range constraints {
+		validValues = append(validValues, r.Name)
+		if r.Name == region {
+			return nil
+		}
+	}
+
+	return field.ErrorList{field.NotSupported(fldPath, region, validValues)}
 }
 
 func validateZones(constraints []core.Region, region, oldRegion string, worker, oldWorker core.Worker, fldPath *field.Path) field.ErrorList {
