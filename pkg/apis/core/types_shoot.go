@@ -100,6 +100,7 @@ type ShootSpec struct {
 	ExposureClassName *string
 }
 
+// GetProviderType gets the type of the provider.
 func (s *Shoot) GetProviderType() string {
 	return s.Spec.Provider.Type
 }

@@ -71,6 +71,7 @@ type CloudProfileSpec struct {
 	VolumeTypes []VolumeType
 }
 
+// GetProviderType gets the type of the provider.
 func (c *CloudProfile) GetProviderType() string {
 	return c.Spec.Type
 }
