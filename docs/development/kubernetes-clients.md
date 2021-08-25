@@ -37,7 +37,7 @@ _Important characteristics of client-go clients:_
 
 - clients are specific to a given API GroupVersionKind, i.e., clients are hard-coded to corresponding API-paths (don't need to use the discovery API to map GVK to a REST endpoint path).
 - client's don't modify the passed in-memory object (e.g. `deployment` in the above example) and return a new in-memory object instead.  
-  This means, controllers have to continue working with the new in-memory object or overwrite the shared object to not loose any state updates.
+  This means, controllers have to continue working with the new in-memory object or overwrite the shared object to not lose any state updates.
 
 ### Generated Client Sets for Gardener APIs
 
@@ -76,9 +76,9 @@ err = c.Update(ctx, shoot)
 
 _Important characteristics of controller-runtime clients:_
 
-- The client functions take a generic `client.Object` or `client.ObjectList` value, which are interfaces implemented by all Kubernetes API types in Golang or list types respectively.
+- The client functions take a generic `client.Object` or `client.ObjectList` value. These interfaces are implemented by all Golang types, that represent Kubernetes API objects or lists respectively which can be interacted with via usual API requests. [1]
 - The client first consults a `runtime.Scheme` (configured during client creation) for recognizing the object's `GroupVersionKind` (this happens on the client-side only).
-- It then consults a `meta.RESTMapper` (also configured during client creation) for mapping the `GroupVersionKind` to a `RESTMapping`, which contains the `GroupVersionResource` and `Scope` (namespaced or cluster-scoped). From these values, the client can unambiguously determine the REST endpoint path of the corresponding API resource.
+- It then consults a `meta.RESTMapper` (also configured during client creation) for mapping the `GroupVersionKind` to a `RESTMapping`, which contains the `GroupVersionResource` and `Scope` (namespaced or cluster-scoped). From these values, the client can unambiguously determine the REST endpoint path of the corresponding API resource. For instance: `appsv1.DeploymentList` is available at `/apis/apps/v1/deployments` or `/apis/apps/v1/namespaces/<namespace>/deployments` respectively.
   - There are different `RESTMapper` implementations, but generally they are talking to the API server's discovery API for retrieving `RESTMappings` for all API resources known to the API server (either built-in, registered via API extension or `CustomResourceDefinition`s).
   - The default implementation of controller-runtime (which Gardener uses as well), is the [dynamic `RESTMapper`](https://github.com/kubernetes-sigs/controller-runtime/blob/v0.9.0/pkg/client/apiutil/dynamicrestmapper.go#L77). It caches discovery results (i.e. `RESTMappings`) in-memory and only re-discovers resources from the API server, when a client tries to use an unknown `GroupVersionKind`, i.e., when it encounters a `No{Kind,Resource}MatchError`.
 - The client writes back results from the API server into the passed in-memory object.
@@ -87,6 +87,8 @@ _Important characteristics of controller-runtime clients:_
   - The benefit is, that you don't lose updates to the API object and always have the last-known state in memory. Therefore, you don't have to read it again, e.g., for getting the current `resourceVersion` when working with optimistic locking (see below), and thus minimize the chances for running into conflicts.
   - However, controllers *must not* use the same in-memory object concurrently in multiple goroutines. For example, decoding results from the API server in multiple goroutines into the same maps (e.g., labels, annotations) will cause panics because of "concurrent map writes". Also, reading from an in-memory API object in one goroutine while decoding into it in another goroutine will yield non-atomic reads, meaning data might be corrupt and represent a non-valid/non-existing API object.
   - Therefore, if you need to use the same in-memory object in multiple goroutines concurrently (e.g., shared state), remember to leverage proper synchronization techniques like channels, mutexes, `atomic.Value` and/or copy the object prior to use. The average controller however, will not need to share in-memory API objects between goroutines, and it's typically an indicator that the controller's design should be improved.
+
+[1] Other lower level, config or internal API types (e.g., such as [`AdmissionReview`](https://github.com/kubernetes/api/blob/release-1.21/admission/v1/types.go#L29)) don't implement `client.Object`. However, you also can't interact with such objects via the Kubernetes API and thus also not via a client, so this can be disregarded at this point.
 
 ### Metadata-Only Clients
 
@@ -190,7 +192,9 @@ _Important characteristics of cached controller-runtime clients:_
 
 - Like for Listers, objects read from a controller-runtime cache can always be slightly out of date. Hence, don't base any important decisions on data read from the cache (see above).
 - In contrast to Listers, controller-runtime caches fill the passed in-memory object with the state of the object in the cache (i.e., they perform something like a "deep copy into"). This means that objects read from a controller-runtime cache can safely be modified without unintended side effects.
-- Reading from a controller-runtime cache or a cached controller-runtime client implicitly starts a watch for the given object kind under the hood. This means that reading a given object kind from the cache for the first time can take up to a few seconds depending on size and amount of objects and API server latency because it has to do a full list operation and wait for an initial watch sync before returning results.
+- Reading from a controller-runtime cache or a cached controller-runtime client implicitly starts a watch for the given object kind under the hood. This has important consequences:
+  - Reading a given object kind from the cache for the first time can take up to a few seconds depending on size and amount of objects as well as API server latency. This is because the cache has to do a full list operation and wait for an initial watch sync before returning results.
+  - ⚠️ Controllers need appropriate RBAC permissions for the object kinds they retrieve via cached clients (i.e., `list` and `watch`).
 - By default, watches started by a controller-runtime cache are cluster-scoped, meaning it watches and caches objects across all namespaces. Thus, be careful which objects to read from the cache as it might significantly increase the controller's memory footprint.
 - There is no interaction with the cache on writing calls (`Create`, `Update`, `Patch` and `Delete`), see below.
 
@@ -213,12 +217,14 @@ Here are some general guidelines on choosing whether to read from a cache or not
 - Always try to use the cache wherever possible and make your controller able to tolerate stale reads.
   - Leverage optimistic locking: use deterministic naming for objects you create (e.g., `Deployment` controller uses hash-based naming for the created `ReplicaSets`).
   - Leverage optimistic locking / concurrency control of the API server: send updates/patches with the last-known `resourceVersion` from the cache (see below). This will make the request fail, if there were concurrent updates to the object (conflict error), which indicates that we have operated on stale data and might have made wrong decisions. In this case, let the controller handle the error with exponential backoff. This will make the controller eventually consistent.
-  - Track the actions you took, e.g., when creating objects with `generateName` (this is what the `ReplicaSet` controller does). The actions can be tracked in memory and repeated if the expected watch events don't occur after a given amount of time.
+  - Track the actions you took, e.g., when creating objects with `generateName` (this is what the `ReplicaSet` controller does [2]). The actions can be tracked in memory and repeated if the expected watch events don't occur after a given amount of time.
   - Always try to write controllers with the assumption that data will only be eventually correct and can be slightly out of date (even if read directly from the API server!).
   - If there is already some other code that needs a cache (e.g., a controller watch), reuse it instead of doing extra direct reads.
   - Don't read an object again if you just sent a write request. Write requests (`Create`, `Update`, `Patch` and `Delete`) don't interact with the cache. Hence, use the current state that the API server returned (filled into the passed in-memory object), which is basically a "free direct read", instead of reading the object again from a cache, because this will probably set back the object to an older `resourceVersion`.
 - If you are concerned about the impact of the resulting cache, try to minimize that by using filtered or metadata-only watches.
 - If watching and caching an object type is not feasible, for example because there will be a lot of updates, and you are only interested in the object every ~5m, or because it will blow up the controllers memory footprint, fallback to a direct read. This can either be done by disabling caching the object type generally or doing a single request via an `APIReader`. In any case, please bear in mind that every direct API call results in a [quorum read from etcd](https://kubernetes.io/docs/reference/using-api/api-concepts/#the-resourceversion-parameter), which can be costly in a heavily-utilized cluster and impose significant scalability limits. Thus, always try to minimize the impact of direct calls by filtering results by namespace or labels, limiting the number of results and/or using metadata-only calls.
+
+[2] In simple terms, the `ReplicaSet` controller tracks its `CREATE pod` actions as follows: when creating new `Pods`, it increases a counter of expected `ADDED` watch events for the corresponding `ReplicaSet`. As soon as such events arrive, it decreases the counter accordingly. It only creates new `Pods` for a given `ReplicaSet`, once all expected events occurred (counter is back to zero) or a timeout occurred. This way, it prevents creating more `Pods` than desired because of stale cache reads and makes the controller eventually consistent.
 
 ## Conflicts, Concurrency Control and Optimistic Locking
 
