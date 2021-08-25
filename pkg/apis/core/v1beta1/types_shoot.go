@@ -121,6 +121,11 @@ type ShootSpec struct {
 	ExposureClassName *string `json:"exposureClassName,omitempty" protobuf:"bytes,18,opt,name=exposureClassName"`
 }
 
+// GetProviderType gets the type of the provider.
+func (s *Shoot) GetProviderType() string {
+	return s.Spec.Provider.Type
+}
+
 // ShootStatus holds the most recently observed status of the Shoot cluster.
 type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoots's current state.
