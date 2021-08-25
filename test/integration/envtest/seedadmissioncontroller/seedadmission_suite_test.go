@@ -18,11 +18,20 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
+	"github.com/gardener/gardener/test/framework"
+
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap/zapcore"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,13 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	"github.com/gardener/gardener/cmd/utils"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
-	"github.com/gardener/gardener/test/framework"
 )
 
 func TestSeedAdmissionController(t *testing.T) {
@@ -107,13 +109,14 @@ var _ = AfterSuite(func() {
 })
 
 func getValidatingWebhookConfig() *admissionregistrationv1.ValidatingWebhookConfiguration {
-	clientConfig := admissionregistrationv1.WebhookClientConfig{
-		Service: &admissionregistrationv1.ServiceReference{
-			Path: pointer.String(extensioncrds.WebhookPath),
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service-name",
+			Namespace: "service-ns",
 		},
 	}
 
-	webhookConfig := seedadmissioncontroller.GetValidatingWebhookConfig(clientConfig)
+	webhookConfig := seedadmissioncontroller.GetValidatingWebhookConfig(nil, service)
 	// envtest doesn't default the webhook config's GVK, so set it explicitly
 	webhookConfig.SetGroupVersionKind(admissionregistrationv1.SchemeGroupVersion.WithKind("ValidatingWebhookConfiguration"))
 

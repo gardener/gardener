@@ -53,11 +53,11 @@ func New(logger logr.Logger) *handler {
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "backupbuckets"},
 		artifact{
 			newEntity: func() client.Object { return new(extensionsv1alpha1.BackupBucket) },
-			validateResource: func(n, _ client.Object) field.ErrorList {
+			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.BackupBucket)
 				return validation.ValidateBackupBucket(new)
 			},
-			validateResourceUpdate: func(n, o client.Object) field.ErrorList {
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.BackupBucket)
 				old := o.(*extensionsv1alpha1.BackupBucket)
 				return validation.ValidateBackupBucketUpdate(new, old)
@@ -66,11 +66,11 @@ func New(logger logr.Logger) *handler {
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "backupentries"},
 		artifact{
 			newEntity: func() client.Object { return new(extensionsv1alpha1.BackupEntry) },
-			validateResource: func(n, o client.Object) field.ErrorList {
+			validateCreateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.BackupEntry)
 				return validation.ValidateBackupEntry(new)
 			},
-			validateResourceUpdate: func(n, o client.Object) field.ErrorList {
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.BackupEntry)
 				old := o.(*extensionsv1alpha1.BackupEntry)
 				return validation.ValidateBackupEntryUpdate(new, old)
@@ -79,11 +79,11 @@ func New(logger logr.Logger) *handler {
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "bastions"},
 		artifact{
 			newEntity: func() client.Object { return new(extensionsv1alpha1.Bastion) },
-			validateResource: func(n, o client.Object) field.ErrorList {
+			validateCreateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.Bastion)
 				return validation.ValidateBastion(new)
 			},
-			validateResourceUpdate: func(n, o client.Object) field.ErrorList {
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.Bastion)
 				old := o.(*extensionsv1alpha1.Bastion)
 				return validation.ValidateBastionUpdate(new, old)
@@ -92,11 +92,11 @@ func New(logger logr.Logger) *handler {
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "controlplanes"},
 		artifact{
 			newEntity: func() client.Object { return new(extensionsv1alpha1.ControlPlane) },
-			validateResource: func(n, _ client.Object) field.ErrorList {
+			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.ControlPlane)
 				return validation.ValidateControlPlane(new)
 			},
-			validateResourceUpdate: func(n, o client.Object) field.ErrorList {
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.ControlPlane)
 				old := o.(*extensionsv1alpha1.ControlPlane)
 				return validation.ValidateControlPlaneUpdate(new, old)
@@ -105,11 +105,11 @@ func New(logger logr.Logger) *handler {
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "dnsrecords"},
 		artifact{
 			newEntity: func() client.Object { return new(extensionsv1alpha1.DNSRecord) },
-			validateResource: func(n, _ client.Object) field.ErrorList {
+			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.DNSRecord)
 				return validation.ValidateDNSRecord(new)
 			},
-			validateResourceUpdate: func(n, o client.Object) field.ErrorList {
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.DNSRecord)
 				old := o.(*extensionsv1alpha1.DNSRecord)
 				return validation.ValidateDNSRecordUpdate(new, old)
@@ -118,11 +118,11 @@ func New(logger logr.Logger) *handler {
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "extensions"},
 		artifact{
 			newEntity: func() client.Object { return new(extensionsv1alpha1.Extension) },
-			validateResource: func(n, _ client.Object) field.ErrorList {
+			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.Extension)
 				return validation.ValidateExtension(new)
 			},
-			validateResourceUpdate: func(n, o client.Object) field.ErrorList {
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.Extension)
 				old := o.(*extensionsv1alpha1.Extension)
 				return validation.ValidateExtensionUpdate(new, old)
@@ -131,11 +131,11 @@ func New(logger logr.Logger) *handler {
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "infrastructures"},
 		artifact{
 			newEntity: func() client.Object { return new(extensionsv1alpha1.Infrastructure) },
-			validateResource: func(n, _ client.Object) field.ErrorList {
+			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.Infrastructure)
 				return validation.ValidateInfrastructure(new)
 			},
-			validateResourceUpdate: func(n, o client.Object) field.ErrorList {
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.Infrastructure)
 				old := o.(*extensionsv1alpha1.Infrastructure)
 				return validation.ValidateInfrastructureUpdate(new, old)
@@ -144,11 +144,11 @@ func New(logger logr.Logger) *handler {
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "networks"},
 		artifact{
 			newEntity: func() client.Object { return new(extensionsv1alpha1.Network) },
-			validateResource: func(n, _ client.Object) field.ErrorList {
+			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.Network)
 				return validation.ValidateNetwork(new)
 			},
-			validateResourceUpdate: func(n, o client.Object) field.ErrorList {
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.Network)
 				old := o.(*extensionsv1alpha1.Network)
 				return validation.ValidateNetworkUpdate(new, old)
@@ -157,11 +157,11 @@ func New(logger logr.Logger) *handler {
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "operatingsystemconfigs"},
 		artifact{
 			newEntity: func() client.Object { return new(extensionsv1alpha1.OperatingSystemConfig) },
-			validateResource: func(n, _ client.Object) field.ErrorList {
+			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.OperatingSystemConfig)
 				return validation.ValidateOperatingSystemConfig(new)
 			},
-			validateResourceUpdate: func(n, o client.Object) field.ErrorList {
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.OperatingSystemConfig)
 				old := o.(*extensionsv1alpha1.OperatingSystemConfig)
 				return validation.ValidateOperatingSystemConfigUpdate(new, old)
@@ -170,11 +170,11 @@ func New(logger logr.Logger) *handler {
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "workers"},
 		artifact{
 			newEntity: func() client.Object { return new(extensionsv1alpha1.Worker) },
-			validateResource: func(n, _ client.Object) field.ErrorList {
+			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.Worker)
 				return validation.ValidateWorker(new)
 			},
-			validateResourceUpdate: func(n, o client.Object) field.ErrorList {
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				new := n.(*extensionsv1alpha1.Worker)
 				old := o.(*extensionsv1alpha1.Worker)
 				return validation.ValidateWorkerUpdate(new, old)
@@ -211,9 +211,9 @@ func (h *handler) Handle(ctx context.Context, ar admission.Request) admission.Re
 
 	switch ar.Operation {
 	case admissionv1.Create:
-		return h.handleValidation(ar.Object, ar.OldObject, artifact.newEntity, artifact.validateResource)
+		return h.handleValidation(ar.Object, ar.OldObject, artifact.newEntity, artifact.validateCreateResource)
 	case admissionv1.Update:
-		return h.handleValidation(ar.Object, ar.OldObject, artifact.newEntity, artifact.validateResourceUpdate)
+		return h.handleValidation(ar.Object, ar.OldObject, artifact.newEntity, artifact.validateUpdateResource)
 	default:
 		return admission.Allowed("operation is not CREATE or UPDATE")
 	}
@@ -227,18 +227,18 @@ type artifact struct {
 	// newEntity is a simple function that creates and returns a new resource.
 	newEntity newEntity
 
-	// validateResource is a wrapper function for the different create validation functions.
-	validateResource validate
+	// validateCreateResource is a wrapper function for the different create validation functions.
+	validateCreateResource validate
 
-	// validateResourceUpdate is a wrapper function for the different update validation functions.
-	validateResourceUpdate validate
+	// validateUpdateResource is a wrapper function for the different update validation functions.
+	validateUpdateResource validate
 }
 
 func (h handler) handleValidation(object, oldObject runtime.RawExtension, newEntity newEntity, validate validate) admission.Response {
 	obj := newEntity()
 	if err := h.decoder.DecodeRaw(object, obj); err != nil {
 		h.logger.Error(err, "could not decode object", "object", object)
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("could not decode ar %v: %w", object, err))
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("could not decode object %v: %w", object, err))
 	}
 
 	oldObj := newEntity()

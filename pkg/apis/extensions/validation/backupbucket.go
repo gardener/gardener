@@ -25,7 +25,7 @@ import (
 // ValidateBackupBucket validates a BackupBucket object.
 func ValidateBackupBucket(bb *extensionsv1alpha1.BackupBucket) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&bb.ObjectMeta, true, apivalidation.NameIsDNSSubdomain, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&bb.ObjectMeta, false, apivalidation.NameIsDNSSubdomain, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateBackupBucketSpec(&bb.Spec, field.NewPath("spec"))...)
 
 	return allErrs

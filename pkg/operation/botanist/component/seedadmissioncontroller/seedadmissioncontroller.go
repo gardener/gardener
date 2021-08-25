@@ -288,15 +288,8 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 			},
 		}
 
-		webhookClientConfig = admissionregistrationv1.WebhookClientConfig{
-			CABundle: []byte(TLSCACert),
-			Service: &admissionregistrationv1.ServiceReference{
-				Name:      service.Name,
-				Namespace: service.Namespace,
-				Path:      pointer.String(extensioncrds.WebhookPath),
-			},
-		}
-		validatingWebhookConfiguration = GetValidatingWebhookConfig(webhookClientConfig)
+		caBundle                       = []byte(TLSCACert)
+		validatingWebhookConfiguration = GetValidatingWebhookConfig(caBundle, service)
 	)
 
 	utilruntime.Must(references.InjectAnnotations(deployment))
@@ -325,13 +318,12 @@ func (g *gardenerSeedAdmissionController) Destroy(ctx context.Context) error {
 
 // GetValidatingWebhookConfig returns the ValidatingWebhookConfiguration for the seedadmissioncontroller component for
 // reuse between the component and integration tests.
-func GetValidatingWebhookConfig(clientConfig admissionregistrationv1.WebhookClientConfig) *admissionregistrationv1.ValidatingWebhookConfiguration {
+func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Service) *admissionregistrationv1.ValidatingWebhookConfiguration {
 	var (
 		failurePolicy = admissionregistrationv1.Fail
 		matchPolicy   = admissionregistrationv1.Exact
 		sideEffect    = admissionregistrationv1.SideEffectClassNone
 	)
-
 	return &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   Name,
@@ -352,7 +344,14 @@ func GetValidatingWebhookConfig(clientConfig admissionregistrationv1.WebhookClie
 			ObjectSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{gutil.DeletionProtected: "true"},
 			},
-			ClientConfig:            clientConfig,
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensioncrds.WebhookPath),
+				},
+			},
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
@@ -379,17 +378,24 @@ func GetValidatingWebhookConfig(clientConfig admissionregistrationv1.WebhookClie
 				},
 				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Delete},
 			}},
-			FailurePolicy:           &failurePolicy,
-			NamespaceSelector:       &metav1.LabelSelector{},
-			ClientConfig:            clientConfig,
+			FailurePolicy:     &failurePolicy,
+			NamespaceSelector: &metav1.LabelSelector{},
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
+					Path:      pointer.String(extensioncrds.WebhookPath),
+				},
+			},
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
 			TimeoutSeconds:          pointer.Int32(10),
 		}, {
 			Name: "validation.extensions.seed.admission.core.gardener.cloud",
-			Rules: []admissionregistrationv1beta1.RuleWithOperations{{
-				Rule: admissionregistrationv1beta1.Rule{
+			Rules: []admissionregistrationv1.RuleWithOperations{{
+				Rule: admissionregistrationv1.Rule{
 					APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 					APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
 					Resources: []string{
@@ -406,15 +412,15 @@ func GetValidatingWebhookConfig(clientConfig admissionregistrationv1.WebhookClie
 						"workers",
 					},
 				},
-				Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Create, admissionregistrationv1beta1.Update},
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 			}},
 			FailurePolicy:     &failurePolicy,
 			NamespaceSelector: &metav1.LabelSelector{},
-			ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
-				CABundle: clientConfig.CABundle,
-				Service: &admissionregistrationv1beta1.ServiceReference{
-					Name:      clientConfig.Service.Name,
-					Namespace: clientConfig.Service.Namespace,
+			ClientConfig: admissionregistrationv1.WebhookClientConfig{
+				CABundle: caBundle,
+				Service: &admissionregistrationv1.ServiceReference{
+					Name:      webhookClientService.Name,
+					Namespace: webhookClientService.Namespace,
 					Path:      pointer.String(extensionresources.WebhookPath),
 				},
 			},

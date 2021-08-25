@@ -16,8 +16,10 @@ package extensionresources_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -26,11 +28,13 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -47,8 +51,6 @@ var _ = Describe("handler", func() {
 			request *admission.Request
 
 			ctrl *gomock.Controller
-
-			resources []dummyResource
 		)
 
 		BeforeEach(func() {
@@ -73,178 +75,329 @@ var _ = Describe("handler", func() {
 
 		Context("ignored requests", func() {
 			It("should ignore DELETE operations", func() {
-				request = newRequest(admissionv1.Delete, "dnsrecords", "", "")
+				request = newRequest(admissionv1.Delete, "dnsrecords", nil, nil)
 				expectAllowed(handler.Handle(ctx, *request), ContainSubstring("operation is not CREATE or UPDATE"))
 			})
 
 			It("should ignore CONNECT operations", func() {
-				request = newRequest(admissionv1.Connect, "dnsrecords", "", "")
+				request = newRequest(admissionv1.Connect, "dnsrecords", nil, nil)
 				expectAllowed(handler.Handle(ctx, *request), ContainSubstring("operation is not CREATE or UPDATE"))
 			})
 
 			It("should ignore different resources", func() {
-				request = newRequest(admissionv1.Create, "customresourcedefinitions", "", "")
+				request = newRequest(admissionv1.Create, "customresourcedefinitions", nil, nil)
 				expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation not found for the given resource"))
 			})
 		})
 
 		Context("create resources", func() {
-			var resources = []dummyResource{
-				{
-					kind: "backupbuckets",
-					obj:  fmt.Sprintf(backupBucketFmt, "", "gcp", "backupprovider"),
-				},
-				{
-					kind: "backupentries",
-					obj:  fmt.Sprintf(backupEntryFmt, "", "gcp", "backupentry"),
-				},
-				{
-					kind: "bastions",
-					obj:  fmt.Sprintf(bastionFmt, "", "gcp", "shoot-ref-2"),
-				},
-				{
-					kind: "controlplanes",
-					obj:  fmt.Sprintf(controlPlaneFmt, "", "gcp", "cloudprovider"),
-				},
-				{
-					kind: "dnsrecords",
-					obj:  fmt.Sprintf(dnsrecordFmt, "", "dnsrecord-external", "A"),
-				},
-				{
-					kind: "extensions",
-					obj:  fmt.Sprintf(extensionsFmt, "", "gcp", "seed-gcp"),
-				},
-				{
-					kind: "infrastructures",
-					obj:  fmt.Sprintf(infrastructureFmt, "", "gcp", "seed-gcp"),
-				},
-				{
-					kind: "networks",
-					obj:  fmt.Sprintf(networksFmt, "", "calico", "seed-gcp"),
-				},
-				{
-					kind: "operatingsystemconfigs",
-					obj:  fmt.Sprintf(operatingsysconfigFmt, "", "gcp", "seed-gcp"),
-				},
-				{
-					kind: "workers",
-					obj:  fmt.Sprintf(workerFmt, "", "gcp", "seed-gcp"),
-				},
-			}
-
-			It("should create successfully the resources", func() {
-				for _, r := range resources {
-					request = newRequest(admissionv1.Create, r.kind, r.obj, "")
+			DescribeTable("should create successfully the resource",
+				func(kind string, obj runtime.Object) {
+					request = newRequest(admissionv1.Create, kind, obj, nil)
 					expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation successful"), resourceToId(request.Resource))
-				}
-			})
+				},
+
+				Entry("for backupbuckets", "backupbuckets", backupBucket),
+				Entry("for backupentries", "backupentries", backupEntry),
+				Entry("for bastions", "bastions", bastion),
+				Entry("for controlplanes", "controlplanes", controlPlane),
+				Entry("for dnsrecords", "dnsrecords", dnsrecord),
+				Entry("for extensions", "extensions", extension),
+				Entry("for infrastructures", "infrastructures", infrastructure),
+				Entry("for networks", "networks", network),
+				Entry("for operatingsystemconfigs", "operatingsystemconfigs", operatingsysconfig),
+				Entry("for workers", "workers", worker),
+			)
 
 			It("decoding of new dns record should fail", func() {
-				dns := fmt.Sprintf(dnsrecordFmt, `"resourceVersion" "1",`, "name", "A")
-				request = newRequest(admissionv1.Create, "dnsrecords", dns, "")
-				expectErrored(handler.Handle(ctx, *request), ContainSubstring("could not decode ar"), BeEquivalentTo(http.StatusUnprocessableEntity))
+				request = newRequest(admissionv1.Create, "dnsrecords", dnsrecord, nil)
+
+				// intentionally break JSON validity
+				obj := string(request.Object.Raw)
+				request.Object.Raw = []byte(strings.Replace(obj, "{", "", 1))
+
+				expectErrored(handler.Handle(ctx, *request), ContainSubstring("could not decode object"), BeEquivalentTo(http.StatusUnprocessableEntity))
 			})
 		})
 
 		Context("update resources", func() {
-			BeforeEach(func() {
-
-				resources = []dummyResource{
-					{
-						kind:     "backupbuckets",
-						obj:      fmt.Sprintf(backupBucketFmt, `"resourceVersion": "2",`, "gcp", "backupprovider-2"),
-						oldobj:   fmt.Sprintf(backupBucketFmt, `"resourceVersion": "1",`, "gcp", "backupprovider"),
-						wrongobj: fmt.Sprintf(backupBucketFmt, `"resourceVersion": "2",`, "azure", "backupprovider"),
-					},
-					{
-						kind:     "backupentries",
-						obj:      fmt.Sprintf(backupEntryFmt, `"resourceVersion": "2",`, "gcp", "backupentry-2"),
-						oldobj:   fmt.Sprintf(backupEntryFmt, `"resourceVersion": "1",`, "gcp", "backupentry"),
-						wrongobj: fmt.Sprintf(backupEntryFmt, `"resourceVersion": "2",`, "azure", "backupentry-2"),
-					},
-					{
-						kind:     "bastions",
-						obj:      fmt.Sprintf(bastionFmt, `"resourceVersion": "2",`, "gcp", "shoot-ref-2"),
-						oldobj:   fmt.Sprintf(bastionFmt, `"resourceVersion": "1",`, "gcp", "shoot-ref"),
-						wrongobj: fmt.Sprintf(bastionFmt, `"resourceVersion": "2",`, "azure", "shoot-ref-2"),
-					},
-					{
-						kind:     "controlplanes",
-						obj:      fmt.Sprintf(controlPlaneFmt, `"resourceVersion": "2",`, "gcp", "cloudprovider-2"),
-						oldobj:   fmt.Sprintf(controlPlaneFmt, `"resourceVersion": "1",`, "gcp", "cloudprovider"),
-						wrongobj: fmt.Sprintf(controlPlaneFmt, `"resourceVersion": "2",`, "azure", "cloudprovider-2"),
-					},
-					{
-						kind:     "dnsrecords",
-						obj:      fmt.Sprintf(dnsrecordFmt, `"resourceVersion": "2",`, "dnsrecord-2", "A"),
-						oldobj:   fmt.Sprintf(dnsrecordFmt, `"resourceVersion": "1",`, "dnsrecord", "A"),
-						wrongobj: fmt.Sprintf(dnsrecordFmt, `"resourceVersion": "2",`, "dnsrecord-2", "TXT"),
-					},
-					{
-						kind:     "extensions",
-						obj:      fmt.Sprintf(extensionsFmt, `"resourceVersion": "2",`, "gcp", "cloudprovider-2"),
-						oldobj:   fmt.Sprintf(extensionsFmt, `"resourceVersion": "1",`, "gcp", "cloudprovider"),
-						wrongobj: fmt.Sprintf(extensionsFmt, `"resourceVersion": "2",`, "azure", "cloudprovider-2"),
-					},
-					{
-						kind:     "infrastructures",
-						obj:      fmt.Sprintf(infrastructureFmt, `"resourceVersion": "2",`, "gcp", "seed-gcp-2"),
-						oldobj:   fmt.Sprintf(infrastructureFmt, `"resourceVersion": "1",`, "gcp", "seed-gcp"),
-						wrongobj: fmt.Sprintf(infrastructureFmt, `"resourceVersion": "2",`, "azure", "seed-gcp-2"),
-					},
-					{
-						kind:     "networks",
-						obj:      fmt.Sprintf(networksFmt, `"resourceVersion": "2",`, "calico", "seed-gcp-2"),
-						oldobj:   fmt.Sprintf(networksFmt, `"resourceVersion": "1",`, "calico", "seed-gcp"),
-						wrongobj: fmt.Sprintf(networksFmt, `"resourceVersion": "2",`, "provisioner", "seed-gcp-2"),
-					},
-					{
-						kind:     "operatingsystemconfigs",
-						obj:      fmt.Sprintf(operatingsysconfigFmt, `"resourceVersion": "2",`, "gcp", "seed-gcp-2"),
-						oldobj:   fmt.Sprintf(operatingsysconfigFmt, `"resourceVersion": "1",`, "gcp", "seed-gcp"),
-						wrongobj: fmt.Sprintf(operatingsysconfigFmt, `"resourceVersion": "2",`, "azure", "seed-gcp-2"),
-					},
-					{
-						kind:     "workers",
-						obj:      fmt.Sprintf(workerFmt, `"resourceVersion": "2",`, "gcp", "seed-gcp-2"),
-						oldobj:   fmt.Sprintf(workerFmt, `"resourceVersion": "1",`, "gcp", "seed-gcp"),
-						wrongobj: fmt.Sprintf(workerFmt, `"resourceVersion": "2",`, "azure", "seed-gcp-2"),
-					},
-				}
-			})
-
-			It("should update successfully the resources", func() {
-				for _, r := range resources {
-					request = newRequest(admissionv1.Update, r.kind, r.obj, r.oldobj)
+			DescribeTable("should update successful the resource",
+				func(kind string, new, old runtime.Object) {
+					request = newRequest(admissionv1.Update, kind, new, old)
 					expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation successful"), resourceToId(request.Resource))
-				}
-			})
+				},
 
-			It("update should fail", func() {
-				for _, r := range resources {
-					request = newRequest(admissionv1.Update, r.kind, r.wrongobj, r.oldobj)
+				Entry("for backupbuckets", "backupbuckets", func() runtime.Object {
+					o := backupBucket.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.SecretRef.Name = "backupbucket-external"
+
+					return o
+				}(), func() runtime.Object {
+					o := backupBucket.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for backupentries", "backupentries", func() runtime.Object {
+					o := backupEntry.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.SecretRef.Name = "backupentry-external-2"
+
+					return o
+				}(), func() runtime.Object {
+					o := backupEntry.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for backupentries", "backupentries", func() runtime.Object {
+					o := backupEntry.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.SecretRef.Name = "backupentry-external-2"
+
+					return o
+				}(), func() runtime.Object {
+					o := backupEntry.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for bastions", "bastions", func() runtime.Object {
+					o := bastion.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.Ingress[0].IPBlock.CIDR = "1.1.1.1/16"
+
+					return o
+				}(), func() runtime.Object {
+					o := bastion.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for controlplanes", "controlplanes", func() runtime.Object {
+					o := controlPlane.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.SecretRef.Name = "cloudprovider"
+
+					return o
+				}(), func() runtime.Object {
+					o := controlPlane.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for dnsrecords", "dnsrecords", func() runtime.Object {
+					o := dnsrecord.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.SecretRef.Name = "dnsrecord-external"
+
+					return o
+				}(), func() runtime.Object {
+					o := dnsrecord.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for extensions", "extensions", func() runtime.Object {
+					o := extension.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.ProviderConfig = &runtime.RawExtension{}
+
+					return o
+				}(), func() runtime.Object {
+					o := extension.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for infrastructures", "infrastructures", func() runtime.Object {
+					o := infrastructure.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.SecretRef.Name = "infrastructure-external"
+
+					return o
+				}(), func() runtime.Object {
+					o := infrastructure.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for networks", "networks", func() runtime.Object {
+					o := network.DeepCopy()
+					o.ResourceVersion = "2"
+
+					return o
+				}(), func() runtime.Object {
+					o := network.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for operatingsystemconfigs", "operatingsystemconfigs", func() runtime.Object {
+					o := operatingsysconfig.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.ReloadConfigFilePath = pointer.String("path/to/file")
+
+					return o
+				}(), func() runtime.Object {
+					o := operatingsysconfig.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for workers", "workers", func() runtime.Object {
+					o := worker.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.SecretRef.Name = "workers-external"
+
+					return o
+				}(), func() runtime.Object {
+					o := worker.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+			)
+
+			DescribeTable("update should fail",
+				func(kind string, wrong, old runtime.Object) {
+					request = newRequest(admissionv1.Update, kind, wrong, old)
 					expectDenied(handler.Handle(ctx, *request), ContainSubstring(""), resourceToId(request.Resource))
-				}
-			})
+				},
+
+				Entry("for backupbuckets", "backupbuckets", func() runtime.Object {
+					o := backupBucket.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.SecretRef.Name = "backupbucket-external"
+					o.Spec.Type = "azure"
+
+					return o
+				}(), func() runtime.Object {
+					o := backupBucket.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for backupentries", "backupentries", func() runtime.Object {
+					o := backupEntry.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.SecretRef.Name = "backupentry-external"
+					o.Spec.Type = "azure"
+
+					return o
+				}(), func() runtime.Object {
+					o := backupEntry.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for bastions", "bastions", func() runtime.Object {
+					o := bastion.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.Ingress[0].IPBlock.CIDR = "1.1.1.1/16"
+					o.Spec.Type = "azure"
+
+					return o
+				}(), func() runtime.Object {
+					o := bastion.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for controlplanes", "controlplanes", func() runtime.Object {
+					o := controlPlane.DeepCopy()
+					o.ResourceVersion = "1"
+					o.Spec.SecretRef.Name = "cloudprovider"
+					o.Spec.Type = "azure"
+
+					return o
+				}(), func() runtime.Object {
+					o := controlPlane.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for dnsrecords", "dnsrecords", func() runtime.Object {
+					o := dnsrecord.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.SecretRef.Name = "dnsrecord-external"
+					o.Spec.RecordType = "TXT"
+
+					return o
+				}(), func() runtime.Object {
+					o := dnsrecord.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for extensions", "extensions", func() runtime.Object {
+					o := extension.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.Type = "azure"
+
+					return o
+				}(), func() runtime.Object {
+					o := extension.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for infrastructures", "infrastructures", func() runtime.Object {
+					o := infrastructure.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.SecretRef.Name = "infrastructure-external"
+					o.Spec.Type = "azure"
+
+					return o
+				}(), func() runtime.Object {
+					o := infrastructure.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for networks", "networks", func() runtime.Object {
+					o := network.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.PodCIDR = "1.1.1.1/16"
+
+					return o
+				}(), func() runtime.Object {
+					o := network.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for operatingsystemconfigs", "operatingsystemconfigs", func() runtime.Object {
+					o := operatingsysconfig.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.Type = "azure"
+
+					return o
+				}(), func() runtime.Object {
+					o := operatingsysconfig.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				Entry("for workers", "workers", func() runtime.Object {
+					o := worker.DeepCopy()
+					o.ResourceVersion = "2"
+					o.Spec.Type = "azure"
+
+					return o
+				}(), func() runtime.Object {
+					o := worker.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+			)
 		})
 	})
 })
 
-type dummyResource struct {
-	// kind of the object eg `dnsrecords`
-	kind string
-
-	// obj is valid object
-	obj string
-
-	// oldobj is fmt used for describing existing objects
-	oldobj string
-
-	// wrongobj is semantically wrong object (e.g. while updating fields that are not meant to)
-	wrongobj string
-}
-
-func newRequest(operation admissionv1.Operation, kind, obj, oldobj string) *admission.Request {
+func newRequest(operation admissionv1.Operation, kind string, obj, oldobj runtime.Object) *admission.Request {
 	r := new(admission.Request)
 
 	r.Operation = operation
@@ -252,10 +405,19 @@ func newRequest(operation admissionv1.Operation, kind, obj, oldobj string) *admi
 		Group:    extensionsv1alpha1.SchemeGroupVersion.Group,
 		Version:  extensionsv1alpha1.SchemeGroupVersion.Version,
 		Resource: kind}
-	r.Object = runtime.RawExtension{Raw: []byte(obj)}
-	r.OldObject = runtime.RawExtension{Raw: []byte(oldobj)}
+	r.Object = runtime.RawExtension{Raw: marshalObject(obj)}
+	r.OldObject = runtime.RawExtension{Raw: marshalObject(oldobj)}
 
 	return r
+}
+
+func marshalObject(obj runtime.Object) []byte {
+	o, err := json.Marshal(obj)
+	if err != nil {
+		return nil
+	}
+
+	return o
 }
 
 func expectAllowed(r admission.Response, reason gomegatypes.GomegaMatcher, description ...interface{}) {

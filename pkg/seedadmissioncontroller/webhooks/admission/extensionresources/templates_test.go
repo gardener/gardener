@@ -14,217 +14,153 @@
 
 package extensionresources_test
 
+import (
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
 var (
-	backupBucketFmt = `
-{ "apiVersion": "extensions.gardener.cloud/v1alpha1",
-"kind": "BackupBucket",
-"metadata": {
-  "name": "cloud--gcp--fg2d6",
-  %s
-  "namespace": "prjswebhooks"
-  },
-"spec":{
-  "type": %q,
-  "region": "eu-west-1",
-  "secretRef": {
-    "name": %q,
-    "namespace": "garden"
-  }
-}
-}
-`
+	apiversion  = "extensions.gardener.cloud/v1alpha1"
+	defaultSpec = extensionsv1alpha1.DefaultSpec{Type: "gcp"}
+	objectMeta  = metav1.ObjectMeta{Name: "entity-external", Namespace: "prjswebhooks"}
+	secretRef   = corev1.SecretReference{Name: "secret-external", Namespace: "prjswebhooks"}
 
-	backupEntryFmt = `
-{
-  "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "BackupEntry",
-  "metadata": {
-    "name": "shoot--foobar--gcp--sd34f",
-	%s
-    "namespace": "prjwebhooks"
-  },
-  "spec": {
-    "type": %q,
-    "region": "eu-west-1",
-    "bucketName": "cloud--gcp--fg2d6",
-    "secretRef": {
-      "name": %q,
-      "namespace": "garden"
-    }
-  }
-}`
-
-	bastionFmt = `
-{
-  "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "Bastion",
-  "metadata": {
-    "generateName": "cli-",
-    %s
-    "name": "cli-abcdef",
-    "namespace": "garden-myproject"
-  },
-  "spec": {
-    "type": %q,
-    "shootRef": {
-      "name": %q
-    },
-    "userData": "data",
-    "seedName": "aws-eu2",
-    "sshPublicKey": "c3NoLXJzYSAuLi4K",
-    "providerType": "gcp",
-    "ingress": [
-      {
-        "ipBlock": {
-          "cidr": "1.2.3.4/32"
-        }
-      }
-    ]
-  }
-}`
-
-	controlPlaneFmt = `
-{
-  "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "ControlPlane",
-  "metadata": {
-    "name": "control-plane",
-	%s
-    "namespace": "shoot--foobar--gcp"
-  },
-  "spec": {
-    "type": %q,
-    "region": "europe-west1",
-    "secretRef": {
-      "name": %q,
-      "namespace": "shoot--foobar--gcp"
-    }
-  }
-}`
-
-	dnsrecordFmt = `
-{ "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "DNSRecord",
-  "metadata": {
-    "name": "dnsrecord-external",
-	%s
-    "namespace": "prjswebhooks"
-  },
-  "spec": {
-    "type": "google-clouddns",
-    "secretRef": {
-      "name": %q,
-      "namespace": "prjswebhooks"
-    },
-    "name": "api.gcp.foobar.shoot.example.com",
-    "recordType": %q,
-    "values": [
-      "1.2.3.4"
-    ]
-  }
-}`
-
-	extensionsFmt = `
-{
-  "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "Extension",
-  "metadata": {
-    "name": "extension-name",
-	%s
-    "namespace": "prjwebhooks"
-  },
-  "spec": {
-    "type": %q,
-    "purpose": "provision",
-	"secretRef":{
-    	"name": %q,
-    	"namespace": "garden"
+	backupBucket = &extensionsv1alpha1.BackupBucket{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.BackupBucketResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "backupbucket-external"},
+		Spec: extensionsv1alpha1.BackupBucketSpec{
+			DefaultSpec: defaultSpec,
+			Region:      "europe-west-1",
+			SecretRef:   secretRef,
+		},
 	}
-  }
-}
-`
 
-	infrastructureFmt = `
-{
-  "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "Infrastructure",
-  "metadata": {
-    "name": "gcp-infra",
-	%s
-    "namespace": "shoot--foobar--gcp"
-  },
-  "spec": {
-    "type": %q,
-    "region": "europe-west1",
-    "secretRef": {
-      "namespace": "shoot--foobar--gcp",
-      "name": %q
-    },
-    "providerConfig": {
-      "apiVersion": "gcp.provider.extensions.gardener.cloud/v1alpha1",
-      "kind": "InfrastructureConfig",
-      "networks": {
-        "workers": "10.242.0.0/19"
-      }
-    }
-  }
-}`
+	backupEntry = &extensionsv1alpha1.BackupEntry{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.BackupEntryResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "backupentry-external"},
+		Spec: extensionsv1alpha1.BackupEntrySpec{
+			DefaultSpec: defaultSpec,
+			Region:      "europe-west-1",
+			BucketName:  "cloud--gcp--fg2d6",
+			SecretRef:   secretRef,
+		},
+	}
 
-	networksFmt = `
-{
-  "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "Network",
-  "metadata": {
-    "name": "gcp-networks",
-	%s
-    "namespace": "shoot--foo--bar"
-  },
-  "spec": {
-    "podCIDR": "100.96.0.0/11",
-    "serviceCIDR": "100.64.0.0/13",
-    "type": %q,
-    "secretRef": {
-       "namespace": "shoot--foobar--gcp",
-       "name": %q
-    }
-  }
-}`
+	bastion = &extensionsv1alpha1.Bastion{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.BastionResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.BastionSpec{
+			DefaultSpec: defaultSpec,
+			UserData:    []byte("data"),
+			Ingress: []extensionsv1alpha1.BastionIngressPolicy{
+				{
+					IPBlock: networkingv1.IPBlock{
+						CIDR: "1.2.3.4/32",
+					},
+				},
+			},
+		},
+	}
 
-	operatingsysconfigFmt = `
-{
-  "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "OperatingSystemConfig",
-  "metadata": {
-    "name": "gcp-osc",
-	%s
-    "namespace": "prjwebhooks"
-  },
-  "spec": {
-    "type": %q,
-    "purpose": "provision",
-   "secretRef": {
-      "namespace": "shoot--foobar--gcp",
-      "name": %q
-    }
-  }
-}`
+	controlPlane = &extensionsv1alpha1.ControlPlane{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.ControlPlaneResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.ControlPlaneSpec{
+			DefaultSpec: defaultSpec,
+			SecretRef:   secretRef,
+			Region:      "europe-west-1",
+		},
+	}
 
-	workerFmt = `
-{
-  "apiVersion": "extensions.gardener.cloud/v1alpha1",
-  "kind": "Worker",
-  "metadata": {
-    "name": "worker",
-	%s
-    "namespace": "shoot--foobar--gcp"
-  },
-  "spec": {
-    "type": %q,
-    "region": "europe-west1",
-    "secretRef": {
-      "name": %q,
-      "namespace": "shoot--foobar--gcp"
-    }
-  }
-}`
+	dnsrecord = &extensionsv1alpha1.DNSRecord{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.DNSRecordResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.DNSRecordSpec{
+			DefaultSpec: defaultSpec,
+			SecretRef:   secretRef,
+			Name:        "api.gcp.foobar.shoot.example.com",
+			RecordType:  "A",
+			Values:      []string{"1.2.3.4"},
+		},
+	}
+
+	extension = &extensionsv1alpha1.Extension{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.ExtensionResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.ExtensionSpec{
+			DefaultSpec: defaultSpec,
+		},
+	}
+
+	infrastructure = &extensionsv1alpha1.Infrastructure{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.InfrastructureResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.InfrastructureSpec{
+			DefaultSpec: defaultSpec,
+			SecretRef:   secretRef,
+			Region:      "europe-west-1",
+		},
+	}
+
+	network = &extensionsv1alpha1.Network{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.NetworkResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.NetworkSpec{
+			DefaultSpec: defaultSpec,
+			PodCIDR:     "100.96.0.0/11",
+			ServiceCIDR: "100.64.0.0/13",
+		},
+	}
+
+	operatingsysconfig = &extensionsv1alpha1.OperatingSystemConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.OperatingSystemConfigResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+			Purpose:     extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
+			DefaultSpec: defaultSpec,
+		},
+	}
+
+	worker = &extensionsv1alpha1.Worker{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.WorkerResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.WorkerSpec{
+			DefaultSpec: defaultSpec,
+			Region:      "europe-west-1",
+			SecretRef:   secretRef,
+		},
+	}
 )
