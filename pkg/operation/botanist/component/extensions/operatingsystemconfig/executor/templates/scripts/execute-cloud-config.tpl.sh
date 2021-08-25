@@ -207,9 +207,13 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || \
     echo "Successfully restarted all units referenced in the cloud config."
     cp "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD"
     md5sum ${PATH_CCD_SCRIPT} > "$PATH_CCD_SCRIPT_CHECKSUM_OLD" # As the file can be updated above, get fresh checksum.
+  else
+    echo "failed to apply the cloud config."
+    exit 1
   fi
 fi
 
+echo "Cloud config is up to date."
 rm "$PATH_CLOUDCONFIG" "$PATH_CCD_SCRIPT_CHECKSUM"
 
 # Now that the most recent cloud-config user data was applied, let's update the checksum/cloud-config-data annotation on
