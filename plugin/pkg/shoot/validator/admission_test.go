@@ -242,23 +242,6 @@ var _ = Describe("validator", func() {
 		})
 
 		Context("name/project length checks", func() {
-			It("should reject Shoot resources with two consecutive hyphens in project name", func() {
-				twoConsecutiveHyphensName := "n--o"
-				project.ObjectMeta = metav1.ObjectMeta{
-					Name: twoConsecutiveHyphensName,
-				}
-
-				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
-				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
-				attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
-
-				err := admissionHandler.Admit(context.TODO(), attrs, nil)
-
-				Expect(err).To(BeBadRequestError())
-				Expect(err.Error()).To(ContainSubstring("consecutive hyphens"))
-			})
-
 			It("should reject create operations on Shoot resources in projects which shall be deleted", func() {
 				deletionTimestamp := metav1.NewTime(time.Now())
 				project.ObjectMeta.DeletionTimestamp = &deletionTimestamp

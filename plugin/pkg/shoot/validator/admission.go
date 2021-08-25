@@ -282,10 +282,6 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 				return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, c.project.Name, c.shoot.Name))
 			}
 		}
-		// TODO: move this to static project validation?
-		if strings.Contains(c.project.Name, "--") {
-			return apierrors.NewBadRequest(fmt.Sprintf("the project name must not contain two consecutive hyphens (project: %s)", c.project.Name))
-		}
 
 		if c.project.DeletionTimestamp != nil {
 			return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' in project '%s' that is already marked for deletion", c.shoot.Name, c.project.Name))
