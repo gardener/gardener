@@ -24,5 +24,8 @@ import (
 // ConfigValidator validates the provider config of infrastructures resource with the cloud provider.
 type ConfigValidator interface {
 	// Validate validates the provider config of the given infrastructure resource with the cloud provider.
+	// If the returned error list is non-empty, the reconciliation will fail with an error.
+	// This error will have the error code ERR_CONFIGURATION_PROBLEM, unless there is at least one error in the list
+	// that has its ErrorType field set to field.ErrorTypeInternal.
 	Validate(ctx context.Context, infra *extensionsv1alpha1.Infrastructure) field.ErrorList
 }
