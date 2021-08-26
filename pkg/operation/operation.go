@@ -343,6 +343,8 @@ func (o *Operation) InitializeShootClients(ctx context.Context) error {
 // the already existing Operation object.
 // In contrast to InitializeShootClients, InitializeDesiredShootClients returns an error if the discovered version
 // via the client does not match the desired Kubernetes version from the shoot spec.
+// This is especially useful, if the client is initialized after a rolling update of the Kube-Apiserver
+// and you want to ensure that the discovered version matches the expected version.
 func (o *Operation) InitializeDesiredShootClients(ctx context.Context) error {
 	return o.initShootClients(ctx, true)
 }
