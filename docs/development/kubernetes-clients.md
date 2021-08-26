@@ -36,7 +36,7 @@ updatedDeployment, err := c.AppsV1().Deployments("default").Update(ctx, deployme
 _Important characteristics of client-go clients:_
 
 - clients are specific to a given API GroupVersionKind, i.e., clients are hard-coded to corresponding API-paths (don't need to use the discovery API to map GVK to a REST endpoint path).
-- client's don't modify the passed in-memory object (e.g. `deployment` in the above example) and return a new in-memory object instead.  
+- client's don't modify the passed in-memory object (e.g. `deployment` in the above example). Instead, they return a new in-memory object.  
   This means, controllers have to continue working with the new in-memory object or overwrite the shared object to not lose any state updates.
 
 ### Generated Client Sets for Gardener APIs
@@ -58,7 +58,8 @@ updatedShoot, err := c.CoreV1beta1().Shoots("garden-my-project").Update(ctx, sho
 
 ### Controller-Runtime Clients
 
-[controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) is a Kubernetes community project ([kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) subproject) for building controllers and operators for custom resources. Therefore, it features a generic client, that can be used for managing any Kubernetes resources (built-in or custom) homogeneously.
+[controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) is a Kubernetes community project ([kubebuilder](https://github.com/kubernetes-sigs/kubebuilder) subproject) for building controllers and operators for custom resources.
+Therefore, it features a generic client, that follows a different approach and does not rely on generated client sets. Instead, the client can be used for managing any Kubernetes resources (built-in or custom) homogeneously.
 For example:
 
 ```go
@@ -77,14 +78,15 @@ err = c.Update(ctx, shoot)
 _Important characteristics of controller-runtime clients:_
 
 - The client functions take a generic `client.Object` or `client.ObjectList` value. These interfaces are implemented by all Golang types, that represent Kubernetes API objects or lists respectively which can be interacted with via usual API requests. [1]
-- The client first consults a `runtime.Scheme` (configured during client creation) for recognizing the object's `GroupVersionKind` (this happens on the client-side only).
+- The client first consults a `runtime.Scheme` (configured during client creation) for recognizing the object's `GroupVersionKind` (this happens on the client-side only).  
+  A `runtime.Scheme` is basically a registry for Golang API types, defaulting and conversion functions. Schemes are usually provided per `GroupVersion` (see [this example](https://github.com/kubernetes/api/blob/release-1.21/apps/v1/register.go) for `apps/v1`) and can be combined to one single scheme for further usage ([example](https://github.com/gardener/gardener/blob/v1.29.0/pkg/client/kubernetes/types.go#L96)). In controller-runtime clients, schemes are used only for mapping a typed API object to its `GroupVersionKind`.
 - It then consults a `meta.RESTMapper` (also configured during client creation) for mapping the `GroupVersionKind` to a `RESTMapping`, which contains the `GroupVersionResource` and `Scope` (namespaced or cluster-scoped). From these values, the client can unambiguously determine the REST endpoint path of the corresponding API resource. For instance: `appsv1.DeploymentList` is available at `/apis/apps/v1/deployments` or `/apis/apps/v1/namespaces/<namespace>/deployments` respectively.
   - There are different `RESTMapper` implementations, but generally they are talking to the API server's discovery API for retrieving `RESTMappings` for all API resources known to the API server (either built-in, registered via API extension or `CustomResourceDefinition`s).
   - The default implementation of controller-runtime (which Gardener uses as well), is the [dynamic `RESTMapper`](https://github.com/kubernetes-sigs/controller-runtime/blob/v0.9.0/pkg/client/apiutil/dynamicrestmapper.go#L77). It caches discovery results (i.e. `RESTMappings`) in-memory and only re-discovers resources from the API server, when a client tries to use an unknown `GroupVersionKind`, i.e., when it encounters a `No{Kind,Resource}MatchError`.
 - The client writes back results from the API server into the passed in-memory object.
   - This means, that controllers don't have to worry about copying back the results and should just continue to work on the given in-memory object.
   - This is a nice and flexible pattern and helper functions should try to follow it wherever applicable. Meaning, if possible accept an object param, pass it down to clients and keep working on the same in-memory object instead of creating a new one in your helper function.
-  - The benefit is, that you don't lose updates to the API object and always have the last-known state in memory. Therefore, you don't have to read it again, e.g., for getting the current `resourceVersion` when working with optimistic locking (see below), and thus minimize the chances for running into conflicts.
+  - The benefit is, that you don't lose updates to the API object and always have the last-known state in memory. Therefore, you don't have to read it again, e.g., for getting the current `resourceVersion` when working with [optimistic locking](#conflicts-concurrency-control-and-optimistic-locking), and thus minimize the chances for running into conflicts.
   - However, controllers *must not* use the same in-memory object concurrently in multiple goroutines. For example, decoding results from the API server in multiple goroutines into the same maps (e.g., labels, annotations) will cause panics because of "concurrent map writes". Also, reading from an in-memory API object in one goroutine while decoding into it in another goroutine will yield non-atomic reads, meaning data might be corrupt and represent a non-valid/non-existing API object.
   - Therefore, if you need to use the same in-memory object in multiple goroutines concurrently (e.g., shared state), remember to leverage proper synchronization techniques like channels, mutexes, `atomic.Value` and/or copy the object prior to use. The average controller however, will not need to share in-memory API objects between goroutines, and it's typically an indicator that the controller's design should be improved.
 
@@ -120,9 +122,9 @@ if len(shootList.Items) > 0 {
 }
 ```
 
-### Compound Client Set, ClientMaps
+### Gardener's Client Collection, ClientMaps
 
-The Gardener codebase has a compound client set ([`kubernetes.Interface`](https://github.com/gardener/gardener/blob/v1.27.0/pkg/client/kubernetes/types.go#L149)), which consists of the different mentioned types of clients.
+The Gardener codebase has a collection of clients ([`kubernetes.Interface`](https://github.com/gardener/gardener/blob/v1.29.0/pkg/client/kubernetes/types.go#L149)), which can return all the above mentioned client types.
 Additionally, it contains helpers for rendering and applying helm charts (`ChartRender`, `ChartApplier`) and retrieving the API server's version (`Version`).  
 Client sets are managed by so called `ClientMap`s, which are a form of registry for all client set for a given type of cluster, i.e., Garden, Seed, Shoot and Plant.
 ClientMaps manage the whole lifecycle of clients: they take care of creating them if they don't exist already, running their caches, refreshing their cached server version and invalidating them when they are no longer needed.
@@ -142,7 +144,7 @@ if err != nil {
 c := cs.Client() // client.Client
 ```
 
-The compound client sets mainly exist for historical reasons (there used to be a lot of code using the client-go style clients).
+The client collection mainly exist for historical reasons (there used to be a lot of code using the client-go style clients).
 However, Gardener is in the process of moving more towards controller-runtime and only using their clients, as they provide many benefits and are much easier to use.
 Also, [gardener/gardener#4251](https://github.com/gardener/gardener/issues/4251) aims at refactoring our controller and admission components to native controller-runtime components.
 
@@ -183,7 +185,7 @@ This means, that if you read the same object from different cache implementation
 
 By default, the `client.Client` created by a controller-runtime `Manager` is a `DelegatingClient`. It delegates `Get` and `List` calls to a `Cache` and all other calls to a client, that talks directly to the API server. Exceptions are requests with `*unstructured.Unstructured` objects and object kinds that were configured to be excluded from the cache in the `DelegatingClient`.
 
-> ℹ️ Currently, the controller-runtime client contained in Gardener's compound client set (`kubernetes.Interface.Client()`) is not cached and does not use the cache contained in the client set (`kubernetes.Interface.Cache()`). This means, the client always reads directly from the API server, but you can intentionally read from the cache if desired.
+> ℹ️ Currently, the controller-runtime client contained in Gardener's client collection (`kubernetes.Interface.Client()`) is not cached and does not use the cache contained in the client set (`kubernetes.Interface.Cache()`). This means, the client always reads directly from the API server, but you can intentionally read from the cache if desired.
 >
 > If the `CachedRuntimeClients` feature gate is enabled, `Client()` returns a `DelegatingClient` that uses the cache returned from `Cache()` under the hood. This means, all `Client()` usages should be ready for cached clients and should be able to cater with stale cache reads.
 > See [gardener/gardener#2822](https://github.com/gardener/gardener/issues/2822) for details on the graduation progress.
@@ -195,7 +197,7 @@ _Important characteristics of cached controller-runtime clients:_
 - Reading from a controller-runtime cache or a cached controller-runtime client implicitly starts a watch for the given object kind under the hood. This has important consequences:
   - Reading a given object kind from the cache for the first time can take up to a few seconds depending on size and amount of objects as well as API server latency. This is because the cache has to do a full list operation and wait for an initial watch sync before returning results.
   - ⚠️ Controllers need appropriate RBAC permissions for the object kinds they retrieve via cached clients (i.e., `list` and `watch`).
-- By default, watches started by a controller-runtime cache are cluster-scoped, meaning it watches and caches objects across all namespaces. Thus, be careful which objects to read from the cache as it might significantly increase the controller's memory footprint.
+  - ⚠️ By default, watches started by a controller-runtime cache are cluster-scoped, meaning it watches and caches objects across all namespaces. Thus, be careful which objects to read from the cache as it might significantly increase the controller's memory footprint.
 - There is no interaction with the cache on writing calls (`Create`, `Update`, `Patch` and `Delete`), see below.
 
 **Uncached objects, filtered caches, `APIReader`s:**
@@ -215,16 +217,18 @@ Thus, developers need to be careful when introducing new API calls and caching n
 Here are some general guidelines on choosing whether to read from a cache or not:
 
 - Always try to use the cache wherever possible and make your controller able to tolerate stale reads.
-  - Leverage optimistic locking: use deterministic naming for objects you create (e.g., `Deployment` controller uses hash-based naming for the created `ReplicaSets`).
+  - Leverage optimistic locking: use deterministic naming for objects you create (this is what the `Deployment` controller does [2]).
   - Leverage optimistic locking / concurrency control of the API server: send updates/patches with the last-known `resourceVersion` from the cache (see below). This will make the request fail, if there were concurrent updates to the object (conflict error), which indicates that we have operated on stale data and might have made wrong decisions. In this case, let the controller handle the error with exponential backoff. This will make the controller eventually consistent.
-  - Track the actions you took, e.g., when creating objects with `generateName` (this is what the `ReplicaSet` controller does [2]). The actions can be tracked in memory and repeated if the expected watch events don't occur after a given amount of time.
+  - Track the actions you took, e.g., when creating objects with `generateName` (this is what the `ReplicaSet` controller does [3]). The actions can be tracked in memory and repeated if the expected watch events don't occur after a given amount of time.
   - Always try to write controllers with the assumption that data will only be eventually correct and can be slightly out of date (even if read directly from the API server!).
   - If there is already some other code that needs a cache (e.g., a controller watch), reuse it instead of doing extra direct reads.
   - Don't read an object again if you just sent a write request. Write requests (`Create`, `Update`, `Patch` and `Delete`) don't interact with the cache. Hence, use the current state that the API server returned (filled into the passed in-memory object), which is basically a "free direct read", instead of reading the object again from a cache, because this will probably set back the object to an older `resourceVersion`.
 - If you are concerned about the impact of the resulting cache, try to minimize that by using filtered or metadata-only watches.
 - If watching and caching an object type is not feasible, for example because there will be a lot of updates, and you are only interested in the object every ~5m, or because it will blow up the controllers memory footprint, fallback to a direct read. This can either be done by disabling caching the object type generally or doing a single request via an `APIReader`. In any case, please bear in mind that every direct API call results in a [quorum read from etcd](https://kubernetes.io/docs/reference/using-api/api-concepts/#the-resourceversion-parameter), which can be costly in a heavily-utilized cluster and impose significant scalability limits. Thus, always try to minimize the impact of direct calls by filtering results by namespace or labels, limiting the number of results and/or using metadata-only calls.
 
-[2] In simple terms, the `ReplicaSet` controller tracks its `CREATE pod` actions as follows: when creating new `Pods`, it increases a counter of expected `ADDED` watch events for the corresponding `ReplicaSet`. As soon as such events arrive, it decreases the counter accordingly. It only creates new `Pods` for a given `ReplicaSet`, once all expected events occurred (counter is back to zero) or a timeout occurred. This way, it prevents creating more `Pods` than desired because of stale cache reads and makes the controller eventually consistent.
+[2] The `Deployment` controller uses the pattern `<deployment-name>-<podtemplate-hash>` for naming `ReplicaSets`. This means, the name of a `ReplicaSet` it tries to create/update/delete at any given time is deterministically calculated based on the `Deployment` object. By this, it is insusceptible to stale reads from its `ReplicaSets` cache.
+
+[3] In simple terms, the `ReplicaSet` controller tracks its `CREATE pod` actions as follows: when creating new `Pods`, it increases a counter of expected `ADDED` watch events for the corresponding `ReplicaSet`. As soon as such events arrive, it decreases the counter accordingly. It only creates new `Pods` for a given `ReplicaSet`, once all expected events occurred (counter is back to zero) or a timeout occurred. This way, it prevents creating more `Pods` than desired because of stale cache reads and makes the controller eventually consistent.
 
 ## Conflicts, Concurrency Control and Optimistic Locking
 
@@ -273,14 +277,14 @@ To properly solve the conflict situation, controllers should immediately return 
 In a later run, the controller will then make correct decisions based on the newest version of the object, not run into conflict errors and will then be able to successfully reconcile the object. This way, the controller becomes eventually consistent.
 
 The other way to solve the situation is to modify objects without optimistic locking in order to avoid running into a conflict in the first place (only if this is safe).
-This is also a good solution for long-running reconciliations (which is actually an anti-pattern but quite unavoidable in some of Gardener's controllers).
+This can be a preferable solution for controllers with long-running reconciliations (which is actually an anti-pattern but quite unavoidable in some of Gardener's controllers).
 Aborting the entire reconciliation run is rather undesirable in such cases as it will add a lot of unnecessary waiting time for end users and overhead in terms of compute and network usage.
 
 However, in any case retrying on conflict is probably not the right option to solve the situation (there are some correct use cases for it, though, they are very rare). Hence, don't retry on conflict.
 
 ### To Lock or Not to Lock
 
-As explained before, conflicts are actually important and prevent clients from doing wrongful concurrent updates. This means, conflicts is not something we generally want to avoid.
+As explained before, conflicts are actually important and prevent clients from doing wrongful concurrent updates. This means, conflicts are not something we generally want to avoid or ignore.
 However, in many cases controllers are exclusive owners of the fields they want to update and thus it might be safe to run without optimistic locking.
 
 For example, the gardenlet is the exclusive owner of the `spec` section of the Extension resources it creates on behalf of a Shoot (e.g., the `Infrastructure` resource for creating VPC, etc.). Meaning, it knows the exact desired state and no other actor is supposed to update the Infrastructure's `spec` fields.
@@ -339,14 +343,14 @@ _Important characteristics of the shown request types:_
 - Patch requests only contain the changes made to the in-memory object between the copy passed to `client.*MergeFrom` and the object passed to `Client.Patch()`. The diff is calculated on the client-side based on the in-memory objects only. This means, if in the meantime some fields were changed on the API server to a different value than the one on the client-side, the fields will not be changed back as long as they are not changed on the client-side as well (there will be no diff in memory).
 - Thus, if you want to ensure a given state using patch requests, always read the object first before patching it, as there will be no diff otherwise, meaning the patch will be empty. Also see [gardener/gardener#4057](https://github.com/gardener/gardener/pull/4057) and comments in [gardener/gardener#4027](https://github.com/gardener/gardener/pull/4027).
 - Also, always send updates and patch requests even if your controller hasn't made any changes to the current state on the API server. I.e., don't make any optimization for preventing empty patches or no-op updates. There might be mutating webhooks in the system that will modify the object and that rely on update/patch requests being sent (even if they are no-op). Gardener's extension concept makes heavy use of mutating webhooks, so it's important to keep this in mind.
-- JSON merge patches always replace lists as a whole and don't merge them. Keep this in mind when operating on lists with patch requests. If the controller is the exclusive owner of the entire list, it's safe to run without optimistic locking. Though, if you want to prevent overwriting concurrent changes to the list or its items made by other actors (e.g., additions/removals to the `metadata.finalizers` list), enable optimistic locking.
+- JSON merge patches always replace lists as a whole and don't merge them. Keep this in mind when operating on lists with merge patch requests. If the controller is the exclusive owner of the entire list, it's safe to run without optimistic locking. Though, if you want to prevent overwriting concurrent changes to the list or its items made by other actors (e.g., additions/removals to the `metadata.finalizers` list), enable optimistic locking.
 - Strategic merge patches are able to make more granular modifications to lists and their elements without replacing the entire list. It uses Golang struct tags of the API types to determine which and how lists should be merged. See [this document](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/) or the [strategic merge patch documentation](https://github.com/kubernetes/community/blob/master/contributors/devel/sig-api-machinery/strategic-merge-patch.md) for more in-depth explanations and comparison with JSON merge patches.
   With this, controllers *might* be able to issue patch requests for individual list items without optimistic locking, even if they are not exclusive owners of the entire list. Remember to check the `patchStrategy` and `patchMergeKey` struct tags of the fields you want to modify before blindly adding patch requests without optimistic locking.
 - Strategic merge patches are only supported by built-in Kubernetes resources and custom resources served by Extension API servers. Strategic merge patches are not supported by custom resources defined by `CustomResourceDefinition`s (see [this comparison](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#advanced-features-and-flexibility)). In that case, fallback to JSON merge patches.
 - [Server-side Apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) is yet another mechanism to modify API objects, which is supported by all API resources (in newer Kubernetes versions). However, it has a few problems and more caveats preventing us from using it in Gardener at the time of writing. See [gardener/gardener#4122](https://github.com/gardener/gardener/issues/4122) for more details.
 
 > Generally speaking, patches are often the better option compared to update requests because they can save network traffic, encoding/decoding effort and avoid conflicts under the presented conditions.
-> If choosing a patch type, consider which type is supported by the resource you're modifying and how you can avoid conflicts if your modification is safe to run without optimistic locking.
+> If choosing a patch type, consider which type is supported by the resource you're modifying and what will happen in case of a conflict. Consider whether your modification is safe to run without optimistic locking.
 > However, there is no simple rule of thumb on which patch type to choose.
 
 ## On Helper Functions
