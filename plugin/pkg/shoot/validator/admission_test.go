@@ -874,6 +874,16 @@ var _ = Describe("validator", func() {
 				Expect(err).To(Not(HaveOccurred()))
 			})
 
+			It("should reject update because shoot changed to unknown region", func() {
+				shoot.Spec.Region = "does-not-exist"
+
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(BeForbiddenError())
+				Expect(err.Error()).To(ContainSubstring("Unsupported value: \"does-not-exist\": supported values: \"europe\", \"asia\""))
+			})
+
 			It("should pass update for non existing zone in cloud profile because shoot worker zone is unchanged", func() {
 				cloudProfile.Spec.Regions[0].Zones = []core.AvailabilityZone{{Name: "not-available"}}
 
