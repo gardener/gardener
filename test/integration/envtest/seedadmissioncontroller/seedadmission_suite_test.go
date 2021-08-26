@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/test/framework"
 
@@ -91,6 +92,7 @@ var _ = BeforeSuite(func() {
 	server := mgr.GetWebhookServer()
 	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(logger)})
 	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
+	server.Register(extensionresources.WebhookPath, &webhook.Admission{Handler: extensionresources.New(logger)})
 
 	go func() {
 		Expect(server.Start(ctx)).To(Succeed())
