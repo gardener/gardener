@@ -19,16 +19,20 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/namespaces"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -52,6 +56,15 @@ func (b *Botanist) DeploySeedNamespace(ctx context.Context) error {
 			v1beta1constants.LabelShootProvider:      b.Shoot.GetInfo().Spec.Provider.Type,
 			v1beta1constants.LabelNetworkingProvider: b.Shoot.GetInfo().Spec.Networking.Type,
 			v1beta1constants.LabelBackupProvider:     b.Seed.Info.Spec.Provider.Type,
+		}
+
+		requiredExtensions, err := getShootRequiredExtensionTypes(ctx, b)
+		if err != nil {
+			return err
+		}
+
+		for extensionType := range requiredExtensions {
+			namespace.Labels[v1beta1constants.LabelExtensionPrefix+extensionType] = "true"
 		}
 
 		if b.Seed.Info.Spec.Backup != nil {
@@ -102,4 +115,32 @@ func (b *Botanist) WaitUntilSeedNamespaceDeleted(ctx context.Context) error {
 // DefaultShootNamespaces returns a deployer for the shoot namespaces.
 func (b *Botanist) DefaultShootNamespaces() component.DeployWaiter {
 	return namespaces.New(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
+}
+
+// getShootRequiredExtensionTypes returns all extension types that are enabled or explicitly disabled for the shoot.
+// The function considers only extensions of kind `Extension`.
+func getShootRequiredExtensionTypes(ctx context.Context, b *Botanist) (sets.String, error) {
+	controllerRegistrationList := &gardencorev1beta1.ControllerRegistrationList{}
+	if err := b.K8sGardenClient.Client().List(ctx, controllerRegistrationList); err != nil {
+		return nil, err
+	}
+
+	types := sets.String{}
+	for _, reg := range controllerRegistrationList.Items {
+		for _, res := range reg.Spec.Resources {
+			if res.Kind == extensionsv1alpha1.ExtensionResource && utils.IsTrue(res.GloballyEnabled) {
+				types.Insert(res.Type)
+			}
+		}
+	}
+
+	for _, extension := range b.Shoot.GetInfo().Spec.Extensions {
+		if utils.IsTrue(extension.Disabled) {
+			types.Delete(extension.Type)
+		} else {
+			types.Insert(extension.Type)
+		}
+	}
+
+	return types, nil
 }
