@@ -39,6 +39,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -333,6 +334,22 @@ func (o *Operation) InitializeSeedClients(ctx context.Context) error {
 // a Kubernetes client as well as a Chart renderer for the Shoot cluster will be initialized and attached to
 // the already existing Operation object.
 func (o *Operation) InitializeShootClients(ctx context.Context) error {
+	return o.initShootClients(ctx, false)
+}
+
+// InitializeDesiredShootClients will use the Seed Kubernetes client to read the gardener Secret in the Seed
+// cluster which contains a Kubeconfig that can be used to authenticate against the Shoot cluster. With it,
+// a Kubernetes client as well as a Chart renderer for the Shoot cluster will be initialized and attached to
+// the already existing Operation object.
+// In contrast to InitializeShootClients, InitializeDesiredShootClients returns an error if the discovered version
+// via the client does not match the desired Kubernetes version from the shoot spec.
+// This is especially useful, if the client is initialized after a rolling update of the Kube-Apiserver
+// and you want to ensure that the discovered version matches the expected version.
+func (o *Operation) InitializeDesiredShootClients(ctx context.Context) error {
+	return o.initShootClients(ctx, true)
+}
+
+func (o *Operation) initShootClients(ctx context.Context, versionMatchRequired bool) error {
 	if o.K8sShootClient != nil {
 		return nil
 	}
@@ -352,6 +369,22 @@ func (o *Operation) InitializeShootClients(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	if versionMatchRequired {
+		var (
+			shootClientVersion = shootClient.Version()
+			kubeVersion        = o.Shoot.GetInfo().Spec.Kubernetes.Version
+		)
+
+		ok, err := version.CompareVersions(shootClientVersion, "=", kubeVersion)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("shoot client version %q does not match desired version %q", shootClientVersion, kubeVersion)
+		}
+	}
+
 	o.K8sShootClient = shootClient
 
 	return nil

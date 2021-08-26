@@ -302,7 +302,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
-			Fn:           flow.TaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Fn:           flow.TaskFn(botanist.InitializeDesiredShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployInternalDomainDNSRecord, waitUntilControlPlaneExposureReady),
 		})
 
