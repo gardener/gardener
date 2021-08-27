@@ -209,7 +209,7 @@ var _ = Describe("Object", func() {
 		})
 	})
 
-	Describe("#MakeImmutable", func() {
+	Describe("#MakeUnique", func() {
 		var (
 			name                 = "some-name"
 			nameWithHyphenSuffix = name + "-"
@@ -217,7 +217,7 @@ var _ = Describe("Object", func() {
 		)
 
 		It("should do nothing for resources not ConfigMap or Secret", func() {
-			Expect(MakeImmutable(&corev1.Pod{})).To(MatchError(ContainSubstring("unhandled object type")))
+			Expect(MakeUnique(&corev1.Pod{})).To(MatchError(ContainSubstring("unhandled object type")))
 		})
 
 		It("should properly make the ConfigMap immutable", func() {
@@ -235,7 +235,7 @@ var _ = Describe("Object", func() {
 			expectedConfigMap.Immutable = pointer.Bool(true)
 			expectedConfigMap.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
 
-			Expect(MakeImmutable(configMap)).To(Succeed())
+			Expect(MakeUnique(configMap)).To(Succeed())
 			Expect(configMap).To(Equal(expectedConfigMap))
 		})
 
@@ -254,7 +254,7 @@ var _ = Describe("Object", func() {
 			expectedSecret.Immutable = pointer.Bool(true)
 			expectedSecret.Labels["resources.gardener.cloud/garbage-collectable-reference"] = "true"
 
-			Expect(MakeImmutable(secret)).To(Succeed())
+			Expect(MakeUnique(secret)).To(Succeed())
 			Expect(secret).To(Equal(expectedSecret))
 		})
 	})

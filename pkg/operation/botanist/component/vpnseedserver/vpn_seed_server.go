@@ -26,6 +26,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	protobuftypes "github.com/gogo/protobuf/types"
 	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
@@ -35,10 +37,12 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,26 +61,18 @@ const (
 	DeploymentName = v1beta1constants.DeploymentNameVPNSeedServer
 	// ServiceName is the name of the vpn seed server service running internally on the control plane in seed.
 	ServiceName = DeploymentName
-	// mountPathVpnSeedServer contains the mount path for the vpn seed server secret.
-	mountPathVpnSeedServer = "/srv/secrets/vpn-server"
-	// mountPathTLSAuth contains the mount path for the tlsauth secret.
-	mountPathTLSAuth = "/srv/secrets/tlsauth"
-	// mountPathDH contains the mount path for the dh secret.
-	mountPathDH = "/srv/secrets/dh"
-	// envoyConfigName is the name of the vpn seed server envoy configuration.
-	envoyConfigName = "vpn-seed-server-envoy-config"
-	// envoyConfigDir contains the envoy configuration file.
-	envoyConfigDir = "/etc/envoy"
-	// envoyConfigFileName is the name of the envoy configuration file.
-	envoyConfigFileName = "envoy.yaml"
-	// envoyTLSConfigDir contains the envoy TLS certificates.
-	envoyTLSConfigDir = "/etc/tls"
 	// EnvoyPort is the port exposed by the envoy proxy on which it receives http proxy/connect requests.
 	EnvoyPort = 9443
-	// envoyProxyContainerName is the name of the envoy proxy container.
+
+	envoyConfigDir          = "/etc/envoy"
+	envoyConfigFileName     = "envoy.yaml"
+	envoyTLSConfigDir       = "/etc/tls"
 	envoyProxyContainerName = "envoy-proxy"
-	// openVPNPort is the port exposed by the OpenVPN server.
-	openVPNPort = 1194
+	openVPNPort             = 1194
+	mountPathVpnSeedServer  = "/srv/secrets/vpn-server"
+	mountPathTLSAuth        = "/srv/secrets/tlsauth"
+	mountPathDH             = "/srv/secrets/dh"
+	volumeNameEnvoyConfig   = "envoy-config"
 )
 
 // Interface contains functions for a vpn-seed-server deployer.
@@ -168,10 +164,50 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 	}
 
 	var (
-		configMap       = v.emptyConfigMap()
-		serverSecret    = v.emptySecret(DeploymentName)
-		tlsAuthSecret   = v.emptySecret(VpnSeedServerTLSAuth)
-		dhSecret        = v.emptySecret(vpnSeedServerDH)
+		configMap = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "vpn-seed-server-envoy-config",
+				Namespace: v.namespace,
+			},
+			Data: map[string]string{
+				envoyConfigFileName: envoyConfig,
+			},
+		}
+
+		serverSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      DeploymentName,
+				Namespace: v.namespace,
+			},
+			Type: corev1.SecretTypeTLS,
+			Data: v.secrets.Server.Data,
+		}
+
+		tlsAuthSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      VpnSeedServerTLSAuth,
+				Namespace: v.namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: v.secrets.TLSAuth.Data,
+		}
+
+		dhSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      vpnSeedServerDH,
+				Namespace: v.namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: v.secrets.DiffieHellmanKey.Data,
+		}
+	)
+
+	utilruntime.Must(kutil.MakeUnique(configMap))
+	utilruntime.Must(kutil.MakeUnique(serverSecret))
+	utilruntime.Must(kutil.MakeUnique(tlsAuthSecret))
+	utilruntime.Must(kutil.MakeUnique(dhSecret))
+
+	var (
 		service         = v.emptyService()
 		deployment      = v.emptyDeployment()
 		networkPolicy   = v.emptyNetworkPolicy()
@@ -185,27 +221,19 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 	)
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, serverSecret, func() error {
-		serverSecret.Type = corev1.SecretTypeTLS
-		serverSecret.Data = v.secrets.Server.Data
-		return nil
-	}); err != nil {
+	if err := v.client.Create(ctx, configMap); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, tlsAuthSecret, func() error {
-		tlsAuthSecret.Type = corev1.SecretTypeOpaque
-		tlsAuthSecret.Data = v.secrets.TLSAuth.Data
-		return nil
-	}); err != nil {
+	if err := v.client.Create(ctx, serverSecret); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, dhSecret, func() error {
-		dhSecret.Type = corev1.SecretTypeOpaque
-		dhSecret.Data = v.secrets.DiffieHellmanKey.Data
-		return nil
-	}); err != nil {
+	if err := v.client.Create(ctx, tlsAuthSecret); err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+
+	if err := v.client.Create(ctx, dhSecret); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
@@ -298,10 +326,6 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 						v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyFromPrometheus:    v1beta1constants.LabelNetworkPolicyAllowed,
-					},
-					Annotations: map[string]string{
-						"checksum/secret-" + tlsAuthSecret.Name: v.secrets.TLSAuth.Checksum,
-						"checksum/secret-" + dhSecret.Name:      v.secrets.DiffieHellmanKey.Checksum,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -421,7 +445,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      "envoy-config",
+									Name:      volumeNameEnvoyConfig,
 									MountPath: envoyConfigDir,
 								},
 								{
@@ -437,7 +461,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							Name: DeploymentName,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName:  DeploymentName,
+									SecretName:  serverSecret.Name,
 									DefaultMode: pointer.Int32Ptr(0400),
 								},
 							},
@@ -446,7 +470,7 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							Name: VpnSeedServerTLSAuth,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName:  VpnSeedServerTLSAuth,
+									SecretName:  tlsAuthSecret.Name,
 									DefaultMode: pointer.Int32Ptr(0400),
 								},
 							},
@@ -455,17 +479,17 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 							Name: vpnSeedServerDH,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName:  vpnSeedServerDH,
+									SecretName:  dhSecret.Name,
 									DefaultMode: pointer.Int32Ptr(0400),
 								},
 							},
 						},
 						{
-							Name: "envoy-config",
+							Name: volumeNameEnvoyConfig,
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: envoyConfigName,
+										Name: configMap.Name,
 									},
 								},
 							},
@@ -474,21 +498,15 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 				},
 			},
 		}
+
 		if v.nodeNetwork != nil {
 			deployment.Spec.Template.Spec.Containers[0].Env = append(
 				deployment.Spec.Template.Spec.Containers[0].Env,
 				corev1.EnvVar{Name: "NODE_NETWORK", Value: *v.nodeNetwork},
 			)
 		}
-		return nil
-	}); err != nil {
-		return err
-	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, v.client, configMap, func() error {
-		configMap.Data = map[string]string{
-			envoyConfigFileName: envoyConfig,
-		}
+		utilruntime.Must(references.InjectAnnotations(deployment))
 		return nil
 	}); err != nil {
 		return err
@@ -802,25 +820,32 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObjects(ctx, v.client,
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: "vpn-seed-server-envoy-config"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: DeploymentName}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: VpnSeedServerTLSAuth}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: vpnSeedServerDH}},
+	)
 }
 
 func (v *vpnSeedServer) Destroy(ctx context.Context) error {
 	return kutil.DeleteObjects(
 		ctx,
 		v.client,
-		v.emptySecret(DeploymentName),
-		v.emptySecret(VpnSeedServerTLSAuth),
-		v.emptySecret(vpnSeedServerDH),
 		v.emptyNetworkPolicy(),
 		v.emptyDeployment(),
-		v.emptyConfigMap(),
 		v.emptyGateway(),
 		v.emptyDestinationRule(),
 		v.emptyVirtualService(),
 		v.emptyService(),
 		v.emptyVPA(),
 		v.emptyEnvoyFilter(),
+		// TODO(rfranzke): Remove in a future release.
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: "vpn-seed-server-envoy-config"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: DeploymentName}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: VpnSeedServerTLSAuth}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v.namespace, Name: vpnSeedServerDH}},
 	)
 }
 
@@ -837,20 +862,12 @@ func (v *vpnSeedServer) SetExposureClassHandlerName(handlerName string) {
 }
 func (v *vpnSeedServer) SetSNIConfig(cfg *config.SNI) { v.sniConfig = cfg }
 
-func (v *vpnSeedServer) emptyConfigMap() *corev1.ConfigMap {
-	return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: envoyConfigName, Namespace: v.namespace}}
-}
-
 func (v *vpnSeedServer) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: v.namespace}}
-}
-
-func (v *vpnSeedServer) emptySecret(name string) *corev1.Secret {
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: v.namespace}}
 }
 
 func (v *vpnSeedServer) emptyNetworkPolicy() *networkingv1.NetworkPolicy {

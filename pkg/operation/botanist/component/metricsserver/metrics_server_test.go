@@ -25,6 +25,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -57,13 +58,17 @@ var _ = Describe("MetricsServer", func() {
 			Server: component.Secret{Name: secretNameServer, Checksum: secretChecksumServer, Data: secretDataServer},
 		}
 
+		secretName = "metrics-server-3a086058"
 		secretYAML = `apiVersion: v1
 data:
   bar: YmF6
+immutable: true
 kind: Secret
 metadata:
   creationTimestamp: null
-  name: metrics-server
+  labels:
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+  name: ` + secretName + `
   namespace: kube-system
 type: kubernetes.io/tls
 `
@@ -201,6 +206,8 @@ metadata:
 		deploymentYAMLWithoutHostEnv = `apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName + `
   creationTimestamp: null
   labels:
     gardener.cloud/role: system-component
@@ -219,8 +226,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/secret-metrics-server: "5678"
-        scheduler.alpha.kubernetes.io/critical-pod: ""
+        ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName + `
       creationTimestamp: null
       labels:
         gardener.cloud/role: system-component
@@ -285,12 +291,14 @@ spec:
       volumes:
       - name: metrics-server
         secret:
-          secretName: metrics-server
+          secretName: ` + secretName + `
 status: {}
 `
 		deploymentYAMLWithHostEnv = `apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName + `
   creationTimestamp: null
   labels:
     gardener.cloud/role: system-component
@@ -309,8 +317,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/secret-metrics-server: "5678"
-        scheduler.alpha.kubernetes.io/critical-pod: ""
+        ` + references.AnnotationKey(references.KindSecret, secretName) + `: ` + secretName + `
       creationTimestamp: null
       labels:
         gardener.cloud/role: system-component
@@ -378,7 +385,7 @@ spec:
       volumes:
       - name: metrics-server
         secret:
-          secretName: metrics-server
+          secretName: ` + secretName + `
 status: {}
 `
 
@@ -408,7 +415,7 @@ status: {}
 				"clusterrolebinding____metrics-server_system_auth-delegator.yaml": []byte(clusterRoleBindingAuthDelegatorYAML),
 				"deployment__kube-system__metrics-server.yaml":                    []byte(deploymentYAMLWithoutHostEnv),
 				"rolebinding__kube-system__metrics-server-auth-reader.yaml":       []byte(roleBindingYAML),
-				"secret__kube-system__metrics-server.yaml":                        []byte(secretYAML),
+				"secret__kube-system__" + secretName + ".yaml":                    []byte(secretYAML),
 				"service__kube-system__metrics-server.yaml":                       []byte(serviceYAML),
 				"serviceaccount__kube-system__metrics-server.yaml":                []byte(serviceAccountYAML),
 			},

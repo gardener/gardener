@@ -40,7 +40,7 @@ var _ = Describe("NewConfigurator", func() {
 })
 
 var _ = Describe("Config", func() {
-	var output, sha256 string
+	var output string
 
 	JustBeforeEach(func() {
 		c, err := v19.NewConfigurator("baz", "test", &v1beta1.KubeSchedulerConfiguration{
@@ -54,7 +54,7 @@ var _ = Describe("Config", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(c).NotTo(BeNil())
 
-		output, sha256, err = c.Config()
+		output, err = c.Config()
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -78,9 +78,5 @@ leaderElection:
 profiles:
 - schedulerName: test
 `))
-	})
-
-	It("returns correct hash", func() {
-		Expect(sha256).To(Equal("634783602497915c897dedad1f4dc3f77d2f67484352f08469b46359658f1377"))
 	})
 })

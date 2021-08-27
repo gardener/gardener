@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler/configurator"
-	"github.com/gardener/gardener/pkg/utils"
 	schedulerv19v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v19/v1beta1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,21 +58,21 @@ func NewConfigurator(resourceName, namespace string, config *schedulerv19v1beta1
 	}, nil
 }
 
-func (c *v19Configurator) Config() (string, string, error) {
+func (c *v19Configurator) Config() (string, error) {
 	const mediaType = runtime.ContentTypeYAML
 
 	componentConfigYAML := &bytes.Buffer{}
 
 	info, ok := runtime.SerializerInfoForMediaType(c.codec.SupportedMediaTypes(), mediaType)
 	if !ok {
-		return "", "", fmt.Errorf("unable to locate encoder -- %q is not a supported media type", mediaType)
+		return "", fmt.Errorf("unable to locate encoder -- %q is not a supported media type", mediaType)
 	}
 
 	encoder := c.codec.EncoderForVersion(info.Serializer, schedulerv19v1beta1.SchemeGroupVersion)
 
 	if err := encoder.Encode(c.config, componentConfigYAML); err != nil {
-		return "", "", err
+		return "", err
 	}
 
-	return componentConfigYAML.String(), utils.ComputeSHA256Hex(componentConfigYAML.Bytes()), nil
+	return componentConfigYAML.String(), nil
 }

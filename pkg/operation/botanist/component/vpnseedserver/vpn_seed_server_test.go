@@ -25,6 +25,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	protobuftypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -161,6 +162,31 @@ var _ = Describe("VpnSeedServer", func() {
 			},
 		}
 
+		secretServer = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
+			Type:       corev1.SecretTypeTLS,
+			Data:       secretDataServer,
+		}
+
+		secretTLSAuth = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: VpnSeedServerTLSAuth, Namespace: namespace},
+			Type:       corev1.SecretTypeOpaque,
+			Data:       secretDataTLSAuth,
+		}
+
+		secretDH = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server-dh", Namespace: namespace},
+			Type:       corev1.SecretTypeOpaque,
+			Data:       secretDataDH,
+		}
+	)
+
+	Expect(kutil.MakeUnique(configMap)).To(Succeed())
+	Expect(kutil.MakeUnique(secretServer)).To(Succeed())
+	Expect(kutil.MakeUnique(secretTLSAuth)).To(Succeed())
+	Expect(kutil.MakeUnique(secretDH)).To(Succeed())
+
+	var (
 		deployment = func(nodeNetwork *string) *appsv1.Deployment {
 			maxSurge := intstr.FromInt(100)
 			maxUnavailable := intstr.FromInt(0)
@@ -196,10 +222,6 @@ var _ = Describe("VpnSeedServer", func() {
 								v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 								v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
 								v1beta1constants.LabelNetworkPolicyFromPrometheus:    v1beta1constants.LabelNetworkPolicyAllowed,
-							},
-							Annotations: map[string]string{
-								"checksum/secret-" + secretNameTLSAuth: secrets.TLSAuth.Checksum,
-								"checksum/secret-" + secretNameDH:      secrets.DiffieHellmanKey.Checksum,
 							},
 						},
 						Spec: corev1.PodSpec{
@@ -335,7 +357,7 @@ var _ = Describe("VpnSeedServer", func() {
 									Name: DeploymentName,
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName:  DeploymentName,
+											SecretName:  secretServer.Name,
 											DefaultMode: pointer.Int32(0400),
 										},
 									},
@@ -344,7 +366,7 @@ var _ = Describe("VpnSeedServer", func() {
 									Name: VpnSeedServerTLSAuth,
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName:  VpnSeedServerTLSAuth,
+											SecretName:  secretTLSAuth.Name,
 											DefaultMode: pointer.Int32(0400),
 										},
 									},
@@ -353,7 +375,7 @@ var _ = Describe("VpnSeedServer", func() {
 									Name: "vpn-seed-server-dh",
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName:  "vpn-seed-server-dh",
+											SecretName:  secretDH.Name,
 											DefaultMode: pointer.Int32(0400),
 										},
 									},
@@ -363,7 +385,7 @@ var _ = Describe("VpnSeedServer", func() {
 									VolumeSource: corev1.VolumeSource{
 										ConfigMap: &corev1.ConfigMapVolumeSource{
 											LocalObjectReference: corev1.LocalObjectReference{
-												Name: "vpn-seed-server-envoy-config",
+												Name: configMap.Name,
 											},
 										},
 									},
@@ -373,9 +395,12 @@ var _ = Describe("VpnSeedServer", func() {
 					},
 				},
 			}
+
 			if nodeNetwork != nil {
 				deploy.Spec.Template.Spec.Containers[0].Env = append(deploy.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: "NODE_NETWORK", Value: *nodeNetwork})
 			}
+
+			Expect(references.InjectAnnotations(deploy)).To(Succeed())
 			return deploy
 		}
 
@@ -487,24 +512,6 @@ var _ = Describe("VpnSeedServer", func() {
 					networkingv1.PolicyTypeEgress,
 				},
 			},
-		}
-
-		secretDH = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "vpn-seed-server-dh", Namespace: namespace},
-			Type:       corev1.SecretTypeOpaque,
-			Data:       secretDataDH,
-		}
-
-		secretTLSAuth = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: VpnSeedServerTLSAuth, Namespace: namespace},
-			Type:       corev1.SecretTypeOpaque,
-			Data:       secretDataTLSAuth,
-		}
-
-		secretServer = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: namespace},
-			Type:       corev1.SecretTypeTLS,
-			Data:       secretDataServer,
 		}
 
 		service = &corev1.Service{
@@ -802,10 +809,18 @@ var _ = Describe("VpnSeedServer", func() {
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 			})
 
+			It("should fail because the configmap cannot be created", func() {
+				gomock.InOrder(
+					c.EXPECT().Create(ctx, configMap).Return(fakeErr),
+				)
+
+				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(fakeErr))
+			})
+
 			It("should fail because the server secret cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
+					c.EXPECT().Create(ctx, configMap),
+					c.EXPECT().Create(ctx, secretServer).Return(fakeErr),
 				)
 
 				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(fakeErr))
@@ -813,10 +828,9 @@ var _ = Describe("VpnSeedServer", func() {
 
 			It("should fail because the tlsAuth secret cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
+					c.EXPECT().Create(ctx, configMap),
+					c.EXPECT().Create(ctx, secretServer),
+					c.EXPECT().Create(ctx, secretTLSAuth).Return(fakeErr),
 				)
 
 				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(fakeErr))
@@ -824,12 +838,10 @@ var _ = Describe("VpnSeedServer", func() {
 
 			It("should fail because the dh secret cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
+					c.EXPECT().Create(ctx, configMap),
+					c.EXPECT().Create(ctx, secretServer),
+					c.EXPECT().Create(ctx, secretTLSAuth),
+					c.EXPECT().Create(ctx, secretDH).Return(fakeErr),
 				)
 
 				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(fakeErr))
@@ -837,12 +849,10 @@ var _ = Describe("VpnSeedServer", func() {
 
 			It("should fail because the networkpolicy cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Create(ctx, configMap),
+					c.EXPECT().Create(ctx, secretServer),
+					c.EXPECT().Create(ctx, secretTLSAuth),
+					c.EXPECT().Create(ctx, secretDH),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).Return(fakeErr),
 				)
@@ -852,12 +862,10 @@ var _ = Describe("VpnSeedServer", func() {
 
 			It("should fail because the deployment cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Create(ctx, configMap),
+					c.EXPECT().Create(ctx, secretServer),
+					c.EXPECT().Create(ctx, secretTLSAuth),
+					c.EXPECT().Create(ctx, secretDH),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
@@ -867,39 +875,16 @@ var _ = Describe("VpnSeedServer", func() {
 				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail because the configMap cannot be created", func() {
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-envoy-config"), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).Return(fakeErr),
-				)
-
-				Expect(vpnSeedServer.Deploy(ctx)).To(MatchError(fakeErr))
-			})
-
 			It("should fail because the gateway cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Create(ctx, configMap),
+					c.EXPECT().Create(ctx, secretServer),
+					c.EXPECT().Create(ctx, secretTLSAuth),
+					c.EXPECT().Create(ctx, secretDH),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-envoy-config"), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{}), gomock.Any()).Return(fakeErr),
 				)
@@ -909,18 +894,14 @@ var _ = Describe("VpnSeedServer", func() {
 
 			It("should fail because the destinationRule cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Create(ctx, configMap),
+					c.EXPECT().Create(ctx, secretServer),
+					c.EXPECT().Create(ctx, secretTLSAuth),
+					c.EXPECT().Create(ctx, secretDH),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-envoy-config"), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
@@ -932,18 +913,14 @@ var _ = Describe("VpnSeedServer", func() {
 
 			It("should fail because the virtualService cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Create(ctx, configMap),
+					c.EXPECT().Create(ctx, secretServer),
+					c.EXPECT().Create(ctx, secretTLSAuth),
+					c.EXPECT().Create(ctx, secretDH),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-envoy-config"), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
@@ -957,18 +934,14 @@ var _ = Describe("VpnSeedServer", func() {
 
 			It("should fail because the service cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Create(ctx, configMap),
+					c.EXPECT().Create(ctx, secretServer),
+					c.EXPECT().Create(ctx, secretTLSAuth),
+					c.EXPECT().Create(ctx, secretDH),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-envoy-config"), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
@@ -984,18 +957,14 @@ var _ = Describe("VpnSeedServer", func() {
 
 			It("should fail because the vpa cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Create(ctx, configMap),
+					c.EXPECT().Create(ctx, secretServer),
+					c.EXPECT().Create(ctx, secretTLSAuth),
+					c.EXPECT().Create(ctx, secretDH),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-envoy-config"), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.DestinationRule{})),
@@ -1013,19 +982,20 @@ var _ = Describe("VpnSeedServer", func() {
 
 			It("should successfully deploy all resources (w/o node network)", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(configMap))
+						}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretServer))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretTLSAuth))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretDH))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
@@ -1038,11 +1008,6 @@ var _ = Describe("VpnSeedServer", func() {
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(deployment(nil)))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-envoy-config"), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(configMap))
-						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1072,6 +1037,10 @@ var _ = Describe("VpnSeedServer", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1alpha3.EnvoyFilter{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(envoyFilter))
 					}),
+					c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
 				)
 				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
 			})
@@ -1082,19 +1051,20 @@ var _ = Describe("VpnSeedServer", func() {
 				vpnSeedServer.SetSeedNamespaceObjectUID(namespaceUID)
 
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
+							Expect(obj).To(DeepEqual(configMap))
+						}),
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretServer))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-tlsauth"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretTLSAuth))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-dh"), gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+					c.EXPECT().Create(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.CreateOption) {
 							Expect(obj).To(DeepEqual(secretDH))
 						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, "allow-to-vpn-seed-server"), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
@@ -1107,11 +1077,6 @@ var _ = Describe("VpnSeedServer", func() {
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(deployment(&nodeNetwork)))
 						}),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName+"-envoy-config"), gomock.AssignableToTypeOf(&corev1.ConfigMap{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ConfigMap{}), gomock.Any()).
-						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(configMap))
-						}),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, DeploymentName), gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1beta1.Gateway{}), gomock.Any()).
 						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -1141,6 +1106,10 @@ var _ = Describe("VpnSeedServer", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1alpha3.EnvoyFilter{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 						Expect(obj).To(DeepEqual(envoyFilter))
 					}),
+					c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
 				)
 
 				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
@@ -1149,39 +1118,8 @@ var _ = Describe("VpnSeedServer", func() {
 	})
 
 	Describe("#Destroy", func() {
-
-		It("should fail because the server secret cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}).Return(fakeErr),
-			)
-
-			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
-		})
-
-		It("should fail because the tlsAuth secret cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}).Return(fakeErr),
-			)
-
-			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
-		})
-
-		It("should fail because the dh secret cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}).Return(fakeErr),
-			)
-
-			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
-		})
-
 		It("should fail because the networkpolicy cannot be deleted", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}).Return(fakeErr),
 			)
 
@@ -1190,9 +1128,6 @@ var _ = Describe("VpnSeedServer", func() {
 
 		It("should fail because the deployment cannot be deleted", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}).Return(fakeErr),
 			)
@@ -1200,27 +1135,10 @@ var _ = Describe("VpnSeedServer", func() {
 			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 
-		It("should fail because the configMap cannot be deleted", func() {
-			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
-				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
-				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}).Return(fakeErr),
-			)
-
-			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
-		})
-
 		It("should fail because the gateway cannot be deleted", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}).Return(fakeErr),
 			)
 
@@ -1229,12 +1147,8 @@ var _ = Describe("VpnSeedServer", func() {
 
 		It("should fail because the destinationRule cannot be deleted", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}).Return(fakeErr),
 			)
@@ -1244,12 +1158,8 @@ var _ = Describe("VpnSeedServer", func() {
 
 		It("should fail because the virtualService cannot be deleted", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}).Return(fakeErr),
@@ -1260,12 +1170,8 @@ var _ = Describe("VpnSeedServer", func() {
 
 		It("should fail because the service cannot be deleted", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
@@ -1277,12 +1183,8 @@ var _ = Describe("VpnSeedServer", func() {
 
 		It("should fail because the vpa cannot be deleted", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
@@ -1293,20 +1195,90 @@ var _ = Describe("VpnSeedServer", func() {
 			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 
-		It("should successfully destroy all resources", func() {
+		It("should fail because the configMap cannot be deleted", func() {
 			gomock.InOrder(
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
-				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
 				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
-				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}),
 				c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-vpa"}}),
 				c.EXPECT().Delete(ctx, &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: namespace + "-vpn"}}),
+				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}).Return(fakeErr),
+			)
+
+			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
+		It("should fail because the server secret cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}),
+				c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-vpa"}}),
+				c.EXPECT().Delete(ctx, &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: namespace + "-vpn"}}),
+				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}).Return(fakeErr),
+			)
+
+			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
+		It("should fail because the tlsAuth secret cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}),
+				c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-vpa"}}),
+				c.EXPECT().Delete(ctx, &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: namespace + "-vpn"}}),
+				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}).Return(fakeErr),
+			)
+
+			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
+		It("should fail because the dh secret cannot be deleted", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}),
+				c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-vpa"}}),
+				c.EXPECT().Delete(ctx, &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: namespace + "-vpn"}}),
+				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}).Return(fakeErr),
+			)
+
+			Expect(vpnSeedServer.Destroy(ctx)).To(MatchError(fakeErr))
+		})
+
+		It("should successfully destroy all resources", func() {
+			gomock.InOrder(
+				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "allow-to-vpn-seed-server"}}),
+				c.EXPECT().Delete(ctx, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: ServiceName}}),
+				c.EXPECT().Delete(ctx, &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-vpa"}}),
+				c.EXPECT().Delete(ctx, &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: namespace + "-vpn"}}),
+				c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-envoy-config"}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
+				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
 			)
 			Expect(vpnSeedServer.Destroy(ctx)).To(Succeed())
 		})

@@ -116,11 +116,11 @@ func deepCopyIntoObject(dest, src runtime.Object) {
 	reflect.ValueOf(dest).Elem().Set(reflect.ValueOf(src.DeepCopyObject()).Elem())
 }
 
-// MakeImmutable takes either a *corev1.ConfigMap or a *corev1.Secret object and makes it immutable, i.e., it sets
+// MakeUnique takes either a *corev1.ConfigMap or a *corev1.Secret object and makes it immutable, i.e., it sets
 // .immutable=true, computes a checksum based on .data, and appends the first 8 characters of the computed checksum
 // to the name of the object. Additionally, it injects the `resources.gardener.cloud/garbage-collectable-reference=true`
 // label.
-func MakeImmutable(obj runtime.Object) error {
+func MakeUnique(obj runtime.Object) error {
 	var (
 		numberOfChecksumChars = 8
 		prependHyphen         = func(name string) string {

@@ -27,6 +27,7 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -54,12 +55,13 @@ var _ = Describe("DependencyWatchdog", func() {
 	})
 
 	Describe("#Deploy, #Destroy", func() {
-		testSuite := func(values Values) {
+		testSuite := func(values Values, configMapDataHash string) {
 			var (
 				managedResource       *resourcesv1alpha1.ManagedResource
 				managedResourceSecret *corev1.Secret
 
-				dwdName = fmt.Sprintf("dependency-watchdog-%s", values.Role)
+				dwdName       = fmt.Sprintf("dependency-watchdog-%s", values.Role)
+				configMapName = dwdName + "-config-" + configMapDataHash
 
 				serviceAccountYAML = `apiVersion: v1
 kind: ServiceAccount
@@ -201,12 +203,14 @@ data:
 `
 					}
 
-					out += `kind: ConfigMap
+					out += `immutable: true
+kind: ConfigMap
 metadata:
   creationTimestamp: null
   labels:
     app: ` + dwdName + `
-  name: ` + dwdName + `-config
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+  name: ` + configMapName + `
   namespace: ` + namespace + `
 `
 
@@ -217,6 +221,8 @@ metadata:
 					out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
   creationTimestamp: null
   labels:
     role: ` + dwdName + `
@@ -230,13 +236,13 @@ spec:
       role: ` + dwdName + `
   strategy: {}
   template:
-    metadata:`
+    metadata:
+      annotations:
+        ` + references.AnnotationKey(references.KindConfigMap, configMapName) + `: ` + configMapName + `
+      creationTimestamp: null`
 
 					if role == RoleEndpoint {
 						out += `
-      annotations:
-        checksum/configmap-dep-config: caac33ef335e1b3e2c2cf3aefb1672dc6004eafc2248f8a2b9ae2a81760d86ce
-      creationTimestamp: null
       labels:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-seed-apiserver: allowed
@@ -245,9 +251,6 @@ spec:
 
 					if role == RoleProbe {
 						out += `
-      annotations:
-        checksum/configmap-dep-config: 018b3557781ccf488796965302d4cc70f6d8ee86d738af5c4f92d42d877a44a1
-      creationTimestamp: null
       labels:
         networking.gardener.cloud/to-all-shoot-apiservers: allowed
         networking.gardener.cloud/to-dns: allowed
@@ -305,7 +308,7 @@ spec:
       terminationGracePeriodSeconds: 5
       volumes:
       - configMap:
-          name: ` + dwdName + `-config
+          name: ` + configMapName + `
         name: config
 status: {}
 `
@@ -398,7 +401,7 @@ status: {}
 				Expect(managedResourceSecret.Data).To(HaveLen(8))
 				Expect(managedResourceSecret.Data["clusterrole____gardener.cloud_"+dwdName+"_cluster-role.yaml"]).To(DeepEqual([]byte(clusterRoleYAMLFor(values.Role))))
 				Expect(managedResourceSecret.Data["clusterrolebinding____gardener.cloud_"+dwdName+"_cluster-role-binding.yaml"]).To(DeepEqual([]byte(clusterRoleBindingYAML)))
-				Expect(managedResourceSecret.Data["configmap__"+namespace+"__"+dwdName+"-config.yaml"]).To(DeepEqual([]byte(configMapYAMLFor(values.Role))))
+				Expect(managedResourceSecret.Data["configmap__"+namespace+"__"+configMapName+".yaml"]).To(DeepEqual([]byte(configMapYAMLFor(values.Role))))
 				Expect(managedResourceSecret.Data["deployment__"+namespace+"__"+dwdName+".yaml"]).To(DeepEqual([]byte(deploymentYAMLFor(values.Role))))
 				Expect(managedResourceSecret.Data["role__"+namespace+"__gardener.cloud_"+dwdName+"_role.yaml"]).To(DeepEqual([]byte(roleYAML)))
 				Expect(managedResourceSecret.Data["rolebinding__"+namespace+"__gardener.cloud_"+dwdName+"_role-binding.yaml"]).To(DeepEqual([]byte(roleBindingYAML)))
@@ -421,11 +424,11 @@ status: {}
 		}
 
 		Describe("RoleEndpoint", func() {
-			testSuite(Values{Role: RoleEndpoint, Image: image})
+			testSuite(Values{Role: RoleEndpoint, Image: image}, "885b78df")
 		})
 
 		Describe("RoleProbe", func() {
-			testSuite(Values{Role: RoleProbe, Image: image})
+			testSuite(Values{Role: RoleProbe, Image: image}, "07491e14")
 		})
 	})
 
