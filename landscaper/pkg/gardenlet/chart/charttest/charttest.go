@@ -755,6 +755,10 @@ func ComputeExpectedGardenletConfiguration(
 				Port:        2720,
 			},
 		}},
+		Debugging: baseconfigv1alpha1.DebuggingConfiguration{
+			EnableProfiling:           pointer.Bool(false),
+			EnableContentionProfiling: pointer.Bool(false),
+		},
 		FeatureGates: featureGates,
 		Resources: &gardenletconfigv1alpha1.ResourcesConfiguration{
 			Capacity: corev1.ResourceList{

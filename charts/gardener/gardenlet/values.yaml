@@ -132,6 +132,9 @@ global:
         #     -----BEGIN RSA PRIVATE KEY-----
         #     ...
         #     -----END RSA PRIVATE KEY-----
+      debugging:
+        enableProfiling: false
+        enableContentionProfiling: false
       featureGates: {}
       # sni: # SNI configuration used for APIServerSNI and ManagedIstio feature gates.
       #   ingress:

@@ -43,6 +43,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/testing"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
 	"k8s.io/utils/pointer"
 )
 
@@ -456,6 +457,10 @@ var _ = Describe("ManagedSeed", func() {
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: configv1alpha1.SchemeGroupVersion.String(),
 							Kind:       "GardenletConfiguration",
+						},
+						Debugging: componentbaseconfigv1alpha1.DebuggingConfiguration{
+							EnableProfiling:           pointer.Bool(false),
+							EnableContentionProfiling: pointer.Bool(false),
 						},
 						SeedConfig: &configv1alpha1.SeedConfig{
 							SeedTemplate: gardencorev1beta1.SeedTemplate{

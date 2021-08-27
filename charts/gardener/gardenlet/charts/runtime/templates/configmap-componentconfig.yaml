@@ -158,6 +158,11 @@ data:
           serverCertPath: /etc/gardenlet/srv/gardenlet.crt
           serverKeyPath: /etc/gardenlet/srv/gardenlet.key
         {{- end }}
+    {{- if .Values.global.gardenlet.config.debugging }}
+    debugging:
+      enableProfiling: {{ .Values.global.gardenlet.config.debugging.enableProfiling | default false }}
+      enableContentionProfiling: {{ .Values.global.gardenlet.config.debugging.enableContentionProfiling | default false }}
+    {{- end }}
     {{- if .Values.global.gardenlet.config.featureGates }}
     featureGates:
 {{ toYaml .Values.global.gardenlet.config.featureGates | indent 6 }}

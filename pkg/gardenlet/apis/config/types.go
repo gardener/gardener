@@ -52,6 +52,8 @@ type GardenletConfiguration struct {
 	KubernetesLogLevel *klog.Level
 	// Server defines the configuration of the HTTP server.
 	Server *ServerConfiguration
+	// Debugging holds configuration for Debugging related features.
+	Debugging componentbaseconfig.DebuggingConfiguration
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/gardener/pkg/gardenlet/features/features.go".

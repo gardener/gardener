@@ -63,6 +63,8 @@ type GardenletConfiguration struct {
 	// Server defines the configuration of the HTTP server.
 	// +optional
 	Server *ServerConfiguration `json:"server,omitempty"`
+	// Debugging holds configuration for Debugging related features.
+	Debugging componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging"`
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/gardener/pkg/gardenlet/features/features.go".
