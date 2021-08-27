@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	goruntime "runtime"
 	"strings"
 	"time"
 
@@ -47,6 +48,7 @@ import (
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
+	"github.com/gardener/gardener/pkg/server/routes"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -443,15 +445,7 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 		g.Logger.Info("TLS server certificates successfully self-generated.")
 	}
 
-	go server.
-		NewBuilder().
-		WithBindAddress(g.Config.Server.HTTPS.BindAddress).
-		WithPort(g.Config.Server.HTTPS.Port).
-		WithTLS(g.Config.Server.HTTPS.TLS.ServerCertPath, g.Config.Server.HTTPS.TLS.ServerKeyPath).
-		WithHandler("/metrics", promhttp.Handler()).
-		WithHandlerFunc("/healthz", healthz.HandlerFunc(g.HealthManager)).
-		Build().
-		Start(ctx)
+	g.startServer(ctx)
 
 	// Prepare a reusable run function.
 	run := func(ctx context.Context) error {
@@ -491,6 +485,25 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 		g.Logger.Errorf("failed to run gardenlet controllers: %v", err)
 	}
 	return err
+}
+
+func (g *Gardenlet) startServer(ctx context.Context) {
+	builder := server.
+		NewBuilder().
+		WithBindAddress(g.Config.Server.HTTPS.BindAddress).
+		WithPort(g.Config.Server.HTTPS.Port).
+		WithTLS(g.Config.Server.HTTPS.TLS.ServerCertPath, g.Config.Server.HTTPS.TLS.ServerKeyPath).
+		WithHandler("/metrics", promhttp.Handler()).
+		WithHandlerFunc("/healthz", healthz.HandlerFunc(g.HealthManager))
+
+	if g.Config.Debugging.EnableProfiling {
+		routes.Profiling{}.AddToBuilder(builder)
+		if g.Config.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
+	}
+
+	go builder.Build().Start(ctx)
 }
 
 func (g *Gardenlet) startControllers(ctx context.Context) error {
