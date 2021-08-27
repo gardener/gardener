@@ -132,9 +132,9 @@ var _ = Describe("Etcd", func() {
 							{
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"garden.sapcloud.io/role": "controlplane",
-										"app":                     "kubernetes",
-										"role":                    "apiserver",
+										"gardener.cloud/role": "controlplane",
+										"app":                 "kubernetes",
+										"role":                "apiserver",
 									},
 								},
 							},

@@ -12,7 +12,7 @@ spec:
   podSelector:
     matchLabels:
       app: kubernetes
-      garden.sapcloud.io/role: controlplane
+      gardener.cloud/role: controlplane
       role: apiserver
   egress:
   - to:
