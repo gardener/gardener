@@ -10,7 +10,7 @@ spec:
   podSelector:
     matchLabels:
       component: alertmanager
-      garden.sapcloud.io/role: monitoring
+      gardener.cloud/role: monitoring
       role: monitoring
   ingress:
   - from:
