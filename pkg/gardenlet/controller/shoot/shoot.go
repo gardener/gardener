@@ -33,6 +33,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -254,7 +255,7 @@ func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterf
 
 func (c *Controller) newProgressReporter(reporterFn flow.ProgressReporterFn) flow.ProgressReporter {
 	if c.config.Controllers.Shoot != nil && c.config.Controllers.Shoot.ProgressReportPeriod != nil {
-		return flow.NewDelayingProgressReporter(reporterFn, c.config.Controllers.Shoot.ProgressReportPeriod.Duration)
+		return flow.NewDelayingProgressReporter(clock.RealClock{}, reporterFn, c.config.Controllers.Shoot.ProgressReportPeriod.Duration)
 	}
 	return flow.NewImmediateProgressReporter(reporterFn)
 }

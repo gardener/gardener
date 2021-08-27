@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 type progressReporterDelaying struct {
@@ -27,15 +29,17 @@ type progressReporterDelaying struct {
 	ctxCancel           context.CancelFunc
 	reporterFn          ProgressReporterFn
 	period              time.Duration
-	timer               *time.Timer
+	clock               clock.Clock
+	timer               clock.Timer
 	pendingProgress     *Stats
 	delayProgressReport bool
 }
 
 // NewDelayingProgressReporter returns a new progress reporter with the given function and the configured period. A
 // period of `0` will lead to immediate reports as soon as flow tasks are completed.
-func NewDelayingProgressReporter(reporterFn ProgressReporterFn, period time.Duration) ProgressReporter {
+func NewDelayingProgressReporter(clock clock.Clock, reporterFn ProgressReporterFn, period time.Duration) ProgressReporter {
 	return &progressReporterDelaying{
+		clock:      clock,
 		reporterFn: reporterFn,
 		period:     period,
 	}
@@ -54,7 +58,7 @@ func (p *progressReporterDelaying) Start(ctx context.Context) error {
 	p.ctx = ctx
 
 	if p.period > 0 {
-		p.timer = time.NewTimer(p.period)
+		p.timer = p.clock.NewTimer(p.period)
 
 		ctx, cancel := context.WithCancel(ctx)
 		p.ctxCancel = cancel
@@ -95,7 +99,7 @@ func (p *progressReporterDelaying) run(ctx context.Context) {
 	timer := p.timer
 	for timer != nil {
 		select {
-		case <-timer.C:
+		case <-timer.C():
 			timer.Reset(p.period)
 			p.report()
 
