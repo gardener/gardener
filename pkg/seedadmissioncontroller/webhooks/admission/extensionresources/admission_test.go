@@ -100,6 +100,7 @@ var _ = Describe("handler", func() {
 				Entry("for backupbuckets", "backupbuckets", backupBucket),
 				Entry("for backupentries", "backupentries", backupEntry),
 				Entry("for bastions", "bastions", bastion),
+				Entry("for containerruntime", "containerruntimes", containerRuntime),
 				Entry("for controlplanes", "controlplanes", controlPlane),
 				Entry("for dnsrecords", "dnsrecords", dnsrecord),
 				Entry("for extensions", "extensions", extension),
@@ -171,6 +172,18 @@ var _ = Describe("handler", func() {
 					return o
 				}(), func() runtime.Object {
 					o := bastion.DeepCopy()
+					o.ResourceVersion = "1"
+
+					return o
+				}()),
+				// TODO: Fix this with #4561
+				Entry("for containerruntime", "containerruntimes", func() runtime.Object {
+					o := containerRuntime.DeepCopy()
+					o.ResourceVersion = "2"
+
+					return o
+				}(), func() runtime.Object {
+					o := containerRuntime.DeepCopy()
 					o.ResourceVersion = "1"
 
 					return o
@@ -305,6 +318,7 @@ var _ = Describe("handler", func() {
 
 					return o
 				}()),
+				// TODO: Introduce entryfor ContainerRuntime with #4561
 				Entry("for controlplanes", "controlplanes", func() runtime.Object {
 					o := controlPlane.DeepCopy()
 					o.ResourceVersion = "1"

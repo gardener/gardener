@@ -74,6 +74,14 @@ var (
 		},
 	}
 
+	containerRuntime = &extensionsv1alpha1.ContainerRuntime{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.ContainerRuntimeResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+	}
+
 	controlPlane = &extensionsv1alpha1.ControlPlane{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       extensionsv1alpha1.ControlPlaneResource,

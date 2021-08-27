@@ -34,8 +34,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// WebhookPath is the HTTP handler path for this admission webhook handler.
-const WebhookPath = "/webhooks/validate-extension-resources"
+const (
+	// WebhookPath is the HTTP handler path for this admission webhook handler.
+	WebhookPath = "/webhooks/validate-extension-resources"
+
+	// HandlerName is the name of this admission webhook handler.
+	HandlerName = "extension_resources"
+)
 
 var gvk = schema.GroupVersionKind{
 	Group:   extensionsv1alpha1.SchemeGroupVersion.Group,
@@ -88,6 +93,20 @@ func New(logger logr.Logger) *handler {
 				old := o.(*extensionsv1alpha1.Bastion)
 				return validation.ValidateBastionUpdate(new, old)
 			}})
+
+	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "containerruntimes"},
+		artifact{
+			newEntity: func() client.Object { return new(extensionsv1alpha1.ContainerRuntime) },
+			validateCreateResource: func(n, o client.Object) field.ErrorList {
+				new := n.(*extensionsv1alpha1.ContainerRuntime)
+				return validation.ValidateContainerRuntime(new)
+			},
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
+				new := n.(*extensionsv1alpha1.ContainerRuntime)
+				old := o.(*extensionsv1alpha1.ContainerRuntime)
+				return validation.ValidateContainerRuntimeUpdate(new, old)
+			},
+		})
 
 	h.addResource(metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "controlplanes"},
 		artifact{
@@ -201,6 +220,8 @@ func (h *handler) InjectDecoder(d *admission.Decoder) error {
 }
 
 func (h *handler) Handle(ctx context.Context, ar admission.Request) admission.Response {
+	h.logger.Info(fmt.Sprintf("validating resource of type %s for operation %s", ar.Resource, ar.Operation))
+
 	_, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
@@ -241,17 +262,19 @@ func (h handler) handleValidation(object, oldObject runtime.RawExtension, newEnt
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("could not decode object %v: %w", object, err))
 	}
 
+	h.logger.Info(fmt.Sprintf("handle validation for %s", obj.GetName()))
+
 	oldObj := newEntity()
 	if len(oldObject.Raw) != 0 {
 		if err := h.decoder.DecodeRaw(oldObject, oldObj); err != nil {
-			h.logger.Error(err, "could not decode old object", "object", oldObj)
+			h.logger.Error(err, "could not decode old object", "old object", oldObj)
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode old object %v: %v", oldObj, err))
 		}
 	}
 
 	errors := validate(obj, oldObj)
 	if len(errors) != 0 {
-		err := apierrors.NewInvalid(gvk.GroupKind(), "", errors)
+		err := apierrors.NewInvalid(gvk.GroupKind(), obj.GetName(), errors)
 		return admission.Denied(err.Error())
 	}
 
