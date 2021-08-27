@@ -19,17 +19,20 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 var _ = Describe("Periodic", func() {
 	Describe("periodicHealthz", func() {
 		var (
+			fakeClock     *clock.FakeClock
 			p             *periodicHealthz
-			resetDuration = 5 * time.Millisecond
+			resetDuration = 5 * time.Second
 		)
 
 		BeforeEach(func() {
-			p = NewPeriodicHealthz(resetDuration).(*periodicHealthz)
+			fakeClock = clock.NewFakeClock(time.Now())
+			p = NewPeriodicHealthz(fakeClock, resetDuration).(*periodicHealthz)
 		})
 
 		Describe("#Name", func() {
@@ -102,21 +105,21 @@ var _ = Describe("Periodic", func() {
 				p.Start()
 
 				Expect(p.Get()).To(BeTrue())
-				time.Sleep(p.resetDuration)
-				Eventually(p.Get, 2*p.resetDuration, p.resetDuration/5).Should(BeFalse())
+				fakeClock.Step(resetDuration)
+				Eventually(p.Get).Should(BeFalse())
 			})
 
 			It("should correctly reset the timer if status is changed to true", func() {
 				p.Start()
 
 				Expect(p.Get()).To(BeTrue())
-				time.Sleep(p.resetDuration / 2)
-				Eventually(p.Get, 2*p.resetDuration, p.resetDuration/5).Should(BeFalse())
+				fakeClock.Step(resetDuration)
+				Eventually(p.Get).Should(BeFalse())
 
 				p.Set(true)
 				Expect(p.Get()).To(BeTrue())
-				time.Sleep(p.resetDuration)
-				Eventually(p.Get, 2*p.resetDuration, p.resetDuration/5).Should(BeFalse())
+				fakeClock.Step(resetDuration)
+				Eventually(p.Get).Should(BeFalse())
 			})
 		})
 
