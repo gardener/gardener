@@ -91,7 +91,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.EtcdMain.SetSecrets(secrets)
 	b.Shoot.Components.ControlPlane.EtcdEvents.SetSecrets(secrets)
 
-	if b.Seed.Info.Spec.Backup != nil {
+	if b.Seed.GetInfo().Spec.Backup != nil {
 		secret := &corev1.Secret{}
 		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, genericactuator.BackupSecretName), secret); err != nil {
 			return err
@@ -103,7 +103,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 		}
 
 		b.Shoot.Components.ControlPlane.EtcdMain.SetBackupConfig(&etcd.BackupConfig{
-			Provider:             b.Seed.Info.Spec.Backup.Provider,
+			Provider:             b.Seed.GetInfo().Spec.Backup.Provider,
 			SecretRefName:        genericactuator.BackupSecretName,
 			Prefix:               b.Shoot.BackupEntryName,
 			Container:            string(secret.Data[genericactuator.DataKeyBackupBucketName]),

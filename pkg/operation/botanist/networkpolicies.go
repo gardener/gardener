@@ -42,25 +42,25 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 		shootCIDRNetworks = append(shootCIDRNetworks, *v)
 	}
 
-	shootNetworkPeers, err := networkpolicies.NetworkPolicyPeersWithExceptions(shootCIDRNetworks, b.Seed.Info.Spec.Networks.BlockCIDRs...)
+	shootNetworkPeers, err := networkpolicies.NetworkPolicyPeersWithExceptions(shootCIDRNetworks, b.Seed.GetInfo().Spec.Networks.BlockCIDRs...)
 	if err != nil {
 		return nil, err
 	}
 
-	seedCIDRNetworks := []string{b.Seed.Info.Spec.Networks.Pods, b.Seed.Info.Spec.Networks.Services}
-	if v := b.Seed.Info.Spec.Networks.Nodes; v != nil {
+	seedCIDRNetworks := []string{b.Seed.GetInfo().Spec.Networks.Pods, b.Seed.GetInfo().Spec.Networks.Services}
+	if v := b.Seed.GetInfo().Spec.Networks.Nodes; v != nil {
 		seedCIDRNetworks = append(seedCIDRNetworks, *v)
 	}
 
 	allCIDRNetworks := append(seedCIDRNetworks, shootCIDRNetworks...)
-	allCIDRNetworks = append(allCIDRNetworks, b.Seed.Info.Spec.Networks.BlockCIDRs...)
+	allCIDRNetworks = append(allCIDRNetworks, b.Seed.GetInfo().Spec.Networks.BlockCIDRs...)
 
 	privateNetworkPeers, err := networkpolicies.ToNetworkPolicyPeersWithExceptions(networkpolicies.AllPrivateNetworkBlocks(), allCIDRNetworks...)
 	if err != nil {
 		return nil, err
 	}
 
-	_, seedServiceCIDR, err := net.ParseCIDR(b.Seed.Info.Spec.Networks.Services)
+	_, seedServiceCIDR, err := net.ParseCIDR(b.Seed.GetInfo().Spec.Networks.Services)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.D
 				// When disabling SNI (previously enabled), the control plane is transitioning between states, thus
 				// it needs to be ensured that the traffic from old clients can still reach the API server.
 				SNIEnabled:           sniPhase == component.PhaseEnabled || sniPhase == component.PhaseEnabling || sniPhase == component.PhaseDisabling,
-				BlockedAddresses:     b.Seed.Info.Spec.Networks.BlockCIDRs,
+				BlockedAddresses:     b.Seed.GetInfo().Spec.Networks.BlockCIDRs,
 				PrivateNetworkPeers:  privateNetworkPeers,
 				DenyAllTraffic:       true,
 				NodeLocalIPVSAddress: pointer.String(common.NodeLocalIPVSAddress),

@@ -70,16 +70,7 @@ var _ = Describe("Networkpolicies", func() {
 		botanist = &Botanist{
 			Operation: &operation.Operation{
 				K8sSeedClient: clientInterface,
-				Seed: &seedpkg.Seed{
-					Info: &gardencorev1beta1.Seed{
-						Spec: gardencorev1beta1.SeedSpec{
-							Networks: gardencorev1beta1.SeedNetworks{
-								Pods:     podCIDRSeed,
-								Services: serviceCIDRSeed,
-							},
-						},
-					},
-				},
+				Seed:          &seedpkg.Seed{},
 				Shoot: &shootpkg.Shoot{
 					Networks: &shootpkg.Networks{
 						CoreDNS: []byte{20, 0, 0, 10},
@@ -88,6 +79,14 @@ var _ = Describe("Networkpolicies", func() {
 				},
 			},
 		}
+		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+			Spec: gardencorev1beta1.SeedSpec{
+				Networks: gardencorev1beta1.SeedNetworks{
+					Pods:     podCIDRSeed,
+					Services: serviceCIDRSeed,
+				},
+			},
+		})
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
@@ -130,8 +129,8 @@ var _ = Describe("Networkpolicies", func() {
 				botanist.Shoot.GetInfo().Spec.Networking.Pods = &podCIDRShoot
 				botanist.Shoot.GetInfo().Spec.Networking.Services = &serviceCIDRShoot
 				botanist.Shoot.GetInfo().Spec.Networking.Nodes = &nodeCIDRShoot
-				botanist.Seed.Info.Spec.Networks.Nodes = &nodeCIDRSeed
-				botanist.Seed.Info.Spec.Networks.BlockCIDRs = blockCIDRs
+				botanist.Seed.GetInfo().Spec.Networks.Nodes = &nodeCIDRSeed
+				botanist.Seed.GetInfo().Spec.Networks.BlockCIDRs = blockCIDRs
 			},
 			func(client client.Client, namespace string, values networkpolicies.Values) {
 				Expect(client).To(Equal(c))

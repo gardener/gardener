@@ -114,13 +114,84 @@ func (b *Builder) Build(ctx context.Context) (*Seed, error) {
 	if err != nil {
 		return nil, err
 	}
-	seed.Info = seedObject
+	seed.SetInfo(seedObject)
 
 	if seedObject.Spec.Settings != nil && seedObject.Spec.Settings.LoadBalancerServices != nil {
 		seed.LoadBalancerServiceAnnotations = seedObject.Spec.Settings.LoadBalancerServices.Annotations
 	}
 
 	return seed, nil
+}
+
+// GetInfo returns the seed resource of this Seed in a concurrency safe way.
+// This method should be used only for reading the data of the returned seed resource. The returned seed
+// resource MUST NOT BE MODIFIED (except in test code) since this might interfere with other concurrent reads and writes.
+// To properly update the seed resource of this Seed use UpdateInfo or UpdateInfoStatus.
+func (s *Seed) GetInfo() *gardencorev1beta1.Seed {
+	return s.info.Load().(*gardencorev1beta1.Seed)
+}
+
+// SetInfo sets the seed resource of this Seed in a concurrency safe way.
+// This method is not protected by a mutex and does not update the seed resource in the cluster and so
+// should be used only in exceptional situations, or as a convenience in test code. The seed passed as a parameter
+// MUST NOT BE MODIFIED after the call to SetInfo (except in test code) since this might interfere with other concurrent reads and writes.
+// To properly update the seed resource of this Seed use UpdateInfo or UpdateInfoStatus.
+func (s *Seed) SetInfo(seed *gardencorev1beta1.Seed) {
+	s.info.Store(seed)
+}
+
+// UpdateInfo updates the seed resource of this Seed in a concurrency safe way,
+// using the given context, client, and mutate function.
+// It copies the current seed resource and then uses the copy to patch the resource in the cluster
+// using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
+// This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
+// executed at any point in time.
+func (s *Seed) UpdateInfo(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Seed) error) error {
+	s.infoMutex.Lock()
+	defer s.infoMutex.Unlock()
+
+	seed := s.info.Load().(*gardencorev1beta1.Seed).DeepCopy()
+	var patch client.Patch
+	if useStrategicMerge {
+		patch = client.StrategicMergeFrom(seed.DeepCopy())
+	} else {
+		patch = client.MergeFrom(seed.DeepCopy())
+	}
+	if err := f(seed); err != nil {
+		return err
+	}
+	if err := c.Patch(ctx, seed, patch); err != nil {
+		return err
+	}
+	s.info.Store(seed)
+	return nil
+}
+
+// UpdateInfoStatus updates the status of the seed resource of this Seed in a concurrency safe way,
+// using the given context, client, and mutate function.
+// It copies the current seed resource and then uses the copy to patch the resource in the cluster
+// using either client.MergeFrom or client.StrategicMergeFrom depending on useStrategicMerge.
+// This method is protected by a mutex, so only a single UpdateInfo or UpdateInfoStatus operation can be
+// executed at any point in time.
+func (s *Seed) UpdateInfoStatus(ctx context.Context, c client.Client, useStrategicMerge bool, f func(*gardencorev1beta1.Seed) error) error {
+	s.infoMutex.Lock()
+	defer s.infoMutex.Unlock()
+
+	seed := s.info.Load().(*gardencorev1beta1.Seed).DeepCopy()
+	var patch client.Patch
+	if useStrategicMerge {
+		patch = client.StrategicMergeFrom(seed.DeepCopy())
+	} else {
+		patch = client.MergeFrom(seed.DeepCopy())
+	}
+	if err := f(seed); err != nil {
+		return err
+	}
+	if err := c.Status().Patch(ctx, seed, patch); err != nil {
+		return err
+	}
+	s.info.Store(seed)
+	return nil
 }
 
 const (
@@ -270,7 +341,7 @@ func RunReconcileSeedFlow(
 
 	vpaGK := schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
 
-	vpaEnabled := seed.Info.Spec.Settings == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler == nil || seed.Info.Spec.Settings.VerticalPodAutoscaler.Enabled
+	vpaEnabled := seed.GetInfo().Spec.Settings == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler == nil || seed.GetInfo().Spec.Settings.VerticalPodAutoscaler.Enabled
 	if !vpaEnabled {
 		// VPA is a prerequisite. If it's not enabled via the seed spec it must be provided through some other mechanism.
 		if _, err := seedClient.RESTMapper().RESTMapping(vpaGK); err != nil {
@@ -623,7 +694,7 @@ func RunReconcileSeedFlow(
 		}
 	}
 
-	if !seed.Info.Spec.Settings.ExcessCapacityReservation.Enabled {
+	if !seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled {
 		if err := common.DeleteReserveExcessCapacity(ctx, seedClient); client.IgnoreNotFound(err) != nil {
 			return err
 		}
@@ -792,16 +863,16 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	if seed.Info.Status.ClusterIdentity == nil {
+	if seed.GetInfo().Status.ClusterIdentity == nil {
 		seedClusterIdentity, err := determineClusterIdentity(ctx, seedClient)
 		if err != nil {
 			return err
 		}
 
-		seedCopy := seed.Info.DeepCopy()
-		seed.Info.Status.ClusterIdentity = &seedClusterIdentity
-
-		if err := gardenClient.Status().Patch(ctx, seed.Info, client.MergeFrom(seedCopy)); err != nil {
+		if err := seed.UpdateInfoStatus(ctx, gardenClient, false, func(seed *gardencorev1beta1.Seed) error {
+			seed.Status.ClusterIdentity = &seedClusterIdentity
+			return nil
+		}); err != nil {
 			return err
 		}
 	}
@@ -812,7 +883,7 @@ func RunReconcileSeedFlow(
 			"ingressClass": getIngressClass(managedIngress(seed)),
 			"images":       imagevector.ImageMapToValues(images),
 		},
-		"reserveExcessCapacity": seed.Info.Spec.Settings.ExcessCapacityReservation.Enabled,
+		"reserveExcessCapacity": seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled,
 		"replicas": map[string]interface{}{
 			"reserve-excess-capacity": desiredExcessCapacity(),
 		},
@@ -825,7 +896,7 @@ func RunReconcileSeedFlow(
 		"aggregatePrometheus": map[string]interface{}{
 			"resources":  monitoringResources["aggregate-prometheus"],
 			"storage":    seed.GetValidVolumeSize("20Gi"),
-			"seed":       seed.Info.Name,
+			"seed":       seed.GetInfo().Name,
 			"hostName":   prometheusHost,
 			"secretName": prometheusTLSOverride,
 		},
@@ -918,11 +989,11 @@ func runCreateSeedFlow(
 		}
 	}
 
-	dnsEntry := getManagedIngressDNSEntry(seedClient, seed.GetIngressFQDN("*"), *seed.Info.Status.ClusterIdentity, ingressLoadBalancerAddress, log)
-	dnsOwner := getManagedIngressDNSOwner(seedClient, *seed.Info.Status.ClusterIdentity)
-	dnsRecord := getManagedIngressDNSRecord(seedClient, seed.Info.Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress, log)
+	dnsEntry := getManagedIngressDNSEntry(seedClient, seed.GetIngressFQDN("*"), *seed.GetInfo().Status.ClusterIdentity, ingressLoadBalancerAddress, log)
+	dnsOwner := getManagedIngressDNSOwner(seedClient, *seed.GetInfo().Status.ClusterIdentity)
+	dnsRecord := getManagedIngressDNSRecord(seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), ingressLoadBalancerAddress, log)
 
-	networkPolicies, err := defaultNetworkPolicies(seedClient, seed.Info, anySNI)
+	networkPolicies, err := defaultNetworkPolicies(seedClient, seed.GetInfo(), anySNI)
 	if err != nil {
 		return err
 	}
@@ -956,7 +1027,7 @@ func runCreateSeedFlow(
 		_ = g.Add(flow.Task{
 			Name: "Deploying managed ingress DNS record",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				return deployDNSResources(ctx, dnsEntry, dnsOwner, dnsRecord, deployDNSProviderTask(seedClient, seed.Info.Spec.DNS), destroyDNSProviderTask(seedClient))
+				return deployDNSResources(ctx, dnsEntry, dnsOwner, dnsRecord, deployDNSProviderTask(seedClient, seed.GetInfo().Spec.DNS), destroyDNSProviderTask(seedClient))
 			}).DoIf(managedIngress(seed)),
 		})
 		_ = g.Add(flow.Task{
@@ -971,7 +1042,7 @@ func runCreateSeedFlow(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying cluster-identity",
-			Fn:           clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, *seed.Info.Status.ClusterIdentity).Deploy,
+			Fn:           clusteridentity.NewForSeed(seedClient, v1beta1constants.GardenNamespace, *seed.GetInfo().Status.ClusterIdentity).Deploy,
 			Dependencies: flow.NewTaskIDs(deployResourceManager),
 		})
 		_ = g.Add(flow.Task{
@@ -1037,9 +1108,9 @@ func RunDeleteSeedFlow(
 
 	// setup for flow graph
 	var (
-		dnsEntry        = getManagedIngressDNSEntry(seedClient, seed.GetIngressFQDN("*"), *seed.Info.Status.ClusterIdentity, "", log)
-		dnsOwner        = getManagedIngressDNSOwner(seedClient, *seed.Info.Status.ClusterIdentity)
-		dnsRecord       = getManagedIngressDNSRecord(seedClient, seed.Info.Spec.DNS, secretData, seed.GetIngressFQDN("*"), "", log)
+		dnsEntry        = getManagedIngressDNSEntry(seedClient, seed.GetIngressFQDN("*"), *seed.GetInfo().Status.ClusterIdentity, "", log)
+		dnsOwner        = getManagedIngressDNSOwner(seedClient, *seed.GetInfo().Status.ClusterIdentity)
+		dnsRecord       = getManagedIngressDNSRecord(seedClient, seed.GetInfo().Spec.DNS, secretData, seed.GetIngressFQDN("*"), "", log)
 		autoscaler      = clusterautoscaler.NewBootstrapper(seedClient, v1beta1constants.GardenNamespace)
 		gsac            = seedadmissioncontroller.New(seedClient, v1beta1constants.GardenNamespace, "")
 		resourceManager = resourcemanager.New(seedClient, v1beta1constants.GardenNamespace, "", 0, resourcemanager.Values{})
@@ -1064,7 +1135,7 @@ func RunDeleteSeedFlow(
 		})
 		noControllerInstallations = g.Add(flow.Task{
 			Name:         "Ensuring no ControllerInstallations are left",
-			Fn:           ensureNoControllerInstallations(gardenClient, seed.Info.Name),
+			Fn:           ensureNoControllerInstallations(gardenClient, seed.GetInfo().Name),
 			Dependencies: flow.NewTaskIDs(destroyDNSRecord),
 		})
 		destroyClusterIdentity = g.Add(flow.Task{
@@ -1211,7 +1282,7 @@ func ensureNoControllerInstallations(c client.Client, seedName string) func(ctx 
 // updateDNSProviderSecret updates the DNSProvider secret in the garden namespace of the seed. This is only needed
 // if the `UseDNSRecords` feature gate is not enabled.
 func updateDNSProviderSecret(ctx context.Context, seedClient client.Client, secret *corev1.Secret, secretData map[string][]byte, seed *Seed) error {
-	if dnsConfig := seed.Info.Spec.DNS; dnsConfig.Provider != nil && !gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
+	if dnsConfig := seed.GetInfo().Spec.DNS; dnsConfig.Provider != nil && !gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) {
 		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, secret, func() error {
 			secret.Type = corev1.SecretTypeOpaque
 			secret.Data = secretData
@@ -1283,7 +1354,7 @@ func emptyDNSProviderSecret() *corev1.Secret {
 }
 
 func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, seed *Seed) (map[string][]byte, error) {
-	if dnsConfig := seed.Info.Spec.DNS; dnsConfig.Provider != nil {
+	if dnsConfig := seed.GetInfo().Spec.DNS; dnsConfig.Provider != nil {
 		secret, err := kutil.GetSecretByReference(ctx, gardenClient, &dnsConfig.Provider.SecretRef)
 		if err != nil {
 			return nil, err
@@ -1294,7 +1365,7 @@ func getDNSProviderSecretData(ctx context.Context, gardenClient client.Client, s
 }
 
 func managedIngress(seed *Seed) bool {
-	return seed.Info.Spec.DNS.Provider != nil && seed.Info.Spec.Ingress != nil
+	return seed.GetInfo().Spec.DNS.Provider != nil && seed.GetInfo().Spec.Ingress != nil
 }
 
 func getManagedIngressDNSEntry(c client.Client, seedFQDN string, seedClusterIdentity, loadBalancerAddress string, log logrus.FieldLogger) component.DeployWaiter {
@@ -1381,10 +1452,11 @@ func (s *Seed) GetIngressFQDN(subDomain string) string {
 
 // IngressDomain returns the ingress domain for the seed.
 func (s *Seed) IngressDomain() string {
-	if s.Info.Spec.DNS.IngressDomain != nil {
-		return *s.Info.Spec.DNS.IngressDomain
-	} else if s.Info.Spec.Ingress != nil {
-		return s.Info.Spec.Ingress.Domain
+	seed := s.GetInfo()
+	if seed.Spec.DNS.IngressDomain != nil {
+		return *seed.Spec.DNS.IngressDomain
+	} else if seed.Spec.Ingress != nil {
+		return seed.Spec.Ingress.Domain
 	}
 	return ""
 }
@@ -1406,13 +1478,14 @@ func (s *Seed) CheckMinimumK8SVersion(version string) (string, error) {
 // GetValidVolumeSize is to get a valid volume size.
 // If the given size is smaller than the minimum volume size permitted by cloud provider on which seed cluster is running, it will return the minimum size.
 func (s *Seed) GetValidVolumeSize(size string) string {
-	if s.Info.Spec.Volume == nil || s.Info.Spec.Volume.MinimumSize == nil {
+	seed := s.GetInfo()
+	if seed.Spec.Volume == nil || seed.Spec.Volume.MinimumSize == nil {
 		return size
 	}
 
 	qs, err := resource.ParseQuantity(size)
-	if err == nil && qs.Cmp(*s.Info.Spec.Volume.MinimumSize) < 0 {
-		return s.Info.Spec.Volume.MinimumSize.String()
+	if err == nil && qs.Cmp(*seed.Spec.Volume.MinimumSize) < 0 {
+		return seed.Spec.Volume.MinimumSize.String()
 	}
 
 	return size
@@ -1479,7 +1552,7 @@ func getIngressClass(seedIngressEnabled bool) string {
 const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
 
 func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, seedClient client.Client, seed *Seed, newClass string) error {
-	if oldClass, ok := seed.Info.Annotations[annotationSeedIngressClass]; ok && oldClass == newClass {
+	if oldClass, ok := seed.GetInfo().Annotations[annotationSeedIngressClass]; ok && oldClass == newClass {
 		return nil
 	}
 
@@ -1503,10 +1576,10 @@ func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, see
 		}
 	}
 
-	seedCopy := seed.Info.DeepCopy()
-	metav1.SetMetaDataAnnotation(&seed.Info.ObjectMeta, annotationSeedIngressClass, newClass)
-
-	return gardenClient.Patch(ctx, seed.Info, client.MergeFrom(seedCopy))
+	return seed.UpdateInfo(ctx, gardenClient, false, func(seed *gardencorev1beta1.Seed) error {
+		metav1.SetMetaDataAnnotation(&seed.ObjectMeta, annotationSeedIngressClass, newClass)
+		return nil
+	})
 }
 
 func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKey types.NamespacedName, newClass string) error {
@@ -1528,8 +1601,8 @@ func computeNginxIngress(seed *Seed) map[string]interface{} {
 		"ingressClass": v1beta1constants.SeedNginxIngressClass,
 	}
 
-	if seed.Info.Spec.Ingress != nil && seed.Info.Spec.Ingress.Controller.ProviderConfig != nil {
-		values["config"] = seed.Info.Spec.Ingress.Controller.ProviderConfig
+	if seed.GetInfo().Spec.Ingress != nil && seed.GetInfo().Spec.Ingress.Controller.ProviderConfig != nil {
+		values["config"] = seed.GetInfo().Spec.Ingress.Controller.ProviderConfig
 	}
 
 	return values

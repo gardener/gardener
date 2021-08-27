@@ -89,12 +89,11 @@ var _ = Describe("Etcd", func() {
 
 		BeforeEach(func() {
 			botanist.K8sSeedClient = kubernetesClient
-			botanist.Seed = &seedpkg.Seed{
-				Info: &gardencorev1beta1.Seed{},
-			}
+			botanist.Seed = &seedpkg.Seed{}
 			botanist.Shoot = &shootpkg.Shoot{
 				SeedNamespace: namespace,
 			}
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Maintenance: &gardencorev1beta1.Maintenance{
@@ -254,9 +253,7 @@ var _ = Describe("Etcd", func() {
 			botanist.StoreCheckSum(secretNameCA, checksumCA)
 			botanist.StoreCheckSum(secretNameServer, checksumServer)
 			botanist.StoreCheckSum(secretNameClient, checksumClient)
-			botanist.Seed = &seedpkg.Seed{
-				Info: &gardencorev1beta1.Seed{},
-			}
+			botanist.Seed = &seedpkg.Seed{}
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
@@ -267,6 +264,7 @@ var _ = Describe("Etcd", func() {
 				SeedNamespace:   namespace,
 				BackupEntryName: namespace + "--" + string(shootUID),
 			}
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Maintenance: &gardencorev1beta1.Maintenance{
@@ -313,7 +311,7 @@ var _ = Describe("Etcd", func() {
 
 		Context("w/o backup", func() {
 			BeforeEach(func() {
-				botanist.Seed.Info.Spec.Backup = nil
+				botanist.Seed.GetInfo().Spec.Backup = nil
 			})
 
 			It("should set the secrets and deploy", func() {
@@ -335,7 +333,7 @@ var _ = Describe("Etcd", func() {
 			)
 
 			BeforeEach(func() {
-				botanist.Seed.Info.Spec.Backup = &gardencorev1beta1.SeedBackup{
+				botanist.Seed.GetInfo().Spec.Backup = &gardencorev1beta1.SeedBackup{
 					Provider: backupProvider,
 				}
 			})

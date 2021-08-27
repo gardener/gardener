@@ -97,14 +97,13 @@ var _ = Describe("seed", func() {
 		It("should return the size because no minimum size was set", func() {
 			var (
 				size = "20Gi"
-				seed = &Seed{
-					Info: &gardencorev1beta1.Seed{
-						Spec: gardencorev1beta1.SeedSpec{
-							Volume: nil,
-						},
-					},
-				}
+				seed = &Seed{}
 			)
+			seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Volume: nil,
+				},
+			})
 
 			Expect(seed.GetValidVolumeSize(size)).To(Equal(size))
 		})
@@ -114,16 +113,15 @@ var _ = Describe("seed", func() {
 				size                = "20Gi"
 				minimumSize         = "25Gi"
 				minimumSizeQuantity = resource.MustParse(minimumSize)
-				seed                = &Seed{
-					Info: &gardencorev1beta1.Seed{
-						Spec: gardencorev1beta1.SeedSpec{
-							Volume: &gardencorev1beta1.SeedVolume{
-								MinimumSize: &minimumSizeQuantity,
-							},
-						},
-					},
-				}
+				seed                = &Seed{}
 			)
+			seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Volume: &gardencorev1beta1.SeedVolume{
+						MinimumSize: &minimumSizeQuantity,
+					},
+				},
+			})
 
 			Expect(seed.GetValidVolumeSize(size)).To(Equal(minimumSize))
 		})
@@ -133,16 +131,15 @@ var _ = Describe("seed", func() {
 				size                = "30Gi"
 				minimumSize         = "25Gi"
 				minimumSizeQuantity = resource.MustParse(minimumSize)
-				seed                = &Seed{
-					Info: &gardencorev1beta1.Seed{
-						Spec: gardencorev1beta1.SeedSpec{
-							Volume: &gardencorev1beta1.SeedVolume{
-								MinimumSize: &minimumSizeQuantity,
-							},
-						},
-					},
-				}
+				seed                = &Seed{}
 			)
+			seed.SetInfo(&gardencorev1beta1.Seed{
+				Spec: gardencorev1beta1.SeedSpec{
+					Volume: &gardencorev1beta1.SeedVolume{
+						MinimumSize: &minimumSizeQuantity,
+					},
+				},
+			})
 
 			Expect(seed.GetValidVolumeSize(size)).To(Equal(size))
 		})
