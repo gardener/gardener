@@ -243,8 +243,8 @@ func (r *reconciler) validateConfig(ctx context.Context, infrastructure *extensi
 	}
 
 	if allErrs := r.configValidator.Validate(ctx, infrastructure); len(allErrs) > 0 {
-		if internalErrs := allErrs.Filter(field.NewErrorTypeMatcher(field.ErrorTypeInternal)); len(internalErrs) > 0 {
-			return internalErrs.ToAggregate()
+		if filteredErrs := allErrs.Filter(field.NewErrorTypeMatcher(field.ErrorTypeInternal)); len(filteredErrs) < len(allErrs) {
+			return allErrs.ToAggregate()
 		}
 		return gardencorev1beta1helper.NewErrorWithCodes(allErrs.ToAggregate().Error(), gardencorev1beta1.ErrorConfigurationProblem)
 	}
