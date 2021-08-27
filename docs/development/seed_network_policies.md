@@ -67,11 +67,11 @@ Please checkout [the Community Meeting for more information](https://www.youtube
 These are the logging and monitoring related network policies:
 ```
 NAME                              POD-SELECTOR                                                             
-allow-from-prometheus             networking.gardener.cloud/from-prometheus=allowed                        
-allow-grafana                     component=grafana,garden.sapcloud.io/role=monitoring                     
-allow-prometheus                  app=prometheus,garden.sapcloud.io/role=monitoring,role=monitoring        
+allow-from-prometheus             networking.gardener.cloud/from-prometheus=allowed
+allow-grafana                     component=grafana,garden.sapcloud.io/role=monitoring
+allow-prometheus                  app=prometheus,gardener.cloud/role=monitoring,role=monitoring
 allow-to-aggregate-prometheus     networking.gardener.cloud/to-aggregate-prometheus=allowed
-allow-to-loki                     networking.gardener.cloud/to-loki=allowed 
+allow-to-loki                     networking.gardener.cloud/to-loki=allowed
 ```
 
 Let's take for instance a look at the network policy `from-prometheus`.

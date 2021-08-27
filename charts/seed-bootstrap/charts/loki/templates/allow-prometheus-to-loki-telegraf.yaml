@@ -16,7 +16,7 @@ spec:
     - podSelector:
         matchLabels:
           app: prometheus
-          garden.sapcloud.io/role: monitoring
+          gardener.cloud/role: monitoring
           role: monitoring
     ports:
     - port: telegraf
