@@ -299,7 +299,7 @@ are.
 # Create a CloudProfile
 
 We need to create a CloudProfile to be referred from the Shoot
-([`example/30-cloudprofile-azure.yaml`](../../example/30-cloudprofile-azure.yaml)):
+([`example/30-cloudprofile-azure.yaml`](../../example/30-cloudprofile.yaml)):
 
 ```
 kubectl apply -f example/30-cloudprofile-azure.yaml
@@ -328,7 +328,7 @@ about having a valid Kubeconfig to talk to its API.
 Lets start with the required seed secret first. Here we need to
 provide it's cloud provider credentials and kubeconfig in the seed
 secret. Update
-[`example/40-secret-seed-azure.yaml`](../../example/40-secret-seed-azure.yaml)
+[`example/40-secret-seed-azure.yaml`](../../example/40-secret-seed.yaml)
 and place the secrets for your environment:
 * **data.subscriptionID**: you can learn this one with `az account show`
 * **data.tenantID**: from `az ad sp create-for-rbac` output as you can see above
@@ -357,7 +357,7 @@ kubectl apply -f example/40-secret-seed-azure.yaml
 ```
 
 Before creating Seed, we need to update the
-[`example/50-seed-azure.yaml`](../../example/50-seed-azure.yaml) file and
+[`example/50-seed-azure.yaml`](../../example/50-seed.yaml) file and
 update:
 * **spec.networks**: IP ranges used in your AKS cluster.
 * **spec.ingressDomain**: Place here the wildcard domain you have for
@@ -454,7 +454,7 @@ projects:
 ## Create a SecretBinding and related Secret
 
 We'll use same Azure credentials with
-[`example/40-secret-seed-azure.yaml`](../../example/40-secret-seed-azure.yaml),
+[`example/40-secret-seed-azure.yaml`](../../example/40-secret-seed.yaml),
 this is due to the fact that we use the same Azure Subscription for
 the Shoot and Seed clusters. Differently from the Seed secret, in this
 one we don't need to provide `kubeconfig` since the Shoot cluster will
@@ -462,7 +462,7 @@ be provisioned by Gardener, and we need to provide credentials for
 Route53 DNS records management.
 
 Update
-[`example/70-secret-cloudprovider-azure.yaml`](../../example/70-secret-cloudprovider-azure.yaml)
+[`example/70-secret-cloudprovider-azure.yaml`](../../example/70-secret-cloudprovider.yaml)
 and place the secrets for your environment:
 * **data.subscriptionID**: you can learn this one with `az account show`
 * **data.tenantID**: from `az ad sp create-for-rbac` output as you can see above
@@ -496,7 +496,7 @@ kubectl apply -f example/70-secret-cloudprovider-azure.yaml
 
 And create the SecretBinding resource to allow Gardener use that
 secret
-([`example/80-secretbinding-cloudprovider-azure.yaml`](../../example/80-secretbinding-cloudprovider-azure.yaml)):
+([`example/80-secretbinding-cloudprovider-azure.yaml`](../../example/80-secretbinding-cloudprovider.yaml)):
 
 ```
 sed -i \
@@ -510,7 +510,7 @@ problems reported.
 
 ## Create the Shoot resource
 
-Update the fields in [`example/90-deprecated-shoot-azure.yaml`](../../example/90-deprecated-shoot-azure.yaml):
+Update the fields in [`example/90-deprecated-shoot-azure.yaml`](../../example/90-deprecated-shoot.yaml):
 * **spec.cloud.region**: `eastus` (this must match the seed cluster's region)
 * **spec.dns.domain**: This is used to specify the base domain for
   your api (and other in the future) endpoint(s). For example when
