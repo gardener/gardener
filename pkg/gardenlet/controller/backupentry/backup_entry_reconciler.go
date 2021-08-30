@@ -79,6 +79,8 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	// Remove the operation annotation if its value is not "restore"
+	// If it's "restore", it will be removed at the end of the reconciliation since it's needed
+	// to properly determine that the operation is "restore, and not "reconcile"
 	backupEntryLogger := logger.NewFieldLogger(logger.Logger, "backupentry", kutil.ObjectName(be))
 	if operationType, ok := be.Annotations[v1beta1constants.GardenerOperation]; ok && operationType != v1beta1constants.GardenerOperationRestore {
 		if updateErr := removeGardenerOperationAnnotation(ctx, gardenClient.Client(), be); updateErr != nil {
@@ -252,11 +254,6 @@ func (r *reconciler) migrateBackupEntry(ctx context.Context, gardenClient kubern
 
 	if updateErr := updateBackupEntryStatusSucceeded(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.LastOperationTypeMigrate); updateErr != nil {
 		backupEntryLogger.Errorf("Could not update the BackupEntry status after migration success: %+v", updateErr)
-		return reconcile.Result{}, updateErr
-	}
-
-	if updateErr := removeGardenerOperationAnnotation(ctx, gardenClient.Client(), backupEntry); updateErr != nil {
-		backupEntryLogger.Errorf("Could not remove %q annotation: %+v", v1beta1constants.GardenerOperation, updateErr)
 		return reconcile.Result{}, updateErr
 	}
 
