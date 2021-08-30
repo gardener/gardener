@@ -183,7 +183,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: "kube-apiserver-kubelet",
 
-				CommonName:   "system:kube-apiserver:kubelet",
+				CommonName:   kubeapiserver.UserName,
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,

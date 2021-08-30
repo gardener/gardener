@@ -1,33 +1,15 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
 ---
 apiVersion: {{ template "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: system:apiserver:kubelet
-rules:
-- apiGroups: [""]
-  resources:
-  - nodes/proxy
-  - nodes/stats
-  - nodes/log
-  - nodes/spec
-  - nodes/metrics
-  verbs:
-  - '*'
-- nonResourceURLs:
-  - '*'
-  verbs:
-  - '*'
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 ---
 apiVersion: {{ template "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: system:apiserver:kubelet
   annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:apiserver:kubelet
-subjects:
-- kind: User
-  name: system:kube-apiserver:kubelet
+    resources.gardener.cloud/mode: Ignore

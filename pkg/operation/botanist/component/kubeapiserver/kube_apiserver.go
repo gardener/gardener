@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	"github.com/Masterminds/semver"
@@ -37,6 +38,10 @@ import (
 const (
 	// Port is the port exposed by the kube-apiserver.
 	Port = 443
+	// UserName is the name of the kube-apiserver user when communicating with the kubelet.
+	UserName = "system:kube-apiserver:kubelet"
+	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
+	ManagedResourceName = "shoot-core-kube-apiserver"
 
 	containerNameKubeAPIServer            = "kube-apiserver"
 	containerNameVPNSeed                  = "vpn-seed"
@@ -143,11 +148,18 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	data, err := k.computeShootResourcesData()
+	if err != nil {
+		return err
+	}
+
+	return managedresources.CreateForShoot(ctx, k.client.Client(), k.namespace, ManagedResourceName, false, data)
 }
 
 func (k *kubeAPIServer) Destroy(ctx context.Context) error {
 	return kutil.DeleteObjects(ctx, k.client.Client(),
+		k.emptyManagedResource(),
+		k.emptyManagedResourceSecret(),
 		k.emptyHorizontalPodAutoscaler(),
 		k.emptyVerticalPodAutoscaler(),
 		k.emptyHVPA(),
