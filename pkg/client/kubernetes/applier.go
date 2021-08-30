@@ -218,7 +218,9 @@ var (
 		},
 		{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}: func(newObj, oldObj *unstructured.Unstructured) {
 			// Never override the status of VPA resources
-			newObj.Object["status"] = oldObj.Object["status"]
+			if oldStatus := oldObj.Object["status"]; oldStatus != nil {
+				newObj.Object["status"] = oldStatus
+			}
 		},
 	}
 
