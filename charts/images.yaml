@@ -204,11 +204,11 @@ images:
 # Miscellaenous
 - name: alpine
   repository: alpine
-  tag: "3.10.3"
+  tag: "3.13.5"
 - name: alpine-iptables
   sourceRepository: github.com/DockToFuture/alpine-iptables
   repository: eu.gcr.io/gardener-project/alpine-iptables
-  tag: "3.10.3"
+  tag: "3.13.5"
 
 # Logging
 - name: fluent-bit
