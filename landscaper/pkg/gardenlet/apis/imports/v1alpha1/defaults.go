@@ -106,7 +106,7 @@ func SetDefaultsDeploymentConfiguration(obj *seedmanagementv1alpha1.GardenletDep
 
 	// Set default revision history limit
 	if obj.RevisionHistoryLimit == nil {
-		obj.RevisionHistoryLimit = pointer.Int32(1)
+		obj.RevisionHistoryLimit = pointer.Int32(10)
 	}
 
 	if obj.VPA == nil {

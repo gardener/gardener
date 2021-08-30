@@ -59,7 +59,7 @@ message GardenletDeployment {
   // +optional
   optional int32 replicaCount = 1;
 
-  // RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 1.
+  // RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.
   // +optional
   optional int32 revisionHistoryLimit = 2;
 

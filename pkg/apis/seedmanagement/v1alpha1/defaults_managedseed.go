@@ -51,7 +51,7 @@ func SetDefaults_GardenletDeployment(obj *GardenletDeployment) {
 
 	// Set default revision history limit
 	if obj.RevisionHistoryLimit == nil {
-		obj.RevisionHistoryLimit = pointer.Int32(1)
+		obj.RevisionHistoryLimit = pointer.Int32(10)
 	}
 
 	// Set default image
