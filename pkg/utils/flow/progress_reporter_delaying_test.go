@@ -21,16 +21,18 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 var _ = Describe("ProgressReporterDelaying", func() {
 	It("should behave correctly", func() {
 		var (
 			ctx           = context.TODO()
-			period        = 50 * time.Millisecond
+			fakeClock     = clock.NewFakeClock(time.Now())
+			period        = 50 * time.Second
 			reportedStats atomic.Value
 			reporterFn    = func(_ context.Context, stats *Stats) { reportedStats.Store(stats) }
-			p             = NewDelayingProgressReporter(reporterFn, period)
+			p             = NewDelayingProgressReporter(fakeClock, reporterFn, period)
 		)
 
 		Expect(p.Start(ctx)).To(Succeed())
@@ -42,20 +44,23 @@ var _ = Describe("ProgressReporterDelaying", func() {
 
 		stats2 := &Stats{FlowName: "2"}
 		p.Report(ctx, stats2)
-		Consistently(reportedStats.Load, period/2, time.Millisecond).Should(Equal(stats1))
-		Eventually(reportedStats.Load, period, period/5).Should(Equal(stats2))
+		Consistently(reportedStats.Load).Should(Equal(stats1))
+		fakeClock.Step(period)
+		Eventually(reportedStats.Load).Should(Equal(stats2))
 
 		stats3 := &Stats{FlowName: "3"}
 		p.Report(ctx, stats3)
-		Consistently(reportedStats.Load, period/2, time.Millisecond).Should(Equal(stats2))
-		Eventually(reportedStats.Load, period, period/5).Should(Equal(stats3))
+		Consistently(reportedStats.Load).Should(Equal(stats2))
+		fakeClock.Step(period)
+		Eventually(reportedStats.Load).Should(Equal(stats3))
 
 		stats4 := &Stats{FlowName: "4"}
 		p.Report(ctx, stats4)
 		stats5 := &Stats{FlowName: "5"}
 		p.Report(ctx, stats5)
-		Consistently(reportedStats.Load, period/2, time.Millisecond).Should(Equal(stats3))
-		Eventually(reportedStats.Load, period, period/5).Should(Equal(stats5))
+		Consistently(reportedStats.Load).Should(Equal(stats3))
+		fakeClock.Step(period)
+		Eventually(reportedStats.Load).Should(Equal(stats5))
 
 		stats6 := &Stats{FlowName: "6"}
 		p.Report(ctx, stats6)

@@ -101,7 +101,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 				}
 			}
 			return true
-		}, 1*time.Second, 50*time.Millisecond).Should(BeTrue())
+		}, 5*time.Second, 200*time.Millisecond).Should(BeTrue())
 	})
 
 	objectID := func(obj client.Object) string {
@@ -112,17 +112,17 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Eventually(func() string {
 			err := c.Delete(ctx, obj)
 			return string(apierrors.ReasonForError(err))
-		}, 1*time.Second, 50*time.Millisecond).Should(ContainSubstring("annotation to delete"), objectID(obj))
+		}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("annotation to delete"), objectID(obj))
 	}
 
 	testDeletionConfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() error {
 			return c.Delete(ctx, obj)
-		}, 1*time.Second, 50*time.Millisecond).ShouldNot(HaveOccurred(), objectID(obj))
+		}, 5*time.Second, 200*time.Millisecond).ShouldNot(HaveOccurred(), objectID(obj))
 		Eventually(func() bool {
 			err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 			return apierrors.IsNotFound(err) || meta.IsNoMatchError(err)
-		}, 1*time.Second, 50*time.Millisecond).Should(BeTrue(), objectID(obj))
+		}, 5*time.Second, 200*time.Millisecond).Should(BeTrue(), objectID(obj))
 	}
 
 	Context("extension resources", func() {

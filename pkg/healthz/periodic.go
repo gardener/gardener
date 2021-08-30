@@ -17,6 +17,8 @@ package healthz
 import (
 	"sync"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 // PeriodicHealthManagerName is the name of the periodic health manager.
@@ -25,14 +27,15 @@ const PeriodicHealthManagerName = "periodic"
 // NewPeriodicHealthz returns a health manager that automatically sets the health status to false after the given reset
 // duration. The timer is reset again when the health status is true (i.e., a running timer is reset and starts again
 // from the beginning).
-func NewPeriodicHealthz(resetDuration time.Duration) Manager {
-	return &periodicHealthz{resetDuration: resetDuration}
+func NewPeriodicHealthz(clock clock.Clock, resetDuration time.Duration) Manager {
+	return &periodicHealthz{clock: clock, resetDuration: resetDuration}
 }
 
 type periodicHealthz struct {
+	clock         clock.Clock
 	mutex         sync.RWMutex
 	health        bool
-	timer         *time.Timer
+	timer         clock.Timer
 	resetDuration time.Duration
 	started       bool
 	stopCh        chan struct{}
@@ -53,14 +56,14 @@ func (p *periodicHealthz) Start() {
 	}
 
 	p.health = true
-	p.timer = time.NewTimer(p.resetDuration)
+	p.timer = p.clock.NewTimer(p.resetDuration)
 	p.started = true
 	p.stopCh = make(chan struct{})
 
 	go func() {
 		for {
 			select {
-			case <-p.timer.C:
+			case <-p.timer.C():
 				p.Set(false)
 			case <-p.stopCh:
 				p.timer.Stop()

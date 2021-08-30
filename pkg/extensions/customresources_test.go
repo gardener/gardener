@@ -29,6 +29,8 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	mocktime "github.com/gardener/gardener/pkg/mock/go/time"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
@@ -46,11 +48,13 @@ import (
 
 var _ = Describe("extensions", func() {
 	var (
-		ctx     context.Context
-		log     logrus.FieldLogger
-		ctrl    *gomock.Controller
-		mockNow *mocktime.MockNow
-		now     time.Time
+		ctx       context.Context
+		log       logrus.FieldLogger
+		ctrl      *gomock.Controller
+		mockNow   *mocktime.MockNow
+		now       time.Time
+		fakeOps   *retryfake.Ops
+		resetVars func()
 
 		c      client.Client
 		scheme *runtime.Scheme
@@ -92,9 +96,15 @@ var _ = Describe("extensions", func() {
 				Namespace: namespace,
 			},
 		}
+
+		fakeOps = &retryfake.Ops{MaxAttempts: 1}
+		resetVars = test.WithVars(
+			&retry.UntilTimeout, fakeOps.UntilTimeout,
+		)
 	})
 
 	AfterEach(func() {
+		resetVars()
 		ctrl.Finish()
 	})
 
@@ -214,6 +224,8 @@ var _ = Describe("extensions", func() {
 						return nil
 					}),
 			)
+
+			fakeOps.MaxAttempts = 2
 
 			err := WaitUntilObjectReadyWithHealthFunction(
 				ctx, mc, log,
