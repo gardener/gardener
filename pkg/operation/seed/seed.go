@@ -583,7 +583,7 @@ func RunReconcileSeedFlow(
     Name          rewrite_tag
     Match         kubernetes.*
     Rule          $tag ^kubernetes\.var\.log\.containers\.(` + strings.Join(userAllowedComponents, "-.+?|") + `-.+?)_ ` + userExposedComponentTagPrefix + `.$TAG true
-    Emitter_Name  re_emitted
+    Emitter_Name  re_emitted-garden-embedded-rewrite-tag
 `
 		filters.WriteString(fmt.Sprintln(loggingRewriteTagFilter))
 
