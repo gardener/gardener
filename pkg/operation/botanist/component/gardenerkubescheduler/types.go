@@ -14,31 +14,7 @@
 
 package gardenerkubescheduler
 
-import (
-	"github.com/Masterminds/semver"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-)
-
-var (
-	versionConstraintEqual118 *semver.Constraints
-	versionConstraintEqual119 *semver.Constraints
-	versionConstraintEqual120 *semver.Constraints
-)
-
 const (
 	// Name is the name of kubernetes resources associated with gardener-kube-scheduler.
 	Name = "gardener-kube-scheduler"
 )
-
-func init() {
-	var err error
-
-	versionConstraintEqual118, err = semver.NewConstraint("1.18.x")
-	utilruntime.Must(err)
-
-	versionConstraintEqual119, err = semver.NewConstraint("1.19.x")
-	utilruntime.Must(err)
-
-	versionConstraintEqual120, err = semver.NewConstraint("1.20.x")
-	utilruntime.Must(err)
-}

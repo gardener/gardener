@@ -537,6 +537,12 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 				Name:      "prometheus",
 			},
 		},
+		&networkingv1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: b.Shoot.SeedNamespace,
+				Name:      "prometheus",
+			},
+		},
 		&autoscalingv1beta2.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,

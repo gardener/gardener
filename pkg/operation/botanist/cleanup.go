@@ -25,14 +25,18 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -183,9 +187,16 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 		return err
 	}
 
+	if version.ConstraintK8sLessEqual115.Check(b.Shoot.KubernetesVersion) {
+		return flow.Parallel(
+			cleanResourceFn(ops, c, &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, cleanOptions),
+			cleanResourceFn(ops, c, &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, cleanOptions),
+		)(ctx)
+	}
+
 	return flow.Parallel(
-		cleanResourceFn(ops, c, &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, cleanOptions),
+		cleanResourceFn(ops, c, &admissionregistrationv1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOption, cleanOptions),
+		cleanResourceFn(ops, c, &admissionregistrationv1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOption, cleanOptions),
 	)(ctx)
 }
 
@@ -203,9 +214,15 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 		return err
 	}
 
+	var crdList client.ObjectList = &apiextensionsv1.CustomResourceDefinitionList{}
+
+	if version.ConstraintK8sLessEqual115.Check(b.Shoot.KubernetesVersion) {
+		crdList = &apiextensionsv1beta1.CustomResourceDefinitionList{}
+	}
+
 	return flow.Parallel(
 		cleanResourceFn(defaultOps, c, &apiregistrationv1.APIServiceList{}, APIServiceCleanOption, cleanOptions),
-		cleanResourceFn(crdCleanOps, c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOption, cleanOptions),
+		cleanResourceFn(crdCleanOps, c, crdList, CustomResourceDefinitionCleanOption, cleanOptions),
 	)(ctx)
 }
 
@@ -232,11 +249,16 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		)(ctx)
 	}
 
+	var ingressList client.ObjectList = &networkingv1.IngressList{}
+	if version.ConstraintK8sLess119.Check(b.Shoot.KubernetesVersion) {
+		ingressList = &extensionsv1beta1.IngressList{}
+	}
+
 	return flow.Parallel(
 		cleanResourceFn(ops, c, &batchv1beta1.CronJobList{}, CronJobCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.DaemonSetList{}, DaemonSetCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.DeploymentList{}, DeploymentCleanOption, cleanOptions),
-		cleanResourceFn(ops, c, &extensionsv1beta1.IngressList{}, IngressCleanOption, cleanOptions),
+		cleanResourceFn(ops, c, ingressList, IngressCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &batchv1.JobList{}, JobCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &corev1.PodList{}, PodCleanOption, cleanOptions),
 		cleanResourceFn(ops, c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOption, cleanOptions),

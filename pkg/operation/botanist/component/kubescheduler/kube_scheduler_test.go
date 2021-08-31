@@ -445,6 +445,12 @@ var _ = Describe("KubeScheduler", func() {
 				Entry("kubernetes 1.18 w/ full config", "1.18.8", configFull),
 				Entry("kubernetes 1.19 w/o config", "1.19.9", configEmpty),
 				Entry("kubernetes 1.19 w/ full config", "1.19.9", configFull),
+				Entry("kubernetes 1.20 w/o config", "1.20.9", configEmpty),
+				Entry("kubernetes 1.20 w/ full config", "1.20.9", configFull),
+				Entry("kubernetes 1.21 w/o config", "1.21.3", configEmpty),
+				Entry("kubernetes 1.21 w/ full config", "1.21.3", configFull),
+				Entry("kubernetes 1.22 w/o config", "1.22.1", configEmpty),
+				Entry("kubernetes 1.22 w/ full config", "1.22.1", configFull),
 			)
 		})
 	})
@@ -470,7 +476,9 @@ var _ = Describe("KubeScheduler", func() {
 
 func componentConfigYAMLForKubernetesVersion(version string) string {
 	var apiVersion string
-	if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {
+	if k8sVersionGreaterEqual122, _ := versionutils.CompareVersions(version, ">=", "1.22"); k8sVersionGreaterEqual122 {
+		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
+	} else if k8sVersionGreaterEqual119, _ := versionutils.CompareVersions(version, ">=", "1.19"); k8sVersionGreaterEqual119 {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
 	} else if k8sVersionGreaterEqual118, _ := versionutils.CompareVersions(version, ">=", "1.18"); k8sVersionGreaterEqual118 {
 		apiVersion = "kubescheduler.config.k8s.io/v1alpha2"

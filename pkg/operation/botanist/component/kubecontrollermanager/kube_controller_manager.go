@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -28,6 +29,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
@@ -41,7 +43,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -449,7 +450,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		defaultHorizontalPodAutoscalerConfig = k.getHorizontalPodAutoscalerConfig()
 	)
 
-	if versionConstraintK8sGreaterEqual117.Check(k.version) {
+	if version.ConstraintK8sGreaterEqual117.Check(k.version) {
 		command = append(command, "/usr/local/bin/kube-controller-manager")
 	} else {
 		command = append(command, "/hyperkube", "kube-controller-manager")
@@ -478,7 +479,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		"--concurrent-resource-quota-syncs=15",
 	)
 
-	if versionConstraintK8sGreaterEqual116.Check(k.version) {
+	if version.ConstraintK8sGreaterEqual116.Check(k.version) {
 		command = append(command,
 			"--concurrent-service-endpoint-syncs=15",
 			"--concurrent-statefulset-syncs=15",
@@ -520,7 +521,7 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--authorization-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)),
-		"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+		fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(kutil.TLSCipherSuites(k.version), ",")),
 		"--use-service-account-credentials=true",
 		"--v=2",
 	)
@@ -586,23 +587,6 @@ func (k *kubeControllerManager) computeResourceRequirements(ctx context.Context)
 	}
 
 	return defaultResources, nil
-}
-
-var (
-	versionConstraintK8sGreaterEqual116 *semver.Constraints
-	versionConstraintK8sGreaterEqual117 *semver.Constraints
-	versionConstraintK8sGreaterEqual120 *semver.Constraints
-)
-
-func init() {
-	var err error
-
-	versionConstraintK8sGreaterEqual116, err = semver.NewConstraint(">= 1.16")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual117, err = semver.NewConstraint(">= 1.17")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual120, err = semver.NewConstraint(">= 1.20")
-	utilruntime.Must(err)
 }
 
 // Secrets is collection of secrets for the kube-controller-manager.

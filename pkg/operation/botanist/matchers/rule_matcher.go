@@ -21,14 +21,14 @@ package matchers
 import (
 	"strings"
 
-	"k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // ruleMatcher determines if the Attr matches the Rule.
 type ruleMatcher struct {
-	rule        v1beta1.RuleWithOperations
+	rule        admissionregistrationv1.RuleWithOperations
 	gvr         schema.GroupVersionResource
 	namespace   string
 	subresource string
@@ -60,15 +60,15 @@ func exactOrWildcard(items []string, requested string) bool {
 var namespaceResource = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "namespaces"}
 
 func (r *ruleMatcher) scope() bool {
-	if r.rule.Scope == nil || *r.rule.Scope == v1beta1.AllScopes {
+	if r.rule.Scope == nil || *r.rule.Scope == admissionregistrationv1.AllScopes {
 		return true
 	}
 
 	switch *r.rule.Scope {
-	case v1beta1.NamespacedScope:
+	case admissionregistrationv1.NamespacedScope:
 		// first make sure that we are not requesting a namespace object (namespace objects are cluster-scoped)
 		return r.gvr != namespaceResource && r.namespace != metav1.NamespaceNone
-	case v1beta1.ClusterScope:
+	case admissionregistrationv1.ClusterScope:
 		// also return true if the request is for a namespace object (namespace objects are cluster-scoped)
 		return r.gvr == namespaceResource || r.namespace == metav1.NamespaceNone
 	default:
@@ -87,7 +87,7 @@ func (r *ruleMatcher) version() bool {
 func (r *ruleMatcher) operation() bool {
 	for _, op := range r.rule.Operations {
 		switch op {
-		case v1beta1.OperationAll, v1beta1.Create, v1beta1.Update:
+		case admissionregistrationv1.OperationAll, admissionregistrationv1.Create, admissionregistrationv1.Update:
 			return true
 		}
 	}

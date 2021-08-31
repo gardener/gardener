@@ -23,18 +23,22 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
+	"github.com/Masterminds/semver"
 	"github.com/onsi/ginkgo"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	utilrand "k8s.io/apimachinery/pkg/util/rand"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -59,14 +63,23 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 	f := framework.NewShootFramework(nil)
 
 	var (
-		grafanaOperatorsIngress  = &extensionsv1beta1.Ingress{}
-		grafanaUsersIngress      = &extensionsv1beta1.Ingress{}
+		grafanaOperatorsIngress client.Object = &networkingv1.Ingress{}
+		grafanaUsersIngress     client.Object = &networkingv1.Ingress{}
+
 		shootNamespace           = &corev1.Namespace{}
 		shootNamespaceLabelKey   = "gardener.cloud/test"
 		shootNamespaceLabelValue = "logging"
 	)
 
 	framework.CBeforeEach(func(ctx context.Context) {
+		kubernetesVersion, err := semver.NewVersion(f.Shoot.Spec.Kubernetes.Version)
+		framework.ExpectNoError(err)
+
+		if versionutils.ConstraintK8sLess119.Check(kubernetesVersion) {
+			grafanaOperatorsIngress = &extensionsv1beta1.Ingress{}
+			grafanaUsersIngress = &extensionsv1beta1.Ingress{}
+		}
+
 		checkRequiredResources(ctx, f.SeedClient)
 		// Get shoot namespace name
 		shootNamespace.ObjectMeta.Name = f.ShootSeedNamespace()
@@ -75,7 +88,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		// Get the grafana-users Ingress
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaUsers}, grafanaUsersIngress))
 		// Set label to the testing namespace
-		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, f.SeedClient.Client(), shootNamespace, func() error {
+		_, err = controllerutils.GetAndCreateOrMergePatch(ctx, f.SeedClient.Client(), shootNamespace, func() error {
 			metav1.SetMetaDataLabel(&shootNamespace.ObjectMeta, shootNamespaceLabelKey, shootNamespaceLabelValue)
 			return nil
 		})
@@ -99,8 +112,8 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		operatorLoggerRegex := operatorLoggerName + "-.*"
 
 		ginkgo.By("Get Loki tenant IDs")
-		userID := getXScopeOrgID(grafanaUsersIngress.Annotations)
-		operatorID := getXScopeOrgID(grafanaOperatorsIngress.Annotations)
+		userID := getXScopeOrgID(grafanaUsersIngress.GetAnnotations())
+		operatorID := getXScopeOrgID(grafanaOperatorsIngress.GetAnnotations())
 
 		ginkgo.By("Wait until Loki StatefulSet is ready")
 		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, lokiName, f.ShootSeedNamespace(), f.SeedClient))
@@ -195,7 +208,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(err)
 
 		ginkgo.By("Cleaning up loki's MutatingWebhook and the additional label")
-		webhookToDelete := &admissionregistrationv1beta1.ValidatingWebhookConfiguration{
+		webhookToDelete := &admissionregistrationv1.ValidatingWebhookConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "block-loki-updates",
 			},

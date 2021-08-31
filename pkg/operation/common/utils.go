@@ -29,14 +29,13 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
-	schedulingv1beta1 "k8s.io/api/scheduling/v1beta1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -190,7 +189,7 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-admission-controller", Namespace: namespace}},
 			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: namespace}},
 			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: namespace}},
-			&admissionregistrationv1beta1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-seed"}},
+			&admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "vpa-webhook-config-seed"}},
 		)
 	}
 
@@ -231,6 +230,7 @@ func DeleteLoki(ctx context.Context, k8sClient client.Client, namespace string) 
 func DeleteShootNodeLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
 	resources := []client.Object{
 		&extensionsv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
+		&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: namespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: logging.SecretNameLokiKubeRBACProxyKubeconfig, Namespace: namespace}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: LokiTLS, Namespace: namespace}},
 		&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: namespace}},
@@ -277,7 +277,7 @@ func DeleteReserveExcessCapacity(ctx context.Context, k8sClient client.Client) e
 		return err
 	}
 
-	priorityClass := &schedulingv1beta1.PriorityClass{
+	priorityClass := &schedulingv1.PriorityClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "gardener-reserve-excess-capacity",
 		},
@@ -295,6 +295,12 @@ func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace 
 			},
 		},
 		&extensionsv1beta1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager",
+				Namespace: namespace,
+			},
+		},
+		&networkingv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "alertmanager",
 				Namespace: namespace,

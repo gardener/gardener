@@ -73,7 +73,7 @@ var _ = Describe("istiod", func() {
 		Expect(autoscalingv1.AddToScheme(s)).NotTo(HaveOccurred())
 
 		c = fake.NewClientBuilder().WithScheme(s).Build()
-		renderer := cr.NewWithServerVersion(&version.Info{})
+		renderer := cr.NewWithServerVersion(&version.Info{GitVersion: "v1.21.4"})
 
 		ca := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(ca).NotTo(BeNil(), "should return chart applier")

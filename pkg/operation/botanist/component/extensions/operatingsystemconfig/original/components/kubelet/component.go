@@ -22,7 +22,6 @@ import (
 
 	"github.com/Masterminds/semver"
 	"github.com/Masterminds/sprig"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 
 	"github.com/gardener/gardener/charts"
@@ -187,13 +186,4 @@ func unitConfigAfterCRI(criName extensionsv1alpha1.CRIName) string {
 	}
 	return `After=` + docker.UnitName + `
 Wants=docker.socket rpc-statd.service`
-}
-
-var versionConstraintK8sLess119 *semver.Constraints
-
-func init() {
-	var err error
-
-	versionConstraintK8sLess119, err = semver.NewConstraint("< 1.19")
-	utilruntime.Must(err)
 }

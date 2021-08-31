@@ -130,3 +130,5 @@ reversedVPN:
 externalHostname: ""
 
 enableAnonymousAuthentication: false
+
+tlsCipherSuites: []

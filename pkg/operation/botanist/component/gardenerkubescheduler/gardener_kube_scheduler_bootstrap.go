@@ -27,12 +27,13 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/podschedulername"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/version"
 	schedulerconfigv18v1alpha2 "github.com/gardener/gardener/third_party/kube-scheduler/v18/v1alpha2"
 	schedulerconfigv19v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v19/v1beta1"
 	schedulerconfigv20v1beta1 "github.com/gardener/gardener/third_party/kube-scheduler/v20/v1beta1"
 
 	"github.com/Masterminds/semver"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -62,7 +63,7 @@ func Bootstrap(
 	)
 
 	switch {
-	case versionConstraintEqual118.Check(seedVersion):
+	case version.ConstraintK8sEqual118.Check(seedVersion):
 		config, err = schedulerconfigv18.NewConfigurator(Name, Name, &schedulerconfigv18v1alpha2.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv18v1alpha2.KubeSchedulerProfile{{
 				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
@@ -79,7 +80,7 @@ func Bootstrap(
 				},
 			}},
 		})
-	case versionConstraintEqual119.Check(seedVersion):
+	case version.ConstraintK8sEqual119.Check(seedVersion):
 		config, err = schedulerconfigv19.NewConfigurator(Name, Name, &schedulerconfigv19v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv19v1beta1.KubeSchedulerProfile{{
 				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
@@ -96,7 +97,11 @@ func Bootstrap(
 				},
 			}},
 		})
-	case versionConstraintEqual120.Check(seedVersion):
+	case version.ConstraintK8sEqual120.Check(seedVersion),
+		version.ConstraintK8sEqual121.Check(seedVersion),
+		// Kubernetes 1.22 already has a v1beta2 API which we cannot use here
+		// because plugins NodeResourcesLeastAllocated and NodeResourcesMostAllocated have been removed in this version.
+		version.ConstraintK8sEqual122.Check(seedVersion):
 		config, err = schedulerconfigv20.NewConfigurator(Name, Name, &schedulerconfigv20v1beta1.KubeSchedulerConfiguration{
 			Profiles: []schedulerconfigv20v1beta1.KubeSchedulerProfile{{
 				SchedulerName: pointer.String(podschedulername.GardenerShootControlPlaneSchedulerName),
@@ -126,8 +131,8 @@ func Bootstrap(
 		Name,
 		image,
 		config,
-		&admissionregistrationv1beta1.WebhookClientConfig{
-			Service: &admissionregistrationv1beta1.ServiceReference{
+		&admissionregistrationv1.WebhookClientConfig{
+			Service: &admissionregistrationv1.ServiceReference{
 				Name:      seedadmissioncontroller.Name,
 				Namespace: seedAdmissionControllerNamespace,
 				Path:      pointer.String(podschedulername.WebhookPath),

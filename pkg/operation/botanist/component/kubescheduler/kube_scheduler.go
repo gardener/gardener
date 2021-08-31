@@ -28,6 +28,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
@@ -363,9 +364,11 @@ func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {
 
 func (k *kubeScheduler) computeComponentConfig() (string, error) {
 	var apiVersion string
-	if versionConstraintK8sGreaterEqual119.Check(k.version) {
+	if version.ConstraintK8sGreaterEqual122.Check(k.version) {
+		apiVersion = "kubescheduler.config.k8s.io/v1beta2"
+	} else if version.ConstraintK8sGreaterEqual119.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1beta1"
-	} else if versionConstraintK8sGreaterEqual118.Check(k.version) {
+	} else if version.ConstraintK8sGreaterEqual118.Check(k.version) {
 		apiVersion = "kubescheduler.config.k8s.io/v1alpha2"
 	} else {
 		apiVersion = "kubescheduler.config.k8s.io/v1alpha1"
@@ -382,7 +385,7 @@ func (k *kubeScheduler) computeComponentConfig() (string, error) {
 func (k *kubeScheduler) computeCommand(port int32) []string {
 	var command []string
 
-	if versionConstraintK8sGreaterEqual117.Check(k.version) {
+	if version.ConstraintK8sGreaterEqual117.Check(k.version) {
 		command = append(command, "/usr/local/bin/kube-scheduler")
 	} else {
 		command = append(command, "/hyperkube", "kube-scheduler")
@@ -408,25 +411,12 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 	return command
 }
 
-var (
-	componentConfigTemplate *template.Template
-
-	versionConstraintK8sGreaterEqual117 *semver.Constraints
-	versionConstraintK8sGreaterEqual118 *semver.Constraints
-	versionConstraintK8sGreaterEqual119 *semver.Constraints
-)
+var componentConfigTemplate *template.Template
 
 func init() {
 	var err error
 
 	componentConfigTemplate, err = template.New("config").Parse(componentConfigTmpl)
-	utilruntime.Must(err)
-
-	versionConstraintK8sGreaterEqual117, err = semver.NewConstraint(">= 1.17")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual118, err = semver.NewConstraint(">= 1.18")
-	utilruntime.Must(err)
-	versionConstraintK8sGreaterEqual119, err = semver.NewConstraint(">= 1.19")
 	utilruntime.Must(err)
 }
 

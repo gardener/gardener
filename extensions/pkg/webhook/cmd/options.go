@@ -21,7 +21,7 @@ import (
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 
 	"github.com/spf13/pflag"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -216,7 +216,7 @@ type AddToManagerConfig struct {
 // AddToManager instantiates all webhooks of this configuration. If there are any webhooks, it creates a
 // webhook server, registers the webhooks and adds the server to the manager. Otherwise, it is a no-op.
 // It generates and registers the seed targeted webhooks via a Mutatingwebhookconfiguration.
-func (c *AddToManagerConfig) AddToManager(mgr manager.Manager) ([]admissionregistrationv1beta1.MutatingWebhook, []admissionregistrationv1beta1.MutatingWebhook, error) {
+func (c *AddToManagerConfig) AddToManager(mgr manager.Manager) ([]admissionregistrationv1.MutatingWebhook, []admissionregistrationv1.MutatingWebhook, error) {
 	ctx := context.Background()
 
 	webhooks, err := c.Switch.WebhooksFactory(mgr)

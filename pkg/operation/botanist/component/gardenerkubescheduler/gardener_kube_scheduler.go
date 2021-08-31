@@ -23,7 +23,7 @@ import (
 	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
@@ -70,7 +70,7 @@ func New(
 	namespace string,
 	image *imagevector.Image,
 	config configurator.Configurator,
-	webhookClientConfig *admissionregistrationv1beta1.WebhookClientConfig,
+	webhookClientConfig *admissionregistrationv1.WebhookClientConfig,
 ) (
 	component.DeployWaiter,
 	error,
@@ -104,7 +104,7 @@ type kubeScheduler struct {
 	namespace           string
 	image               *imagevector.Image
 	config              configurator.Configurator
-	webhookClientConfig *admissionregistrationv1beta1.WebhookClientConfig
+	webhookClientConfig *admissionregistrationv1.WebhookClientConfig
 }
 
 func (k *kubeScheduler) Deploy(ctx context.Context) error {
@@ -390,27 +390,27 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 
 // GetMutatingWebhookConfig returns the MutatingWebhookConfiguration for the seedadmissioncontroller component for
 // reuse between the component and integration tests.
-func GetMutatingWebhookConfig(clientConfig admissionregistrationv1beta1.WebhookClientConfig) *admissionregistrationv1beta1.MutatingWebhookConfiguration {
+func GetMutatingWebhookConfig(clientConfig admissionregistrationv1.WebhookClientConfig) *admissionregistrationv1.MutatingWebhookConfiguration {
 	var (
-		failPolicy         = admissionregistrationv1beta1.Ignore
-		matchPolicy        = admissionregistrationv1beta1.Exact
-		reinvocationPolicy = admissionregistrationv1beta1.NeverReinvocationPolicy
+		failPolicy         = admissionregistrationv1.Ignore
+		matchPolicy        = admissionregistrationv1.Exact
+		reinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
 		timeout            = int32(2)
-		sideEffects        = admissionregistrationv1beta1.SideEffectClassNone
-		scope              = admissionregistrationv1beta1.NamespacedScope
+		sideEffects        = admissionregistrationv1.SideEffectClassNone
+		scope              = admissionregistrationv1.NamespacedScope
 	)
 
-	return &admissionregistrationv1beta1.MutatingWebhookConfiguration{
+	return &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   webhookName,
 			Labels: getLabels(),
 		},
-		Webhooks: []admissionregistrationv1beta1.MutatingWebhook{{
+		Webhooks: []admissionregistrationv1.MutatingWebhook{{
 			Name:         webhookName,
 			ClientConfig: clientConfig,
-			Rules: []admissionregistrationv1beta1.RuleWithOperations{{
-				Operations: []admissionregistrationv1beta1.OperationType{admissionregistrationv1beta1.Create},
-				Rule: admissionregistrationv1beta1.Rule{
+			Rules: []admissionregistrationv1.RuleWithOperations{{
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+				Rule: admissionregistrationv1.Rule{
 					APIGroups:   []string{corev1.GroupName},
 					APIVersions: []string{corev1.SchemeGroupVersion.Version},
 					Scope:       &scope,

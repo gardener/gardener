@@ -27,10 +27,10 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -232,7 +232,7 @@ func (k *kubeAPIServer) Wait(ctx context.Context) error {
 			return err
 		}
 
-		if versionConstraintK8sLess119.Check(k.values.Version) {
+		if version.ConstraintK8sLess119.Check(k.values.Version) {
 			headBytes = pointer.Int64Ptr(1024)
 		}
 
@@ -284,15 +284,4 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
 	}
-}
-
-var (
-	versionConstraintK8sLess119 *semver.Constraints
-)
-
-func init() {
-	var err error
-
-	versionConstraintK8sLess119, err = semver.NewConstraint("< 1.19")
-	utilruntime.Must(err)
 }

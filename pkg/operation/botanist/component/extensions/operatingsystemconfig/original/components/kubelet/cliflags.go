@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -46,7 +47,7 @@ func CLIFlags(kubernetesVersion *semver.Version, criName extensionsv1alpha1.CRIN
 		"--network-plugin=cni",
 	)
 
-	if versionConstraintK8sLess119.Check(kubernetesVersion) {
+	if version.ConstraintK8sLess119.Check(kubernetesVersion) {
 		flags = append(flags, "--volume-plugin-dir="+pathVolumePluginDirectory)
 	}
 

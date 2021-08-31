@@ -1,5 +1,4 @@
----
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: dnsproviders.dns.gardener.cloud
@@ -7,147 +6,156 @@ metadata:
     gardener.cloud/deletion-protected: "true"
 spec:
   group: dns.gardener.cloud
-  scope: Namespaced
-  version: v1alpha1
-  versions:
-  - name: v1alpha1
-    served: true
-    storage: true
-  conversion:
-    strategy: None
-  subresources:
-    status: {}
   names:
     kind: DNSProvider
     listKind: DNSProviderList
     plural: dnsproviders
     shortNames:
-    - dnspr
+      - dnspr
     singular: dnsprovider
-  additionalPrinterColumns:
-  - JSONPath: .spec.type
-    description: Provider type
-    name: TYPE
-    type: string
-  - JSONPath: .status.state
-    description: Status of DNS provider
-    name: STATUS
-    type: string
-  - JSONPath: .metadata.creationTimestamp
-    name: AGE
-    type: date
-  preserveUnknownFields: false
-  validation:
-    openAPIV3Schema:
-      properties:
-        apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .spec.type
+          name: TYPE
           type: string
-        kind:
-          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+        - jsonPath: .status.state
+          name: STATUS
           type: string
-        metadata:
-          type: object
-        spec:
+        - description: creation timestamp
+          jsonPath: .metadata.creationTimestamp
+          name: AGE
+          type: date
+        - description: included domains
+          jsonPath: .status.domains.included
+          name: INCLUDED_DOMAINS
+          type: string
+        - description: included zones
+          jsonPath: .status.zones.included
+          name: INCLUDED_ZONES
+          priority: 2000
+          type: string
+        - description: message describing the reason for the state
+          jsonPath: .status.message
+          name: MESSAGE
+          priority: 2000
+          type: string
+      name: v1alpha1
+      schema:
+        openAPIV3Schema:
           properties:
-            defaultTTL:
-              description: default TTL used for DNS entries if not specified explicitly
-              format: int64
-              type: integer
-            domains:
-              description: desired selection of usable domains (by default all zones and domains in those zones will be served)
-              properties:
-                exclude:
-                  description: values that should be ignored (domains or zones)
-                  items:
-                    type: string
-                  type: array
-                include:
-                  description: values that should be observed (domains or zones)
-                  items:
-                    type: string
-                  type: array
+            apiVersion:
+              description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+              type: string
+            kind:
+              description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+              type: string
+            metadata:
               type: object
-            providerConfig:
-              description: optional additional provider specific configuration values
-              type: object
-              x-kubernetes-preserve-unknown-fields: true
-            secretRef:
-              description: access credential for the external DNS system of the given type
+            spec:
               properties:
-                name:
-                  description: Name is unique within a namespace to reference a secret resource.
+                defaultTTL:
+                  description: default TTL used for DNS entries if not specified explicitly
+                  format: int64
+                  type: integer
+                domains:
+                  description: desired selection of usable domains (by default all zones and domains in those zones will be served)
+                  properties:
+                    exclude:
+                      description: values that should be ignored (domains or zones)
+                      items:
+                        type: string
+                      type: array
+                    include:
+                      description: values that should be observed (domains or zones)
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                providerConfig:
+                  description: optional additional provider specific configuration values
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                secretRef:
+                  description: access credential for the external DNS system of the given type
+                  properties:
+                    name:
+                      description: Name is unique within a namespace to reference a secret resource.
+                      type: string
+                    namespace:
+                      description: Namespace defines the space within which the secret name must be unique.
+                      type: string
+                  type: object
+                type:
+                  description: type of the provider (selecting the responsible type of DNS controller)
                   type: string
-                namespace:
-                  description: Namespace defines the space within which the secret name must be unique.
+                zones:
+                  description: desired selection of usable domains the domain selection is used for served zones, only (by default all zones will be served)
+                  properties:
+                    exclude:
+                      description: values that should be ignored (domains or zones)
+                      items:
+                        type: string
+                      type: array
+                    include:
+                      description: values that should be observed (domains or zones)
+                      items:
+                        type: string
+                      type: array
+                  type: object
+              type: object
+            status:
+              properties:
+                defaultTTL:
+                  description: actually used default TTL for DNS entries
+                  format: int64
+                  type: integer
+                domains:
+                  description: actually served domain selection
+                  properties:
+                    excluded:
+                      description: Excluded values (domains or zones)
+                      items:
+                        type: string
+                      type: array
+                    included:
+                      description: included values (domains or zones)
+                      items:
+                        type: string
+                      type: array
+                  type: object
+                lastUpdateTime:
+                  description: lastUpdateTime contains the timestamp of the last status update
+                  format: date-time
                   type: string
+                message:
+                  description: message describing the reason for the actual state of the provider
+                  type: string
+                observedGeneration:
+                  format: int64
+                  type: integer
+                state:
+                  description: state of the provider
+                  type: string
+                zones:
+                  description: actually served zones
+                  properties:
+                    excluded:
+                      description: Excluded values (domains or zones)
+                      items:
+                        type: string
+                      type: array
+                    included:
+                      description: included values (domains or zones)
+                      items:
+                        type: string
+                      type: array
+                  type: object
               type: object
-            type:
-              description: type of the provider (selecting the responsible type of DNS controller)
-              type: string
-            zones:
-              description: desired selection of usable domains the domain selection is used for served zones, only (by default all zones will be served)
-              properties:
-                exclude:
-                  description: values that should be ignored (domains or zones)
-                  items:
-                    type: string
-                  type: array
-                include:
-                  description: values that should be observed (domains or zones)
-                  items:
-                    type: string
-                  type: array
-              type: object
+          required:
+            - spec
           type: object
-        status:
-          properties:
-            defaultTTL:
-              description: actually used default TTL for DNS entries
-              format: int64
-              type: integer
-            domains:
-              description: actually served domain selection
-              properties:
-                excluded:
-                  description: Excluded values (domains or zones)
-                  items:
-                    type: string
-                  type: array
-                included:
-                  description: included values (domains or zones)
-                  items:
-                    type: string
-                  type: array
-              type: object
-            lastUpdateTime:
-              description: lastUpdateTime contains the timestamp of the last status update
-              format: date-time
-              type: string
-            message:
-              description: message describing the reason for the actual state of the provider
-              type: string
-            observedGeneration:
-              format: int64
-              type: integer
-            state:
-              description: state of the provider
-              type: string
-            zones:
-              description: actually served zones
-              properties:
-                excluded:
-                  description: Excluded values (domains or zones)
-                  items:
-                    type: string
-                  type: array
-                included:
-                  description: included values (domains or zones)
-                  items:
-                    type: string
-                  type: array
-              type: object
-          type: object
-      required:
-        - spec
-      type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}

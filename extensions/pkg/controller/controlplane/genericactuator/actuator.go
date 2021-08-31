@@ -26,21 +26,28 @@ import (
 	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	secretutil "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/version"
 
+	"github.com/Masterminds/semver"
 	"github.com/go-logr/logr"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -75,7 +82,7 @@ func NewActuator(
 	chartRendererFactory extensionscontroller.ChartRendererFactory,
 	imageVector imagevector.ImageVector,
 	configName string,
-	shootWebhooks []admissionregistrationv1beta1.MutatingWebhook,
+	shootWebhooks []admissionregistrationv1.MutatingWebhook,
 	webhookServerPort int,
 	logger logr.Logger,
 ) controlplane.Actuator {
@@ -114,7 +121,7 @@ type actuator struct {
 	chartRendererFactory       extensionscontroller.ChartRendererFactory
 	imageVector                imagevector.ImageVector
 	configName                 string
-	shootWebhooks              []admissionregistrationv1beta1.MutatingWebhook
+	shootWebhooks              []admissionregistrationv1.MutatingWebhook
 	webhookServerPort          int
 
 	clientset         kubernetes.Interface
@@ -225,7 +232,7 @@ func (a *actuator) reconcileControlPlane(
 ) (bool, error) {
 
 	if len(a.shootWebhooks) > 0 {
-		if err := ReconcileShootWebhooks(ctx, a.client, cp.Namespace, a.providerName, a.webhookServerPort, a.shootWebhooks); err != nil {
+		if err := ReconcileShootWebhooks(ctx, a.client, cp.Namespace, a.providerName, a.webhookServerPort, a.shootWebhooks, cluster); err != nil {
 			return false, fmt.Errorf("could not reconcile shoot webhooks: %w", err)
 		}
 	}
@@ -491,13 +498,13 @@ func (a *actuator) computeChecksums(
 	return controlplane.ComputeChecksums(csSecrets, csConfigMaps), nil
 }
 
-func marshalWebhooks(webhooks []admissionregistrationv1beta1.MutatingWebhook, name string) ([]byte, error) {
+func marshalWebhooks(webhooks []admissionregistrationv1.MutatingWebhook, name string, k8sVersion *semver.Version) ([]byte, error) {
 	var (
 		buf     = new(bytes.Buffer)
 		encoder = json.NewYAMLSerializer(json.DefaultMetaFactory, nil, nil)
 
-		apiVersion, kind             = admissionregistrationv1beta1.SchemeGroupVersion.WithKind("MutatingWebhookConfiguration").ToAPIVersionAndKind()
-		mutatingWebhookConfiguration = admissionregistrationv1beta1.MutatingWebhookConfiguration{
+		apiVersion, kind                            = admissionregistrationv1.SchemeGroupVersion.WithKind("MutatingWebhookConfiguration").ToAPIVersionAndKind()
+		mutatingWebhookConfiguration runtime.Object = &admissionregistrationv1.MutatingWebhookConfiguration{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: apiVersion,
 				Kind:       kind,
@@ -509,7 +516,17 @@ func marshalWebhooks(webhooks []admissionregistrationv1beta1.MutatingWebhook, na
 		}
 	)
 
-	if err := encoder.Encode(&mutatingWebhookConfiguration, buf); err != nil {
+	if version.ConstraintK8sLessEqual115.Check(k8sVersion) {
+		u := &unstructured.Unstructured{}
+		if err := clientkubernetes.ShootScheme.Convert(mutatingWebhookConfiguration, u, nil); err != nil {
+			return nil, err
+		}
+		// Set APIVersion to v1beta1. We can transform v1 directly to v1beta1 because both APIs are identical.
+		u.SetAPIVersion(admissionregistrationv1beta1.SchemeGroupVersion.String())
+		mutatingWebhookConfiguration = u
+	}
+
+	if err := encoder.Encode(mutatingWebhookConfiguration, buf); err != nil {
 		return nil, err
 	}
 
@@ -551,12 +568,21 @@ func (a *actuator) Migrate(
 
 // ReconcileShootWebhooks deploys the shoot webhook configuration, i.e., a network policy to allow the kube-apiserver to
 // talk to the provider extension, and a managed resource that contains the MutatingWebhookConfiguration.
-func ReconcileShootWebhooks(ctx context.Context, c client.Client, namespace, providerName string, serverPort int, shootWebhooks []admissionregistrationv1beta1.MutatingWebhook) error {
+func ReconcileShootWebhooks(ctx context.Context, c client.Client, namespace, providerName string, serverPort int, shootWebhooks []admissionregistrationv1.MutatingWebhook, cluster *extensionscontroller.Cluster) error {
 	if err := extensionswebhookshoot.EnsureNetworkPolicy(ctx, c, namespace, providerName, serverPort); err != nil {
 		return fmt.Errorf("could not create or update network policy for shoot webhooks in namespace '%s': %w", namespace, err)
 	}
 
-	webhookConfiguration, err := marshalWebhooks(shootWebhooks, providerName)
+	if cluster.Shoot == nil {
+		return fmt.Errorf("no shoot found in cluster resource")
+	}
+
+	shootK8sVersion, err := semver.NewVersion(cluster.Shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return err
+	}
+
+	webhookConfiguration, err := marshalWebhooks(shootWebhooks, providerName, shootK8sVersion)
 	if err != nil {
 		return err
 	}
@@ -572,7 +598,7 @@ func ReconcileShootWebhooks(ctx context.Context, c client.Client, namespace, pro
 // ReconcileShootWebhooksForAllNamespaces reconciles the shoot webhooks in all shoot namespaces of the given
 // provider type. This is necessary in case the webhook port is changed (otherwise, the network policy would only be
 // updated again as part of the ControlPlane reconciliation which might only happen in the next 24h).
-func ReconcileShootWebhooksForAllNamespaces(ctx context.Context, c client.Client, providerName, providerType string, port int, shootWebhooks []admissionregistrationv1beta1.MutatingWebhook) error {
+func ReconcileShootWebhooksForAllNamespaces(ctx context.Context, c client.Client, providerName, providerType string, port int, shootWebhooks []admissionregistrationv1.MutatingWebhook) error {
 	namespaceList := &corev1.NamespaceList{}
 	if err := c.List(ctx, namespaceList, client.MatchingLabels{
 		v1beta1constants.GardenRole:         v1beta1constants.GardenRoleShoot,
@@ -597,7 +623,13 @@ func ReconcileShootWebhooksForAllNamespaces(ctx context.Context, c client.Client
 				}
 				return nil
 			}
-			return ReconcileShootWebhooks(ctx, c, namespaceName, providerName, port, shootWebhooks)
+
+			cluster, err := extensions.GetCluster(ctx, c, namespaceName)
+			if err != nil {
+				return err
+			}
+
+			return ReconcileShootWebhooks(ctx, c, namespaceName, providerName, port, shootWebhooks, cluster)
 		})
 	}
 
