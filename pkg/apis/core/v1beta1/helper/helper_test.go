@@ -358,6 +358,17 @@ var _ = Describe("helper", func() {
 			),
 		)
 
+		DescribeTable("#HasOperationAnnotation",
+			func(objectMeta metav1.ObjectMeta, expected bool) {
+				Expect(HasOperationAnnotation(objectMeta)).To(Equal(expected))
+			},
+			Entry("reconcile", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile}}, true),
+			Entry("restore", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationRestore}}, true),
+			Entry("migrate", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationMigrate}}, true),
+			Entry("unknown", metav1.ObjectMeta{Annotations: map[string]string{v1beta1constants.GardenerOperation: "unknown"}}, false),
+			Entry("not present", metav1.ObjectMeta{}, false),
+		)
+
 		DescribeTable("#TaintsHave",
 			func(taints []gardencorev1beta1.SeedTaint, key string, expectation bool) {
 				Expect(TaintsHave(taints, key)).To(Equal(expectation))

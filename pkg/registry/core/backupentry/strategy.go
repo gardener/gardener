@@ -21,7 +21,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/core"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/validation"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -77,14 +76,6 @@ func mustIncreaseGeneration(oldBackupEntry, newBackupEntry *core.BackupEntry) bo
 	oldPresent, _ := strconv.ParseBool(oldBackupEntry.ObjectMeta.Annotations[core.BackupEntryForceDeletion])
 	newPresent, _ := strconv.ParseBool(newBackupEntry.ObjectMeta.Annotations[core.BackupEntryForceDeletion])
 	if oldPresent != newPresent && newPresent {
-		return true
-	}
-
-	oldOperationAnnotation := oldBackupEntry.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]
-	newOperationAnnotation := newBackupEntry.ObjectMeta.Annotations[v1beta1constants.GardenerOperation]
-	if (newOperationAnnotation == v1beta1constants.GardenerOperationRestore ||
-		newOperationAnnotation == v1beta1constants.GardenerOperationReconcile) &&
-		newOperationAnnotation != oldOperationAnnotation {
 		return true
 	}
 

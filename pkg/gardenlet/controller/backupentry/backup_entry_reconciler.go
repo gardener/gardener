@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -77,6 +78,17 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
+	// Remove the operation annotation if its value is not "restore"
+	// If it's "restore", it will be removed at the end of the reconciliation since it's needed
+	// to properly determine that the operation is "restore, and not "reconcile"
+	backupEntryLogger := logger.NewFieldLogger(logger.Logger, "backupentry", kutil.ObjectName(be))
+	if operationType, ok := be.Annotations[v1beta1constants.GardenerOperation]; ok && operationType != v1beta1constants.GardenerOperationRestore {
+		if updateErr := removeGardenerOperationAnnotation(ctx, gardenClient.Client(), be); updateErr != nil {
+			backupEntryLogger.Errorf("Could not remove %q annotation: %+v", v1beta1constants.GardenerOperation, updateErr)
+			return reconcile.Result{}, updateErr
+		}
+	}
+
 	if be.DeletionTimestamp != nil {
 		return r.deleteBackupEntry(ctx, gardenClient, be)
 	}
@@ -86,7 +98,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if !controllerutils.BackupEntryIsManagedByThisGardenlet(be, r.config) {
-		r.logger.Debugf("Skipping because BackupEntry is not managed by this gardenlet in seed %s", *be.Spec.SeedName)
+		backupEntryLogger.Debugf("Skipping because BackupEntry is not managed by this gardenlet in seed %s", *be.Spec.SeedName)
 		return reconcile.Result{}, nil
 	}
 
@@ -95,7 +107,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcileBackupEntry(ctx context.Context, gardenClient kubernetes.Interface, backupEntry *gardencorev1beta1.BackupEntry) (reconcile.Result, error) {
-	backupEntryLogger := logger.NewFieldLogger(logger.Logger, "backupentry", backupEntry.Name)
+	backupEntryLogger := logger.NewFieldLogger(r.logger, "backupentry", kutil.ObjectName(backupEntry))
 
 	if !controllerutil.ContainsFinalizer(backupEntry, gardencorev1beta1.GardenerName) {
 		if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.GardenerName); err != nil {
@@ -141,16 +153,18 @@ func (r *reconciler) reconcileBackupEntry(ctx context.Context, gardenClient kube
 		return reconcile.Result{}, updateErr
 	}
 
-	if updateErr := removeGardenerOperationAnnotation(ctx, gardenClient.Client(), backupEntry); updateErr != nil {
-		backupEntryLogger.Errorf("Could not remove %q annotation: %+v", v1beta1constants.GardenerOperation, updateErr)
-		return reconcile.Result{}, updateErr
+	if kutil.HasMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore) {
+		if updateErr := removeGardenerOperationAnnotation(ctx, gardenClient.Client(), backupEntry); updateErr != nil {
+			backupEntryLogger.Errorf("Could not remove %q annotation: %+v", v1beta1constants.GardenerOperation, updateErr)
+			return reconcile.Result{}, updateErr
+		}
 	}
 
 	return reconcile.Result{}, nil
 }
 
 func (r *reconciler) deleteBackupEntry(ctx context.Context, gardenClient kubernetes.Interface, backupEntry *gardencorev1beta1.BackupEntry) (reconcile.Result, error) {
-	backupEntryLogger := logger.NewFieldLogger(r.logger, "backupentry", backupEntry.Name)
+	backupEntryLogger := logger.NewFieldLogger(r.logger, "backupentry", kutil.ObjectName(backupEntry))
 	if !sets.NewString(backupEntry.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		backupEntryLogger.Debug("Do not need to do anything as the BackupEntry does not have my finalizer")
 		return reconcile.Result{}, nil
@@ -205,7 +219,7 @@ func shouldMigrateBackupEntry(be *gardencorev1beta1.BackupEntry) bool {
 }
 
 func (r *reconciler) migrateBackupEntry(ctx context.Context, gardenClient kubernetes.Interface, backupEntry *gardencorev1beta1.BackupEntry) (reconcile.Result, error) {
-	backupEntryLogger := logger.NewFieldLogger(r.logger, "backupentry", backupEntry.Name)
+	backupEntryLogger := logger.NewFieldLogger(r.logger, "backupentry", kutil.ObjectName(backupEntry))
 	if !sets.NewString(backupEntry.Finalizers...).Has(gardencorev1beta1.GardenerName) {
 		backupEntryLogger.Debug("Do not need to do anything as the BackupEntry does not have my finalizer")
 		return reconcile.Result{}, nil
@@ -240,11 +254,6 @@ func (r *reconciler) migrateBackupEntry(ctx context.Context, gardenClient kubern
 
 	if updateErr := updateBackupEntryStatusSucceeded(ctx, gardenClient.Client(), backupEntry, gardencorev1beta1.LastOperationTypeMigrate); updateErr != nil {
 		backupEntryLogger.Errorf("Could not update the BackupEntry status after migration success: %+v", updateErr)
-		return reconcile.Result{}, updateErr
-	}
-
-	if updateErr := removeGardenerOperationAnnotation(ctx, gardenClient.Client(), backupEntry); updateErr != nil {
-		backupEntryLogger.Errorf("Could not remove %q annotation: %+v", v1beta1constants.GardenerOperation, updateErr)
 		return reconcile.Result{}, updateErr
 	}
 
