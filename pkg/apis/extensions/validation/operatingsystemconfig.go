@@ -15,6 +15,7 @@
 package validation
 
 import (
+	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cloudinit"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -122,8 +123,14 @@ func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.E
 				allErrs = append(allErrs, field.Required(idxPath.Child("content", "secretRef", "dataKey"), "field is required"))
 			}
 		case file.Content.Inline != nil:
-			if len(file.Content.Inline.Encoding) == 0 {
-				allErrs = append(allErrs, field.Required(idxPath.Child("content", "inline", "encoding"), "field is required"))
+			switch file.Content.Inline.Encoding {
+			case
+				"",
+				string(cloudinit.B64FileCodecID),
+				string(cloudinit.GZIPFileCodecID),
+				string(cloudinit.GZIPB64FileCodecID):
+			default:
+				allErrs = append(allErrs, field.Required(idxPath.Child("content", "inline", "encoding"), "field is required to among b64, gzip or gzip+b64"))
 			}
 			if len(file.Content.Inline.Data) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("content", "inline", "data"), "field is required"))
