@@ -2,55 +2,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: node-local-dns
+  name: {{ include "node-local-dns.config.name" . }}
   namespace: kube-system
+  labels:
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+immutable: true
 data:
-  Corefile: |
-    {{ .Values.domain }}:53 {
-        errors
-        cache {
-                success 9984 30
-                denial 9984 5
-        }
-        reload
-        loop
-        bind {{ .Values.nodeLocal }} {{ .Values.dnsServer }}
-        forward . {{ .Values.clusterDNS }} {
-                force_tcp
-        }
-        prometheus :{{ .Values.prometheus.port }}
-        health {{ .Values.nodeLocal }}:8080
-        }
-    in-addr.arpa:53 {
-        errors
-        cache 30
-        reload
-        loop
-        bind {{ .Values.nodeLocal }} {{ .Values.dnsServer }}
-        forward . {{ .Values.clusterDNS }} {
-                force_tcp
-        }
-        prometheus :{{ .Values.prometheus.port }}
-        }
-    ip6.arpa:53 {
-        errors
-        cache 30
-        reload
-        loop
-        bind {{ .Values.nodeLocal }} {{ .Values.dnsServer }}
-        forward . {{ .Values.clusterDNS }} {
-                force_tcp
-        }
-        prometheus :{{ .Values.prometheus.port }}
-        }
-    .:53 {
-        errors
-        cache 30
-        reload
-        loop
-        bind {{ .Values.nodeLocal }} {{ .Values.dnsServer }}
-        forward . __PILLAR__UPSTREAM__SERVERS__ {
-                force_tcp
-        }
-        prometheus :{{ .Values.prometheus.port }}
-        }
+{{ include "node-local-dns.config.data" . | indent 2 }}

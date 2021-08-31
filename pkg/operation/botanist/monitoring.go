@@ -445,7 +445,17 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 	if err != nil {
 		return err
 	}
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values))
+
+	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), kubernetes.Values(values)); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-dashboard-providers"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-datasources"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-dashboards"}},
+	)
 }
 
 // DeleteGrafana will delete all grafana instances from the seed cluster.

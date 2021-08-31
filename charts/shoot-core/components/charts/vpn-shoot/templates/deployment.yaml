@@ -1,3 +1,8 @@
+{{- define "vpn-shoot.deployment.annotations" -}}
+reference.resources.gardener.cloud/secret-{{ include "vpn-shoot.certs.name" . | sha256sum | trunc 8 }}: {{ include "vpn-shoot.certs.name" . }}
+reference.resources.gardener.cloud/secret-{{ include "vpn-shoot.dh.name" . | sha256sum | trunc 8 }}: {{ include "vpn-shoot.dh.name" . }}
+reference.resources.gardener.cloud/secret-{{ include "vpn-shoot.tls-auth.name" . | sha256sum | trunc 8 }}: {{ include "vpn-shoot.tls-auth.name" . }}
+{{- end -}}
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
@@ -8,6 +13,8 @@ metadata:
     gardener.cloud/role: system-component
     app: vpn-shoot
     origin: gardener
+  annotations:
+{{ include "vpn-shoot.deployment.annotations" . | indent 4 }}
 spec:
   revisionHistoryLimit: 1
   replicas: 1
@@ -23,8 +30,7 @@ spec:
     metadata:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
-        checksum/secret-vpn-shoot-dh: {{ include (print $.Template.BasePath "/secret-dh.yaml") . | sha256sum }}
-        checksum/secret-vpn-shoot-tlsauth: {{ include (print $.Template.BasePath "/secret-tlsauth.yaml") . | sha256sum }}
+{{ include "vpn-shoot.deployment.annotations" . | indent 8 }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
@@ -95,15 +101,15 @@ spec:
       volumes:
       - name: vpn-shoot
         secret:
-          secretName: vpn-shoot
+          secretName: {{ include "vpn-shoot.certs.name" . }}
           defaultMode: 0400
       - name: vpn-shoot-tlsauth
         secret:
-          secretName: vpn-shoot-tlsauth
+          secretName: {{ include "vpn-shoot.tls-auth.name" . }}
           defaultMode: 0400
       {{- if not .Values.reversedVPN.enabled }}
       - name: vpn-shoot-dh
         secret:
-          secretName: vpn-shoot-dh
+          secretName: {{ include "vpn-shoot.dh.name" . }}
           defaultMode: 0400
       {{- end }}

@@ -1,20 +1,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-{{ .Values.role }}-dashboard-providers
+  name: {{ include "grafana.providers.name" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     component: grafana
     role: {{ .Values.role }}
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+immutable: true
 data:
-  default.yaml: |-
-    apiVersion: 1
-    providers:
-    - name: 'default'
-      orgId: 1
-      folder: ''
-      type: file
-      disableDeletion: false
-      editable: false
-      options:
-        path: /var/lib/grafana/dashboards
+{{ include "grafana.providers.data" . | indent 2 }}

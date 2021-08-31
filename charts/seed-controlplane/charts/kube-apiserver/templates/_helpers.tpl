@@ -78,6 +78,10 @@ rules:
 {{- end -}}
 {{- end -}}
 
+{{- define "kube-apiserver.auditConfig.name" -}}
+audit-policy-config-{{ include "kube-apiserver.auditConfigAuditPolicy" . | sha256sum | trunc 8 }}
+{{- end }}
+
 {{- define "kube-apiserver.serviceAccountConfig" -}}
 {{- if .Values.serviceAccountConfig }}
 {{- if .Values.serviceAccountConfig.issuer }}
@@ -114,3 +118,69 @@ rules:
 {{- required ".resource is required" .resource }}{{ if .apiGroup }}.{{ .apiGroup }}{{ end }}#{{ .size }},
 {{- end -}}
 {{- end -}}
+
+{{- define "kube-apiserver.admissionConfig.data" -}}
+admission-configuration.yaml: |
+  apiVersion: {{ include "apiserverversion" . }}
+  kind: AdmissionConfiguration
+  {{- if (include "kube-apiserver.admissionConfig" .) }}
+  plugins:
+  {{- include "kube-apiserver.admissionConfig" . | indent 2 }}
+  {{- else }}
+  plugins: []
+  {{- end }}
+
+{{- range $i, $plugin := .Values.admissionPlugins }}
+{{- if $plugin.config }}
+{{ lower $plugin.name }}.yaml: |
+{{ toYaml $plugin.config | indent 2 }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{- define "kube-apiserver.admissionConfig.name" -}}
+kube-apiserver-admission-config-{{ include "kube-apiserver.admissionConfig.data" . | sha256sum | trunc 8 }}
+{{- end }}
+
+{{- define "kube-apiserver.egressSelector.data" -}}
+egress-selector-configuration.yaml: |-
+  apiVersion: apiserver.k8s.io/v1alpha1
+  kind: EgressSelectorConfiguration
+  egressSelections:
+  - name: cluster
+    connection:
+      proxyProtocol: HTTPConnect
+      transport:
+        tcp:
+          url: https://vpn-seed-server:9443
+          tlsConfig:
+            caBundle: /etc/srv/kubernetes/envoy/ca.crt
+            clientCert: /etc/srv/kubernetes/envoy/tls.crt
+            clientKey: /etc/srv/kubernetes/envoy/tls.key
+  - name: {{ if semverCompare "< 1.20" .Values.kubernetesVersion }}master{{ else }}controlplane{{ end }}
+    connection:
+      proxyProtocol: Direct
+  - name: etcd
+    connection:
+      proxyProtocol: Direct
+{{- end -}}
+
+{{- define "kube-apiserver.egressSelector.name" -}}
+kube-apiserver-egress-selector-config-{{ include "kube-apiserver.egressSelector.data" . | sha256sum | trunc 8 }}
+{{- end }}
+
+{{- define "kube-apiserver.oidcCABundle.data" -}}
+ca.crt: {{ .Values.oidcConfig.caBundle | b64enc }}
+{{- end -}}
+
+{{- define "kube-apiserver.oidcCABundle.name" -}}
+kube-apiserver-oidc-cabundle-{{ include "kube-apiserver.oidcCABundle.data" . | sha256sum | trunc 8 }}
+{{- end }}
+
+{{- define "kube-apiserver.serviceAccountSigningKeyConfig.data" -}}
+signing-key: {{ .Values.serviceAccountConfig.signingKey | b64enc }}
+{{- end -}}
+
+{{- define "kube-apiserver.serviceAccountSigningKeyConfig.name" -}}
+kube-apiserver-sa-signing-key-{{ include "kube-apiserver.serviceAccountSigningKeyConfig.data" . | sha256sum | trunc 8 }}
+{{- end }}

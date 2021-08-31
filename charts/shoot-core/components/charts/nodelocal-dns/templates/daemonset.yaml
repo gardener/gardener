@@ -1,3 +1,6 @@
+{{- define "node-local-dns.daemonset.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "node-local-dns.config.name" . | sha256sum | trunc 8 }}: {{ include "node-local-dns.config.name" . }}
+{{- end -}}
 ---
 apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
@@ -8,6 +11,8 @@ metadata:
     gardener.cloud/role: system-component
     origin: gardener
     k8s-app: node-local-dns
+  annotations:
+{{ include "node-local-dns.daemonset.annotations" . | indent 4 }}
 spec:
   updateStrategy:
     rollingUpdate:
@@ -20,8 +25,8 @@ spec:
       labels:
         k8s-app: node-local-dns
         networking.gardener.cloud/to-dns: allowed
-        # we won't be using the checksum of the configmap since coreDNS provides the "reload" plugins that does the reload if config changes.
       annotations:
+{{ include "node-local-dns.daemonset.annotations" . | indent 8 }}
         prometheus.io/port: "{{ .Values.prometheus.port }}"
         prometheus.io/scrape: "{{ .Values.prometheus.scrape }}"
     spec:
@@ -95,7 +100,7 @@ spec:
             optional: true
         - name: config-volume
           configMap:
-            name: node-local-dns
+            name: {{ include "node-local-dns.config.name" . }}
             items:
               - key: Corefile
                 path: Corefile.base

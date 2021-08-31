@@ -1,3 +1,8 @@
+{{- define "grafana.deployment.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "grafana.providers.name" . | sha256sum | trunc 8 }}: {{ include "grafana.providers.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "grafana.datasources.name" . | sha256sum | trunc 8 }}: {{ include "grafana.datasources.name" . }}
+reference.resources.gardener.cloud/configmap-{{ include "grafana.dashboards.name" . | sha256sum | trunc 8 }}: {{ include "grafana.dashboards.name" . }}
+{{- end -}}
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
@@ -8,6 +13,8 @@ metadata:
     gardener.cloud/role: monitoring
     component: grafana
     role: {{ .Values.role }}
+  annotations:
+{{ include "grafana.deployment.annotations" . | indent 4 }}
 spec:
   revisionHistoryLimit: 1
   replicas: {{ .Values.replicas }}
@@ -18,9 +25,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-dashboards: {{ include (print $.Template.BasePath "/grafana-dashboards-configmap.yaml") . | sha256sum }}
-        checksum/configmap-datasources: {{ include (print $.Template.BasePath "/grafana-datasources-configmap.yaml") . | sha256sum }}
-        checksum/configmap-dashboard-providers: {{ include (print $.Template.BasePath "/grafana-dashboard-providers-configmap.yaml") . | sha256sum }}
+{{ include "grafana.deployment.annotations" . | indent 8 }}
       labels:
         gardener.cloud/role: monitoring
         garden.sapcloud.io/role: monitoring
@@ -77,10 +82,10 @@ spec:
         emptyDir: {}
       - name: grafana-dashboards
         configMap:
-          name: grafana-{{ .Values.role }}-dashboards
+          name: {{ include "grafana.dashboards.name" . }}
       - name: grafana-datasources
         configMap:
-          name: grafana-{{ .Values.role }}-datasources
+          name: {{ include "grafana.datasources.name" . }}
       - name: grafana-dashboard-providers
         configMap:
-          name: grafana-{{ .Values.role }}-dashboard-providers
+          name: {{ include "grafana.providers.name" . }}

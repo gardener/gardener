@@ -1,18 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboards
+  name: {{ include "grafana.dashboards.name" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     component: grafana
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+immutable: true
 data:
-  {{ range $name, $bytes := .Files.Glob "dashboards/**.json" }}
-  {{ base $name }}: |-
-{{ toString $bytes | indent 4}}
-  {{ end }}
-{{ if .Values.istio.enabled }}
-  {{ range $name, $bytes := .Files.Glob "dashboards/istio/**.json" }}
-  {{ base $name }}: |-
-{{ toString $bytes | indent 4}}
-  {{ end }}
-{{- end }}
+{{ include "grafana.dashboards.data" . | indent 2 }}

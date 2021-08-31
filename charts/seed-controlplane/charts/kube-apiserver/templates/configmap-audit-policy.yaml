@@ -1,9 +1,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: audit-policy-config
-  namespace: {{.Release.Namespace}}
+  name: {{ include "kube-apiserver.auditConfig.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+immutable: true
 data:
   audit-policy.yaml: |-
     ---
-{{ include "kube-apiserver.auditConfigAuditPolicy" . | indent 4}}
+{{ include "kube-apiserver.auditConfigAuditPolicy" . | indent 4 }}

@@ -1,3 +1,6 @@
+{{- define "apiserver-proxy.daemonset.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "apiserver-proxy.config.name" . | sha256sum | trunc 8 }}: {{ include "apiserver-proxy.config.name" . }}
+{{- end -}}
 ---
 apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
@@ -7,6 +10,8 @@ metadata:
   labels:
     gardener.cloud/role: system-component
     origin: gardener
+  annotations:
+{{ include "apiserver-proxy.daemonset.annotations" . | indent 4 }}
 spec:
   updateStrategy:
     type: RollingUpdate
@@ -17,7 +22,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/proxy-config: {{ include ( print $.Template.BasePath "/proxy-configmap.yaml") . | sha256sum }}
+{{ include "apiserver-proxy.daemonset.annotations" . | indent 8 }}
         checksum/psp: {{ include ( print $.Template.BasePath "/psp/apiserver-proxy-psp.yaml") . | sha256sum }}
       labels:
         gardener.cloud/role: system-component
@@ -118,6 +123,6 @@ spec:
       volumes:
       - name: proxy-config
         configMap:
-          name: apiserver-proxy-config
+          name: {{ include "apiserver-proxy.config.name" . }}
       - name: admin-uds
         emptyDir: {}

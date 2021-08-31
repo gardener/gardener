@@ -4,11 +4,11 @@ metadata:
   labels:
     app: nginx-ingress
     component: "controller"
-  name: nginx-ingress-controller
+    resources.gardener.cloud/garbage-collectable-reference: "true"
+  name: {{ include "nginx-ingress.config.name" . }}
   namespace: garden
+immutable: true
 {{- if .Values.config }}
 data:
-{{- range $k, $v := .Values.config }}
-  {{ $k }}: {{ quote $v }}
-{{- end }}
+{{ include "nginx-ingress.config.data" . | indent 2 }}
 {{- end }}

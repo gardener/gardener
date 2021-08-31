@@ -1,3 +1,7 @@
+{{- define "nginx-ingress.deployment.annotations" -}}
+reference.resources.gardener.cloud/configmap-{{ include "nginx-ingress.config.name" . | sha256sum | trunc 8 }}: {{ include "nginx-ingress.config.name" . }}
+{{- end -}}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,6 +10,8 @@ metadata:
     component: "controller"
   name: nginx-ingress-controller
   namespace: garden
+  annotations:
+{{ include "nginx-ingress.deployment.annotations" . | indent 4 }}
 spec:
   replicas: 3
   revisionHistoryLimit: 1
@@ -17,7 +23,7 @@ spec:
   template:
     metadata:
       annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
+{{ include "nginx-ingress.deployment.annotations" . | indent 8 }}
       labels:
         app: nginx-ingress
         component: "controller"
@@ -57,7 +63,7 @@ spec:
             - --ingress-class={{ .Values.global.ingressClass }}
             - --update-status=true
             - --annotations-prefix=nginx.ingress.kubernetes.io
-            - --configmap=garden/nginx-ingress-controller
+            - --configmap=garden/{{ include "nginx-ingress.config.name" . }}
           securityContext:
             capabilities:
               drop:

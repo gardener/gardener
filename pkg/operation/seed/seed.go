@@ -945,6 +945,19 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
+	// TODO(rfranzke): Remove in a future release.
+	if err := kutil.DeleteObjects(ctx, seedClient,
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "fluent-bit-config"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "loki-config"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "telegraf-config"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "nginx-ingress-controller"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "grafana-dashboard-providers"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "grafana-datasources"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "grafana-dashboards"}},
+	); err != nil {
+		return err
+	}
+
 	var ingressClass string
 	if managedIngress(seed) {
 		ingressClass = v1beta1constants.SeedNginxIngressClass
