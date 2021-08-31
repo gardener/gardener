@@ -32,11 +32,164 @@ import (
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+)
+
+var (
+	apiversion  = "extensions.gardener.cloud/v1alpha1"
+	defaultSpec = extensionsv1alpha1.DefaultSpec{Type: "gcp"}
+	objectMeta  = metav1.ObjectMeta{Name: "entity-external", Namespace: "prjswebhooks"}
+	secretRef   = corev1.SecretReference{Name: "secret-external", Namespace: "prjswebhooks"}
+
+	backupBucket = &extensionsv1alpha1.BackupBucket{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.BackupBucketResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "backupbucket-external"},
+		Spec: extensionsv1alpha1.BackupBucketSpec{
+			DefaultSpec: defaultSpec,
+			Region:      "europe-west-1",
+			SecretRef:   secretRef,
+		},
+	}
+
+	backupEntry = &extensionsv1alpha1.BackupEntry{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.BackupEntryResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: metav1.ObjectMeta{Name: "backupentry-external"},
+		Spec: extensionsv1alpha1.BackupEntrySpec{
+			DefaultSpec: defaultSpec,
+			Region:      "europe-west-1",
+			BucketName:  "cloud--gcp--fg2d6",
+			SecretRef:   secretRef,
+		},
+	}
+
+	bastion = &extensionsv1alpha1.Bastion{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.BastionResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.BastionSpec{
+			DefaultSpec: defaultSpec,
+			UserData:    []byte("data"),
+			Ingress: []extensionsv1alpha1.BastionIngressPolicy{
+				{
+					IPBlock: networkingv1.IPBlock{
+						CIDR: "1.2.3.4/32",
+					},
+				},
+			},
+		},
+	}
+
+	containerRuntime = &extensionsv1alpha1.ContainerRuntime{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.ContainerRuntimeResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+	}
+
+	controlPlane = &extensionsv1alpha1.ControlPlane{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.ControlPlaneResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.ControlPlaneSpec{
+			DefaultSpec: defaultSpec,
+			SecretRef:   secretRef,
+			Region:      "europe-west-1",
+		},
+	}
+
+	dnsrecord = &extensionsv1alpha1.DNSRecord{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.DNSRecordResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.DNSRecordSpec{
+			DefaultSpec: defaultSpec,
+			SecretRef:   secretRef,
+			Name:        "api.gcp.foobar.shoot.example.com",
+			RecordType:  "A",
+			Values:      []string{"1.2.3.4"},
+		},
+	}
+
+	extension = &extensionsv1alpha1.Extension{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.ExtensionResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.ExtensionSpec{
+			DefaultSpec: defaultSpec,
+		},
+	}
+
+	infrastructure = &extensionsv1alpha1.Infrastructure{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.InfrastructureResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.InfrastructureSpec{
+			DefaultSpec: defaultSpec,
+			SecretRef:   secretRef,
+			Region:      "europe-west-1",
+		},
+	}
+
+	network = &extensionsv1alpha1.Network{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.NetworkResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.NetworkSpec{
+			DefaultSpec: defaultSpec,
+			PodCIDR:     "100.96.0.0/11",
+			ServiceCIDR: "100.64.0.0/13",
+		},
+	}
+
+	osc = &extensionsv1alpha1.OperatingSystemConfig{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.OperatingSystemConfigResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
+			Purpose:     extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
+			DefaultSpec: defaultSpec,
+		},
+	}
+
+	worker = &extensionsv1alpha1.Worker{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       extensionsv1alpha1.WorkerResource,
+			APIVersion: apiversion,
+		},
+		ObjectMeta: objectMeta,
+		Spec: extensionsv1alpha1.WorkerSpec{
+			DefaultSpec: defaultSpec,
+			Region:      "europe-west-1",
+			SecretRef:   secretRef,
+		},
+	}
 )
 
 var _ = Describe("handler", func() {
@@ -106,7 +259,7 @@ var _ = Describe("handler", func() {
 				Entry("for extensions", "extensions", extension),
 				Entry("for infrastructures", "infrastructures", infrastructure),
 				Entry("for networks", "networks", network),
-				Entry("for operatingsystemconfigs", "operatingsystemconfigs", operatingsysconfig),
+				Entry("for operatingsystemconfigs", "operatingsystemconfigs", osc),
 				Entry("for workers", "workers", worker),
 			)
 
@@ -122,155 +275,24 @@ var _ = Describe("handler", func() {
 		})
 
 		Context("update resources", func() {
-			DescribeTable("should update successful the resource",
+			DescribeTable("should update successfully the resource",
 				func(kind string, new, old runtime.Object) {
 					request = newRequest(admissionv1.Update, kind, new, old)
 					expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation successful"), resourceToId(request.Resource))
 				},
 
-				Entry("for backupbuckets", "backupbuckets", func() runtime.Object {
-					o := backupBucket.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.SecretRef.Name = "backupbucket-external"
-
-					return o
-				}(), func() runtime.Object {
-					o := backupBucket.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for backupentries", "backupentries", func() runtime.Object {
-					o := backupEntry.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.SecretRef.Name = "backupentry-external-2"
-
-					return o
-				}(), func() runtime.Object {
-					o := backupEntry.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for backupentries", "backupentries", func() runtime.Object {
-					o := backupEntry.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.SecretRef.Name = "backupentry-external-2"
-
-					return o
-				}(), func() runtime.Object {
-					o := backupEntry.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for bastions", "bastions", func() runtime.Object {
-					o := bastion.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.Ingress[0].IPBlock.CIDR = "1.1.1.1/16"
-
-					return o
-				}(), func() runtime.Object {
-					o := bastion.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
+				Entry("for backupbuckets", "backupbuckets", newBackupBucket("2", "backupbucket-external", ""), newBackupBucket("2", "backupbucket-external-2", "")),
+				Entry("for backupentries", "backupentries", newBackupEntry("2", "backupentry-external-2", ""), newBackupEntry("1", "", "")),
+				Entry("for bastions", "bastions", newBastion("2", "1.1.1.1/16", ""), newBastion("1", "", "")),
 				// TODO: Fix this with #4561
-				Entry("for containerruntime", "containerruntimes", func() runtime.Object {
-					o := containerRuntime.DeepCopy()
-					o.ResourceVersion = "2"
-
-					return o
-				}(), func() runtime.Object {
-					o := containerRuntime.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for controlplanes", "controlplanes", func() runtime.Object {
-					o := controlPlane.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.SecretRef.Name = "cloudprovider"
-
-					return o
-				}(), func() runtime.Object {
-					o := controlPlane.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for dnsrecords", "dnsrecords", func() runtime.Object {
-					o := dnsrecord.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.SecretRef.Name = "dnsrecord-external"
-
-					return o
-				}(), func() runtime.Object {
-					o := dnsrecord.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for extensions", "extensions", func() runtime.Object {
-					o := extension.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.ProviderConfig = &runtime.RawExtension{}
-
-					return o
-				}(), func() runtime.Object {
-					o := extension.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for infrastructures", "infrastructures", func() runtime.Object {
-					o := infrastructure.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.SecretRef.Name = "infrastructure-external"
-
-					return o
-				}(), func() runtime.Object {
-					o := infrastructure.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for networks", "networks", func() runtime.Object {
-					o := network.DeepCopy()
-					o.ResourceVersion = "2"
-
-					return o
-				}(), func() runtime.Object {
-					o := network.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for operatingsystemconfigs", "operatingsystemconfigs", func() runtime.Object {
-					o := operatingsysconfig.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.ReloadConfigFilePath = pointer.String("path/to/file")
-
-					return o
-				}(), func() runtime.Object {
-					o := operatingsysconfig.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for workers", "workers", func() runtime.Object {
-					o := worker.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.SecretRef.Name = "workers-external"
-
-					return o
-				}(), func() runtime.Object {
-					o := worker.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
+				Entry("for containerruntime", "containerruntimes", newContainerRuntime("2"), newContainerRuntime("1")),
+				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", ""), newControlPlane("1", "", "")),
+				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", ""), newDNSRecord("1", "", "")),
+				Entry("for extensions", "extensions", newExtension("2", "", &runtime.RawExtension{}), newExtension("1", "", nil)),
+				Entry("for infrastructures", "infrastructures", newInfrastructure("2", "infrastructure-external", ""), newInfrastructure("1", "", "")),
+				Entry("for networks", "networks", newNetwork("2", ""), newNetwork("1", "")),
+				Entry("for operatingsystemconfigs", "operatingsystemconfigs", newOSC("2", "path/to/file", ""), newOSC("1", "", "")),
+				Entry("for workers", "workers", newWorker("2", "workers-external", ""), newWorker("1", "", "")),
 			)
 
 			DescribeTable("update should fail",
@@ -278,134 +300,17 @@ var _ = Describe("handler", func() {
 					request = newRequest(admissionv1.Update, kind, wrong, old)
 					expectDenied(handler.Handle(ctx, *request), ContainSubstring(""), resourceToId(request.Resource))
 				},
-
-				Entry("for backupbuckets", "backupbuckets", func() runtime.Object {
-					o := backupBucket.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.SecretRef.Name = "backupbucket-external"
-					o.Spec.Type = "azure"
-
-					return o
-				}(), func() runtime.Object {
-					o := backupBucket.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for backupentries", "backupentries", func() runtime.Object {
-					o := backupEntry.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.SecretRef.Name = "backupentry-external"
-					o.Spec.Type = "azure"
-
-					return o
-				}(), func() runtime.Object {
-					o := backupEntry.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for bastions", "bastions", func() runtime.Object {
-					o := bastion.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.Ingress[0].IPBlock.CIDR = "1.1.1.1/16"
-					o.Spec.Type = "azure"
-
-					return o
-				}(), func() runtime.Object {
-					o := bastion.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				// TODO: Introduce entryfor ContainerRuntime with #4561
-				Entry("for controlplanes", "controlplanes", func() runtime.Object {
-					o := controlPlane.DeepCopy()
-					o.ResourceVersion = "1"
-					o.Spec.SecretRef.Name = "cloudprovider"
-					o.Spec.Type = "azure"
-
-					return o
-				}(), func() runtime.Object {
-					o := controlPlane.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for dnsrecords", "dnsrecords", func() runtime.Object {
-					o := dnsrecord.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.SecretRef.Name = "dnsrecord-external"
-					o.Spec.RecordType = "TXT"
-
-					return o
-				}(), func() runtime.Object {
-					o := dnsrecord.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for extensions", "extensions", func() runtime.Object {
-					o := extension.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.Type = "azure"
-
-					return o
-				}(), func() runtime.Object {
-					o := extension.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for infrastructures", "infrastructures", func() runtime.Object {
-					o := infrastructure.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.SecretRef.Name = "infrastructure-external"
-					o.Spec.Type = "azure"
-
-					return o
-				}(), func() runtime.Object {
-					o := infrastructure.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for networks", "networks", func() runtime.Object {
-					o := network.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.PodCIDR = "1.1.1.1/16"
-
-					return o
-				}(), func() runtime.Object {
-					o := network.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for operatingsystemconfigs", "operatingsystemconfigs", func() runtime.Object {
-					o := operatingsysconfig.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.Type = "azure"
-
-					return o
-				}(), func() runtime.Object {
-					o := operatingsysconfig.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
-				Entry("for workers", "workers", func() runtime.Object {
-					o := worker.DeepCopy()
-					o.ResourceVersion = "2"
-					o.Spec.Type = "azure"
-
-					return o
-				}(), func() runtime.Object {
-					o := worker.DeepCopy()
-					o.ResourceVersion = "1"
-
-					return o
-				}()),
+				Entry("for backupbuckets", "backupbuckets", newBackupBucket("2", "backupbucket-external", "azure"), newBackupBucket("1", "", "")),
+				Entry("for backupentries", "backupentries", newBackupEntry("2", "backupentry-external", "azure"), newBackupEntry("1", "", "")),
+				Entry("for bastions", "bastions", newBastion("2", "1.1.1.1/16", "azure"), newBastion("1", "", "")),
+				// TODO: Introduce entry for ContainerRuntime with #4561
+				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", "azure"), newControlPlane("1", "", "")),
+				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", "TXT"), newDNSRecord("1", "", "")),
+				Entry("for extensions", "extensions", newExtension("2", "azure", nil), newExtension("1", "", nil)),
+				Entry("for infrastructures", "infrastructures", newInfrastructure("2", "infrastructure-external", "azure"), newInfrastructure("2", "infrastructure-external", "")),
+				Entry("for networks", "networks", newNetwork("2", "1.1.1.1/16"), newNetwork("1", "")),
+				Entry("for operatingsystemconfigs", "operatingsystemconfigs", newOSC("2", "", "azure"), newOSC("2", "", "")),
+				Entry("for workers", "workers", newWorker("2", "", "azure"), newWorker("1", "", "")),
 			)
 		})
 	})
@@ -418,7 +323,8 @@ func newRequest(operation admissionv1.Operation, kind string, obj, oldobj runtim
 	r.Resource = metav1.GroupVersionResource{
 		Group:    extensionsv1alpha1.SchemeGroupVersion.Group,
 		Version:  extensionsv1alpha1.SchemeGroupVersion.Version,
-		Resource: kind}
+		Resource: kind,
+	}
 	r.Object = runtime.RawExtension{Raw: marshalObject(obj)}
 	r.OldObject = runtime.RawExtension{Raw: marshalObject(oldobj)}
 
@@ -452,4 +358,171 @@ func expectDenied(r admission.Response, reason gomegatypes.GomegaMatcher, descri
 
 func resourceToId(resource metav1.GroupVersionResource) string {
 	return fmt.Sprintf("%s/%s/%s", resource.Group, resource.Version, resource.Resource)
+}
+
+func newBackupBucket(resourcesVersion, secretRefName, specType string) runtime.Object {
+	b := backupBucket.DeepCopy()
+
+	if resourcesVersion != "" {
+		b.ResourceVersion = resourcesVersion
+	}
+	if secretRefName != "" {
+		b.Spec.SecretRef.Name = secretRefName
+	}
+	if specType != "" {
+		b.Spec.Type = specType
+	}
+
+	return b
+}
+
+func newBackupEntry(resourcesVersion, secretRefName, specType string) runtime.Object {
+	b := backupEntry.DeepCopy()
+
+	if resourcesVersion != "" {
+		b.ResourceVersion = resourcesVersion
+	}
+	if secretRefName != "" {
+		b.Spec.SecretRef.Name = secretRefName
+	}
+	if specType != "" {
+		b.Spec.Type = specType
+	}
+
+	return b
+}
+
+func newBastion(resourcesVersion, cidr, specType string) runtime.Object {
+	b := bastion.DeepCopy()
+
+	if resourcesVersion != "" {
+		b.ResourceVersion = resourcesVersion
+	}
+	if cidr != "" {
+		b.Spec.Ingress[0].IPBlock.CIDR = cidr
+	}
+	if specType != "" {
+		b.Spec.Type = specType
+	}
+
+	return b
+}
+
+func newContainerRuntime(resourcesVersion string) runtime.Object {
+	c := containerRuntime.DeepCopy()
+
+	if resourcesVersion != "" {
+		c.ResourceVersion = resourcesVersion
+	}
+
+	return c
+}
+
+func newControlPlane(resourcesVersion, secretRefName, specType string) runtime.Object {
+	b := controlPlane.DeepCopy()
+
+	if resourcesVersion != "" {
+		b.ResourceVersion = resourcesVersion
+	}
+	if secretRefName != "" {
+		b.Spec.SecretRef.Name = secretRefName
+	}
+	if specType != "" {
+		b.Spec.Type = specType
+	}
+
+	return b
+}
+
+func newDNSRecord(resourcesVersion, secretRefName, recordType string) runtime.Object {
+	d := dnsrecord.DeepCopy()
+
+	if resourcesVersion != "" {
+		d.ResourceVersion = resourcesVersion
+	}
+	if secretRefName != "" {
+		d.Spec.SecretRef.Name = secretRefName
+	}
+	if recordType != "" {
+		d.Spec.RecordType = extensionsv1alpha1.DNSRecordType(recordType)
+	}
+
+	return d
+}
+
+func newExtension(resourcesVersion, specType string, config *runtime.RawExtension) runtime.Object {
+	e := extension.DeepCopy()
+
+	if resourcesVersion != "" {
+		e.ResourceVersion = resourcesVersion
+	}
+	if specType != "" {
+		e.Spec.Type = specType
+	}
+	if config != nil {
+		e.Spec.ProviderConfig = config
+	}
+
+	return e
+}
+
+func newInfrastructure(resourcesVersion, secretRefName, specType string) runtime.Object {
+	i := infrastructure.DeepCopy()
+
+	if resourcesVersion != "" {
+		i.ResourceVersion = resourcesVersion
+	}
+	if secretRefName != "infrastructure-external" {
+		i.Spec.SecretRef.Name = secretRefName
+	}
+	if specType != "" {
+		i.Spec.Type = specType
+	}
+
+	return i
+}
+
+func newNetwork(resourcesVersion, podCIDR string) runtime.Object {
+	n := network.DeepCopy()
+
+	if resourcesVersion != "" {
+		n.ResourceVersion = resourcesVersion
+	}
+	if podCIDR != "" {
+		n.Spec.PodCIDR = podCIDR
+	}
+
+	return n
+}
+
+func newOSC(resourcesVersion, path, specType string) runtime.Object {
+	o := osc.DeepCopy()
+
+	if resourcesVersion != "" {
+		o.ResourceVersion = resourcesVersion
+	}
+	if path != "" {
+		o.Spec.ReloadConfigFilePath = pointer.String(path)
+	}
+	if specType != "" {
+		o.Spec.Type = specType
+	}
+
+	return o
+}
+
+func newWorker(resourcesVersion, secretRefName, specType string) runtime.Object {
+	w := worker.DeepCopy()
+
+	if resourcesVersion != "" {
+		w.ResourceVersion = resourcesVersion
+	}
+	if secretRefName != "" {
+		w.Spec.SecretRef.Name = secretRefName
+	}
+	if specType != "" {
+		w.Spec.Type = specType
+	}
+
+	return w
 }
