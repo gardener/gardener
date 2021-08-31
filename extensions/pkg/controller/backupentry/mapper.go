@@ -41,7 +41,7 @@ func (m *secretToBackupEntryMapper) Map(obj client.Object) []reconcile.Request {
 	}
 
 	backupEntryList := &extensionsv1alpha1.BackupEntryList{}
-	if err := m.client.List(context.TODO(), backupEntryList); err != nil {
+	if err := m.client.List(context.Background(), backupEntryList); err != nil {
 		return nil
 	}
 
@@ -79,7 +79,7 @@ func (m *namespaceToBackupEntryMapper) Map(obj client.Object) []reconcile.Reques
 	}
 
 	backupEntryList := &extensionsv1alpha1.BackupEntryList{}
-	if err := m.client.List(context.TODO(), backupEntryList); err != nil {
+	if err := m.client.List(context.Background(), backupEntryList); err != nil {
 		return nil
 	}
 

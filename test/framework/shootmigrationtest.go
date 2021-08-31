@@ -87,7 +87,7 @@ func NewShootMigrationTest(f *GardenerFramework, cfg *ShootMigrationConfig) *Sho
 func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 	// Dump gardener state if delete shoot is in exit handler
 	if os.Getenv("TM_PHASE") == "Exit" {
-		if shootFramework, err := t.GardenerFramework.NewShootFramework(&t.Shoot); err == nil {
+		if shootFramework, err := t.GardenerFramework.NewShootFramework(ctx, &t.Shoot); err == nil {
 			shootFramework.DumpState(ctx)
 		} else {
 			t.GardenerFramework.DumpState(ctx)

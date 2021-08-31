@@ -147,14 +147,14 @@ func RegisterGardenerFrameworkFlags() *GardenerConfig {
 
 // NewShootFramework creates a new shoot framework with the current gardener framework
 // and a shoot
-func (f *GardenerFramework) NewShootFramework(shoot *gardencorev1beta1.Shoot) (*ShootFramework, error) {
+func (f *GardenerFramework) NewShootFramework(ctx context.Context, shoot *gardencorev1beta1.Shoot) (*ShootFramework, error) {
 	shootFramework := &ShootFramework{
 		GardenerFramework: f,
 		Config: &ShootConfig{
 			GardenerConfig: f.GardenerFrameworkConfig,
 		},
 	}
-	if err := shootFramework.AddShoot(context.TODO(), shoot.GetName(), shoot.GetNamespace()); err != nil {
+	if err := shootFramework.AddShoot(ctx, shoot.GetName(), shoot.GetNamespace()); err != nil {
 		return nil, err
 	}
 	return shootFramework, nil

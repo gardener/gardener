@@ -55,7 +55,7 @@ func (m *secretToBackupBucketMapper) Map(obj client.Object) []reconcile.Request 
 	}
 
 	backupBucketList := &extensionsv1alpha1.BackupBucketList{}
-	if err := m.client.List(context.TODO(), backupBucketList); err != nil {
+	if err := m.client.List(context.Background(), backupBucketList); err != nil {
 		return nil
 	}
 

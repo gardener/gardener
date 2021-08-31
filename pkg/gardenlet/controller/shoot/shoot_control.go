@@ -54,7 +54,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (c *Controller) shootAdd(obj interface{}, resetRateLimiting bool) {
+func (c *Controller) shootAdd(ctx context.Context, obj interface{}, resetRateLimiting bool) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
@@ -62,12 +62,12 @@ func (c *Controller) shootAdd(obj interface{}, resetRateLimiting bool) {
 	}
 
 	if resetRateLimiting {
-		c.getShootQueue(obj).Forget(key)
+		c.getShootQueue(ctx, obj).Forget(key)
 	}
-	c.getShootQueue(obj).Add(key)
+	c.getShootQueue(ctx, obj).Add(key)
 }
 
-func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
+func (c *Controller) shootUpdate(ctx context.Context, oldObj, newObj interface{}) {
 	var (
 		oldShoot    = oldObj.(*gardencorev1beta1.Shoot)
 		newShoot    = newObj.(*gardencorev1beta1.Shoot)
@@ -86,17 +86,17 @@ func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 	// backoff and enqueue it faster.
 	resetRateLimiting := oldShoot.DeletionTimestamp == nil && newShoot.DeletionTimestamp != nil
 
-	c.shootAdd(newObj, resetRateLimiting)
+	c.shootAdd(ctx, newObj, resetRateLimiting)
 }
 
-func (c *Controller) shootDelete(obj interface{}) {
+func (c *Controller) shootDelete(ctx context.Context, obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
 		c.logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 
-	c.getShootQueue(obj).Add(key)
+	c.getShootQueue(ctx, obj).Add(key)
 }
 
 func (c *Controller) reconcileInMaintenanceOnly() bool {

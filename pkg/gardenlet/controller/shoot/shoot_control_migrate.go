@@ -68,7 +68,7 @@ func (c *Controller) prepareShootForMigration(ctx context.Context, logger logrus
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
 	}
 
-	if flowErr := c.runPrepareShootControlPlaneMigration(o); flowErr != nil {
+	if flowErr := c.runPrepareShootControlPlaneMigration(ctx, o); flowErr != nil {
 		c.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventMigrationPreparationFailed, flowErr.Description)
 		updateErr := c.patchShootStatusOperationError(ctx, gardenClient.Client(), o, shoot, flowErr.Description, gardencorev1beta1.LastOperationTypeMigrate, flowErr.LastErrors...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
@@ -77,9 +77,8 @@ func (c *Controller) prepareShootForMigration(ctx context.Context, logger logrus
 	return c.finalizeShootPrepareForMigration(ctx, gardenClient.Client(), shoot, o)
 }
 
-func (c *Controller) runPrepareShootControlPlaneMigration(o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (c *Controller) runPrepareShootControlPlaneMigration(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
-		ctx                          = context.TODO()
 		botanist                     *botanistpkg.Botanist
 		err                          error
 		tasksWithErrors              []string
