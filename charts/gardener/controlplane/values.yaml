@@ -5,7 +5,7 @@ global:
   apiserver:
     enabled: true
     serviceEnabled: true
-    replicaCount: 1
+    replicaCount: 3
     serviceAccountName: gardener-apiserver
     image:
       repository: eu.gcr.io/gardener-project/gardener/apiserver
@@ -437,8 +437,8 @@ global:
       limits:
         cpu: 300m
         memory: 256Mi
-  # podAnnotations: # YAML formated annotations used for pod template
-  # podLabels: # YAML formated labels used for pod template
+  # podAnnotations: # YAML formatted annotations used for pod template
+  # podLabels: # YAML formatted labels used for pod template
     vpa: false
     config:
       clientConnection:

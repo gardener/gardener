@@ -239,9 +239,9 @@ func validateMachineTypes(machineTypes []core.MachineType, fldPath *field.Path) 
 		}
 		names[machineType.Name] = struct{}{}
 
-		allErrs = append(allErrs, validateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
-		allErrs = append(allErrs, validateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
-		allErrs = append(allErrs, validateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+		allErrs = append(allErrs, ValidateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
+		allErrs = append(allErrs, ValidateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
+		allErrs = append(allErrs, ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
 
 		if machineType.Storage != nil {
 			allErrs = append(allErrs, validateMachineTypeStorage(*machineType.Storage, idxPath.Child("storage"))...)
@@ -265,11 +265,11 @@ func validateMachineTypeStorage(storage core.MachineTypeStorage, fldPath *field.
 	}
 
 	if storage.StorageSize != nil {
-		allErrs = append(allErrs, validateResourceQuantityValue("size", *storage.StorageSize, fldPath.Child("size"))...)
+		allErrs = append(allErrs, ValidateResourceQuantityValue("size", *storage.StorageSize, fldPath.Child("size"))...)
 	}
 
 	if storage.MinSize != nil {
-		allErrs = append(allErrs, validateResourceQuantityValue("minSize", *storage.MinSize, fldPath.Child("minSize"))...)
+		allErrs = append(allErrs, ValidateResourceQuantityValue("minSize", *storage.MinSize, fldPath.Child("minSize"))...)
 	}
 
 	return allErrs
@@ -386,7 +386,7 @@ func validateVolumeTypes(volumeTypes []core.VolumeType, fldPath *field.Path) fie
 		}
 
 		if volumeType.MinSize != nil {
-			allErrs = append(allErrs, validateResourceQuantityValue("minSize", *volumeType.MinSize, idxPath.Child("minSize"))...)
+			allErrs = append(allErrs, ValidateResourceQuantityValue("minSize", *volumeType.MinSize, idxPath.Child("minSize"))...)
 		}
 	}
 
