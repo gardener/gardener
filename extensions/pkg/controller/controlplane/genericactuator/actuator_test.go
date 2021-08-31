@@ -33,7 +33,6 @@ import (
 	mockchartutil "github.com/gardener/gardener/pkg/utils/chart/mocks"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	mocksecretsutil "github.com/gardener/gardener/pkg/utils/secrets/mock"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
@@ -47,6 +46,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"

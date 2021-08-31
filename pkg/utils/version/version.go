@@ -18,9 +18,8 @@ import (
 	"fmt"
 	"strings"
 
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-
 	"github.com/Masterminds/semver"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var (

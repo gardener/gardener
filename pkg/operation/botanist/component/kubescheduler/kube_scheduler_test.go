@@ -445,6 +445,10 @@ var _ = Describe("KubeScheduler", func() {
 				Entry("kubernetes 1.18 w/ full config", "1.18.8", configFull),
 				Entry("kubernetes 1.19 w/o config", "1.19.9", configEmpty),
 				Entry("kubernetes 1.19 w/ full config", "1.19.9", configFull),
+				Entry("kubernetes 1.20 w/o config", "1.20.9", configEmpty),
+				Entry("kubernetes 1.20 w/ full config", "1.20.9", configFull),
+				Entry("kubernetes 1.21 w/o config", "1.21.3", configEmpty),
+				Entry("kubernetes 1.21 w/ full config", "1.21.3", configFull),
 				Entry("kubernetes 1.22 w/o config", "1.22.1", configEmpty),
 				Entry("kubernetes 1.22 w/ full config", "1.22.1", configFull),
 			)
