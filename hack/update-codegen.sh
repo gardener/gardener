@@ -246,7 +246,7 @@ gardenlet_groups() {
 }
 export -f gardenlet_groups
 
-# Componentconfig for landscaper-gardenlet
+# Componentconfig for the gardenlet landscaper component
 
 landscapergardenlet_groups() {
   echo "Generating API groups for landscaper/gardenlet/pkg/apis/imports"
@@ -269,6 +269,30 @@ landscapergardenlet_groups() {
     -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
 }
 export -f landscapergardenlet_groups
+
+# Componentconfig for control plane landscaper component
+
+landscapercontrolplane_groups() {
+  echo "Generating API groups for landscaper/controlplane/pkg/apis/imports"
+
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+    deepcopy,defaulter \
+    github.com/gardener/gardener/pkg/client/componentconfig \
+    github.com/gardener/gardener/landscaper/pkg/controlplane/apis \
+    github.com/gardener/gardener/landscaper/pkg/controlplane/apis \
+    "imports:v1alpha1" \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+
+  bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
+    conversion \
+    github.com/gardener/gardener/pkg/client/componentconfig \
+    github.com/gardener/gardener/landscaper/pkg/controlplane/apis \
+    github.com/gardener/gardener/landscaper/pkg/controlplane/apis \
+    "imports:v1alpha1" \
+    --extra-peer-dirs=k8s.io/apiserver/pkg/apis/apiserver/v1,k8s.io/apiserver/pkg/apis/audit/v1,k8s.io/apiserver/pkg/apis/config/v1,github.com/gardener/hvpa-controller/api/v1alpha1,github.com/gardener/landscaper/apis/core/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime \
+    -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
+}
+export -f landscapercontrolplane_groups
 
 # Componentconfig for admission plugins
 
@@ -340,6 +364,7 @@ if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
     gardenlet_groups \
     shoottolerationrestriction_groups \
     landscapergardenlet_groups
+    landscapercontrolplane_groups
 else
   authentication_groups
   core_groups
@@ -353,6 +378,7 @@ else
   gardenlet_groups
   shoottolerationrestriction_groups
   landscapergardenlet_groups
+  landscapercontrolplane_groups
 fi
 
 openapi_definitions "$@"
