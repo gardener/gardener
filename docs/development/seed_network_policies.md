@@ -39,23 +39,23 @@ These policies are the same for every Shoot control plane.
 ```
 NAME                              POD-SELECTOR      
 # Pods that need to access the Shoot API server. Used by all Kubernetes control plane components.
-allow-to-shoot-apiserver          networking.gardener.cloud/to-shoot-apiserver=allowed 
+allow-to-shoot-apiserver          networking.gardener.cloud/to-shoot-apiserver=allowed
 
 # allows access to kube-dns/core-dns pods for DNS queries                       
 allow-to-dns                      networking.gardener.cloud/to-dns=allowed
 
 # allows access to private IP address ranges 
-allow-to-private-networks         networking.gardener.cloud/to-private-networks=allowed  
+allow-to-private-networks         networking.gardener.cloud/to-private-networks=allowed
 
 # allows access to all but private IP address ranges 
-allow-to-public-networks          networking.gardener.cloud/to-public-networks=allowed                     
+allow-to-public-networks          networking.gardener.cloud/to-public-networks=allowed
 
 # allows Ingress to etcd pods from the Shoot's Kubernetes API Server
-allow-etcd                        app=etcd-statefulset,garden.sapcloud.io/role=controlplane   
+allow-etcd                        app=etcd-statefulset,garden.sapcloud.io/role=controlplane
 
 # used by the Shoot API server to allows ingress from pods labeled
 # with'networking.gardener.cloud/to-shoot-apiserver=allowed', from Prometheus, and allows Egress to etcd pods
-allow-kube-apiserver              app=kubernetes,garden.sapcloud.io/role=controlplane,role=apiserver       
+allow-kube-apiserver              app=kubernetes,gardener.cloud/role=controlplane,role=apiserver
 ```
 
 
@@ -67,11 +67,11 @@ Please checkout [the Community Meeting for more information](https://www.youtube
 These are the logging and monitoring related network policies:
 ```
 NAME                              POD-SELECTOR                                                             
-allow-from-prometheus             networking.gardener.cloud/from-prometheus=allowed                        
-allow-grafana                     component=grafana,garden.sapcloud.io/role=monitoring                     
-allow-prometheus                  app=prometheus,garden.sapcloud.io/role=monitoring,role=monitoring        
+allow-from-prometheus             networking.gardener.cloud/from-prometheus=allowed
+allow-grafana                     component=grafana,gardener.cloud/role=monitoring
+allow-prometheus                  app=prometheus,gardener.cloud/role=monitoring,role=monitoring
 allow-to-aggregate-prometheus     networking.gardener.cloud/to-aggregate-prometheus=allowed
-allow-to-loki                     networking.gardener.cloud/to-loki=allowed 
+allow-to-loki                     networking.gardener.cloud/to-loki=allowed
 ```
 
 Let's take for instance a look at the network policy `from-prometheus`.

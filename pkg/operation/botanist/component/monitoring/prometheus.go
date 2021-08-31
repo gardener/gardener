@@ -21,8 +21,8 @@ import (
 // GetPrometheusLabels returns the labels for the Prometheus.
 func GetPrometheusLabels() map[string]string {
 	return map[string]string{
-		v1beta1constants.DeprecatedGardenRole: "monitoring",
-		v1beta1constants.LabelApp:             "prometheus",
-		v1beta1constants.LabelRole:            "monitoring",
+		v1beta1constants.GardenRole: "monitoring",
+		v1beta1constants.LabelApp:   "prometheus",
+		v1beta1constants.LabelRole:  "monitoring",
 	}
 }

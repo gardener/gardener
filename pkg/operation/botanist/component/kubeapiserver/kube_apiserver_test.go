@@ -605,9 +605,9 @@ var _ = Describe("KubeAPIServer", func() {
 							From: []networkingv1.NetworkPolicyPeer{{
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"app":                     "kubernetes",
-										"garden.sapcloud.io/role": "controlplane",
-										"role":                    "apiserver",
+										"app":                 "kubernetes",
+										"gardener.cloud/role": "controlplane",
+										"role":                "apiserver",
 									},
 								},
 							}},
@@ -649,9 +649,9 @@ var _ = Describe("KubeAPIServer", func() {
 							To: []networkingv1.NetworkPolicyPeer{{
 								PodSelector: &metav1.LabelSelector{
 									MatchLabels: map[string]string{
-										"app":                     "kubernetes",
-										"garden.sapcloud.io/role": "controlplane",
-										"role":                    "apiserver",
+										"app":                 "kubernetes",
+										"gardener.cloud/role": "controlplane",
+										"role":                "apiserver",
 									},
 								},
 							}},
@@ -696,9 +696,9 @@ var _ = Describe("KubeAPIServer", func() {
 						Spec: networkingv1.NetworkPolicySpec{
 							PodSelector: metav1.LabelSelector{
 								MatchLabels: map[string]string{
-									"app":                     "kubernetes",
-									"garden.sapcloud.io/role": "controlplane",
-									"role":                    "apiserver",
+									"app":                 "kubernetes",
+									"gardener.cloud/role": "controlplane",
+									"role":                "apiserver",
 								},
 							},
 							Egress: []networkingv1.NetworkPolicyEgressRule{{
@@ -730,9 +730,9 @@ var _ = Describe("KubeAPIServer", func() {
 									From: []networkingv1.NetworkPolicyPeer{{
 										PodSelector: &metav1.LabelSelector{
 											MatchLabels: map[string]string{
-												"garden.sapcloud.io/role": "monitoring",
-												"app":                     "prometheus",
-												"role":                    "monitoring",
+												"gardener.cloud/role": "monitoring",
+												"app":                 "prometheus",
+												"role":                "monitoring",
 											},
 										},
 									}},
@@ -777,9 +777,9 @@ var _ = Describe("KubeAPIServer", func() {
 						Spec: networkingv1.NetworkPolicySpec{
 							PodSelector: metav1.LabelSelector{
 								MatchLabels: map[string]string{
-									"app":                     "kubernetes",
-									"garden.sapcloud.io/role": "controlplane",
-									"role":                    "apiserver",
+									"app":                 "kubernetes",
+									"gardener.cloud/role": "controlplane",
+									"role":                "apiserver",
 								},
 							},
 							Egress: []networkingv1.NetworkPolicyEgressRule{
@@ -827,9 +827,9 @@ var _ = Describe("KubeAPIServer", func() {
 									From: []networkingv1.NetworkPolicyPeer{{
 										PodSelector: &metav1.LabelSelector{
 											MatchLabels: map[string]string{
-												"garden.sapcloud.io/role": "monitoring",
-												"app":                     "prometheus",
-												"role":                    "monitoring",
+												"gardener.cloud/role": "monitoring",
+												"app":                 "prometheus",
+												"role":                "monitoring",
 											},
 										},
 									}},

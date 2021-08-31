@@ -10,7 +10,7 @@ spec:
   podSelector:
     matchLabels:
       app: prometheus
-      garden.sapcloud.io/role: monitoring
+      gardener.cloud/role: monitoring
       role: monitoring
   egress:
   - to:
@@ -67,7 +67,7 @@ spec:
     - podSelector:
         matchLabels:
           component: grafana
-          garden.sapcloud.io/role: monitoring
+          gardener.cloud/role: monitoring
     - podSelector:
         matchLabels:
           app: nginx-ingress

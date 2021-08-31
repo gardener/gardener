@@ -52,9 +52,9 @@ func (a *Agnostic) KubeControllerManagerSecured() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10257),
 		Pod: NewPod("kube-controller-manager-https", labels.Set{
-			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-			v1beta1constants.LabelRole:            kubecontrollermanager.LabelRole,
+			v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:  kubecontrollermanager.LabelRole,
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-to-public-networks",
@@ -73,9 +73,9 @@ func (a *Agnostic) KubeSchedulerSecured() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(10259),
 		Pod: NewPod("kube-scheduler-https", labels.Set{
-			v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-			v1beta1constants.LabelRole:            kubescheduler.LabelRole,
+			v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelRole:  kubescheduler.LabelRole,
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -166,8 +166,8 @@ func (a *Agnostic) Grafana() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(3000),
 		Pod: NewPod("grafana", labels.Set{
-			"component":                           "grafana",
-			v1beta1constants.DeprecatedGardenRole: "monitoring",
+			"component":                 "grafana",
+			v1beta1constants.GardenRole: "monitoring",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-grafana",
@@ -182,9 +182,9 @@ func (a *Agnostic) KubeStateMetricsShoot() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(8080),
 		Pod: NewPod("kube-state-metrics-shoot", labels.Set{
-			"component":                           "kube-state-metrics",
-			v1beta1constants.DeprecatedGardenRole: "monitoring",
-			"type":                                "shoot",
+			"component":                 "kube-state-metrics",
+			v1beta1constants.GardenRole: "monitoring",
+			"type":                      "shoot",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
@@ -220,9 +220,9 @@ func (a *Agnostic) Prometheus() *SourcePod {
 	return &SourcePod{
 		Ports: NewSinglePort(9090),
 		Pod: NewPod("prometheus", labels.Set{
-			v1beta1constants.LabelApp:             "prometheus",
-			v1beta1constants.DeprecatedGardenRole: "monitoring",
-			v1beta1constants.LabelRole:            "monitoring",
+			v1beta1constants.LabelApp:   "prometheus",
+			v1beta1constants.GardenRole: "monitoring",
+			v1beta1constants.LabelRole:  "monitoring",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-prometheus",
@@ -240,8 +240,8 @@ func (a *Agnostic) Prometheus() *SourcePod {
 func (a *Agnostic) AddonManager() *SourcePod {
 	return &SourcePod{
 		Pod: NewPod("gardener-resource-manager", labels.Set{
-			v1beta1constants.LabelApp:             "gardener-resource-manager",
-			v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+			v1beta1constants.LabelApp:   "gardener-resource-manager",
+			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-to-dns",

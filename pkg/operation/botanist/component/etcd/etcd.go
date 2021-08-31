@@ -268,9 +268,9 @@ func (e *etcd) Deploy(ctx context.Context) error {
 						PodSelector: &metav1.LabelSelector{
 							// TODO: Replace below map with a function call to the to-be-introduced kubeapiserver package.
 							MatchLabels: map[string]string{
-								v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-								v1beta1constants.LabelApp:             v1beta1constants.LabelKubernetes,
-								v1beta1constants.LabelRole:            v1beta1constants.LabelAPIServer,
+								v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+								v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+								v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
 							},
 						},
 					},

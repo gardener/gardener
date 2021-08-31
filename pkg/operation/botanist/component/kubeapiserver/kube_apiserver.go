@@ -275,7 +275,7 @@ func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
 // GetLabels returns the labels for the kube-apiserver.
 func GetLabels() map[string]string {
 	return utils.MergeStringMaps(getLabels(), map[string]string{
-		v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
+		v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 	})
 }
 

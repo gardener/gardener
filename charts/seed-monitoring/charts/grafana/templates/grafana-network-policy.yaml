@@ -10,13 +10,13 @@ spec:
   podSelector:
     matchLabels:
       component: grafana
-      garden.sapcloud.io/role: monitoring
+      gardener.cloud/role: monitoring
   egress:
   - to:
     - podSelector:
         matchLabels:
           app: prometheus
-          garden.sapcloud.io/role: monitoring
+          gardener.cloud/role: monitoring
           role: monitoring
     ports:
     - protocol: TCP
