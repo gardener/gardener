@@ -17,6 +17,7 @@ package validation
 import (
 	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cloudinit"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/utils"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -124,14 +125,7 @@ func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.E
 			}
 		case file.Content.Inline != nil:
 			encodings := []string{"", string(cloudinit.B64FileCodecID), string(cloudinit.GZIPFileCodecID), string(cloudinit.GZIPB64FileCodecID)}
-			isEncodingFound := false
-			for _, enc := range encodings {
-				if enc == file.Content.Inline.Encoding {
-					isEncodingFound = true
-					break
-				}
-			}
-			if !isEncodingFound {
+			if !utils.ValueExists(file.Content.Inline.Encoding, encodings) {
 				allErrs = append(allErrs, field.NotSupported(idxPath.Child("content", "inline", "encoding"), file.Content.Inline.Encoding, encodings))
 			}
 

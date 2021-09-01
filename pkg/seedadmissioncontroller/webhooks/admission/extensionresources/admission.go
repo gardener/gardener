@@ -220,7 +220,7 @@ func (h handler) handleValidation(request admission.Request, newObject newObject
 		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("could not decode object %v: %w", request.Object, err))
 	}
 
-	h.logger.Info("Validating resource", "type", request.Resource, "operation", request.Operation, "kind", obj.GetObjectKind(), "object", kutil.ObjectName(obj))
+	h.logger.Info("Validating extension resource", "resource", request.Resource, "name", kutil.ObjectName(obj), "operation", request.Operation)
 
 	var oldObj client.Object
 	if len(request.OldObject.Raw) != 0 {
