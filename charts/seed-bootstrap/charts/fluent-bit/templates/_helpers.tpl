@@ -195,6 +195,7 @@ filter-kubernetes.conf: |-
       Name                rewrite_tag
       Match               {{ .Values.exposedComponentsTagPrefix }}.*
       Rule                $tag ^.+? kubernetes.$TAG false
+      Emitter_Name        re_emitted-reversed-rewrite-tag
   # Scripts
   [FILTER]
       Name                lua
