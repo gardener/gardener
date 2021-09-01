@@ -170,11 +170,15 @@ var _ = Describe("Worker Mapper", func() {
 		var (
 			resourceName = "machineSet"
 			namespace    = "shoot"
+			stopCh       = make(chan struct{})
 		)
 
 		It("should find all objects for the passed worker", func() {
 			mapper := worker.MachineToWorkerMapper(nil)
 			ExpectInject(inject.ClientInto(c, mapper))
+			ok, err := inject.StopChannelInto(stopCh, mapper)
+			Expect(ok).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
 
 			c.EXPECT().
 				List(
@@ -222,6 +226,9 @@ var _ = Describe("Worker Mapper", func() {
 				mapper = worker.MachineToWorkerMapper(predicates)
 			)
 			ExpectInject(inject.ClientInto(c, mapper))
+			ok, err := inject.StopChannelInto(stopCh, mapper)
+			Expect(ok).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
 
 			c.EXPECT().
 				List(
@@ -255,6 +262,9 @@ var _ = Describe("Worker Mapper", func() {
 		It("should find no objects because list is empty", func() {
 			mapper := worker.MachineToWorkerMapper(nil)
 			ExpectInject(inject.ClientInto(c, mapper))
+			ok, err := inject.StopChannelInto(stopCh, mapper)
+			Expect(ok).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
 
 			c.EXPECT().
 				List(
@@ -278,6 +288,10 @@ var _ = Describe("Worker Mapper", func() {
 
 		It("should find no objects because the passed object is no worker", func() {
 			mapper := worker.MachineToWorkerMapper(nil)
+			ok, err := inject.StopChannelInto(stopCh, mapper)
+			Expect(ok).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
+
 			result := mapper.Map(&extensionsv1alpha1.Cluster{})
 			Expect(result).To(BeNil())
 		})

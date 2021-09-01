@@ -65,7 +65,7 @@ var _ = Describe("Shoot deletion testing", func() {
 
 		// Dump gardener state if delete shoot is in exit handler
 		if os.Getenv("TM_PHASE") == "Exit" {
-			if shootFramework, err := f.NewShootFramework(shoot); err == nil {
+			if shootFramework, err := f.NewShootFramework(ctx, shoot); err == nil {
 				shootFramework.DumpState(ctx)
 			} else {
 				f.DumpState(ctx)
@@ -73,7 +73,7 @@ var _ = Describe("Shoot deletion testing", func() {
 		}
 
 		if err := f.DeleteShootAndWaitForDeletion(ctx, shoot); err != nil && !apierrors.IsNotFound(err) {
-			if shootFramework, err := f.NewShootFramework(shoot); err == nil {
+			if shootFramework, err := f.NewShootFramework(ctx, shoot); err == nil {
 				shootFramework.DumpState(ctx)
 			}
 			f.Logger.Fatalf("Cannot delete shoot %s: %s", *shootName, err.Error())

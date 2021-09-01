@@ -16,6 +16,7 @@ package backupbucket
 
 import (
 	"context"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -27,15 +28,22 @@ import (
 	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	ctxutils "github.com/gardener/gardener/pkg/utils/context"
 )
 
 type secretToBackupBucketMapper struct {
+	ctx        context.Context
 	client     client.Client
 	predicates []predicate.Predicate
 }
 
 func (m *secretToBackupBucketMapper) InjectClient(c client.Client) error {
 	m.client = c
+	return nil
+}
+
+func (m *secretToBackupBucketMapper) InjectStopChannel(stopCh <-chan struct{}) error {
+	m.ctx = ctxutils.FromStopChannel(stopCh)
 	return nil
 }
 
@@ -49,13 +57,16 @@ func (m *secretToBackupBucketMapper) InjectFunc(f inject.Func) error {
 }
 
 func (m *secretToBackupBucketMapper) Map(obj client.Object) []reconcile.Request {
+	ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+	defer cancel()
+
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
 		return nil
 	}
 
 	backupBucketList := &extensionsv1alpha1.BackupBucketList{}
-	if err := m.client.List(context.TODO(), backupBucketList); err != nil {
+	if err := m.client.List(ctx, backupBucketList); err != nil {
 		return nil
 	}
 

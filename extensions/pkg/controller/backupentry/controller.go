@@ -88,14 +88,14 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Namespace{}},
-			extensionshandler.EnqueueRequestsFromMapper(NamespaceToBackupEntryMapper(mgr.GetClient(), predicates), extensionshandler.UpdateWithNew),
+			extensionshandler.EnqueueRequestsFromMapper(NamespaceToBackupEntryMapper(predicates), extensionshandler.UpdateWithNew),
 		); err != nil {
 			return err
 		}
 
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Secret{}},
-			extensionshandler.EnqueueRequestsFromMapper(SecretToBackupEntryMapper(mgr.GetClient(), predicates), extensionshandler.UpdateWithNew),
+			extensionshandler.EnqueueRequestsFromMapper(SecretToBackupEntryMapper(predicates), extensionshandler.UpdateWithNew),
 		); err != nil {
 			return err
 		}

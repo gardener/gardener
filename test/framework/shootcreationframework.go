@@ -367,7 +367,7 @@ func (f *ShootCreationFramework) CreateShoot(ctx context.Context, initializeShoo
 
 	if err := f.GardenerFramework.CreateShoot(ctx, f.Shoot); err != nil {
 		f.Logger.Fatalf("Cannot create shoot %s: %s", f.Shoot.GetName(), err.Error())
-		shootFramework, err2 := f.newShootFramework()
+		shootFramework, err2 := f.newShootFramework(ctx)
 		if err2 != nil {
 			f.Logger.Fatalf("Cannot dump shoot state %s: %s", f.Shoot.GetName(), err.Error())
 		} else {
@@ -377,7 +377,7 @@ func (f *ShootCreationFramework) CreateShoot(ctx context.Context, initializeShoo
 	}
 
 	f.Logger.Infof("Successfully created shoot %s", f.Shoot.GetName())
-	shootFramework, err := f.newShootFramework()
+	shootFramework, err := f.newShootFramework(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -435,8 +435,8 @@ func (f *ShootCreationFramework) InitializeShootWithFlags(ctx context.Context) e
 }
 
 // newShootFramework creates a new ShootFramework with the Shoot created by the ShootCreationFramework
-func (f *ShootCreationFramework) newShootFramework() (*ShootFramework, error) {
-	shootFramework, err := f.GardenerFramework.NewShootFramework(f.Shoot)
+func (f *ShootCreationFramework) newShootFramework(ctx context.Context) (*ShootFramework, error) {
+	shootFramework, err := f.GardenerFramework.NewShootFramework(ctx, f.Shoot)
 	if err != nil {
 		return nil, err
 	}
