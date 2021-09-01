@@ -52,7 +52,7 @@ apiserver_flags="
   --tls-private-key-file $TLS_KEY_FILE \
   --feature-gates SeedChange=true \
   --feature-gates AdminKubeconfigRequest=true \
-  --feature-gates UseDNSRecords=false \
+  --feature-gates UseDNSRecords=true \
   --feature-gates DisallowKubeconfigRotationForShootInDeletion=false \
   --shoot-admin-kubeconfig-max-expiration=1h \
   --enable-admission-plugins=ShootVPAEnabledByDefault \

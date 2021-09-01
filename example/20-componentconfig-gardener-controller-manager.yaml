@@ -75,5 +75,5 @@ server:
     port: 2718
 featureGates:
   CachedRuntimeClients: true
-  UseDNSRecords: false
+  UseDNSRecords: true
   RotateSSHKeypairOnMaintenance: false

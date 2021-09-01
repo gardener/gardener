@@ -97,7 +97,7 @@ featureGates:
   CachedRuntimeClients: true
   SeedKubeScheduler: false
   ReversedVPN: false
-  UseDNSRecords: false
+  UseDNSRecords: true
 # seedConfig:
 #   metadata:
 #     name: my-seed
