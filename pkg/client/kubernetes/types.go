@@ -24,7 +24,6 @@ import (
 	gardensettingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardenoperationsclientset "github.com/gardener/gardener/pkg/client/operations/clientset/versioned"
 	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
@@ -172,7 +171,6 @@ type Interface interface {
 	Kubernetes() kubernetesclientset.Interface
 	GardenCore() gardencoreclientset.Interface
 	GardenSeedManagement() gardenseedmanagementclientset.Interface
-	GardenOperations() gardenoperationsclientset.Interface
 	APIExtension() apiextensionsclientset.Interface
 	APIRegistration() apiregistrationclientset.Interface
 
