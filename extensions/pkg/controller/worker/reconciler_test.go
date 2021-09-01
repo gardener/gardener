@@ -37,7 +37,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	extensionsclient "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 var _ = Describe("Worker Reconcile", func() {
@@ -95,7 +95,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, false, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationReconcile),
@@ -110,7 +110,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, false, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addDeletionTimestampToWorker(
 						addOperationAnnotationToWorker(
 							addLastOperationToWorker(
@@ -130,7 +130,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, false, false, true),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationMigrate),
@@ -145,7 +145,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, false, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationMigrate),
@@ -160,7 +160,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, false, false, true),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeMigrate,
@@ -177,7 +177,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, true, true, false),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeMigrate,
@@ -194,7 +194,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, true, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addFinalizerToWorker(addDeletionTimestampToWorker(getWorker()), worker.FinalizerName),
 					getCluster()).Build(),
 			},
@@ -207,7 +207,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, false, true, true),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addFinalizerToWorker(addDeletionTimestampToWorker(getWorker()), worker.FinalizerName),
 					getCluster()).Build(),
 			},
@@ -220,7 +220,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, false, true, false),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationRestore),
@@ -235,7 +235,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, true, false, true),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
 						getWorker(),
 						v1beta1constants.GardenerOperationRestore),
@@ -250,7 +250,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, false, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
@@ -267,7 +267,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(true, false, false, false),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
@@ -284,7 +284,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, true, true, true),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,
@@ -301,7 +301,7 @@ var _ = Describe("Worker Reconcile", func() {
 				logger:   logger,
 				actuator: newFakeActuator(false, true, true, true),
 				ctx:      context.TODO(),
-				client: fake.NewClientBuilder().WithScheme(extensionsclient.Scheme).WithObjects(
+				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
 						getWorker(),
 						gardencorev1beta1.LastOperationTypeReconcile,

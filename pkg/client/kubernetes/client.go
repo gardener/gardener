@@ -33,13 +33,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
+	gardenercoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
+	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardenercorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	kcache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
 	gardenoperationsclientset "github.com/gardener/gardener/pkg/client/operations/clientset/versioned"
 	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
-	seedmanagementscheme "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
-	settingsscheme "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/scheme"
 	"github.com/gardener/gardener/pkg/logger"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -57,9 +57,9 @@ const KubeConfig = "kubeconfig"
 func init() {
 	// enable protobuf for Gardener API for controller-runtime clients
 	protobufSchemeBuilder := runtime.NewSchemeBuilder(
-		gardenercorescheme.AddToScheme,
-		seedmanagementscheme.AddToScheme,
-		settingsscheme.AddToScheme,
+		gardenercoreinstall.AddToScheme,
+		seedmanagementinstall.AddToScheme,
+		settingsinstall.AddToScheme,
 	)
 
 	utilruntime.Must(apiutil.AddToProtobufScheme(protobufSchemeBuilder.AddToScheme))

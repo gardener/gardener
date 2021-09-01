@@ -17,19 +17,19 @@ package kubernetes
 import (
 	"context"
 
+	gardenercoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenoperationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
+	gardenseedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
+	gardensettingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
-	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
 	gardenoperationsclientset "github.com/gardener/gardener/pkg/client/operations/clientset/versioned"
-	gardenoperationsscheme "github.com/gardener/gardener/pkg/client/operations/clientset/versioned/scheme"
 	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
-	gardenseedmanagementscheme "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/scheme"
-	gardensettingsscheme "github.com/gardener/gardener/pkg/client/settings/clientset/versioned/scheme"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
-	resourcesscheme "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -42,9 +42,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/version"
-	autoscalingscheme "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
-	corescheme "k8s.io/client-go/kubernetes/scheme"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
@@ -95,21 +95,21 @@ func DefaultUpdateOptions() metav1.UpdateOptions { return metav1.UpdateOptions{}
 
 func init() {
 	gardenSchemeBuilder := runtime.NewSchemeBuilder(
-		corescheme.AddToScheme,
-		gardencorescheme.AddToScheme,
-		gardenseedmanagementscheme.AddToScheme,
-		gardensettingsscheme.AddToScheme,
-		gardenoperationsscheme.AddToScheme,
+		kubernetesscheme.AddToScheme,
+		gardenercoreinstall.AddToScheme,
+		gardenseedmanagementinstall.AddToScheme,
+		gardensettingsinstall.AddToScheme,
+		gardenoperationsinstall.AddToScheme,
 		apiregistrationscheme.AddToScheme,
 	)
 	utilruntime.Must(gardenSchemeBuilder.AddToScheme(GardenScheme))
 
 	seedSchemeBuilder := runtime.NewSchemeBuilder(
-		corescheme.AddToScheme,
+		kubernetesscheme.AddToScheme,
 		dnsv1alpha1.AddToScheme,
-		gardenextensionsscheme.AddToScheme,
-		resourcesscheme.AddToScheme,
-		autoscalingscheme.AddToScheme,
+		extensionsv1alpha1.AddToScheme,
+		resourcesv1alpha1.AddToScheme,
+		autoscalingv1beta2.AddToScheme,
 		hvpav1alpha1.AddToScheme,
 		druidv1alpha1.AddToScheme,
 		apiextensionsscheme.AddToScheme,
@@ -119,16 +119,15 @@ func init() {
 	utilruntime.Must(seedSchemeBuilder.AddToScheme(SeedScheme))
 
 	shootSchemeBuilder := runtime.NewSchemeBuilder(
-		corescheme.AddToScheme,
+		kubernetesscheme.AddToScheme,
 		apiextensionsscheme.AddToScheme,
 		apiregistrationscheme.AddToScheme,
-		autoscalingscheme.AddToScheme,
+		autoscalingv1beta2.AddToScheme,
 	)
 	utilruntime.Must(shootSchemeBuilder.AddToScheme(ShootScheme))
 
 	plantSchemeBuilder := runtime.NewSchemeBuilder(
-		corescheme.AddToScheme,
-		gardencorescheme.AddToScheme,
+		kubernetesscheme.AddToScheme,
 	)
 	utilruntime.Must(plantSchemeBuilder.AddToScheme(PlantScheme))
 }
