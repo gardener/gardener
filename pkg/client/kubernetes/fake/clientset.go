@@ -18,9 +18,7 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 
 	"k8s.io/apimachinery/pkg/version"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -35,18 +33,16 @@ var _ kubernetes.Interface = &ClientSet{}
 type ClientSet struct {
 	CheckForwardPodPortFn
 
-	applier              kubernetes.Applier
-	chartRenderer        chartrenderer.Interface
-	chartApplier         kubernetes.ChartApplier
-	restConfig           *rest.Config
-	client               client.Client
-	apiReader            client.Reader
-	cache                cache.Cache
-	kubernetes           kubernetesclientset.Interface
-	gardenCore           gardencoreclientset.Interface
-	gardenSeedManagement gardenseedmanagementclientset.Interface
-	restClient           rest.Interface
-	version              string
+	applier       kubernetes.Applier
+	chartRenderer chartrenderer.Interface
+	chartApplier  kubernetes.ChartApplier
+	restConfig    *rest.Config
+	client        client.Client
+	apiReader     client.Reader
+	cache         cache.Cache
+	kubernetes    kubernetesclientset.Interface
+	restClient    rest.Interface
+	version       string
 }
 
 // NewClientSet returns a new empty fake ClientSet.
@@ -92,16 +88,6 @@ func (c *ClientSet) Cache() cache.Cache {
 // Kubernetes will return the kubernetes attribute of the Client object.
 func (c *ClientSet) Kubernetes() kubernetesclientset.Interface {
 	return c.kubernetes
-}
-
-// GardenCore will return the gardenCore attribute of the Client object.
-func (c *ClientSet) GardenCore() gardencoreclientset.Interface {
-	return c.gardenCore
-}
-
-// GardenSeedManagement will return the gardenSeedManagement attribute of the Client object.
-func (c *ClientSet) GardenSeedManagement() gardenseedmanagementclientset.Interface {
-	return c.gardenSeedManagement
 }
 
 // RESTClient will return the restClient attribute of the Client object.

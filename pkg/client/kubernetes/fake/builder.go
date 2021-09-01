@@ -15,15 +15,13 @@
 package fake
 
 import (
-	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
-
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
 // ClientSetBuilder is a builder for fake ClientSets
@@ -36,8 +34,6 @@ type ClientSetBuilder struct {
 	apiReader             client.Reader
 	cache                 cache.Cache
 	kubernetes            kubernetesclientset.Interface
-	gardenCore            gardencoreclientset.Interface
-	gardenSeedManagement  gardenseedmanagementclientset.Interface
 	restClient            rest.Interface
 	version               string
 	checkForwardPodPortFn CheckForwardPodPortFn
@@ -96,18 +92,6 @@ func (b *ClientSetBuilder) WithKubernetes(kubernetes kubernetesclientset.Interfa
 	return b
 }
 
-// WithGardenCore sets the gardenCore attribute of the builder.
-func (b *ClientSetBuilder) WithGardenCore(gardenCore gardencoreclientset.Interface) *ClientSetBuilder {
-	b.gardenCore = gardenCore
-	return b
-}
-
-// WithGardenSeedManagement sets the gardenSeedManagement attribute of the builder.
-func (b *ClientSetBuilder) WithGardenSeedManagement(gardenSeedManagement gardenseedmanagementclientset.Interface) *ClientSetBuilder {
-	b.gardenSeedManagement = gardenSeedManagement
-	return b
-}
-
 // WithRESTClient sets the restClient attribute of the builder.
 func (b *ClientSetBuilder) WithRESTClient(restClient rest.Interface) *ClientSetBuilder {
 	b.restClient = restClient
@@ -144,8 +128,6 @@ func (b *ClientSetBuilder) Build() *ClientSet {
 		apiReader:             b.apiReader,
 		cache:                 b.cache,
 		kubernetes:            b.kubernetes,
-		gardenCore:            b.gardenCore,
-		gardenSeedManagement:  b.gardenSeedManagement,
 		restClient:            b.restClient,
 		version:               b.version,
 	}

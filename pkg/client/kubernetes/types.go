@@ -17,15 +17,6 @@ package kubernetes
 import (
 	"context"
 
-	gardenercoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenoperationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
-	gardenseedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
-	gardensettingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
-	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
-
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
@@ -47,6 +38,13 @@ import (
 	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardenercoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	gardenoperationsinstall "github.com/gardener/gardener/pkg/apis/operations/install"
+	gardenseedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
+	gardensettingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 )
 
 var (
@@ -167,8 +165,6 @@ type Interface interface {
 	ChartApplier() ChartApplier
 
 	Kubernetes() kubernetesclientset.Interface
-	GardenCore() gardencoreclientset.Interface
-	GardenSeedManagement() gardenseedmanagementclientset.Interface
 
 	// Deprecated: Use `Client()` and utils instead.
 	ForwardPodPort(string, string, int, int) (chan struct{}, error)

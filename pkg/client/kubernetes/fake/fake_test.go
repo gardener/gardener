@@ -19,11 +19,9 @@ import (
 	"errors"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencorefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
-	gardenseedmanagementfake "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	mockdiscovery "github.com/gardener/gardener/pkg/mock/client-go/discovery"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -106,20 +104,6 @@ var _ = Describe("Fake ClientSet", func() {
 		cs := builder.WithKubernetes(kubernetes).Build()
 
 		Expect(cs.Kubernetes()).To(BeIdenticalTo(kubernetes))
-	})
-
-	It("should correctly set gardenCore attribute", func() {
-		gardenCore := gardencorefake.NewSimpleClientset()
-		cs := builder.WithGardenCore(gardenCore).Build()
-
-		Expect(cs.GardenCore()).To(BeIdenticalTo(gardenCore))
-	})
-
-	It("should correctly set gardenSeedManagement attribute", func() {
-		gardenSeedManagement := gardenseedmanagementfake.NewSimpleClientset()
-		cs := builder.WithGardenSeedManagement(gardenSeedManagement).Build()
-
-		Expect(cs.GardenSeedManagement()).To(BeIdenticalTo(gardenSeedManagement))
 	})
 
 	It("should correctly set restClient attribute", func() {

@@ -34,9 +34,7 @@ import (
 	gardenercoreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	settingsinstall "github.com/gardener/gardener/pkg/apis/settings/install"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	kcache "github.com/gardener/gardener/pkg/client/kubernetes/cache"
-	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	"github.com/gardener/gardener/pkg/logger"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 )
@@ -303,16 +301,6 @@ func newClientSet(conf *Config) (Interface, error) {
 		return nil, err
 	}
 
-	gardenCore, err := gardencoreclientset.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	gardenSeedManagement, err := gardenseedmanagementclientset.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	cs := &clientSet{
 		config:     conf.restConfig,
 		restClient: kubernetes.Discovery().RESTClient(),
@@ -323,9 +311,7 @@ func newClientSet(conf *Config) (Interface, error) {
 		apiReader: c,
 		cache:     runtimeCache,
 
-		kubernetes:           kubernetes,
-		gardenCore:           gardenCore,
-		gardenSeedManagement: gardenSeedManagement,
+		kubernetes: kubernetes,
 	}
 
 	if _, err := cs.DiscoverVersion(); err != nil {

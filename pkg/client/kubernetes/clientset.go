@@ -19,8 +19,6 @@ import (
 	"sync"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/apimachinery/pkg/version"
@@ -56,9 +54,7 @@ type clientSet struct {
 	// startOnce guards starting the cache only once
 	startOnce sync.Once
 
-	kubernetes           kubernetes.Interface
-	gardenCore           gardencoreclientset.Interface
-	gardenSeedManagement gardenseedmanagementclientset.Interface
+	kubernetes kubernetes.Interface
 
 	version string
 }
@@ -101,16 +97,6 @@ func (c *clientSet) Cache() cache.Cache {
 // Kubernetes will return the kubernetes attribute of the Client object.
 func (c *clientSet) Kubernetes() kubernetes.Interface {
 	return c.kubernetes
-}
-
-// GardenCore will return the gardenCore attribute of the Client object.
-func (c *clientSet) GardenCore() gardencoreclientset.Interface {
-	return c.gardenCore
-}
-
-// GardenSeedManagement will return the gardenSeedManagement attribute of the Client object.
-func (c *clientSet) GardenSeedManagement() gardenseedmanagementclientset.Interface {
-	return c.gardenSeedManagement
 }
 
 // RESTClient will return the restClient attribute of the Client object.
