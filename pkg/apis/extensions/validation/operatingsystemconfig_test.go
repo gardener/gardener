@@ -60,7 +60,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 						Path: "foo/bar",
 						Content: extensionsv1alpha1.FileContent{
 							Inline: &extensionsv1alpha1.FileContentInline{
-								Encoding: "1234",
+								Encoding: "b64",
 								Data:     "some-data",
 							},
 						},
@@ -141,7 +141,9 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				{
 					Path: "path3",
 					Content: extensionsv1alpha1.FileContent{
-						Inline: &extensionsv1alpha1.FileContentInline{},
+						Inline: &extensionsv1alpha1.FileContentInline{
+							Encoding: "foo",
+						},
 					},
 				},
 				{
@@ -168,7 +170,7 @@ var _ = Describe("OperatingSystemConfig validation tests", func() {
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.files[2].content.secretRef.dataKey"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
+				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("spec.files[3].content.inline.encoding"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),

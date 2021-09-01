@@ -28,7 +28,6 @@ import (
 	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -178,22 +177,20 @@ func (h *handler) InjectDecoder(d *admission.Decoder) error {
 	return nil
 }
 
-func (h *handler) Handle(ctx context.Context, ar admission.Request) admission.Response {
-	h.logger.Info("Validating resource", "type", ar.Resource, "operation", ar.Operation)
-
+func (h *handler) Handle(ctx context.Context, request admission.Request) admission.Response {
 	_, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	artifact, ok := h.artifacts[ar.Resource]
+	artifact, ok := h.artifacts[request.Resource]
 	if !ok {
 		return admission.Allowed("validation not found for the given resource")
 	}
 
-	switch ar.Operation {
+	switch request.Operation {
 	case admissionv1.Create:
-		return h.handleValidation(ar.Object, ar.OldObject, artifact.newObject, artifact.validateCreateResource, ar.Kind)
+		return h.handleValidation(request, artifact.newObject, artifact.validateCreateResource)
 	case admissionv1.Update:
-		return h.handleValidation(ar.Object, ar.OldObject, artifact.newObject, artifact.validateUpdateResource, ar.Kind)
+		return h.handleValidation(request, artifact.newObject, artifact.validateUpdateResource)
 	default:
 		return admission.Allowed("operation is not CREATE or UPDATE")
 	}
@@ -216,19 +213,19 @@ type artifact struct {
 	validateUpdateResource validateFunc
 }
 
-func (h handler) handleValidation(object, oldObject runtime.RawExtension, newObject newObjectFunc, validate validateFunc, qualifiedGVK metav1.GroupVersionKind) admission.Response {
+func (h handler) handleValidation(request admission.Request, newObject newObjectFunc, validate validateFunc) admission.Response {
 	obj := newObject()
-	if err := h.decoder.DecodeRaw(object, obj); err != nil {
-		h.logger.Error(err, "could not decode object", "object", object)
-		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("could not decode object %v: %w", object, err))
+	if err := h.decoder.DecodeRaw(request.Object, obj); err != nil {
+		h.logger.Error(err, "could not decode object", "object", request.Object)
+		return admission.Errored(http.StatusUnprocessableEntity, fmt.Errorf("could not decode object %v: %w", request.Object, err))
 	}
 
-	h.logger.Info("Validating resource", "kind", obj.GetObjectKind(), "object", kutil.ObjectName(obj))
+	h.logger.Info("Validating resource", "type", request.Resource, "operation", request.Operation, "kind", obj.GetObjectKind(), "object", kutil.ObjectName(obj))
 
 	var oldObj client.Object
-	if len(oldObject.Raw) != 0 {
+	if len(request.OldObject.Raw) != 0 {
 		oldObj = newObject()
-		if err := h.decoder.DecodeRaw(oldObject, oldObj); err != nil {
+		if err := h.decoder.DecodeRaw(request.OldObject, oldObj); err != nil {
 			h.logger.Error(err, "could not decode old object", "old object", oldObj)
 			return admission.Errored(http.StatusBadRequest, fmt.Errorf("could not decode old object %v: %v", oldObj, err))
 		}
@@ -237,8 +234,8 @@ func (h handler) handleValidation(object, oldObject runtime.RawExtension, newObj
 	errors := validate(obj, oldObj)
 	if len(errors) != 0 {
 		err := apierrors.NewInvalid(schema.GroupKind{
-			Group: qualifiedGVK.Group,
-			Kind:  qualifiedGVK.Kind,
+			Group: request.Kind.Group,
+			Kind:  request.Kind.Kind,
 		}, kutil.ObjectName(obj), errors)
 		return admission.Denied(err.Error())
 	}

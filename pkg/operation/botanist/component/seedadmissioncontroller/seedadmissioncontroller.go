@@ -425,6 +425,8 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 				},
 			},
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
 			TimeoutSeconds:          pointer.Int32(10),
 		}},
 	}

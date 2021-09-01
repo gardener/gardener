@@ -123,15 +123,18 @@ func ValidateFiles(files []extensionsv1alpha1.File, fldPath *field.Path) field.E
 				allErrs = append(allErrs, field.Required(idxPath.Child("content", "secretRef", "dataKey"), "field is required"))
 			}
 		case file.Content.Inline != nil:
-			switch file.Content.Inline.Encoding {
-			case
-				"",
-				string(cloudinit.B64FileCodecID),
-				string(cloudinit.GZIPFileCodecID),
-				string(cloudinit.GZIPB64FileCodecID):
-			default:
-				allErrs = append(allErrs, field.Required(idxPath.Child("content", "inline", "encoding"), "field is required to among b64, gzip or gzip+b64"))
+			encodings := []string{"", string(cloudinit.B64FileCodecID), string(cloudinit.GZIPFileCodecID), string(cloudinit.GZIPB64FileCodecID)}
+			isEncodingFound := false
+			for _, enc := range encodings {
+				if enc == file.Content.Inline.Encoding {
+					isEncodingFound = true
+					break
+				}
 			}
+			if !isEncodingFound {
+				allErrs = append(allErrs, field.NotSupported(idxPath.Child("content", "inline", "encoding"), file.Content.Inline.Encoding, encodings))
+			}
+
 			if len(file.Content.Inline.Data) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("content", "inline", "data"), "field is required"))
 			}

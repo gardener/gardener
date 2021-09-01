@@ -321,6 +321,7 @@ webhooks:
       namespace: shoot--foo--bar
       path: /webhooks/validate-extension-resources
   failurePolicy: Fail
+  matchPolicy: Exact
   name: validation.extensions.seed.admission.core.gardener.cloud
   namespaceSelector: {}
   rules:
@@ -343,6 +344,7 @@ webhooks:
     - networks
     - operatingsystemconfigs
     - workers
+  sideEffects: None
   timeoutSeconds: 10
 `
 		vpaYAML = `apiVersion: autoscaling.k8s.io/v1beta2
