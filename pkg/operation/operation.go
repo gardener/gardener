@@ -518,10 +518,8 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 		}
 	)
 
-	if err = o.K8sGardenClient.Client().Create(ctx, shootState); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return err
-		}
+	if err = o.K8sGardenClient.Client().Create(ctx, shootState); kutil.IgnoreAlreadyExists(err) != nil {
+		return err
 	}
 
 	if err = o.K8sGardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {

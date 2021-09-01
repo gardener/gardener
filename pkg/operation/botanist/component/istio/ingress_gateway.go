@@ -21,11 +21,11 @@ import (
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -89,7 +89,7 @@ func (i *ingress) Deploy(ctx context.Context) error {
 				Labels: getIngressGatewayNamespaceLabels(i.values.Labels),
 			},
 		},
-	); err != nil && !apierrors.IsAlreadyExists(err) {
+	); kutil.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 

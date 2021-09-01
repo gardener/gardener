@@ -20,9 +20,9 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -71,7 +71,7 @@ func (i *istiod) Deploy(ctx context.Context) error {
 				},
 			},
 		},
-	); err != nil && !apierrors.IsAlreadyExists(err) {
+	); kutil.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 
