@@ -16,6 +16,7 @@ package worker
 
 import (
 	"context"
+	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -124,13 +125,16 @@ func (m *machineToObjectMapper) InjectFunc(f inject.Func) error {
 }
 
 func (m *machineToObjectMapper) Map(obj client.Object) []reconcile.Request {
+	ctx, cancel := context.WithTimeout(m.ctx, 5*time.Second)
+	defer cancel()
+
 	machine, ok := obj.(*machinev1alpha1.Machine)
 	if !ok {
 		return nil
 	}
 
 	objList := m.newObjListFunc()
-	if err := m.client.List(m.ctx, objList, client.InNamespace(machine.Namespace)); err != nil {
+	if err := m.client.List(ctx, objList, client.InNamespace(machine.Namespace)); err != nil {
 		return nil
 	}
 
