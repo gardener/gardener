@@ -27,6 +27,11 @@ import (
 const (
 	secretOIDCCABundleNamePrefix   = "kube-apiserver-oidc-cabundle"
 	secretOIDCCABundleDataKeyCaCrt = "ca.crt"
+
+	secretServiceAccountSigningKeyNamePrefix = "kube-apiserver-sa-signing-key"
+	// SecretServiceAccountSigningKeyDataKeySigningKey is a constant for a key in the data map that contains the key
+	// which is used to sign service accounts.
+	SecretServiceAccountSigningKeyDataKeySigningKey = "signing-key"
 )
 
 func (k *kubeAPIServer) emptySecret(name string) *corev1.Secret {
@@ -41,6 +46,19 @@ func (k *kubeAPIServer) reconcileSecretOIDCCABundle(ctx context.Context, secret 
 	}
 
 	secret.Data = map[string][]byte{secretOIDCCABundleDataKeyCaCrt: []byte(*k.values.OIDC.CABundle)}
+	utilruntime.Must(kutil.MakeUnique(secret))
+
+	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))
+}
+
+func (k *kubeAPIServer) reconcileSecretServiceAccountSigningKey(ctx context.Context, secret *corev1.Secret) error {
+	if k.values.ServiceAccountConfig == nil || k.values.ServiceAccountConfig.SigningKey == nil {
+		// We don't delete the secret here as we don't know its name (as it's unique). Instead, we rely on the usual
+		// garbage collection for unique secrets/configmaps.
+		return nil
+	}
+
+	secret.Data = map[string][]byte{SecretServiceAccountSigningKeyDataKeySigningKey: k.values.ServiceAccountConfig.SigningKey}
 	utilruntime.Must(kutil.MakeUnique(secret))
 
 	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))

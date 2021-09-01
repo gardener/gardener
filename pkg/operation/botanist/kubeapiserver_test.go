@@ -38,7 +38,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
@@ -50,25 +52,33 @@ var _ = Describe("KubeAPIServer", func() {
 	var (
 		ctrl *gomock.Controller
 
-		c             client.Client
-		k8sSeedClient kubernetes.Interface
-		botanist      *Botanist
-		kubeAPIServer *mockkubeapiserver.MockInterface
+		gc              client.Client
+		k8sGardenClient kubernetes.Interface
+		c               client.Client
+		k8sSeedClient   kubernetes.Interface
+		botanist        *Botanist
+		kubeAPIServer   *mockkubeapiserver.MockInterface
 
-		ctx            = context.TODO()
-		shootNamespace = "shoot--foo--bar"
+		ctx              = context.TODO()
+		projectNamespace = "garden-my-project"
+		shootNamespace   = "shoot--foo--bar"
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 
+		gc = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
+		k8sGardenClient = fake.NewClientSetBuilder().WithClient(gc).Build()
+
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		k8sSeedClient = fake.NewClientSetBuilder().WithClient(c).Build()
+
 		kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 		botanist = &Botanist{
 			Operation: &operation.Operation{
-				K8sSeedClient: k8sSeedClient,
-				Garden:        &gardenpkg.Garden{},
+				K8sGardenClient: k8sGardenClient,
+				K8sSeedClient:   k8sSeedClient,
+				Garden:          &gardenpkg.Garden{},
 				Shoot: &shootpkg.Shoot{
 					SeedNamespace: shootNamespace,
 					Components: &shootpkg.Components{
@@ -98,7 +108,7 @@ var _ = Describe("KubeAPIServer", func() {
 						defer test.WithFeatureGate(gardenletfeatures.FeatureGate, *featureGate, *value)()
 					}
 
-					kubeAPIServer, err := botanist.DefaultKubeAPIServer()
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(kubeAPIServer.GetValues().Autoscaling).To(Equal(expectedConfig))
 				},
@@ -228,7 +238,7 @@ var _ = Describe("KubeAPIServer", func() {
 						prepTest()
 					}
 
-					kubeAPIServer, err := botanist.DefaultKubeAPIServer()
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(kubeAPIServer.GetValues().OIDC).To(Equal(expectedConfig))
 				},
@@ -266,6 +276,144 @@ var _ = Describe("KubeAPIServer", func() {
 			)
 		})
 
+		Describe("ServiceAccountConfig", func() {
+			var (
+				signingKey       = []byte("some-key")
+				signingKeySecret *corev1.Secret
+			)
+
+			BeforeEach(func() {
+				signingKeySecret = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-secret",
+						Namespace: projectNamespace,
+					},
+					Data: map[string][]byte{"signing-key": signingKey},
+				}
+			})
+
+			DescribeTable("should have the expected ServiceAccountConfig config",
+				func(prepTest func(), expectedConfig *kubeapiserver.ServiceAccountConfig, errMatcher gomegatypes.GomegaMatcher) {
+					if prepTest != nil {
+						prepTest()
+					}
+
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+					Expect(err).To(errMatcher)
+					if kubeAPIServer != nil {
+						Expect(kubeAPIServer.GetValues().ServiceAccountConfig).To(Equal(expectedConfig))
+					}
+				},
+
+				Entry("KubeAPIServerConfig is nil",
+					nil,
+					nil,
+					Not(HaveOccurred()),
+				),
+				Entry("ServiceAccountConfig is nil",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+								},
+							},
+						})
+					},
+					nil,
+					Not(HaveOccurred()),
+				),
+				Entry("SigningKeySecret is nil",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{},
+									},
+								},
+							},
+						})
+					},
+					&kubeapiserver.ServiceAccountConfig{},
+					Not(HaveOccurred()),
+				),
+				Entry("SigningKeySecret is provided but secret is missing",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: projectNamespace,
+							},
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+											SigningKeySecret: &corev1.LocalObjectReference{
+												Name: signingKeySecret.Name,
+											},
+										},
+									},
+								},
+							},
+						})
+					},
+					nil,
+					MatchError(ContainSubstring("not found")),
+				),
+				Entry("SigningKeySecret is provided but secret does not have correct data field",
+					func() {
+						signingKeySecret.Data = nil
+						Expect(gc.Create(ctx, signingKeySecret)).To(Succeed())
+
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: projectNamespace,
+							},
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+											SigningKeySecret: &corev1.LocalObjectReference{
+												Name: signingKeySecret.Name,
+											},
+										},
+									},
+								},
+							},
+						})
+					},
+					nil,
+					MatchError(ContainSubstring("no signing key in secret")),
+				),
+				Entry("SigningKeySecret is provided and secret is compliant",
+					func() {
+						Expect(gc.Create(ctx, signingKeySecret)).To(Succeed())
+
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: projectNamespace,
+							},
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+											SigningKeySecret: &corev1.LocalObjectReference{
+												Name: signingKeySecret.Name,
+											},
+										},
+									},
+								},
+							},
+						})
+					},
+					&kubeapiserver.ServiceAccountConfig{
+						SigningKey: signingKey,
+					},
+					Not(HaveOccurred()),
+				),
+			)
+		})
+
 		Describe("SNIConfig", func() {
 			DescribeTable("should have the expected SNI config",
 				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedConfig kubeapiserver.SNIConfig) {
@@ -277,7 +425,7 @@ var _ = Describe("KubeAPIServer", func() {
 						defer test.WithFeatureGate(gardenletfeatures.FeatureGate, *featureGate, *value)()
 					}
 
-					kubeAPIServer, err := botanist.DefaultKubeAPIServer()
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(kubeAPIServer.GetValues().SNI).To(Equal(expectedConfig))
 				},

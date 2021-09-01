@@ -482,15 +482,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			if issuer := serviceAccountConfig.Issuer; issuer != nil {
 				serviceAccountTokenIssuerURL = *issuer
 			}
-
-			if signingKeySecret := serviceAccountConfig.SigningKeySecret; signingKeySecret != nil {
-				signingKey, err := common.GetServiceAccountSigningKeySecret(ctx, b.K8sGardenClient.Client(), b.Shoot.GetInfo().Namespace, signingKeySecret.Name)
-				if err != nil {
-					return err
-				}
-
-				serviceAccountConfigVals["signingKey"] = signingKey
-			}
 		}
 
 		if apiServerConfig.APIAudiences != nil {

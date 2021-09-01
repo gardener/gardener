@@ -70,6 +70,7 @@ var _ = Describe("KubeAPIServer", func() {
 		networkPolicyAllowToShootAPIServer   *networkingv1.NetworkPolicy
 		networkPolicyAllowKubeAPIServer      *networkingv1.NetworkPolicy
 		secretOIDCCABundle                   *corev1.Secret
+		secretServiceAccountSigningKey       *corev1.Secret
 		managedResource                      *resourcesv1alpha1.ManagedResource
 		managedResourceSecret                *corev1.Secret
 	)
@@ -974,6 +975,39 @@ subjects:
 					},
 					Immutable: pointer.Bool(true),
 					Data:      secretOIDCCABundle.Data,
+				}))
+			})
+
+			It("should successfully deploy the ServiceAccountSigningKey secret resource", func() {
+				var (
+					signingKey           = []byte("some-signingkey")
+					serviceAccountConfig = &ServiceAccountConfig{SigningKey: signingKey}
+				)
+
+				kapi = New(kubernetesInterface, namespace, Values{ServiceAccountConfig: serviceAccountConfig})
+
+				secretServiceAccountSigningKey = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-sa-signing-key", Namespace: namespace},
+					Data:       map[string][]byte{"signing-key": signingKey},
+				}
+				Expect(kutil.MakeUnique(secretServiceAccountSigningKey)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretServiceAccountSigningKey), secretServiceAccountSigningKey)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, secretServiceAccountSigningKey.Name)))
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretServiceAccountSigningKey), secretServiceAccountSigningKey)).To(Succeed())
+				Expect(secretServiceAccountSigningKey).To(DeepEqual(&corev1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Secret",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            secretServiceAccountSigningKey.Name,
+						Namespace:       secretServiceAccountSigningKey.Namespace,
+						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+						ResourceVersion: "1",
+					},
+					Immutable: pointer.Bool(true),
+					Data:      secretServiceAccountSigningKey.Data,
 				}))
 			})
 		})

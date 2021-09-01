@@ -168,11 +168,3 @@ egress-selector-configuration.yaml: |-
 {{- define "kube-apiserver.egressSelector.name" -}}
 kube-apiserver-egress-selector-config-{{ include "kube-apiserver.egressSelector.data" . | sha256sum | trunc 8 }}
 {{- end }}
-
-{{- define "kube-apiserver.serviceAccountSigningKeyConfig.data" -}}
-signing-key: {{ .Values.serviceAccountConfig.signingKey | b64enc }}
-{{- end -}}
-
-{{- define "kube-apiserver.serviceAccountSigningKeyConfig.name" -}}
-kube-apiserver-sa-signing-key-{{ include "kube-apiserver.serviceAccountSigningKeyConfig.data" . | sha256sum | trunc 8 }}
-{{- end }}

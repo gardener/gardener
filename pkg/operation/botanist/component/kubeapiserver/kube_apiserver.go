@@ -60,6 +60,8 @@ type Values struct {
 	ReversedVPNEnabled bool
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
 	OIDC *gardencorev1beta1.OIDCConfig
+	// ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.
+	ServiceAccountConfig *ServiceAccountConfig
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
 	// Version is the Kubernetes version for the kube-apiserver.
@@ -82,6 +84,12 @@ type AutoscalingConfig struct {
 	// ScaleDownDisabledForHvpa states whether scale-down shall be disabled when HPA or VPA are configured in an HVPA
 	// resource.
 	ScaleDownDisabledForHvpa bool
+}
+
+// ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.
+type ServiceAccountConfig struct {
+	// SigningKey is the key used when service accounts are signed.
+	SigningKey []byte
 }
 
 // SNIConfig contains information for configuring SNI settings for the kube-apiserver.
@@ -116,6 +124,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
 		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
 		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
+		secretServiceAccountSigningKey       = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -147,6 +156,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileSecretOIDCCABundle(ctx, secretOIDCCABundle); err != nil {
+		return err
+	}
+
+	if err := k.reconcileSecretServiceAccountSigningKey(ctx, secretServiceAccountSigningKey); err != nil {
 		return err
 	}
 

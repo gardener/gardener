@@ -118,9 +118,6 @@ const (
 	// IstioNamespace is the istio-system namespace
 	IstioNamespace = "istio-system"
 
-	// ServiceAccountSigningKeySecretDataKey is the data key of a signing key Kubernetes secret.
-	ServiceAccountSigningKeySecretDataKey = "signing-key"
-
 	// AlertManagerTLS is the name of the secret resource which holds the TLS certificate for Alert Manager.
 	AlertManagerTLS = "alertmanager-tls"
 	// GrafanaTLS is the name of the secret resource which holds the TLS certificate for Grafana.

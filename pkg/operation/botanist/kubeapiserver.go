@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -27,26 +28,37 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
-func (b *Botanist) DefaultKubeAPIServer() (kubeapiserver.Interface, error) {
-	var oidcConfig *gardencorev1beta1.OIDCConfig
+func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Interface, error) {
+	var (
+		oidcConfig           *gardencorev1beta1.OIDCConfig
+		serviceAccountConfig *kubeapiserver.ServiceAccountConfig
+		err                  error
+	)
 
-	if apiServerConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; apiServerConfig != nil && apiServerConfig.OIDCConfig != nil {
+	if apiServerConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; apiServerConfig != nil {
 		oidcConfig = apiServerConfig.OIDCConfig
+
+		serviceAccountConfig, err = b.computeKubeAPIServerServiceAccountConfig(ctx, apiServerConfig.ServiceAccountConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return kubeapiserver.New(
 		b.K8sSeedClient,
 		b.Shoot.SeedNamespace,
 		kubeapiserver.Values{
-			Autoscaling:        b.computeKubeAPIServerAutoscalingConfig(),
-			ReversedVPNEnabled: b.Shoot.ReversedVPNEnabled,
-			OIDC:               oidcConfig,
+			Autoscaling:          b.computeKubeAPIServerAutoscalingConfig(),
+			ReversedVPNEnabled:   b.Shoot.ReversedVPNEnabled,
+			OIDC:                 oidcConfig,
+			ServiceAccountConfig: serviceAccountConfig,
 			SNI: kubeapiserver.SNIConfig{
 				PodMutatorEnabled: b.APIServerSNIPodMutatorEnabled(),
 			},
@@ -96,6 +108,29 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		UseMemoryMetricForHvpaHPA: useMemoryMetricForHvpaHPA,
 		ScaleDownDisabledForHvpa:  scaleDownDisabledForHvpa,
 	}
+}
+
+func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context, config *gardencorev1beta1.ServiceAccountConfig) (*kubeapiserver.ServiceAccountConfig, error) {
+	if config == nil {
+		return nil, nil
+	}
+
+	out := &kubeapiserver.ServiceAccountConfig{}
+
+	if signingKeySecret := config.SigningKeySecret; signingKeySecret != nil {
+		secret := &corev1.Secret{}
+		if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, signingKeySecret.Name), secret); err != nil {
+			return nil, err
+		}
+
+		data, ok := secret.Data[kubeapiserver.SecretServiceAccountSigningKeyDataKeySigningKey]
+		if !ok {
+			return nil, fmt.Errorf("no signing key in secret %s/%s at .data.%s", secret.Namespace, secret.Name, kubeapiserver.SecretServiceAccountSigningKeyDataKeySigningKey)
+		}
+		out.SigningKey = data
+	}
+
+	return out, nil
 }
 
 func (b *Botanist) computeKubeAPIServerReplicas(deployment *appsv1.Deployment) *int32 {
