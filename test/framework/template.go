@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Masterminds/sprig"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 )
 
@@ -32,7 +33,10 @@ func (f *CommonFramework) RenderAndDeployTemplate(ctx context.Context, k8sClient
 		return fmt.Errorf("could not find template in %q", templateFilepath)
 	}
 
-	tpl, err := template.ParseFiles(templateFilepath)
+	tpl, err := template.
+		New(templateName).
+		Funcs(sprig.HtmlFuncMap()).
+		ParseFiles(templateFilepath)
 	if err != nil {
 		return fmt.Errorf("unable to parse template in %s: %w", templateFilepath, err)
 	}
