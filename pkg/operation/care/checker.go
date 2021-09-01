@@ -26,7 +26,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/metricsserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/namespaces"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -98,15 +97,23 @@ type HealthChecker struct {
 	staleExtensionHealthCheckThreshold *metav1.Duration
 	lastOperation                      *gardencorev1beta1.LastOperation
 	kubernetesVersion                  *semver.Version
+	gardenerVersion                    *semver.Version
 }
 
 // NewHealthChecker creates a new health checker.
-func NewHealthChecker(conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration, healthCheckOutdatedThreshold *metav1.Duration, lastOperation *gardencorev1beta1.LastOperation, kubernetesVersion *semver.Version) *HealthChecker {
+func NewHealthChecker(
+	conditionThresholds map[gardencorev1beta1.ConditionType]time.Duration,
+	healthCheckOutdatedThreshold *metav1.Duration,
+	lastOperation *gardencorev1beta1.LastOperation,
+	kubernetesVersion *semver.Version,
+	gardenerVersion *semver.Version,
+) *HealthChecker {
 	return &HealthChecker{
 		conditionThresholds:                conditionThresholds,
 		staleExtensionHealthCheckThreshold: healthCheckOutdatedThreshold,
 		lastOperation:                      lastOperation,
 		kubernetesVersion:                  kubernetesVersion,
+		gardenerVersion:                    gardenerVersion,
 	}
 }
 
@@ -538,7 +545,6 @@ var managedResourcesShoot = sets.NewString(
 	common.ManagedResourceShootCoreName,
 	common.ManagedResourceAddonsName,
 	metricsserver.ManagedResourceName,
-	kubeapiserver.ManagedResourceName,
 )
 
 func makeDeploymentLister(ctx context.Context, c client.Client, namespace string, selector labels.Selector) kutil.DeploymentLister {
