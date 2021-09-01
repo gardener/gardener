@@ -287,7 +287,7 @@ func (b *Builder) Build(ctx context.Context, clientMap clientmap.ClientMap) (*Op
 
 	// Get the ManagedSeed object for this shoot, if it exists.
 	// Also read the managed seed API server settings from the managed-seed-api-server annotation.
-	operation.ManagedSeed, err = kutil.GetManagedSeed(ctx, gardenClient.GardenSeedManagement(), shoot.GetInfo().Namespace, shoot.GetInfo().Name)
+	operation.ManagedSeed, err = kutil.GetManagedSeedWithReader(ctx, gardenClient.Cache(), shoot.GetInfo().Namespace, shoot.GetInfo().Name)
 	if err != nil {
 		return nil, fmt.Errorf("could not get managed seed for shoot %s/%s: %w", shoot.GetInfo().Namespace, shoot.GetInfo().Name, err)
 	}

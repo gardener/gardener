@@ -261,11 +261,7 @@ func (c *Controller) newProgressReporter(reporterFn flow.ProgressReporterFn) flo
 }
 
 func (c *Controller) shootIsSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot) bool {
-	gardenClient, err := c.clientMap.GetClient(ctx, keys.ForGarden())
-	if err != nil {
-		return false
-	}
-	managedSeed, err := kutil.GetManagedSeed(ctx, gardenClient.GardenSeedManagement(), shoot.Namespace, shoot.Name)
+	managedSeed, err := kutil.GetManagedSeedWithReader(ctx, c.gardenCache, shoot.Namespace, shoot.Name)
 	if err != nil {
 		return false
 	}
