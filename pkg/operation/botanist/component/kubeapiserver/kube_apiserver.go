@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -57,6 +58,8 @@ type Values struct {
 	Autoscaling AutoscalingConfig
 	// ReversedVPNEnabled states whether the 'ReversedVPN' feature gate is enabled.
 	ReversedVPNEnabled bool
+	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
+	OIDC *gardencorev1beta1.OIDCConfig
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
 	// Version is the Kubernetes version for the kube-apiserver.
@@ -112,6 +115,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		networkPolicyAllowFromShootAPIServer = k.emptyNetworkPolicy(networkPolicyNameAllowFromShootAPIServer)
 		networkPolicyAllowToShootAPIServer   = k.emptyNetworkPolicy(networkPolicyNameAllowToShootAPIServer)
 		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
+		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -139,6 +143,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileNetworkPolicyAllowKubeAPIServer(ctx, networkPolicyAllowKubeAPIServer); err != nil {
+		return err
+	}
+
+	if err := k.reconcileSecretOIDCCABundle(ctx, secretOIDCCABundle); err != nil {
 		return err
 	}
 

@@ -169,14 +169,6 @@ egress-selector-configuration.yaml: |-
 kube-apiserver-egress-selector-config-{{ include "kube-apiserver.egressSelector.data" . | sha256sum | trunc 8 }}
 {{- end }}
 
-{{- define "kube-apiserver.oidcCABundle.data" -}}
-ca.crt: {{ .Values.oidcConfig.caBundle | b64enc }}
-{{- end -}}
-
-{{- define "kube-apiserver.oidcCABundle.name" -}}
-kube-apiserver-oidc-cabundle-{{ include "kube-apiserver.oidcCABundle.data" . | sha256sum | trunc 8 }}
-{{- end }}
-
 {{- define "kube-apiserver.serviceAccountSigningKeyConfig.data" -}}
 signing-key: {{ .Values.serviceAccountConfig.signingKey | b64enc }}
 {{- end -}}

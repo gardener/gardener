@@ -221,6 +221,51 @@ var _ = Describe("KubeAPIServer", func() {
 			)
 		})
 
+		Describe("OIDCConfig", func() {
+			DescribeTable("should have the expected OIDC config",
+				func(prepTest func(), expectedConfig *gardencorev1beta1.OIDCConfig) {
+					if prepTest != nil {
+						prepTest()
+					}
+
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(kubeAPIServer.GetValues().OIDC).To(Equal(expectedConfig))
+				},
+
+				Entry("KubeAPIServerConfig is nil",
+					nil,
+					nil,
+				),
+				Entry("OIDCConfig is nil",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+								},
+							},
+						})
+					},
+					nil,
+				),
+				Entry("OIDCConfig is not nil",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										OIDCConfig: &gardencorev1beta1.OIDCConfig{},
+									},
+								},
+							},
+						})
+					},
+					&gardencorev1beta1.OIDCConfig{},
+				),
+			)
+		})
+
 		Describe("SNIConfig", func() {
 			DescribeTable("should have the expected SNI config",
 				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedConfig kubeapiserver.SNIConfig) {

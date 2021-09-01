@@ -18,9 +18,11 @@ import (
 	"context"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -67,6 +69,7 @@ var _ = Describe("KubeAPIServer", func() {
 		networkPolicyAllowFromShootAPIServer *networkingv1.NetworkPolicy
 		networkPolicyAllowToShootAPIServer   *networkingv1.NetworkPolicy
 		networkPolicyAllowKubeAPIServer      *networkingv1.NetworkPolicy
+		secretOIDCCABundle                   *corev1.Secret
 		managedResource                      *resourcesv1alpha1.ManagedResource
 		managedResourceSecret                *corev1.Secret
 	)
@@ -936,6 +939,41 @@ subjects:
 						KeepObjects:  pointer.Bool(false),
 						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
 					},
+				}))
+			})
+		})
+
+		Describe("Secrets", func() {
+			It("should successfully deploy the OIDCCABundle secret resource", func() {
+				var (
+					caBundle   = "some-ca-bundle"
+					oidcConfig = &gardencorev1beta1.OIDCConfig{CABundle: &caBundle}
+				)
+
+				kapi = New(kubernetesInterface, namespace, Values{OIDC: oidcConfig})
+
+				secretOIDCCABundle = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-oidc-cabundle", Namespace: namespace},
+					Data:       map[string][]byte{"ca.crt": []byte(caBundle)},
+				}
+				Expect(kutil.MakeUnique(secretOIDCCABundle)).To(Succeed())
+
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretOIDCCABundle), secretOIDCCABundle)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, secretOIDCCABundle.Name)))
+				Expect(kapi.Deploy(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretOIDCCABundle), secretOIDCCABundle)).To(Succeed())
+				Expect(secretOIDCCABundle).To(DeepEqual(&corev1.Secret{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: corev1.SchemeGroupVersion.String(),
+						Kind:       "Secret",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            secretOIDCCABundle.Name,
+						Namespace:       secretOIDCCABundle.Namespace,
+						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+						ResourceVersion: "1",
+					},
+					Immutable: pointer.Bool(true),
+					Data:      secretOIDCCABundle.Data,
 				}))
 			})
 		})

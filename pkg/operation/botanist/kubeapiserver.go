@@ -34,12 +34,19 @@ import (
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
 func (b *Botanist) DefaultKubeAPIServer() (kubeapiserver.Interface, error) {
+	var oidcConfig *gardencorev1beta1.OIDCConfig
+
+	if apiServerConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; apiServerConfig != nil && apiServerConfig.OIDCConfig != nil {
+		oidcConfig = apiServerConfig.OIDCConfig
+	}
+
 	return kubeapiserver.New(
 		b.K8sSeedClient,
 		b.Shoot.SeedNamespace,
 		kubeapiserver.Values{
 			Autoscaling:        b.computeKubeAPIServerAutoscalingConfig(),
 			ReversedVPNEnabled: b.Shoot.ReversedVPNEnabled,
+			OIDC:               oidcConfig,
 			SNI: kubeapiserver.SNIConfig{
 				PodMutatorEnabled: b.APIServerSNIPodMutatorEnabled(),
 			},

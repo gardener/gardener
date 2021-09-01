@@ -478,10 +478,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 		defaultValues["featureGates"] = apiServerConfig.FeatureGates
 		defaultValues["runtimeConfig"] = apiServerConfig.RuntimeConfig
 
-		if apiServerConfig.OIDCConfig != nil {
-			defaultValues["oidcConfig"] = apiServerConfig.OIDCConfig
-		}
-
 		if serviceAccountConfig := apiServerConfig.ServiceAccountConfig; serviceAccountConfig != nil {
 			if issuer := serviceAccountConfig.Issuer; issuer != nil {
 				serviceAccountTokenIssuerURL = *issuer
