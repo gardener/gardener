@@ -15,8 +15,6 @@
 package utils
 
 import (
-	"context"
-
 	coreinstall "github.com/gardener/gardener/pkg/apis/core/install"
 	seedmanagementinstall "github.com/gardener/gardener/pkg/apis/seedmanagement/install"
 	"github.com/gardener/gardener/pkg/logger"
@@ -42,15 +40,4 @@ func CreateRecorder(kubeClient k8s.Interface, eventSourceName string) record.Eve
 	eventBroadcaster.StartLogging(logger.Logger.Debugf)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: typedcorev1.New(kubeClient.CoreV1().RESTClient()).Events("")})
 	return eventBroadcaster.NewRecorder(scheme, corev1.EventSource{Component: eventSourceName})
-}
-
-// ContextFromStopChannel creates a new context from a given stop channel.
-func ContextFromStopChannel(stopCh <-chan struct{}) context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		defer cancel()
-		<-stopCh
-	}()
-
-	return ctx
 }
