@@ -184,6 +184,13 @@ var _ = Describe("DNSRecord validation tests", func() {
 
 			Expect(errorList).To(BeEmpty())
 		})
+
+		It("should allow valid resources with wildcard names", func() {
+			dns.Spec.Name = "*.test.example.com"
+			errorList := ValidateDNSRecord(dns)
+
+			Expect(errorList).To(BeEmpty())
+		})
 	})
 
 	Describe("#ValidateDNSRecordUpdate", func() {

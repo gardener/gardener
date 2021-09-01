@@ -15,6 +15,8 @@
 package validation
 
 import (
+	"strings"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 
@@ -65,7 +67,7 @@ func ValidateDNSRecordSpec(spec *extensionsv1alpha1.DNSRecordSpec, fldPath *fiel
 	}
 
 	// This will return FieldValueRequired for an empty spec.Name
-	allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(fldPath.Child("name"), spec.Name)...)
+	allErrs = append(allErrs, validation.IsFullyQualifiedDomainName(fldPath.Child("name"), strings.TrimPrefix(spec.Name, "*."))...)
 
 	validRecordTypes := []string{string(extensionsv1alpha1.DNSRecordTypeA), string(extensionsv1alpha1.DNSRecordTypeCNAME), string(extensionsv1alpha1.DNSRecordTypeTXT)}
 	if !utils.ValueExists(string(spec.RecordType), validRecordTypes) {
