@@ -289,6 +289,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 }
 
 func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
+	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeTesting {
+		return b.DeleteGrafana(ctx)
+	}
+
 	var (
 		credentials         = b.LoadSecret(common.MonitoringIngressCredentials)
 		credentialsUsers    = b.LoadSecret(common.MonitoringIngressCredentialsUsers)
