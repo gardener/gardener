@@ -95,7 +95,7 @@ type Gardenlet struct {
 type GardenletDeployment struct {
 	// ReplicaCount is the number of gardenlet replicas. Defaults to 1.
 	ReplicaCount *int32
-	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 1.
+	// RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.
 	RevisionHistoryLimit *int32
 	// ServiceAccountName is the name of the ServiceAccount to use to run gardenlet pods.
 	ServiceAccountName *string

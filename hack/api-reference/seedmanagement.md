@@ -421,7 +421,7 @@ int32
 </td>
 <td>
 <em>(Optional)</em>
-<p>RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 1.</p>
+<p>RevisionHistoryLimit is the number of old gardenlet ReplicaSets to retain to allow rollback. Defaults to 10.</p>
 </td>
 </tr>
 <tr>
