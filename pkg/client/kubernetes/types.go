@@ -166,8 +166,6 @@ type Interface interface {
 
 	Kubernetes() kubernetesclientset.Interface
 
-	// Deprecated: Use `Client()` and utils instead.
-	ForwardPodPort(string, string, int, int) (chan struct{}, error)
 	CheckForwardPodPort(string, string, int, int) error
 
 	// Version returns the server version of the targeted Kubernetes cluster.

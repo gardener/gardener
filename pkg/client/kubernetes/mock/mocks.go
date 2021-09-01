@@ -154,21 +154,6 @@ func (mr *MockInterfaceMockRecorder) DiscoverVersion() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiscoverVersion", reflect.TypeOf((*MockInterface)(nil).DiscoverVersion))
 }
 
-// ForwardPodPort mocks base method.
-func (m *MockInterface) ForwardPodPort(arg0, arg1 string, arg2, arg3 int) (chan struct{}, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ForwardPodPort", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(chan struct{})
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ForwardPodPort indicates an expected call of ForwardPodPort.
-func (mr *MockInterfaceMockRecorder) ForwardPodPort(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForwardPodPort", reflect.TypeOf((*MockInterface)(nil).ForwardPodPort), arg0, arg1, arg2, arg3)
-}
-
 // Kubernetes mocks base method.
 func (m *MockInterface) Kubernetes() kubernetes0.Interface {
 	m.ctrl.T.Helper()

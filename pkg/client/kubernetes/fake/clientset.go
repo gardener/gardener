@@ -120,11 +120,6 @@ func (c *ClientSet) WaitForCacheSync(context.Context) bool {
 	return true
 }
 
-// ForwardPodPort does nothing as the fake ClientSet does not support it.
-func (c *ClientSet) ForwardPodPort(string, string, int, int) (chan struct{}, error) {
-	return nil, nil
-}
-
 // CheckForwardPodPortFn is a type alias for a function checking port forwarding for pods.
 type CheckForwardPodPortFn func(string, string, int, int) error
 
