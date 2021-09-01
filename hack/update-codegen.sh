@@ -53,8 +53,8 @@ extensions_groups() {
   echo "Generating API groups for pkg/apis/extensions"
 
   bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh \
-    "deepcopy,client,informer,lister" \
-    github.com/gardener/gardener/pkg/client/extensions \
+    "deepcopy" \
+    github.com/gardener/gardener/pkg/apis \
     github.com/gardener/gardener/pkg/apis \
     "extensions:v1alpha1" \
     -h "${PROJECT_ROOT}/hack/LICENSE_BOILERPLATE.txt"
