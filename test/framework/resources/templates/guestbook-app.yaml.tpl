@@ -42,8 +42,8 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8080
-{{- if semverCompare "< 1.19-0" .KubeVersion }}
 ---
+{{- if semverCompare "< 1.19-0" .KubeVersion }}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -60,8 +60,7 @@ spec:
           serviceName: guestbook
           servicePort: 80
         path: /
-{{- else -}}
----
+{{- else }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
