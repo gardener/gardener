@@ -20,10 +20,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 
-	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -40,8 +38,6 @@ type ClientSetBuilder struct {
 	kubernetes            kubernetesclientset.Interface
 	gardenCore            gardencoreclientset.Interface
 	gardenSeedManagement  gardenseedmanagementclientset.Interface
-	apiextension          apiextensionclientset.Interface
-	apiregistration       apiregistrationclientset.Interface
 	restClient            rest.Interface
 	version               string
 	checkForwardPodPortFn CheckForwardPodPortFn
@@ -112,18 +108,6 @@ func (b *ClientSetBuilder) WithGardenSeedManagement(gardenSeedManagement gardens
 	return b
 }
 
-// WithAPIExtension sets the apiextension attribute of the builder.
-func (b *ClientSetBuilder) WithAPIExtension(apiextension apiextensionclientset.Interface) *ClientSetBuilder {
-	b.apiextension = apiextension
-	return b
-}
-
-// WithAPIRegistration sets the apiregistration attribute of the builder.
-func (b *ClientSetBuilder) WithAPIRegistration(apiregistration apiregistrationclientset.Interface) *ClientSetBuilder {
-	b.apiregistration = apiregistration
-	return b
-}
-
 // WithRESTClient sets the restClient attribute of the builder.
 func (b *ClientSetBuilder) WithRESTClient(restClient rest.Interface) *ClientSetBuilder {
 	b.restClient = restClient
@@ -162,8 +146,6 @@ func (b *ClientSetBuilder) Build() *ClientSet {
 		kubernetes:            b.kubernetes,
 		gardenCore:            b.gardenCore,
 		gardenSeedManagement:  b.gardenSeedManagement,
-		apiextension:          b.apiextension,
-		apiregistration:       b.apiregistration,
 		restClient:            b.restClient,
 		version:               b.version,
 	}

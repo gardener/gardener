@@ -13,11 +13,9 @@ import (
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	versioned0 "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	gomock "github.com/golang/mock/gomock"
-	clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	version "k8s.io/apimachinery/pkg/version"
 	kubernetes0 "k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
-	clientset0 "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	cache "sigs.k8s.io/controller-runtime/pkg/cache"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -45,20 +43,6 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
-// APIExtension mocks base method.
-func (m *MockInterface) APIExtension() clientset.Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "APIExtension")
-	ret0, _ := ret[0].(clientset.Interface)
-	return ret0
-}
-
-// APIExtension indicates an expected call of APIExtension.
-func (mr *MockInterfaceMockRecorder) APIExtension() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIExtension", reflect.TypeOf((*MockInterface)(nil).APIExtension))
-}
-
 // APIReader mocks base method.
 func (m *MockInterface) APIReader() client.Reader {
 	m.ctrl.T.Helper()
@@ -71,20 +55,6 @@ func (m *MockInterface) APIReader() client.Reader {
 func (mr *MockInterfaceMockRecorder) APIReader() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIReader", reflect.TypeOf((*MockInterface)(nil).APIReader))
-}
-
-// APIRegistration mocks base method.
-func (m *MockInterface) APIRegistration() clientset0.Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "APIRegistration")
-	ret0, _ := ret[0].(clientset0.Interface)
-	return ret0
-}
-
-// APIRegistration indicates an expected call of APIRegistration.
-func (mr *MockInterfaceMockRecorder) APIRegistration() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIRegistration", reflect.TypeOf((*MockInterface)(nil).APIRegistration))
 }
 
 // Applier mocks base method.

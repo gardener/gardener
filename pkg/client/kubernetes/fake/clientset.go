@@ -22,11 +22,9 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 
-	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/version"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -47,8 +45,6 @@ type ClientSet struct {
 	kubernetes           kubernetesclientset.Interface
 	gardenCore           gardencoreclientset.Interface
 	gardenSeedManagement gardenseedmanagementclientset.Interface
-	apiextension         apiextensionsclientset.Interface
-	apiregistration      apiregistrationclientset.Interface
 	restClient           rest.Interface
 	version              string
 }
@@ -106,16 +102,6 @@ func (c *ClientSet) GardenCore() gardencoreclientset.Interface {
 // GardenSeedManagement will return the gardenSeedManagement attribute of the Client object.
 func (c *ClientSet) GardenSeedManagement() gardenseedmanagementclientset.Interface {
 	return c.gardenSeedManagement
-}
-
-// APIExtension will return the apiextension ClientSet attribute of the Client object.
-func (c *ClientSet) APIExtension() apiextensionsclientset.Interface {
-	return c.apiextension
-}
-
-// APIRegistration will return the apiregistration attribute of the Client object.
-func (c *ClientSet) APIRegistration() apiregistrationclientset.Interface {
-	return c.apiregistration
 }
 
 // RESTClient will return the restClient attribute of the Client object.

@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -28,7 +27,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	componentbaseconfig "k8s.io/component-base/config"
-	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -315,16 +313,6 @@ func newClientSet(conf *Config) (Interface, error) {
 		return nil, err
 	}
 
-	apiRegistration, err := apiserviceclientset.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	apiExtension, err := apiextensionsclientset.NewForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	cs := &clientSet{
 		config:     conf.restConfig,
 		restClient: kubernetes.Discovery().RESTClient(),
@@ -338,8 +326,6 @@ func newClientSet(conf *Config) (Interface, error) {
 		kubernetes:           kubernetes,
 		gardenCore:           gardenCore,
 		gardenSeedManagement: gardenSeedManagement,
-		apiregistration:      apiRegistration,
-		apiextension:         apiExtension,
 	}
 
 	if _, err := cs.DiscoverVersion(); err != nil {

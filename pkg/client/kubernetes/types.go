@@ -32,7 +32,6 @@ import (
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	istionetworkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
-	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -45,7 +44,6 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -171,8 +169,6 @@ type Interface interface {
 	Kubernetes() kubernetesclientset.Interface
 	GardenCore() gardencoreclientset.Interface
 	GardenSeedManagement() gardenseedmanagementclientset.Interface
-	APIExtension() apiextensionsclientset.Interface
-	APIRegistration() apiregistrationclientset.Interface
 
 	// Deprecated: Use `Client()` and utils instead.
 	ForwardPodPort(string, string, int, int) (chan struct{}, error)

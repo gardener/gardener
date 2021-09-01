@@ -31,12 +31,10 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	apiextensionsfake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
-	apiregistrationfake "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/fake"
 )
 
 var _ = Describe("Fake ClientSet", func() {
@@ -122,20 +120,6 @@ var _ = Describe("Fake ClientSet", func() {
 		cs := builder.WithGardenSeedManagement(gardenSeedManagement).Build()
 
 		Expect(cs.GardenSeedManagement()).To(BeIdenticalTo(gardenSeedManagement))
-	})
-
-	It("should correctly set apiextension attribute", func() {
-		apiextension := apiextensionsfake.NewSimpleClientset()
-		cs := builder.WithAPIExtension(apiextension).Build()
-
-		Expect(cs.APIExtension()).To(BeIdenticalTo(apiextension))
-	})
-
-	It("should correctly set apiregistration attribute", func() {
-		apiregistration := apiregistrationfake.NewSimpleClientset()
-		cs := builder.WithAPIRegistration(apiregistration).Build()
-
-		Expect(cs.APIRegistration()).To(BeIdenticalTo(apiregistration))
 	})
 
 	It("should correctly set restClient attribute", func() {
