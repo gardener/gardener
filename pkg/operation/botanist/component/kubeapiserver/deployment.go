@@ -21,6 +21,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	containerNameKubeAPIServer            = "kube-apiserver"
+	containerNameVPNSeed                  = "vpn-seed"
+	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
+)
+
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
 }

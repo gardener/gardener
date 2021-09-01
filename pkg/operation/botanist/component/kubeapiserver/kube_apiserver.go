@@ -42,10 +42,6 @@ const (
 	UserName = "system:kube-apiserver:kubelet"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-kube-apiserver"
-
-	containerNameKubeAPIServer            = "kube-apiserver"
-	containerNameVPNSeed                  = "vpn-seed"
-	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 )
 
 // Interface contains functions for a kube-apiserver deployer.
