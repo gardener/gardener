@@ -351,6 +351,7 @@ spec:
                     type: array
                 type: object
             type: object
+            nullable: true
         required:
         - spec
         type: object
@@ -582,6 +583,7 @@ spec:
                     type: array
                 type: object
             type: object
+            nullable: true
         required:
         - spec
         type: object
