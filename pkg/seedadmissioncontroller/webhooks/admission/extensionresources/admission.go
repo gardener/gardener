@@ -45,7 +45,7 @@ const (
 // New creates a new webhook handler validating CREATE and UPDATE requests for extension resources.
 func New(logger logr.Logger) *handler {
 	artifacts := map[metav1.GroupVersionResource]*artifact{
-		gvr("backupbuckets"): &artifact{
+		gvr("backupbuckets"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.BackupBucket) },
 			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				return validation.ValidateBackupBucket(n.(*extensionsv1alpha1.BackupBucket))
@@ -55,7 +55,7 @@ func New(logger logr.Logger) *handler {
 			},
 		},
 
-		gvr("backupentries"): &artifact{
+		gvr("backupentries"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.BackupEntry) },
 			validateCreateResource: func(n, o client.Object) field.ErrorList {
 				return validation.ValidateBackupEntry(n.(*extensionsv1alpha1.BackupEntry))
@@ -65,7 +65,7 @@ func New(logger logr.Logger) *handler {
 			},
 		},
 
-		gvr("bastions"): &artifact{
+		gvr("bastions"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.Bastion) },
 			validateCreateResource: func(n, o client.Object) field.ErrorList {
 				return validation.ValidateBastion(n.(*extensionsv1alpha1.Bastion))
@@ -75,7 +75,7 @@ func New(logger logr.Logger) *handler {
 			},
 		},
 
-		gvr("containerruntimes"): &artifact{
+		gvr("containerruntimes"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.ContainerRuntime) },
 			validateCreateResource: func(n, o client.Object) field.ErrorList {
 				return validation.ValidateContainerRuntime(n.(*extensionsv1alpha1.ContainerRuntime))
@@ -85,7 +85,7 @@ func New(logger logr.Logger) *handler {
 			},
 		},
 
-		gvr("controlplanes"): &artifact{
+		gvr("controlplanes"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.ControlPlane) },
 			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				return validation.ValidateControlPlane(n.(*extensionsv1alpha1.ControlPlane))
@@ -95,7 +95,7 @@ func New(logger logr.Logger) *handler {
 			},
 		},
 
-		gvr("dnsrecords"): &artifact{
+		gvr("dnsrecords"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.DNSRecord) },
 			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				return validation.ValidateDNSRecord(n.(*extensionsv1alpha1.DNSRecord))
@@ -105,7 +105,7 @@ func New(logger logr.Logger) *handler {
 			},
 		},
 
-		gvr("extensions"): &artifact{
+		gvr("extensions"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.Extension) },
 			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				return validation.ValidateExtension(n.(*extensionsv1alpha1.Extension))
@@ -115,7 +115,7 @@ func New(logger logr.Logger) *handler {
 			},
 		},
 
-		gvr("infrastructures"): &artifact{
+		gvr("infrastructures"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.Infrastructure) },
 			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				return validation.ValidateInfrastructure(n.(*extensionsv1alpha1.Infrastructure))
@@ -125,7 +125,7 @@ func New(logger logr.Logger) *handler {
 			},
 		},
 
-		gvr("networks"): &artifact{
+		gvr("networks"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.Network) },
 			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				return validation.ValidateNetwork(n.(*extensionsv1alpha1.Network))
@@ -135,7 +135,7 @@ func New(logger logr.Logger) *handler {
 			},
 		},
 
-		gvr("operatingsystemconfigs"): &artifact{
+		gvr("operatingsystemconfigs"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.OperatingSystemConfig) },
 			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				return validation.ValidateOperatingSystemConfig(n.(*extensionsv1alpha1.OperatingSystemConfig))
@@ -145,7 +145,7 @@ func New(logger logr.Logger) *handler {
 			},
 		},
 
-		gvr("workers"): &artifact{
+		gvr("workers"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.Worker) },
 			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				return validation.ValidateWorker(n.(*extensionsv1alpha1.Worker))
