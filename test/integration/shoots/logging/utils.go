@@ -215,3 +215,12 @@ func getLogCountFromResult(search *framework.SearchResponse) (int, error) {
 	}
 	return totalLogs, nil
 }
+
+func getConfigMapName(volumes []corev1.Volume, wantedVolumeName string) string {
+	for _, volume := range volumes {
+		if volume.Name == wantedVolumeName && volume.ConfigMap != nil {
+			return volume.ConfigMap.Name
+		}
+	}
+	return ""
+}
