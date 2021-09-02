@@ -464,7 +464,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 
 	var (
 		apiServerConfig              = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
-		admissionPlugins             = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
 		externalHostname             = b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
 		serviceAccountTokenIssuerURL = fmt.Sprintf("https://%s", externalHostname)
 		serviceAccountConfigVals     = map[string]interface{}{}
@@ -482,22 +481,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 
 		if apiServerConfig.APIAudiences != nil {
 			defaultValues["apiAudiences"] = apiServerConfig.APIAudiences
-		}
-
-		for _, plugin := range apiServerConfig.AdmissionPlugins {
-			pluginOverwritesDefault := false
-
-			for i, defaultPlugin := range admissionPlugins {
-				if defaultPlugin.Name == plugin.Name {
-					pluginOverwritesDefault = true
-					admissionPlugins[i] = plugin
-					break
-				}
-			}
-
-			if !pluginOverwritesDefault {
-				admissionPlugins = append(admissionPlugins, plugin)
-			}
 		}
 
 		if watchCacheSizes := apiServerConfig.WatchCacheSizes; watchCacheSizes != nil {
@@ -518,7 +501,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 
 	serviceAccountConfigVals["issuer"] = serviceAccountTokenIssuerURL
 	defaultValues["serviceAccountConfig"] = serviceAccountConfigVals
-	defaultValues["admissionPlugins"] = admissionPlugins
 
 	values, err := b.InjectSeedShootImages(defaultValues,
 		charts.ImageNameVpnSeed,

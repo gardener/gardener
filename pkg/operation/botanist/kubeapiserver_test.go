@@ -42,6 +42,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -97,6 +98,89 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#DefaultKubeAPIServer", func() {
+		Describe("AdmissionPlugins", func() {
+			DescribeTable("should have the expected admission plugins config",
+				func(configuredPlugins, expectedPlugins []gardencorev1beta1.AdmissionPlugin) {
+					botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+						Spec: gardencorev1beta1.ShootSpec{
+							Kubernetes: gardencorev1beta1.Kubernetes{
+								KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+									AdmissionPlugins: configuredPlugins,
+								},
+								Version: "1.22.1",
+							},
+						},
+					})
+
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(kubeAPIServer.GetValues().AdmissionPlugins).To(Equal(expectedPlugins))
+				},
+
+				Entry("only default plugins",
+					nil,
+					[]gardencorev1beta1.AdmissionPlugin{
+						{Name: "Priority"},
+						{Name: "NamespaceLifecycle"},
+						{Name: "LimitRanger"},
+						{Name: "PodSecurityPolicy"},
+						{Name: "ServiceAccount"},
+						{Name: "NodeRestriction"},
+						{Name: "DefaultStorageClass"},
+						{Name: "DefaultTolerationSeconds"},
+						{Name: "ResourceQuota"},
+						{Name: "StorageObjectInUseProtection"},
+						{Name: "MutatingAdmissionWebhook"},
+						{Name: "ValidatingAdmissionWebhook"},
+					},
+				),
+				Entry("default plugins with overrides",
+					[]gardencorev1beta1.AdmissionPlugin{
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
+					},
+					[]gardencorev1beta1.AdmissionPlugin{
+						{Name: "Priority"},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
+						{Name: "LimitRanger"},
+						{Name: "PodSecurityPolicy"},
+						{Name: "ServiceAccount"},
+						{Name: "NodeRestriction"},
+						{Name: "DefaultStorageClass"},
+						{Name: "DefaultTolerationSeconds"},
+						{Name: "ResourceQuota"},
+						{Name: "StorageObjectInUseProtection"},
+						{Name: "MutatingAdmissionWebhook"},
+						{Name: "ValidatingAdmissionWebhook"},
+					},
+				),
+				Entry("default plugins with overrides and other plugins",
+					[]gardencorev1beta1.AdmissionPlugin{
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
+						{Name: "Foo"},
+						{Name: "Bar"},
+						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
+					},
+					[]gardencorev1beta1.AdmissionPlugin{
+						{Name: "Priority"},
+						{Name: "NamespaceLifecycle", Config: &runtime.RawExtension{Raw: []byte("namespace-lifecycle-config")}},
+						{Name: "LimitRanger"},
+						{Name: "PodSecurityPolicy"},
+						{Name: "ServiceAccount"},
+						{Name: "NodeRestriction"},
+						{Name: "DefaultStorageClass"},
+						{Name: "DefaultTolerationSeconds"},
+						{Name: "ResourceQuota"},
+						{Name: "StorageObjectInUseProtection"},
+						{Name: "MutatingAdmissionWebhook"},
+						{Name: "ValidatingAdmissionWebhook"},
+						{Name: "Foo"},
+						{Name: "Bar"},
+						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("baz-config")}},
+					},
+				),
+			)
+		})
+
 		Describe("AuditConfig", func() {
 			var (
 				policy               = "some-policy"

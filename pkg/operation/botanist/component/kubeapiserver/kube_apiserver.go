@@ -54,6 +54,8 @@ type Interface interface {
 
 // Values contains configuration values for the kube-apiserver resources.
 type Values struct {
+	// AdmissionPlugins is the list of admission plugins with configuration for the kube-apiserver.
+	AdmissionPlugins []gardencorev1beta1.AdmissionPlugin
 	// Audit contains information for configuring audit settings for the kube-apiserver.
 	Audit *AuditConfig
 	// Autoscaling contains information for configuring autoscaling settings for the kube-apiserver.
@@ -133,6 +135,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
 		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
 		secretServiceAccountSigningKey       = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
+		configMapAdmission                   = k.emptyConfigMap(configMapAdmissionNamePrefix)
 		configMapAuditPolicy                 = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
 		configMapEgressSelector              = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
 	)
@@ -170,6 +173,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileSecretServiceAccountSigningKey(ctx, secretServiceAccountSigningKey); err != nil {
+		return err
+	}
+
+	if err := k.reconcileConfigMapAdmission(ctx, configMapAdmission); err != nil {
 		return err
 	}
 

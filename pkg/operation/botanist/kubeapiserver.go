@@ -37,6 +37,7 @@ import (
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
 func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Interface, error) {
 	var (
+		admissionPlugins     = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
 		auditConfig          *kubeapiserver.AuditConfig
 		oidcConfig           *gardencorev1beta1.OIDCConfig
 		serviceAccountConfig *kubeapiserver.ServiceAccountConfig
@@ -44,6 +45,8 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	)
 
 	if apiServerConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; apiServerConfig != nil {
+		admissionPlugins = b.computeKubeAPIServerAdmissionPlugins(admissionPlugins, apiServerConfig.AdmissionPlugins)
+
 		auditConfig, err = b.computeKubeAPIServerAuditConfig(ctx, apiServerConfig.AuditConfig)
 		if err != nil {
 			return nil, err
@@ -61,6 +64,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		b.K8sSeedClient,
 		b.Shoot.SeedNamespace,
 		kubeapiserver.Values{
+			AdmissionPlugins:     admissionPlugins,
 			Audit:                auditConfig,
 			Autoscaling:          b.computeKubeAPIServerAutoscalingConfig(),
 			ReversedVPNEnabled:   b.Shoot.ReversedVPNEnabled,
@@ -72,6 +76,26 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			Version: b.Shoot.KubernetesVersion,
 		},
 	), nil
+}
+
+func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
+	for _, plugin := range configuredPlugins {
+		pluginOverwritesDefault := false
+
+		for i, defaultPlugin := range defaultPlugins {
+			if defaultPlugin.Name == plugin.Name {
+				pluginOverwritesDefault = true
+				defaultPlugins[i] = plugin
+				break
+			}
+		}
+
+		if !pluginOverwritesDefault {
+			defaultPlugins = append(defaultPlugins, plugin)
+		}
+	}
+
+	return defaultPlugins
 }
 
 func (b *Botanist) computeKubeAPIServerAuditConfig(ctx context.Context, config *gardencorev1beta1.AuditConfig) (*kubeapiserver.AuditConfig, error) {

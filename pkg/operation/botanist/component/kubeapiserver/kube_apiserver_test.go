@@ -73,6 +73,7 @@ var _ = Describe("KubeAPIServer", func() {
 		networkPolicyAllowKubeAPIServer      *networkingv1.NetworkPolicy
 		secretOIDCCABundle                   *corev1.Secret
 		secretServiceAccountSigningKey       *corev1.Secret
+		configMapAdmission                   *corev1.ConfigMap
 		configMapAuditPolicy                 *corev1.ConfigMap
 		configMapEgressSelector              *corev1.ConfigMap
 		managedResource                      *resourcesv1alpha1.ManagedResource
@@ -1012,6 +1013,80 @@ subjects:
 		})
 
 		Describe("ConfigMaps", func() {
+			Context("admission", func() {
+				It("should successfully deploy the configmap resource w/o admission plugins", func() {
+					configMapAdmission = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
+						Data: map[string]string{"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins: null
+`},
+					}
+					Expect(kutil.MakeUnique(configMapAdmission)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAdmission.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "ConfigMap",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAdmission.Name,
+							Namespace:       configMapAdmission.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      configMapAdmission.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/ admission plugins", func() {
+					admissionPlugins := []gardencorev1beta1.AdmissionPlugin{
+						{Name: "Foo"},
+						{Name: "Bar"},
+						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("some-config-for-baz")}},
+					}
+
+					kapi = New(kubernetesInterface, namespace, Values{AdmissionPlugins: admissionPlugins})
+
+					configMapAdmission = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
+						Data: map[string]string{
+							"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins:
+- configuration: null
+  name: Baz
+  path: /etc/kubernetes/admission/baz.yaml
+`,
+							"baz.yaml": "some-config-for-baz",
+						},
+					}
+					Expect(kutil.MakeUnique(configMapAdmission)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAdmission.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "ConfigMap",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAdmission.Name,
+							Namespace:       configMapAdmission.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      configMapAdmission.Data,
+					}))
+				})
+			})
+
 			Context("audit policy", func() {
 				It("should successfully deploy the configmap resource w/ default policy", func() {
 					configMapAuditPolicy = &corev1.ConfigMap{

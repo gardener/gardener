@@ -44,23 +44,10 @@
 {{- end }}
 {{- end -}}
 
-{{- define "kube-apiserver.admissionPluginConfigFileDir" -}}
-/etc/kubernetes/admission
-{{- end -}}
-
 {{- define "kube-apiserver.admissionPlugins" }}
 {{- range $i, $plugin := .Values.admissionPlugins -}}
 {{ $plugin.name }},
 {{- end -}}
-{{- end -}}
-
-{{- define "kube-apiserver.admissionConfig" }}
-{{- range $i, $plugin := .Values.admissionPlugins }}
-{{- if $plugin.config }}
-- name: {{ $plugin.name }}
-  path: {{ include "kube-apiserver.admissionPluginConfigFileDir" . }}/{{ lower $plugin.name }}.yaml
-{{- end }}
-{{- end }}
 {{- end -}}
 
 {{- define "kube-apiserver.serviceAccountConfig" -}}
@@ -99,26 +86,3 @@
 {{- required ".resource is required" .resource }}{{ if .apiGroup }}.{{ .apiGroup }}{{ end }}#{{ .size }},
 {{- end -}}
 {{- end -}}
-
-{{- define "kube-apiserver.admissionConfig.data" -}}
-admission-configuration.yaml: |
-  apiVersion: {{ include "apiserverversion" . }}
-  kind: AdmissionConfiguration
-  {{- if (include "kube-apiserver.admissionConfig" .) }}
-  plugins:
-  {{- include "kube-apiserver.admissionConfig" . | indent 2 }}
-  {{- else }}
-  plugins: []
-  {{- end }}
-
-{{- range $i, $plugin := .Values.admissionPlugins }}
-{{- if $plugin.config }}
-{{ lower $plugin.name }}.yaml: |
-{{ toYaml $plugin.config | indent 2 }}
-{{- end }}
-{{- end }}
-{{- end -}}
-
-{{- define "kube-apiserver.admissionConfig.name" -}}
-kube-apiserver-admission-config-{{ include "kube-apiserver.admissionConfig.data" . | sha256sum | trunc 8 }}
-{{- end }}
