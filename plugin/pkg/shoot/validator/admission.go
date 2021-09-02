@@ -238,7 +238,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	var allErrs field.ErrorList
 	allErrs = append(allErrs, validationContext.defaultOrValidateShootNetworks()...)
 	allErrs = append(allErrs, validationContext.validateKubernetes()...)
-	allErrs = append(allErrs, validateRegion(validationContext.cloudProfile.Spec.Regions, validationContext.shoot.Spec.Region, validationContext.oldShoot.Spec.Region, field.NewPath("spec", "region"))...)
+	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateProvider()...)
 
 	dnsErrors, err := validationContext.validateDNSDomainUniqueness(v.shootLister)
@@ -835,14 +835,19 @@ top:
 	return false, validValues
 }
 
-func validateRegion(constraints []core.Region, region, oldRegion string, fldPath *field.Path) field.ErrorList {
-	var validValues []string
+func (c *validationContext) validateRegion() field.ErrorList {
+	var (
+		fldPath     = field.NewPath("spec", "region")
+		validValues []string
+		region      = c.shoot.Spec.Region
+		oldRegion   = c.oldShoot.Spec.Region
+	)
 
 	if region == oldRegion {
 		return nil
 	}
 
-	for _, r := range constraints {
+	for _, r := range c.cloudProfile.Spec.Regions {
 		validValues = append(validValues, r.Name)
 		if r.Name == region {
 			return nil
