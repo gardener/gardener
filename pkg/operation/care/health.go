@@ -29,12 +29,15 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 
+	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -199,7 +202,7 @@ func (h *Health) healthChecks(
 	}
 
 	var (
-		checker               = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion)
+		checker               = NewHealthChecker(thresholdMappings, healthCheckOutdatedThreshold, h.shoot.GetInfo().Status.LastOperation, h.shoot.KubernetesVersion, h.shoot.GardenerVersion)
 		seedDeploymentLister  = makeDeploymentLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
 		seedStatefulSetLister = makeStatefulSetLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace, controlPlaneMonitoringLoggingSelector)
 		seedEtcdLister        = makeEtcdLister(ctx, h.seedClient.Client(), h.shoot.SeedNamespace)
@@ -285,14 +288,32 @@ func (h *Health) checkControlPlane(
 	return &c, nil
 }
 
+var versionConstraintGreaterEqual131 *semver.Constraints
+
+func init() {
+	var err error
+
+	versionConstraintGreaterEqual131, err = semver.NewConstraint(">= 1.31")
+	utilruntime.Must(err)
+}
+
 // checkSystemComponents checks whether the system components of a Shoot are running.
 func (h *Health) checkSystemComponents(
 	ctx context.Context,
 	checker *HealthChecker,
 	condition gardencorev1beta1.Condition,
 	extensionConditions []ExtensionCondition,
-) (*gardencorev1beta1.Condition, error) {
-	for name := range managedResourcesShoot {
+) (
+	*gardencorev1beta1.Condition,
+	error,
+) {
+	managedResources := managedResourcesShoot.List()
+	if versionConstraintGreaterEqual131.Check(checker.gardenerVersion) {
+		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
+		managedResources = append(managedResources, kubeapiserver.ManagedResourceName)
+	}
+
+	for _, name := range managedResources {
 		mr := &resourcesv1alpha1.ManagedResource{}
 		if err := h.seedClient.Client().Get(ctx, kutil.Key(h.shoot.SeedNamespace, name), mr); err != nil {
 			return nil, err
