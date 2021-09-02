@@ -40,8 +40,6 @@ const (
 	Port = 443
 	// UserName is the name of the kube-apiserver user when communicating with the kubelet.
 	UserName = "system:kube-apiserver:kubelet"
-	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
-	ManagedResourceName = "shoot-core-kube-apiserver"
 )
 
 // Interface contains functions for a kube-apiserver deployer.

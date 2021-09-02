@@ -24,6 +24,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
+const ManagedResourceName = "shoot-core-kube-apiserver"
+
 func (k *kubeAPIServer) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
 	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: ManagedResourceName, Namespace: k.namespace}}
 }
