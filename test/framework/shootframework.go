@@ -24,7 +24,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -32,13 +31,9 @@ import (
 	"github.com/onsi/ginkgo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	corescheme "k8s.io/client-go/kubernetes/scheme"
-	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
-	metricsscheme "k8s.io/metrics/pkg/client/clientset/versioned/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -211,21 +206,9 @@ func (f *ShootFramework) AddShoot(ctx context.Context, shootName, shootNamespace
 		return nil
 	}
 
-	shootScheme := runtime.NewScheme()
-	shootSchemeBuilder := runtime.NewSchemeBuilder(
-		corescheme.AddToScheme,
-		apiextensionsscheme.AddToScheme,
-		apiregistrationscheme.AddToScheme,
-		metricsscheme.AddToScheme,
-		gardenextensionsscheme.AddToScheme,
-	)
-	err = shootSchemeBuilder.AddToScheme(shootScheme)
-	if err != nil {
-		return fmt.Errorf("could not add schemes to shoot scheme: %w", err)
-	}
 	if err := retry.UntilTimeout(ctx, k8sClientInitPollInterval, k8sClientInitTimeout, func(ctx context.Context) (bool, error) {
 		shootClient, err = kubernetes.NewClientFromSecret(ctx, f.SeedClient.Client(), ComputeTechnicalID(f.Project.Name, shoot), gardencorev1beta1.GardenerName, kubernetes.WithClientOptions(client.Options{
-			Scheme: shootScheme,
+			Scheme: kubernetes.ShootScheme,
 		}))
 		if err != nil {
 			return retry.MinorError(fmt.Errorf("could not construct Shoot client: %w", err))

@@ -24,7 +24,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	operations "github.com/gardener/gardener/pkg/apis/operations"
+	"github.com/gardener/gardener/pkg/apis/operations"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	settingsv1alpha1 "github.com/gardener/gardener/pkg/apis/settings/v1alpha1"
@@ -36,8 +36,6 @@ import (
 	gardenexternalcoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	operationsclientset "github.com/gardener/gardener/pkg/client/operations/clientset/versioned"
-	operationsinformer "github.com/gardener/gardener/pkg/client/operations/informers/externalversions"
 	seedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	seedmanagementinformer "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
@@ -115,7 +113,6 @@ type Options struct {
 	KubeInformerFactory           kubeinformers.SharedInformerFactory
 	SeedManagementInformerFactory seedmanagementinformer.SharedInformerFactory
 	SettingsInformerFactory       settingsinformer.SharedInformerFactory
-	OperationsInformerFactory     operationsinformer.SharedInformerFactory
 }
 
 // NewOptions returns a new Options object.
@@ -209,13 +206,6 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 		}
 		o.SettingsInformerFactory = settingsinformer.NewSharedInformerFactory(settingsClient, protobufLoopbackConfig.Timeout)
 
-		// operations client
-		operationsClient, err := operationsclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
-		if err != nil {
-			return nil, err
-		}
-		o.OperationsInformerFactory = operationsinformer.NewSharedInformerFactory(operationsClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
-
 		// dynamic client
 		dynamicClient, err := dynamic.NewForConfig(kubeAPIServerConfig)
 		if err != nil {
@@ -290,7 +280,6 @@ func (o *Options) Run(ctx context.Context) error {
 		o.KubeInformerFactory.Start(context.StopCh)
 		o.SeedManagementInformerFactory.Start(context.StopCh)
 		o.SettingsInformerFactory.Start(context.StopCh)
-		o.OperationsInformerFactory.Start(context.StopCh)
 		return nil
 	}); err != nil {
 		return err

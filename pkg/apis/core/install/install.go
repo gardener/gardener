@@ -23,6 +23,15 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
+var (
+	localSchemeBuilder = runtime.SchemeBuilder{
+		v1alpha1.AddToScheme,
+		v1beta1.AddToScheme,
+	}
+	// AddToScheme adds all versioned API types to the given scheme.
+	AddToScheme = localSchemeBuilder.AddToScheme
+)
+
 // Install registers the API group and adds types to a scheme.
 func Install(scheme *runtime.Scheme) {
 	utilruntime.Must(core.AddToScheme(scheme))

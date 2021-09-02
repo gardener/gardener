@@ -18,16 +18,11 @@ import (
 	"context"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	gardenoperationsclientset "github.com/gardener/gardener/pkg/client/operations/clientset/versioned"
-	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 
-	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/version"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -38,21 +33,16 @@ var _ kubernetes.Interface = &ClientSet{}
 type ClientSet struct {
 	CheckForwardPodPortFn
 
-	applier              kubernetes.Applier
-	chartRenderer        chartrenderer.Interface
-	chartApplier         kubernetes.ChartApplier
-	restConfig           *rest.Config
-	client               client.Client
-	apiReader            client.Reader
-	cache                cache.Cache
-	kubernetes           kubernetesclientset.Interface
-	gardenCore           gardencoreclientset.Interface
-	gardenSeedManagement gardenseedmanagementclientset.Interface
-	gardenOperations     gardenoperationsclientset.Interface
-	apiextension         apiextensionsclientset.Interface
-	apiregistration      apiregistrationclientset.Interface
-	restClient           rest.Interface
-	version              string
+	applier       kubernetes.Applier
+	chartRenderer chartrenderer.Interface
+	chartApplier  kubernetes.ChartApplier
+	restConfig    *rest.Config
+	client        client.Client
+	apiReader     client.Reader
+	cache         cache.Cache
+	kubernetes    kubernetesclientset.Interface
+	restClient    rest.Interface
+	version       string
 }
 
 // NewClientSet returns a new empty fake ClientSet.
@@ -100,31 +90,6 @@ func (c *ClientSet) Kubernetes() kubernetesclientset.Interface {
 	return c.kubernetes
 }
 
-// GardenCore will return the gardenCore attribute of the Client object.
-func (c *ClientSet) GardenCore() gardencoreclientset.Interface {
-	return c.gardenCore
-}
-
-// GardenSeedManagement will return the gardenSeedManagement attribute of the Client object.
-func (c *ClientSet) GardenSeedManagement() gardenseedmanagementclientset.Interface {
-	return c.gardenSeedManagement
-}
-
-// GardenOperations will return the gardenOperations attribute of the Client object.
-func (c *ClientSet) GardenOperations() gardenoperationsclientset.Interface {
-	return c.gardenOperations
-}
-
-// APIExtension will return the apiextension ClientSet attribute of the Client object.
-func (c *ClientSet) APIExtension() apiextensionsclientset.Interface {
-	return c.apiextension
-}
-
-// APIRegistration will return the apiregistration attribute of the Client object.
-func (c *ClientSet) APIRegistration() apiregistrationclientset.Interface {
-	return c.apiregistration
-}
-
 // RESTClient will return the restClient attribute of the Client object.
 func (c *ClientSet) RESTClient() rest.Interface {
 	return c.restClient
@@ -153,11 +118,6 @@ func (c *ClientSet) Start(context.Context) {
 // WaitForCacheSync does nothing and return trues.
 func (c *ClientSet) WaitForCacheSync(context.Context) bool {
 	return true
-}
-
-// ForwardPodPort does nothing as the fake ClientSet does not support it.
-func (c *ClientSet) ForwardPodPort(string, string, int, int) (chan struct{}, error) {
-	return nil, nil
 }
 
 // CheckForwardPodPortFn is a type alias for a function checking port forwarding for pods.

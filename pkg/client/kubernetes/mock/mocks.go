@@ -9,16 +9,11 @@ import (
 	reflect "reflect"
 
 	chartrenderer "github.com/gardener/gardener/pkg/chartrenderer"
-	versioned "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
-	versioned0 "github.com/gardener/gardener/pkg/client/operations/clientset/versioned"
-	versioned1 "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	gomock "github.com/golang/mock/gomock"
-	clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	version "k8s.io/apimachinery/pkg/version"
 	kubernetes0 "k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
-	clientset0 "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	cache "sigs.k8s.io/controller-runtime/pkg/cache"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -46,20 +41,6 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
-// APIExtension mocks base method.
-func (m *MockInterface) APIExtension() clientset.Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "APIExtension")
-	ret0, _ := ret[0].(clientset.Interface)
-	return ret0
-}
-
-// APIExtension indicates an expected call of APIExtension.
-func (mr *MockInterfaceMockRecorder) APIExtension() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIExtension", reflect.TypeOf((*MockInterface)(nil).APIExtension))
-}
-
 // APIReader mocks base method.
 func (m *MockInterface) APIReader() client.Reader {
 	m.ctrl.T.Helper()
@@ -72,20 +53,6 @@ func (m *MockInterface) APIReader() client.Reader {
 func (mr *MockInterfaceMockRecorder) APIReader() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIReader", reflect.TypeOf((*MockInterface)(nil).APIReader))
-}
-
-// APIRegistration mocks base method.
-func (m *MockInterface) APIRegistration() clientset0.Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "APIRegistration")
-	ret0, _ := ret[0].(clientset0.Interface)
-	return ret0
-}
-
-// APIRegistration indicates an expected call of APIRegistration.
-func (mr *MockInterfaceMockRecorder) APIRegistration() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIRegistration", reflect.TypeOf((*MockInterface)(nil).APIRegistration))
 }
 
 // Applier mocks base method.
@@ -185,63 +152,6 @@ func (m *MockInterface) DiscoverVersion() (*version.Info, error) {
 func (mr *MockInterfaceMockRecorder) DiscoverVersion() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DiscoverVersion", reflect.TypeOf((*MockInterface)(nil).DiscoverVersion))
-}
-
-// ForwardPodPort mocks base method.
-func (m *MockInterface) ForwardPodPort(arg0, arg1 string, arg2, arg3 int) (chan struct{}, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ForwardPodPort", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(chan struct{})
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ForwardPodPort indicates an expected call of ForwardPodPort.
-func (mr *MockInterfaceMockRecorder) ForwardPodPort(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForwardPodPort", reflect.TypeOf((*MockInterface)(nil).ForwardPodPort), arg0, arg1, arg2, arg3)
-}
-
-// GardenCore mocks base method.
-func (m *MockInterface) GardenCore() versioned.Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GardenCore")
-	ret0, _ := ret[0].(versioned.Interface)
-	return ret0
-}
-
-// GardenCore indicates an expected call of GardenCore.
-func (mr *MockInterfaceMockRecorder) GardenCore() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GardenCore", reflect.TypeOf((*MockInterface)(nil).GardenCore))
-}
-
-// GardenOperations mocks base method.
-func (m *MockInterface) GardenOperations() versioned0.Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GardenOperations")
-	ret0, _ := ret[0].(versioned0.Interface)
-	return ret0
-}
-
-// GardenOperations indicates an expected call of GardenOperations.
-func (mr *MockInterfaceMockRecorder) GardenOperations() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GardenOperations", reflect.TypeOf((*MockInterface)(nil).GardenOperations))
-}
-
-// GardenSeedManagement mocks base method.
-func (m *MockInterface) GardenSeedManagement() versioned1.Interface {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GardenSeedManagement")
-	ret0, _ := ret[0].(versioned1.Interface)
-	return ret0
-}
-
-// GardenSeedManagement indicates an expected call of GardenSeedManagement.
-func (mr *MockInterfaceMockRecorder) GardenSeedManagement() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GardenSeedManagement", reflect.TypeOf((*MockInterface)(nil).GardenSeedManagement))
 }
 
 // Kubernetes mocks base method.

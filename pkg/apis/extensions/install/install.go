@@ -15,18 +15,18 @@
 package install
 
 import (
-	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 var (
-	schemeBuilder = runtime.NewSchemeBuilder(
+	localSchemeBuilder = runtime.SchemeBuilder{
 		v1alpha1.AddToScheme,
-	)
-
-	// AddToScheme adds all extension types to the given Scheme.
-	AddToScheme = schemeBuilder.AddToScheme
+	}
+	// AddToScheme adds all versioned API types to the given scheme.
+	AddToScheme = localSchemeBuilder.AddToScheme
 )
 
 // Install installs all extension types into the given Scheme. It panics if there is an error.

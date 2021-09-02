@@ -25,6 +25,8 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
@@ -279,6 +281,19 @@ func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error 
 		return []string{controllerInstallation.Spec.SeedRef.Name}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer to ControllerInstallation Informer: %w", err)
+	}
+
+	if err := indexer.IndexField(ctx, &seedmanagementv1alpha1.ManagedSeed{}, seedmanagement.ManagedSeedShootName, func(obj client.Object) []string {
+		managedSeed, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
+		if !ok {
+			return []string{""}
+		}
+		if shoot := managedSeed.Spec.Shoot; shoot != nil {
+			return []string{managedSeed.Spec.Shoot.Name}
+		}
+		return []string{""}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to ManagedSeed Informer: %w", err)
 	}
 
 	return nil

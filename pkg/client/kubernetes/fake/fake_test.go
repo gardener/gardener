@@ -19,12 +19,9 @@ import (
 	"errors"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencorefake "github.com/gardener/gardener/pkg/client/core/clientset/versioned/fake"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/client/kubernetes/test"
-	gardenoperationsfake "github.com/gardener/gardener/pkg/client/operations/clientset/versioned/fake"
-	gardenseedmanagementfake "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
 	mockdiscovery "github.com/gardener/gardener/pkg/mock/client-go/discovery"
 	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -32,12 +29,10 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	apiextensionsfake "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/fake"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	kubernetesfake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
-	apiregistrationfake "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/fake"
 )
 
 var _ = Describe("Fake ClientSet", func() {
@@ -111,41 +106,6 @@ var _ = Describe("Fake ClientSet", func() {
 		Expect(cs.Kubernetes()).To(BeIdenticalTo(kubernetes))
 	})
 
-	It("should correctly set gardenCore attribute", func() {
-		gardenCore := gardencorefake.NewSimpleClientset()
-		cs := builder.WithGardenCore(gardenCore).Build()
-
-		Expect(cs.GardenCore()).To(BeIdenticalTo(gardenCore))
-	})
-
-	It("should correctly set gardenSeedManagement attribute", func() {
-		gardenSeedManagement := gardenseedmanagementfake.NewSimpleClientset()
-		cs := builder.WithGardenSeedManagement(gardenSeedManagement).Build()
-
-		Expect(cs.GardenSeedManagement()).To(BeIdenticalTo(gardenSeedManagement))
-	})
-
-	It("should correctly set gardenOperations attribute", func() {
-		gardenOperations := gardenoperationsfake.NewSimpleClientset()
-		cs := builder.WithGardenOperations(gardenOperations).Build()
-
-		Expect(cs.GardenOperations()).To(BeIdenticalTo(gardenOperations))
-	})
-
-	It("should correctly set apiextension attribute", func() {
-		apiextension := apiextensionsfake.NewSimpleClientset()
-		cs := builder.WithAPIExtension(apiextension).Build()
-
-		Expect(cs.APIExtension()).To(BeIdenticalTo(apiextension))
-	})
-
-	It("should correctly set apiregistration attribute", func() {
-		apiregistration := apiregistrationfake.NewSimpleClientset()
-		cs := builder.WithAPIRegistration(apiregistration).Build()
-
-		Expect(cs.APIRegistration()).To(BeIdenticalTo(apiregistration))
-	})
-
 	It("should correctly set restClient attribute", func() {
 		disc, err := discovery.NewDiscoveryClientForConfig(&rest.Config{})
 		Expect(err).NotTo(HaveOccurred())
@@ -199,14 +159,6 @@ var _ = Describe("Fake ClientSet", func() {
 		cs := fake.NewClientSet()
 
 		Expect(cs.WaitForCacheSync(context.Background())).To(BeTrue())
-	})
-
-	It("should do nothing on ForwardPodPort", func() {
-		cs := fake.NewClientSet()
-
-		ch, err := cs.ForwardPodPort("", "", 0, 0)
-		Expect(ch).To(BeNil())
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("should do nothing on CheckForwardPodPort", func() {

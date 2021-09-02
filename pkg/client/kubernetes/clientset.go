@@ -19,16 +19,11 @@ import (
 	"sync"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-	gardenoperationsclientset "github.com/gardener/gardener/pkg/client/operations/clientset/versioned"
-	gardenseedmanagementclientset "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned"
 	"github.com/gardener/gardener/pkg/logger"
 
-	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -59,12 +54,7 @@ type clientSet struct {
 	// startOnce guards starting the cache only once
 	startOnce sync.Once
 
-	kubernetes           kubernetes.Interface
-	gardenCore           gardencoreclientset.Interface
-	gardenSeedManagement gardenseedmanagementclientset.Interface
-	gardenOperations     gardenoperationsclientset.Interface
-	apiextension         apiextensionclientset.Interface
-	apiregistration      apiregistrationclientset.Interface
+	kubernetes kubernetes.Interface
 
 	version string
 }
@@ -107,31 +97,6 @@ func (c *clientSet) Cache() cache.Cache {
 // Kubernetes will return the kubernetes attribute of the Client object.
 func (c *clientSet) Kubernetes() kubernetes.Interface {
 	return c.kubernetes
-}
-
-// GardenCore will return the gardenCore attribute of the Client object.
-func (c *clientSet) GardenCore() gardencoreclientset.Interface {
-	return c.gardenCore
-}
-
-// GardenSeedManagement will return the gardenSeedManagement attribute of the Client object.
-func (c *clientSet) GardenSeedManagement() gardenseedmanagementclientset.Interface {
-	return c.gardenSeedManagement
-}
-
-// GardenOperations will return the gardenOperations attribute of the Client object.
-func (c *clientSet) GardenOperations() gardenoperationsclientset.Interface {
-	return c.gardenOperations
-}
-
-// APIExtension will return the apiextensions attribute of the Client object.
-func (c *clientSet) APIExtension() apiextensionclientset.Interface {
-	return c.apiextension
-}
-
-// APIRegistration will return the apiregistration attribute of the Client object.
-func (c *clientSet) APIRegistration() apiregistrationclientset.Interface {
-	return c.apiregistration
 }
 
 // RESTClient will return the restClient attribute of the Client object.

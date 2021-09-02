@@ -103,17 +103,6 @@ func GetPodLogs(ctx context.Context, podInterface corev1client.PodInterface, nam
 	return io.ReadAll(stream)
 }
 
-// ForwardPodPort tries to forward the <remote> port of the pod with name <name> in namespace <namespace> to
-// the <local> port. If <local> equals zero, a free port will be chosen randomly.
-// It returns the stop channel which must be closed when the port forward connection should be terminated.
-func (c *clientSet) ForwardPodPort(namespace, name string, local, remote int) (chan struct{}, error) {
-	fw, stopChan, err := c.setupForwardPodPort(namespace, name, local, remote)
-	if err != nil {
-		return nil, err
-	}
-	return stopChan, fw.ForwardPorts()
-}
-
 // CheckForwardPodPort tries to forward the <remote> port of the pod with name <name> in namespace <namespace> to
 // the <local> port. If <local> equals zero, a free port will be chosen randomly.
 // It returns true if the port forward connection has been established successfully or false otherwise.
