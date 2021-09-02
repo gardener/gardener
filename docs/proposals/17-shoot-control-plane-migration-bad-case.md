@@ -68,11 +68,22 @@ The mechanism to copy the snapshots and pass the ownership from the source to th
 
 ## Handling Inability to Access the Backup Container
 
-The mechanism described above assumes that the `etcd-backup-restore` process in the source seed is able to access its backup container in order to take snapshots. If this is not the case, but an ownership change was detected, the `etcd-backup-restore` process still sets the readiness probe status of the main `etcd` container to 503, and kills the main `etcd` process as described above to ensure that any open connections from `kube-apiserver` are terminated. This effectively deactivates the source seed cluster to ensure that the ownership of the shoot can be passed to a different seed.
+The mechanism described above assumes that the `etcd-backup-restore` process in the source seed is able to access its backup container in order to take snapshots. If this is not the case, but an ownership change was detected, the `etcd-backup-restore` process still sets the readiness probe status of the main `etcd` container to 503, and kills the main `etcd` process as described above to ensure that any open connections from `kube-apiserver` are terminated. This effectively deactivates the source seed control plane to ensure that the ownership of the shoot can be passed to a different seed.
 
 Because of this, `etcd-backup-restore` process in the destination seed responsible for copying the snapshots can avoid waiting forever for a final full snapshot to appear. Instead, after a certain timeout has elapsed, it can proceed with the copying. In this situation, whatever latest snapshot is found in the source backup container will be restored in the destination seed. The shoot is still migrated to a healthy seed at the cost of losing the etcd data that accumulated between the point in time when the connection to the source backup container was lost, and the point in time when the source seed cluster was deactivated.
 
 When the connection to the backup container is restored in the source seed, a final full snapshot will be eventually taken. Depending on the stage of the restoration flow in the destination seed, this snapshot may be copied to the destination seed and restored, or it may simply be ignored since the snapshots have already been copied.
+
+## Handling Inability to Resolve the Owner DNS Record
+
+The situation when the owner DNS record cannot be resolved is treated similarly to a failed ownership check: the `etcd-backup-restore` process sets the readiness probe status of the main `etcd` container to 503, and kills the main `etcd` process as described above to ensure that any open connections from `kube-apiserver` are terminated, effectively deactivating the source seed control plane. The final full snapshot is not taken in this case to ensure that the control plane can be re-activated if needed.
+
+When the owner DNS record can be resolved again, the following 2 situations are possible:
+
+* If the source seed is still the owner of the shoot, the `etcd-backup-restore` process will set the readiness probe status of the main `etcd` container to 200, so `kube-apiserver` will be able to connect to `etcd` and the source seed control plane will be activated again.
+* If the source seed is no longer the owner of the shoot, the etcd readiness probe will continue to fail, and the source seed control plane will remain inactive. In addition, the final full snapshot will be taken at this time, for the same reason as described in [Handling Inability to Access the Backup Container](#handling-inability-to-access-the-backup-container).
+
+**Note:** We expect that actual DNS outages are extremely unlikely. A more likely reason for an inability to resolve a DNS record could be network issues with the underlying infrastructure. In such cases, the shoot would usually not be usable / reachable anyway, so deactivating its control plane would not cause a worse outage. 
 
 ## Migration Flow Adaptations
 
