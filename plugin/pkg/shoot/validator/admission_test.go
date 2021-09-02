@@ -2089,18 +2089,43 @@ var _ = Describe("validator", func() {
 
 		Context("control plane migration", func() {
 			It("should fail to change Seed name, because Seed doesn't have configuration for backup", func() {
-				oldShoot := shoot.DeepCopy()
-				oldShoot.Spec.SeedName = pointer.String("oldSeedName")
+				oldSeedName := fmt.Sprintf("old-%s", seedName)
+				oldSeed := seed.DeepCopy()
+				oldSeed.Name = oldSeedName
 				seed.Spec.Backup = nil
+
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.SeedName = &oldSeedName
 
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(oldSeed)).To(Succeed())
 				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
 
 				err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
-				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("backup is not configured for seed %q", seedName))))
+			})
+
+			It("should fail to change Seed name, because old Seed doesn't have configuration for backup", func() {
+				oldSeedName := fmt.Sprintf("old-%s", seedName)
+				oldSeed := seed.DeepCopy()
+				oldSeed.Name = oldSeedName
+				oldSeed.Spec.Backup = nil
+
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.SeedName = &oldSeedName
+
+				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+				Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(oldSeed)).To(Succeed())
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+				err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("backup is not configured for old seed %q", oldSeedName))))
 			})
 
 			It("should fail to change Seed name, because cloud provider for new Seed is not equal to cloud provider for old Seed", func() {

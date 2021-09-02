@@ -199,7 +199,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if shoot.Spec.SeedName != nil {
 		seed, err = v.seedLister.Get(*shoot.Spec.SeedName)
 		if err != nil {
-			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
+			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed %q: %+v", *shoot.Spec.SeedName, err.Error()))
 		}
 	}
 
@@ -322,15 +322,18 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 	}
 
 	if shootIsBeingRescheduled {
-		// TODO: this should be checked on both old and new Seed?
-		if c.seed.Spec.Backup == nil {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because seed backup is not configured for shoot %q", c.shoot.Name))
-		}
-
 		oldSeed, err := seedLister.Get(*c.oldShoot.Spec.SeedName)
 		if err != nil {
 			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
 		}
+
+		if oldSeed.Spec.Backup == nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because backup is not configured for old seed %q", oldSeed.Name))
+		}
+		if c.seed.Spec.Backup == nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because backup is not configured for seed %q", c.seed.Name))
+		}
+
 		if oldSeed.Spec.Provider.Type != c.seed.Spec.Provider.Type {
 			return admission.NewForbidden(a, fmt.Errorf("cannot change Seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", c.seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
 		}
