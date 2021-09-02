@@ -134,6 +134,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
 		secretServiceAccountSigningKey       = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
 		configMapAuditPolicy                 = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
+		configMapEgressSelector              = k.emptyConfigMap(configMapEgressSelectorNamePrefix)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -173,6 +174,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileConfigMapAuditPolicy(ctx, configMapAuditPolicy); err != nil {
+		return err
+	}
+
+	if err := k.reconcileConfigMapEgressSelector(ctx, configMapEgressSelector); err != nil {
 		return err
 	}
 

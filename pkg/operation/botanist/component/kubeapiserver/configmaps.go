@@ -16,8 +16,12 @@ package kubeapiserver
 
 import (
 	"context"
+	"strconv"
 
+	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +31,9 @@ import (
 const (
 	configMapAuditPolicyNamePrefix = "audit-policy-config"
 	configMapAuditPolicyDataKey    = "audit-policy.yaml"
+
+	configMapEgressSelectorNamePrefix = "kube-apiserver-egress-selector-config"
+	configMapEgressSelectorDataKey    = "egress-selector-configuration.yaml"
 )
 
 func (k *kubeAPIServer) emptyConfigMap(name string) *corev1.ConfigMap {
@@ -46,6 +53,44 @@ rules:
 	}
 
 	configMap.Data = map[string]string{configMapAuditPolicyDataKey: policy}
+	utilruntime.Must(kutil.MakeUnique(configMap))
+
+	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
+}
+
+func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, configMap *corev1.ConfigMap) error {
+	if !k.values.ReversedVPNEnabled {
+		// We don't delete the confimap here as we don't know its name (as it's unique). Instead, we rely on the usual
+		// garbage collection for unique secrets/configmaps.
+		return nil
+	}
+
+	egressSelectionControlPlaneName := "controlplane"
+	if versionutils.ConstraintK8sLess120.Check(k.values.Version) {
+		egressSelectionControlPlaneName = "master"
+	}
+
+	configMap.Data = map[string]string{configMapEgressSelectorDataKey: `---
+apiVersion: apiserver.k8s.io/v1alpha1
+  kind: EgressSelectorConfiguration
+  egressSelections:
+  - name: cluster
+    connection:
+      proxyProtocol: HTTPConnect
+      transport:
+        tcp:
+          url: https://` + vpnseedserver.ServiceName + `:` + strconv.Itoa(vpnseedserver.EnvoyPort) + `
+          tlsConfig:
+            caBundle: ` + volumeMountPathHTTPProxy + `/` + secretutils.DataKeyCertificateCA + `
+            clientCert: ` + volumeMountPathHTTPProxy + `/` + secretutils.DataKeyCertificate + `
+            clientKey: ` + volumeMountPathHTTPProxy + `/` + secretutils.DataKeyPrivateKey + `
+  - name: ` + egressSelectionControlPlaneName + `
+    connection:
+      proxyProtocol: Direct
+  - name: etcd
+    connection:
+      proxyProtocol: Direct
+`}
 	utilruntime.Must(kutil.MakeUnique(configMap))
 
 	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))

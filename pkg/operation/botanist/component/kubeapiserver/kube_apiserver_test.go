@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
+	"github.com/Masterminds/semver"
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
@@ -60,6 +61,7 @@ var _ = Describe("KubeAPIServer", func() {
 		kubernetesInterface kubernetes.Interface
 		c                   client.Client
 		kapi                Interface
+		version             = semver.MustParse("1.22.1")
 
 		deployment                           *appsv1.Deployment
 		horizontalPodAutoscaler              *autoscalingv2beta1.HorizontalPodAutoscaler
@@ -72,6 +74,7 @@ var _ = Describe("KubeAPIServer", func() {
 		secretOIDCCABundle                   *corev1.Secret
 		secretServiceAccountSigningKey       *corev1.Secret
 		configMapAuditPolicy                 *corev1.ConfigMap
+		configMapEgressSelector              *corev1.ConfigMap
 		managedResource                      *resourcesv1alpha1.ManagedResource
 		managedResourceSecret                *corev1.Secret
 	)
@@ -111,35 +114,30 @@ var _ = Describe("KubeAPIServer", func() {
 				Namespace: namespace,
 			},
 		}
-
 		networkPolicyAllowFromShootAPIServer = &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "allow-from-shoot-apiserver",
 				Namespace: namespace,
 			},
 		}
-
 		networkPolicyAllowToShootAPIServer = &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "allow-to-shoot-apiserver",
 				Namespace: namespace,
 			},
 		}
-
 		networkPolicyAllowKubeAPIServer = &networkingv1.NetworkPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "allow-kube-apiserver",
 				Namespace: namespace,
 			},
 		}
-
 		managedResource = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "shoot-core-kube-apiserver",
 				Namespace: namespace,
 			},
 		}
-
 		managedResourceSecret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "managedresource-shoot-core-kube-apiserver",
@@ -759,7 +757,7 @@ var _ = Describe("KubeAPIServer", func() {
 				})
 
 				It("w/ ReversedVPN", func() {
-					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true})
+					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: version})
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
 					Expect(kapi.Deploy(ctx)).To(Succeed())
@@ -1079,6 +1077,64 @@ rules:
 					}))
 				})
 			})
+
+			Context("egress selector", func() {
+				It("should successfully deploy the configmap resource for K8s < 1.20", func() {
+					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: semver.MustParse("1.19.0")})
+
+					configMapEgressSelector = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-egress-selector-config", Namespace: namespace},
+						Data:       map[string]string{"egress-selector-configuration.yaml": egressSelectorConfigFor("master")},
+					}
+					Expect(kutil.MakeUnique(configMapEgressSelector)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapEgressSelector.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(Succeed())
+					Expect(configMapEgressSelector).To(DeepEqual(&corev1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "ConfigMap",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapEgressSelector.Name,
+							Namespace:       configMapEgressSelector.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      configMapEgressSelector.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource for K8s >= 1.20", func() {
+					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: version})
+
+					configMapEgressSelector = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-egress-selector-config", Namespace: namespace},
+						Data:       map[string]string{"egress-selector-configuration.yaml": egressSelectorConfigFor("controlplane")},
+					}
+					Expect(kutil.MakeUnique(configMapEgressSelector)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapEgressSelector.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(Succeed())
+					Expect(configMapEgressSelector).To(DeepEqual(&corev1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "ConfigMap",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapEgressSelector.Name,
+							Namespace:       configMapEgressSelector.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      configMapEgressSelector.Data,
+					}))
+				})
+			})
 		})
 	})
 
@@ -1255,4 +1311,28 @@ rules:
 
 func intOrStrPtr(intOrStr intstr.IntOrString) *intstr.IntOrString {
 	return &intOrStr
+}
+
+func egressSelectorConfigFor(controlPlaneName string) string {
+	return `---
+apiVersion: apiserver.k8s.io/v1alpha1
+  kind: EgressSelectorConfiguration
+  egressSelections:
+  - name: cluster
+    connection:
+      proxyProtocol: HTTPConnect
+      transport:
+        tcp:
+          url: https://vpn-seed-server:9443
+          tlsConfig:
+            caBundle: /etc/srv/kubernetes/envoy/ca.crt
+            clientCert: /etc/srv/kubernetes/envoy/tls.crt
+            clientKey: /etc/srv/kubernetes/envoy/tls.key
+  - name: ` + controlPlaneName + `
+    connection:
+      proxyProtocol: Direct
+  - name: etcd
+    connection:
+      proxyProtocol: Direct
+`
 }

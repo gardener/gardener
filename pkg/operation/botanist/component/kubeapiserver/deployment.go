@@ -25,6 +25,8 @@ const (
 	containerNameKubeAPIServer            = "kube-apiserver"
 	containerNameVPNSeed                  = "vpn-seed"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
+
+	volumeMountPathHTTPProxy = "/etc/srv/kubernetes/envoy"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
