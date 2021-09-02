@@ -1,5 +1,12 @@
 # Control Plane Migration
 
+## Preconditions
+
+To be able to use this feature you need to enable the feature gate `SeedChange` in your `garden-apiserver`
+by adding the following command flag: `--feature-flags=SeedChange=true`.
+
+Also, the involved Seeds need to have enabled BackupBuckets.
+
 ## ShootState
 
 `ShootState` is an API resource which stores non-reconstructible state and data required to completely recreate a `Shoot`'s control plane on a new `Seed`.  The `ShootState` resource is created on `Shoot` creation in its `Project` namespace and the required state/data is persisted during `Shoot` creation or reconciliation.
