@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/utils/pointer"
 )
 
 // GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
@@ -368,4 +369,26 @@ func ConvertSeedExternal(obj runtime.Object) (*gardencorev1beta1.Seed, error) {
 		return nil, fmt.Errorf("could not convert Seed to version %s", gardencorev1beta1.SchemeGroupVersion.String())
 	}
 	return result, nil
+}
+
+// CalculateSeedUsage returns a map representing the number of shoots per seed from the given list of shoots.
+// It takes both spec.seedName and status.seedName into account.
+func CalculateSeedUsage(shootList []*core.Shoot) map[string]int {
+	m := map[string]int{}
+
+	for _, shoot := range shootList {
+		var (
+			specSeed   = pointer.StringDeref(shoot.Spec.SeedName, "")
+			statusSeed = pointer.StringDeref(shoot.Status.SeedName, "")
+		)
+
+		if specSeed != "" {
+			m[specSeed]++
+		}
+		if statusSeed != "" && specSeed != statusSeed {
+			m[statusSeed]++
+		}
+	}
+
+	return m
 }

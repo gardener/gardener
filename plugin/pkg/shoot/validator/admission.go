@@ -376,13 +376,8 @@ func getNumberOfShootsOnSeed(shootLister corelisters.ShootLister, seedName strin
 		return 0, fmt.Errorf("could not list all shoots: %w", err)
 	}
 
-	count := int64(0)
-	for _, shoot := range allShoots {
-		if seed := shoot.Spec.SeedName; seed != nil && *seed == seedName {
-			count++
-		}
-	}
-	return count, nil
+	seedUsage := helper.CalculateSeedUsage(allShoots)
+	return int64(seedUsage[seedName]), nil
 }
 
 func (c *validationContext) validateDeletion(a admission.Attributes) error {
