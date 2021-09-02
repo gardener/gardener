@@ -63,25 +63,6 @@
 {{- end }}
 {{- end -}}
 
-{{- define "kube-apiserver.auditversion" -}}
-audit.k8s.io/v1
-{{- end -}}
-
-{{- define "kube-apiserver.auditConfigAuditPolicy" -}}
-{{- if .Values.auditConfig.auditPolicy }}
-{{- .Values.auditConfig.auditPolicy -}}
-{{- else -}}
-apiVersion: {{ include "kube-apiserver.auditversion" . }}
-kind: Policy
-rules:
-- level: None
-{{- end -}}
-{{- end -}}
-
-{{- define "kube-apiserver.auditConfig.name" -}}
-audit-policy-config-{{ include "kube-apiserver.auditConfigAuditPolicy" . | sha256sum | trunc 8 }}
-{{- end }}
-
 {{- define "kube-apiserver.serviceAccountConfig" -}}
 {{- if .Values.serviceAccountConfig }}
 {{- if .Values.serviceAccountConfig.issuer }}

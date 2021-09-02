@@ -97,6 +97,192 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#DefaultKubeAPIServer", func() {
+		Describe("AuditConfig", func() {
+			var (
+				policy               = "some-policy"
+				auditPolicyConfigMap *corev1.ConfigMap
+			)
+
+			BeforeEach(func() {
+				auditPolicyConfigMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-audit-policy",
+						Namespace: projectNamespace,
+					},
+					Data: map[string]string{"policy": policy},
+				}
+			})
+
+			DescribeTable("should have the expected audit config",
+				func(prepTest func(), expectedConfig *kubeapiserver.AuditConfig, errMatcher gomegatypes.GomegaMatcher) {
+					if prepTest != nil {
+						prepTest()
+					}
+
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+					Expect(err).To(errMatcher)
+					if kubeAPIServer != nil {
+						Expect(kubeAPIServer.GetValues().Audit).To(Equal(expectedConfig))
+					}
+				},
+
+				Entry("KubeAPIServerConfig is nil",
+					nil,
+					nil,
+					Not(HaveOccurred()),
+				),
+				Entry("AuditConfig is nil",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{},
+								},
+							},
+						})
+					},
+					nil,
+					Not(HaveOccurred()),
+				),
+				Entry("AuditPolicy is nil",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										AuditConfig: &gardencorev1beta1.AuditConfig{},
+									},
+								},
+							},
+						})
+					},
+					nil,
+					Not(HaveOccurred()),
+				),
+				Entry("ConfigMapRef is nil",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										AuditConfig: &gardencorev1beta1.AuditConfig{
+											AuditPolicy: &gardencorev1beta1.AuditPolicy{},
+										},
+									},
+								},
+							},
+						})
+					},
+					nil,
+					Not(HaveOccurred()),
+				),
+				Entry("ConfigMapRef is provided but configmap is missing",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: projectNamespace,
+							},
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										AuditConfig: &gardencorev1beta1.AuditConfig{
+											AuditPolicy: &gardencorev1beta1.AuditPolicy{
+												ConfigMapRef: &corev1.ObjectReference{
+													Name: auditPolicyConfigMap.Name,
+												},
+											},
+										},
+									},
+								},
+							},
+						})
+					},
+					nil,
+					MatchError(ContainSubstring("not found")),
+				),
+				Entry("ConfigMapRef is provided but configmap is missing while shoot has a deletion timestamp",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace:         projectNamespace,
+								DeletionTimestamp: &metav1.Time{},
+							},
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										AuditConfig: &gardencorev1beta1.AuditConfig{
+											AuditPolicy: &gardencorev1beta1.AuditPolicy{
+												ConfigMapRef: &corev1.ObjectReference{
+													Name: auditPolicyConfigMap.Name,
+												},
+											},
+										},
+									},
+								},
+							},
+						})
+					},
+					&kubeapiserver.AuditConfig{},
+					Not(HaveOccurred()),
+				),
+				Entry("ConfigMapRef is provided but configmap does not have correct data field",
+					func() {
+						auditPolicyConfigMap.Data = nil
+						Expect(gc.Create(ctx, auditPolicyConfigMap)).To(Succeed())
+
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: projectNamespace,
+							},
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										AuditConfig: &gardencorev1beta1.AuditConfig{
+											AuditPolicy: &gardencorev1beta1.AuditPolicy{
+												ConfigMapRef: &corev1.ObjectReference{
+													Name: auditPolicyConfigMap.Name,
+												},
+											},
+										},
+									},
+								},
+							},
+						})
+					},
+					nil,
+					MatchError(ContainSubstring("missing '.data.policy' in audit policy configmap")),
+				),
+				Entry("ConfigMapRef is provided and configmap is compliant",
+					func() {
+						Expect(gc.Create(ctx, auditPolicyConfigMap)).To(Succeed())
+
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							ObjectMeta: metav1.ObjectMeta{
+								Namespace: projectNamespace,
+							},
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										AuditConfig: &gardencorev1beta1.AuditConfig{
+											AuditPolicy: &gardencorev1beta1.AuditPolicy{
+												ConfigMapRef: &corev1.ObjectReference{
+													Name: auditPolicyConfigMap.Name,
+												},
+											},
+										},
+									},
+								},
+							},
+						})
+					},
+					&kubeapiserver.AuditConfig{
+						Policy: &policy,
+					},
+					Not(HaveOccurred()),
+				),
+			)
+		})
+
 		Describe("AutoscalingConfig", func() {
 			DescribeTable("should have the expected autoscaling config",
 				func(prepTest func(), featureGate *featuregate.Feature, value *bool, expectedConfig kubeapiserver.AutoscalingConfig) {

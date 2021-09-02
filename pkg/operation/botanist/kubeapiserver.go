@@ -37,12 +37,18 @@ import (
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
 func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Interface, error) {
 	var (
+		auditConfig          *kubeapiserver.AuditConfig
 		oidcConfig           *gardencorev1beta1.OIDCConfig
 		serviceAccountConfig *kubeapiserver.ServiceAccountConfig
 		err                  error
 	)
 
 	if apiServerConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; apiServerConfig != nil {
+		auditConfig, err = b.computeKubeAPIServerAuditConfig(ctx, apiServerConfig.AuditConfig)
+		if err != nil {
+			return nil, err
+		}
+
 		oidcConfig = apiServerConfig.OIDCConfig
 
 		serviceAccountConfig, err = b.computeKubeAPIServerServiceAccountConfig(ctx, apiServerConfig.ServiceAccountConfig)
@@ -55,6 +61,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		b.K8sSeedClient,
 		b.Shoot.SeedNamespace,
 		kubeapiserver.Values{
+			Audit:                auditConfig,
 			Autoscaling:          b.computeKubeAPIServerAutoscalingConfig(),
 			ReversedVPNEnabled:   b.Shoot.ReversedVPNEnabled,
 			OIDC:                 oidcConfig,
@@ -65,6 +72,32 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			Version: b.Shoot.KubernetesVersion,
 		},
 	), nil
+}
+
+func (b *Botanist) computeKubeAPIServerAuditConfig(ctx context.Context, config *gardencorev1beta1.AuditConfig) (*kubeapiserver.AuditConfig, error) {
+	if config == nil || config.AuditPolicy == nil || config.AuditPolicy.ConfigMapRef == nil {
+		return nil, nil
+	}
+
+	out := &kubeapiserver.AuditConfig{}
+
+	configMap := &corev1.ConfigMap{}
+	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, config.AuditPolicy.ConfigMapRef.Name), configMap); err != nil {
+		// Ignore missing audit configuration on shoot deletion to prevent failing redeployments of the
+		// kube-apiserver in case the end-user deleted the configmap before/simultaneously to the shoot
+		// deletion.
+		if !apierrors.IsNotFound(err) || b.Shoot.GetInfo().DeletionTimestamp == nil {
+			return nil, fmt.Errorf("retrieving audit policy from the ConfigMap '%v' failed with reason '%w'", config.AuditPolicy.ConfigMapRef.Name, err)
+		}
+	} else {
+		policy, ok := configMap.Data["policy"]
+		if !ok {
+			return nil, fmt.Errorf("missing '.data.policy' in audit policy configmap %v/%v", b.Shoot.GetInfo().Namespace, config.AuditPolicy.ConfigMapRef.Name)
+		}
+		out.Policy = &policy
+	}
+
+	return out, nil
 }
 
 func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.AutoscalingConfig {

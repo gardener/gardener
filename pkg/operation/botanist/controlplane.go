@@ -268,10 +268,6 @@ func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane
 	return controlPlane.Deploy(ctx)
 }
 
-const (
-	auditPolicyConfigMapDataKey = "policy"
-)
-
 // getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
 func getResourcesForAPIServer(nodeCount int32, scalingClass string) (string, string, string, string) {
 	var (
@@ -504,25 +500,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			}
 		}
 
-		if apiServerConfig.AuditConfig != nil &&
-			apiServerConfig.AuditConfig.AuditPolicy != nil &&
-			apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
-
-			auditPolicy, err := b.getAuditPolicy(ctx, apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, b.Shoot.GetInfo().Namespace)
-			if err != nil {
-				// Ignore missing audit configuration on shoot deletion to prevent failing redeployments of the
-				// kube-apiserver in case the end-user deleted the configmap before/simultaneously to the shoot
-				// deletion.
-				if !apierrors.IsNotFound(err) || b.Shoot.GetInfo().DeletionTimestamp == nil {
-					return fmt.Errorf("retrieving audit policy from the ConfigMap '%v' failed with reason '%w'", apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, err)
-				}
-			} else {
-				defaultValues["auditConfig"] = map[string]interface{}{
-					"auditPolicy": auditPolicy,
-				}
-			}
-		}
-
 		if watchCacheSizes := apiServerConfig.WatchCacheSizes; watchCacheSizes != nil {
 			defaultValues["watchCacheSizes"] = watchCacheSizes
 		}
@@ -565,18 +542,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-oidc-cabundle"}},
 		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-service-account-signing-key"}},
 	)
-}
-
-func (b *Botanist) getAuditPolicy(ctx context.Context, name, namespace string) (string, error) {
-	auditPolicyCm := &corev1.ConfigMap{}
-	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(namespace, name), auditPolicyCm); err != nil {
-		return "", err
-	}
-	auditPolicy, ok := auditPolicyCm.Data[auditPolicyConfigMapDataKey]
-	if !ok {
-		return "", fmt.Errorf("missing '.data.policy' in audit policy configmap %v/%v", namespace, name)
-	}
-	return auditPolicy, nil
 }
 
 // RestartControlPlanePods restarts (deletes) pods of the shoot control plane.

@@ -71,6 +71,7 @@ var _ = Describe("KubeAPIServer", func() {
 		networkPolicyAllowKubeAPIServer      *networkingv1.NetworkPolicy
 		secretOIDCCABundle                   *corev1.Secret
 		secretServiceAccountSigningKey       *corev1.Secret
+		configMapAuditPolicy                 *corev1.ConfigMap
 		managedResource                      *resourcesv1alpha1.ManagedResource
 		managedResourceSecret                *corev1.Secret
 	)
@@ -1009,6 +1010,74 @@ subjects:
 					Immutable: pointer.Bool(true),
 					Data:      secretServiceAccountSigningKey.Data,
 				}))
+			})
+		})
+
+		Describe("ConfigMaps", func() {
+			Context("audit policy", func() {
+				It("should successfully deploy the configmap resource w/ default policy", func() {
+					configMapAuditPolicy = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "audit-policy-config", Namespace: namespace},
+						Data: map[string]string{"audit-policy.yaml": `---
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+- level: None
+`},
+					}
+					Expect(kutil.MakeUnique(configMapAuditPolicy)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAuditPolicy.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
+					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "ConfigMap",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuditPolicy.Name,
+							Namespace:       configMapAuditPolicy.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      configMapAuditPolicy.Data,
+					}))
+				})
+
+				It("should successfully deploy the configmap resource w/o default policy", func() {
+					var (
+						policy      = "some-audit-policy"
+						auditConfig = &AuditConfig{Policy: &policy}
+					)
+
+					kapi = New(kubernetesInterface, namespace, Values{Audit: auditConfig})
+
+					configMapAuditPolicy = &corev1.ConfigMap{
+						ObjectMeta: metav1.ObjectMeta{Name: "audit-policy-config", Namespace: namespace},
+						Data:       map[string]string{"audit-policy.yaml": policy},
+					}
+					Expect(kutil.MakeUnique(configMapAuditPolicy)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAuditPolicy.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
+					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "ConfigMap",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            configMapAuditPolicy.Name,
+							Namespace:       configMapAuditPolicy.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      configMapAuditPolicy.Data,
+					}))
+				})
 			})
 		})
 	})

@@ -54,6 +54,8 @@ type Interface interface {
 
 // Values contains configuration values for the kube-apiserver resources.
 type Values struct {
+	// Audit contains information for configuring audit settings for the kube-apiserver.
+	Audit *AuditConfig
 	// Autoscaling contains information for configuring autoscaling settings for the kube-apiserver.
 	Autoscaling AutoscalingConfig
 	// ReversedVPNEnabled states whether the 'ReversedVPN' feature gate is enabled.
@@ -66,6 +68,12 @@ type Values struct {
 	SNI SNIConfig
 	// Version is the Kubernetes version for the kube-apiserver.
 	Version *semver.Version
+}
+
+// AuditConfig contains information for configuring audit settings for the kube-apiserver.
+type AuditConfig struct {
+	// Policy is the audit policy document in YAML format.
+	Policy *string
 }
 
 // AutoscalingConfig contains information for configuring autoscaling settings for the kube-apiserver.
@@ -125,6 +133,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		networkPolicyAllowKubeAPIServer      = k.emptyNetworkPolicy(networkPolicyNameAllowKubeAPIServer)
 		secretOIDCCABundle                   = k.emptySecret(secretOIDCCABundleNamePrefix)
 		secretServiceAccountSigningKey       = k.emptySecret(secretServiceAccountSigningKeyNamePrefix)
+		configMapAuditPolicy                 = k.emptyConfigMap(configMapAuditPolicyNamePrefix)
 	)
 
 	if err := k.reconcilePodDisruptionBudget(ctx, podDisruptionBudget); err != nil {
@@ -160,6 +169,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 	}
 
 	if err := k.reconcileSecretServiceAccountSigningKey(ctx, secretServiceAccountSigningKey); err != nil {
+		return err
+	}
+
+	if err := k.reconcileConfigMapAuditPolicy(ctx, configMapAuditPolicy); err != nil {
 		return err
 	}
 
