@@ -1389,25 +1389,24 @@ func intOrStrPtr(intOrStr intstr.IntOrString) *intstr.IntOrString {
 }
 
 func egressSelectorConfigFor(controlPlaneName string) string {
-	return `---
-apiVersion: apiserver.k8s.io/v1alpha1
-  kind: EgressSelectorConfiguration
-  egressSelections:
-  - name: cluster
-    connection:
-      proxyProtocol: HTTPConnect
-      transport:
-        tcp:
-          url: https://vpn-seed-server:9443
-          tlsConfig:
-            caBundle: /etc/srv/kubernetes/envoy/ca.crt
-            clientCert: /etc/srv/kubernetes/envoy/tls.crt
-            clientKey: /etc/srv/kubernetes/envoy/tls.key
-  - name: ` + controlPlaneName + `
-    connection:
-      proxyProtocol: Direct
-  - name: etcd
-    connection:
-      proxyProtocol: Direct
+	return `apiVersion: apiserver.k8s.io/v1alpha1
+egressSelections:
+- connection:
+    proxyProtocol: HTTPConnect
+    transport:
+      tcp:
+        tlsConfig:
+          caBundle: /etc/srv/kubernetes/envoy/ca.crt
+          clientCert: /etc/srv/kubernetes/envoy/tls.crt
+          clientKey: /etc/srv/kubernetes/envoy/tls.key
+        url: https://vpn-seed-server:9443
+  name: cluster
+- connection:
+    proxyProtocol: Direct
+  name: ` + controlPlaneName + `
+- connection:
+    proxyProtocol: Direct
+  name: etcd
+kind: EgressSelectorConfiguration
 `
 }

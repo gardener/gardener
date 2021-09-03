@@ -16,7 +16,7 @@ package kubeapiserver
 
 import (
 	"context"
-	"strconv"
+	"fmt"
 	"strings"
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
@@ -132,27 +132,41 @@ func (k *kubeAPIServer) reconcileConfigMapEgressSelector(ctx context.Context, co
 		egressSelectionControlPlaneName = "master"
 	}
 
-	configMap.Data = map[string]string{configMapEgressSelectorDataKey: `---
-apiVersion: apiserver.k8s.io/v1alpha1
-  kind: EgressSelectorConfiguration
-  egressSelections:
-  - name: cluster
-    connection:
-      proxyProtocol: HTTPConnect
-      transport:
-        tcp:
-          url: https://` + vpnseedserver.ServiceName + `:` + strconv.Itoa(vpnseedserver.EnvoyPort) + `
-          tlsConfig:
-            caBundle: ` + volumeMountPathHTTPProxy + `/` + secretutils.DataKeyCertificateCA + `
-            clientCert: ` + volumeMountPathHTTPProxy + `/` + secretutils.DataKeyCertificate + `
-            clientKey: ` + volumeMountPathHTTPProxy + `/` + secretutils.DataKeyPrivateKey + `
-  - name: ` + egressSelectionControlPlaneName + `
-    connection:
-      proxyProtocol: Direct
-  - name: etcd
-    connection:
-      proxyProtocol: Direct
-`}
+	egressSelectorConfig := &apiserverv1alpha1.EgressSelectorConfiguration{
+		EgressSelections: []apiserverv1alpha1.EgressSelection{
+			{
+				Name: "cluster",
+				Connection: apiserverv1alpha1.Connection{
+					ProxyProtocol: apiserverv1alpha1.ProtocolHTTPConnect,
+					Transport: &apiserverv1alpha1.Transport{
+						TCP: &apiserverv1alpha1.TCPTransport{
+							URL: fmt.Sprintf("https://%s:%d", vpnseedserver.ServiceName, vpnseedserver.EnvoyPort),
+							TLSConfig: &apiserverv1alpha1.TLSConfig{
+								CABundle:   fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretutils.DataKeyCertificateCA),
+								ClientCert: fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretutils.DataKeyCertificate),
+								ClientKey:  fmt.Sprintf("%s/%s", volumeMountPathHTTPProxy, secretutils.DataKeyPrivateKey),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name:       egressSelectionControlPlaneName,
+				Connection: apiserverv1alpha1.Connection{ProxyProtocol: apiserverv1alpha1.ProtocolDirect},
+			},
+			{
+				Name:       "etcd",
+				Connection: apiserverv1alpha1.Connection{ProxyProtocol: apiserverv1alpha1.ProtocolDirect},
+			},
+		},
+	}
+
+	data, err := runtime.Encode(codec, egressSelectorConfig)
+	if err != nil {
+		return err
+	}
+	configMap.Data = map[string]string{configMapEgressSelectorDataKey: string(data)}
+
 	utilruntime.Must(kutil.MakeUnique(configMap))
 
 	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, configMap))
