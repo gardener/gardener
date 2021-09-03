@@ -3,7 +3,7 @@
 ## Preconditions
 
 To be able to use this feature you need to enable the feature gate `SeedChange` in your `gardener-apiserver`
-by adding the following command flag: `--feature-flags=SeedChange=true`.
+by adding the following command flag: `--feature-gates=SeedChange=true`.
 
 Also, the involved Seeds need to have enabled BackupBuckets.
 
