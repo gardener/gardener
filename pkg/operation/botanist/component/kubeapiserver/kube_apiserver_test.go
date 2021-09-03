@@ -1091,9 +1091,10 @@ plugins:
 				It("should successfully deploy the configmap resource w/ default policy", func() {
 					configMapAuditPolicy = &corev1.ConfigMap{
 						ObjectMeta: metav1.ObjectMeta{Name: "audit-policy-config", Namespace: namespace},
-						Data: map[string]string{"audit-policy.yaml": `---
-apiVersion: audit.k8s.io/v1
+						Data: map[string]string{"audit-policy.yaml": `apiVersion: audit.k8s.io/v1
 kind: Policy
+metadata:
+  creationTimestamp: null
 rules:
 - level: None
 `},

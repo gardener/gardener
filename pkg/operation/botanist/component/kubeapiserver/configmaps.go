@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	apiserverv1alpha1 "k8s.io/apiserver/pkg/apis/apiserver/v1alpha1"
+	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
 )
 
 const (
@@ -53,6 +54,7 @@ var (
 func init() {
 	scheme = runtime.NewScheme()
 	utilruntime.Must(apiserverv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(auditv1.AddToScheme(scheme))
 
 	var (
 		ser = json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme, scheme, json.SerializerOptions{
@@ -60,7 +62,7 @@ func init() {
 			Pretty: false,
 			Strict: false,
 		})
-		versions = schema.GroupVersions([]schema.GroupVersion{apiserverv1alpha1.SchemeGroupVersion})
+		versions = schema.GroupVersions([]schema.GroupVersion{apiserverv1alpha1.SchemeGroupVersion, auditv1.SchemeGroupVersion})
 	)
 
 	codec = serializer.NewCodecFactory(scheme).CodecForVersions(ser, ser, versions, versions)
@@ -103,12 +105,17 @@ func admissionPluginsConfigFilename(name string) string {
 }
 
 func (k *kubeAPIServer) reconcileConfigMapAuditPolicy(ctx context.Context, configMap *corev1.ConfigMap) error {
-	policy := `---
-apiVersion: audit.k8s.io/v1
-kind: Policy
-rules:
-- level: None
-`
+	defaultPolicy := &auditv1.Policy{
+		Rules: []auditv1.PolicyRule{
+			{Level: auditv1.LevelNone},
+		},
+	}
+
+	data, err := runtime.Encode(codec, defaultPolicy)
+	if err != nil {
+		return err
+	}
+	policy := string(data)
 
 	if k.values.Audit != nil && k.values.Audit.Policy != nil {
 		policy = *k.values.Audit.Policy
