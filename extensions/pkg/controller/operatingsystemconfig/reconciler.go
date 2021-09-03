@@ -110,13 +110,17 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	operationType := gardencorev1beta1helper.ComputeOperationType(osc.ObjectMeta, osc.Status.LastOperation)
 
 	switch {
-	case extensionscontroller.IsMigrated(osc):
-		return reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
+		if extensionscontroller.IsMigrated(osc) {
+			return reconcile.Result{}, nil
+		}
 		return r.migrate(ctx, osc)
 	case osc.DeletionTimestamp != nil:
+		if extensionscontroller.IsMigrated(osc) {
+			return reconcile.Result{}, nil
+		}
 		return r.delete(ctx, osc)
-	case osc.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
+	case operationType == gardencorev1beta1.LastOperationTypeRestore:
 		return r.restore(ctx, osc)
 	default:
 		return r.reconcile(ctx, osc, operationType)

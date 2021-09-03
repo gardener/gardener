@@ -187,6 +187,8 @@ func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1bet
 		return gardencorev1beta1.LastOperationTypeMigrate
 	case meta.DeletionTimestamp != nil:
 		return gardencorev1beta1.LastOperationTypeDelete
+	case meta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore:
+		return gardencorev1beta1.LastOperationTypeRestore
 	case lastOperation == nil:
 		return gardencorev1beta1.LastOperationTypeCreate
 	case lastOperation.Type == gardencorev1beta1.LastOperationTypeCreate && lastOperation.State != gardencorev1beta1.LastOperationStateSucceeded:
