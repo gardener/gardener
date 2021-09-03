@@ -64,6 +64,8 @@ type Values struct {
 	Autoscaling AutoscalingConfig
 	// BasicAuthenticationEnabled states whether basic authentication is enabled.
 	BasicAuthenticationEnabled bool
+	// Images is a set of container images used for the containers of the kube-apiserver pods.
+	Images Images
 	// ReversedVPNEnabled states whether the 'ReversedVPN' feature gate is enabled.
 	ReversedVPNEnabled bool
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
@@ -98,6 +100,12 @@ type AutoscalingConfig struct {
 	// ScaleDownDisabledForHvpa states whether scale-down shall be disabled when HPA or VPA are configured in an HVPA
 	// resource.
 	ScaleDownDisabledForHvpa bool
+}
+
+// Images is a set of container images used for the containers of the kube-apiserver pods.
+type Images struct {
+	// AlpineIPTables is the container image for alpine-iptables.
+	AlpineIPTables string
 }
 
 // ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.

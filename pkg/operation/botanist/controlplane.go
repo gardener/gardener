@@ -342,7 +342,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 		defaultValues = map[string]interface{}{
 			"etcdServicePort":           etcd.PortEtcdClient,
 			"kubernetesVersion":         b.Shoot.GetInfo().Spec.Kubernetes.Version,
-			"priorityClassName":         v1beta1constants.PriorityClassNameShootControlPlane,
 			"enableBasicAuthentication": gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
 			"probeCredentials":          b.APIServerHealthCheckToken,
 			"securePort":                443,
@@ -467,7 +466,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	values, err := b.InjectSeedShootImages(defaultValues,
 		charts.ImageNameVpnSeed,
 		charts.ImageNameKubeApiserver,
-		charts.ImageNameAlpineIptables,
 		charts.ImageNameApiserverProxyPodWebhook,
 	)
 	if err != nil {

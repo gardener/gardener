@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -29,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -40,12 +42,16 @@ import (
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
 func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Interface, error) {
+	imageAlpineIPTables, err := b.ImageVector.FindImage(charts.ImageNameAlpineIptables, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		admissionPlugins     = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
 		auditConfig          *kubeapiserver.AuditConfig
 		oidcConfig           *gardencorev1beta1.OIDCConfig
 		serviceAccountConfig *kubeapiserver.ServiceAccountConfig
-		err                  error
 	)
 
 	if apiServerConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; apiServerConfig != nil {
@@ -72,9 +78,12 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			Audit:                      auditConfig,
 			Autoscaling:                b.computeKubeAPIServerAutoscalingConfig(),
 			BasicAuthenticationEnabled: gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
-			OIDC:                       oidcConfig,
-			ReversedVPNEnabled:         b.Shoot.ReversedVPNEnabled,
-			ServiceAccountConfig:       serviceAccountConfig,
+			Images: kubeapiserver.Images{
+				AlpineIPTables: imageAlpineIPTables.String(),
+			},
+			OIDC:                 oidcConfig,
+			ReversedVPNEnabled:   b.Shoot.ReversedVPNEnabled,
+			ServiceAccountConfig: serviceAccountConfig,
 			SNI: kubeapiserver.SNIConfig{
 				Enabled:           b.APIServerSNIEnabled(),
 				PodMutatorEnabled: b.APIServerSNIPodMutatorEnabled(),

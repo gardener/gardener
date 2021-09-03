@@ -1430,6 +1430,72 @@ rules:
 						"networking.gardener.cloud/from-prometheus":     "allowed",
 					}))
 				})
+
+				It("should have the expected pod settings", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Affinity).To(Equal(&corev1.Affinity{
+						PodAntiAffinity: &corev1.PodAntiAffinity{
+							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
+								Weight: 1,
+								PodAffinityTerm: corev1.PodAffinityTerm{
+									TopologyKey: "kubernetes.io/hostname",
+									LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{
+										"app":  "kubernetes",
+										"role": "apiserver",
+									}},
+								},
+							}},
+						},
+					}))
+					Expect(deployment.Spec.Template.Spec.PriorityClassName).To(Equal("gardener-shoot-controlplane"))
+					Expect(deployment.Spec.Template.Spec.DNSPolicy).To(Equal(corev1.DNSClusterFirst))
+					Expect(deployment.Spec.Template.Spec.RestartPolicy).To(Equal(corev1.RestartPolicyAlways))
+					Expect(deployment.Spec.Template.Spec.SchedulerName).To(Equal("default-scheduler"))
+					Expect(deployment.Spec.Template.Spec.TerminationGracePeriodSeconds).To(PointTo(Equal(int64(30))))
+				})
+
+				It("should have no init containers when reversed vpn is enabled", func() {
+					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: version})
+					kapi.SetSecrets(secrets)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.InitContainers).To(BeEmpty())
+				})
+
+				It("should have one init container when reversed vpn is disabled", func() {
+					images := Images{AlpineIPTables: "some-image:latest"}
+
+					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: false, Images: images, Version: version})
+					kapi.SetSecrets(secrets)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.InitContainers).To(ConsistOf(corev1.Container{
+						Name:  "set-iptable-rules",
+						Image: images.AlpineIPTables,
+						Command: []string{
+							"/bin/sh",
+							"-c",
+							"iptables -A INPUT -i tun0 -p icmp -j ACCEPT && iptables -A INPUT -i tun0 -m state --state NEW -j DROP",
+						},
+						SecurityContext: &corev1.SecurityContext{
+							Capabilities: &corev1.Capabilities{
+								Add: []corev1.Capability{"NET_ADMIN"},
+							},
+							Privileged: pointer.Bool(true),
+						},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      "modules",
+							MountPath: "/lib/modules",
+						}},
+					}))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
+						Name: "modules",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{Path: "/lib/modules"},
+						},
+					}))
+				})
 			})
 		})
 	})

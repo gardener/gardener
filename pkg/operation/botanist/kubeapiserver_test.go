@@ -33,6 +33,7 @@ import (
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
@@ -89,6 +90,9 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 				},
+				ImageVector: imagevector.ImageVector{
+					{Name: "alpine-iptables"},
+				},
 			},
 		}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
@@ -99,6 +103,14 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#DefaultKubeAPIServer", func() {
+		It("should return an error because the alpine-iptables image cannot be found", func() {
+			botanist.ImageVector = imagevector.ImageVector{}
+
+			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+			Expect(kubeAPIServer).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("could not find image \"alpine-iptables\"")))
+		})
+
 		Describe("AdmissionPlugins", func() {
 			DescribeTable("should have the expected admission plugins config",
 				func(configuredPlugins, expectedPlugins []gardencorev1beta1.AdmissionPlugin) {

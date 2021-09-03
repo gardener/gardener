@@ -54,8 +54,11 @@ const (
 	containerNameVPNSeed                  = "vpn-seed"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 
+	volumeNameLibModules = "modules"
+
 	volumeMountPathAdmissionConfiguration = "/etc/kubernetes/admission"
 	volumeMountPathHTTPProxy              = "/etc/srv/kubernetes/envoy"
+	volumeMountPathLibModules             = "/lib/modules"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
@@ -98,7 +101,53 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 						v1beta1constants.LabelNetworkPolicyFromPrometheus:    v1beta1constants.LabelNetworkPolicyAllowed,
 					}),
 				},
+				Spec: corev1.PodSpec{
+					Affinity: &corev1.Affinity{
+						PodAntiAffinity: &corev1.PodAntiAffinity{
+							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
+								Weight: 1,
+								PodAffinityTerm: corev1.PodAffinityTerm{
+									TopologyKey:   corev1.LabelHostname,
+									LabelSelector: &metav1.LabelSelector{MatchLabels: getLabels()},
+								},
+							}},
+						},
+					},
+					PriorityClassName:             v1beta1constants.PriorityClassNameShootControlPlane,
+					DNSPolicy:                     corev1.DNSClusterFirst,
+					RestartPolicy:                 corev1.RestartPolicyAlways,
+					SchedulerName:                 corev1.DefaultSchedulerName,
+					TerminationGracePeriodSeconds: pointer.Int64(30),
+				},
 			},
+		}
+
+		if !k.values.ReversedVPNEnabled {
+			deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
+				Name:  "set-iptable-rules",
+				Image: k.values.Images.AlpineIPTables,
+				Command: []string{
+					"/bin/sh",
+					"-c",
+					"iptables -A INPUT -i tun0 -p icmp -j ACCEPT && iptables -A INPUT -i tun0 -m state --state NEW -j DROP",
+				},
+				SecurityContext: &corev1.SecurityContext{
+					Capabilities: &corev1.Capabilities{
+						Add: []corev1.Capability{"NET_ADMIN"},
+					},
+					Privileged: pointer.Bool(true),
+				},
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      volumeNameLibModules,
+					MountPath: volumeMountPathLibModules,
+				}},
+			}}
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeNameLibModules,
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{Path: "/lib/modules"},
+				},
+			})
 		}
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
