@@ -18,8 +18,6 @@ rbacSidecarEnabled: false
 kubeRBACProxyKubeconfigCheckSum: bed9a4ef5410793c023b3551308661a1a1acafe9f93c9393714ce4f2c0134ac3
 
 labels:
-  # deprecated label
-  garden.sapcloud.io/role: logging
   gardener.cloud/role: logging
   app: loki
   role: logging

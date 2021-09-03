@@ -21,6 +21,7 @@ spec:
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
+      garden.sapcloud.io/role: logging
 {{ toYaml .Values.labels | indent 6 }}
   template:
     metadata:
@@ -30,6 +31,7 @@ spec:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-shoot-apiserver: allowed
 {{- end}}
+        garden.sapcloud.io/role: logging
 {{ toYaml .Values.labels | indent 8 }}
       annotations:
 {{ include "loki.statefulset.annotations" . | indent 8 }}
