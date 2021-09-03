@@ -102,7 +102,7 @@ const (
 	// alpha: v1.28.0
 	RotateSSHKeypairOnMaintenance featuregate.Feature = "RotateSSHKeypairOnMaintenance"
 
-	// DenyInvalidExtensionResources causes the seed-admission-controller to allow invalid extension resources.
+	// DenyInvalidExtensionResources causes the seed-admission-controller to deny invalid extension resources (instead of just logging validation errors).
 	// owner: @vanjiii
 	// alpha: v1.31.0
 	DenyInvalidExtensionResources featuregate.Feature = "DenyInvalidExtensionResources"
