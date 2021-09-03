@@ -86,6 +86,7 @@ func (in *ControllerManagerConfiguration) DeepCopyInto(out *ControllerManagerCon
 	in.Controllers.DeepCopyInto(&out.Controllers)
 	out.LeaderElection = in.LeaderElection
 	out.Server = in.Server
+	out.Debugging = in.Debugging
 	if in.FeatureGates != nil {
 		in, out := &in.FeatureGates, &out.FeatureGates
 		*out = make(map[string]bool, len(*in))

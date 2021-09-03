@@ -421,6 +421,9 @@ global:
               -----BEGIN RSA PRIVATE KEY-----
               ...
               -----END RSA PRIVATE KEY-----
+      debugging:
+        enableProfiling: false
+        enableContentionProfiling: false
       featureGates: {}
 
   # Gardener scheduler configuration values
