@@ -37,7 +37,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -221,19 +220,19 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 	)
 
-	if err := v.client.Create(ctx, configMap); err != nil && !apierrors.IsAlreadyExists(err) {
+	if err := v.client.Create(ctx, configMap); kutil.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 
-	if err := v.client.Create(ctx, serverSecret); err != nil && !apierrors.IsAlreadyExists(err) {
+	if err := v.client.Create(ctx, serverSecret); kutil.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 
-	if err := v.client.Create(ctx, tlsAuthSecret); err != nil && !apierrors.IsAlreadyExists(err) {
+	if err := v.client.Create(ctx, tlsAuthSecret); kutil.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 
-	if err := v.client.Create(ctx, dhSecret); err != nil && !apierrors.IsAlreadyExists(err) {
+	if err := v.client.Create(ctx, dhSecret); kutil.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 

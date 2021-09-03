@@ -99,7 +99,7 @@ func (g *Landscaper) Reconcile(ctx context.Context) error {
 	}
 
 	gardenNamespace := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.GardenNamespace}}
-	if err := g.seedClient.Client().Create(ctx, gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
+	if err := g.seedClient.Client().Create(ctx, gardenNamespace); kutil.IgnoreAlreadyExists(err) != nil {
 		return err
 	}
 

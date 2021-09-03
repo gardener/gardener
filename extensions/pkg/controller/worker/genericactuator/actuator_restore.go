@@ -124,7 +124,7 @@ func (a *genericActuator) deployMachineSetsAndMachines(ctx context.Context, logg
 		for _, machineSet := range machineSets {
 			// Create the MachineSet if not already exists. We do not care about the MachineSet status
 			// because the MCM will update it
-			if err := a.client.Create(ctx, &machineSet); err != nil && !apierrors.IsAlreadyExists(err) {
+			if err := a.client.Create(ctx, &machineSet); kutil.IgnoreAlreadyExists(err) != nil {
 				return err
 			}
 		}
@@ -132,8 +132,7 @@ func (a *genericActuator) deployMachineSetsAndMachines(ctx context.Context, logg
 		// Deploy each machine owned by the MachineSet which was restored above
 		for _, machine := range wantedMachineDeployment.State.Machines {
 			// Create the machine if it not exists already
-			err := a.client.Create(ctx, &machine)
-			if err != nil && !apierrors.IsAlreadyExists(err) {
+			if err := a.client.Create(ctx, &machine); kutil.IgnoreAlreadyExists(err) != nil {
 				return err
 			}
 
