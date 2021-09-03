@@ -31,6 +31,7 @@ func (in *AdmissionControllerConfiguration) DeepCopyInto(out *AdmissionControlle
 	out.TypeMeta = in.TypeMeta
 	out.GardenClientConnection = in.GardenClientConnection
 	in.Server.DeepCopyInto(&out.Server)
+	out.Debugging = in.Debugging
 	return
 }
 

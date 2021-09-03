@@ -313,6 +313,9 @@ global:
       #     apiGroup: rbac.authorization.k8s.io
       #   operationMode: log
         enableDebugHandlers: false
+      debugging:
+        enableProfiling: false
+        enableContentionProfiling: false
     seedRestriction:
       enabled: false
 

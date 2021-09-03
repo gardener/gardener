@@ -33,6 +33,8 @@ type AdmissionControllerConfiguration struct {
 	LogLevel string
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration
+	// Debugging holds configuration for Debugging related features.
+	Debugging componentbaseconfig.DebuggingConfiguration
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.
