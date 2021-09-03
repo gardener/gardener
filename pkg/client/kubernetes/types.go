@@ -36,6 +36,7 @@ import (
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
+	metricsv1beta1 "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -118,6 +119,7 @@ func init() {
 		apiextensionsscheme.AddToScheme,
 		apiregistrationscheme.AddToScheme,
 		autoscalingv1beta2.AddToScheme,
+		metricsv1beta1.AddToScheme,
 	)
 	utilruntime.Must(shootSchemeBuilder.AddToScheme(ShootScheme))
 
