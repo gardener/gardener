@@ -21,7 +21,7 @@ import (
 	"sync"
 
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/utils/infodata"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	corev1 "k8s.io/api/core/v1"
@@ -192,7 +192,7 @@ func (s *SecretsManager) generateStaticTokenAndUpdateResourceList() error {
 	}
 
 	newStaticTokenConfig := secrets.StaticTokenSecretConfig{
-		Name:   common.StaticTokenSecretName,
+		Name:   kubeapiserver.SecretNameStaticToken,
 		Tokens: make(map[string]secrets.TokenConfig),
 	}
 

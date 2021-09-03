@@ -22,6 +22,25 @@ import (
 )
 
 const (
+	// SecretNameBasicAuth is the name of the secret containing basic authentication credentials for the kube-apiserver.
+	SecretNameBasicAuth = "kube-apiserver-basic-auth"
+	// SecretNameEtcdEncryption is the name of the secret which contains the EncryptionConfiguration. The
+	// EncryptionConfiguration contains a key which the kube-apiserver uses for encrypting selected etcd content.
+	SecretNameEtcdEncryption = "etcd-encryption-secret"
+	// SecretNameKubeAggregator is the name of the secret for the kube-aggregator when talking to the kube-apiserver.
+	SecretNameKubeAggregator = "kube-aggregator"
+	// SecretNameKubeAPIServerToKubelet is the name of the secret for the kube-apiserver credentials when talking to
+	// kubelets.
+	SecretNameKubeAPIServerToKubelet = "kube-apiserver-kubelet"
+	// SecretNameServer is the name of the secret for the kube-apiserver server certificates.
+	SecretNameServer = "kube-apiserver"
+	// SecretNameStaticToken is the name of the secret containing static tokens for the kube-apiserver.
+	SecretNameStaticToken = "static-token"
+	// SecretNameVPNSeed is the name of the secret containing the certificates for the vpn-seed.
+	SecretNameVPNSeed = "vpn-seed"
+	// SecretNameVPNSeedTLSAuth is the name of the secret containing the TLS auth for the vpn-seed.
+	SecretNameVPNSeedTLSAuth = "vpn-seed-tlsauth"
+
 	containerNameKubeAPIServer            = "kube-apiserver"
 	containerNameVPNSeed                  = "vpn-seed"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"

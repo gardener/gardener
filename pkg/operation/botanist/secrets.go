@@ -23,6 +23,7 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -60,7 +61,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 
 		if b.Shoot.GetInfo().DeletionTimestamp == nil {
 			if b.Shoot.ReversedVPNEnabled {
-				if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"); err != nil {
+				if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, kubeapiserver.SecretNameVPNSeedTLSAuth, kubeapiserver.SecretNameVPNSeedTLSAuth, "vpn-shoot"); err != nil {
 					return err
 				}
 			} else {
@@ -71,7 +72,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		}
 
 		shootWantsBasicAuth := gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo())
-		shootHasBasicAuth := gardenerResourceDataList.Get(common.BasicAuthSecretName) != nil
+		shootHasBasicAuth := gardenerResourceDataList.Get(kubeapiserver.SecretNameBasicAuth) != nil
 		if shootWantsBasicAuth != shootHasBasicAuth {
 			if err := b.deleteBasicAuthDependantSecrets(ctx, &gardenerResourceDataList); err != nil {
 				return err
@@ -219,8 +220,8 @@ func (b *Botanist) fetchExistingSecrets(ctx context.Context) (map[string]*corev1
 
 func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
 	secrets := []string{
-		common.StaticTokenSecretName,
-		common.BasicAuthSecretName,
+		kubeapiserver.SecretNameStaticToken,
+		kubeapiserver.SecretNameBasicAuth,
 		common.KubecfgSecretName,
 	}
 
@@ -274,7 +275,7 @@ func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResource
 }
 
 func (b *Botanist) deleteBasicAuthDependantSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
-	for _, secretName := range []string{common.BasicAuthSecretName, common.KubecfgSecretName} {
+	for _, secretName := range []string{kubeapiserver.SecretNameBasicAuth, common.KubecfgSecretName} {
 		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
 			return err
 		}

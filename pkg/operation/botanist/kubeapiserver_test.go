@@ -28,6 +28,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
 	gardenpkg "github.com/gardener/gardener/pkg/operation/garden"
@@ -740,6 +741,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
+						Enabled:           true,
 						PodMutatorEnabled: true,
 					},
 				),
@@ -757,6 +759,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.APIServerSNI), pointer.Bool(true),
 					kubeapiserver.SNIConfig{
+						Enabled:           true,
 						PodMutatorEnabled: false,
 					},
 				),
@@ -777,10 +780,10 @@ var _ = Describe("KubeAPIServer", func() {
 					return func(context.Context) error { return nil }
 				}
 
-				kubeAPIServer.EXPECT().GetValues().DoAndReturn(func() kubeapiserver.Values {
-					return kubeapiserver.Values{Autoscaling: autoscalingConfig}
-				})
+				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{Autoscaling: autoscalingConfig})
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(&expectedReplicas)
+				kubeAPIServer.EXPECT().GetValues()
+				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
 				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
@@ -826,6 +829,59 @@ var _ = Describe("KubeAPIServer", func() {
 				},
 				kubeapiserver.AutoscalingConfig{},
 				int32(0),
+			),
+		)
+
+		DescribeTable("should correctly set the secrets",
+			func(values kubeapiserver.Values, mutateSecrets func(*kubeapiserver.Secrets)) {
+				secrets := kubeapiserver.Secrets{
+					CA:                     component.Secret{Name: "ca", Checksum: botanist.LoadCheckSum("ca")},
+					CAEtcd:                 component.Secret{Name: "ca-etcd", Checksum: botanist.LoadCheckSum("ca-etcd")},
+					CAFrontProxy:           component.Secret{Name: "ca-front-proxy", Checksum: botanist.LoadCheckSum("ca-front-proxy")},
+					Etcd:                   component.Secret{Name: "etcd-client-tls", Checksum: botanist.LoadCheckSum("etcd-client-tls")},
+					EtcdEncryptionConfig:   component.Secret{Name: "etcd-encryption-secret", Checksum: botanist.LoadCheckSum("etcd-encryption-secret")},
+					KubeAggregator:         component.Secret{Name: "kube-aggregator", Checksum: botanist.LoadCheckSum("kube-aggregator")},
+					KubeAPIServerToKubelet: component.Secret{Name: "kube-apiserver-kubelet", Checksum: botanist.LoadCheckSum("kube-apiserver-kubelet")},
+					Server:                 component.Secret{Name: "kube-apiserver", Checksum: botanist.LoadCheckSum("kube-apiserver")},
+					ServiceAccountKey:      component.Secret{Name: "service-account-key", Checksum: botanist.LoadCheckSum("service-account-key")},
+					StaticToken:            component.Secret{Name: "static-token", Checksum: botanist.LoadCheckSum("static-token")},
+				}
+				mutateSecrets(&secrets)
+
+				oldGetDeployKubeAPIServerFunc := GetLegacyDeployKubeAPIServerFunc
+				defer func() { GetLegacyDeployKubeAPIServerFunc = oldGetDeployKubeAPIServerFunc }()
+				GetLegacyDeployKubeAPIServerFunc = func(*Botanist) func(context.Context) error {
+					return func(context.Context) error { return nil }
+				}
+
+				kubeAPIServer.EXPECT().GetValues()
+				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+				kubeAPIServer.EXPECT().GetValues().Return(values)
+				kubeAPIServer.EXPECT().SetSecrets(secrets)
+				kubeAPIServer.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+			},
+
+			Entry("reversed vpn disabled",
+				kubeapiserver.Values{ReversedVPNEnabled: false},
+				func(s *kubeapiserver.Secrets) {
+					s.VPNSeed = &component.Secret{Name: "vpn-seed", Checksum: botanist.LoadCheckSum("vpn-seed")}
+					s.VPNSeedTLSAuth = &component.Secret{Name: "vpn-seed-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-tlsauth")}
+				},
+			),
+			Entry("reversed vpn enabled",
+				kubeapiserver.Values{ReversedVPNEnabled: true},
+				func(s *kubeapiserver.Secrets) {
+					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
+				},
+			),
+			Entry("basic auth enabled",
+				kubeapiserver.Values{BasicAuthenticationEnabled: true, ReversedVPNEnabled: true},
+				func(s *kubeapiserver.Secrets) {
+					s.BasicAuthentication = &component.Secret{Name: "kube-apiserver-basic-auth", Checksum: botanist.LoadCheckSum("kube-apiserver-basic-auth")}
+					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
+				},
 			),
 		)
 	})

@@ -46,6 +46,8 @@ const (
 // Interface contains functions for a kube-apiserver deployer.
 type Interface interface {
 	component.DeployWaiter
+	// SetSecrets sets the secrets.
+	SetSecrets(Secrets)
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
 	// SetAutoscalingReplicas sets the Replicas field in the AutoscalingConfig of the Values of the deployer.
@@ -60,6 +62,8 @@ type Values struct {
 	Audit *AuditConfig
 	// Autoscaling contains information for configuring autoscaling settings for the kube-apiserver.
 	Autoscaling AutoscalingConfig
+	// BasicAuthenticationEnabled states whether basic authentication is enabled.
+	BasicAuthenticationEnabled bool
 	// ReversedVPNEnabled states whether the 'ReversedVPN' feature gate is enabled.
 	ReversedVPNEnabled bool
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
@@ -104,6 +108,8 @@ type ServiceAccountConfig struct {
 
 // SNIConfig contains information for configuring SNI settings for the kube-apiserver.
 type SNIConfig struct {
+	// Enabled states whether the SNI feature is enabled.
+	Enabled bool
 	// PodMutatorEnabled states whether the pod mutator is enabled.
 	PodMutatorEnabled bool
 }
@@ -121,9 +127,14 @@ type kubeAPIServer struct {
 	client    kubernetes.Interface
 	namespace string
 	values    Values
+	secrets   Secrets
 }
 
 func (k *kubeAPIServer) Deploy(ctx context.Context) error {
+	if err := k.secrets.verify(k.values); err != nil {
+		return err
+	}
+
 	var (
 		deployment                           = k.emptyDeployment()
 		podDisruptionBudget                  = k.emptyPodDisruptionBudget()
@@ -312,6 +323,10 @@ func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
 	k.values.Autoscaling.Replicas = replicas
 }
 
+func (k *kubeAPIServer) SetSecrets(secrets Secrets) {
+	k.secrets = secrets
+}
+
 // GetLabels returns the labels for the kube-apiserver.
 func GetLabels() map[string]string {
 	return utils.MergeStringMaps(getLabels(), map[string]string{
@@ -324,4 +339,78 @@ func getLabels() map[string]string {
 		v1beta1constants.LabelApp:  v1beta1constants.LabelKubernetes,
 		v1beta1constants.LabelRole: v1beta1constants.LabelAPIServer,
 	}
+}
+
+// Secrets is collection of secrets for the kube-apiserver.
+type Secrets struct {
+	// BasicAuthentication contains the basic authentication credentials.
+	// Only relevant if BasicAuthenticationEnabled is true.
+	BasicAuthentication *component.Secret
+	// CA is the cluster's certificate authority.
+	CA component.Secret
+	// CAEtcd is the certificate authority for the etcd.
+	CAEtcd component.Secret
+	// CAFrontProxy is the certificate authority for the front-proxy.
+	CAFrontProxy component.Secret
+	// Etcd is the client certificate for the kube-apiserver to talk to etcd.
+	Etcd component.Secret
+	// EtcdEncryptionConfig is the configuration containing information how to encrypt the etcd data.
+	EtcdEncryptionConfig component.Secret
+	// KubeAggregator is the client certificate for the kube-aggregator to talk to the kube-apiserver.
+	KubeAggregator component.Secret
+	// KubeAPIServerToKubelet is the client certificate for the kube-apiserver to talk to kubelets.
+	KubeAPIServerToKubelet component.Secret
+	// Server is the server certificate and key for the HTTP server of kube-apiserver.
+	Server component.Secret
+	// ServiceAccountKey is key for service accounts.
+	ServiceAccountKey component.Secret
+	// StaticToken is the static token secret.
+	StaticToken component.Secret
+	// VPNSeed is the client certificate for the vpn-seed to talk to the kube-apiserver.
+	// Only relevant if ReversedVPNEnabled is false.
+	VPNSeed *component.Secret
+	// VPNSeedTLSAuth is the TLS auth information for the vpn-seed.
+	// Only relevant if ReversedVPNEnabled is false.
+	VPNSeedTLSAuth *component.Secret
+	// VPNSeedServerTLSAuth is the TLS auth information for the vpn-seed server.
+	// Only relevant if ReversedVPNEnabled is true.
+	VPNSeedServerTLSAuth *component.Secret
+}
+
+type secret struct {
+	*component.Secret
+	requiredConditionFn func(Values) bool
+}
+
+func (s *Secrets) all() map[string]secret {
+	return map[string]secret{
+		"BasicAuthentication":    {Secret: s.BasicAuthentication, requiredConditionFn: func(v Values) bool { return v.BasicAuthenticationEnabled }},
+		"CA":                     {Secret: &s.CA},
+		"CAEtcd":                 {Secret: &s.CAEtcd},
+		"CAFrontProxy":           {Secret: &s.CAFrontProxy},
+		"Etcd":                   {Secret: &s.Etcd},
+		"EtcdEncryptionConfig":   {Secret: &s.EtcdEncryptionConfig},
+		"KubeAggregator":         {Secret: &s.KubeAggregator},
+		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},
+		"Server":                 {Secret: &s.Server},
+		"ServiceAccountKey":      {Secret: &s.ServiceAccountKey},
+		"StaticToken":            {Secret: &s.StaticToken},
+		"VPNSeed":                {Secret: s.VPNSeed, requiredConditionFn: func(v Values) bool { return !v.ReversedVPNEnabled }},
+		"VPNSeedTLSAuth":         {Secret: s.VPNSeedTLSAuth, requiredConditionFn: func(v Values) bool { return !v.ReversedVPNEnabled }},
+		"VPNSeedServerTLSAuth":   {Secret: s.VPNSeedServerTLSAuth, requiredConditionFn: func(v Values) bool { return v.ReversedVPNEnabled }},
+	}
+}
+
+func (s *Secrets) verify(values Values) error {
+	for name, secret := range s.all() {
+		if secret.requiredConditionFn != nil && !secret.requiredConditionFn(values) {
+			continue
+		}
+
+		if secret.Secret == nil || secret.Name == "" || secret.Checksum == "" {
+			return fmt.Errorf("missing information for required secret %s", name)
+		}
+	}
+
+	return nil
 }

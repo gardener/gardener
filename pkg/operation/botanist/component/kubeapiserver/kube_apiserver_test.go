@@ -21,6 +21,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakekubernetes "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/test"
@@ -63,6 +64,36 @@ var _ = Describe("KubeAPIServer", func() {
 		kapi                Interface
 		version             = semver.MustParse("1.22.1")
 
+		secretNameBasicAuthentication        = "BasicAuthentication-secret"
+		secretChecksumBasicAuthentication    = "12345"
+		secretNameCA                         = "CA-secret"
+		secretChecksumCA                     = "12345"
+		secretNameCAEtcd                     = "CAEtcd-secret"
+		secretChecksumCAEtcd                 = "12345"
+		secretNameCAFrontProxy               = "CAFrontProxy-secret"
+		secretChecksumCAFrontProxy           = "12345"
+		secretNameEtcd                       = "Etcd-secret"
+		secretChecksumEtcd                   = "12345"
+		secretNameEtcdEncryptionConfig       = "EtcdEncryptionConfig-secret"
+		secretChecksumEtcdEncryptionConfig   = "12345"
+		secretNameKubeAggregator             = "KubeAggregator-secret"
+		secretChecksumKubeAggregator         = "12345"
+		secretNameKubeAPIServerToKubelet     = "KubeAPIServerToKubelet-secret"
+		secretChecksumKubeAPIServerToKubelet = "12345"
+		secretNameServer                     = "Server-secret"
+		secretChecksumServer                 = "12345"
+		secretNameServiceAccountKey          = "ServiceAccountKey-secret"
+		secretChecksumServiceAccountKey      = "12345"
+		secretNameStaticToken                = "StaticToken-secret"
+		secretChecksumStaticToken            = "12345"
+		secretNameVPNSeed                    = "VPNSeed-secret"
+		secretChecksumVPNSeed                = "12345"
+		secretNameVPNSeedTLSAuth             = "VPNSeedTLSAuth-secret"
+		secretChecksumVPNSeedTLSAuth         = "12345"
+		secretNameVPNSeedServerTLSAuth       = "VPNSeedServerTLSAuth-secret"
+		secretChecksumVPNSeedServerTLSAuth   = "12345"
+		secrets                              Secrets
+
 		deployment                           *appsv1.Deployment
 		horizontalPodAutoscaler              *autoscalingv2beta1.HorizontalPodAutoscaler
 		verticalPodAutoscaler                *autoscalingv1beta2.VerticalPodAutoscaler
@@ -84,6 +115,23 @@ var _ = Describe("KubeAPIServer", func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
 		kapi = New(kubernetesInterface, namespace, Values{})
+
+		secrets = Secrets{
+			BasicAuthentication:    &component.Secret{Name: secretNameBasicAuthentication, Checksum: secretChecksumBasicAuthentication},
+			CA:                     component.Secret{Name: secretNameCA, Checksum: secretChecksumCA},
+			CAEtcd:                 component.Secret{Name: secretNameCAEtcd, Checksum: secretChecksumCAEtcd},
+			CAFrontProxy:           component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
+			Etcd:                   component.Secret{Name: secretNameEtcd, Checksum: secretChecksumEtcd},
+			EtcdEncryptionConfig:   component.Secret{Name: secretNameEtcdEncryptionConfig, Checksum: secretChecksumEtcdEncryptionConfig},
+			KubeAggregator:         component.Secret{Name: secretNameKubeAggregator, Checksum: secretChecksumKubeAggregator},
+			KubeAPIServerToKubelet: component.Secret{Name: secretNameKubeAPIServerToKubelet, Checksum: secretChecksumKubeAPIServerToKubelet},
+			Server:                 component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
+			ServiceAccountKey:      component.Secret{Name: secretNameServiceAccountKey, Checksum: secretChecksumServiceAccountKey},
+			StaticToken:            component.Secret{Name: secretNameStaticToken, Checksum: secretChecksumStaticToken},
+			VPNSeed:                &component.Secret{Name: secretNameVPNSeed, Checksum: secretChecksumVPNSeed},
+			VPNSeedTLSAuth:         &component.Secret{Name: secretNameVPNSeedTLSAuth, Checksum: secretChecksumVPNSeedTLSAuth},
+			VPNSeedServerTLSAuth:   &component.Secret{Name: secretNameVPNSeedServerTLSAuth, Checksum: secretChecksumVPNSeedServerTLSAuth},
+		}
 
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -148,314 +196,199 @@ var _ = Describe("KubeAPIServer", func() {
 	})
 
 	Describe("#Deploy", func() {
-		Describe("HorizontalPodAutoscaler", func() {
-			DescribeTable("should delete the HPA resource",
-				func(autoscalingConfig AutoscalingConfig) {
-					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
+		Context("missing secret information", func() {
+			DescribeTable("should return an error because secret information is not provided",
+				func(name string, mutateSecrets func(*Secrets), values Values) {
+					mutateSecrets(&secrets)
 
-					Expect(c.Create(ctx, horizontalPodAutoscaler)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
-					Expect(kapi.Deploy(ctx)).To(Succeed())
+					kapi = New(kubernetesInterface, namespace, values)
+					kapi.SetSecrets(secrets)
+
+					Expect(kapi.Deploy(ctx)).To(MatchError(ContainSubstring("missing information for required secret " + name)))
+				},
+
+				Entry("BasicAuthentication enabled but missing",
+					"BasicAuthentication", func(s *Secrets) { s.BasicAuthentication = nil }, Values{BasicAuthenticationEnabled: true},
+				),
+				Entry("CA missing",
+					"CA", func(s *Secrets) { s.CA.Name = "" }, Values{},
+				),
+				Entry("CAEtcd missing",
+					"CAEtcd", func(s *Secrets) { s.CAEtcd.Name = "" }, Values{},
+				),
+				Entry("CAFrontProxy missing",
+					"CAFrontProxy", func(s *Secrets) { s.CAFrontProxy.Name = "" }, Values{},
+				),
+				Entry("Etcd missing",
+					"Etcd", func(s *Secrets) { s.Etcd.Name = "" }, Values{},
+				),
+				Entry("EtcdEncryptionConfig missing",
+					"EtcdEncryptionConfig", func(s *Secrets) { s.EtcdEncryptionConfig.Name = "" }, Values{},
+				),
+				Entry("KubeAggregator missing",
+					"KubeAggregator", func(s *Secrets) { s.KubeAggregator.Name = "" }, Values{},
+				),
+				Entry("KubeAPIServerToKubelet missing",
+					"KubeAPIServerToKubelet", func(s *Secrets) { s.KubeAPIServerToKubelet.Name = "" }, Values{},
+				),
+				Entry("Server missing",
+					"Server", func(s *Secrets) { s.Server.Name = "" }, Values{},
+				),
+				Entry("ServiceAccountKey missing",
+					"ServiceAccountKey", func(s *Secrets) { s.ServiceAccountKey.Name = "" }, Values{},
+				),
+				Entry("StaticToken missing",
+					"StaticToken", func(s *Secrets) { s.StaticToken.Name = "" }, Values{},
+				),
+				Entry("ReversedVPN disabled but VPNSeed missing",
+					"VPNSeed", func(s *Secrets) { s.VPNSeed = nil }, Values{ReversedVPNEnabled: false},
+				),
+				Entry("ReversedVPN disabled but VPNSeedTLSAuth missing",
+					"VPNSeedTLSAuth", func(s *Secrets) { s.VPNSeedTLSAuth = nil }, Values{ReversedVPNEnabled: false},
+				),
+				Entry("ReversedVPN enabled but VPNSeedServerTLSAuth missing",
+					"VPNSeedServerTLSAuth", func(s *Secrets) { s.VPNSeedServerTLSAuth = nil }, Values{ReversedVPNEnabled: true},
+				),
+			)
+		})
+
+		Context("secret information available", func() {
+			BeforeEach(func() {
+				kapi.SetSecrets(secrets)
+			})
+
+			Describe("HorizontalPodAutoscaler", func() {
+				DescribeTable("should delete the HPA resource",
+					func(autoscalingConfig AutoscalingConfig) {
+						kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
+						kapi.SetSecrets(secrets)
+
+						Expect(c.Create(ctx, horizontalPodAutoscaler)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2beta1.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscaler.Name)))
+					},
+
+					Entry("HVPA is enabled", AutoscalingConfig{HVPAEnabled: true}),
+					Entry("replicas is nil", AutoscalingConfig{HVPAEnabled: false, Replicas: nil}),
+					Entry("replicas is 0", AutoscalingConfig{HVPAEnabled: false, Replicas: pointer.Int32(0)}),
+				)
+
+				It("should successfully deploy the HPA resource", func() {
+					autoscalingConfig := AutoscalingConfig{
+						HVPAEnabled: false,
+						Replicas:    pointer.Int32(2),
+						MinReplicas: 4,
+						MaxReplicas: 6,
+					}
+					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
+					kapi.SetSecrets(secrets)
+
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2beta1.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscaler.Name)))
-				},
-
-				Entry("HVPA is enabled", AutoscalingConfig{HVPAEnabled: true}),
-				Entry("replicas is nil", AutoscalingConfig{HVPAEnabled: false, Replicas: nil}),
-				Entry("replicas is 0", AutoscalingConfig{HVPAEnabled: false, Replicas: pointer.Int32(0)}),
-			)
-
-			It("should successfully deploy the HPA resource", func() {
-				autoscalingConfig := AutoscalingConfig{
-					HVPAEnabled: false,
-					Replicas:    pointer.Int32(2),
-					MinReplicas: 4,
-					MaxReplicas: 6,
-				}
-				kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2beta1.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscaler.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
-				Expect(horizontalPodAutoscaler).To(DeepEqual(&autoscalingv2beta1.HorizontalPodAutoscaler{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: autoscalingv2beta1.SchemeGroupVersion.String(),
-						Kind:       "HorizontalPodAutoscaler",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            horizontalPodAutoscaler.Name,
-						Namespace:       horizontalPodAutoscaler.Namespace,
-						ResourceVersion: "1",
-					},
-					Spec: autoscalingv2beta1.HorizontalPodAutoscalerSpec{
-						MinReplicas: &autoscalingConfig.MinReplicas,
-						MaxReplicas: autoscalingConfig.MaxReplicas,
-						ScaleTargetRef: autoscalingv2beta1.CrossVersionObjectReference{
-							APIVersion: "apps/v1",
-							Kind:       "Deployment",
-							Name:       "kube-apiserver",
-						},
-						Metrics: []autoscalingv2beta1.MetricSpec{
-							{
-								Type: "Resource",
-								Resource: &autoscalingv2beta1.ResourceMetricSource{
-									Name:                     "cpu",
-									TargetAverageUtilization: pointer.Int32(80),
-								},
-							},
-							{
-								Type: "Resource",
-								Resource: &autoscalingv2beta1.ResourceMetricSource{
-									Name:                     "memory",
-									TargetAverageUtilization: pointer.Int32(80),
-								},
-							},
-						},
-					},
-				}))
-			})
-		})
-
-		Describe("VerticalPodAutoscaler", func() {
-			It("should delete the VPA resource", func() {
-				kapi = New(kubernetesInterface, namespace, Values{Autoscaling: AutoscalingConfig{HVPAEnabled: true}})
-
-				Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
-			})
-
-			It("should successfully deploy the VPA resource", func() {
-				autoscalingConfig := AutoscalingConfig{HVPAEnabled: false}
-				kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
-				Expect(verticalPodAutoscaler).To(DeepEqual(&autoscalingv1beta2.VerticalPodAutoscaler{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: autoscalingv1beta2.SchemeGroupVersion.String(),
-						Kind:       "VerticalPodAutoscaler",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            verticalPodAutoscaler.Name,
-						Namespace:       verticalPodAutoscaler.Namespace,
-						ResourceVersion: "1",
-					},
-					Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
-						TargetRef: &autoscalingv1.CrossVersionObjectReference{
-							APIVersion: "apps/v1",
-							Kind:       "Deployment",
-							Name:       "kube-apiserver",
-						},
-						UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
-							UpdateMode: &vpaUpdateMode,
-						},
-					},
-				}))
-			})
-		})
-
-		Describe("HVPA", func() {
-			DescribeTable("should delete the HVPA resource",
-				func(autoscalingConfig AutoscalingConfig) {
-					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
-
-					Expect(c.Create(ctx, hvpa)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
 					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: hvpav1alpha1.SchemeGroupVersionHvpa.Group, Resource: "hvpas"}, hvpa.Name)))
-				},
-
-				Entry("HVPA disabled", AutoscalingConfig{HVPAEnabled: false}),
-				Entry("HVPA enabled but replicas nil", AutoscalingConfig{HVPAEnabled: true}),
-				Entry("HVPA enabled but replicas zero", AutoscalingConfig{HVPAEnabled: true, Replicas: pointer.Int32(0)}),
-			)
-
-			var (
-				defaultExpectedScaleDownUpdateMode = "Auto"
-				defaultExpectedHPAMetrics          = []autoscalingv2beta1.MetricSpec{
-					{
-						Type: "Resource",
-						Resource: &autoscalingv2beta1.ResourceMetricSource{
-							Name:                     "cpu",
-							TargetAverageUtilization: pointer.Int32(80),
-						},
-					},
-				}
-				defaultExpectedVPAContainerResourcePolicies = []autoscalingv1beta2.ContainerResourcePolicy{
-					{
-						ContainerName: "kube-apiserver",
-						MinAllowed: corev1.ResourceList{
-							"cpu":    resource.MustParse("300m"),
-							"memory": resource.MustParse("400M"),
-						},
-						MaxAllowed: corev1.ResourceList{
-							"cpu":    resource.MustParse("8"),
-							"memory": resource.MustParse("25G"),
-						},
-					},
-					{
-						ContainerName: "vpn-seed",
-						Mode:          &containerPolicyOff,
-					},
-				}
-				defaultExpectedWeightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
-					{
-						VpaWeight:         100,
-						StartReplicaCount: 5,
-						LastReplicaCount:  5,
-					},
-				}
-			)
-
-			DescribeTable("should successfully deploy the HVPA resource",
-				func(
-					autoscalingConfig AutoscalingConfig,
-					sniConfig SNIConfig,
-					expectedScaleDownUpdateMode string,
-					expectedHPAMetrics []autoscalingv2beta1.MetricSpec,
-					expectedVPAContainerResourcePolicies []autoscalingv1beta2.ContainerResourcePolicy,
-					expectedWeightBasedScalingIntervals []hvpav1alpha1.WeightBasedScalingInterval,
-				) {
-					kapi = New(kubernetesInterface, namespace, Values{
-						Autoscaling: autoscalingConfig,
-						SNI:         sniConfig,
-					})
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: hvpav1alpha1.SchemeGroupVersionHvpa.Group, Resource: "hvpas"}, hvpa.Name)))
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
-					Expect(hvpa).To(DeepEqual(&hvpav1alpha1.Hvpa{
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(Succeed())
+					Expect(horizontalPodAutoscaler).To(DeepEqual(&autoscalingv2beta1.HorizontalPodAutoscaler{
 						TypeMeta: metav1.TypeMeta{
-							APIVersion: hvpav1alpha1.SchemeGroupVersionHvpa.String(),
-							Kind:       "Hvpa",
+							APIVersion: autoscalingv2beta1.SchemeGroupVersion.String(),
+							Kind:       "HorizontalPodAutoscaler",
 						},
 						ObjectMeta: metav1.ObjectMeta{
-							Name:            hvpa.Name,
-							Namespace:       hvpa.Namespace,
+							Name:            horizontalPodAutoscaler.Name,
+							Namespace:       horizontalPodAutoscaler.Namespace,
 							ResourceVersion: "1",
 						},
-						Spec: hvpav1alpha1.HvpaSpec{
-							Replicas: pointer.Int32(1),
-							Hpa: hvpav1alpha1.HpaSpec{
-								Selector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{"role": "apiserver-hpa"},
-								},
-								Deploy: true,
-								ScaleUp: hvpav1alpha1.ScaleType{
-									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: pointer.StringPtr("Auto"),
-									},
-								},
-								ScaleDown: hvpav1alpha1.ScaleType{
-									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: pointer.StringPtr("Auto"),
-									},
-								},
-								Template: hvpav1alpha1.HpaTemplate{
-									ObjectMeta: metav1.ObjectMeta{
-										Labels: map[string]string{"role": "apiserver-hpa"},
-									},
-									Spec: hvpav1alpha1.HpaTemplateSpec{
-										MinReplicas: &autoscalingConfig.MinReplicas,
-										MaxReplicas: autoscalingConfig.MaxReplicas,
-										Metrics:     expectedHPAMetrics,
-									},
-								},
-							},
-							Vpa: hvpav1alpha1.VpaSpec{
-								Selector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{"role": "apiserver-vpa"},
-								},
-								Deploy: true,
-								ScaleUp: hvpav1alpha1.ScaleType{
-									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: pointer.StringPtr("Auto"),
-									},
-									StabilizationDuration: pointer.StringPtr("3m"),
-									MinChange: hvpav1alpha1.ScaleParams{
-										CPU: hvpav1alpha1.ChangeParams{
-											Value:      pointer.StringPtr("300m"),
-											Percentage: pointer.Int32Ptr(80),
-										},
-										Memory: hvpav1alpha1.ChangeParams{
-											Value:      pointer.StringPtr("200M"),
-											Percentage: pointer.Int32Ptr(80),
-										},
-									},
-								},
-								ScaleDown: hvpav1alpha1.ScaleType{
-									UpdatePolicy: hvpav1alpha1.UpdatePolicy{
-										UpdateMode: &expectedScaleDownUpdateMode,
-									},
-									StabilizationDuration: pointer.StringPtr("15m"),
-									MinChange: hvpav1alpha1.ScaleParams{
-										CPU: hvpav1alpha1.ChangeParams{
-											Value:      pointer.StringPtr("300m"),
-											Percentage: pointer.Int32Ptr(80),
-										},
-										Memory: hvpav1alpha1.ChangeParams{
-											Value:      pointer.StringPtr("200M"),
-											Percentage: pointer.Int32Ptr(80),
-										},
-									},
-								},
-								LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
-									CPU: hvpav1alpha1.ChangeParams{
-										Value:      pointer.StringPtr("1"),
-										Percentage: pointer.Int32Ptr(70),
-									},
-									Memory: hvpav1alpha1.ChangeParams{
-										Value:      pointer.StringPtr("1G"),
-										Percentage: pointer.Int32Ptr(70),
-									},
-								},
-								Template: hvpav1alpha1.VpaTemplate{
-									ObjectMeta: metav1.ObjectMeta{
-										Labels: map[string]string{"role": "apiserver-vpa"},
-									},
-									Spec: hvpav1alpha1.VpaTemplateSpec{
-										ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
-											ContainerPolicies: expectedVPAContainerResourcePolicies,
-										},
-									},
-								},
-							},
-							WeightBasedScalingIntervals: expectedWeightBasedScalingIntervals,
-							TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
+						Spec: autoscalingv2beta1.HorizontalPodAutoscalerSpec{
+							MinReplicas: &autoscalingConfig.MinReplicas,
+							MaxReplicas: autoscalingConfig.MaxReplicas,
+							ScaleTargetRef: autoscalingv2beta1.CrossVersionObjectReference{
 								APIVersion: "apps/v1",
 								Kind:       "Deployment",
 								Name:       "kube-apiserver",
 							},
+							Metrics: []autoscalingv2beta1.MetricSpec{
+								{
+									Type: "Resource",
+									Resource: &autoscalingv2beta1.ResourceMetricSource{
+										Name:                     "cpu",
+										TargetAverageUtilization: pointer.Int32(80),
+									},
+								},
+								{
+									Type: "Resource",
+									Resource: &autoscalingv2beta1.ResourceMetricSource{
+										Name:                     "memory",
+										TargetAverageUtilization: pointer.Int32(80),
+									},
+								},
+							},
 						},
 					}))
-				},
+				})
+			})
 
-				Entry("default behaviour",
-					AutoscalingConfig{
-						HVPAEnabled: true,
-						Replicas:    pointer.Int32(2),
-						MinReplicas: 5,
-						MaxReplicas: 5,
+			Describe("VerticalPodAutoscaler", func() {
+				It("should delete the VPA resource", func() {
+					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: AutoscalingConfig{HVPAEnabled: true}})
+					kapi.SetSecrets(secrets)
+
+					Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
+				})
+
+				It("should successfully deploy the VPA resource", func() {
+					autoscalingConfig := AutoscalingConfig{HVPAEnabled: false}
+					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
+					kapi.SetSecrets(secrets)
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(Succeed())
+					Expect(verticalPodAutoscaler).To(DeepEqual(&autoscalingv1beta2.VerticalPodAutoscaler{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: autoscalingv1beta2.SchemeGroupVersion.String(),
+							Kind:       "VerticalPodAutoscaler",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            verticalPodAutoscaler.Name,
+							Namespace:       verticalPodAutoscaler.Namespace,
+							ResourceVersion: "1",
+						},
+						Spec: autoscalingv1beta2.VerticalPodAutoscalerSpec{
+							TargetRef: &autoscalingv1.CrossVersionObjectReference{
+								APIVersion: "apps/v1",
+								Kind:       "Deployment",
+								Name:       "kube-apiserver",
+							},
+							UpdatePolicy: &autoscalingv1beta2.PodUpdatePolicy{
+								UpdateMode: &vpaUpdateMode,
+							},
+						},
+					}))
+				})
+			})
+
+			Describe("HVPA", func() {
+				DescribeTable("should delete the HVPA resource",
+					func(autoscalingConfig AutoscalingConfig) {
+						kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
+						kapi.SetSecrets(secrets)
+
+						Expect(c.Create(ctx, hvpa)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: hvpav1alpha1.SchemeGroupVersionHvpa.Group, Resource: "hvpas"}, hvpa.Name)))
 					},
-					SNIConfig{},
-					defaultExpectedScaleDownUpdateMode,
-					defaultExpectedHPAMetrics,
-					defaultExpectedVPAContainerResourcePolicies,
-					defaultExpectedWeightBasedScalingIntervals,
-				),
-				Entry("UseMemoryMetricForHvpaHPA is true",
-					AutoscalingConfig{
-						HVPAEnabled:               true,
-						Replicas:                  pointer.Int32(2),
-						UseMemoryMetricForHvpaHPA: true,
-						MinReplicas:               5,
-						MaxReplicas:               5,
-					},
-					SNIConfig{},
-					defaultExpectedScaleDownUpdateMode,
-					[]autoscalingv2beta1.MetricSpec{
+
+					Entry("HVPA disabled", AutoscalingConfig{HVPAEnabled: false}),
+					Entry("HVPA enabled but replicas nil", AutoscalingConfig{HVPAEnabled: true}),
+					Entry("HVPA enabled but replicas zero", AutoscalingConfig{HVPAEnabled: true, Replicas: pointer.Int32(0)}),
+				)
+
+				var (
+					defaultExpectedScaleDownUpdateMode = "Auto"
+					defaultExpectedHPAMetrics          = []autoscalingv2beta1.MetricSpec{
 						{
 							Type: "Resource",
 							Resource: &autoscalingv2beta1.ResourceMetricSource{
@@ -463,44 +396,8 @@ var _ = Describe("KubeAPIServer", func() {
 								TargetAverageUtilization: pointer.Int32(80),
 							},
 						},
-						{
-							Type: "Resource",
-							Resource: &autoscalingv2beta1.ResourceMetricSource{
-								Name:                     "memory",
-								TargetAverageUtilization: pointer.Int32(80),
-							},
-						},
-					},
-					defaultExpectedVPAContainerResourcePolicies,
-					defaultExpectedWeightBasedScalingIntervals,
-				),
-				Entry("scale down is disabled",
-					AutoscalingConfig{
-						HVPAEnabled:              true,
-						Replicas:                 pointer.Int32(2),
-						MinReplicas:              5,
-						MaxReplicas:              5,
-						ScaleDownDisabledForHvpa: true,
-					},
-					SNIConfig{},
-					"Off",
-					defaultExpectedHPAMetrics,
-					defaultExpectedVPAContainerResourcePolicies,
-					defaultExpectedWeightBasedScalingIntervals,
-				),
-				Entry("SNI pod mutator is enabled",
-					AutoscalingConfig{
-						HVPAEnabled: true,
-						Replicas:    pointer.Int32(2),
-						MinReplicas: 5,
-						MaxReplicas: 5,
-					},
-					SNIConfig{
-						PodMutatorEnabled: true,
-					},
-					defaultExpectedScaleDownUpdateMode,
-					defaultExpectedHPAMetrics,
-					[]autoscalingv1beta2.ContainerResourcePolicy{
+					}
+					defaultExpectedVPAContainerResourcePolicies = []autoscalingv1beta2.ContainerResourcePolicy{
 						{
 							ContainerName: "kube-apiserver",
 							MinAllowed: corev1.ResourceList{
@@ -516,278 +413,414 @@ var _ = Describe("KubeAPIServer", func() {
 							ContainerName: "vpn-seed",
 							Mode:          &containerPolicyOff,
 						},
-						{
-							ContainerName: "apiserver-proxy-pod-mutator",
-							Mode:          &containerPolicyOff,
-						},
-					},
-					defaultExpectedWeightBasedScalingIntervals,
-				),
-				Entry("max replicas > min replicas",
-					AutoscalingConfig{
-						HVPAEnabled: true,
-						Replicas:    pointer.Int32(2),
-						MinReplicas: 3,
-						MaxReplicas: 5,
-					},
-					SNIConfig{},
-					defaultExpectedScaleDownUpdateMode,
-					defaultExpectedHPAMetrics,
-					defaultExpectedVPAContainerResourcePolicies,
-					[]hvpav1alpha1.WeightBasedScalingInterval{
+					}
+					defaultExpectedWeightBasedScalingIntervals = []hvpav1alpha1.WeightBasedScalingInterval{
 						{
 							VpaWeight:         100,
 							StartReplicaCount: 5,
 							LastReplicaCount:  5,
 						},
-						{
-							VpaWeight:         0,
-							StartReplicaCount: 3,
-							LastReplicaCount:  4,
-						},
-					},
-				),
-			)
-		})
+					}
+				)
 
-		Describe("PodDisruptionBudget", func() {
-			It("should successfully deploy the PDB resource", func() {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1beta1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
-				Expect(podDisruptionBudget).To(DeepEqual(&policyv1beta1.PodDisruptionBudget{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: policyv1beta1.SchemeGroupVersion.String(),
-						Kind:       "PodDisruptionBudget",
+				DescribeTable("should successfully deploy the HVPA resource",
+					func(
+						autoscalingConfig AutoscalingConfig,
+						sniConfig SNIConfig,
+						expectedScaleDownUpdateMode string,
+						expectedHPAMetrics []autoscalingv2beta1.MetricSpec,
+						expectedVPAContainerResourcePolicies []autoscalingv1beta2.ContainerResourcePolicy,
+						expectedWeightBasedScalingIntervals []hvpav1alpha1.WeightBasedScalingInterval,
+					) {
+						kapi = New(kubernetesInterface, namespace, Values{
+							Autoscaling: autoscalingConfig,
+							SNI:         sniConfig,
+						})
+						kapi.SetSecrets(secrets)
+
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: hvpav1alpha1.SchemeGroupVersionHvpa.Group, Resource: "hvpas"}, hvpa.Name)))
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(hvpa), hvpa)).To(Succeed())
+						Expect(hvpa).To(DeepEqual(&hvpav1alpha1.Hvpa{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: hvpav1alpha1.SchemeGroupVersionHvpa.String(),
+								Kind:       "Hvpa",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            hvpa.Name,
+								Namespace:       hvpa.Namespace,
+								ResourceVersion: "1",
+							},
+							Spec: hvpav1alpha1.HvpaSpec{
+								Replicas: pointer.Int32(1),
+								Hpa: hvpav1alpha1.HpaSpec{
+									Selector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{"role": "apiserver-hpa"},
+									},
+									Deploy: true,
+									ScaleUp: hvpav1alpha1.ScaleType{
+										UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+											UpdateMode: pointer.StringPtr("Auto"),
+										},
+									},
+									ScaleDown: hvpav1alpha1.ScaleType{
+										UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+											UpdateMode: pointer.StringPtr("Auto"),
+										},
+									},
+									Template: hvpav1alpha1.HpaTemplate{
+										ObjectMeta: metav1.ObjectMeta{
+											Labels: map[string]string{"role": "apiserver-hpa"},
+										},
+										Spec: hvpav1alpha1.HpaTemplateSpec{
+											MinReplicas: &autoscalingConfig.MinReplicas,
+											MaxReplicas: autoscalingConfig.MaxReplicas,
+											Metrics:     expectedHPAMetrics,
+										},
+									},
+								},
+								Vpa: hvpav1alpha1.VpaSpec{
+									Selector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{"role": "apiserver-vpa"},
+									},
+									Deploy: true,
+									ScaleUp: hvpav1alpha1.ScaleType{
+										UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+											UpdateMode: pointer.StringPtr("Auto"),
+										},
+										StabilizationDuration: pointer.StringPtr("3m"),
+										MinChange: hvpav1alpha1.ScaleParams{
+											CPU: hvpav1alpha1.ChangeParams{
+												Value:      pointer.StringPtr("300m"),
+												Percentage: pointer.Int32Ptr(80),
+											},
+											Memory: hvpav1alpha1.ChangeParams{
+												Value:      pointer.StringPtr("200M"),
+												Percentage: pointer.Int32Ptr(80),
+											},
+										},
+									},
+									ScaleDown: hvpav1alpha1.ScaleType{
+										UpdatePolicy: hvpav1alpha1.UpdatePolicy{
+											UpdateMode: &expectedScaleDownUpdateMode,
+										},
+										StabilizationDuration: pointer.StringPtr("15m"),
+										MinChange: hvpav1alpha1.ScaleParams{
+											CPU: hvpav1alpha1.ChangeParams{
+												Value:      pointer.StringPtr("300m"),
+												Percentage: pointer.Int32Ptr(80),
+											},
+											Memory: hvpav1alpha1.ChangeParams{
+												Value:      pointer.StringPtr("200M"),
+												Percentage: pointer.Int32Ptr(80),
+											},
+										},
+									},
+									LimitsRequestsGapScaleParams: hvpav1alpha1.ScaleParams{
+										CPU: hvpav1alpha1.ChangeParams{
+											Value:      pointer.StringPtr("1"),
+											Percentage: pointer.Int32Ptr(70),
+										},
+										Memory: hvpav1alpha1.ChangeParams{
+											Value:      pointer.StringPtr("1G"),
+											Percentage: pointer.Int32Ptr(70),
+										},
+									},
+									Template: hvpav1alpha1.VpaTemplate{
+										ObjectMeta: metav1.ObjectMeta{
+											Labels: map[string]string{"role": "apiserver-vpa"},
+										},
+										Spec: hvpav1alpha1.VpaTemplateSpec{
+											ResourcePolicy: &autoscalingv1beta2.PodResourcePolicy{
+												ContainerPolicies: expectedVPAContainerResourcePolicies,
+											},
+										},
+									},
+								},
+								WeightBasedScalingIntervals: expectedWeightBasedScalingIntervals,
+								TargetRef: &autoscalingv2beta1.CrossVersionObjectReference{
+									APIVersion: "apps/v1",
+									Kind:       "Deployment",
+									Name:       "kube-apiserver",
+								},
+							},
+						}))
 					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            podDisruptionBudget.Name,
-						Namespace:       podDisruptionBudget.Namespace,
-						ResourceVersion: "1",
-						Labels: map[string]string{
-							"app":  "kubernetes",
-							"role": "apiserver",
+
+					Entry("default behaviour",
+						AutoscalingConfig{
+							HVPAEnabled: true,
+							Replicas:    pointer.Int32(2),
+							MinReplicas: 5,
+							MaxReplicas: 5,
 						},
-					},
-					Spec: policyv1beta1.PodDisruptionBudgetSpec{
-						MaxUnavailable: intOrStrPtr(intstr.FromInt(1)),
-						Selector: &metav1.LabelSelector{
-							MatchLabels: map[string]string{
+						SNIConfig{},
+						defaultExpectedScaleDownUpdateMode,
+						defaultExpectedHPAMetrics,
+						defaultExpectedVPAContainerResourcePolicies,
+						defaultExpectedWeightBasedScalingIntervals,
+					),
+					Entry("UseMemoryMetricForHvpaHPA is true",
+						AutoscalingConfig{
+							HVPAEnabled:               true,
+							Replicas:                  pointer.Int32(2),
+							UseMemoryMetricForHvpaHPA: true,
+							MinReplicas:               5,
+							MaxReplicas:               5,
+						},
+						SNIConfig{},
+						defaultExpectedScaleDownUpdateMode,
+						[]autoscalingv2beta1.MetricSpec{
+							{
+								Type: "Resource",
+								Resource: &autoscalingv2beta1.ResourceMetricSource{
+									Name:                     "cpu",
+									TargetAverageUtilization: pointer.Int32(80),
+								},
+							},
+							{
+								Type: "Resource",
+								Resource: &autoscalingv2beta1.ResourceMetricSource{
+									Name:                     "memory",
+									TargetAverageUtilization: pointer.Int32(80),
+								},
+							},
+						},
+						defaultExpectedVPAContainerResourcePolicies,
+						defaultExpectedWeightBasedScalingIntervals,
+					),
+					Entry("scale down is disabled",
+						AutoscalingConfig{
+							HVPAEnabled:              true,
+							Replicas:                 pointer.Int32(2),
+							MinReplicas:              5,
+							MaxReplicas:              5,
+							ScaleDownDisabledForHvpa: true,
+						},
+						SNIConfig{},
+						"Off",
+						defaultExpectedHPAMetrics,
+						defaultExpectedVPAContainerResourcePolicies,
+						defaultExpectedWeightBasedScalingIntervals,
+					),
+					Entry("SNI pod mutator is enabled",
+						AutoscalingConfig{
+							HVPAEnabled: true,
+							Replicas:    pointer.Int32(2),
+							MinReplicas: 5,
+							MaxReplicas: 5,
+						},
+						SNIConfig{
+							PodMutatorEnabled: true,
+						},
+						defaultExpectedScaleDownUpdateMode,
+						defaultExpectedHPAMetrics,
+						[]autoscalingv1beta2.ContainerResourcePolicy{
+							{
+								ContainerName: "kube-apiserver",
+								MinAllowed: corev1.ResourceList{
+									"cpu":    resource.MustParse("300m"),
+									"memory": resource.MustParse("400M"),
+								},
+								MaxAllowed: corev1.ResourceList{
+									"cpu":    resource.MustParse("8"),
+									"memory": resource.MustParse("25G"),
+								},
+							},
+							{
+								ContainerName: "vpn-seed",
+								Mode:          &containerPolicyOff,
+							},
+							{
+								ContainerName: "apiserver-proxy-pod-mutator",
+								Mode:          &containerPolicyOff,
+							},
+						},
+						defaultExpectedWeightBasedScalingIntervals,
+					),
+					Entry("max replicas > min replicas",
+						AutoscalingConfig{
+							HVPAEnabled: true,
+							Replicas:    pointer.Int32(2),
+							MinReplicas: 3,
+							MaxReplicas: 5,
+						},
+						SNIConfig{},
+						defaultExpectedScaleDownUpdateMode,
+						defaultExpectedHPAMetrics,
+						defaultExpectedVPAContainerResourcePolicies,
+						[]hvpav1alpha1.WeightBasedScalingInterval{
+							{
+								VpaWeight:         100,
+								StartReplicaCount: 5,
+								LastReplicaCount:  5,
+							},
+							{
+								VpaWeight:         0,
+								StartReplicaCount: 3,
+								LastReplicaCount:  4,
+							},
+						},
+					),
+				)
+			})
+
+			Describe("PodDisruptionBudget", func() {
+				It("should successfully deploy the PDB resource", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: policyv1beta1.SchemeGroupVersion.Group, Resource: "poddisruptionbudgets"}, podDisruptionBudget.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(podDisruptionBudget), podDisruptionBudget)).To(Succeed())
+					Expect(podDisruptionBudget).To(DeepEqual(&policyv1beta1.PodDisruptionBudget{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: policyv1beta1.SchemeGroupVersion.String(),
+							Kind:       "PodDisruptionBudget",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            podDisruptionBudget.Name,
+							Namespace:       podDisruptionBudget.Namespace,
+							ResourceVersion: "1",
+							Labels: map[string]string{
 								"app":  "kubernetes",
 								"role": "apiserver",
 							},
 						},
-					},
-				}))
-			})
-		})
-
-		Describe("NetworkPolicy", func() {
-			It("should successfully deploy the allow-from-shoot-apiserver NetworkPolicy resource", func() {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowFromShootAPIServer.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(Succeed())
-				Expect(networkPolicyAllowFromShootAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: networkingv1.SchemeGroupVersion.String(),
-						Kind:       "NetworkPolicy",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            networkPolicyAllowFromShootAPIServer.Name,
-						Namespace:       networkPolicyAllowFromShootAPIServer.Namespace,
-						ResourceVersion: "1",
-						Annotations: map[string]string{
-							"gardener.cloud/description": "Allows Egress from Shoot's Kubernetes API Server to talk to " +
-								"pods labeled with 'networking.gardener.cloud/from-shoot-apiserver=allowed'.",
-						},
-					},
-					Spec: networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{"networking.gardener.cloud/from-shoot-apiserver": "allowed"},
-						},
-						Ingress: []networkingv1.NetworkPolicyIngressRule{{
-							From: []networkingv1.NetworkPolicyPeer{{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"app":                 "kubernetes",
-										"gardener.cloud/role": "controlplane",
-										"role":                "apiserver",
-									},
+						Spec: policyv1beta1.PodDisruptionBudgetSpec{
+							MaxUnavailable: intOrStrPtr(intstr.FromInt(1)),
+							Selector: &metav1.LabelSelector{
+								MatchLabels: map[string]string{
+									"app":  "kubernetes",
+									"role": "apiserver",
 								},
-							}},
-						}},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
-					},
-				}))
+							},
+						},
+					}))
+				})
 			})
 
-			It("should successfully deploy the allow-to-shoot-apiserver NetworkPolicy resource", func() {
-				var (
-					protocol = corev1.ProtocolTCP
-					port     = intstr.FromInt(443)
-				)
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowToShootAPIServer.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(Succeed())
-				Expect(networkPolicyAllowToShootAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: networkingv1.SchemeGroupVersion.String(),
-						Kind:       "NetworkPolicy",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            networkPolicyAllowToShootAPIServer.Name,
-						Namespace:       networkPolicyAllowToShootAPIServer.Namespace,
-						ResourceVersion: "1",
-						Annotations: map[string]string{
-							"gardener.cloud/description": "Allows Egress from pods labeled with " +
-								"'networking.gardener.cloud/to-shoot-apiserver=allowed' to talk to Shoot's Kubernetes " +
-								"API Server.",
-						},
-					},
-					Spec: networkingv1.NetworkPolicySpec{
-						PodSelector: metav1.LabelSelector{
-							MatchLabels: map[string]string{"networking.gardener.cloud/to-shoot-apiserver": "allowed"},
-						},
-						Egress: []networkingv1.NetworkPolicyEgressRule{{
-							To: []networkingv1.NetworkPolicyPeer{{
-								PodSelector: &metav1.LabelSelector{
-									MatchLabels: map[string]string{
-										"app":                 "kubernetes",
-										"gardener.cloud/role": "controlplane",
-										"role":                "apiserver",
-									},
-								},
-							}},
-							Ports: []networkingv1.NetworkPolicyPort{{
-								Protocol: &protocol,
-								Port:     &port,
-							}},
-						}},
-						PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
-					},
-				}))
-			})
-
-			Context("should successfully deploy the allow-kube-apiserver NetworkPolicy resource", func() {
-				var (
-					protocol             = corev1.ProtocolTCP
-					portAPIServer        = intstr.FromInt(443)
-					portBlackboxExporter = intstr.FromInt(9115)
-					portEtcd             = intstr.FromInt(2379)
-					portVPNSeedServer    = intstr.FromInt(9443)
-				)
-
-				It("w/o ReversedVPN", func() {
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
+			Describe("NetworkPolicy", func() {
+				It("should successfully deploy the allow-from-shoot-apiserver NetworkPolicy resource", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowFromShootAPIServer.Name)))
 					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(Succeed())
-					Expect(networkPolicyAllowKubeAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowFromShootAPIServer), networkPolicyAllowFromShootAPIServer)).To(Succeed())
+					Expect(networkPolicyAllowFromShootAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: networkingv1.SchemeGroupVersion.String(),
 							Kind:       "NetworkPolicy",
 						},
 						ObjectMeta: metav1.ObjectMeta{
-							Name:            networkPolicyAllowKubeAPIServer.Name,
-							Namespace:       networkPolicyAllowKubeAPIServer.Namespace,
+							Name:            networkPolicyAllowFromShootAPIServer.Name,
+							Namespace:       networkPolicyAllowFromShootAPIServer.Namespace,
 							ResourceVersion: "1",
 							Annotations: map[string]string{
-								"gardener.cloud/description": "Allows Ingress to the Shoot's Kubernetes API Server from " +
-									"pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' and " +
-									"Prometheus, and Egress to etcd pods.",
+								"gardener.cloud/description": "Allows Egress from Shoot's Kubernetes API Server to talk to " +
+									"pods labeled with 'networking.gardener.cloud/from-shoot-apiserver=allowed'.",
 							},
 						},
 						Spec: networkingv1.NetworkPolicySpec{
 							PodSelector: metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"app":                 "kubernetes",
-									"gardener.cloud/role": "controlplane",
-									"role":                "apiserver",
-								},
+								MatchLabels: map[string]string{"networking.gardener.cloud/from-shoot-apiserver": "allowed"},
+							},
+							Ingress: []networkingv1.NetworkPolicyIngressRule{{
+								From: []networkingv1.NetworkPolicyPeer{{
+									PodSelector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"app":                 "kubernetes",
+											"gardener.cloud/role": "controlplane",
+											"role":                "apiserver",
+										},
+									},
+								}},
+							}},
+							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress},
+						},
+					}))
+				})
+
+				It("should successfully deploy the allow-to-shoot-apiserver NetworkPolicy resource", func() {
+					var (
+						protocol = corev1.ProtocolTCP
+						port     = intstr.FromInt(443)
+					)
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowToShootAPIServer.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowToShootAPIServer), networkPolicyAllowToShootAPIServer)).To(Succeed())
+					Expect(networkPolicyAllowToShootAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: networkingv1.SchemeGroupVersion.String(),
+							Kind:       "NetworkPolicy",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            networkPolicyAllowToShootAPIServer.Name,
+							Namespace:       networkPolicyAllowToShootAPIServer.Namespace,
+							ResourceVersion: "1",
+							Annotations: map[string]string{
+								"gardener.cloud/description": "Allows Egress from pods labeled with " +
+									"'networking.gardener.cloud/to-shoot-apiserver=allowed' to talk to Shoot's Kubernetes " +
+									"API Server.",
+							},
+						},
+						Spec: networkingv1.NetworkPolicySpec{
+							PodSelector: metav1.LabelSelector{
+								MatchLabels: map[string]string{"networking.gardener.cloud/to-shoot-apiserver": "allowed"},
 							},
 							Egress: []networkingv1.NetworkPolicyEgressRule{{
 								To: []networkingv1.NetworkPolicyPeer{{
 									PodSelector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
-											"app":                     "etcd-statefulset",
-											"garden.sapcloud.io/role": "controlplane",
+											"app":                 "kubernetes",
+											"gardener.cloud/role": "controlplane",
+											"role":                "apiserver",
 										},
 									},
 								}},
 								Ports: []networkingv1.NetworkPolicyPort{{
 									Protocol: &protocol,
-									Port:     &portEtcd,
+									Port:     &port,
 								}},
 							}},
-							Ingress: []networkingv1.NetworkPolicyIngressRule{
-								{
-									From: []networkingv1.NetworkPolicyPeer{
-										{PodSelector: &metav1.LabelSelector{}},
-										{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-									},
-									Ports: []networkingv1.NetworkPolicyPort{{
-										Protocol: &protocol,
-										Port:     &portAPIServer,
-									}},
-								},
-								{
-									From: []networkingv1.NetworkPolicyPeer{{
-										PodSelector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{
-												"gardener.cloud/role": "monitoring",
-												"app":                 "prometheus",
-												"role":                "monitoring",
-											},
-										},
-									}},
-									Ports: []networkingv1.NetworkPolicyPort{
-										{
-											Protocol: &protocol,
-											Port:     &portBlackboxExporter,
-										},
-										{
-											Protocol: &protocol,
-											Port:     &portAPIServer,
-										},
-									},
-								},
-							},
-							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
 						},
 					}))
 				})
 
-				It("w/ ReversedVPN", func() {
-					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: version})
+				Context("should successfully deploy the allow-kube-apiserver NetworkPolicy resource", func() {
+					var (
+						protocol             = corev1.ProtocolTCP
+						portAPIServer        = intstr.FromInt(443)
+						portBlackboxExporter = intstr.FromInt(9115)
+						portEtcd             = intstr.FromInt(2379)
+						portVPNSeedServer    = intstr.FromInt(9443)
+					)
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(Succeed())
-					Expect(networkPolicyAllowKubeAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: networkingv1.SchemeGroupVersion.String(),
-							Kind:       "NetworkPolicy",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            networkPolicyAllowKubeAPIServer.Name,
-							Namespace:       networkPolicyAllowKubeAPIServer.Namespace,
-							ResourceVersion: "1",
-							Annotations: map[string]string{
-								"gardener.cloud/description": "Allows Ingress to the Shoot's Kubernetes API Server from " +
-									"pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' and " +
-									"Prometheus, and Egress to etcd pods.",
+					It("w/o ReversedVPN", func() {
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(Succeed())
+						Expect(networkPolicyAllowKubeAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: networkingv1.SchemeGroupVersion.String(),
+								Kind:       "NetworkPolicy",
 							},
-						},
-						Spec: networkingv1.NetworkPolicySpec{
-							PodSelector: metav1.LabelSelector{
-								MatchLabels: map[string]string{
-									"app":                 "kubernetes",
-									"gardener.cloud/role": "controlplane",
-									"role":                "apiserver",
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            networkPolicyAllowKubeAPIServer.Name,
+								Namespace:       networkPolicyAllowKubeAPIServer.Namespace,
+								ResourceVersion: "1",
+								Annotations: map[string]string{
+									"gardener.cloud/description": "Allows Ingress to the Shoot's Kubernetes API Server from " +
+										"pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' and " +
+										"Prometheus, and Egress to etcd pods.",
 								},
 							},
-							Egress: []networkingv1.NetworkPolicyEgressRule{
-								{
+							Spec: networkingv1.NetworkPolicySpec{
+								PodSelector: metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"app":                 "kubernetes",
+										"gardener.cloud/role": "controlplane",
+										"role":                "apiserver",
+									},
+								},
+								Egress: []networkingv1.NetworkPolicyEgressRule{{
 									To: []networkingv1.NetworkPolicyPeer{{
 										PodSelector: &metav1.LabelSelector{
 											MatchLabels: map[string]string{
@@ -800,66 +833,149 @@ var _ = Describe("KubeAPIServer", func() {
 										Protocol: &protocol,
 										Port:     &portEtcd,
 									}},
-								},
-								{
-									To: []networkingv1.NetworkPolicyPeer{{
-										PodSelector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{
-												"gardener.cloud/role": "controlplane",
-												"app":                 "vpn-seed-server",
-											},
+								}},
+								Ingress: []networkingv1.NetworkPolicyIngressRule{
+									{
+										From: []networkingv1.NetworkPolicyPeer{
+											{PodSelector: &metav1.LabelSelector{}},
+											{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
 										},
-									}},
-									Ports: []networkingv1.NetworkPolicyPort{{
-										Protocol: &protocol,
-										Port:     &portVPNSeedServer,
-									}},
-								},
-							},
-							Ingress: []networkingv1.NetworkPolicyIngressRule{
-								{
-									From: []networkingv1.NetworkPolicyPeer{
-										{PodSelector: &metav1.LabelSelector{}},
-										{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
-									},
-									Ports: []networkingv1.NetworkPolicyPort{{
-										Protocol: &protocol,
-										Port:     &portAPIServer,
-									}},
-								},
-								{
-									From: []networkingv1.NetworkPolicyPeer{{
-										PodSelector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{
-												"gardener.cloud/role": "monitoring",
-												"app":                 "prometheus",
-												"role":                "monitoring",
-											},
-										},
-									}},
-									Ports: []networkingv1.NetworkPolicyPort{
-										{
-											Protocol: &protocol,
-											Port:     &portBlackboxExporter,
-										},
-										{
+										Ports: []networkingv1.NetworkPolicyPort{{
 											Protocol: &protocol,
 											Port:     &portAPIServer,
+										}},
+									},
+									{
+										From: []networkingv1.NetworkPolicyPeer{{
+											PodSelector: &metav1.LabelSelector{
+												MatchLabels: map[string]string{
+													"gardener.cloud/role": "monitoring",
+													"app":                 "prometheus",
+													"role":                "monitoring",
+												},
+											},
+										}},
+										Ports: []networkingv1.NetworkPolicyPort{
+											{
+												Protocol: &protocol,
+												Port:     &portBlackboxExporter,
+											},
+											{
+												Protocol: &protocol,
+												Port:     &portAPIServer,
+											},
 										},
 									},
 								},
+								PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
 							},
-							PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
-						},
-					}))
+						}))
+					})
+
+					It("w/ ReversedVPN", func() {
+						kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: version})
+						kapi.SetSecrets(secrets)
+
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(Succeed())
+						Expect(networkPolicyAllowKubeAPIServer).To(DeepEqual(&networkingv1.NetworkPolicy{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: networkingv1.SchemeGroupVersion.String(),
+								Kind:       "NetworkPolicy",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            networkPolicyAllowKubeAPIServer.Name,
+								Namespace:       networkPolicyAllowKubeAPIServer.Namespace,
+								ResourceVersion: "1",
+								Annotations: map[string]string{
+									"gardener.cloud/description": "Allows Ingress to the Shoot's Kubernetes API Server from " +
+										"pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed' and " +
+										"Prometheus, and Egress to etcd pods.",
+								},
+							},
+							Spec: networkingv1.NetworkPolicySpec{
+								PodSelector: metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"app":                 "kubernetes",
+										"gardener.cloud/role": "controlplane",
+										"role":                "apiserver",
+									},
+								},
+								Egress: []networkingv1.NetworkPolicyEgressRule{
+									{
+										To: []networkingv1.NetworkPolicyPeer{{
+											PodSelector: &metav1.LabelSelector{
+												MatchLabels: map[string]string{
+													"app":                     "etcd-statefulset",
+													"garden.sapcloud.io/role": "controlplane",
+												},
+											},
+										}},
+										Ports: []networkingv1.NetworkPolicyPort{{
+											Protocol: &protocol,
+											Port:     &portEtcd,
+										}},
+									},
+									{
+										To: []networkingv1.NetworkPolicyPeer{{
+											PodSelector: &metav1.LabelSelector{
+												MatchLabels: map[string]string{
+													"gardener.cloud/role": "controlplane",
+													"app":                 "vpn-seed-server",
+												},
+											},
+										}},
+										Ports: []networkingv1.NetworkPolicyPort{{
+											Protocol: &protocol,
+											Port:     &portVPNSeedServer,
+										}},
+									},
+								},
+								Ingress: []networkingv1.NetworkPolicyIngressRule{
+									{
+										From: []networkingv1.NetworkPolicyPeer{
+											{PodSelector: &metav1.LabelSelector{}},
+											{IPBlock: &networkingv1.IPBlock{CIDR: "0.0.0.0/0"}},
+										},
+										Ports: []networkingv1.NetworkPolicyPort{{
+											Protocol: &protocol,
+											Port:     &portAPIServer,
+										}},
+									},
+									{
+										From: []networkingv1.NetworkPolicyPeer{{
+											PodSelector: &metav1.LabelSelector{
+												MatchLabels: map[string]string{
+													"gardener.cloud/role": "monitoring",
+													"app":                 "prometheus",
+													"role":                "monitoring",
+												},
+											},
+										}},
+										Ports: []networkingv1.NetworkPolicyPort{
+											{
+												Protocol: &protocol,
+												Port:     &portBlackboxExporter,
+											},
+											{
+												Protocol: &protocol,
+												Port:     &portAPIServer,
+											},
+										},
+									},
+								},
+								PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
+							},
+						}))
+					})
 				})
 			})
-		})
 
-		Describe("Shoot Resources", func() {
-			It("should successfully deploy the managed resource secret", func() {
-				var (
-					clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
+			Describe("Shoot Resources", func() {
+				It("should successfully deploy the managed resource secret", func() {
+					var (
+						clusterRoleYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
@@ -880,7 +996,7 @@ rules:
   verbs:
   - '*'
 `
-					clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
+						clusterRoleBindingYAML = `apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   annotations:
@@ -895,320 +1011,327 @@ subjects:
 - kind: User
   name: system:kube-apiserver:kubelet
 `
-				)
+					)
 
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
-				Expect(managedResourceSecret).To(DeepEqual(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResourceSecret.Name,
-						Namespace:       managedResourceSecret.Namespace,
-						ResourceVersion: "1",
-					},
-					Type: corev1.SecretTypeOpaque,
-					Data: map[string][]byte{
-						"clusterrole____system_apiserver_kubelet.yaml":        []byte(clusterRoleYAML),
-						"clusterrolebinding____system_apiserver_kubelet.yaml": []byte(clusterRoleBindingYAML),
-					},
-				}))
-			})
-
-			It("should successfully deploy the managed resource", func() {
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
-				Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
-						Kind:       "ManagedResource",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            managedResource.Name,
-						Namespace:       managedResource.Namespace,
-						ResourceVersion: "1",
-						Labels: map[string]string{
-							"origin": "gardener",
-						},
-					},
-					Spec: resourcesv1alpha1.ManagedResourceSpec{
-						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  pointer.Bool(false),
-						SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
-					},
-				}))
-			})
-		})
-
-		Describe("Secrets", func() {
-			It("should successfully deploy the OIDCCABundle secret resource", func() {
-				var (
-					caBundle   = "some-ca-bundle"
-					oidcConfig = &gardencorev1beta1.OIDCConfig{CABundle: &caBundle}
-				)
-
-				kapi = New(kubernetesInterface, namespace, Values{OIDC: oidcConfig})
-
-				secretOIDCCABundle = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-oidc-cabundle", Namespace: namespace},
-					Data:       map[string][]byte{"ca.crt": []byte(caBundle)},
-				}
-				Expect(kutil.MakeUnique(secretOIDCCABundle)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretOIDCCABundle), secretOIDCCABundle)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, secretOIDCCABundle.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretOIDCCABundle), secretOIDCCABundle)).To(Succeed())
-				Expect(secretOIDCCABundle).To(DeepEqual(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            secretOIDCCABundle.Name,
-						Namespace:       secretOIDCCABundle.Namespace,
-						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-						ResourceVersion: "1",
-					},
-					Immutable: pointer.Bool(true),
-					Data:      secretOIDCCABundle.Data,
-				}))
-			})
-
-			It("should successfully deploy the ServiceAccountSigningKey secret resource", func() {
-				var (
-					signingKey           = []byte("some-signingkey")
-					serviceAccountConfig = &ServiceAccountConfig{SigningKey: signingKey}
-				)
-
-				kapi = New(kubernetesInterface, namespace, Values{ServiceAccountConfig: serviceAccountConfig})
-
-				secretServiceAccountSigningKey = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-sa-signing-key", Namespace: namespace},
-					Data:       map[string][]byte{"signing-key": signingKey},
-				}
-				Expect(kutil.MakeUnique(secretServiceAccountSigningKey)).To(Succeed())
-
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretServiceAccountSigningKey), secretServiceAccountSigningKey)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, secretServiceAccountSigningKey.Name)))
-				Expect(kapi.Deploy(ctx)).To(Succeed())
-				Expect(c.Get(ctx, client.ObjectKeyFromObject(secretServiceAccountSigningKey), secretServiceAccountSigningKey)).To(Succeed())
-				Expect(secretServiceAccountSigningKey).To(DeepEqual(&corev1.Secret{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: corev1.SchemeGroupVersion.String(),
-						Kind:       "Secret",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            secretServiceAccountSigningKey.Name,
-						Namespace:       secretServiceAccountSigningKey.Namespace,
-						Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-						ResourceVersion: "1",
-					},
-					Immutable: pointer.Bool(true),
-					Data:      secretServiceAccountSigningKey.Data,
-				}))
-			})
-		})
-
-		Describe("ConfigMaps", func() {
-			Context("admission", func() {
-				It("should successfully deploy the configmap resource w/o admission plugins", func() {
-					configMapAdmission = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
-						Data: map[string]string{"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
-kind: AdmissionConfiguration
-plugins: null
-`},
-					}
-					Expect(kutil.MakeUnique(configMapAdmission)).To(Succeed())
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAdmission.Name)))
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, managedResourceSecret.Name)))
 					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
-					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResourceSecret), managedResourceSecret)).To(Succeed())
+					Expect(managedResourceSecret).To(DeepEqual(&corev1.Secret{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
+							Kind:       "Secret",
 						},
 						ObjectMeta: metav1.ObjectMeta{
-							Name:            configMapAdmission.Name,
-							Namespace:       configMapAdmission.Namespace,
+							Name:            managedResourceSecret.Name,
+							Namespace:       managedResourceSecret.Namespace,
+							ResourceVersion: "1",
+						},
+						Type: corev1.SecretTypeOpaque,
+						Data: map[string][]byte{
+							"clusterrole____system_apiserver_kubelet.yaml":        []byte(clusterRoleYAML),
+							"clusterrolebinding____system_apiserver_kubelet.yaml": []byte(clusterRoleBindingYAML),
+						},
+					}))
+				})
+
+				It("should successfully deploy the managed resource", func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: resourcesv1alpha1.SchemeGroupVersion.Group, Resource: "managedresources"}, managedResource.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(managedResource), managedResource)).To(Succeed())
+					Expect(managedResource).To(DeepEqual(&resourcesv1alpha1.ManagedResource{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: resourcesv1alpha1.SchemeGroupVersion.String(),
+							Kind:       "ManagedResource",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            managedResource.Name,
+							Namespace:       managedResource.Namespace,
+							ResourceVersion: "1",
+							Labels: map[string]string{
+								"origin": "gardener",
+							},
+						},
+						Spec: resourcesv1alpha1.ManagedResourceSpec{
+							InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+							KeepObjects:  pointer.Bool(false),
+							SecretRefs:   []corev1.LocalObjectReference{{Name: managedResourceSecret.Name}},
+						},
+					}))
+				})
+			})
+
+			Describe("Secrets", func() {
+				It("should successfully deploy the OIDCCABundle secret resource", func() {
+					var (
+						caBundle   = "some-ca-bundle"
+						oidcConfig = &gardencorev1beta1.OIDCConfig{CABundle: &caBundle}
+					)
+
+					kapi = New(kubernetesInterface, namespace, Values{OIDC: oidcConfig})
+					kapi.SetSecrets(secrets)
+
+					secretOIDCCABundle = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-oidc-cabundle", Namespace: namespace},
+						Data:       map[string][]byte{"ca.crt": []byte(caBundle)},
+					}
+					Expect(kutil.MakeUnique(secretOIDCCABundle)).To(Succeed())
+
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretOIDCCABundle), secretOIDCCABundle)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, secretOIDCCABundle.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretOIDCCABundle), secretOIDCCABundle)).To(Succeed())
+					Expect(secretOIDCCABundle).To(DeepEqual(&corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            secretOIDCCABundle.Name,
+							Namespace:       secretOIDCCABundle.Namespace,
 							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
 							ResourceVersion: "1",
 						},
 						Immutable: pointer.Bool(true),
-						Data:      configMapAdmission.Data,
+						Data:      secretOIDCCABundle.Data,
 					}))
 				})
 
-				It("should successfully deploy the configmap resource w/ admission plugins", func() {
-					admissionPlugins := []gardencorev1beta1.AdmissionPlugin{
-						{Name: "Foo"},
-						{Name: "Bar"},
-						{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("some-config-for-baz")}},
+				It("should successfully deploy the ServiceAccountSigningKey secret resource", func() {
+					var (
+						signingKey           = []byte("some-signingkey")
+						serviceAccountConfig = &ServiceAccountConfig{SigningKey: signingKey}
+					)
+
+					kapi = New(kubernetesInterface, namespace, Values{ServiceAccountConfig: serviceAccountConfig})
+					kapi.SetSecrets(secrets)
+
+					secretServiceAccountSigningKey = &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-sa-signing-key", Namespace: namespace},
+						Data:       map[string][]byte{"signing-key": signingKey},
 					}
+					Expect(kutil.MakeUnique(secretServiceAccountSigningKey)).To(Succeed())
 
-					kapi = New(kubernetesInterface, namespace, Values{AdmissionPlugins: admissionPlugins})
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretServiceAccountSigningKey), secretServiceAccountSigningKey)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "secrets"}, secretServiceAccountSigningKey.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(secretServiceAccountSigningKey), secretServiceAccountSigningKey)).To(Succeed())
+					Expect(secretServiceAccountSigningKey).To(DeepEqual(&corev1.Secret{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: corev1.SchemeGroupVersion.String(),
+							Kind:       "Secret",
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            secretServiceAccountSigningKey.Name,
+							Namespace:       secretServiceAccountSigningKey.Namespace,
+							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+							ResourceVersion: "1",
+						},
+						Immutable: pointer.Bool(true),
+						Data:      secretServiceAccountSigningKey.Data,
+					}))
+				})
+			})
 
-					configMapAdmission = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
-						Data: map[string]string{
-							"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+			Describe("ConfigMaps", func() {
+				Context("admission", func() {
+					It("should successfully deploy the configmap resource w/o admission plugins", func() {
+						configMapAdmission = &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
+							Data: map[string]string{"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins: null
+`},
+						}
+						Expect(kutil.MakeUnique(configMapAdmission)).To(Succeed())
+
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAdmission.Name)))
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+						Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapAdmission.Name,
+								Namespace:       configMapAdmission.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapAdmission.Data,
+						}))
+					})
+
+					It("should successfully deploy the configmap resource w/ admission plugins", func() {
+						admissionPlugins := []gardencorev1beta1.AdmissionPlugin{
+							{Name: "Foo"},
+							{Name: "Bar"},
+							{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("some-config-for-baz")}},
+						}
+
+						kapi = New(kubernetesInterface, namespace, Values{AdmissionPlugins: admissionPlugins})
+						kapi.SetSecrets(secrets)
+
+						configMapAdmission = &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-admission-config", Namespace: namespace},
+							Data: map[string]string{
+								"admission-configuration.yaml": `apiVersion: apiserver.k8s.io/v1alpha1
 kind: AdmissionConfiguration
 plugins:
 - configuration: null
   name: Baz
   path: /etc/kubernetes/admission/baz.yaml
 `,
-							"baz.yaml": "some-config-for-baz",
-						},
-					}
-					Expect(kutil.MakeUnique(configMapAdmission)).To(Succeed())
+								"baz.yaml": "some-config-for-baz",
+							},
+						}
+						Expect(kutil.MakeUnique(configMapAdmission)).To(Succeed())
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAdmission.Name)))
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
-					Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            configMapAdmission.Name,
-							Namespace:       configMapAdmission.Namespace,
-							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-							ResourceVersion: "1",
-						},
-						Immutable: pointer.Bool(true),
-						Data:      configMapAdmission.Data,
-					}))
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAdmission.Name)))
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAdmission), configMapAdmission)).To(Succeed())
+						Expect(configMapAdmission).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapAdmission.Name,
+								Namespace:       configMapAdmission.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapAdmission.Data,
+						}))
+					})
 				})
-			})
 
-			Context("audit policy", func() {
-				It("should successfully deploy the configmap resource w/ default policy", func() {
-					configMapAuditPolicy = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "audit-policy-config", Namespace: namespace},
-						Data: map[string]string{"audit-policy.yaml": `apiVersion: audit.k8s.io/v1
+				Context("audit policy", func() {
+					It("should successfully deploy the configmap resource w/ default policy", func() {
+						configMapAuditPolicy = &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "audit-policy-config", Namespace: namespace},
+							Data: map[string]string{"audit-policy.yaml": `apiVersion: audit.k8s.io/v1
 kind: Policy
 metadata:
   creationTimestamp: null
 rules:
 - level: None
 `},
-					}
-					Expect(kutil.MakeUnique(configMapAuditPolicy)).To(Succeed())
+						}
+						Expect(kutil.MakeUnique(configMapAuditPolicy)).To(Succeed())
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAuditPolicy.Name)))
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
-					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            configMapAuditPolicy.Name,
-							Namespace:       configMapAuditPolicy.Namespace,
-							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-							ResourceVersion: "1",
-						},
-						Immutable: pointer.Bool(true),
-						Data:      configMapAuditPolicy.Data,
-					}))
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAuditPolicy.Name)))
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
+						Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapAuditPolicy.Name,
+								Namespace:       configMapAuditPolicy.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapAuditPolicy.Data,
+						}))
+					})
+
+					It("should successfully deploy the configmap resource w/o default policy", func() {
+						var (
+							policy      = "some-audit-policy"
+							auditConfig = &AuditConfig{Policy: &policy}
+						)
+
+						kapi = New(kubernetesInterface, namespace, Values{Audit: auditConfig})
+						kapi.SetSecrets(secrets)
+
+						configMapAuditPolicy = &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "audit-policy-config", Namespace: namespace},
+							Data:       map[string]string{"audit-policy.yaml": policy},
+						}
+						Expect(kutil.MakeUnique(configMapAuditPolicy)).To(Succeed())
+
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAuditPolicy.Name)))
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
+						Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapAuditPolicy.Name,
+								Namespace:       configMapAuditPolicy.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapAuditPolicy.Data,
+						}))
+					})
 				})
 
-				It("should successfully deploy the configmap resource w/o default policy", func() {
-					var (
-						policy      = "some-audit-policy"
-						auditConfig = &AuditConfig{Policy: &policy}
-					)
+				Context("egress selector", func() {
+					It("should successfully deploy the configmap resource for K8s < 1.20", func() {
+						kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: semver.MustParse("1.19.0")})
+						kapi.SetSecrets(secrets)
 
-					kapi = New(kubernetesInterface, namespace, Values{Audit: auditConfig})
+						configMapEgressSelector = &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-egress-selector-config", Namespace: namespace},
+							Data:       map[string]string{"egress-selector-configuration.yaml": egressSelectorConfigFor("master")},
+						}
+						Expect(kutil.MakeUnique(configMapEgressSelector)).To(Succeed())
 
-					configMapAuditPolicy = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "audit-policy-config", Namespace: namespace},
-						Data:       map[string]string{"audit-policy.yaml": policy},
-					}
-					Expect(kutil.MakeUnique(configMapAuditPolicy)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapEgressSelector.Name)))
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(Succeed())
+						Expect(configMapEgressSelector).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapEgressSelector.Name,
+								Namespace:       configMapEgressSelector.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapEgressSelector.Data,
+						}))
+					})
 
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapAuditPolicy.Name)))
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapAuditPolicy), configMapAuditPolicy)).To(Succeed())
-					Expect(configMapAuditPolicy).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            configMapAuditPolicy.Name,
-							Namespace:       configMapAuditPolicy.Namespace,
-							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-							ResourceVersion: "1",
-						},
-						Immutable: pointer.Bool(true),
-						Data:      configMapAuditPolicy.Data,
-					}))
-				})
-			})
+					It("should successfully deploy the configmap resource for K8s >= 1.20", func() {
+						kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: version})
+						kapi.SetSecrets(secrets)
 
-			Context("egress selector", func() {
-				It("should successfully deploy the configmap resource for K8s < 1.20", func() {
-					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: semver.MustParse("1.19.0")})
+						configMapEgressSelector = &corev1.ConfigMap{
+							ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-egress-selector-config", Namespace: namespace},
+							Data:       map[string]string{"egress-selector-configuration.yaml": egressSelectorConfigFor("controlplane")},
+						}
+						Expect(kutil.MakeUnique(configMapEgressSelector)).To(Succeed())
 
-					configMapEgressSelector = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-egress-selector-config", Namespace: namespace},
-						Data:       map[string]string{"egress-selector-configuration.yaml": egressSelectorConfigFor("master")},
-					}
-					Expect(kutil.MakeUnique(configMapEgressSelector)).To(Succeed())
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapEgressSelector.Name)))
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(Succeed())
-					Expect(configMapEgressSelector).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            configMapEgressSelector.Name,
-							Namespace:       configMapEgressSelector.Namespace,
-							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-							ResourceVersion: "1",
-						},
-						Immutable: pointer.Bool(true),
-						Data:      configMapEgressSelector.Data,
-					}))
-				})
-
-				It("should successfully deploy the configmap resource for K8s >= 1.20", func() {
-					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: version})
-
-					configMapEgressSelector = &corev1.ConfigMap{
-						ObjectMeta: metav1.ObjectMeta{Name: "kube-apiserver-egress-selector-config", Namespace: namespace},
-						Data:       map[string]string{"egress-selector-configuration.yaml": egressSelectorConfigFor("controlplane")},
-					}
-					Expect(kutil.MakeUnique(configMapEgressSelector)).To(Succeed())
-
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapEgressSelector.Name)))
-					Expect(kapi.Deploy(ctx)).To(Succeed())
-					Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(Succeed())
-					Expect(configMapEgressSelector).To(DeepEqual(&corev1.ConfigMap{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: corev1.SchemeGroupVersion.String(),
-							Kind:       "ConfigMap",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            configMapEgressSelector.Name,
-							Namespace:       configMapEgressSelector.Namespace,
-							Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
-							ResourceVersion: "1",
-						},
-						Immutable: pointer.Bool(true),
-						Data:      configMapEgressSelector.Data,
-					}))
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: corev1.SchemeGroupVersion.Group, Resource: "configmaps"}, configMapEgressSelector.Name)))
+						Expect(kapi.Deploy(ctx)).To(Succeed())
+						Expect(c.Get(ctx, client.ObjectKeyFromObject(configMapEgressSelector), configMapEgressSelector)).To(Succeed())
+						Expect(configMapEgressSelector).To(DeepEqual(&corev1.ConfigMap{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: corev1.SchemeGroupVersion.String(),
+								Kind:       "ConfigMap",
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            configMapEgressSelector.Name,
+								Namespace:       configMapEgressSelector.Namespace,
+								Labels:          map[string]string{"resources.gardener.cloud/garbage-collectable-reference": "true"},
+								ResourceVersion: "1",
+							},
+							Immutable: pointer.Bool(true),
+							Data:      configMapEgressSelector.Data,
+						}))
+					})
 				})
 			})
 		})

@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -473,7 +474,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		values["vpn-shoot"] = common.GenerateAddonConfig(vpnShoot, true)
 	} else {
 		var (
-			vpnTLSAuthSecret = b.LoadSecret("vpn-seed-tlsauth")
+			vpnTLSAuthSecret = b.LoadSecret(kubeapiserver.SecretNameVPNSeedTLSAuth)
 			vpnShootSecret   = b.LoadSecret("vpn-shoot")
 			vpnShootConfig   = map[string]interface{}{
 				"podNetwork":     b.Shoot.Networks.Pods.String(),

@@ -89,6 +89,18 @@ func (mr *MockInterfaceMockRecorder) SetAutoscalingReplicas(arg0 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAutoscalingReplicas", reflect.TypeOf((*MockInterface)(nil).SetAutoscalingReplicas), arg0)
 }
 
+// SetSecrets mocks base method.
+func (m *MockInterface) SetSecrets(arg0 kubeapiserver.Secrets) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetSecrets", arg0)
+}
+
+// SetSecrets indicates an expected call of SetSecrets.
+func (mr *MockInterfaceMockRecorder) SetSecrets(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecrets", reflect.TypeOf((*MockInterface)(nil).SetSecrets), arg0)
+}
+
 // Wait mocks base method.
 func (m *MockInterface) Wait(arg0 context.Context) error {
 	m.ctrl.T.Helper()
