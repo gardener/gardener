@@ -64,6 +64,8 @@ type SchedulerConfiguration struct {
 	// Server defines the configuration of the HTTP server. This is deprecated in favor of
 	// HealthServer.
 	Server ServerConfiguration
+	// Debugging holds configuration for Debugging related features.
+	Debugging componentbaseconfig.DebuggingConfiguration
 	// Scheduler defines the configuration of the schedulers.
 	Schedulers SchedulerControllerConfiguration
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental

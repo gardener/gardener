@@ -64,6 +64,7 @@ func (in *SchedulerConfiguration) DeepCopyInto(out *SchedulerConfiguration) {
 	out.ClientConnection = in.ClientConnection
 	out.LeaderElection = in.LeaderElection
 	in.Server.DeepCopyInto(&out.Server)
+	out.Debugging = in.Debugging
 	in.Schedulers.DeepCopyInto(&out.Schedulers)
 	if in.FeatureGates != nil {
 		in, out := &in.FeatureGates, &out.FeatureGates
