@@ -61,7 +61,7 @@ func NewSecretsManager(
 	secretConfigGenerator SecretConfigGeneratorFunc,
 ) *SecretsManager {
 	return &SecretsManager{
-		GardenerResourceDataList:    gardenerResourceDataList.DeepCopy(),
+		GardenerResourceDataList:    gardenerResourceDataList,
 		staticTokenConfig:           staticTokenConfig,
 		certificateAuthorityConfigs: certificateAuthorityConfigs,
 		secretConfigGenerator:       secretConfigGenerator,
