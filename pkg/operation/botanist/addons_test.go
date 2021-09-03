@@ -337,7 +337,7 @@ var _ = Describe("addons", func() {
 			var shootState = &gardencorev1alpha1.ShootState{}
 
 			BeforeEach(func() {
-				b.ShootState = shootState
+				b.SetShootState(shootState)
 				b.Shoot.GetInfo().Status = gardencorev1beta1.ShootStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
 						Type: gardencorev1beta1.LastOperationTypeRestore,

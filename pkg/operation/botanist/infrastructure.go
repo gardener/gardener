@@ -50,7 +50,7 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 	b.Shoot.Components.Extensions.Infrastructure.SetSSHPublicKey(b.LoadSecret(v1beta1constants.SecretNameSSHKeyPair).Data[secrets.DataKeySSHAuthorizedKeys])
 
 	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.Infrastructure.Restore(ctx, b.ShootState)
+		return b.Shoot.Components.Extensions.Infrastructure.Restore(ctx, b.GetShootState())
 	}
 
 	return b.Shoot.Components.Extensions.Infrastructure.Deploy(ctx)
