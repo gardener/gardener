@@ -17,11 +17,15 @@ package seedadmissioncontroller_test
 import (
 	"testing"
 
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 func TestSeedAdmissionController(t *testing.T) {
+	gardenletfeatures.RegisterFeatureGates()
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Botanist Component SeedAdmissionController Suite")
 }

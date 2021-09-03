@@ -164,6 +164,7 @@ spec:
         - /gardener-seed-admission-controller
         - --port=10250
         - --tls-cert-dir=/srv/gardener-seed-admission-controller
+        - --allow-invalid-extension-resources=true
         image: ` + image + `
         imagePullPolicy: IfNotPresent
         name: gardener-seed-admission-controller

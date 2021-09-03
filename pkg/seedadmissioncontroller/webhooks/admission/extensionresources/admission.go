@@ -43,7 +43,7 @@ const (
 )
 
 // New creates a new webhook handler validating CREATE and UPDATE requests for extension resources.
-func New(logger logr.Logger) *handler {
+func New(logger logr.Logger, allowInvalidExtensionResources bool) *handler {
 	artifacts := map[metav1.GroupVersionResource]*artifact{
 		gvr("backupbuckets"): {
 			newObject: func() client.Object { return new(extensionsv1alpha1.BackupBucket) },
@@ -157,17 +157,19 @@ func New(logger logr.Logger) *handler {
 	}
 
 	h := handler{
-		logger:    logger,
-		artifacts: artifacts,
+		logger:                         logger,
+		artifacts:                      artifacts,
+		allowInvalidExtensionResources: allowInvalidExtensionResources,
 	}
 
 	return &h
 }
 
 type handler struct {
-	decoder   *admission.Decoder
-	logger    logr.Logger
-	artifacts map[metav1.GroupVersionResource]*artifact
+	decoder                        *admission.Decoder
+	logger                         logr.Logger
+	artifacts                      map[metav1.GroupVersionResource]*artifact
+	allowInvalidExtensionResources bool
 }
 
 var _ admission.Handler = &handler{}
@@ -237,6 +239,11 @@ func (h handler) handleValidation(request admission.Request, newObject newObject
 			Group: request.Kind.Group,
 			Kind:  request.Kind.Kind,
 		}, kutil.ObjectName(obj), errors)
+
+		if h.allowInvalidExtensionResources {
+			h.logger.Info("Invalid extension resource detected", "operation", request.Operation, "error", err.Error())
+			return admission.Allowed(err.Error())
+		}
 		return admission.Denied(err.Error())
 	}
 
