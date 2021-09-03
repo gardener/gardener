@@ -8,7 +8,7 @@ However, once the handlers are enabled, they provide profiles via the same HTTP 
 (You might need to use `kubectl port-forward` in order to access HTTP endpoints of Gardener components running in clusters.)
 
 For example (gardener-controller-manager):
-```shell
+```bash
 $ curl http://localhost:2718/debug/pprof/heap > /tmp/heap-controller-manager
 $ go tool pprof /tmp/heap-controller-manager
 Type: inuse_space
@@ -17,7 +17,7 @@ Entering interactive mode (type "help" for commands, "o" for options)
 (pprof)
 ```
 or 
-```
+```bash
 $ go tool pprof http://localhost:2718/debug/pprof/heap
 Fetching profile over HTTP from http://localhost:2718/debug/pprof/heap
 Saved profile in /Users/timebertt/pprof/pprof.alloc_objects.alloc_space.inuse_objects.inuse_space.008.pb.gz
@@ -41,7 +41,7 @@ This means, you will also have to authenticate against the API server according 
 
 For example, in the [local-setup](../development/local_setup.md) you can use:
 
-```shell
+```bash
 $ curl -k --cert ./hack/local-development/local-garden/certificates/certs/default-admin.crt --key ./hack/local-development/local-garden/certificates/keys/default-admin.key https://localhost:8443/debug/pprof/heap > /tmp/heap-apiserver
 $ go tool pprof /tmp/heap-apiserver
 ```
