@@ -33,6 +33,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
@@ -1332,6 +1333,102 @@ rules:
 							Data:      configMapEgressSelector.Data,
 						}))
 					})
+				})
+			})
+
+			Describe("Deployment", func() {
+				deployAndRead := func() {
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: appsv1.SchemeGroupVersion.Group, Resource: "deployments"}, deployment.Name)))
+					Expect(kapi.Deploy(ctx)).To(Succeed())
+					Expect(c.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+				}
+
+				It("should have the expected labels w/o SNI", func() {
+					deployAndRead()
+
+					Expect(deployment.Labels).To(Equal(map[string]string{
+						"gardener.cloud/role": "controlplane",
+						"app":                 "kubernetes",
+						"role":                "apiserver",
+					}))
+				})
+
+				It("should have the expected labels w/ SNI", func() {
+					kapi = New(kubernetesInterface, namespace, Values{SNI: SNIConfig{Enabled: true}, Version: version})
+					kapi.SetSecrets(secrets)
+					deployAndRead()
+
+					Expect(deployment.Labels).To(Equal(map[string]string{
+						"gardener.cloud/role":                    "controlplane",
+						"app":                                    "kubernetes",
+						"role":                                   "apiserver",
+						"core.gardener.cloud/apiserver-exposure": "gardener-managed",
+					}))
+				})
+
+				It("should have the expected annotations", func() {
+					deployAndRead()
+
+					Expect(deployment.Annotations).To(BeNil())
+				})
+
+				It("should have the expected deployment settings", func() {
+					var (
+						replicas        int32 = 1337
+						intStr25Percent       = intstr.FromString("25%")
+						intStrZero            = intstr.FromInt(0)
+					)
+
+					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: AutoscalingConfig{Replicas: &replicas}, Version: version})
+					kapi.SetSecrets(secrets)
+					deployAndRead()
+
+					Expect(deployment.Spec.MinReadySeconds).To(Equal(int32(30)))
+					Expect(deployment.Spec.RevisionHistoryLimit).To(PointTo(Equal(int32(2))))
+					Expect(deployment.Spec.Replicas).To(PointTo(Equal(replicas)))
+					Expect(deployment.Spec.Selector).To(Equal(&metav1.LabelSelector{MatchLabels: map[string]string{
+						"app":  "kubernetes",
+						"role": "apiserver",
+					}}))
+					Expect(deployment.Spec.Strategy).To(Equal(appsv1.DeploymentStrategy{
+						Type: appsv1.RollingUpdateDeploymentStrategyType,
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxSurge:       &intStr25Percent,
+							MaxUnavailable: &intStrZero,
+						},
+					}))
+				})
+
+				It("should have the expected pod template metadata", func() {
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
+						"checksum/secret-" + secretNameCAEtcd:                 secretChecksumCAEtcd,
+						"checksum/secret-" + secretNameServiceAccountKey:      secretChecksumServiceAccountKey,
+						"checksum/secret-" + secretNameVPNSeedServerTLSAuth:   secretChecksumVPNSeedServerTLSAuth,
+						"checksum/secret-" + secretNameVPNSeed:                secretChecksumVPNSeed,
+						"checksum/secret-" + secretNameCA:                     secretChecksumCA,
+						"checksum/secret-" + secretNameEtcd:                   secretChecksumEtcd,
+						"checksum/secret-" + secretNameStaticToken:            secretChecksumStaticToken,
+						"checksum/secret-" + secretNameKubeAggregator:         secretChecksumKubeAggregator,
+						"checksum/secret-" + secretNameBasicAuthentication:    secretChecksumBasicAuthentication,
+						"checksum/secret-" + secretNameCAFrontProxy:           secretChecksumCAFrontProxy,
+						"checksum/secret-" + secretNameKubeAPIServerToKubelet: secretChecksumKubeAPIServerToKubelet,
+						"checksum/secret-" + secretNameEtcdEncryptionConfig:   secretChecksumEtcdEncryptionConfig,
+						"checksum/secret-" + secretNameServer:                 secretChecksumServer,
+						"checksum/secret-" + secretNameVPNSeedTLSAuth:         secretChecksumVPNSeedTLSAuth,
+					}))
+					Expect(deployment.Spec.Template.Labels).To(Equal(map[string]string{
+						"garden.sapcloud.io/role":          "controlplane",
+						"gardener.cloud/role":              "controlplane",
+						"app":                              "kubernetes",
+						"role":                             "apiserver",
+						"networking.gardener.cloud/to-dns": "allowed",
+						"networking.gardener.cloud/to-private-networks": "allowed",
+						"networking.gardener.cloud/to-public-networks":  "allowed",
+						"networking.gardener.cloud/to-shoot-networks":   "allowed",
+						"networking.gardener.cloud/from-prometheus":     "allowed",
+					}))
 				})
 			})
 		})

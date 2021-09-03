@@ -199,6 +199,10 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := k.reconcileDeployment(ctx, deployment); err != nil {
+		return err
+	}
+
 	data, err := k.computeShootResourcesData()
 	if err != nil {
 		return err

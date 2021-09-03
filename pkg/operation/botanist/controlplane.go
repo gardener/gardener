@@ -31,7 +31,6 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -340,18 +339,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	}
 
 	var (
-		podAnnotations = map[string]interface{}{
-			"checksum/secret-ca":                     b.LoadCheckSum(v1beta1constants.SecretNameCACluster),
-			"checksum/secret-ca-front-proxy":         b.LoadCheckSum(v1beta1constants.SecretNameCAFrontProxy),
-			"checksum/secret-kube-apiserver":         b.LoadCheckSum(v1beta1constants.DeploymentNameKubeAPIServer),
-			"checksum/secret-kube-aggregator":        b.LoadCheckSum("kube-aggregator"),
-			"checksum/secret-kube-apiserver-kubelet": b.LoadCheckSum("kube-apiserver-kubelet"),
-			"checksum/secret-static-token":           b.LoadCheckSum(common.StaticTokenSecretName),
-			"checksum/secret-service-account-key":    b.LoadCheckSum("service-account-key"),
-			"checksum/secret-etcd-ca":                b.LoadCheckSum(etcd.SecretNameCA),
-			"checksum/secret-etcd-client-tls":        b.LoadCheckSum(etcd.SecretNameClient),
-			"checksum/secret-etcd-encryption":        b.LoadCheckSum(common.EtcdEncryptionSecretName),
-		}
 		defaultValues = map[string]interface{}{
 			"etcdServicePort":           etcd.PortEtcdClient,
 			"kubernetesVersion":         b.Shoot.GetInfo().Spec.Kubernetes.Version,
@@ -360,7 +347,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			"probeCredentials":          b.APIServerHealthCheckToken,
 			"securePort":                443,
 			"enableEtcdEncryption":      true,
-			"podAnnotations":            podAnnotations,
 			"reversedVPN": map[string]interface{}{
 				"enabled": b.Shoot.ReversedVPNEnabled,
 			},
@@ -373,13 +359,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			"pods":     b.Shoot.Networks.Pods.String(),
 		}
 	)
-
-	if b.Shoot.ReversedVPNEnabled {
-		podAnnotations["checksum/secret-"+vpnseedserver.VpnSeedServerTLSAuth] = b.LoadCheckSum(vpnseedserver.VpnSeedServerTLSAuth)
-	} else {
-		podAnnotations["checksum/secret-vpn-seed"] = b.LoadCheckSum("vpn-seed")
-		podAnnotations["checksum/secret-vpn-seed-tlsauth"] = b.LoadCheckSum("vpn-seed-tlsauth")
-	}
 
 	if v := b.Shoot.GetNodeNetwork(); v != nil {
 		shootNetworks["nodes"] = *v
@@ -395,10 +374,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 		}
 	}
 
-	if gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()) {
-		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-"+common.BasicAuthSecretName] = b.LoadCheckSum(common.BasicAuthSecretName)
-	}
-
 	foundDeployment := true
 	deployment := &appsv1.Deployment{}
 	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil && !apierrors.IsNotFound(err) {
@@ -408,7 +383,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	}
 
 	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil && !hvpaEnabled {
-		defaultValues["replicas"] = *b.ManagedSeedAPIServer.Replicas
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"requests": map[string]interface{}{
 				"cpu":    "1750m",
@@ -420,18 +394,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			},
 		}
 	} else {
-		replicas := deployment.Spec.Replicas
-
-		// As kube-apiserver HPA manages the number of replicas, we have to maintain current number of replicas
-		// otherwise keep the value to default
-		if replicas != nil && *replicas > 0 {
-			defaultValues["replicas"] = *replicas
-		}
-		// If the shoot is hibernated then we want to keep the number of replicas (scale down happens later).
-		if b.Shoot.HibernationEnabled && (replicas == nil || *replicas == 0) {
-			defaultValues["replicas"] = 0
-		}
-
 		var cpuRequest, memoryRequest, cpuLimit, memoryLimit string
 		if hvpaEnabled {
 			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMinNodeCount(), b.Shoot.GetInfo().Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
