@@ -351,18 +351,11 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			},
 			"enableAnonymousAuthentication": gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
 			"tlsCipherSuites":               kutil.TLSCipherSuites(b.Shoot.KubernetesVersion),
-		}
-
-		shootNetworks = map[string]interface{}{
-			"services": b.Shoot.Networks.Services.String(),
-			"pods":     b.Shoot.Networks.Pods.String(),
+			"shootNetworks": map[string]interface{}{
+				"services": b.Shoot.Networks.Services.String(),
+			},
 		}
 	)
-
-	if v := b.Shoot.GetNodeNetwork(); v != nil {
-		shootNetworks["nodes"] = *v
-	}
-	defaultValues["shootNetworks"] = shootNetworks
 
 	if b.APIServerSNIEnabled() {
 		defaultValues["sni"] = map[string]interface{}{
@@ -462,7 +455,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	defaultValues["serviceAccountConfig"] = serviceAccountConfigVals
 
 	values, err := b.InjectSeedShootImages(defaultValues,
-		charts.ImageNameVpnSeed,
 		charts.ImageNameKubeApiserver,
 	)
 	if err != nil {

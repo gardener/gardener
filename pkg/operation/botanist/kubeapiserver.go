@@ -42,12 +42,7 @@ import (
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
 func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Interface, error) {
-	imageAlpineIPTables, err := b.ImageVector.FindImage(charts.ImageNameAlpineIptables, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return nil, err
-	}
-
-	imageApiserverProxyPodWebhook, err := b.ImageVector.FindImage(charts.ImageNameApiserverProxyPodWebhook, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	images, err := b.computeKubeAPIServerImages()
 	if err != nil {
 		return nil, err
 	}
@@ -83,15 +78,17 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			Audit:                      auditConfig,
 			Autoscaling:                b.computeKubeAPIServerAutoscalingConfig(),
 			BasicAuthenticationEnabled: gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
-			Images: kubeapiserver.Images{
-				AlpineIPTables:           imageAlpineIPTables.String(),
-				APIServerProxyPodWebhook: imageApiserverProxyPodWebhook.String(),
+			Images:                     images,
+			OIDC:                       oidcConfig,
+			ServiceAccountConfig:       serviceAccountConfig,
+			SNI:                        b.computeKubeAPIServerSNIConfig(),
+			Version:                    b.Shoot.KubernetesVersion,
+			VPN: kubeapiserver.VPNConfig{
+				ReversedVPNEnabled: b.Shoot.ReversedVPNEnabled,
+				PodNetworkCIDR:     b.Shoot.Networks.Pods.String(),
+				ServiceNetworkCIDR: b.Shoot.Networks.Services.String(),
+				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
 			},
-			OIDC:                 oidcConfig,
-			ReversedVPNEnabled:   b.Shoot.ReversedVPNEnabled,
-			ServiceAccountConfig: serviceAccountConfig,
-			SNI:                  b.computeKubeAPIServerSNIConfig(),
-			Version:              b.Shoot.KubernetesVersion,
 		},
 	), nil
 }
@@ -183,6 +180,29 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		UseMemoryMetricForHvpaHPA: useMemoryMetricForHvpaHPA,
 		ScaleDownDisabledForHvpa:  scaleDownDisabledForHvpa,
 	}
+}
+
+func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
+	imageAlpineIPTables, err := b.ImageVector.FindImage(charts.ImageNameAlpineIptables, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return kubeapiserver.Images{}, err
+	}
+
+	imageApiserverProxyPodWebhook, err := b.ImageVector.FindImage(charts.ImageNameApiserverProxyPodWebhook, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return kubeapiserver.Images{}, err
+	}
+
+	imageVPNSeed, err := b.ImageVector.FindImage(charts.ImageNameVpnSeed, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return kubeapiserver.Images{}, err
+	}
+
+	return kubeapiserver.Images{
+		AlpineIPTables:           imageAlpineIPTables.String(),
+		APIServerProxyPodWebhook: imageApiserverProxyPodWebhook.String(),
+		VPNSeed:                  imageVPNSeed.String(),
+	}, nil
 }
 
 func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context, config *gardencorev1beta1.ServiceAccountConfig) (*kubeapiserver.ServiceAccountConfig, error) {
@@ -289,7 +309,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		secrets.BasicAuthentication = &component.Secret{Name: kubeapiserver.SecretNameBasicAuth, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameBasicAuth)}
 	}
 
-	if values.ReversedVPNEnabled {
+	if values.VPN.ReversedVPNEnabled {
 		secrets.VPNSeedServerTLSAuth = &component.Secret{Name: vpnseedserver.VpnSeedServerTLSAuth, Checksum: b.LoadCheckSum(vpnseedserver.VpnSeedServerTLSAuth)}
 	} else {
 		secrets.VPNSeed = &component.Secret{Name: kubeapiserver.SecretNameVPNSeed, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameVPNSeed)}

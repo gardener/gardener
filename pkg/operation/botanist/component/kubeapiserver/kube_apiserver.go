@@ -66,8 +66,6 @@ type Values struct {
 	BasicAuthenticationEnabled bool
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
 	Images Images
-	// ReversedVPNEnabled states whether the 'ReversedVPN' feature gate is enabled.
-	ReversedVPNEnabled bool
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
 	OIDC *gardencorev1beta1.OIDCConfig
 	// ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.
@@ -76,6 +74,8 @@ type Values struct {
 	SNI SNIConfig
 	// Version is the Kubernetes version for the kube-apiserver.
 	Version *semver.Version
+	// VPN contains information for configuring the VPN settings for the kube-apiserver.
+	VPN VPNConfig
 }
 
 // AuditConfig contains information for configuring audit settings for the kube-apiserver.
@@ -108,6 +108,20 @@ type Images struct {
 	AlpineIPTables string
 	// APIServerProxyPodWebhook is the container image for the apiserver-proxy-pod-webhook.
 	APIServerProxyPodWebhook string
+	// VPNSeed is the container image for the vpn-seed.
+	VPNSeed string
+}
+
+// VPNConfig contains information for configuring the VPN settings for the kube-apiserver.
+type VPNConfig struct {
+	// ReversedVPNEnabled states whether the 'ReversedVPN' feature gate is enabled.
+	ReversedVPNEnabled bool
+	// PodNetworkCIDR is the CIDR of the pod network.
+	PodNetworkCIDR string
+	// ServiceNetworkCIDR is the CIDR of the service network.
+	ServiceNetworkCIDR string
+	// NodeNetworkCIDR is the CIDR of the node network.
+	NodeNetworkCIDR *string
 }
 
 // ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.
@@ -383,13 +397,13 @@ type Secrets struct {
 	// StaticToken is the static token secret.
 	StaticToken component.Secret
 	// VPNSeed is the client certificate for the vpn-seed to talk to the kube-apiserver.
-	// Only relevant if ReversedVPNEnabled is false.
+	// Only relevant if VPNConfig.ReversedVPNEnabled is false.
 	VPNSeed *component.Secret
 	// VPNSeedTLSAuth is the TLS auth information for the vpn-seed.
-	// Only relevant if ReversedVPNEnabled is false.
+	// Only relevant if VPNConfig.ReversedVPNEnabled is false.
 	VPNSeedTLSAuth *component.Secret
 	// VPNSeedServerTLSAuth is the TLS auth information for the vpn-seed server.
-	// Only relevant if ReversedVPNEnabled is true.
+	// Only relevant if VPNConfig.ReversedVPNEnabled is true.
 	VPNSeedServerTLSAuth *component.Secret
 }
 
@@ -411,9 +425,9 @@ func (s *Secrets) all() map[string]secret {
 		"Server":                 {Secret: &s.Server},
 		"ServiceAccountKey":      {Secret: &s.ServiceAccountKey},
 		"StaticToken":            {Secret: &s.StaticToken},
-		"VPNSeed":                {Secret: s.VPNSeed, requiredConditionFn: func(v Values) bool { return !v.ReversedVPNEnabled }},
-		"VPNSeedTLSAuth":         {Secret: s.VPNSeedTLSAuth, requiredConditionFn: func(v Values) bool { return !v.ReversedVPNEnabled }},
-		"VPNSeedServerTLSAuth":   {Secret: s.VPNSeedServerTLSAuth, requiredConditionFn: func(v Values) bool { return v.ReversedVPNEnabled }},
+		"VPNSeed":                {Secret: s.VPNSeed, requiredConditionFn: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
+		"VPNSeedTLSAuth":         {Secret: s.VPNSeedTLSAuth, requiredConditionFn: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
+		"VPNSeedServerTLSAuth":   {Secret: s.VPNSeedServerTLSAuth, requiredConditionFn: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
 	}
 }
 

@@ -56,13 +56,17 @@ const (
 	containerNameVPNSeed                  = "vpn-seed"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 
-	volumeNameLibModules = "modules"
-	volumeNameServer     = "kube-apiserver"
+	volumeNameLibModules     = "modules"
+	volumeNameServer         = "kube-apiserver"
+	volumeNameVPNSeed        = "vpn-seed"
+	volumeNameVPNSeedTLSAuth = "vpn-seed-tlsauth"
 
 	volumeMountPathAdmissionConfiguration = "/etc/kubernetes/admission"
 	volumeMountPathHTTPProxy              = "/etc/srv/kubernetes/envoy"
 	volumeMountPathLibModules             = "/lib/modules"
 	volumeMountPathServer                 = "/srv/kubernetes/apiserver"
+	volumeMountPathVPNSeed                = "/srv/secrets/vpn-seed"
+	volumeMountPathVPNSeedTLSAuth         = "/srv/secrets/tlsauth"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
@@ -136,7 +140,7 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 			},
 		}
 
-		if !k.values.ReversedVPNEnabled {
+		if !k.values.VPN.ReversedVPNEnabled {
 			deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
 				Name:  "set-iptable-rules",
 				Image: k.values.Images.AlpineIPTables,
@@ -162,6 +166,97 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 					HostPath: &corev1.HostPathVolumeSource{Path: "/lib/modules"},
 				},
 			})
+
+			vpnSeedContainer := corev1.Container{
+				Name:            containerNameVPNSeed,
+				Image:           k.values.Images.VPNSeed,
+				ImagePullPolicy: corev1.PullIfNotPresent,
+				Env: []corev1.EnvVar{
+					{
+						Name:  "MAIN_VPN_SEED",
+						Value: "true",
+					},
+					{
+						Name:  "OPENVPN_PORT",
+						Value: "4314",
+					},
+					{
+						Name:  "APISERVER_AUTH_MODE",
+						Value: "client-cert",
+					},
+					{
+						Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CA",
+						Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyCertificateCA,
+					},
+					{
+						Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CRT",
+						Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyCertificate,
+					},
+					{
+						Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_KEY",
+						Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyPrivateKey,
+					},
+					{
+						Name:  "SERVICE_NETWORK",
+						Value: k.values.VPN.ServiceNetworkCIDR,
+					},
+					{
+						Name:  "POD_NETWORK",
+						Value: k.values.VPN.PodNetworkCIDR,
+					},
+				},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("100m"),
+						corev1.ResourceMemory: resource.MustParse("128Mi"),
+					},
+					Limits: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("500m"),
+						corev1.ResourceMemory: resource.MustParse("1000Mi"),
+					},
+				},
+				SecurityContext: &corev1.SecurityContext{
+					Capabilities: &corev1.Capabilities{
+						Add: []corev1.Capability{"NET_ADMIN"},
+					},
+					Privileged: pointer.Bool(true),
+				},
+				TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+				TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      volumeNameVPNSeed,
+						MountPath: volumeMountPathVPNSeed,
+					},
+					{
+						Name:      volumeNameVPNSeedTLSAuth,
+						MountPath: volumeMountPathVPNSeedTLSAuth,
+					},
+				},
+			}
+
+			if k.values.VPN.NodeNetworkCIDR != nil {
+				vpnSeedContainer.Env = append(vpnSeedContainer.Env, corev1.EnvVar{
+					Name:  "NODE_NETWORK",
+					Value: *k.values.VPN.NodeNetworkCIDR,
+				})
+			}
+
+			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, vpnSeedContainer)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+				{
+					Name: volumeNameVPNSeed,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{SecretName: k.secrets.VPNSeed.Name},
+					},
+				},
+				{
+					Name: volumeNameVPNSeedTLSAuth,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{SecretName: k.secrets.VPNSeedTLSAuth.Name},
+					},
+				},
+			}...)
 		}
 
 		if k.values.SNI.PodMutatorEnabled {

@@ -197,48 +197,6 @@
           mountPath: /usr/share/ca-certificates
           readOnly: true
         {{- end }}
-      {{- if (not .Values.reversedVPN.enabled) }}
-      - name: vpn-seed
-        image: {{ index .Values.images "vpn-seed" }}
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: MAIN_VPN_SEED
-          value: "true"
-        - name: OPENVPN_PORT
-          value: "4314"
-        - name: APISERVER_AUTH_MODE
-          value: client-cert
-        - name: APISERVER_AUTH_MODE_CLIENT_CERT_CA
-          value: /srv/secrets/vpn-seed/ca.crt
-        - name: APISERVER_AUTH_MODE_CLIENT_CERT_CRT
-          value: /srv/secrets/vpn-seed/tls.crt
-        - name: APISERVER_AUTH_MODE_CLIENT_CERT_KEY
-          value: /srv/secrets/vpn-seed/tls.key
-        - name: SERVICE_NETWORK
-          value: {{ .Values.shootNetworks.services }}
-        - name: POD_NETWORK
-          value: {{ .Values.shootNetworks.pods }}
-        {{- if .Values.shootNetworks.nodes }}
-        - name: NODE_NETWORK
-          value: {{ .Values.shootNetworks.nodes }}
-        {{- end }}
-        {{- if .Values.vpnSeedResources }}
-        resources:
-{{ toYaml .Values.vpnSeedResources | indent 10 }}
-        {{- end }}
-        securityContext:
-          capabilities:
-            add:
-            - NET_ADMIN
-          privileged: true
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        volumeMounts:
-        - mountPath: /srv/secrets/vpn-seed
-          name: vpn-seed
-        - mountPath: /srv/secrets/tlsauth
-          name: vpn-seed-tlsauth
-      {{- end }}
       volumes:
       - name: audit-policy-config
         configMap:
@@ -299,13 +257,6 @@
       - name: egress-selection-config
         configMap:
           name: {{ include "kube-apiserver.egressSelector.name" . }}
-      {{- else }}
-      - name: vpn-seed
-        secret:
-          secretName: vpn-seed
-      - name: vpn-seed-tlsauth
-        secret:
-          secretName: vpn-seed-tlsauth
       {{- end }}
       {{- if .Values.enableEtcdEncryption }}
       - name: etcd-encryption-secret

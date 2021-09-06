@@ -242,13 +242,13 @@ var _ = Describe("KubeAPIServer", func() {
 					"StaticToken", func(s *Secrets) { s.StaticToken.Name = "" }, Values{},
 				),
 				Entry("ReversedVPN disabled but VPNSeed missing",
-					"VPNSeed", func(s *Secrets) { s.VPNSeed = nil }, Values{ReversedVPNEnabled: false},
+					"VPNSeed", func(s *Secrets) { s.VPNSeed = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: false}},
 				),
 				Entry("ReversedVPN disabled but VPNSeedTLSAuth missing",
-					"VPNSeedTLSAuth", func(s *Secrets) { s.VPNSeedTLSAuth = nil }, Values{ReversedVPNEnabled: false},
+					"VPNSeedTLSAuth", func(s *Secrets) { s.VPNSeedTLSAuth = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: false}},
 				),
 				Entry("ReversedVPN enabled but VPNSeedServerTLSAuth missing",
-					"VPNSeedServerTLSAuth", func(s *Secrets) { s.VPNSeedServerTLSAuth = nil }, Values{ReversedVPNEnabled: true},
+					"VPNSeedServerTLSAuth", func(s *Secrets) { s.VPNSeedServerTLSAuth = nil }, Values{VPN: VPNConfig{ReversedVPNEnabled: true}},
 				),
 			)
 		})
@@ -874,7 +874,7 @@ var _ = Describe("KubeAPIServer", func() {
 					})
 
 					It("w/ ReversedVPN", func() {
-						kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: version})
+						kapi = New(kubernetesInterface, namespace, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: version})
 						kapi.SetSecrets(secrets)
 
 						Expect(c.Get(ctx, client.ObjectKeyFromObject(networkPolicyAllowKubeAPIServer), networkPolicyAllowKubeAPIServer)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: networkingv1.SchemeGroupVersion.Group, Resource: "networkpolicies"}, networkPolicyAllowKubeAPIServer.Name)))
@@ -1277,7 +1277,7 @@ rules:
 
 				Context("egress selector", func() {
 					It("should successfully deploy the configmap resource for K8s < 1.20", func() {
-						kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: semver.MustParse("1.19.0")})
+						kapi = New(kubernetesInterface, namespace, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: semver.MustParse("1.19.0")})
 						kapi.SetSecrets(secrets)
 
 						configMapEgressSelector = &corev1.ConfigMap{
@@ -1306,7 +1306,7 @@ rules:
 					})
 
 					It("should successfully deploy the configmap resource for K8s >= 1.20", func() {
-						kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: version})
+						kapi = New(kubernetesInterface, namespace, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: version})
 						kapi.SetSecrets(secrets)
 
 						configMapEgressSelector = &corev1.ConfigMap{
@@ -1371,6 +1371,8 @@ rules:
 
 					Expect(deployment.Annotations).To(Equal(map[string]string{
 						"reference.resources.gardener.cloud/secret-e2878235": secretNameServer,
+						"reference.resources.gardener.cloud/secret-9f3de87f": secretNameVPNSeed,
+						"reference.resources.gardener.cloud/secret-e638c9f3": secretNameVPNSeedTLSAuth,
 					}))
 				})
 
@@ -1420,6 +1422,8 @@ rules:
 						"checksum/secret-" + secretNameServer:                 secretChecksumServer,
 						"checksum/secret-" + secretNameVPNSeedTLSAuth:         secretChecksumVPNSeedTLSAuth,
 						"reference.resources.gardener.cloud/secret-e2878235":  secretNameServer,
+						"reference.resources.gardener.cloud/secret-9f3de87f":  secretNameVPNSeed,
+						"reference.resources.gardener.cloud/secret-e638c9f3":  secretNameVPNSeedTLSAuth,
 					}))
 					Expect(deployment.Spec.Template.Labels).To(Equal(map[string]string{
 						"garden.sapcloud.io/role":          "controlplane",
@@ -1459,17 +1463,25 @@ rules:
 				})
 
 				It("should have no init containers when reversed vpn is enabled", func() {
-					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: true, Version: version})
+					kapi = New(kubernetesInterface, namespace, Values{VPN: VPNConfig{ReversedVPNEnabled: true}, Version: version})
 					kapi.SetSecrets(secrets)
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Spec.InitContainers).To(BeEmpty())
 				})
 
-				It("should have one init container when reversed vpn is disabled", func() {
-					images := Images{AlpineIPTables: "some-image:latest"}
+				It("should have one init container and the vpn-seed sidecar container when reversed vpn is disabled", func() {
+					var (
+						images    = Images{AlpineIPTables: "some-image:latest", VPNSeed: "some-other-image:really-latest"}
+						vpnConfig = VPNConfig{
+							ReversedVPNEnabled: false,
+							PodNetworkCIDR:     "1.2.3.4/5",
+							ServiceNetworkCIDR: "6.7.8.9/10",
+							NodeNetworkCIDR:    pointer.String("11.12.13.14/15"),
+						}
+					)
 
-					kapi = New(kubernetesInterface, namespace, Values{ReversedVPNEnabled: false, Images: images, Version: version})
+					kapi = New(kubernetesInterface, namespace, Values{VPN: vpnConfig, Images: images, Version: version})
 					kapi.SetSecrets(secrets)
 					deployAndRead()
 
@@ -1498,6 +1510,92 @@ rules:
 							HostPath: &corev1.HostPathVolumeSource{Path: "/lib/modules"},
 						},
 					}))
+
+					Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(corev1.Container{
+						Name:            "vpn-seed",
+						Image:           images.VPNSeed,
+						ImagePullPolicy: corev1.PullIfNotPresent,
+						Env: []corev1.EnvVar{
+							{
+								Name:  "MAIN_VPN_SEED",
+								Value: "true",
+							},
+							{
+								Name:  "OPENVPN_PORT",
+								Value: "4314",
+							},
+							{
+								Name:  "APISERVER_AUTH_MODE",
+								Value: "client-cert",
+							},
+							{
+								Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CA",
+								Value: "/srv/secrets/vpn-seed/ca.crt",
+							},
+							{
+								Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CRT",
+								Value: "/srv/secrets/vpn-seed/tls.crt",
+							},
+							{
+								Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_KEY",
+								Value: "/srv/secrets/vpn-seed/tls.key",
+							},
+							{
+								Name:  "SERVICE_NETWORK",
+								Value: vpnConfig.ServiceNetworkCIDR,
+							},
+							{
+								Name:  "POD_NETWORK",
+								Value: vpnConfig.PodNetworkCIDR,
+							},
+							{
+								Name:  "NODE_NETWORK",
+								Value: *vpnConfig.NodeNetworkCIDR,
+							},
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("100m"),
+								corev1.ResourceMemory: resource.MustParse("128Mi"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("500m"),
+								corev1.ResourceMemory: resource.MustParse("1000Mi"),
+							},
+						},
+						SecurityContext: &corev1.SecurityContext{
+							Capabilities: &corev1.Capabilities{
+								Add: []corev1.Capability{"NET_ADMIN"},
+							},
+							Privileged: pointer.Bool(true),
+						},
+						TerminationMessagePath:   "/dev/termination-log",
+						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "vpn-seed",
+								MountPath: "/srv/secrets/vpn-seed",
+							},
+							{
+								Name:      "vpn-seed-tlsauth",
+								MountPath: "/srv/secrets/tlsauth",
+							},
+						},
+					}))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+						corev1.Volume{
+							Name: "vpn-seed",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{SecretName: secretNameVPNSeed},
+							},
+						},
+						corev1.Volume{
+							Name: "vpn-seed-tlsauth",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{SecretName: secretNameVPNSeedTLSAuth},
+							},
+						},
+					))
 				})
 
 				It("should have the mutator sidecar container when enabled", func() {

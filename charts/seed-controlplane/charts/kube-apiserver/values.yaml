@@ -5,8 +5,6 @@ securePort: 443
 probeCredentials: base64(user:pass)
 shootNetworks:
   services: 10.0.1.0/24
-  pods: 192.168.0.0/1
-# nodes: 172.16.0.0/20
 podAnnotations: {}
 featureGates: {}
   # CustomResourceValidation: true
@@ -59,14 +57,6 @@ images:
 
 blackboxExporterPort: 9115
 etcdServicePort: 2379
-
-vpnSeedResources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 500m
-      memory: 1000M
 
 apiServerResources:
   requests:

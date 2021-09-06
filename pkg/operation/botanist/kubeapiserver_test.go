@@ -16,6 +16,7 @@ package botanist_test
 
 import (
 	"context"
+	"net"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -66,6 +67,11 @@ var _ = Describe("KubeAPIServer", func() {
 		projectNamespace      = "garden-my-project"
 		shootNamespace        = "shoot--foo--bar"
 		internalClusterDomain = "foo.bar.com"
+		podNetwork            *net.IPNet
+		serviceNetwork        *net.IPNet
+		podNetworkCIDR        = "10.0.1.0/24"
+		serviceNetworkCIDR    = "10.0.2.0/24"
+		nodeNetworkCIDR       = "10.0.3.0/24"
 	)
 
 	BeforeEach(func() {
@@ -76,6 +82,12 @@ var _ = Describe("KubeAPIServer", func() {
 
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		k8sSeedClient = fake.NewClientSetBuilder().WithClient(c).Build()
+
+		var err error
+		_, podNetwork, err = net.ParseCIDR(podNetworkCIDR)
+		Expect(err).NotTo(HaveOccurred())
+		_, serviceNetwork, err = net.ParseCIDR(serviceNetworkCIDR)
+		Expect(err).NotTo(HaveOccurred())
 
 		kubeAPIServer = mockkubeapiserver.NewMockInterface(ctrl)
 		botanist = &Botanist{
@@ -91,14 +103,25 @@ var _ = Describe("KubeAPIServer", func() {
 						},
 					},
 					InternalClusterDomain: internalClusterDomain,
+					Networks: &shootpkg.Networks{
+						Pods:     podNetwork,
+						Services: serviceNetwork,
+					},
 				},
 				ImageVector: imagevector.ImageVector{
 					{Name: "alpine-iptables"},
 					{Name: "apiserver-proxy-pod-webhook"},
+					{Name: "vpn-seed"},
 				},
 			},
 		}
-		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+			Spec: gardencorev1beta1.ShootSpec{
+				Networking: gardencorev1beta1.Networking{
+					Nodes: &nodeNetworkCIDR,
+				},
+			},
+		})
 	})
 
 	AfterEach(func() {
@@ -120,6 +143,13 @@ var _ = Describe("KubeAPIServer", func() {
 			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 			Expect(kubeAPIServer).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("could not find image \"apiserver-proxy-pod-webhook\"")))
+		})
+		It("should return an error because the vpn-seed cannot be found", func() {
+			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine-iptables"}, {Name: "apiserver-proxy-pod-webhook"}}
+
+			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+			Expect(kubeAPIServer).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("could not find image \"vpn-seed\"")))
 		})
 
 		Describe("AdmissionPlugins", func() {
@@ -789,6 +819,51 @@ var _ = Describe("KubeAPIServer", func() {
 				),
 			)
 		})
+
+		Describe("VPNConfig", func() {
+			DescribeTable("should have the expected VPN config",
+				func(prepTest func(), expectedConfig kubeapiserver.VPNConfig) {
+					if prepTest != nil {
+						prepTest()
+					}
+
+					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(kubeAPIServer.GetValues().VPN).To(Equal(expectedConfig))
+				},
+
+				Entry("ReversedVPN disabled",
+					nil,
+					kubeapiserver.VPNConfig{
+						ReversedVPNEnabled: false,
+						PodNetworkCIDR:     podNetworkCIDR,
+						ServiceNetworkCIDR: serviceNetworkCIDR,
+						NodeNetworkCIDR:    &nodeNetworkCIDR,
+					},
+				),
+				Entry("ReversedVPN enabled",
+					func() {
+						botanist.Shoot.ReversedVPNEnabled = true
+					},
+					kubeapiserver.VPNConfig{
+						ReversedVPNEnabled: true,
+						PodNetworkCIDR:     podNetworkCIDR,
+						ServiceNetworkCIDR: serviceNetworkCIDR,
+						NodeNetworkCIDR:    &nodeNetworkCIDR,
+					},
+				),
+				Entry("no node network",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
+					},
+					kubeapiserver.VPNConfig{
+						ReversedVPNEnabled: false,
+						PodNetworkCIDR:     podNetworkCIDR,
+						ServiceNetworkCIDR: serviceNetworkCIDR,
+					},
+				),
+			)
+		})
 	})
 
 	Describe("#DeployKubeAPIServer", func() {
@@ -888,20 +963,20 @@ var _ = Describe("KubeAPIServer", func() {
 			},
 
 			Entry("reversed vpn disabled",
-				kubeapiserver.Values{ReversedVPNEnabled: false},
+				kubeapiserver.Values{VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: false}},
 				func(s *kubeapiserver.Secrets) {
 					s.VPNSeed = &component.Secret{Name: "vpn-seed", Checksum: botanist.LoadCheckSum("vpn-seed")}
 					s.VPNSeedTLSAuth = &component.Secret{Name: "vpn-seed-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-tlsauth")}
 				},
 			),
 			Entry("reversed vpn enabled",
-				kubeapiserver.Values{ReversedVPNEnabled: true},
+				kubeapiserver.Values{VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: true}},
 				func(s *kubeapiserver.Secrets) {
 					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
 				},
 			),
 			Entry("basic auth enabled",
-				kubeapiserver.Values{BasicAuthenticationEnabled: true, ReversedVPNEnabled: true},
+				kubeapiserver.Values{BasicAuthenticationEnabled: true, VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: true}},
 				func(s *kubeapiserver.Secrets) {
 					s.BasicAuthentication = &component.Secret{Name: "kube-apiserver-basic-auth", Checksum: botanist.LoadCheckSum("kube-apiserver-basic-auth")}
 					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
