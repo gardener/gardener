@@ -236,7 +236,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	validationContext.addMetadataAnnotations(a)
 
 	var allErrs field.ErrorList
-	allErrs = append(allErrs, validationContext.defaultOrValidateShootNetworks()...)
+	allErrs = append(allErrs, validationContext.validateShootNetworks()...)
 	allErrs = append(allErrs, validationContext.validateKubernetes()...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
 	allErrs = append(allErrs, validationContext.validateProvider()...)
@@ -467,7 +467,7 @@ func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
 	}
 }
 
-func (c *validationContext) defaultOrValidateShootNetworks() field.ErrorList {
+func (c *validationContext) validateShootNetworks() field.ErrorList {
 	var (
 		allErrs field.ErrorList
 		path    = field.NewPath("spec", "networking")
