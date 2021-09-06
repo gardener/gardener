@@ -52,13 +52,13 @@ func (k *kubeAPIServer) reconcileSecretOIDCCABundle(ctx context.Context, secret 
 }
 
 func (k *kubeAPIServer) reconcileSecretServiceAccountSigningKey(ctx context.Context, secret *corev1.Secret) error {
-	if k.values.ServiceAccountConfig == nil || k.values.ServiceAccountConfig.SigningKey == nil {
+	if k.values.ServiceAccount == nil || k.values.ServiceAccount.SigningKey == nil {
 		// We don't delete the secret here as we don't know its name (as it's unique). Instead, we rely on the usual
 		// garbage collection for unique secrets/configmaps.
 		return nil
 	}
 
-	secret.Data = map[string][]byte{SecretServiceAccountSigningKeyDataKeySigningKey: k.values.ServiceAccountConfig.SigningKey}
+	secret.Data = map[string][]byte{SecretServiceAccountSigningKeyDataKeySigningKey: k.values.ServiceAccount.SigningKey}
 	utilruntime.Must(kutil.MakeUnique(secret))
 
 	return kutil.IgnoreAlreadyExists(k.client.Client().Create(ctx, secret))

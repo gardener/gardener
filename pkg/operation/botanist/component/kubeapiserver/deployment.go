@@ -39,6 +39,8 @@ const (
 	// SecretNameEtcdEncryption is the name of the secret which contains the EncryptionConfiguration. The
 	// EncryptionConfiguration contains a key which the kube-apiserver uses for encrypting selected etcd content.
 	SecretNameEtcdEncryption = "etcd-encryption-secret"
+	// SecretNameHTTPProxy is the name of the secret for the http proxy.
+	SecretNameHTTPProxy = "kube-apiserver-http-proxy"
 	// SecretNameKubeAggregator is the name of the secret for the kube-aggregator when talking to the kube-apiserver.
 	SecretNameKubeAggregator = "kube-aggregator"
 	// SecretNameKubeAPIServerToKubelet is the name of the secret for the kube-apiserver credentials when talking to
@@ -58,32 +60,70 @@ const (
 	containerNameVPNSeed                  = "vpn-seed"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 
-	volumeNameLibModules      = "modules"
-	volumeNameServer          = "kube-apiserver"
-	volumeNameVPNSeed         = "vpn-seed"
-	volumeNameVPNSeedTLSAuth  = "vpn-seed-tlsauth"
-	volumeNameFedora          = "fedora-rhel6-openelec-cabundle"
-	volumeNameCentOS          = "centos-rhel7-cabundle"
-	volumeNameEtcSSL          = "etc-ssl"
-	volumeNameUsrShareCaCerts = "usr-share-cacerts"
+	volumeNameAdmissionConfiguration   = "kube-apiserver-admission-config"
+	volumeNameAuditPolicy              = "audit-policy-config"
+	volumeNameBasicAuthentication      = "kube-apiserver-basic-auth"
+	volumeNameCA                       = "ca"
+	volumeNameCAEtcd                   = "ca-etcd"
+	volumeNameCAFrontProxy             = "ca-front-proxy"
+	volumeNameEgressSelector           = "egress-selection-config"
+	volumeNameEtcdClient               = "etcd-client-tls"
+	volumeNameEtcdEncryptionConfig     = "etcd-encryption-secret"
+	volumeNameHTTPProxy                = "kube-apiserver-http-proxy"
+	volumeNameKubeAPIServerToKubelet   = "kube-apiserver-kubelet"
+	volumeNameKubeAggregator           = "kube-aggregator"
+	volumeNameLibModules               = "modules"
+	volumeNameOIDCCABundle             = "kube-apiserver-oidc-cabundle"
+	volumeNameServer                   = "kube-apiserver"
+	volumeNameServiceAccountKey        = "service-account-key"
+	volumeNameServiceAccountSigningKey = "kube-apiserver-service-account-signing-key"
+	volumeNameStaticToken              = "static-token"
+	volumeNameVPNSeed                  = "vpn-seed"
+	volumeNameVPNSeedTLSAuth           = "vpn-seed-tlsauth"
+	volumeNameFedora                   = "fedora-rhel6-openelec-cabundle"
+	volumeNameCentOS                   = "centos-rhel7-cabundle"
+	volumeNameEtcSSL                   = "etc-ssl"
+	volumeNameUsrShareCaCerts          = "usr-share-cacerts"
 
-	volumeMountPathAdmissionConfiguration = "/etc/kubernetes/admission"
-	volumeMountPathHTTPProxy              = "/etc/srv/kubernetes/envoy"
-	volumeMountPathLibModules             = "/lib/modules"
-	volumeMountPathServer                 = "/srv/kubernetes/apiserver"
-	volumeMountPathVPNSeed                = "/srv/secrets/vpn-seed"
-	volumeMountPathVPNSeedTLSAuth         = "/srv/secrets/tlsauth"
-	volumeMountPathFedora                 = "/etc/pki/tls"
-	volumeMountPathCentOS                 = "/etc/pki/ca-trust/extracted/pem"
-	volumeMountPathEtcSSL                 = "/etc/ssl"
-	volumeMountPathUsrShareCaCerts        = "/usr/share/ca-certificates"
+	volumeMountPathAdmissionConfiguration   = "/etc/kubernetes/admission"
+	volumeMountPathAuditPolicy              = "/etc/kubernetes/audit"
+	volumeMountPathBasicAuthentication      = "/srv/kubernetes/auth"
+	volumeMountPathCA                       = "/srv/kubernetes/ca"
+	volumeMountPathCAEtcd                   = "/srv/kubernetes/etcd/ca"
+	volumeMountPathCAFrontProxy             = "/srv/kubernetes/ca-front-proxy"
+	volumeMountPathEgressSelector           = "/etc/kubernetes/egress"
+	volumeMountPathEtcdEncryptionConfig     = "/etc/kubernetes/etcd-encryption-secret"
+	volumeMountPathEtcdClient               = "/srv/kubernetes/etcd/client"
+	volumeMountPathHTTPProxy                = "/etc/srv/kubernetes/envoy"
+	volumeMountPathKubeAPIServerToKubelet   = "/srv/kubernetes/apiserver-kubelet"
+	volumeMountPathKubeAggregator           = "/srv/kubernetes/aggregator"
+	volumeMountPathLibModules               = "/lib/modules"
+	volumeMountPathOIDCCABundle             = "/srv/kubernetes/oidc"
+	volumeMountPathServer                   = "/srv/kubernetes/apiserver"
+	volumeMountPathServiceAccountKey        = "/srv/kubernetes/service-account-key"
+	volumeMountPathServiceAccountSigningKey = "/srv/kubernetes/service-account-signing-key"
+	volumeMountPathStaticToken              = "/srv/kubernetes/token"
+	volumeMountPathVPNSeed                  = "/srv/secrets/vpn-seed"
+	volumeMountPathVPNSeedTLSAuth           = "/srv/secrets/tlsauth"
+	volumeMountPathFedora                   = "/etc/pki/tls"
+	volumeMountPathCentOS                   = "/etc/pki/ca-trust/extracted/pem"
+	volumeMountPathEtcSSL                   = "/etc/ssl"
+	volumeMountPathUsrShareCaCerts          = "/usr/share/ca-certificates"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeAPIServer, Namespace: k.namespace}}
 }
 
-func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *appsv1.Deployment) error {
+func (k *kubeAPIServer) reconcileDeployment(
+	ctx context.Context,
+	deployment *appsv1.Deployment,
+	configMapAuditPolicy *corev1.ConfigMap,
+	configMapAdmission *corev1.ConfigMap,
+	configMapEgressSelector *corev1.ConfigMap,
+	secretOIDCCABundle *corev1.Secret,
+	secretServiceAccountSigningKey *corev1.Secret,
+) error {
 	var (
 		maxSurge          = intstr.FromString("25%")
 		maxUnavailable    = intstr.FromInt(0)
@@ -185,8 +225,151 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 							PeriodSeconds:       10,
 							TimeoutSeconds:      15,
 						},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      volumeNameAuditPolicy,
+								MountPath: volumeMountPathAuditPolicy,
+							},
+							{
+								Name:      volumeNameAdmissionConfiguration,
+								MountPath: volumeMountPathAdmissionConfiguration,
+							},
+							{
+								Name:      volumeNameCA,
+								MountPath: volumeMountPathCA,
+							},
+							{
+								Name:      volumeNameCAEtcd,
+								MountPath: volumeMountPathCAEtcd,
+							},
+							{
+								Name:      volumeNameCAFrontProxy,
+								MountPath: volumeMountPathCAFrontProxy,
+							},
+							{
+								Name:      volumeNameEtcdClient,
+								MountPath: volumeMountPathEtcdClient,
+							},
+							{
+								Name:      volumeNameServer,
+								MountPath: volumeMountPathServer,
+							},
+							{
+								Name:      volumeNameServiceAccountKey,
+								MountPath: volumeMountPathServiceAccountKey,
+							},
+							{
+								Name:      volumeNameStaticToken,
+								MountPath: volumeMountPathStaticToken,
+							},
+							{
+								Name:      volumeNameKubeAPIServerToKubelet,
+								MountPath: volumeMountPathKubeAPIServerToKubelet,
+							},
+							{
+								Name:      volumeNameKubeAggregator,
+								MountPath: volumeMountPathKubeAggregator,
+							},
+							{
+								Name:      volumeNameEtcdEncryptionConfig,
+								MountPath: volumeMountPathEtcdEncryptionConfig,
+								ReadOnly:  true,
+							},
+						},
 					}},
 					Volumes: []corev1.Volume{
+						{
+							Name: volumeNameAuditPolicy,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configMapAuditPolicy.Name,
+									},
+								},
+							},
+						},
+						{
+							Name: volumeNameAdmissionConfiguration,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: configMapAdmission.Name,
+									},
+								},
+							},
+						},
+						{
+							Name: volumeNameCA,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: k.secrets.CA.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameCAEtcd,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: k.secrets.CAEtcd.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameCAFrontProxy,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: k.secrets.CAFrontProxy.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameEtcdClient,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: k.secrets.Etcd.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameServiceAccountKey,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: k.secrets.ServiceAccountKey.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameStaticToken,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: k.secrets.StaticToken.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameKubeAPIServerToKubelet,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: k.secrets.KubeAPIServerToKubelet.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameKubeAggregator,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: k.secrets.KubeAggregator.Name,
+								},
+							},
+						},
+						{
+							Name: volumeNameEtcdEncryptionConfig,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: k.secrets.EtcdEncryptionConfig.Name,
+								},
+							},
+						},
 						{
 							Name: volumeNameServer,
 							VolumeSource: corev1.VolumeSource{
@@ -270,6 +453,25 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 						HostPath: &corev1.HostPathVolumeSource{
 							Path: volumeMountPathUsrShareCaCerts,
 							Type: &directoryOrCreate,
+						},
+					},
+				},
+			}...)
+		}
+
+		if k.values.BasicAuthenticationEnabled {
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+				{
+					Name:      volumeNameBasicAuthentication,
+					MountPath: volumeMountPathBasicAuthentication,
+				},
+			}...)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+				{
+					Name: volumeNameBasicAuthentication,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: k.secrets.BasicAuthentication.Name,
 						},
 					},
 				},
@@ -390,6 +592,75 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 					Name: volumeNameVPNSeedTLSAuth,
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{SecretName: k.secrets.VPNSeedTLSAuth.Name},
+					},
+				},
+			}...)
+		} else {
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+				{
+					Name:      volumeNameHTTPProxy,
+					MountPath: volumeMountPathHTTPProxy,
+				},
+				{
+					Name:      volumeNameEgressSelector,
+					MountPath: volumeMountPathEgressSelector,
+				},
+			}...)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+				{
+					Name: volumeNameHTTPProxy,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: k.secrets.HTTPProxy.Name,
+						},
+					},
+				},
+				{
+					Name: volumeNameEgressSelector,
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: configMapEgressSelector.Name,
+							},
+						},
+					},
+				},
+			}...)
+		}
+
+		if k.values.OIDC != nil && k.values.OIDC.CABundle != nil {
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+				{
+					Name:      volumeNameOIDCCABundle,
+					MountPath: volumeMountPathOIDCCABundle,
+				},
+			}...)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+				{
+					Name: volumeNameOIDCCABundle,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: secretOIDCCABundle.Name,
+						},
+					},
+				},
+			}...)
+		}
+
+		if k.values.ServiceAccount != nil && k.values.ServiceAccount.SigningKey != nil {
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+				{
+					Name:      volumeNameServiceAccountSigningKey,
+					MountPath: volumeMountPathServiceAccountSigningKey,
+				},
+			}...)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+				{
+					Name: volumeNameServiceAccountSigningKey,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: secretServiceAccountSigningKey.Name,
+						},
 					},
 				},
 			}...)

@@ -74,8 +74,8 @@ type Values struct {
 	OIDC *gardencorev1beta1.OIDCConfig
 	// ProbeToken is the JWT token used for {live,readi}ness probes of the kube-apiserver container.
 	ProbeToken string
-	// ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.
-	ServiceAccountConfig *ServiceAccountConfig
+	// ServiceAccount contains information for configuring ServiceAccount settings for the kube-apiserver.
+	ServiceAccount *ServiceAccountConfig
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
 	// Version is the Kubernetes version for the kube-apiserver.
@@ -235,7 +235,7 @@ func (k *kubeAPIServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileDeployment(ctx, deployment); err != nil {
+	if err := k.reconcileDeployment(ctx, deployment, configMapAuditPolicy, configMapAdmission, configMapEgressSelector, secretOIDCCABundle, secretServiceAccountSigningKey); err != nil {
 		return err
 	}
 
@@ -401,6 +401,9 @@ type Secrets struct {
 	Etcd component.Secret
 	// EtcdEncryptionConfig is the configuration containing information how to encrypt the etcd data.
 	EtcdEncryptionConfig component.Secret
+	// HTTPProxy is the client certificate for the http proxy to talk to the kube-apiserver..
+	// Only relevant if VPNConfig.ReversedVPNEnabled is true.
+	HTTPProxy *component.Secret
 	// KubeAggregator is the client certificate for the kube-aggregator to talk to the kube-apiserver.
 	KubeAggregator component.Secret
 	// KubeAPIServerToKubelet is the client certificate for the kube-apiserver to talk to kubelets.
@@ -435,6 +438,7 @@ func (s *Secrets) all() map[string]secret {
 		"CAFrontProxy":           {Secret: &s.CAFrontProxy},
 		"Etcd":                   {Secret: &s.Etcd},
 		"EtcdEncryptionConfig":   {Secret: &s.EtcdEncryptionConfig},
+		"HTTPProxy":              {Secret: s.HTTPProxy},
 		"KubeAggregator":         {Secret: &s.KubeAggregator},
 		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},
 		"Server":                 {Secret: &s.Server},

@@ -696,7 +696,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 			// Secret definition for kube-apiserver http proxy client
 			&secrets.CertificateSecretConfig{
-				Name:       "kube-apiserver-http-proxy",
+				Name:       kubeapiserver.SecretNameHTTPProxy,
 				CommonName: "kube-apiserver-http-proxy",
 				CertType:   secrets.ClientCert,
 				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],

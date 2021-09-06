@@ -654,7 +654,7 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 					Expect(err).To(errMatcher)
 					if kubeAPIServer != nil {
-						Expect(kubeAPIServer.GetValues().ServiceAccountConfig).To(Equal(expectedConfig))
+						Expect(kubeAPIServer.GetValues().ServiceAccount).To(Equal(expectedConfig))
 					}
 				},
 
@@ -1127,6 +1127,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Entry("reversed vpn enabled",
 				kubeapiserver.Values{VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: true}},
 				func(s *kubeapiserver.Secrets) {
+					s.HTTPProxy = &component.Secret{Name: "kube-apiserver-http-proxy", Checksum: botanist.LoadCheckSum("kube-apiserver-http-proxy")}
 					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
 				},
 			),
@@ -1134,6 +1135,7 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeapiserver.Values{BasicAuthenticationEnabled: true, VPN: kubeapiserver.VPNConfig{ReversedVPNEnabled: true}},
 				func(s *kubeapiserver.Secrets) {
 					s.BasicAuthentication = &component.Secret{Name: "kube-apiserver-basic-auth", Checksum: botanist.LoadCheckSum("kube-apiserver-basic-auth")}
+					s.HTTPProxy = &component.Secret{Name: "kube-apiserver-http-proxy", Checksum: botanist.LoadCheckSum("kube-apiserver-http-proxy")}
 					s.VPNSeedServerTLSAuth = &component.Secret{Name: "vpn-seed-server-tlsauth", Checksum: botanist.LoadCheckSum("vpn-seed-server-tlsauth")}
 				},
 			),

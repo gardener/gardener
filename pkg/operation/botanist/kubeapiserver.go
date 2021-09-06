@@ -83,7 +83,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			Images:                     images,
 			OIDC:                       oidcConfig,
 			ProbeToken:                 b.APIServerHealthCheckToken,
-			ServiceAccountConfig:       serviceAccountConfig,
+			ServiceAccount:             serviceAccountConfig,
 			SNI:                        b.computeKubeAPIServerSNIConfig(),
 			Version:                    b.Shoot.KubernetesVersion,
 			VPN: kubeapiserver.VPNConfig{
@@ -399,6 +399,7 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 
 	if values.VPN.ReversedVPNEnabled {
+		secrets.HTTPProxy = &component.Secret{Name: kubeapiserver.SecretNameHTTPProxy, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameHTTPProxy)}
 		secrets.VPNSeedServerTLSAuth = &component.Secret{Name: vpnseedserver.VpnSeedServerTLSAuth, Checksum: b.LoadCheckSum(vpnseedserver.VpnSeedServerTLSAuth)}
 	} else {
 		secrets.VPNSeed = &component.Secret{Name: kubeapiserver.SecretNameVPNSeed, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameVPNSeed)}

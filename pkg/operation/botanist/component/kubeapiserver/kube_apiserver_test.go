@@ -75,6 +75,8 @@ var _ = Describe("KubeAPIServer", func() {
 		secretChecksumCAFrontProxy           = "12345"
 		secretNameEtcd                       = "Etcd-secret"
 		secretChecksumEtcd                   = "12345"
+		secretNameHTTPProxy                  = "HttpProxy-secret"
+		secretChecksumHTTPProxy              = "12345"
 		secretNameEtcdEncryptionConfig       = "EtcdEncryptionConfig-secret"
 		secretChecksumEtcdEncryptionConfig   = "12345"
 		secretNameKubeAggregator             = "KubeAggregator-secret"
@@ -123,6 +125,7 @@ var _ = Describe("KubeAPIServer", func() {
 			CAEtcd:                 component.Secret{Name: secretNameCAEtcd, Checksum: secretChecksumCAEtcd},
 			CAFrontProxy:           component.Secret{Name: secretNameCAFrontProxy, Checksum: secretChecksumCAFrontProxy},
 			Etcd:                   component.Secret{Name: secretNameEtcd, Checksum: secretChecksumEtcd},
+			HTTPProxy:              &component.Secret{Name: secretNameHTTPProxy, Checksum: secretChecksumHTTPProxy},
 			EtcdEncryptionConfig:   component.Secret{Name: secretNameEtcdEncryptionConfig, Checksum: secretChecksumEtcdEncryptionConfig},
 			KubeAggregator:         component.Secret{Name: secretNameKubeAggregator, Checksum: secretChecksumKubeAggregator},
 			KubeAPIServerToKubelet: component.Secret{Name: secretNameKubeAPIServerToKubelet, Checksum: secretChecksumKubeAPIServerToKubelet},
@@ -1104,7 +1107,7 @@ subjects:
 						serviceAccountConfig = &ServiceAccountConfig{SigningKey: signingKey}
 					)
 
-					kapi = New(kubernetesInterface, namespace, Values{ServiceAccountConfig: serviceAccountConfig, Version: version})
+					kapi = New(kubernetesInterface, namespace, Values{ServiceAccount: serviceAccountConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
 					secretServiceAccountSigningKey = &corev1.Secret{
@@ -1372,9 +1375,20 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Annotations).To(Equal(map[string]string{
-						"reference.resources.gardener.cloud/secret-e2878235": secretNameServer,
-						"reference.resources.gardener.cloud/secret-9f3de87f": secretNameVPNSeed,
-						"reference.resources.gardener.cloud/secret-e638c9f3": secretNameVPNSeedTLSAuth,
+						"reference.resources.gardener.cloud/secret-7e9b40c7":    secretNameServiceAccountKey,
+						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
+						"reference.resources.gardener.cloud/secret-91c30740":    secretNameCAEtcd,
+						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
+						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
+						"reference.resources.gardener.cloud/secret-7e1cfe53":    secretNameEtcdEncryptionConfig,
+						"reference.resources.gardener.cloud/secret-274d0dbb":    secretNameKubeAPIServerToKubelet,
+						"reference.resources.gardener.cloud/secret-2e310c99":    secretNameKubeAggregator,
+						"reference.resources.gardener.cloud/secret-59f1a197":    secretNameStaticToken,
+						"reference.resources.gardener.cloud/secret-e2878235":    secretNameServer,
+						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
+						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
+						"reference.resources.gardener.cloud/configmap-130aa219": "kube-apiserver-admission-config-e38ff146",
+						"reference.resources.gardener.cloud/configmap-d4419cd4": "audit-policy-config-f5b578b4",
 					}))
 				})
 
@@ -1409,23 +1423,35 @@ rules:
 					deployAndRead()
 
 					Expect(deployment.Spec.Template.Annotations).To(Equal(map[string]string{
-						"checksum/secret-" + secretNameCAEtcd:                 secretChecksumCAEtcd,
-						"checksum/secret-" + secretNameServiceAccountKey:      secretChecksumServiceAccountKey,
-						"checksum/secret-" + secretNameVPNSeedServerTLSAuth:   secretChecksumVPNSeedServerTLSAuth,
-						"checksum/secret-" + secretNameVPNSeed:                secretChecksumVPNSeed,
-						"checksum/secret-" + secretNameCA:                     secretChecksumCA,
-						"checksum/secret-" + secretNameEtcd:                   secretChecksumEtcd,
-						"checksum/secret-" + secretNameStaticToken:            secretChecksumStaticToken,
-						"checksum/secret-" + secretNameKubeAggregator:         secretChecksumKubeAggregator,
-						"checksum/secret-" + secretNameBasicAuthentication:    secretChecksumBasicAuthentication,
-						"checksum/secret-" + secretNameCAFrontProxy:           secretChecksumCAFrontProxy,
-						"checksum/secret-" + secretNameKubeAPIServerToKubelet: secretChecksumKubeAPIServerToKubelet,
-						"checksum/secret-" + secretNameEtcdEncryptionConfig:   secretChecksumEtcdEncryptionConfig,
-						"checksum/secret-" + secretNameServer:                 secretChecksumServer,
-						"checksum/secret-" + secretNameVPNSeedTLSAuth:         secretChecksumVPNSeedTLSAuth,
-						"reference.resources.gardener.cloud/secret-e2878235":  secretNameServer,
-						"reference.resources.gardener.cloud/secret-9f3de87f":  secretNameVPNSeed,
-						"reference.resources.gardener.cloud/secret-e638c9f3":  secretNameVPNSeedTLSAuth,
+						"checksum/secret-" + secretNameCAEtcd:                   secretChecksumCAEtcd,
+						"checksum/secret-" + secretNameServiceAccountKey:        secretChecksumServiceAccountKey,
+						"checksum/secret-" + secretNameVPNSeedServerTLSAuth:     secretChecksumVPNSeedServerTLSAuth,
+						"checksum/secret-" + secretNameVPNSeed:                  secretChecksumVPNSeed,
+						"checksum/secret-" + secretNameCA:                       secretChecksumCA,
+						"checksum/secret-" + secretNameEtcd:                     secretChecksumEtcd,
+						"checksum/secret-" + secretNameHTTPProxy:                secretChecksumHTTPProxy,
+						"checksum/secret-" + secretNameStaticToken:              secretChecksumStaticToken,
+						"checksum/secret-" + secretNameKubeAggregator:           secretChecksumKubeAggregator,
+						"checksum/secret-" + secretNameBasicAuthentication:      secretChecksumBasicAuthentication,
+						"checksum/secret-" + secretNameCAFrontProxy:             secretChecksumCAFrontProxy,
+						"checksum/secret-" + secretNameKubeAPIServerToKubelet:   secretChecksumKubeAPIServerToKubelet,
+						"checksum/secret-" + secretNameEtcdEncryptionConfig:     secretChecksumEtcdEncryptionConfig,
+						"checksum/secret-" + secretNameServer:                   secretChecksumServer,
+						"checksum/secret-" + secretNameVPNSeedTLSAuth:           secretChecksumVPNSeedTLSAuth,
+						"reference.resources.gardener.cloud/secret-7e9b40c7":    secretNameServiceAccountKey,
+						"reference.resources.gardener.cloud/secret-71fba891":    secretNameCA,
+						"reference.resources.gardener.cloud/secret-91c30740":    secretNameCAEtcd,
+						"reference.resources.gardener.cloud/secret-9282d44f":    secretNameCAFrontProxy,
+						"reference.resources.gardener.cloud/secret-c16f0542":    secretNameEtcd,
+						"reference.resources.gardener.cloud/secret-7e1cfe53":    secretNameEtcdEncryptionConfig,
+						"reference.resources.gardener.cloud/secret-274d0dbb":    secretNameKubeAPIServerToKubelet,
+						"reference.resources.gardener.cloud/secret-2e310c99":    secretNameKubeAggregator,
+						"reference.resources.gardener.cloud/secret-59f1a197":    secretNameStaticToken,
+						"reference.resources.gardener.cloud/secret-e2878235":    secretNameServer,
+						"reference.resources.gardener.cloud/secret-9f3de87f":    secretNameVPNSeed,
+						"reference.resources.gardener.cloud/secret-e638c9f3":    secretNameVPNSeedTLSAuth,
+						"reference.resources.gardener.cloud/configmap-130aa219": "kube-apiserver-admission-config-e38ff146",
+						"reference.resources.gardener.cloud/configmap-d4419cd4": "audit-policy-config-f5b578b4",
 					}))
 					Expect(deployment.Spec.Template.Labels).To(Equal(map[string]string{
 						"garden.sapcloud.io/role":          "controlplane",
@@ -1650,7 +1676,7 @@ rules:
 				Context("kube-apiserver container", func() {
 					images := Images{KubeAPIServer: "some-kapi-image:latest"}
 
-					It("should have the kube-apiserver container with the expected metadata", func() {
+					It("should have the kube-apiserver container with the expected spec", func() {
 						apiServerResources := corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceCPU:    resource.MustParse("1"),
@@ -1677,6 +1703,159 @@ rules:
 							Protocol:      corev1.ProtocolTCP,
 						}))
 						Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(apiServerResources))
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+							corev1.VolumeMount{
+								Name:      "audit-policy-config",
+								MountPath: "/etc/kubernetes/audit",
+							},
+							corev1.VolumeMount{
+								Name:      "kube-apiserver-admission-config",
+								MountPath: "/etc/kubernetes/admission",
+							},
+							corev1.VolumeMount{
+								Name:      "ca",
+								MountPath: "/srv/kubernetes/ca",
+							},
+							corev1.VolumeMount{
+								Name:      "ca-etcd",
+								MountPath: "/srv/kubernetes/etcd/ca",
+							},
+							corev1.VolumeMount{
+								Name:      "ca-front-proxy",
+								MountPath: "/srv/kubernetes/ca-front-proxy",
+							},
+							corev1.VolumeMount{
+								Name:      "etcd-client-tls",
+								MountPath: "/srv/kubernetes/etcd/client",
+							},
+							corev1.VolumeMount{
+								Name:      "kube-apiserver",
+								MountPath: "/srv/kubernetes/apiserver",
+							},
+							corev1.VolumeMount{
+								Name:      "service-account-key",
+								MountPath: "/srv/kubernetes/service-account-key",
+							},
+							corev1.VolumeMount{
+								Name:      "static-token",
+								MountPath: "/srv/kubernetes/token",
+							},
+							corev1.VolumeMount{
+								Name:      "kube-apiserver-kubelet",
+								MountPath: "/srv/kubernetes/apiserver-kubelet",
+							},
+							corev1.VolumeMount{
+								Name:      "kube-aggregator",
+								MountPath: "/srv/kubernetes/aggregator",
+							},
+							corev1.VolumeMount{
+								Name:      "etcd-encryption-secret",
+								MountPath: "/etc/kubernetes/etcd-encryption-secret",
+								ReadOnly:  true,
+							},
+						))
+						Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+							corev1.Volume{
+								Name: "audit-policy-config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "audit-policy-config-f5b578b4",
+										},
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "kube-apiserver-admission-config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "kube-apiserver-admission-config-e38ff146",
+										},
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "ca",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameCA,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "ca-etcd",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameCAEtcd,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "ca-front-proxy",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameCAFrontProxy,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "etcd-client-tls",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameEtcd,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "service-account-key",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameServiceAccountKey,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "static-token",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameStaticToken,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "kube-apiserver-kubelet",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameKubeAPIServerToKubelet,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "kube-aggregator",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameKubeAggregator,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "etcd-encryption-secret",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameEtcdEncryptionConfig,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "kube-apiserver",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameServer,
+									},
+								},
+							},
+						))
 					})
 
 					It("should mount the host pki directories if k8s >= 1.17", func() {
@@ -1758,6 +1937,136 @@ rules:
 							Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal(name)})))
 							Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal(name)})))
 						}
+					})
+
+					It("should mount the basic auth secret if enabled", func() {
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, BasicAuthenticationEnabled: true})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElement(corev1.VolumeMount{
+							Name:      "kube-apiserver-basic-auth",
+							MountPath: "/srv/kubernetes/auth",
+						}))
+
+						Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
+							Name: "kube-apiserver-basic-auth",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: secretNameBasicAuthentication,
+								},
+							},
+						}))
+					})
+
+					It("should not mount the basic auth secret if disabled", func() {
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, BasicAuthenticationEnabled: false})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-basic-auth")})))
+						Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-basic-auth")})))
+					})
+
+					It("should mount the reversed vpn-related secrets if enabled", func() {
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, VPN: VPNConfig{ReversedVPNEnabled: true}})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+							corev1.VolumeMount{
+								Name:      "kube-apiserver-http-proxy",
+								MountPath: "/etc/srv/kubernetes/envoy",
+							},
+							corev1.VolumeMount{
+								Name:      "egress-selection-config",
+								MountPath: "/etc/kubernetes/egress",
+							},
+						))
+
+						Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+							corev1.Volume{
+								Name: "kube-apiserver-http-proxy",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretNameHTTPProxy,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "egress-selection-config",
+								VolumeSource: corev1.VolumeSource{
+									ConfigMap: &corev1.ConfigMapVolumeSource{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: "kube-apiserver-egress-selector-config-6a97058a",
+										},
+									},
+								},
+							},
+						))
+					})
+
+					It("should not mount the reversed vpn-related secrets if disabled", func() {
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, VPN: VPNConfig{ReversedVPNEnabled: false}})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-http-proxy")})))
+						Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-http-proxy")})))
+					})
+
+					It("should mount the oidc ca bundle secret if enabled", func() {
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, OIDC: &gardencorev1beta1.OIDCConfig{CABundle: pointer.String("")}})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElement(corev1.VolumeMount{
+							Name:      "kube-apiserver-oidc-cabundle",
+							MountPath: "/srv/kubernetes/oidc",
+						}))
+
+						Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
+							Name: "kube-apiserver-oidc-cabundle",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "kube-apiserver-oidc-cabundle-cd372fb8",
+								},
+							},
+						}))
+					})
+
+					It("should not mount the oidc ca bundle secret if disabled", func() {
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-oidc-cabundle")})))
+						Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-oidc-cabundle")})))
+					})
+
+					It("should mount the service account signing key secret if enabled", func() {
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, ServiceAccount: &ServiceAccountConfig{SigningKey: []byte("")}})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElement(corev1.VolumeMount{
+							Name:      "kube-apiserver-service-account-signing-key",
+							MountPath: "/srv/kubernetes/service-account-signing-key",
+						}))
+
+						Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
+							Name: "kube-apiserver-service-account-signing-key",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "kube-apiserver-sa-signing-key-cd372fb8",
+								},
+							},
+						}))
+					})
+
+					It("should not mount the service account signing key secret if disabled", func() {
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-oidc-cabundle")})))
+						Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-oidc-cabundle")})))
 					})
 
 					It("should have the proper probes for k8s >= 1.16", func() {
