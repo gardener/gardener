@@ -60,7 +60,7 @@ func (k *kubeAPIServer) reconcileHVPA(ctx context.Context, hvpa *hvpav1alpha1.Hv
 		}
 		vpaContainerResourcePolicies = []autoscalingv1beta2.ContainerResourcePolicy{
 			{
-				ContainerName: containerNameKubeAPIServer,
+				ContainerName: ContainerNameKubeAPIServer,
 				MinAllowed: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("300m"),
 					corev1.ResourceMemory: resource.MustParse("400M"),

@@ -1,7 +1,4 @@
       containers:
-      - name: kube-apiserver
-        image: {{ index .Values.images "kube-apiserver" }}
-        imagePullPolicy: IfNotPresent
         command:
         {{- if semverCompare "< 1.17" .Values.kubernetesVersion }}
         - /hyperkube
@@ -122,16 +119,6 @@
           initialDelaySeconds: 10
           periodSeconds: 10
           timeoutSeconds: 15
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-        ports:
-        - name: https
-          containerPort: {{ required ".securePort is required" .Values.securePort }}
-          protocol: TCP
-        {{- if .Values.apiServerResources }}
-        resources:
-{{ toYaml .Values.apiServerResources | indent 10 }}
-        {{- end }}
         volumeMounts:
         {{- if .Values.reversedVPN.enabled }}
         - name: kube-apiserver-http-proxy

@@ -31,12 +31,14 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
 )
 
@@ -147,6 +149,7 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		defaultReplicas           *int32
 		minReplicas               int32 = 1
 		maxReplicas               int32 = 4
+		apiServerResources        corev1.ResourceRequirements
 	)
 
 	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeProduction {
@@ -158,6 +161,12 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 		scaleDownDisabledForHvpa = true
 	}
 
+	nodeCount := b.Shoot.GetMinNodeCount()
+	if hvpaEnabled {
+		nodeCount = b.Shoot.GetMaxNodeCount()
+	}
+	apiServerResources = resourcesRequirementsForKubeAPIServer(nodeCount, b.Shoot.GetInfo().Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
+
 	if b.ManagedSeed != nil {
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 		useMemoryMetricForHvpaHPA = true
@@ -168,17 +177,84 @@ func (b *Botanist) computeKubeAPIServerAutoscalingConfig() kubeapiserver.Autosca
 
 			if !hvpaEnabled {
 				defaultReplicas = b.ManagedSeedAPIServer.Replicas
+				apiServerResources = corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("1750m"),
+						corev1.ResourceMemory: resource.MustParse("2Gi"),
+					},
+					Limits: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("4000m"),
+						corev1.ResourceMemory: resource.MustParse("8Gi"),
+					},
+				}
 			}
 		}
 	}
 
 	return kubeapiserver.AutoscalingConfig{
+		APIServerResources:        apiServerResources,
 		HVPAEnabled:               hvpaEnabled,
 		Replicas:                  defaultReplicas,
 		MinReplicas:               minReplicas,
 		MaxReplicas:               maxReplicas,
 		UseMemoryMetricForHvpaHPA: useMemoryMetricForHvpaHPA,
 		ScaleDownDisabledForHvpa:  scaleDownDisabledForHvpa,
+	}
+}
+
+func resourcesRequirementsForKubeAPIServer(nodeCount int32, scalingClass string) corev1.ResourceRequirements {
+	var (
+		validScalingClasses        = sets.NewString("small", "medium", "large", "xlarge", "2xlarge")
+		cpuRequest, cpuLimit       string
+		memoryRequest, memoryLimit string
+	)
+
+	if !validScalingClasses.Has(scalingClass) {
+		switch {
+		case nodeCount <= 2:
+			scalingClass = "small"
+		case nodeCount <= 10:
+			scalingClass = "medium"
+		case nodeCount <= 50:
+			scalingClass = "large"
+		case nodeCount <= 100:
+			scalingClass = "xlarge"
+		default:
+			scalingClass = "2xlarge"
+		}
+	}
+
+	switch {
+	case scalingClass == "small":
+		cpuRequest, cpuLimit = "800m", "1000m"
+		memoryRequest, memoryLimit = "800Mi", "1200Mi"
+
+	case scalingClass == "medium":
+		cpuRequest, cpuLimit = "1000m", "1200m"
+		memoryRequest, memoryLimit = "1100Mi", "1900Mi"
+
+	case scalingClass == "large":
+		cpuRequest, cpuLimit = "1200m", "1500m"
+		memoryRequest, memoryLimit = "1600Mi", "3900Mi"
+
+	case scalingClass == "xlarge":
+		cpuRequest, cpuLimit = "2500m", "3000m"
+		memoryRequest, memoryLimit = "5200Mi", "5900Mi"
+
+	case scalingClass == "2xlarge":
+		cpuRequest, cpuLimit = "3000m", "4000m"
+		memoryRequest, memoryLimit = "5200Mi", "7800Mi"
+	}
+
+	return corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(cpuRequest),
+			corev1.ResourceMemory: resource.MustParse(memoryRequest),
+		},
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(cpuLimit),
+			corev1.ResourceMemory: resource.MustParse(memoryLimit),
+		},
 	}
 }
 
@@ -193,6 +269,11 @@ func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
 		return kubeapiserver.Images{}, err
 	}
 
+	imageKubeAPIServer, err := b.ImageVector.FindImage(charts.ImageNameKubeApiserver, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return kubeapiserver.Images{}, err
+	}
+
 	imageVPNSeed, err := b.ImageVector.FindImage(charts.ImageNameVpnSeed, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
 	if err != nil {
 		return kubeapiserver.Images{}, err
@@ -201,6 +282,7 @@ func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
 	return kubeapiserver.Images{
 		AlpineIPTables:           imageAlpineIPTables.String(),
 		APIServerProxyPodWebhook: imageApiserverProxyPodWebhook.String(),
+		KubeAPIServer:            imageKubeAPIServer.String(),
 		VPNSeed:                  imageVPNSeed.String(),
 	}, nil
 }
@@ -243,9 +325,7 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 	return config
 }
 
-func (b *Botanist) computeKubeAPIServerReplicas(deployment *appsv1.Deployment) *int32 {
-	autoscalingConfig := b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues().Autoscaling
-
+func (b *Botanist) computeKubeAPIServerReplicas(autoscalingConfig kubeapiserver.AutoscalingConfig, deployment *appsv1.Deployment) *int32 {
 	switch {
 	case autoscalingConfig.Replicas != nil:
 		// If the replicas were already set then don't change them.
@@ -279,6 +359,8 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		return err
 	}
 
+	values := b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues()
+
 	deployment := &appsv1.Deployment{}
 	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -287,23 +369,29 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 		deployment = nil
 	}
 
-	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(b.computeKubeAPIServerReplicas(deployment))
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingReplicas(b.computeKubeAPIServerReplicas(values.Autoscaling, deployment))
 
-	var (
-		values  = b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues()
-		secrets = kubeapiserver.Secrets{
-			CA:                     component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
-			CAEtcd:                 component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
-			CAFrontProxy:           component.Secret{Name: v1beta1constants.SecretNameCAFrontProxy, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCAFrontProxy)},
-			Etcd:                   component.Secret{Name: etcd.SecretNameClient, Checksum: b.LoadCheckSum(etcd.SecretNameClient)},
-			EtcdEncryptionConfig:   component.Secret{Name: kubeapiserver.SecretNameEtcdEncryption, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameEtcdEncryption)},
-			KubeAggregator:         component.Secret{Name: kubeapiserver.SecretNameKubeAggregator, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAggregator)},
-			KubeAPIServerToKubelet: component.Secret{Name: kubeapiserver.SecretNameKubeAPIServerToKubelet, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAPIServerToKubelet)},
-			Server:                 component.Secret{Name: kubeapiserver.SecretNameServer, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameServer)},
-			ServiceAccountKey:      component.Secret{Name: v1beta1constants.SecretNameServiceAccountKey, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameServiceAccountKey)},
-			StaticToken:            component.Secret{Name: kubeapiserver.SecretNameStaticToken, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameStaticToken)},
+	if deployment != nil && values.Autoscaling.HVPAEnabled {
+		for _, container := range deployment.Spec.Template.Spec.Containers {
+			if container.Name == kubeapiserver.ContainerNameKubeAPIServer {
+				b.Shoot.Components.ControlPlane.KubeAPIServer.SetAutoscalingAPIServerResources(container.Resources)
+				break
+			}
 		}
-	)
+	}
+
+	secrets := kubeapiserver.Secrets{
+		CA:                     component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
+		CAEtcd:                 component.Secret{Name: etcd.SecretNameCA, Checksum: b.LoadCheckSum(etcd.SecretNameCA)},
+		CAFrontProxy:           component.Secret{Name: v1beta1constants.SecretNameCAFrontProxy, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCAFrontProxy)},
+		Etcd:                   component.Secret{Name: etcd.SecretNameClient, Checksum: b.LoadCheckSum(etcd.SecretNameClient)},
+		EtcdEncryptionConfig:   component.Secret{Name: kubeapiserver.SecretNameEtcdEncryption, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameEtcdEncryption)},
+		KubeAggregator:         component.Secret{Name: kubeapiserver.SecretNameKubeAggregator, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAggregator)},
+		KubeAPIServerToKubelet: component.Secret{Name: kubeapiserver.SecretNameKubeAPIServerToKubelet, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameKubeAPIServerToKubelet)},
+		Server:                 component.Secret{Name: kubeapiserver.SecretNameServer, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameServer)},
+		ServiceAccountKey:      component.Secret{Name: v1beta1constants.SecretNameServiceAccountKey, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameServiceAccountKey)},
+		StaticToken:            component.Secret{Name: kubeapiserver.SecretNameStaticToken, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameStaticToken)},
+	}
 
 	if values.BasicAuthenticationEnabled {
 		secrets.BasicAuthentication = &component.Secret{Name: kubeapiserver.SecretNameBasicAuth, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameBasicAuth)}

@@ -52,7 +52,8 @@ const (
 	// SecretNameVPNSeedTLSAuth is the name of the secret containing the TLS auth for the vpn-seed.
 	SecretNameVPNSeedTLSAuth = "vpn-seed-tlsauth"
 
-	containerNameKubeAPIServer            = "kube-apiserver"
+	// ContainerNameKubeAPIServer is the name of the kube-apiserver container.
+	ContainerNameKubeAPIServer            = "kube-apiserver"
 	containerNameVPNSeed                  = "vpn-seed"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 
@@ -126,6 +127,19 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					TerminationGracePeriodSeconds: pointer.Int64(30),
+					Containers: []corev1.Container{{
+						Name:                     ContainerNameKubeAPIServer,
+						Image:                    k.values.Images.KubeAPIServer,
+						ImagePullPolicy:          corev1.PullIfNotPresent,
+						TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+						Ports: []corev1.ContainerPort{{
+							Name:          "https",
+							ContainerPort: Port,
+							Protocol:      corev1.ProtocolTCP,
+						}},
+						Resources: k.values.Autoscaling.APIServerResources,
+					}},
 					Volumes: []corev1.Volume{
 						{
 							Name: volumeNameServer,

@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,6 +51,9 @@ type Interface interface {
 	SetSecrets(Secrets)
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
+	// SetAutoscalingAPIServerResources sets the APIServerResources field in the AutoscalingConfig of the Values of the
+	// deployer.
+	SetAutoscalingAPIServerResources(corev1.ResourceRequirements)
 	// SetAutoscalingReplicas sets the Replicas field in the AutoscalingConfig of the Values of the deployer.
 	SetAutoscalingReplicas(*int32)
 }
@@ -86,6 +90,8 @@ type AuditConfig struct {
 
 // AutoscalingConfig contains information for configuring autoscaling settings for the kube-apiserver.
 type AutoscalingConfig struct {
+	// APIServerResources are the resource requirements for the kube-apiserver container.
+	APIServerResources corev1.ResourceRequirements
 	// HVPAEnabled states whether an HVPA object shall be deployed. If false, HPA and VPA will be used.
 	HVPAEnabled bool
 	// Replicas is the number of pod replicas for the kube-apiserver.
@@ -108,6 +114,8 @@ type Images struct {
 	AlpineIPTables string
 	// APIServerProxyPodWebhook is the container image for the apiserver-proxy-pod-webhook.
 	APIServerProxyPodWebhook string
+	// KubeAPIServer is the container image for the kube-apiserver.
+	KubeAPIServer string
 	// VPNSeed is the container image for the vpn-seed.
 	VPNSeed string
 }
@@ -317,7 +325,7 @@ func (k *kubeAPIServer) Wait(ctx context.Context) error {
 			headBytes = pointer.Int64Ptr(1024)
 		}
 
-		logs, err2 := kutil.MostRecentCompleteLogs(ctx, k.client.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, containerNameKubeAPIServer, tailLines, headBytes)
+		logs, err2 := kutil.MostRecentCompleteLogs(ctx, k.client.Kubernetes().CoreV1().Pods(newestPod.Namespace), newestPod, ContainerNameKubeAPIServer, tailLines, headBytes)
 		if err2 != nil {
 			return fmt.Errorf("failure to read the logs: %s: %w", err2.Error(), err)
 		}
@@ -349,6 +357,11 @@ func (k *kubeAPIServer) WaitCleanup(ctx context.Context) error {
 func (k *kubeAPIServer) GetValues() Values {
 	return k.values
 }
+
+func (k *kubeAPIServer) SetAutoscalingAPIServerResources(resources corev1.ResourceRequirements) {
+	k.values.Autoscaling.APIServerResources = resources
+}
+
 func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
 	k.values.Autoscaling.Replicas = replicas
 }

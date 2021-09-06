@@ -27,8 +27,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -36,12 +34,10 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -267,77 +263,7 @@ func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane
 	return controlPlane.Deploy(ctx)
 }
 
-// getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
-func getResourcesForAPIServer(nodeCount int32, scalingClass string) (string, string, string, string) {
-	var (
-		validScalingClasses = sets.NewString("small", "medium", "large", "xlarge", "2xlarge")
-		cpuRequest          string
-		memoryRequest       string
-		cpuLimit            string
-		memoryLimit         string
-	)
-
-	if !validScalingClasses.Has(scalingClass) {
-		switch {
-		case nodeCount <= 2:
-			scalingClass = "small"
-		case nodeCount <= 10:
-			scalingClass = "medium"
-		case nodeCount <= 50:
-			scalingClass = "large"
-		case nodeCount <= 100:
-			scalingClass = "xlarge"
-		default:
-			scalingClass = "2xlarge"
-		}
-	}
-
-	switch {
-	case scalingClass == "small":
-		cpuRequest = "800m"
-		memoryRequest = "800Mi"
-
-		cpuLimit = "1000m"
-		memoryLimit = "1200Mi"
-	case scalingClass == "medium":
-		cpuRequest = "1000m"
-		memoryRequest = "1100Mi"
-
-		cpuLimit = "1200m"
-		memoryLimit = "1900Mi"
-	case scalingClass == "large":
-		cpuRequest = "1200m"
-		memoryRequest = "1600Mi"
-
-		cpuLimit = "1500m"
-		memoryLimit = "3900Mi"
-	case scalingClass == "xlarge":
-		cpuRequest = "2500m"
-		memoryRequest = "5200Mi"
-
-		cpuLimit = "3000m"
-		memoryLimit = "5900Mi"
-	case scalingClass == "2xlarge":
-		cpuRequest = "3000m"
-		memoryRequest = "5200Mi"
-
-		cpuLimit = "4000m"
-		memoryLimit = "7800Mi"
-	}
-
-	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
-}
-
 func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
-	var (
-		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPA)
-	)
-
-	if b.ManagedSeed != nil {
-		// Override for shooted seeds
-		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
-	}
-
 	var (
 		defaultValues = map[string]interface{}{
 			"etcdServicePort":           etcd.PortEtcdClient,
@@ -361,56 +287,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 		defaultValues["sni"] = map[string]interface{}{
 			"enabled":     true,
 			"advertiseIP": b.APIServerClusterIP,
-		}
-	}
-
-	foundDeployment := true
-	deployment := &appsv1.Deployment{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), deployment); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	} else if apierrors.IsNotFound(err) {
-		foundDeployment = false
-	}
-
-	if b.ManagedSeed != nil && b.ManagedSeedAPIServer != nil && !hvpaEnabled {
-		defaultValues["apiServerResources"] = map[string]interface{}{
-			"requests": map[string]interface{}{
-				"cpu":    "1750m",
-				"memory": "2Gi",
-			},
-			"limits": map[string]interface{}{
-				"cpu":    "4000m",
-				"memory": "8Gi",
-			},
-		}
-	} else {
-		var cpuRequest, memoryRequest, cpuLimit, memoryLimit string
-		if hvpaEnabled {
-			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMinNodeCount(), b.Shoot.GetInfo().Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
-		} else {
-			cpuRequest, memoryRequest, cpuLimit, memoryLimit = getResourcesForAPIServer(b.Shoot.GetMaxNodeCount(), b.Shoot.GetInfo().Annotations[v1beta1constants.ShootAlphaScalingAPIServerClass])
-		}
-		defaultValues["apiServerResources"] = map[string]interface{}{
-			"limits": map[string]interface{}{
-				"cpu":    cpuLimit,
-				"memory": memoryLimit,
-			},
-			"requests": map[string]interface{}{
-				"cpu":    cpuRequest,
-				"memory": memoryRequest,
-			},
-		}
-	}
-
-	if foundDeployment && hvpaEnabled {
-		// Deployment is already created AND is controlled by HVPA
-		// Keep the "resources" as it is.
-		for k := range deployment.Spec.Template.Spec.Containers {
-			v := &deployment.Spec.Template.Spec.Containers[k]
-			if v.Name == "kube-apiserver" {
-				defaultValues["apiServerResources"] = v.Resources.DeepCopy()
-				break
-			}
 		}
 	}
 
@@ -454,14 +330,7 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	serviceAccountConfigVals["issuer"] = serviceAccountTokenIssuerURL
 	defaultValues["serviceAccountConfig"] = serviceAccountConfigVals
 
-	values, err := b.InjectSeedShootImages(defaultValues,
-		charts.ImageNameKubeApiserver,
-	)
-	if err != nil {
-		return err
-	}
-
-	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, kubernetes.Values(values)); err != nil {
+	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, kubernetes.Values(defaultValues)); err != nil {
 		return err
 	}
 

@@ -1644,6 +1644,42 @@ rules:
 						},
 					}))
 				})
+
+				Context("kube-apiserver container", func() {
+					It("should have the kube-apiserver container with the expected metadata", func() {
+						var (
+							images             = Images{KubeAPIServer: "some-kapi-image:latest"}
+							apiServerResources = corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceMemory: resource.MustParse("2Gi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("2"),
+									corev1.ResourceMemory: resource.MustParse("4Gi"),
+								},
+							}
+						)
+
+						kapi = New(kubernetesInterface, namespace, Values{Autoscaling: AutoscalingConfig{APIServerResources: apiServerResources}, Images: images, Version: version})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(corev1.Container{
+							Name:                     "kube-apiserver",
+							Image:                    images.KubeAPIServer,
+							ImagePullPolicy:          corev1.PullIfNotPresent,
+							TerminationMessagePath:   "/dev/termination-log",
+							TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+							Ports: []corev1.ContainerPort{{
+								Name:          "https",
+								ContainerPort: int32(443),
+								Protocol:      corev1.ProtocolTCP,
+							}},
+							Resources: apiServerResources,
+						}))
+					})
+				})
 			})
 		})
 	})

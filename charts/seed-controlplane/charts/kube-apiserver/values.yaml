@@ -50,21 +50,8 @@ admissionPlugins:
 #       namespace1: <node-selectors-labels>
 #       namespace2: <node-selectors-labels>
 
-images:
-  kube-apiserver: image-repository
-  vpn-seed: image-repository:image-tag
-  apiserver-proxy-pod-webhook: image-repository:image-tag
-
 blackboxExporterPort: 9115
 etcdServicePort: 2379
-
-apiServerResources:
-  requests:
-    cpu: 400m
-    memory: 400M
-  limits:
-    cpu: 800m
-    memory: 900M
 
 auditConfig:
   auditPolicy: ""

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package botanist_test
+package botanist
 
 import (
 	"context"
@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
-	. "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	mockkubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver/mock"
@@ -44,6 +43,7 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/component-base/featuregate"
@@ -111,6 +111,7 @@ var _ = Describe("KubeAPIServer", func() {
 				ImageVector: imagevector.ImageVector{
 					{Name: "alpine-iptables"},
 					{Name: "apiserver-proxy-pod-webhook"},
+					{Name: "kube-apiserver"},
 					{Name: "vpn-seed"},
 				},
 			},
@@ -144,12 +145,21 @@ var _ = Describe("KubeAPIServer", func() {
 			Expect(kubeAPIServer).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("could not find image \"apiserver-proxy-pod-webhook\"")))
 		})
+
 		It("should return an error because the vpn-seed cannot be found", func() {
-			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine-iptables"}, {Name: "apiserver-proxy-pod-webhook"}}
+			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine-iptables"}, {Name: "apiserver-proxy-pod-webhook"}, {Name: "kube-apiserver"}}
 
 			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 			Expect(kubeAPIServer).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("could not find image \"vpn-seed\"")))
+		})
+
+		It("should return an error because the kube-apiserver cannot be found", func() {
+			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine-iptables"}, {Name: "apiserver-proxy-pod-webhook"}, {Name: "vpn-seed"}}
+
+			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+			Expect(kubeAPIServer).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("could not find image \"kube-apiserver\"")))
 		})
 
 		Describe("AdmissionPlugins", func() {
@@ -441,6 +451,7 @@ var _ = Describe("KubeAPIServer", func() {
 					nil,
 					featureGatePtr(features.HVPA), pointer.Bool(false),
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -452,6 +463,7 @@ var _ = Describe("KubeAPIServer", func() {
 					nil,
 					featureGatePtr(features.HVPA), pointer.Bool(true),
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               true,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -465,6 +477,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil, nil,
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               2,
 						MaxReplicas:               4,
@@ -478,6 +491,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					nil, nil,
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               4,
 						MaxReplicas:               4,
@@ -491,6 +505,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(false),
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               false,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -504,6 +519,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(true),
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               true,
 						MinReplicas:               1,
 						MaxReplicas:               4,
@@ -524,6 +540,7 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(true),
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources:        resourcesRequirementsForKubeAPIServer(0, ""),
 						HVPAEnabled:               true,
 						MinReplicas:               16,
 						MaxReplicas:               32,
@@ -544,6 +561,16 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 					featureGatePtr(features.HVPAForShootedSeed), pointer.Bool(false),
 					kubeapiserver.AutoscalingConfig{
+						APIServerResources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("1750m"),
+								corev1.ResourceMemory: resource.MustParse("2Gi"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("4000m"),
+								corev1.ResourceMemory: resource.MustParse("8Gi"),
+							},
+						},
 						HVPAEnabled:               false,
 						MinReplicas:               16,
 						MaxReplicas:               32,
@@ -866,6 +893,43 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 	})
 
+	DescribeTable("#resourcesRequirementsForKubeAPIServer",
+		func(nodes int, storageClass, expectedCPURequest, expectedMemoryRequest, expectedCPULimit, expectedMemoryLimit string) {
+			Expect(resourcesRequirementsForKubeAPIServer(int32(nodes), storageClass)).To(Equal(
+				corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse(expectedCPURequest),
+						corev1.ResourceMemory: resource.MustParse(expectedMemoryRequest),
+					},
+					Limits: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse(expectedCPULimit),
+						corev1.ResourceMemory: resource.MustParse(expectedMemoryLimit),
+					},
+				}))
+		},
+
+		// nodes tests
+		Entry("nodes <= 2", 2, "", "800m", "800Mi", "1000m", "1200Mi"),
+		Entry("nodes <= 10", 10, "", "1000m", "1100Mi", "1200m", "1900Mi"),
+		Entry("nodes <= 50", 50, "", "1200m", "1600Mi", "1500m", "3900Mi"),
+		Entry("nodes <= 100", 100, "", "2500m", "5200Mi", "3000m", "5900Mi"),
+		Entry("nodes > 100", 1000, "", "3000m", "5200Mi", "4000m", "7800Mi"),
+
+		// scaling class tests
+		Entry("scaling class small", -1, "small", "800m", "800Mi", "1000m", "1200Mi"),
+		Entry("scaling class medium", -1, "medium", "1000m", "1100Mi", "1200m", "1900Mi"),
+		Entry("scaling class large", -1, "large", "1200m", "1600Mi", "1500m", "3900Mi"),
+		Entry("scaling class xlarge", -1, "xlarge", "2500m", "5200Mi", "3000m", "5900Mi"),
+		Entry("scaling class 2xlarge", -1, "2xlarge", "3000m", "5200Mi", "4000m", "7800Mi"),
+
+		// scaling class always decides if provided
+		Entry("nodes > 100, scaling class small", 100, "small", "800m", "800Mi", "1000m", "1200Mi"),
+		Entry("nodes <= 100, scaling class medium", 100, "medium", "1000m", "1100Mi", "1200m", "1900Mi"),
+		Entry("nodes <= 50, scaling class large", 50, "large", "1200m", "1600Mi", "1500m", "3900Mi"),
+		Entry("nodes <= 10, scaling class xlarge", 10, "xlarge", "2500m", "5200Mi", "3000m", "5900Mi"),
+		Entry("nodes <= 2, scaling class 2xlarge", 2, "2xlarge", "3000m", "5200Mi", "4000m", "7800Mi"),
+	)
+
 	Describe("#DeployKubeAPIServer", func() {
 		DescribeTable("should correctly set the autoscaling replicas",
 			func(prepTest func(), autoscalingConfig kubeapiserver.AutoscalingConfig, expectedReplicas int32) {
@@ -881,7 +945,6 @@ var _ = Describe("KubeAPIServer", func() {
 
 				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{Autoscaling: autoscalingConfig})
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(&expectedReplicas)
-				kubeAPIServer.EXPECT().GetValues()
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
 				kubeAPIServer.EXPECT().Deploy(ctx)
 
@@ -931,6 +994,91 @@ var _ = Describe("KubeAPIServer", func() {
 			),
 		)
 
+		var apiServerResources = corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("1"),
+				corev1.ResourceMemory: resource.MustParse("2"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("3"),
+				corev1.ResourceMemory: resource.MustParse("4"),
+			},
+		}
+
+		DescribeTable("should correctly set the autoscaling apiserver resources",
+			func(prepTest func(), autoscalingConfig kubeapiserver.AutoscalingConfig, expectedResources *corev1.ResourceRequirements) {
+				if prepTest != nil {
+					prepTest()
+				}
+
+				oldGetDeployKubeAPIServerFunc := GetLegacyDeployKubeAPIServerFunc
+				defer func() { GetLegacyDeployKubeAPIServerFunc = oldGetDeployKubeAPIServerFunc }()
+				GetLegacyDeployKubeAPIServerFunc = func(*Botanist) func(context.Context) error {
+					return func(context.Context) error { return nil }
+				}
+
+				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{Autoscaling: autoscalingConfig})
+				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
+				if expectedResources != nil {
+					kubeAPIServer.EXPECT().SetAutoscalingAPIServerResources(*expectedResources)
+				}
+				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
+				kubeAPIServer.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployKubeAPIServer(ctx)).To(Succeed())
+			},
+
+			Entry("nothing is set because deployment is not found",
+				nil,
+				kubeapiserver.AutoscalingConfig{},
+				nil,
+			),
+			Entry("nothing is set because HVPA is disabled",
+				func() {
+					Expect(c.Create(ctx, &appsv1.Deployment{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kube-apiserver",
+							Namespace: shootNamespace,
+						},
+						Spec: appsv1.DeploymentSpec{
+							Template: corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{{
+										Name:      "kube-apiserver",
+										Resources: apiServerResources,
+									}},
+								},
+							},
+						},
+					})).To(Succeed())
+				},
+				kubeapiserver.AutoscalingConfig{HVPAEnabled: false},
+				nil,
+			),
+			Entry("set the existing requirements because deployment found and HVPA enabled",
+				func() {
+					Expect(c.Create(ctx, &appsv1.Deployment{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "kube-apiserver",
+							Namespace: shootNamespace,
+						},
+						Spec: appsv1.DeploymentSpec{
+							Template: corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{{
+										Name:      "kube-apiserver",
+										Resources: apiServerResources,
+									}},
+								},
+							},
+						},
+					})).To(Succeed())
+				},
+				kubeapiserver.AutoscalingConfig{HVPAEnabled: true},
+				&apiServerResources,
+			),
+		)
+
 		DescribeTable("should correctly set the secrets",
 			func(values kubeapiserver.Values, mutateSecrets func(*kubeapiserver.Secrets)) {
 				secrets := kubeapiserver.Secrets{
@@ -953,9 +1101,8 @@ var _ = Describe("KubeAPIServer", func() {
 					return func(context.Context) error { return nil }
 				}
 
-				kubeAPIServer.EXPECT().GetValues()
-				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				kubeAPIServer.EXPECT().GetValues().Return(values)
+				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
 				kubeAPIServer.EXPECT().SetSecrets(secrets)
 				kubeAPIServer.EXPECT().Deploy(ctx)
 

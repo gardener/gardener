@@ -10,6 +10,7 @@ import (
 
 	kubeapiserver "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	gomock "github.com/golang/mock/gomock"
+	v1 "k8s.io/api/core/v1"
 )
 
 // MockInterface is a mock of Interface interface.
@@ -75,6 +76,18 @@ func (m *MockInterface) GetValues() kubeapiserver.Values {
 func (mr *MockInterfaceMockRecorder) GetValues() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValues", reflect.TypeOf((*MockInterface)(nil).GetValues))
+}
+
+// SetAutoscalingAPIServerResources mocks base method.
+func (m *MockInterface) SetAutoscalingAPIServerResources(arg0 v1.ResourceRequirements) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetAutoscalingAPIServerResources", arg0)
+}
+
+// SetAutoscalingAPIServerResources indicates an expected call of SetAutoscalingAPIServerResources.
+func (mr *MockInterfaceMockRecorder) SetAutoscalingAPIServerResources(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAutoscalingAPIServerResources", reflect.TypeOf((*MockInterface)(nil).SetAutoscalingAPIServerResources), arg0)
 }
 
 // SetAutoscalingReplicas mocks base method.
