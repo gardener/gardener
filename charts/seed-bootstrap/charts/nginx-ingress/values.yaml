@@ -1,4 +1,5 @@
 global:
+  ingressClass: "seed-nginx"
   images:
     nginx-ingress-controller-seed: image-repository:image-tag
     ingress-default-backend: image-repository:image-tag

@@ -448,6 +448,8 @@ const (
 
 	// SeedNginxIngressClass defines the ingress class for the seed nginx ingress controller
 	SeedNginxIngressClass = "nginx-gardener"
+	// SeedNginxIngressClass122 defines the ingress class for the seed nginx ingress controller for K8s >= 1.22
+	SeedNginxIngressClass122 = "nginx-ingress-gardener"
 	// IngressKindNginx defines nginx as kind as managed Seed ingress
 	IngressKindNginx = "nginx"
 	// ShootNginxIngressClass defines the ingress class for the seed nginx ingress controller

@@ -1,0 +1,11 @@
+{{- if semverCompare ">= 1.22" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  labels:
+    app: nginx-ingress
+    component: "controller"
+  name: {{ .Values.global.ingressClass }}
+spec:
+  controller: {{ include "nginx-ingress.class" . }}
+{{- end }}
