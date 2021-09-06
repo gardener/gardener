@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
@@ -57,10 +58,14 @@ const (
 	containerNameVPNSeed                  = "vpn-seed"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 
-	volumeNameLibModules     = "modules"
-	volumeNameServer         = "kube-apiserver"
-	volumeNameVPNSeed        = "vpn-seed"
-	volumeNameVPNSeedTLSAuth = "vpn-seed-tlsauth"
+	volumeNameLibModules      = "modules"
+	volumeNameServer          = "kube-apiserver"
+	volumeNameVPNSeed         = "vpn-seed"
+	volumeNameVPNSeedTLSAuth  = "vpn-seed-tlsauth"
+	volumeNameFedora          = "fedora-rhel6-openelec-cabundle"
+	volumeNameCentOS          = "centos-rhel7-cabundle"
+	volumeNameEtcSSL          = "etc-ssl"
+	volumeNameUsrShareCaCerts = "usr-share-cacerts"
 
 	volumeMountPathAdmissionConfiguration = "/etc/kubernetes/admission"
 	volumeMountPathHTTPProxy              = "/etc/srv/kubernetes/envoy"
@@ -68,6 +73,10 @@ const (
 	volumeMountPathServer                 = "/srv/kubernetes/apiserver"
 	volumeMountPathVPNSeed                = "/srv/secrets/vpn-seed"
 	volumeMountPathVPNSeedTLSAuth         = "/srv/secrets/tlsauth"
+	volumeMountPathFedora                 = "/etc/pki/tls"
+	volumeMountPathCentOS                 = "/etc/pki/ca-trust/extracted/pem"
+	volumeMountPathEtcSSL                 = "/etc/ssl"
+	volumeMountPathUsrShareCaCerts        = "/usr/share/ca-certificates"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
@@ -76,8 +85,9 @@ func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
 
 func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *appsv1.Deployment) error {
 	var (
-		maxSurge       = intstr.FromString("25%")
-		maxUnavailable = intstr.FromInt(0)
+		maxSurge          = intstr.FromString("25%")
+		maxUnavailable    = intstr.FromInt(0)
+		directoryOrCreate = corev1.HostPathDirectoryOrCreate
 	)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
@@ -152,6 +162,72 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 					},
 				},
 			},
+		}
+
+		if versionutils.ConstraintK8sGreaterEqual117.Check(k.values.Version) {
+			// locations are taken from
+			// https://github.com/golang/go/blob/1bb247a469e306c57a5e0eaba788efb8b3b1acef/src/crypto/x509/root_linux.go#L7-L15
+			// we cannot be sure on which Node OS the Seed Cluster is running so, it's safer to mount them all
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+				{
+					Name:      volumeNameFedora,
+					MountPath: volumeMountPathFedora,
+					ReadOnly:  true,
+				},
+				{
+					Name:      volumeNameCentOS,
+					MountPath: volumeMountPathCentOS,
+					ReadOnly:  true,
+				},
+				{
+					Name:      volumeNameEtcSSL,
+					MountPath: volumeMountPathEtcSSL,
+					ReadOnly:  true,
+				},
+				{
+					Name:      volumeNameUsrShareCaCerts,
+					MountPath: volumeMountPathUsrShareCaCerts,
+					ReadOnly:  true,
+				},
+			}...)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+				{
+					Name: volumeNameFedora,
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: volumeMountPathFedora,
+							Type: &directoryOrCreate,
+						},
+					},
+				},
+				{
+					Name: volumeNameCentOS,
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: volumeMountPathCentOS,
+							Type: &directoryOrCreate,
+						},
+					},
+				},
+				{
+					Name: volumeNameEtcSSL,
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: volumeMountPathEtcSSL,
+							Type: &directoryOrCreate,
+						},
+					},
+				},
+				{
+					Name: volumeNameUsrShareCaCerts,
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: volumeMountPathUsrShareCaCerts,
+							Type: &directoryOrCreate,
+						},
+					},
+				},
+			}...)
 		}
 
 		if !k.values.VPN.ReversedVPNEnabled {

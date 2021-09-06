@@ -115,7 +115,7 @@ var _ = Describe("KubeAPIServer", func() {
 	BeforeEach(func() {
 		c = fakeclient.NewClientBuilder().WithScheme(kubernetes.SeedScheme).Build()
 		kubernetesInterface = fakekubernetes.NewClientSetBuilder().WithAPIReader(c).WithClient(c).Build()
-		kapi = New(kubernetesInterface, namespace, Values{})
+		kapi = New(kubernetesInterface, namespace, Values{Version: version})
 
 		secrets = Secrets{
 			BasicAuthentication:    &component.Secret{Name: secretNameBasicAuthentication, Checksum: secretChecksumBasicAuthentication},
@@ -201,6 +201,7 @@ var _ = Describe("KubeAPIServer", func() {
 			DescribeTable("should return an error because secret information is not provided",
 				func(name string, mutateSecrets func(*Secrets), values Values) {
 					mutateSecrets(&secrets)
+					values.Version = version
 
 					kapi = New(kubernetesInterface, namespace, values)
 					kapi.SetSecrets(secrets)
@@ -261,7 +262,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Describe("HorizontalPodAutoscaler", func() {
 				DescribeTable("should delete the HPA resource",
 					func(autoscalingConfig AutoscalingConfig) {
-						kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
+						kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig, Version: version})
 						kapi.SetSecrets(secrets)
 
 						Expect(c.Create(ctx, horizontalPodAutoscaler)).To(Succeed())
@@ -282,7 +283,7 @@ var _ = Describe("KubeAPIServer", func() {
 						MinReplicas: 4,
 						MaxReplicas: 6,
 					}
-					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
+					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(horizontalPodAutoscaler), horizontalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv2beta1.SchemeGroupVersion.Group, Resource: "horizontalpodautoscalers"}, horizontalPodAutoscaler.Name)))
@@ -329,7 +330,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 			Describe("VerticalPodAutoscaler", func() {
 				It("should delete the VPA resource", func() {
-					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: AutoscalingConfig{HVPAEnabled: true}})
+					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: AutoscalingConfig{HVPAEnabled: true}, Version: version})
 					kapi.SetSecrets(secrets)
 
 					Expect(c.Create(ctx, verticalPodAutoscaler)).To(Succeed())
@@ -340,7 +341,7 @@ var _ = Describe("KubeAPIServer", func() {
 
 				It("should successfully deploy the VPA resource", func() {
 					autoscalingConfig := AutoscalingConfig{HVPAEnabled: false}
-					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
+					kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
 					Expect(c.Get(ctx, client.ObjectKeyFromObject(verticalPodAutoscaler), verticalPodAutoscaler)).To(MatchError(apierrors.NewNotFound(schema.GroupResource{Group: autoscalingv1beta2.SchemeGroupVersion.Group, Resource: "verticalpodautoscalers"}, verticalPodAutoscaler.Name)))
@@ -373,7 +374,7 @@ var _ = Describe("KubeAPIServer", func() {
 			Describe("HVPA", func() {
 				DescribeTable("should delete the HVPA resource",
 					func(autoscalingConfig AutoscalingConfig) {
-						kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig})
+						kapi = New(kubernetesInterface, namespace, Values{Autoscaling: autoscalingConfig, Version: version})
 						kapi.SetSecrets(secrets)
 
 						Expect(c.Create(ctx, hvpa)).To(Succeed())
@@ -436,6 +437,7 @@ var _ = Describe("KubeAPIServer", func() {
 						kapi = New(kubernetesInterface, namespace, Values{
 							Autoscaling: autoscalingConfig,
 							SNI:         sniConfig,
+							Version:     version,
 						})
 						kapi.SetSecrets(secrets)
 
@@ -1068,7 +1070,7 @@ subjects:
 						oidcConfig = &gardencorev1beta1.OIDCConfig{CABundle: &caBundle}
 					)
 
-					kapi = New(kubernetesInterface, namespace, Values{OIDC: oidcConfig})
+					kapi = New(kubernetesInterface, namespace, Values{OIDC: oidcConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
 					secretOIDCCABundle = &corev1.Secret{
@@ -1102,7 +1104,7 @@ subjects:
 						serviceAccountConfig = &ServiceAccountConfig{SigningKey: signingKey}
 					)
 
-					kapi = New(kubernetesInterface, namespace, Values{ServiceAccountConfig: serviceAccountConfig})
+					kapi = New(kubernetesInterface, namespace, Values{ServiceAccountConfig: serviceAccountConfig, Version: version})
 					kapi.SetSecrets(secrets)
 
 					secretServiceAccountSigningKey = &corev1.Secret{
@@ -1169,7 +1171,7 @@ plugins: null
 							{Name: "Baz", Config: &runtime.RawExtension{Raw: []byte("some-config-for-baz")}},
 						}
 
-						kapi = New(kubernetesInterface, namespace, Values{AdmissionPlugins: admissionPlugins})
+						kapi = New(kubernetesInterface, namespace, Values{AdmissionPlugins: admissionPlugins, Version: version})
 						kapi.SetSecrets(secrets)
 
 						configMapAdmission = &corev1.ConfigMap{
@@ -1246,7 +1248,7 @@ rules:
 							auditConfig = &AuditConfig{Policy: &policy}
 						)
 
-						kapi = New(kubernetesInterface, namespace, Values{Audit: auditConfig})
+						kapi = New(kubernetesInterface, namespace, Values{Audit: auditConfig, Version: version})
 						kapi.SetSecrets(secrets)
 
 						configMapAuditPolicy = &corev1.ConfigMap{
@@ -1646,38 +1648,116 @@ rules:
 				})
 
 				Context("kube-apiserver container", func() {
+					images := Images{KubeAPIServer: "some-kapi-image:latest"}
+
 					It("should have the kube-apiserver container with the expected metadata", func() {
-						var (
-							images             = Images{KubeAPIServer: "some-kapi-image:latest"}
-							apiServerResources = corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1"),
-									corev1.ResourceMemory: resource.MustParse("2Gi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("2"),
-									corev1.ResourceMemory: resource.MustParse("4Gi"),
-								},
-							}
-						)
+						apiServerResources := corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("1"),
+								corev1.ResourceMemory: resource.MustParse("2Gi"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("2"),
+								corev1.ResourceMemory: resource.MustParse("4Gi"),
+							},
+						}
 
 						kapi = New(kubernetesInterface, namespace, Values{Autoscaling: AutoscalingConfig{APIServerResources: apiServerResources}, Images: images, Version: version})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
-						Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(corev1.Container{
-							Name:                     "kube-apiserver",
-							Image:                    images.KubeAPIServer,
-							ImagePullPolicy:          corev1.PullIfNotPresent,
-							TerminationMessagePath:   "/dev/termination-log",
-							TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-							Ports: []corev1.ContainerPort{{
-								Name:          "https",
-								ContainerPort: int32(443),
-								Protocol:      corev1.ProtocolTCP,
-							}},
-							Resources: apiServerResources,
+						Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("kube-apiserver"))
+						Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(images.KubeAPIServer))
+						Expect(deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
+						Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePath).To(Equal("/dev/termination-log"))
+						Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePolicy).To(Equal(corev1.TerminationMessageReadFile))
+						Expect(deployment.Spec.Template.Spec.Containers[0].Ports).To(ConsistOf(corev1.ContainerPort{
+							Name:          "https",
+							ContainerPort: int32(443),
+							Protocol:      corev1.ProtocolTCP,
 						}))
+						Expect(deployment.Spec.Template.Spec.Containers[0].Resources).To(Equal(apiServerResources))
+					})
+
+					It("should mount the host pki directories if k8s >= 1.17", func() {
+						directoryOrCreate := corev1.HostPathDirectoryOrCreate
+
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
+							corev1.VolumeMount{
+								Name:      "fedora-rhel6-openelec-cabundle",
+								MountPath: "/etc/pki/tls",
+								ReadOnly:  true,
+							},
+							corev1.VolumeMount{
+								Name:      "centos-rhel7-cabundle",
+								MountPath: "/etc/pki/ca-trust/extracted/pem",
+								ReadOnly:  true,
+							},
+							corev1.VolumeMount{
+								Name:      "etc-ssl",
+								MountPath: "/etc/ssl",
+								ReadOnly:  true,
+							},
+							corev1.VolumeMount{
+								Name:      "usr-share-cacerts",
+								MountPath: "/usr/share/ca-certificates",
+								ReadOnly:  true,
+							},
+						))
+
+						Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElements(
+							corev1.Volume{
+								Name: "fedora-rhel6-openelec-cabundle",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/etc/pki/tls",
+										Type: &directoryOrCreate,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "centos-rhel7-cabundle",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/etc/pki/ca-trust/extracted/pem",
+										Type: &directoryOrCreate,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "etc-ssl",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/etc/ssl",
+										Type: &directoryOrCreate,
+									},
+								},
+							},
+							corev1.Volume{
+								Name: "usr-share-cacerts",
+								VolumeSource: corev1.VolumeSource{
+									HostPath: &corev1.HostPathVolumeSource{
+										Path: "/usr/share/ca-certificates",
+										Type: &directoryOrCreate,
+									},
+								},
+							},
+						))
+					})
+
+					It("should not mount the host pki directories if k8s < 1.17", func() {
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.16.9")})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						for _, name := range []string{"fedora-rhel6-openelec-cabundle", "centos-rhel7-cabundle", "etc-ssl", "usr-share-cacerts"} {
+							Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal(name)})))
+							Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal(name)})))
+						}
 					})
 				})
 			})
