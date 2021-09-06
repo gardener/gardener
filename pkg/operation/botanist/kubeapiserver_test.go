@@ -62,9 +62,10 @@ var _ = Describe("KubeAPIServer", func() {
 		botanist        *Botanist
 		kubeAPIServer   *mockkubeapiserver.MockInterface
 
-		ctx              = context.TODO()
-		projectNamespace = "garden-my-project"
-		shootNamespace   = "shoot--foo--bar"
+		ctx                   = context.TODO()
+		projectNamespace      = "garden-my-project"
+		shootNamespace        = "shoot--foo--bar"
+		internalClusterDomain = "foo.bar.com"
 	)
 
 	BeforeEach(func() {
@@ -89,9 +90,11 @@ var _ = Describe("KubeAPIServer", func() {
 							KubeAPIServer: kubeAPIServer,
 						},
 					},
+					InternalClusterDomain: internalClusterDomain,
 				},
 				ImageVector: imagevector.ImageVector{
 					{Name: "alpine-iptables"},
+					{Name: "apiserver-proxy-pod-webhook"},
 				},
 			},
 		}
@@ -109,6 +112,14 @@ var _ = Describe("KubeAPIServer", func() {
 			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 			Expect(kubeAPIServer).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("could not find image \"alpine-iptables\"")))
+		})
+
+		It("should return an error because the apiserver-proxy-pod-webhook cannot be found", func() {
+			botanist.ImageVector = imagevector.ImageVector{{Name: "alpine-iptables"}}
+
+			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+			Expect(kubeAPIServer).To(BeNil())
+			Expect(err).To(MatchError(ContainSubstring("could not find image \"apiserver-proxy-pod-webhook\"")))
 		})
 
 		Describe("AdmissionPlugins", func() {
@@ -755,6 +766,7 @@ var _ = Describe("KubeAPIServer", func() {
 					kubeapiserver.SNIConfig{
 						Enabled:           true,
 						PodMutatorEnabled: true,
+						APIServerFQDN:     "api." + internalClusterDomain,
 					},
 				),
 				Entry("SNI and both DNS enabled but pod injector disabled via annotation",

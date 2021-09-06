@@ -1369,7 +1369,9 @@ rules:
 				It("should have the expected annotations", func() {
 					deployAndRead()
 
-					Expect(deployment.Annotations).To(BeNil())
+					Expect(deployment.Annotations).To(Equal(map[string]string{
+						"reference.resources.gardener.cloud/secret-e2878235": secretNameServer,
+					}))
 				})
 
 				It("should have the expected deployment settings", func() {
@@ -1417,6 +1419,7 @@ rules:
 						"checksum/secret-" + secretNameEtcdEncryptionConfig:   secretChecksumEtcdEncryptionConfig,
 						"checksum/secret-" + secretNameServer:                 secretChecksumServer,
 						"checksum/secret-" + secretNameVPNSeedTLSAuth:         secretChecksumVPNSeedTLSAuth,
+						"reference.resources.gardener.cloud/secret-e2878235":  secretNameServer,
 					}))
 					Expect(deployment.Spec.Template.Labels).To(Equal(map[string]string{
 						"garden.sapcloud.io/role":          "controlplane",
@@ -1493,6 +1496,53 @@ rules:
 						Name: "modules",
 						VolumeSource: corev1.VolumeSource{
 							HostPath: &corev1.HostPathVolumeSource{Path: "/lib/modules"},
+						},
+					}))
+				})
+
+				It("should have the mutator sidecar container when enabled", func() {
+					var (
+						fqdn   = "fqdn.fqdn"
+						images = Images{APIServerProxyPodWebhook: "some-image:latest"}
+					)
+
+					kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, SNI: SNIConfig{
+						PodMutatorEnabled: true,
+						APIServerFQDN:     fqdn,
+					}})
+					kapi.SetSecrets(secrets)
+					deployAndRead()
+
+					Expect(deployment.Spec.Template.Spec.Containers).To(ContainElement(corev1.Container{
+						Name:  "apiserver-proxy-pod-mutator",
+						Image: images.APIServerProxyPodWebhook,
+						Args: []string{
+							"--apiserver-fqdn=" + fqdn,
+							"--host=localhost",
+							"--port=9443",
+							"--cert-dir=/srv/kubernetes/apiserver",
+							"--cert-name=kube-apiserver.crt",
+							"--key-name=kube-apiserver.key",
+						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("50m"),
+								corev1.ResourceMemory: resource.MustParse("128M"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("200m"),
+								corev1.ResourceMemory: resource.MustParse("500M"),
+							},
+						},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      "kube-apiserver",
+							MountPath: "/srv/kubernetes/apiserver",
+						}},
+					}))
+					Expect(deployment.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
+						Name: "kube-apiserver",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{SecretName: secretNameServer},
 						},
 					}))
 				})

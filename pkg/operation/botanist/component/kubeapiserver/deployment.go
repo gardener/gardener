@@ -20,10 +20,12 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -55,10 +57,12 @@ const (
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 
 	volumeNameLibModules = "modules"
+	volumeNameServer     = "kube-apiserver"
 
 	volumeMountPathAdmissionConfiguration = "/etc/kubernetes/admission"
 	volumeMountPathHTTPProxy              = "/etc/srv/kubernetes/envoy"
 	volumeMountPathLibModules             = "/lib/modules"
+	volumeMountPathServer                 = "/srv/kubernetes/apiserver"
 )
 
 func (k *kubeAPIServer) emptyDeployment() *appsv1.Deployment {
@@ -118,6 +122,16 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					TerminationGracePeriodSeconds: pointer.Int64(30),
+					Volumes: []corev1.Volume{
+						{
+							Name: volumeNameServer,
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: k.secrets.Server.Name,
+								},
+							},
+						},
+					},
 				},
 			},
 		}
@@ -147,6 +161,35 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 				VolumeSource: corev1.VolumeSource{
 					HostPath: &corev1.HostPathVolumeSource{Path: "/lib/modules"},
 				},
+			})
+		}
+
+		if k.values.SNI.PodMutatorEnabled {
+			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
+				Name:  containerNameAPIServerProxyPodMutator,
+				Image: k.values.Images.APIServerProxyPodWebhook,
+				Args: []string{
+					"--apiserver-fqdn=" + k.values.SNI.APIServerFQDN,
+					"--host=localhost",
+					"--port=9443",
+					"--cert-dir=" + volumeMountPathServer,
+					"--cert-name=" + secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer),
+					"--key-name=" + secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer),
+				},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("50m"),
+						corev1.ResourceMemory: resource.MustParse("128M"),
+					},
+					Limits: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("200m"),
+						corev1.ResourceMemory: resource.MustParse("500M"),
+					},
+				},
+				VolumeMounts: []corev1.VolumeMount{{
+					Name:      volumeNameServer,
+					MountPath: volumeMountPathServer,
+				}},
 			})
 		}
 

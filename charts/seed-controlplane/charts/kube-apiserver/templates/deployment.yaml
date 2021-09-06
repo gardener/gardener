@@ -197,22 +197,6 @@
           mountPath: /usr/share/ca-certificates
           readOnly: true
         {{- end }}
-      {{- if .Values.sni.podMutatorEnabled }}
-      - name: apiserver-proxy-pod-mutator
-        image: {{ index .Values.images "apiserver-proxy-pod-webhook" }}
-        args:
-        - --apiserver-fqdn={{ .Values.sni.apiserverFQDN }}
-        - --host=localhost
-        - --cert-dir=/srv/kubernetes/apiserver
-        - --cert-name=kube-apiserver.crt
-        - --key-name=kube-apiserver.key
-        - --port=9443
-        resources:
-{{ toYaml .Values.podMutatorResources | indent 10 }}
-        volumeMounts:
-        - name: kube-apiserver
-          mountPath: /srv/kubernetes/apiserver
-      {{- end }}
       {{- if (not .Values.reversedVPN.enabled) }}
       - name: vpn-seed
         image: {{ index .Values.images "vpn-seed" }}

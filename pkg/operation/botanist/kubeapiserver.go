@@ -47,6 +47,11 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		return nil, err
 	}
 
+	imageApiserverProxyPodWebhook, err := b.ImageVector.FindImage(charts.ImageNameApiserverProxyPodWebhook, imagevector.RuntimeVersion(b.SeedVersion()), imagevector.TargetVersion(b.ShootVersion()))
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		admissionPlugins     = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
 		auditConfig          *kubeapiserver.AuditConfig
@@ -79,16 +84,14 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			Autoscaling:                b.computeKubeAPIServerAutoscalingConfig(),
 			BasicAuthenticationEnabled: gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
 			Images: kubeapiserver.Images{
-				AlpineIPTables: imageAlpineIPTables.String(),
+				AlpineIPTables:           imageAlpineIPTables.String(),
+				APIServerProxyPodWebhook: imageApiserverProxyPodWebhook.String(),
 			},
 			OIDC:                 oidcConfig,
 			ReversedVPNEnabled:   b.Shoot.ReversedVPNEnabled,
 			ServiceAccountConfig: serviceAccountConfig,
-			SNI: kubeapiserver.SNIConfig{
-				Enabled:           b.APIServerSNIEnabled(),
-				PodMutatorEnabled: b.APIServerSNIPodMutatorEnabled(),
-			},
-			Version: b.Shoot.KubernetesVersion,
+			SNI:                  b.computeKubeAPIServerSNIConfig(),
+			Version:              b.Shoot.KubernetesVersion,
 		},
 	), nil
 }
@@ -203,6 +206,21 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context,
 	}
 
 	return out, nil
+}
+
+func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
+	var config kubeapiserver.SNIConfig
+
+	if b.APIServerSNIEnabled() {
+		config.Enabled = true
+
+		if b.APIServerSNIPodMutatorEnabled() {
+			config.PodMutatorEnabled = true
+			config.APIServerFQDN = b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
+		}
+	}
+
+	return config
 }
 
 func (b *Botanist) computeKubeAPIServerReplicas(deployment *appsv1.Deployment) *int32 {

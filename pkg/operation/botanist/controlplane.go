@@ -366,10 +366,8 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 
 	if b.APIServerSNIEnabled() {
 		defaultValues["sni"] = map[string]interface{}{
-			"enabled":           true,
-			"advertiseIP":       b.APIServerClusterIP,
-			"apiserverFQDN":     b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-			"podMutatorEnabled": b.APIServerSNIPodMutatorEnabled(),
+			"enabled":     true,
+			"advertiseIP": b.APIServerClusterIP,
 		}
 	}
 
@@ -466,7 +464,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 	values, err := b.InjectSeedShootImages(defaultValues,
 		charts.ImageNameVpnSeed,
 		charts.ImageNameKubeApiserver,
-		charts.ImageNameApiserverProxyPodWebhook,
 	)
 	if err != nil {
 		return err

@@ -76,14 +76,6 @@ apiServerResources:
     cpu: 800m
     memory: 900M
 
-podMutatorResources:
-  requests:
-    cpu: 50m
-    memory: 128M
-  limits:
-    cpu: 200m
-    memory: 500M
-
 auditConfig:
   auditPolicy: ""
 
@@ -109,8 +101,6 @@ apiAudiences:
 sni:
   enabled: false
   advertiseIP: 1.1.1.1
-  podMutatorEnabled: false
-  # apiserverFQDN: foo.bar.
 
 # watchCacheSizes:
 #   default: 100

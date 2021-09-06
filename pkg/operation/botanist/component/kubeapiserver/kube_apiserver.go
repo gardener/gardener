@@ -106,6 +106,8 @@ type AutoscalingConfig struct {
 type Images struct {
 	// AlpineIPTables is the container image for alpine-iptables.
 	AlpineIPTables string
+	// APIServerProxyPodWebhook is the container image for the apiserver-proxy-pod-webhook.
+	APIServerProxyPodWebhook string
 }
 
 // ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.
@@ -120,6 +122,8 @@ type SNIConfig struct {
 	Enabled bool
 	// PodMutatorEnabled states whether the pod mutator is enabled.
 	PodMutatorEnabled bool
+	// APIServerFQDN is the fully qualified domain name for the kube-apiserver.
+	APIServerFQDN string
 }
 
 // New creates a new instance of DeployWaiter for the kube-apiserver.
