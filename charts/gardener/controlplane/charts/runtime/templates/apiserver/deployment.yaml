@@ -285,12 +285,10 @@ spec:
         - name: gardener-apiserver-encryption-config
           mountPath: /etc/gardener-apiserver/encryption
         {{- end }}
-        {{- if not .Values.global.apiserver.tlsSecretName }}
-        {{- if not .Values.global.apiserver.etcd.tlsSecretName }}
+        {{- if or (not .Values.global.apiserver.tlsSecretName) (not .Values.global.apiserver.etcd.tlsSecretName) }}
         - name: gardener-apiserver-cert
           mountPath: /etc/gardener-apiserver/srv
           readOnly: true
-        {{- end }}
         {{- end }}
         {{- if .Values.global.apiserver.tlsSecretName }}
         - name: gardener-apiserver-tls
@@ -370,12 +368,10 @@ spec:
       - name: etcd
         emptyDir: {}
       {{- end }}
-      {{- if not .Values.global.apiserver.tlsSecretName }}
-      {{- if not .Values.global.apiserver.etcd.tlsSecretName }}
+      {{- if or (not .Values.global.apiserver.tlsSecretName) (not .Values.global.apiserver.etcd.tlsSecretName) }}
       - name: gardener-apiserver-cert
         secret:
           secretName: gardener-apiserver-cert
-      {{- end }}
       {{- end }}
       {{- if .Values.global.apiserver.tlsSecretName }}
       - name: gardener-apiserver-tls
