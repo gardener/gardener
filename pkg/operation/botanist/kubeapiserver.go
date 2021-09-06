@@ -82,6 +82,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			BasicAuthenticationEnabled: gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
 			Images:                     images,
 			OIDC:                       oidcConfig,
+			ProbeToken:                 b.APIServerHealthCheckToken,
 			ServiceAccountConfig:       serviceAccountConfig,
 			SNI:                        b.computeKubeAPIServerSNIConfig(),
 			Version:                    b.Shoot.KubernetesVersion,

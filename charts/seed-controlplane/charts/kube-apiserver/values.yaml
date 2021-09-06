@@ -2,7 +2,6 @@ replicas: 1
 kubernetesVersion: 1.15.2
 priorityClassName: foo
 securePort: 443
-probeCredentials: base64(user:pass)
 shootNetworks:
   services: 10.0.1.0/24
 podAnnotations: {}

@@ -269,7 +269,6 @@ func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
 			"etcdServicePort":           etcd.PortEtcdClient,
 			"kubernetesVersion":         b.Shoot.GetInfo().Spec.Kubernetes.Version,
 			"enableBasicAuthentication": gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
-			"probeCredentials":          b.APIServerHealthCheckToken,
 			"securePort":                443,
 			"enableEtcdEncryption":      true,
 			"reversedVPN": map[string]interface{}{

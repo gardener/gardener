@@ -76,49 +76,6 @@
         {{- include "kube-apiserver.apiAudiences" . | indent 8 }}
         {{- include "kube-apiserver.serviceAccountConfig" . | indent 8 }}
         - --v=2
-        {{- if semverCompare "< 1.16" .Values.kubernetesVersion }}
-        lifecycle:
-          preStop:
-            exec:
-              command:
-              - sh
-              - -c
-              - sleep 5
-        {{- end }}
-        livenessProbe:
-          httpGet:
-            scheme: HTTPS
-            {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
-            path: /livez
-            {{- else }}
-            path: /healthz
-            {{- end }}
-            port: {{ required ".securePort is required" .Values.securePort }}
-            httpHeaders:
-            - name: Authorization
-              value: Bearer {{ .Values.probeCredentials }}
-          successThreshold: 1
-          failureThreshold: 3
-          initialDelaySeconds: 15
-          periodSeconds: 10
-          timeoutSeconds: 15
-        readinessProbe:
-          httpGet:
-            scheme: HTTPS
-            {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
-            path: /readyz
-            {{- else }}
-            path: /healthz
-            {{- end }}
-            port: {{ required ".securePort is required" .Values.securePort }}
-            httpHeaders:
-            - name: Authorization
-              value: Bearer {{ .Values.probeCredentials }}
-          successThreshold: 1
-          failureThreshold: 3
-          initialDelaySeconds: 10
-          periodSeconds: 10
-          timeoutSeconds: 15
         volumeMounts:
         {{- if .Values.reversedVPN.enabled }}
         - name: kube-apiserver-http-proxy

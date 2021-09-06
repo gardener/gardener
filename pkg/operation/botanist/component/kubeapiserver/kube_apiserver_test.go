@@ -1759,6 +1759,116 @@ rules:
 							Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal(name)})))
 						}
 					})
+
+					It("should have the proper probes for k8s >= 1.16", func() {
+						probeToken := "1234"
+
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.16.9"), ProbeToken: probeToken})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe).To(Equal(&corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path:   "/livez",
+									Scheme: corev1.URISchemeHTTPS,
+									Port:   intstr.FromInt(Port),
+									HTTPHeaders: []corev1.HTTPHeader{{
+										Name:  "Authorization",
+										Value: "Bearer " + probeToken,
+									}},
+								},
+							},
+							SuccessThreshold:    1,
+							FailureThreshold:    3,
+							InitialDelaySeconds: 15,
+							PeriodSeconds:       10,
+							TimeoutSeconds:      15,
+						}))
+						Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe).To(Equal(&corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path:   "/readyz",
+									Scheme: corev1.URISchemeHTTPS,
+									Port:   intstr.FromInt(Port),
+									HTTPHeaders: []corev1.HTTPHeader{{
+										Name:  "Authorization",
+										Value: "Bearer " + probeToken,
+									}},
+								},
+							},
+							SuccessThreshold:    1,
+							FailureThreshold:    3,
+							InitialDelaySeconds: 10,
+							PeriodSeconds:       10,
+							TimeoutSeconds:      15,
+						}))
+					})
+
+					It("should have the proper probes for k8s < 1.16", func() {
+						probeToken := "1234"
+
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.15.9"), ProbeToken: probeToken})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].LivenessProbe).To(Equal(&corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path:   "/healthz",
+									Scheme: corev1.URISchemeHTTPS,
+									Port:   intstr.FromInt(Port),
+									HTTPHeaders: []corev1.HTTPHeader{{
+										Name:  "Authorization",
+										Value: "Bearer " + probeToken,
+									}},
+								},
+							},
+							SuccessThreshold:    1,
+							FailureThreshold:    3,
+							InitialDelaySeconds: 15,
+							PeriodSeconds:       10,
+							TimeoutSeconds:      15,
+						}))
+						Expect(deployment.Spec.Template.Spec.Containers[0].ReadinessProbe).To(Equal(&corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path:   "/healthz",
+									Scheme: corev1.URISchemeHTTPS,
+									Port:   intstr.FromInt(Port),
+									HTTPHeaders: []corev1.HTTPHeader{{
+										Name:  "Authorization",
+										Value: "Bearer " + probeToken,
+									}},
+								},
+							},
+							SuccessThreshold:    1,
+							FailureThreshold:    3,
+							InitialDelaySeconds: 10,
+							PeriodSeconds:       10,
+							TimeoutSeconds:      15,
+						}))
+					})
+
+					It("should have no lifecycle settings if k8s >= 1.16", func() {
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Lifecycle).To(BeNil())
+					})
+
+					It("should have no lifecycle settings if k8s < 1.16", func() {
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.15.9")})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Lifecycle).To(Equal(&corev1.Lifecycle{
+							PreStop: &corev1.Handler{
+								Exec: &corev1.ExecAction{
+									Command: []string{"sh", "-c", "sleep 5"},
+								},
+							},
+						}))
+					})
 				})
 			})
 		})

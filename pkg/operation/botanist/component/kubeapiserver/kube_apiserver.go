@@ -72,6 +72,8 @@ type Values struct {
 	Images Images
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
 	OIDC *gardencorev1beta1.OIDCConfig
+	// ProbeToken is the JWT token used for {live,readi}ness probes of the kube-apiserver container.
+	ProbeToken string
 	// ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.
 	ServiceAccountConfig *ServiceAccountConfig
 	// SNI contains information for configuring SNI settings for the kube-apiserver.

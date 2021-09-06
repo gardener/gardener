@@ -72,6 +72,7 @@ var _ = Describe("KubeAPIServer", func() {
 		podNetworkCIDR        = "10.0.1.0/24"
 		serviceNetworkCIDR    = "10.0.2.0/24"
 		nodeNetworkCIDR       = "10.0.3.0/24"
+		healthCheckToken      = "some-token"
 	)
 
 	BeforeEach(func() {
@@ -114,6 +115,7 @@ var _ = Describe("KubeAPIServer", func() {
 					{Name: "kube-apiserver"},
 					{Name: "vpn-seed"},
 				},
+				APIServerHealthCheckToken: healthCheckToken,
 			},
 		}
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
@@ -890,6 +892,12 @@ var _ = Describe("KubeAPIServer", func() {
 					},
 				),
 			)
+		})
+
+		It("should have the correct probe token", func() {
+			kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(kubeAPIServer.GetValues().ProbeToken).To(Equal(healthCheckToken))
 		})
 	})
 

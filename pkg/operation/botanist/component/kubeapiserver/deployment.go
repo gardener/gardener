@@ -149,6 +149,42 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 							Protocol:      corev1.ProtocolTCP,
 						}},
 						Resources: k.values.Autoscaling.APIServerResources,
+						LivenessProbe: &corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path:   k.probeEndpoint("/livez"),
+									Scheme: corev1.URISchemeHTTPS,
+									Port:   intstr.FromInt(Port),
+									HTTPHeaders: []corev1.HTTPHeader{{
+										Name:  "Authorization",
+										Value: "Bearer " + k.values.ProbeToken,
+									}},
+								},
+							},
+							SuccessThreshold:    1,
+							FailureThreshold:    3,
+							InitialDelaySeconds: 15,
+							PeriodSeconds:       10,
+							TimeoutSeconds:      15,
+						},
+						ReadinessProbe: &corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path:   k.probeEndpoint("/readyz"),
+									Scheme: corev1.URISchemeHTTPS,
+									Port:   intstr.FromInt(Port),
+									HTTPHeaders: []corev1.HTTPHeader{{
+										Name:  "Authorization",
+										Value: "Bearer " + k.values.ProbeToken,
+									}},
+								},
+							},
+							SuccessThreshold:    1,
+							FailureThreshold:    3,
+							InitialDelaySeconds: 10,
+							PeriodSeconds:       10,
+							TimeoutSeconds:      15,
+						},
 					}},
 					Volumes: []corev1.Volume{
 						{
@@ -162,6 +198,16 @@ func (k *kubeAPIServer) reconcileDeployment(ctx context.Context, deployment *app
 					},
 				},
 			},
+		}
+
+		if !versionutils.ConstraintK8sGreaterEqual116.Check(k.values.Version) {
+			deployment.Spec.Template.Spec.Containers[0].Lifecycle = &corev1.Lifecycle{
+				PreStop: &corev1.Handler{
+					Exec: &corev1.ExecAction{
+						Command: []string{"sh", "-c", "sleep 5"},
+					},
+				},
+			}
 		}
 
 		if versionutils.ConstraintK8sGreaterEqual117.Check(k.values.Version) {
@@ -394,4 +440,11 @@ func (k *kubeAPIServer) computePodAnnotations() map[string]string {
 	}
 
 	return out
+}
+
+func (k *kubeAPIServer) probeEndpoint(path string) string {
+	if versionutils.ConstraintK8sGreaterEqual116.Check(k.values.Version) {
+		return path
+	}
+	return "/healthz"
 }
