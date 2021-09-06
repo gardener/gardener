@@ -195,7 +195,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		_ = g.Add(flow.Task{
 			Name: "Reconciling network policies now that infrastructure is ready",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				if botanist.Shoot.GetNodeNetwork() != nil {
+				if botanist.Shoot.GetInfo().Spec.Networking.Nodes != nil {
 					o.Shoot.Components.NetworkPolicies, err = botanist.DefaultNetworkPolicies(sniPhase)
 					if err != nil {
 						return err

@@ -71,7 +71,7 @@ func (b *Botanist) DefaultVPNSeedServer() (vpnseedserver.Interface, error) {
 		kubeAPIServerHost,
 		b.Shoot.Networks.Services.String(),
 		b.Shoot.Networks.Pods.String(),
-		b.Shoot.GetNodeNetwork(),
+		b.Shoot.GetInfo().Spec.Networking.Nodes,
 		b.Shoot.GetReplicas(1),
 		vpnseedserver.IstioIngressGateway{
 			Namespace: *b.Config.SNI.Ingress.Namespace,

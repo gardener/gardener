@@ -327,7 +327,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			},
 		}
 
-		nodeNetwork = b.Shoot.GetNodeNetwork()
+		nodeNetwork = b.Shoot.GetInfo().Spec.Networking.Nodes
 	)
 
 	if b.Shoot.IPVSEnabled() {
