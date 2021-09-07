@@ -20,6 +20,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	corev1 "k8s.io/api/core/v1"
@@ -136,7 +137,7 @@ func findResourceConfigurationForResource(configs []apiserverconfigv1.ResourceCo
 	return nil, fmt.Errorf("no resource configuration found for resource %q", resource)
 }
 
-var errConfigurationNotFound = fmt.Errorf("no encryption configuration at %s", common.EtcdEncryptionSecretFileName)
+var errConfigurationNotFound = fmt.Errorf("no encryption configuration at %s", kubeapiserver.SecretEtcdEncryptionConfigurationDataKey)
 
 // IsConfigurationNotFoundError checks if the given error is an error when the encryption
 // configuration is not found at the common.EtcdEncryptionSecretFileName key of the data section
@@ -147,7 +148,7 @@ func IsConfigurationNotFoundError(err error) bool {
 
 // ReadSecret reads and validates the EncryptionConfiguration of the given secret.
 func ReadSecret(secret *corev1.Secret) (*apiserverconfigv1.EncryptionConfiguration, error) {
-	confData, ok := secret.Data[common.EtcdEncryptionSecretFileName]
+	confData, ok := secret.Data[kubeapiserver.SecretEtcdEncryptionConfigurationDataKey]
 	if !ok {
 		return nil, errConfigurationNotFound
 	}
@@ -172,7 +173,7 @@ func UpdateSecret(secret *corev1.Secret, conf *apiserverconfigv1.EncryptionConfi
 		return err
 	}
 
-	secret.Data[common.EtcdEncryptionSecretFileName] = confData
+	secret.Data[kubeapiserver.SecretEtcdEncryptionConfigurationDataKey] = confData
 	return nil
 }
 

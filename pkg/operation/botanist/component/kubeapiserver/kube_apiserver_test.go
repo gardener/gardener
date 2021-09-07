@@ -1104,7 +1104,7 @@ subjects:
 				It("should successfully deploy the ServiceAccountSigningKey secret resource", func() {
 					var (
 						signingKey           = []byte("some-signingkey")
-						serviceAccountConfig = &ServiceAccountConfig{SigningKey: signingKey}
+						serviceAccountConfig = ServiceAccountConfig{SigningKey: signingKey}
 					)
 
 					kapi = New(kubernetesInterface, namespace, Values{ServiceAccount: serviceAccountConfig, Version: version})
@@ -1677,24 +1677,86 @@ rules:
 					images := Images{KubeAPIServer: "some-kapi-image:latest"}
 
 					It("should have the kube-apiserver container with the expected spec", func() {
-						apiServerResources := corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("1"),
-								corev1.ResourceMemory: resource.MustParse("2Gi"),
-							},
-							Limits: corev1.ResourceList{
-								corev1.ResourceCPU:    resource.MustParse("2"),
-								corev1.ResourceMemory: resource.MustParse("4Gi"),
-							},
-						}
+						var (
+							apiServerResources = corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("1"),
+									corev1.ResourceMemory: resource.MustParse("2Gi"),
+								},
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU:    resource.MustParse("2"),
+									corev1.ResourceMemory: resource.MustParse("4Gi"),
+								},
+							}
+							admissionPlugin1     = "foo"
+							admissionPlugin2     = "foo"
+							admissionPlugins     = []gardencorev1beta1.AdmissionPlugin{{Name: admissionPlugin1}, {Name: admissionPlugin2}}
+							externalHostname     = "api.foo.bar.com"
+							serviceAccountIssuer = "issuer"
+							serviceNetworkCIDR   = "1.2.3.4/5"
+						)
 
-						kapi = New(kubernetesInterface, namespace, Values{Autoscaling: AutoscalingConfig{APIServerResources: apiServerResources}, Images: images, Version: version})
+						kapi = New(kubernetesInterface, namespace, Values{
+							AdmissionPlugins: admissionPlugins,
+							Autoscaling:      AutoscalingConfig{APIServerResources: apiServerResources},
+							ExternalHostname: externalHostname,
+							Images:           images,
+							ServiceAccount:   ServiceAccountConfig{Issuer: serviceAccountIssuer},
+							Version:          version,
+							VPN:              VPNConfig{ServiceNetworkCIDR: serviceNetworkCIDR},
+						})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].Name).To(Equal("kube-apiserver"))
 						Expect(deployment.Spec.Template.Spec.Containers[0].Image).To(Equal(images.KubeAPIServer))
 						Expect(deployment.Spec.Template.Spec.Containers[0].ImagePullPolicy).To(Equal(corev1.PullIfNotPresent))
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+							"/usr/local/bin/kube-apiserver",
+							"--enable-admission-plugins="+admissionPlugin1+","+admissionPlugin2,
+							"--admission-control-config-file=/etc/kubernetes/admission/admission-configuration.yaml",
+							"--allow-privileged=true",
+							"--anonymous-auth=false",
+							"--audit-log-path=/var/lib/audit.log",
+							"--audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml",
+							"--audit-log-maxsize=100",
+							"--audit-log-maxbackup=5",
+							"--authorization-mode=Node,RBAC",
+							"--client-ca-file=/srv/kubernetes/ca/ca.crt",
+							"--enable-aggregator-routing=true",
+							"--enable-bootstrap-token-auth=true",
+							"--http2-max-streams-per-connection=1000",
+							"--etcd-cafile=/srv/kubernetes/etcd/ca/ca.crt",
+							"--etcd-certfile=/srv/kubernetes/etcd/client/tls.crt",
+							"--etcd-keyfile=/srv/kubernetes/etcd/client/tls.key",
+							"--etcd-servers=https://etcd-main-client:2379",
+							"--etcd-servers-overrides=/events#https://etcd-events-client:2379",
+							"--encryption-provider-config=/etc/kubernetes/etcd-encryption-secret/encryption-configuration.yaml",
+							"--external-hostname="+externalHostname,
+							"--insecure-port=0",
+							"--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP",
+							"--kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.crt",
+							"--kubelet-client-key=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.key",
+							"--livez-grace-period=1m",
+							"--shutdown-delay-duration=15s",
+							"--profiling=false",
+							"--proxy-client-cert-file=/srv/kubernetes/aggregator/kube-aggregator.crt",
+							"--proxy-client-key-file=/srv/kubernetes/aggregator/kube-aggregator.key",
+							"--requestheader-client-ca-file=/srv/kubernetes/ca-front-proxy/ca.crt",
+							"--requestheader-extra-headers-prefix=X-Remote-Extra-",
+							"--requestheader-group-headers=X-Remote-Group",
+							"--requestheader-username-headers=X-Remote-User",
+							"--secure-port=443",
+							"--service-cluster-ip-range="+serviceNetworkCIDR,
+							"--service-account-issuer="+serviceAccountIssuer,
+							"--service-account-key-file=/srv/kubernetes/service-account-key/id_rsa",
+							"--service-account-signing-key-file=/srv/kubernetes/service-account-key/id_rsa",
+							"--token-auth-file=/srv/kubernetes/token/static_tokens.csv",
+							"--tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt",
+							"--tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key",
+							"--tls-cipher-suites=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+							"--v=2",
+						))
 						Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePath).To(Equal("/dev/termination-log"))
 						Expect(deployment.Spec.Template.Spec.Containers[0].TerminationMessagePolicy).To(Equal(corev1.TerminationMessageReadFile))
 						Expect(deployment.Spec.Template.Spec.Containers[0].Ports).To(ConsistOf(corev1.ContainerPort{
@@ -1858,6 +1920,167 @@ rules:
 						))
 					})
 
+					It("should use the hyperkube binary if k8s < 1.17", func() {
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.16.9")})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command[0]).To(Equal("/hyperkube"))
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command[1]).To(Equal("kube-apiserver"))
+					})
+
+					It("should properly set the anonymous auth flag if enabled", func() {
+						kapi = New(kubernetesInterface, namespace, Values{AnonymousAuthenticationEnabled: true, Images: images, Version: version})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(ContainSubstring(
+							"--anonymous-auth=true",
+						)))
+					})
+
+					It("should configure the advertise address if SNI is enabled", func() {
+						advertiseAddress := "1.2.3.4"
+
+						kapi = New(kubernetesInterface, namespace, Values{SNI: SNIConfig{Enabled: true, AdvertiseAddress: advertiseAddress}, Images: images, Version: version})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+							"--advertise-address=" + advertiseAddress,
+						))
+					})
+
+					It("should not configure the advertise address if SNI is enabled", func() {
+						kapi = New(kubernetesInterface, namespace, Values{SNI: SNIConfig{Enabled: false, AdvertiseAddress: "foo"}, Images: images, Version: version})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--advertise-address=")))
+					})
+
+					It("should configure the api audiences if provided", func() {
+						var (
+							apiAudience1 = "foo"
+							apiAudience2 = "bar"
+							apiAudiences = []string{apiAudience1, apiAudience2}
+						)
+
+						kapi = New(kubernetesInterface, namespace, Values{APIAudiences: apiAudiences, Images: images, Version: version})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+							"--api-audiences=" + apiAudience1 + "," + apiAudience2,
+						))
+					})
+
+					It("should not configure the api audiences if not provided", func() {
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--api-audiences=")))
+					})
+
+					It("should configure the feature gates if provided", func() {
+						featureGates := map[string]bool{"Foo": true, "Bar": false}
+
+						kapi = New(kubernetesInterface, namespace, Values{FeatureGates: featureGates, Images: images, Version: version})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+							"--feature-gates=Bar=false,Foo=true",
+						))
+					})
+
+					It("should not configure the feature gates if not provided", func() {
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--feature-gates=")))
+					})
+
+					It("should not have the flags for improved start-up/shut-down behaviour if k8s < 1.16", func() {
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: semver.MustParse("1.15.8")})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElements(
+							ContainSubstring("--livez-grace-period="),
+							ContainSubstring("--shutdown-delay-duration="),
+						))
+					})
+
+					It("should configure the request settings if provided", func() {
+						requests := &gardencorev1beta1.KubeAPIServerRequests{
+							MaxNonMutatingInflight: pointer.Int32(123),
+							MaxMutatingInflight:    pointer.Int32(456),
+						}
+
+						kapi = New(kubernetesInterface, namespace, Values{Requests: requests, Images: images, Version: version})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+							"--max-requests-inflight=123",
+							"--max-mutating-requests-inflight=456",
+						))
+					})
+
+					It("should not configure the request settings if not provided", func() {
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElements(
+							ContainSubstring("--max-requests-inflight="),
+							ContainSubstring("--max-mutating-requests-inflight="),
+						))
+					})
+
+					It("should configure the runtime config if provided", func() {
+						runtimeConfig := map[string]bool{"foo": true, "bar": false}
+
+						kapi = New(kubernetesInterface, namespace, Values{RuntimeConfig: runtimeConfig, Images: images, Version: version})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+							"--runtime-config=bar=false,foo=true",
+						))
+					})
+
+					It("should not configure the runtime config if not provided", func() {
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--runtime-config=")))
+					})
+
+					It("should configure the watch cache settings if provided", func() {
+						watchCacheSizes := &gardencorev1beta1.WatchCacheSizes{
+							Default: pointer.Int32(123),
+							Resources: []gardencorev1beta1.ResourceWatchCacheSize{
+								{Resource: "foo", CacheSize: 456},
+								{Resource: "bar", CacheSize: 789, APIGroup: pointer.String("baz")},
+							},
+						}
+
+						kapi = New(kubernetesInterface, namespace, Values{WatchCacheSizes: watchCacheSizes, Images: images, Version: version})
+						kapi.SetSecrets(secrets)
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+							"--default-watch-cache-size=123",
+							"--watch-cache-sizes=foo#456,bar.baz#789",
+						))
+					})
+
+					It("should not configure the watch cache settings if not provided", func() {
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElements(
+							ContainSubstring("--default-watch-cache-size="),
+							ContainSubstring("--watch-cache-sizes="),
+						))
+					})
+
 					It("should mount the host pki directories if k8s >= 1.17", func() {
 						directoryOrCreate := corev1.HostPathDirectoryOrCreate
 
@@ -1939,10 +2162,14 @@ rules:
 						}
 					})
 
-					It("should mount the basic auth secret if enabled", func() {
+					It("should properly configure the settings related to the basic auth secret if enabled", func() {
 						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, BasicAuthenticationEnabled: true})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+							"--basic-auth-file=/srv/kubernetes/auth/basic_auth.csv",
+						))
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElement(corev1.VolumeMount{
 							Name:      "kube-apiserver-basic-auth",
@@ -1959,19 +2186,24 @@ rules:
 						}))
 					})
 
-					It("should not mount the basic auth secret if disabled", func() {
+					It("should not configure the settings related to the basic auth secret if disabled", func() {
 						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, BasicAuthenticationEnabled: false})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--basic-auth-file=")))
 						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-basic-auth")})))
 						Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-basic-auth")})))
 					})
 
-					It("should mount the reversed vpn-related secrets if enabled", func() {
+					It("should properly configure the settings related to reversed vpn if enabled", func() {
 						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, VPN: VPNConfig{ReversedVPNEnabled: true}})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
+							"--egress-selector-config-file=/etc/kubernetes/egress/egress-selector-configuration.yaml",
+						))
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElements(
 							corev1.VolumeMount{
@@ -2006,19 +2238,45 @@ rules:
 						))
 					})
 
-					It("should not mount the reversed vpn-related secrets if disabled", func() {
+					It("should not configure the settings related to reversed vpn if disabled", func() {
 						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, VPN: VPNConfig{ReversedVPNEnabled: false}})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
 
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--egress-selector-config-file=")))
 						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-http-proxy")})))
 						Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-http-proxy")})))
 					})
 
-					It("should mount the oidc ca bundle secret if enabled", func() {
-						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, OIDC: &gardencorev1beta1.OIDCConfig{CABundle: pointer.String("")}})
+					It("should properly configure the settings related to oidc if enabled", func() {
+						oidc := &gardencorev1beta1.OIDCConfig{
+							IssuerURL:      pointer.String("someurl"),
+							ClientID:       pointer.String("clientid"),
+							CABundle:       pointer.String(""),
+							UsernameClaim:  pointer.String("usernameclaim"),
+							GroupsClaim:    pointer.String("groupsclaim"),
+							UsernamePrefix: pointer.String("usernameprefix"),
+							GroupsPrefix:   pointer.String("groupsprefix"),
+							SigningAlgs:    []string{"foo", "bar"},
+							RequiredClaims: map[string]string{"one": "two", "three": "four"},
+						}
+
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, OIDC: oidc})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+							"--oidc-issuer-url="+*oidc.IssuerURL,
+							"--oidc-client-id="+*oidc.ClientID,
+							"--oidc-ca-file=/srv/kubernetes/oidc/ca.crt",
+							"--oidc-username-claim="+*oidc.UsernameClaim,
+							"--oidc-groups-claim="+*oidc.GroupsClaim,
+							"--oidc-username-prefix="+*oidc.UsernamePrefix,
+							"--oidc-groups-prefix="+*oidc.GroupsPrefix,
+							"--oidc-signing-algs=foo,bar",
+							"--oidc-required-claim=one=two",
+							"--oidc-required-claim=three=four",
+						))
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElement(corev1.VolumeMount{
 							Name:      "kube-apiserver-oidc-cabundle",
@@ -2035,17 +2293,22 @@ rules:
 						}))
 					})
 
-					It("should not mount the oidc ca bundle secret if disabled", func() {
+					It("should not configure the settings related to oidc if disabled", func() {
 						deployAndRead()
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-oidc-cabundle")})))
 						Expect(deployment.Spec.Template.Spec.Volumes).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-oidc-cabundle")})))
 					})
 
-					It("should mount the service account signing key secret if enabled", func() {
-						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, ServiceAccount: &ServiceAccountConfig{SigningKey: []byte("")}})
+					It("should properly configure the settings related ot the service account signing key if provided", func() {
+						kapi = New(kubernetesInterface, namespace, Values{Images: images, Version: version, ServiceAccount: ServiceAccountConfig{SigningKey: []byte("")}})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElements(
+							"--service-account-signing-key-file=/srv/kubernetes/service-account-signing-key/signing-key",
+							"--service-account-key-file=/srv/kubernetes/service-account-signing-key/signing-key",
+						))
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).To(ContainElement(corev1.VolumeMount{
 							Name:      "kube-apiserver-service-account-signing-key",
@@ -2062,7 +2325,7 @@ rules:
 						}))
 					})
 
-					It("should not mount the service account signing key secret if disabled", func() {
+					It("should not configure the settings related to the service account signing key if not provided", func() {
 						deployAndRead()
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].VolumeMounts).NotTo(ContainElement(MatchFields(IgnoreExtras, Fields{"Name": Equal("kube-apiserver-oidc-cabundle")})))
@@ -2350,6 +2613,54 @@ rules:
 			kapi = New(kubernetesInterface2, namespace, Values{})
 
 			Expect(runtime.IsNotRegisteredError(kapi.WaitCleanup(ctx))).To(BeTrue())
+		})
+	})
+
+	Describe("#SetAutoscalingAPIServerResources", func() {
+		It("should properly set the field", func() {
+			v := corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("10Mi")}}
+			kapi.SetAutoscalingAPIServerResources(v)
+			Expect(kapi.GetValues().Autoscaling.APIServerResources).To(Equal(v))
+		})
+	})
+
+	Describe("#SetAutoscalingReplicas", func() {
+		It("should properly set the field", func() {
+			v := pointer.Int32(2)
+			kapi.SetAutoscalingReplicas(v)
+			Expect(kapi.GetValues().Autoscaling.Replicas).To(Equal(v))
+		})
+	})
+
+	Describe("#SetServiceAccountConfig", func() {
+		It("should properly set the field", func() {
+			v := ServiceAccountConfig{Issuer: "foo"}
+			kapi.SetServiceAccountConfig(v)
+			Expect(kapi.GetValues().ServiceAccount).To(Equal(v))
+		})
+	})
+
+	Describe("#SetSNIConfig", func() {
+		It("should properly set the field", func() {
+			v := SNIConfig{AdvertiseAddress: "foo"}
+			kapi.SetSNIConfig(v)
+			Expect(kapi.GetValues().SNI).To(Equal(v))
+		})
+	})
+
+	Describe("#SetProbeToken", func() {
+		It("should properly set the field", func() {
+			v := "bar"
+			kapi.SetProbeToken(v)
+			Expect(kapi.GetValues().ProbeToken).To(Equal(v))
+		})
+	})
+
+	Describe("#SetExternalHostname", func() {
+		It("should properly set the field", func() {
+			v := "bar"
+			kapi.SetExternalHostname(v)
+			Expect(kapi.GetValues().ExternalHostname).To(Equal(v))
 		})
 	})
 })

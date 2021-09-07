@@ -50,48 +50,61 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 	}
 
 	var (
-		admissionPlugins     = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
-		auditConfig          *kubeapiserver.AuditConfig
-		oidcConfig           *gardencorev1beta1.OIDCConfig
-		serviceAccountConfig *kubeapiserver.ServiceAccountConfig
+		apiServerConfig = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
+
+		admissionPlugins = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
+		apiAudiences     = []string{"kubernetes"}
+		auditConfig      *kubeapiserver.AuditConfig
+		featureGates     map[string]bool
+		oidcConfig       *gardencorev1beta1.OIDCConfig
+		requests         *gardencorev1beta1.KubeAPIServerRequests
+		runtimeConfig    map[string]bool
+		watchCacheSizes  *gardencorev1beta1.WatchCacheSizes
 	)
 
-	if apiServerConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer; apiServerConfig != nil {
+	if apiServerConfig != nil {
 		admissionPlugins = b.computeKubeAPIServerAdmissionPlugins(admissionPlugins, apiServerConfig.AdmissionPlugins)
+
+		if apiServerConfig.APIAudiences != nil {
+			apiAudiences = apiServerConfig.APIAudiences
+		}
 
 		auditConfig, err = b.computeKubeAPIServerAuditConfig(ctx, apiServerConfig.AuditConfig)
 		if err != nil {
 			return nil, err
 		}
 
+		featureGates = apiServerConfig.FeatureGates
 		oidcConfig = apiServerConfig.OIDCConfig
+		requests = apiServerConfig.Requests
+		runtimeConfig = apiServerConfig.RuntimeConfig
 
-		serviceAccountConfig, err = b.computeKubeAPIServerServiceAccountConfig(ctx, apiServerConfig.ServiceAccountConfig)
-		if err != nil {
-			return nil, err
-		}
+		watchCacheSizes = apiServerConfig.WatchCacheSizes
 	}
 
 	return kubeapiserver.New(
 		b.K8sSeedClient,
 		b.Shoot.SeedNamespace,
 		kubeapiserver.Values{
-			AdmissionPlugins:           admissionPlugins,
-			Audit:                      auditConfig,
-			Autoscaling:                b.computeKubeAPIServerAutoscalingConfig(),
-			BasicAuthenticationEnabled: gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
-			Images:                     images,
-			OIDC:                       oidcConfig,
-			ProbeToken:                 b.APIServerHealthCheckToken,
-			ServiceAccount:             serviceAccountConfig,
-			SNI:                        b.computeKubeAPIServerSNIConfig(),
-			Version:                    b.Shoot.KubernetesVersion,
+			AdmissionPlugins:               admissionPlugins,
+			AnonymousAuthenticationEnabled: gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
+			APIAudiences:                   apiAudiences,
+			Audit:                          auditConfig,
+			Autoscaling:                    b.computeKubeAPIServerAutoscalingConfig(),
+			BasicAuthenticationEnabled:     gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
+			FeatureGates:                   featureGates,
+			Images:                         images,
+			OIDC:                           oidcConfig,
+			Requests:                       requests,
+			RuntimeConfig:                  runtimeConfig,
+			Version:                        b.Shoot.KubernetesVersion,
 			VPN: kubeapiserver.VPNConfig{
 				ReversedVPNEnabled: b.Shoot.ReversedVPNEnabled,
 				PodNetworkCIDR:     b.Shoot.Networks.Pods.String(),
 				ServiceNetworkCIDR: b.Shoot.Networks.Services.String(),
 				NodeNetworkCIDR:    b.Shoot.GetInfo().Spec.Networking.Nodes,
 			},
+			WatchCacheSizes: watchCacheSizes,
 		},
 	), nil
 }
@@ -288,22 +301,26 @@ func (b *Botanist) computeKubeAPIServerImages() (kubeapiserver.Images, error) {
 	}, nil
 }
 
-func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context, config *gardencorev1beta1.ServiceAccountConfig) (*kubeapiserver.ServiceAccountConfig, error) {
-	if config == nil {
-		return nil, nil
+func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context, config *gardencorev1beta1.KubeAPIServerConfig, externalHostname string) (kubeapiserver.ServiceAccountConfig, error) {
+	out := kubeapiserver.ServiceAccountConfig{Issuer: "https://" + externalHostname}
+
+	if config == nil || config.ServiceAccountConfig == nil {
+		return out, nil
 	}
 
-	out := &kubeapiserver.ServiceAccountConfig{}
+	if config.ServiceAccountConfig.Issuer != nil {
+		out.Issuer = *config.ServiceAccountConfig.Issuer
+	}
 
-	if signingKeySecret := config.SigningKeySecret; signingKeySecret != nil {
+	if signingKeySecret := config.ServiceAccountConfig.SigningKeySecret; signingKeySecret != nil {
 		secret := &corev1.Secret{}
 		if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.GetInfo().Namespace, signingKeySecret.Name), secret); err != nil {
-			return nil, err
+			return out, err
 		}
 
 		data, ok := secret.Data[kubeapiserver.SecretServiceAccountSigningKeyDataKeySigningKey]
 		if !ok {
-			return nil, fmt.Errorf("no signing key in secret %s/%s at .data.%s", secret.Namespace, secret.Name, kubeapiserver.SecretServiceAccountSigningKeyDataKeySigningKey)
+			return out, fmt.Errorf("no signing key in secret %s/%s at .data.%s", secret.Namespace, secret.Name, kubeapiserver.SecretServiceAccountSigningKeyDataKeySigningKey)
 		}
 		out.SigningKey = data
 	}
@@ -316,6 +333,7 @@ func (b *Botanist) computeKubeAPIServerSNIConfig() kubeapiserver.SNIConfig {
 
 	if b.APIServerSNIEnabled() {
 		config.Enabled = true
+		config.AdvertiseAddress = b.APIServerClusterIP
 
 		if b.APIServerSNIPodMutatorEnabled() {
 			config.PodMutatorEnabled = true
@@ -407,6 +425,17 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSecrets(secrets)
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetSNIConfig(b.computeKubeAPIServerSNIConfig())
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetProbeToken(b.APIServerHealthCheckToken)
+
+	externalHostname := b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetExternalHostname(externalHostname)
+
+	serviceAccountConfig, err := b.computeKubeAPIServerServiceAccountConfig(ctx, b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer, externalHostname)
+	if err != nil {
+		return err
+	}
+	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServiceAccountConfig(serviceAccountConfig)
 
 	return b.Shoot.Components.ControlPlane.KubeAPIServer.Deploy(ctx)
 }

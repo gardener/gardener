@@ -32,6 +32,10 @@ const (
 	// SecretServiceAccountSigningKeyDataKeySigningKey is a constant for a key in the data map that contains the key
 	// which is used to sign service accounts.
 	SecretServiceAccountSigningKeyDataKeySigningKey = "signing-key"
+
+	// SecretEtcdEncryptionConfigurationDataKey is a constant for a key in the data map that contains the config
+	// which is used to encrypt etcd data.
+	SecretEtcdEncryptionConfigurationDataKey = "encryption-configuration.yaml"
 )
 
 func (k *kubeAPIServer) emptySecret(name string) *corev1.Secret {
@@ -52,7 +56,7 @@ func (k *kubeAPIServer) reconcileSecretOIDCCABundle(ctx context.Context, secret 
 }
 
 func (k *kubeAPIServer) reconcileSecretServiceAccountSigningKey(ctx context.Context, secret *corev1.Secret) error {
-	if k.values.ServiceAccount == nil || k.values.ServiceAccount.SigningKey == nil {
+	if k.values.ServiceAccount.SigningKey == nil {
 		// We don't delete the secret here as we don't know its name (as it's unique). Instead, we rely on the usual
 		// garbage collection for unique secrets/configmaps.
 		return nil

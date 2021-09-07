@@ -22,11 +22,6 @@ const (
 	// VPNTunnel dictates that VPN is used as a tunnel between seed and shoot networks.
 	VPNTunnel string = "vpn-shoot"
 
-	// EtcdEncryptionSecretFileName is the name of the file within the EncryptionConfiguration
-	// which is made available as volume mount to the shoot's apiserver.
-	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/deployment.yaml
-	EtcdEncryptionSecretFileName = "encryption-configuration.yaml"
-
 	// EtcdEncryptionChecksumLabelName is the name of the label which is added to the shoot
 	// secrets after rewriting them to ensure that successfully rewritten secrets are not
 	// (unnecessarily) rewritten during each reconciliation.

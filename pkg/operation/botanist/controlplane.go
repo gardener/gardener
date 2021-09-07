@@ -16,18 +16,15 @@ package botanist
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"time"
 
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -264,70 +261,7 @@ func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane
 }
 
 func (b *Botanist) deployKubeAPIServer(ctx context.Context) error {
-	var (
-		defaultValues = map[string]interface{}{
-			"etcdServicePort":           etcd.PortEtcdClient,
-			"kubernetesVersion":         b.Shoot.GetInfo().Spec.Kubernetes.Version,
-			"enableBasicAuthentication": gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
-			"securePort":                443,
-			"enableEtcdEncryption":      true,
-			"reversedVPN": map[string]interface{}{
-				"enabled": b.Shoot.ReversedVPNEnabled,
-			},
-			"enableAnonymousAuthentication": gardencorev1beta1helper.ShootWantsAnonymousAuthentication(b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer),
-			"tlsCipherSuites":               kutil.TLSCipherSuites(b.Shoot.KubernetesVersion),
-			"shootNetworks": map[string]interface{}{
-				"services": b.Shoot.Networks.Services.String(),
-			},
-		}
-	)
-
-	if b.APIServerSNIEnabled() {
-		defaultValues["sni"] = map[string]interface{}{
-			"enabled":     true,
-			"advertiseIP": b.APIServerClusterIP,
-		}
-	}
-
-	var (
-		apiServerConfig              = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
-		externalHostname             = b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)
-		serviceAccountTokenIssuerURL = fmt.Sprintf("https://%s", externalHostname)
-		serviceAccountConfigVals     = map[string]interface{}{}
-	)
-
-	if apiServerConfig != nil {
-		defaultValues["featureGates"] = apiServerConfig.FeatureGates
-		defaultValues["runtimeConfig"] = apiServerConfig.RuntimeConfig
-
-		if serviceAccountConfig := apiServerConfig.ServiceAccountConfig; serviceAccountConfig != nil {
-			if issuer := serviceAccountConfig.Issuer; issuer != nil {
-				serviceAccountTokenIssuerURL = *issuer
-			}
-		}
-
-		if apiServerConfig.APIAudiences != nil {
-			defaultValues["apiAudiences"] = apiServerConfig.APIAudiences
-		}
-
-		if watchCacheSizes := apiServerConfig.WatchCacheSizes; watchCacheSizes != nil {
-			defaultValues["watchCacheSizes"] = watchCacheSizes
-		}
-
-		if apiServerConfig.Requests != nil {
-			if v := apiServerConfig.Requests.MaxNonMutatingInflight; v != nil {
-				defaultValues["maxNonMutatingRequestsInflight"] = *v
-			}
-			if v := apiServerConfig.Requests.MaxMutatingInflight; v != nil {
-				defaultValues["maxMutatingRequestsInflight"] = *v
-			}
-		}
-
-		defaultValues["externalHostname"] = externalHostname
-	}
-
-	serviceAccountConfigVals["issuer"] = serviceAccountTokenIssuerURL
-	defaultValues["serviceAccountConfig"] = serviceAccountConfigVals
+	var defaultValues = map[string]interface{}{}
 
 	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(chartPathControlPlane, v1beta1constants.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer, kubernetes.Values(defaultValues)); err != nil {
 		return err

@@ -18,12 +18,12 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/pkg/operation/etcdencryption"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 const yamlString = `apiVersion: apiserver.config.k8s.io/v1
@@ -101,7 +101,7 @@ var _ = Describe("ETCD Encryption InfoData", func() {
 					},
 				},
 				Data: map[string][]byte{
-					common.EtcdEncryptionSecretFileName: []byte(yamlString),
+					"encryption-configuration.yaml": []byte(yamlString),
 				},
 			}
 

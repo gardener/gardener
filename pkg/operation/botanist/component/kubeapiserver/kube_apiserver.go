@@ -47,41 +47,64 @@ const (
 // Interface contains functions for a kube-apiserver deployer.
 type Interface interface {
 	component.DeployWaiter
-	// SetSecrets sets the secrets.
-	SetSecrets(Secrets)
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
+	// SetSecrets sets the secrets.
+	SetSecrets(Secrets)
 	// SetAutoscalingAPIServerResources sets the APIServerResources field in the AutoscalingConfig of the Values of the
 	// deployer.
 	SetAutoscalingAPIServerResources(corev1.ResourceRequirements)
 	// SetAutoscalingReplicas sets the Replicas field in the AutoscalingConfig of the Values of the deployer.
 	SetAutoscalingReplicas(*int32)
+	// SetServiceAccountConfig sets the ServiceAccount field in the Values of the deployer.
+	SetServiceAccountConfig(ServiceAccountConfig)
+	// SetSNIConfig sets the SNI field in the Values of the deployer.
+	SetSNIConfig(SNIConfig)
+	// SetProbeToken sets the ProbeToken field in the Values of the deployer.
+	SetProbeToken(string)
+	// SetExternalHostname sets the ExternalHostname field in the Values of the deployer.
+	SetExternalHostname(string)
 }
 
 // Values contains configuration values for the kube-apiserver resources.
 type Values struct {
 	// AdmissionPlugins is the list of admission plugins with configuration for the kube-apiserver.
 	AdmissionPlugins []gardencorev1beta1.AdmissionPlugin
+	// AnonymousAuthenticationEnabled states whether anonymous authentication is enabled.
+	AnonymousAuthenticationEnabled bool
+	// APIAudiences are identifiers of the API. The service account token authenticator will validate that tokens used
+	// against the API are bound to at least one of these audiences.
+	APIAudiences []string
 	// Audit contains information for configuring audit settings for the kube-apiserver.
 	Audit *AuditConfig
 	// Autoscaling contains information for configuring autoscaling settings for the kube-apiserver.
 	Autoscaling AutoscalingConfig
 	// BasicAuthenticationEnabled states whether basic authentication is enabled.
 	BasicAuthenticationEnabled bool
+	// ExternalHostname is the external hostname which should be exposed by the kube-apiserver.
+	ExternalHostname string
+	// FeatureGates is the set of feature gates.
+	FeatureGates map[string]bool
 	// Images is a set of container images used for the containers of the kube-apiserver pods.
 	Images Images
 	// OIDC contains information for configuring OIDC settings for the kube-apiserver.
 	OIDC *gardencorev1beta1.OIDCConfig
 	// ProbeToken is the JWT token used for {live,readi}ness probes of the kube-apiserver container.
 	ProbeToken string
+	// Requests contains configuration for the kube-apiserver requests.
+	Requests *gardencorev1beta1.KubeAPIServerRequests
+	// RuntimeConfig is the set of runtime configurations.
+	RuntimeConfig map[string]bool
 	// ServiceAccount contains information for configuring ServiceAccount settings for the kube-apiserver.
-	ServiceAccount *ServiceAccountConfig
+	ServiceAccount ServiceAccountConfig
 	// SNI contains information for configuring SNI settings for the kube-apiserver.
 	SNI SNIConfig
 	// Version is the Kubernetes version for the kube-apiserver.
 	Version *semver.Version
 	// VPN contains information for configuring the VPN settings for the kube-apiserver.
 	VPN VPNConfig
+	// WatchCacheSizes are the configured sizes for the watch caches.
+	WatchCacheSizes *gardencorev1beta1.WatchCacheSizes
 }
 
 // AuditConfig contains information for configuring audit settings for the kube-apiserver.
@@ -136,6 +159,8 @@ type VPNConfig struct {
 
 // ServiceAccountConfig contains information for configuring ServiceAccountConfig settings for the kube-apiserver.
 type ServiceAccountConfig struct {
+	// Issuer is the issuer of service accounts.
+	Issuer string
 	// SigningKey is the key used when service accounts are signed.
 	SigningKey []byte
 }
@@ -148,6 +173,8 @@ type SNIConfig struct {
 	PodMutatorEnabled bool
 	// APIServerFQDN is the fully qualified domain name for the kube-apiserver.
 	APIServerFQDN string
+	// AdvertiseAddress is the address which should be advertised by the kube-apiserver.
+	AdvertiseAddress string
 }
 
 // New creates a new instance of DeployWaiter for the kube-apiserver.
@@ -370,6 +397,22 @@ func (k *kubeAPIServer) SetAutoscalingReplicas(replicas *int32) {
 
 func (k *kubeAPIServer) SetSecrets(secrets Secrets) {
 	k.secrets = secrets
+}
+
+func (k *kubeAPIServer) SetServiceAccountConfig(config ServiceAccountConfig) {
+	k.values.ServiceAccount = config
+}
+
+func (k *kubeAPIServer) SetSNIConfig(config SNIConfig) {
+	k.values.SNI = config
+}
+
+func (k *kubeAPIServer) SetProbeToken(token string) {
+	k.values.ProbeToken = token
+}
+
+func (k *kubeAPIServer) SetExternalHostname(hostname string) {
+	k.values.ExternalHostname = hostname
 }
 
 // GetLabels returns the labels for the kube-apiserver.

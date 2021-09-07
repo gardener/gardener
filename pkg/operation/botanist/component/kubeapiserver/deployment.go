@@ -16,10 +16,15 @@ package kubeapiserver
 
 import (
 	"context"
+	"fmt"
+	"strconv"
+	"strings"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
@@ -181,6 +186,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 						Name:                     ContainerNameKubeAPIServer,
 						Image:                    k.values.Images.KubeAPIServer,
 						ImagePullPolicy:          corev1.PullIfNotPresent,
+						Command:                  k.computeKubeAPIServerCommand(),
 						TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 						TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 						Ports: []corev1.ContainerPort{{
@@ -647,7 +653,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 			}...)
 		}
 
-		if k.values.ServiceAccount != nil && k.values.ServiceAccount.SigningKey != nil {
+		if k.values.ServiceAccount.SigningKey != nil {
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
 				{
 					Name:      volumeNameServiceAccountSigningKey,
@@ -718,4 +724,177 @@ func (k *kubeAPIServer) probeEndpoint(path string) string {
 		return path
 	}
 	return "/healthz"
+}
+
+func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
+	var out []string
+
+	if versionutils.ConstraintK8sGreaterEqual117.Check(k.values.Version) {
+		out = append(out, "/usr/local/bin/kube-apiserver")
+	} else {
+		out = append(out, "/hyperkube", "kube-apiserver")
+	}
+
+	if k.values.VPN.ReversedVPNEnabled {
+		out = append(out, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
+	}
+
+	out = append(out, "--enable-admission-plugins="+strings.Join(k.admissionPluginNames(), ","))
+	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
+	out = append(out, "--allow-privileged=true")
+	out = append(out, "--anonymous-auth="+strconv.FormatBool(k.values.AnonymousAuthenticationEnabled))
+	out = append(out, "--audit-log-path=/var/lib/audit.log")
+	out = append(out, fmt.Sprintf("--audit-policy-file=%s/%s", volumeMountPathAuditPolicy, configMapAuditPolicyDataKey))
+	out = append(out, "--audit-log-maxsize=100")
+	out = append(out, "--audit-log-maxbackup=5")
+	out = append(out, "--authorization-mode=Node,RBAC")
+
+	if k.values.SNI.Enabled {
+		out = append(out, fmt.Sprintf("--advertise-address=%s", k.values.SNI.AdvertiseAddress))
+	}
+
+	if len(k.values.APIAudiences) > 0 {
+		out = append(out, "--api-audiences="+strings.Join(k.values.APIAudiences, ","))
+	}
+
+	if k.values.BasicAuthenticationEnabled {
+		out = append(out, fmt.Sprintf("--basic-auth-file=%s/%s", volumeMountPathBasicAuthentication, secrets.DataKeyCSV))
+	}
+
+	out = append(out, fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA))
+	out = append(out, "--enable-aggregator-routing=true")
+	out = append(out, "--enable-bootstrap-token-auth=true")
+	out = append(out, "--http2-max-streams-per-connection=1000")
+	out = append(out, fmt.Sprintf("--etcd-cafile=%s/%s", volumeMountPathCAEtcd, secrets.DataKeyCertificateCA))
+	out = append(out, fmt.Sprintf("--etcd-certfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyCertificate))
+	out = append(out, fmt.Sprintf("--etcd-keyfile=%s/%s", volumeMountPathEtcdClient, secrets.DataKeyPrivateKey))
+	out = append(out, fmt.Sprintf("--etcd-servers=https://%s:%d", etcd.ServiceName(v1beta1constants.ETCDRoleMain), etcd.PortEtcdClient))
+	out = append(out, fmt.Sprintf("--etcd-servers-overrides=/events#https://%s:%d", etcd.ServiceName(v1beta1constants.ETCDRoleEvents), etcd.PortEtcdClient))
+	out = append(out, fmt.Sprintf("--encryption-provider-config=%s/%s", volumeMountPathEtcdEncryptionConfig, SecretEtcdEncryptionConfigurationDataKey))
+	out = append(out, "--external-hostname="+k.values.ExternalHostname)
+
+	if k.values.FeatureGates != nil {
+		out = append(out, kutil.FeatureGatesToCommandLineParameter(k.values.FeatureGates))
+	}
+
+	out = append(out, "--insecure-port=0")
+	out = append(out, "--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP")
+	out = append(out, fmt.Sprintf("--kubelet-client-certificate=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameKubeAPIServerToKubelet)))
+	out = append(out, fmt.Sprintf("--kubelet-client-key=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameKubeAPIServerToKubelet)))
+
+	if versionutils.ConstraintK8sGreaterEqual116.Check(k.values.Version) {
+		out = append(out, "--livez-grace-period=1m")
+		out = append(out, "--shutdown-delay-duration=15s")
+	}
+
+	if k.values.Requests != nil {
+		if k.values.Requests.MaxNonMutatingInflight != nil {
+			out = append(out, fmt.Sprintf("--max-requests-inflight=%d", *k.values.Requests.MaxNonMutatingInflight))
+		}
+
+		if k.values.Requests.MaxMutatingInflight != nil {
+			out = append(out, fmt.Sprintf("--max-mutating-requests-inflight=%d", *k.values.Requests.MaxMutatingInflight))
+		}
+	}
+
+	if k.values.OIDC != nil {
+		if v := k.values.OIDC.IssuerURL; v != nil {
+			out = append(out, "--oidc-issuer-url="+*v)
+		}
+
+		if v := k.values.OIDC.ClientID; v != nil {
+			out = append(out, "--oidc-client-id="+*v)
+		}
+
+		if k.values.OIDC.CABundle != nil {
+			out = append(out, fmt.Sprintf("--oidc-ca-file=%s/%s", volumeMountPathOIDCCABundle, secretOIDCCABundleDataKeyCaCrt))
+		}
+
+		if v := k.values.OIDC.UsernameClaim; v != nil {
+			out = append(out, "--oidc-username-claim="+*v)
+		}
+
+		if v := k.values.OIDC.GroupsClaim; v != nil {
+			out = append(out, "--oidc-groups-claim="+*v)
+		}
+
+		if v := k.values.OIDC.UsernamePrefix; v != nil {
+			out = append(out, "--oidc-username-prefix="+*v)
+		}
+
+		if v := k.values.OIDC.GroupsPrefix; v != nil {
+			out = append(out, "--oidc-groups-prefix="+*v)
+		}
+
+		if k.values.OIDC.SigningAlgs != nil {
+			out = append(out, "--oidc-signing-algs="+strings.Join(k.values.OIDC.SigningAlgs, ","))
+		}
+
+		for key, value := range k.values.OIDC.RequiredClaims {
+			out = append(out, "--oidc-required-claim="+fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+
+	out = append(out, "--profiling=false")
+	out = append(out, fmt.Sprintf("--proxy-client-cert-file=%s/%s", volumeMountPathKubeAggregator, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameKubeAggregator)))
+	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameKubeAggregator)))
+	out = append(out, fmt.Sprintf("--requestheader-client-ca-file=%s/%s", volumeMountPathCAFrontProxy, secrets.DataKeyCertificateCA))
+	out = append(out, "--requestheader-extra-headers-prefix=X-Remote-Extra-")
+	out = append(out, "--requestheader-group-headers=X-Remote-Group")
+	out = append(out, "--requestheader-username-headers=X-Remote-User")
+
+	if k.values.RuntimeConfig != nil {
+		out = append(out, kutil.MapStringBoolToCommandLineParameter(k.values.RuntimeConfig, "--runtime-config="))
+	}
+
+	if k.values.ServiceAccount.SigningKey != nil {
+		out = append(out, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
+		out = append(out, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
+	} else {
+		out = append(out, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
+		out = append(out, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
+	}
+
+	out = append(out, "--service-account-issuer="+k.values.ServiceAccount.Issuer)
+	out = append(out, fmt.Sprintf("--service-cluster-ip-range=%s", k.values.VPN.ServiceNetworkCIDR))
+	out = append(out, fmt.Sprintf("--secure-port=%d", Port))
+	out = append(out, fmt.Sprintf("--token-auth-file=%s/%s", volumeMountPathStaticToken, secrets.DataKeyStaticTokenCSV))
+	out = append(out, fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)))
+	out = append(out, fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)))
+	out = append(out, "--tls-cipher-suites="+strings.Join(kutil.TLSCipherSuites(k.values.Version), ","))
+	out = append(out, "--v=2")
+
+	if k.values.WatchCacheSizes != nil {
+		if k.values.WatchCacheSizes.Default != nil {
+			out = append(out, fmt.Sprintf("--default-watch-cache-size=%d", *k.values.WatchCacheSizes.Default))
+		}
+
+		if len(k.values.WatchCacheSizes.Resources) > 0 {
+			var sizes []string
+
+			for _, resource := range k.values.WatchCacheSizes.Resources {
+				size := resource.Resource
+				if resource.APIGroup != nil {
+					size += "." + *resource.APIGroup
+				}
+				size += fmt.Sprintf("#%d", resource.CacheSize)
+
+				sizes = append(sizes, size)
+			}
+
+			out = append(out, "--watch-cache-sizes="+strings.Join(sizes, ","))
+		}
+	}
+
+	return out
+}
+
+func (k *kubeAPIServer) admissionPluginNames() []string {
+	var out []string
+
+	for _, plugin := range k.values.AdmissionPlugins {
+		out = append(out, plugin.Name)
+	}
+
+	return out
 }

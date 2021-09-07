@@ -760,8 +760,18 @@ var _ = Describe("kubernetes", func() {
 		},
 		Entry("nil map", nil, BeEmpty()),
 		Entry("empty map", map[string]bool{}, BeEmpty()),
-		Entry("map with one entry", map[string]bool{"foo": true}, Equal("--feature-gates=foo=true,")),
-		Entry("map with multiple entries", map[string]bool{"foo": true, "bar": false, "baz": true}, Equal("--feature-gates=bar=false,baz=true,foo=true,")),
+		Entry("map with one entry", map[string]bool{"foo": true}, Equal("--feature-gates=foo=true")),
+		Entry("map with multiple entries", map[string]bool{"foo": true, "bar": false, "baz": true}, Equal("--feature-gates=bar=false,baz=true,foo=true")),
+	)
+
+	DescribeTable("#MapStringBoolToCommandLineParameter",
+		func(m map[string]bool, param string, matcher gomegatypes.GomegaMatcher) {
+			Expect(MapStringBoolToCommandLineParameter(m, param)).To(matcher)
+		},
+		Entry("nil map", nil, "--some-param=", BeEmpty()),
+		Entry("empty map", map[string]bool{}, "--some-param=", BeEmpty()),
+		Entry("map with one entry", map[string]bool{"foo": true}, "--some-param=", Equal("--some-param=foo=true")),
+		Entry("map with multiple entries", map[string]bool{"foo": true, "bar": false, "baz": true}, "--some-param=", Equal("--some-param=bar=false,baz=true,foo=true")),
 	)
 
 	var (
