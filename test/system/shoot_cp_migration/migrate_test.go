@@ -142,19 +142,20 @@ func initShootAndClient(ctx context.Context, t *ShootMigrationTest) (err error) 
 func initSeedsAndClients(ctx context.Context, t *ShootMigrationTest) error {
 	t.Config.SourceSeedName = *t.Shoot.Spec.SeedName
 
-	if seed, seedClient, err := t.GardenerFramework.GetSeed(ctx, t.Config.TargetSeedName); err != nil {
+	seed, seedClient, err := t.GardenerFramework.GetSeed(ctx, t.Config.TargetSeedName)
+	if err != nil {
 		return err
-	} else {
-		t.TargetSeedClient = seedClient
-		t.TargetSeed = seed
 	}
+	t.TargetSeedClient = seedClient
+	t.TargetSeed = seed
 
-	if seed, seedClient, err := t.GardenerFramework.GetSeed(ctx, t.Config.SourceSeedName); err != nil {
+	seed, seedClient, err = t.GardenerFramework.GetSeed(ctx, t.Config.SourceSeedName)
+	if err != nil {
 		return err
-	} else {
-		t.SourceSeedClient = seedClient
-		t.SourceSeed = seed
 	}
+	t.SourceSeedClient = seedClient
+	t.SourceSeed = seed
+
 	return nil
 }
 
