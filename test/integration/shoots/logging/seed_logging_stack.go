@@ -21,7 +21,10 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
@@ -55,34 +58,40 @@ const (
 	garden                        = "garden"
 	loggerDeploymentName          = "logger"
 	logger                        = "logger-.*"
-	fluentBitConfigMapName        = "fluent-bit-config"
 	fluentBitClusterRoleName      = "fluent-bit-read"
 	simulatesShootNamespacePrefix = "shoot--logging--test-"
-	lokiConfigMapName             = "loki-config"
 )
 
 var _ = ginkgo.Describe("Seed logging testing", func() {
-
-	f := framework.NewShootFramework(nil)
-	gardenNamespace := &corev1.Namespace{}
-	fluentBit := &appsv1.DaemonSet{}
-	fluentBitConfMap := &corev1.ConfigMap{}
-	fluentBitService := &corev1.Service{}
-	fluentBitClusterRole := &rbacv1.ClusterRole{}
-	fluentBitClusterRoleBinding := &rbacv1.ClusterRoleBinding{}
-	fluentBitServiceAccount := &corev1.ServiceAccount{}
-	fluentBitPriorityClass := &schedulingv1.PriorityClass{}
-	clusterCRD := &apiextensionsv1.CustomResourceDefinition{}
-	lokiSts := &appsv1.StatefulSet{}
-	lokiServiceAccount := &corev1.ServiceAccount{}
-	lokiService := &corev1.Service{}
-	lokiConfMap := &corev1.ConfigMap{}
-	lokiPriorityClass := &schedulingv1.PriorityClass{}
+	var (
+		f                           = framework.NewShootFramework(nil)
+		gardenNamespace             = &corev1.Namespace{}
+		fluentBit                   = &appsv1.DaemonSet{}
+		fluentBitConfMap            = &corev1.ConfigMap{}
+		fluentBitService            = &corev1.Service{}
+		fluentBitClusterRole        = &rbacv1.ClusterRole{}
+		fluentBitClusterRoleBinding = &rbacv1.ClusterRoleBinding{}
+		fluentBitServiceAccount     = &corev1.ServiceAccount{}
+		fluentBitPriorityClass      = &schedulingv1.PriorityClass{}
+		clusterCRD                  = &apiextensionsv1.CustomResourceDefinition{}
+		lokiSts                     = &appsv1.StatefulSet{}
+		lokiServiceAccount          = &corev1.ServiceAccount{}
+		lokiService                 = &corev1.Service{}
+		lokiConfMap                 = &corev1.ConfigMap{}
+		lokiPriorityClass           = &schedulingv1.PriorityClass{}
+		// This shoot is used as seed for this integration test only
+		shootClient kubernetes.Interface
+	)
 
 	framework.CBeforeEach(func(ctx context.Context) {
+		var err error
 		checkRequiredResources(ctx, f.SeedClient)
+		shootClient, err = kubernetes.NewClientFromSecret(ctx, f.SeedClient.Client(), framework.ComputeTechnicalID(f.Project.Name, f.Shoot), gardencorev1beta1.GardenerName, kubernetes.WithClientOptions(client.Options{
+			Scheme: kubernetes.SeedScheme,
+		}))
+		framework.ExpectNoError(err)
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBit))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitConfigMapName}, fluentBitConfMap))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getConfigMapName(fluentBit.Spec.Template.Spec.Volumes, "template-config")}, fluentBitConfMap))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitService))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitClusterRoleName}, fluentBitClusterRole))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitClusterRoleName}, fluentBitClusterRoleBinding))
@@ -92,7 +101,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiSts))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiServiceAccount))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiService))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiConfigMapName}, lokiConfMap))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getConfigMapName(lokiSts.Spec.Template.Spec.Volumes, "config")}, lokiConfMap))
 	}, initializationTimeout)
 
 	f.Beta().Serial().CIt("should get container logs from loki for all namespaces", func(ctx context.Context) {
@@ -175,7 +184,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 
 			cluster := getCluster(i)
 			ginkgo.By(fmt.Sprintf("Deploy cluster %s", cluster.Name))
-			framework.ExpectNoError(create(ctx, f.ShootClient.Client(), cluster))
+			framework.ExpectNoError(create(ctx, shootClient.Client(), cluster))
 
 			ginkgo.By(fmt.Sprintf("Deploy the loki service in namespace %s", shootNamespace.Name))
 			lokiShootService := getLokiShootService(i)
@@ -219,7 +228,7 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			framework.ExpectNoError(kutil.DeleteObject(ctx, f.ShootClient.Client(), loggerDeploymentToDelete))
 
 			cluster := getCluster(i)
-			framework.ExpectNoError(kutil.DeleteObject(ctx, f.ShootClient.Client(), cluster))
+			framework.ExpectNoError(kutil.DeleteObject(ctx, shootClient.Client(), cluster))
 
 			lokiShootService := getLokiShootService(i)
 			framework.ExpectNoError(kutil.DeleteObject(ctx, f.ShootClient.Client(), lokiShootService))
