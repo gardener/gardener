@@ -203,7 +203,7 @@ func (t *ShootMigrationTest) CompareElementsAfterMigration() error {
 
 // Check the timestamp of all objects that the resource-manager creates in the Shoot cluster.
 // The timestamp should not be after the ShootMigrationTest.MigrationTime
-func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExcludeList []string) error {
+func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExcludeList, resourcesWithGeneratedName []string) error {
 	mrList := &resourcesv1alpha1.ManagedResourceList{}
 	if err := t.TargetSeedClient.Client().List(
 		ctx,
@@ -218,6 +218,11 @@ func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExclud
 			if !utils.ValueExists(mr.GetName(), mrExcludeList) {
 				t.GardenerFramework.Logger.Infof("=== Managed Resource: %s/%s ===", mr.Namespace, mr.Name)
 				for _, r := range mr.Status.Resources {
+					nameWithoutSHA256Sum := r.Name[:len(r.Name)-9]
+					if utils.ValueExists(nameWithoutSHA256Sum, resourcesWithGeneratedName) {
+						continue
+					}
+
 					obj := &unstructured.Unstructured{}
 					obj.SetAPIVersion(r.APIVersion)
 					obj.SetKind(r.Kind)
