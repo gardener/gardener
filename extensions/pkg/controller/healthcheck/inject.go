@@ -24,7 +24,7 @@ type ShootClient interface {
 	InjectShootClient(client.Client)
 }
 
-// ShootClient is an interface to be used to receive a seed client.
+// SeedClient is an interface to be used to receive a seed client.
 type SeedClient interface {
 	// InjectSeedClient injects the seed client
 	InjectSeedClient(client.Client)

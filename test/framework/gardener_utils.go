@@ -685,7 +685,7 @@ func (f *GardenerFramework) WaitForManagedSeedToBeCreated(ctx context.Context, m
 	})
 }
 
-// DeleteSeed deletes the given managed seed and waits for it to be deleted.
+// DeleteManagedSeed deletes the given managed seed and waits for it to be deleted.
 func (f *GardenerFramework) DeleteManagedSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 	// Delete the managed seed
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {

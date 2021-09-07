@@ -245,7 +245,7 @@ func (f *CommonFrameworkLandscaper) waitForInstallationToBeCreated(ctx context.C
 	})
 }
 
-// DeleteSeed deletes the given installation and waits for it to be deleted.
+// DeleteInstallation deletes the given installation and waits for it to be deleted.
 func (f *CommonFrameworkLandscaper) DeleteInstallation(ctx context.Context, name string) error {
 	installation := &landscaperv1alpha1.Installation{
 		ObjectMeta: metav1.ObjectMeta{

@@ -50,7 +50,7 @@ import (
 // For example: func() extensionsv1alpha1.Object {return &extensionsv1alpha1.Worker{}}
 type GetExtensionObjectFunc = func() extensionsv1alpha1.Object
 
-// GetExtensionObjectFunc returns the extension object that should be registered with the health check controller. Has to be a List.
+// GetExtensionObjectListFunc returns the extension object list that should be registered with the health check controller.
 // For example: func() client.ObjectList { return &extensionsv1alpha1.WorkerList{} }
 type GetExtensionObjectListFunc = func() client.ObjectList
 

@@ -44,7 +44,7 @@ const (
 `
 )
 
-// LoggingConfiguration returns a fluent-bit parser and filters for the gardener-resource-manager logs.
+// CentralLoggingConfiguration returns a fluent-bit parser and filters for the gardener-resource-manager logs.
 func CentralLoggingConfiguration() (component.CentralLoggingConfig, error) {
 	return component.CentralLoggingConfig{Filters: loggingFilters, Parsers: loggingParser}, nil
 }

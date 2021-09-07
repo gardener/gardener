@@ -46,7 +46,7 @@ type Args struct {
 	MutatorWithShootClient extensionswebhook.MutatorWithShootClient
 }
 
-// Add creates a new webhook with the shoot as target cluster.
+// New creates a new webhook with the shoot as target cluster.
 func New(mgr manager.Manager, args Args) (*extensionswebhook.Webhook, error) {
 	logger.Info("Creating webhook", "name", WebhookName)
 

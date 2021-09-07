@@ -59,7 +59,7 @@ type Manager struct {
 	seedName               string
 }
 
-// NewCertificateRotation creates a certificate manager that can be used to rotate gardenlet's client certificate for the Garden cluster
+// NewCertificateManager creates a certificate manager that can be used to rotate gardenlet's client certificate for the Garden cluster
 func NewCertificateManager(clientMap clientmap.ClientMap, seedClient client.Client, config *config.GardenletConfiguration) *Manager {
 	seedName := bootstraputil.GetSeedName(config.SeedConfig)
 	gardenletTargetClusterName := bootstraputil.GetTargetClusterName(config.SeedClientConnection)

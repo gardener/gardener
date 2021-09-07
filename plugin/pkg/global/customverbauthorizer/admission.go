@@ -40,7 +40,7 @@ const (
 	// CustomVerbModifyProjectTolerationsWhitelist is a constant for the custom verb that allows modifying the
 	// `.spec.tolerations.whitelist` field in `Project` resources.
 	CustomVerbModifyProjectTolerationsWhitelist = "modify-spec-tolerations-whitelist"
-	// CustomVerbProjectUserAccessManagement is a constant for the custom verb that allows to manage human users or
+	// CustomVerbProjectManageMembers is a constant for the custom verb that allows to manage human users or
 	// groups subjects in the `.spec.members` field in `Project` resources.
 	CustomVerbProjectManageMembers = "manage-members"
 )

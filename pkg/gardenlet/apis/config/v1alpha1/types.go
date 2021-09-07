@@ -499,7 +499,7 @@ type ExposureClassHandler struct {
 	SNI *SNI `json:"sni,omitempty"`
 }
 
-// LoadBalancerService contains configuration which is used to configure the underlying
+// LoadBalancerServiceConfig contains configuration which is used to configure the underlying
 // load balancer to apply the control plane endpoint exposure strategy.
 type LoadBalancerServiceConfig struct {
 	// Annotations is a key value map to annotate the underlying load balancer services.

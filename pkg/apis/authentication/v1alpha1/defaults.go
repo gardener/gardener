@@ -24,6 +24,7 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 	return RegisterDefaults(scheme)
 }
 
+// SetDefaults_AdminKubeconfigRequestSpec sets default values for AdminKubeconfigRequestSpec objects.
 func SetDefaults_AdminKubeconfigRequestSpec(obj *AdminKubeconfigRequestSpec) {
 	if obj.ExpirationSeconds == nil {
 		hour := int64(60 * 60)

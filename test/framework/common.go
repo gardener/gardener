@@ -38,7 +38,7 @@ const (
 	// testmachinery provided kubeconfigs.
 	TestMachineryKubeconfigsPathEnvVarName = "TM_KUBECONFIG_PATH"
 
-	// TestMachineryTestRunEnvVarName is the name of the environment variable that holds the testrun ID.
+	// TestMachineryTestRunIDEnvVarName is the name of the environment variable that holds the testrun ID.
 	TestMachineryTestRunIDEnvVarName = "TM_TESTRUN_ID"
 
 	// SeedTaintTestRun is the taint used to limit shoots that can be scheduled on a seed to shoots created by the same testrun.

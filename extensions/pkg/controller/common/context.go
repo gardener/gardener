@@ -34,7 +34,7 @@ type ClientContext struct {
 	client  client.Client
 }
 
-// NewClientConntext offers the possibility to create a ClientContext without injection.
+// NewClientContext offers the possibility to create a ClientContext without injection.
 func NewClientContext(client client.Client, scheme *runtime.Scheme, decoder runtime.Decoder) ClientContext {
 	if decoder == nil && scheme != nil {
 		decoder = serializer.NewCodecFactory(scheme, serializer.EnableStrict).UniversalDecoder()

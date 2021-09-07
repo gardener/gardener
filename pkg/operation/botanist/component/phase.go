@@ -24,7 +24,7 @@ const (
 	PhaseEnabled
 	// PhaseDisabled is when a component was disabled before and it's still disabled.
 	PhaseDisabled
-	// PhaseEnabled is when a component was disabled before, but it's being activated.
+	// PhaseEnabling is when a component was disabled before, but it's being activated.
 	PhaseEnabling
 	// PhaseDisabling is when a component was enabled before, but it's being disabled.
 	PhaseDisabling
