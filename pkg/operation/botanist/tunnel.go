@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -26,6 +27,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// SetupPortForwarder is an alias for kubernetes.SetupPortForwarder, exposed for testing
+var SetupPortForwarder = kubernetes.SetupPortForwarder
 
 // CheckTunnelConnection checks if the tunnel connection between the control plane and the shoot networks
 // is established.
@@ -47,9 +51,18 @@ func CheckTunnelConnection(ctx context.Context, shootClient kubernetes.Interface
 		logger.Infof("Waiting until a running %s pod exists in the Shoot cluster...", tunnelName)
 		return retry.MinorError(fmt.Errorf("no running %s pod found yet in the shoot cluster", tunnelName))
 	}
-	if err := shootClient.CheckForwardPodPort(tunnelPod.Namespace, tunnelPod.Name, 0, 22); err != nil {
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	fw, err := SetupPortForwarder(timeoutCtx, shootClient.RESTConfig(), tunnelPod.Namespace, tunnelPod.Name, 0, 22)
+	if err != nil {
+		return retry.MinorError(fmt.Errorf("could not setup pod port forwarding: %w", err))
+	}
+
+	if err := kubernetes.CheckForwardPodPort(fw); err != nil {
 		logger.Info("Waiting until the tunnel connection has been established...")
-		return retry.MinorError(fmt.Errorf("could not forward to %s pod: %v", tunnelName, err))
+		return retry.MinorError(fmt.Errorf("could not forward to %s pod (timeout after 5 seconds): %v", tunnelName, err))
 	}
 
 	logger.Info("Tunnel connection has been established.")

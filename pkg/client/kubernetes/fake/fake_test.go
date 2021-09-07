@@ -160,11 +160,4 @@ var _ = Describe("Fake ClientSet", func() {
 
 		Expect(cs.WaitForCacheSync(context.Background())).To(BeTrue())
 	})
-
-	It("should do nothing on CheckForwardPodPort", func() {
-		cs := builder.Build()
-
-		Expect(cs.CheckForwardPodPort("", "", 0, 0)).To(Succeed())
-	})
-
 })
