@@ -235,15 +235,20 @@ type APIServerEtcdConfiguration struct {
 	// Optional. if not set, the Gardener API server will not validate etcd's TLS serving certificate
 	// +optional
 	CABundle *string `json:"caBundle,omitempty"`
-	// TLSServer contains a client certificate and key which will be used by the Gardener API server
+	// ClientCert contains a client certificate which will be used by the Gardener API server
 	// to communicate with etcd via TLS.
-	// Configures the flags --etcd-certfile and --etcd-keyfile on the Gardener API server.
+	// Configures the flags --etcd-certfile on the Gardener API server.
 	// On the etcd make sure that
 	//  - client authentication is enabled via the flag --client-cert-auth
 	//  - the client credentials have been signed by the CA provided to etcd via the flag --trusted-ca-file
 	// Optional. Etcd does not have to enforce client authentication.
 	// +optional
-	*TLSServer `json:"tls,omitempty"`
+	ClientCert *string `json:"clientCert,omitempty"`
+	// ClientKey is the key matching the configured client certificate.
+	// Configures the flags --etcd-keyfile on the Gardener API server.
+	// Optional. Etcd does not have to enforce client authentication.
+	// +optional
+	ClientKey *string `json:"clientKey,omitempty"`
 }
 
 // APIServerAuditConfiguration contains audit logging configuration

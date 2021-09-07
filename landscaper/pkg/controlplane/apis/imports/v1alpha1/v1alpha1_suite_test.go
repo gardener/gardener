@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helper_test
+package v1alpha1_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHelper(t *testing.T) {
+func TestV1alpha1(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Gardener Scheduler APIs Config Helper Suite")
+	RunSpecs(t, "Landscaper ControlPlane API Imports V1alpha1 Suite")
 }

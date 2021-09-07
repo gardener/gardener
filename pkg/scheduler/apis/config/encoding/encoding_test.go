@@ -71,9 +71,9 @@ var _ = Describe("Encoding", func() {
 		})
 	})
 
-	Describe("#EncodeschedulerConfiguration", func() {
+	Describe("#EncodeSchedulerConfiguration", func() {
 		It("should encode the SchedulerConfiguration into a raw extension", func() {
-			result, err := EncodeschedulerConfiguration(config)
+			result, err := EncodeSchedulerConfiguration(config)
 
 			Expect(err).NotTo(HaveOccurred())
 			// Test for equality doesn't work since there is one extra byte at the end of result compared to json.Marshal
@@ -82,9 +82,9 @@ var _ = Describe("Encoding", func() {
 		})
 	})
 
-	Describe("#EncodeschedulerConfigurationToBytes", func() {
+	Describe("#EncodeSchedulerConfigurationToBytes", func() {
 		It("should encode the SchedulerConfiguration into a byte slice", func() {
-			result, err := EncodeschedulerConfigurationToBytes(config)
+			result, err := EncodeSchedulerConfigurationToBytes(config)
 
 			Expect(err).NotTo(HaveOccurred())
 			// Test for equality doesn't work since there is one extra byte at the end of result compared to json.Marshal

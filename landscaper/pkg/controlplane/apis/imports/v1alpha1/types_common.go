@@ -54,7 +54,7 @@ type Configuration struct {
 type TLSServer struct {
 	// Certificate is a certificate used by the component to serve TLS endpoints.
 	// If specified, the certificate must be signed by the configured CA.
-	Certificate string `json:"certificate,omitempty"`
+	Crt string `json:"crt,omitempty"`
 	// Key is the key for the configured TLS certificate.
 	Key string `json:"key,omitempty"`
 }

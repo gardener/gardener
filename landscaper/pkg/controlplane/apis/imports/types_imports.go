@@ -68,7 +68,7 @@ type VirtualGarden struct {
 	// the runtime cluster (this should be done automatically by a preceding component when using the standard installation via the landscaper)
 	// and must be able to communicate with the Gardener Extension API server pod that will
 	// be deployed to the Garden namespace
-	Enabled *bool
+	Enabled bool
 	// Kubeconfig is the landscaper target containing the kubeconfig to an existing "Virtual Garden" API server
 	// deployed in the runtime cluster.
 	// This is the kubeconfig of the Cluster
@@ -160,5 +160,6 @@ type Rbac struct {
 // SeedAuthorizer configures RBAC for the SeedAuthorizer
 type SeedAuthorizer struct {
 	// Enabled configures whether the Seed Authorizer is enabled
+	// The Seed Authorizer must be configured on the to-be extendet API server (runtime cluster or virtual-garden)
 	Enabled *bool
 }

@@ -54,7 +54,7 @@ func ValidateControllerManagerComponentConfiguration(config imports.ControllerMa
 			return allErrs
 		}
 
-		allErrs = append(allErrs, ValidateControllerManagerConfiguration(componentConfig, fldPath)...)
+		allErrs = append(allErrs, ValidateControllerManagerConfiguration(componentConfig, fldPath.Child("config"))...)
 	}
 
 	return allErrs
@@ -76,7 +76,12 @@ func ValidateControllerManagerConfiguration(config *apisconfig.ControllerManager
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("server").Child("https").Child("tls").Child("serverKeyPath"), config.Server.HTTPS.TLS.ServerKeyPath, "The path to the TLS serving certificate of the Gardener Controller Manager must not be set. Instead, directly provide the certificates via the landscaper imports field gardenerControllerManager.componentConfiguration.tls.key."))
 	}
 
-	allErrs = append(allErrs, configvalidation.ValidateControllerManagerConfiguration(config)...)
+	if errorList := configvalidation.ValidateControllerManagerConfiguration(config); len(errorList) > 0 {
+		for _, err := range errorList {
+			err.Field = fmt.Sprintf("%s.%s", fldPath.String(), err.Field)
+			allErrs = append(allErrs, err)
+		}
+	}
 
 	return allErrs
 }

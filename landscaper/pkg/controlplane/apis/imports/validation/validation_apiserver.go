@@ -80,8 +80,18 @@ func ValidateAPIServerComponentConfiguration(config imports.APIServerComponentCo
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("caBundle"), "For security reasons, only providing the TLS serving certificates of the Gardener API server, but not the CA for verification, is forbidden."))
 	}
 
+	if config.CABundle != nil {
+		allErrs = append(allErrs, ValidateCABundle(*config.CABundle, fldPath.Child("caBundle"))...)
+	}
+
 	if config.TLS != nil {
-		allErrs = append(allErrs, ValidateCommonTLSServer(*config.TLS, fldPath.Child("tls"))...)
+		errors := ValidateCommonTLSServer(*config.TLS, fldPath.Child("tls"))
+
+		// only makes sense to further validate the cert against the CA, if the cert is valid in the first place
+		if len(errors) == 0 && config.CABundle != nil {
+			allErrs = append(allErrs, ValidateTLSServingCertificateAgainstCA(config.TLS.Crt, *config.CABundle, fldPath.Child("tls").Child("crt"))...)
+		}
+		allErrs = append(allErrs, errors...)
 	}
 
 	if config.Encryption != nil {
@@ -89,7 +99,7 @@ func ValidateAPIServerComponentConfiguration(config imports.APIServerComponentCo
 	}
 
 	if config.Admission != nil {
-		allErrs = append(allErrs, ValidateAPIServerAdmission(config.Admission, fldPath.Child("tls"))...)
+		allErrs = append(allErrs, ValidateAPIServerAdmission(config.Admission, fldPath.Child("admission"))...)
 	}
 
 	if config.GoAwayChance != nil && (*config.GoAwayChance < 0 || *config.GoAwayChance > 0.02) {
@@ -243,10 +253,10 @@ func ValidateAPIServerWatchCache(config *imports.APIServerWatchCacheConfiguratio
 	for i, resource := range config.Resources {
 		path := fldPath.Child("resources").Index(i)
 		if len(resource.ApiGroup) == 0 {
-			allErrs = append(allErrs, field.Invalid(path.Child("apiGroup"), resource.ApiGroup, "The API Group of the watch cache resource cannot be empty"))
+			allErrs = append(allErrs, field.Invalid(path.Child("apiGroup"), "", "The API Group of the watch cache resource cannot be empty"))
 		}
 		if len(resource.Resource) == 0 {
-			allErrs = append(allErrs, field.Invalid(path.Child("resource"), resource.Resource, "The name of the watch cache resource cannot be empty"))
+			allErrs = append(allErrs, field.Invalid(path.Child("resource"), "", "The name of the watch cache resource cannot be empty"))
 		}
 		if resource.Size < 0 {
 			allErrs = append(allErrs, field.Invalid(path.Child("size"), resource.Size, "The size of the watch cache resource cannot be negative"))
@@ -264,7 +274,7 @@ func ValidateAPIServerRequests(config *imports.APIServerRequests, fldPath *field
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxNonMutatingInflight"), *config.MaxNonMutatingInflight, "The MaxNonMutatingInflight field cannot be negative"))
 	}
 	if config.MaxMutatingInflight != nil && *config.MaxMutatingInflight < 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxMutatingInflight"), *config.MaxNonMutatingInflight, "The MaxMutatingInflight field cannot be negative"))
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxMutatingInflight"), *config.MaxMutatingInflight, "The MaxMutatingInflight field cannot be negative"))
 	}
 
 	allErrs = append(allErrs, gardencorevalidation.ValidatePositiveDuration(config.MinTimeout, fldPath.Child("minTimeout"))...)
@@ -301,8 +311,18 @@ func ValidateAPIServerETCDConfiguration(config imports.APIServerEtcdConfiguratio
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("url"), config.Url, "url of etcd must be set"))
 	}
 
-	if config.TLSServer != nil {
-		allErrs = append(allErrs, ValidateCommonTLSServer(*config.TLSServer, fldPath.Child("tls"))...)
+	// Do not verify the client certs against the given CA, as the client certs do not necessarily have to be signed by the
+	// same CA that signed etcd's TLS serving certificates.
+	if config.CABundle != nil {
+		allErrs = append(allErrs, ValidateCABundle(*config.CABundle, fldPath.Child("caBundle"))...)
+	}
+
+	if config.ClientCert != nil {
+		allErrs = append(allErrs, ValidateClientCertificate(*config.ClientCert, fldPath.Child("clientCert"))...)
+	}
+
+	if config.ClientKey != nil {
+		allErrs = append(allErrs, ValidatePrivateKey(*config.ClientKey, fldPath.Child("clientKey"))...)
 	}
 
 	return allErrs

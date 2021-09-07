@@ -18,7 +18,7 @@ package v1alpha1
 type GardenerAdmissionController struct {
 	// Enabled configures whether the Gardener Admission Controller should be deployed
 	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
+	Enabled bool `json:"enabled,omitempty"`
 	// SeedRestriction configures the SeedRestriction admission plugin
 	// +optional
 	SeedRestriction *SeedRestriction `json:"seedRestriction,omitempty"`
@@ -58,7 +58,8 @@ type SeedRestriction struct {
 	// Enabled configures whether the SeedRestriction admission plugin should be enabled.
 	// Sets up the ValidatingWebhookConfiguration pointing to the webhook server in the Gardener Admission Controller
 	// serving the SeedRestriction webhook
-	// Default: true
+	// If the Seed Authorizer is enabled already, the Seed Restriction Plugin will be enabled per default.
+	// Default: false
 	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
+	Enabled bool `json:"enabled,omitempty"`
 }

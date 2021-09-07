@@ -5,7 +5,7 @@ global:
   apiserver:
     enabled: true
     serviceEnabled: true
-    replicaCount: 3
+    replicaCount: 1
     serviceAccountName: gardener-apiserver
     image:
       repository: eu.gcr.io/gardener-project/gardener/apiserver
@@ -258,7 +258,7 @@ global:
   # Gardener admission controller configuration values
   admission:
     enabled: true
-    replicaCount: 3
+    replicaCount: 1
     serviceAccountName: gardener-admission-controller
     image:
       repository: eu.gcr.io/gardener-project/gardener/admission-controller

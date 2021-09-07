@@ -45,9 +45,9 @@ type Configuration struct {
 
 // TLSServer configures the TLS serving endpoints of a component
 type TLSServer struct {
-	// Certificate is a certificate used by the component to serve TLS endpoints.
+	// Cert is a certificate used by the component to serve TLS endpoints.
 	// If specified, the certificate must be signed by the configured CA.
-	Certificate string
+	Crt string
 	// Key is the key for the configured TLS certificate.
 	Key string
 }

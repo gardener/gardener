@@ -17,7 +17,7 @@ package imports
 // GardenerAdmissionController contains the configuration of the Gardener Admission Controller
 type GardenerAdmissionController struct {
 	// Enabled configures whether the Gardener Admission Controller should be deployed
-	Enabled *bool
+	Enabled bool
 	// SeedRestriction configures the SeedRestriction admission plugin
 	SeedRestriction *SeedRestriction
 	// DeploymentConfiguration contains optional configurations for
@@ -51,6 +51,7 @@ type SeedRestriction struct {
 	// Enabled configures whether the SeedRestriction admission plugin should be enabled.
 	// Sets up the ValidatingWebhookConfiguration pointing to the webhook server in the Gardener Admission Controller
 	// serving the SeedRestriction webhook
-	// Default: true
-	Enabled *bool
+	// If the Seed Authorizer is enabled already, the Seed Restriction Plugin will be enabled per default.
+	// Default: false
+	Enabled bool
 }

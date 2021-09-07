@@ -1,6 +1,6 @@
 # Prerequisites
 
-1) A kubeconfig for a Kubernetes cluster (`runtime` cluster) to run the Gardener Control Plane pods (Gardener Extension API server, Gardener Controller Manager, Gardener Scheduler, Gardener Admission Controller)
+1) A kubeconfig for a Kubernetes cluster (`runtime` cluster) to run the Gardener control plane pods (Gardener Extension API server, Gardener Controller Manager, Gardener Scheduler, Gardener Admission Controller)
 
 2) A kubeconfig for a Kubernetes cluster with a Kubernetes API server set up for API aggregation.
   - The Gardener API server extends this API server and serves the Gardener resource groups.
@@ -17,8 +17,8 @@ The Gardener control plane can be set up in two different ways.
 ### 1) Extending the Runtime Cluster
 
 In this setup, 
-- the `runtime` cluster hosts the Gardener control Plane pods
-- the API server of the `runtime` cluster is extendet by the Gardener Extension API server, thus serves the Gardener resource groups (Shoot, Seed, ...).
+- the `runtime` cluster hosts the Gardener control plane pods
+- the API server of the `runtime` cluster is extended by the Gardener Extension API server, thus serves the Gardener resource groups (Shoot, Seed, ...).
 - the Gardener control plane pods are configured against the API server of the `runtime` cluster
 
 Consider this option if
@@ -31,11 +31,11 @@ Consider this option if
 - An Kubernetes API server deployment configured for API aggregation in the `runtime` cluster.
   This component does not deploy the such API server. It must already exist in the runtime cluster
   and setup for [API aggregation](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer).
-  This is the case when the [virtual garden component](https://github.com/gardener/virtual-garden) of the lanscaper has already been deployed to the `runtime` cluster.
+  This is the case when the [virtual garden component](https://github.com/gardener/virtual-garden) of the Landscaper has already been deployed to the `runtime` cluster.
 
 In this setup,
-- the `runtime` cluster hosts the Gardener control Plane pods
-- a dedicated Kubernetes API server deployed in the `runtime` cluster is extendet by the Gardener Extension API server (`virtual-garden` API server).
+- the `runtime` cluster hosts the Gardener control plane pods
+- a dedicated Kubernetes API server deployed in the `runtime` cluster is extended by the Gardener Extension API server (`virtual-garden` API server).
   - the `virtual-garden` API server serves the Gardener API
 - the Gardener control plane pods are configured against the `virtual-garden` API server
 
@@ -46,6 +46,8 @@ Consider this option if
 - scalability of the API server of the runtime cluster is a concern
   - deployed as a dedicated deployment, the virtual Garden API server can scale independently of the `runtime` cluster's API server
 
+
+Please note that all resources will be installed in the `garden` namespace.
 
 # Mandatory configuration
 
@@ -157,15 +159,14 @@ Make sure that the client credentials are signed by the CA provided to etcd via 
 gardenerAPIserver:
   componentConfiguration:
     etcd:
-      tls:
-        crt: |
-          -----BEGIN CERTIFICATE-----
-          ...
-          -----END CERTIFICATE-----
-        key: |
-          -----BEGIN RSA PRIVATE KEY-----
-          ...
-          -----END RSA PRIVATE KEY-----
+      clientCrt: |
+        -----BEGIN CERTIFICATE-----
+        ...
+        -----END CERTIFICATE-----
+      clientKey: |
+        -----BEGIN RSA PRIVATE KEY-----
+        ...
+        -----END RSA PRIVATE KEY-----
 ```
 
 
@@ -175,7 +176,7 @@ gardenerAPIserver:
 
 The Gardener cluster identity is a string that uniquely identifies the Gardener installation.
 It can be any string that uniquely identifies the landscape.
-If not provided, sets a default random identity.
+If not provided, sets a default identity.
 
 ``` yaml
 clusterIdentity: my-company-landscape-dev
@@ -281,6 +282,51 @@ gardenerAdmissionController:
         ...
         -----END RSA PRIVATE KEY-----
 ```
+
+### Seed Authorizer
+
+The Seed Authorizer is a special-purpose authorization plugin that specifically authorizes API requests made by the gardenlets 
+in the Garden cluster. Please see [here](https://github.com/gardener/gardener/blob/master/docs/deployment/gardenlet_api_access.md)
+for more information.
+
+**Prerequisite**: 
+
+The Seed Authorizer must be already configured on the to-be extended API server (runtime cluster or virtual-garden).
+This is already done when using the [virtual-garden component](https://github.com/gardener/virtual-garden).
+
+The following configuration is required:
+
+
+``` yaml
+rbac:
+  seedAuthorizer:
+    enabled: true
+```
+
+This has the effect that the Gardenlet authenticating as `gardener.cloud:system:seeds` does NOT have
+admin access to all resources in the Garden cluster (the RBAC rolebindings are not deployed for the Gardenlet).
+Instead, the authorization decision is delegated via webhook from the `virtual-garden` /`runtime` cluster API Server
+to the Seed Authorizer running as a webhook in the Gardener Admission Controller.
+
+### Seed Restriction Plugin
+
+The Seed restriction plugin can be enabled to provide an extra layer of security.
+For more information, please see [here](https://github.com/gardener/gardener/blob/master/docs/deployment/gardenlet_api_access.md#seedrestriction-admission-webhook-enablement).
+
+**Please note**: 
+The Seed Restriction Plugin and the Seed Authorizer should be enabled together. 
+If only one is enabled, then you are missing a piece of the security pie.
+If the Seed Authorizer is enabled already, the Seed Restriction Plugin will be enabled per default.
+
+The following configuration is required:
+
+``` yaml
+gardenerAdmissionController:
+  seedRestriction:
+    enabled: true
+```
+This sets up a `ValidatingWebhookConfiguration` pointing to the Gardener Admission Controller serving the
+Seed restriction webhook.
 
 ## Custom deployment configurations
 Each component has a set of common configuration values configuring its Kubernetes deployment.

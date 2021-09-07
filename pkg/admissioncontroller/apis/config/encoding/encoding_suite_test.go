@@ -23,5 +23,5 @@ import (
 
 func TestEncoding(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "ControllerManager API Encoding Suite")
+	RunSpecs(t, "AdmissionController API Encoding Suite")
 }

@@ -671,7 +671,8 @@ func Convert_imports_APIServerDeploymentConfiguration_To_v1alpha1_APIServerDeplo
 func autoConvert_v1alpha1_APIServerEtcdConfiguration_To_imports_APIServerEtcdConfiguration(in *APIServerEtcdConfiguration, out *imports.APIServerEtcdConfiguration, s conversion.Scope) error {
 	out.Url = in.Url
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
-	out.TLSServer = (*imports.TLSServer)(unsafe.Pointer(in.TLSServer))
+	out.ClientCert = (*string)(unsafe.Pointer(in.ClientCert))
+	out.ClientKey = (*string)(unsafe.Pointer(in.ClientKey))
 	return nil
 }
 
@@ -683,7 +684,8 @@ func Convert_v1alpha1_APIServerEtcdConfiguration_To_imports_APIServerEtcdConfigu
 func autoConvert_imports_APIServerEtcdConfiguration_To_v1alpha1_APIServerEtcdConfiguration(in *imports.APIServerEtcdConfiguration, out *APIServerEtcdConfiguration, s conversion.Scope) error {
 	out.Url = in.Url
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
-	out.TLSServer = (*TLSServer)(unsafe.Pointer(in.TLSServer))
+	out.ClientCert = (*string)(unsafe.Pointer(in.ClientCert))
+	out.ClientKey = (*string)(unsafe.Pointer(in.ClientKey))
 	return nil
 }
 
@@ -993,7 +995,7 @@ func Convert_imports_GardenerAPIServer_To_v1alpha1_GardenerAPIServer(in *imports
 }
 
 func autoConvert_v1alpha1_GardenerAdmissionController_To_imports_GardenerAdmissionController(in *GardenerAdmissionController, out *imports.GardenerAdmissionController, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	out.Enabled = in.Enabled
 	out.SeedRestriction = (*imports.SeedRestriction)(unsafe.Pointer(in.SeedRestriction))
 	out.DeploymentConfiguration = (*imports.CommonDeploymentConfiguration)(unsafe.Pointer(in.DeploymentConfiguration))
 	if in.ComponentConfiguration != nil {
@@ -1009,7 +1011,7 @@ func autoConvert_v1alpha1_GardenerAdmissionController_To_imports_GardenerAdmissi
 }
 
 func autoConvert_imports_GardenerAdmissionController_To_v1alpha1_GardenerAdmissionController(in *imports.GardenerAdmissionController, out *GardenerAdmissionController, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	out.Enabled = in.Enabled
 	out.SeedRestriction = (*SeedRestriction)(unsafe.Pointer(in.SeedRestriction))
 	out.DeploymentConfiguration = (*CommonDeploymentConfiguration)(unsafe.Pointer(in.DeploymentConfiguration))
 	if in.ComponentConfiguration != nil {
@@ -1333,7 +1335,7 @@ func Convert_imports_SeedAuthorizer_To_v1alpha1_SeedAuthorizer(in *imports.SeedA
 }
 
 func autoConvert_v1alpha1_SeedRestriction_To_imports_SeedRestriction(in *SeedRestriction, out *imports.SeedRestriction, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	out.Enabled = in.Enabled
 	return nil
 }
 
@@ -1343,7 +1345,7 @@ func Convert_v1alpha1_SeedRestriction_To_imports_SeedRestriction(in *SeedRestric
 }
 
 func autoConvert_imports_SeedRestriction_To_v1alpha1_SeedRestriction(in *imports.SeedRestriction, out *SeedRestriction, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	out.Enabled = in.Enabled
 	return nil
 }
 
@@ -1353,7 +1355,7 @@ func Convert_imports_SeedRestriction_To_v1alpha1_SeedRestriction(in *imports.See
 }
 
 func autoConvert_v1alpha1_TLSServer_To_imports_TLSServer(in *TLSServer, out *imports.TLSServer, s conversion.Scope) error {
-	out.Certificate = in.Certificate
+	out.Crt = in.Crt
 	out.Key = in.Key
 	return nil
 }
@@ -1364,7 +1366,7 @@ func Convert_v1alpha1_TLSServer_To_imports_TLSServer(in *TLSServer, out *imports
 }
 
 func autoConvert_imports_TLSServer_To_v1alpha1_TLSServer(in *imports.TLSServer, out *TLSServer, s conversion.Scope) error {
-	out.Certificate = in.Certificate
+	out.Crt = in.Crt
 	out.Key = in.Key
 	return nil
 }
@@ -1375,7 +1377,7 @@ func Convert_imports_TLSServer_To_v1alpha1_TLSServer(in *imports.TLSServer, out 
 }
 
 func autoConvert_v1alpha1_VirtualGarden_To_imports_VirtualGarden(in *VirtualGarden, out *imports.VirtualGarden, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	out.Enabled = in.Enabled
 	out.Kubeconfig = (*corev1alpha1.Target)(unsafe.Pointer(in.Kubeconfig))
 	out.ClusterIP = (*string)(unsafe.Pointer(in.ClusterIP))
 	return nil
@@ -1387,7 +1389,7 @@ func Convert_v1alpha1_VirtualGarden_To_imports_VirtualGarden(in *VirtualGarden, 
 }
 
 func autoConvert_imports_VirtualGarden_To_v1alpha1_VirtualGarden(in *imports.VirtualGarden, out *VirtualGarden, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	out.Enabled = in.Enabled
 	out.Kubeconfig = (*corev1alpha1.Target)(unsafe.Pointer(in.Kubeconfig))
 	out.ClusterIP = (*string)(unsafe.Pointer(in.ClusterIP))
 	return nil

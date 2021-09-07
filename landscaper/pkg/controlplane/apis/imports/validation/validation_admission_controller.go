@@ -44,16 +44,26 @@ func ValidateAdmissionControllerComponentConfiguration(config imports.AdmissionC
 
 	if config.CABundle == nil && config.TLS != nil {
 		// For security reasons, require the CA bundle of the provided TLS serving certs.
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("caBundle"), "For security reasons, only providing the TLS serving certificates of the Gardener API server, but not the CA for verification, is forbidden."))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("caBundle"), "Only providing the TLS serving certificates of the Gardener API server, but not the CA for verification, is forbidden."))
+	}
+
+	if config.CABundle != nil {
+		allErrs = append(allErrs, ValidateCABundle(*config.CABundle, fldPath.Child("caBundle"))...)
 	}
 
 	if config.TLS != nil {
-		allErrs = append(allErrs, ValidateCommonTLSServer(*config.TLS, fldPath.Child("tls"))...)
+		errors := ValidateCommonTLSServer(*config.TLS, fldPath.Child("tls"))
+
+		// only makes sense to further validate the cert against the CA, if the cert is valid in the first place
+		if len(errors) == 0 && config.CABundle != nil {
+			allErrs = append(allErrs, ValidateTLSServingCertificateAgainstCA(config.TLS.Crt, *config.CABundle, fldPath.Child("tls").Child("crt"))...)
+		}
+		allErrs = append(allErrs, errors...)
 	}
 
 	// Convert the admission controller config to an internal version
 	if config.Configuration != nil {
-		fldPathComponentConfig := fldPath.Child("componentConfiguration")
+		fldPathComponentConfig := fldPath.Child("config")
 
 		componentConfig, err := admissionconfighelper.ConvertAdmissionControllerConfiguration(config.Configuration.ComponentConfiguration)
 		if err != nil {
@@ -79,7 +89,12 @@ func ValidateAdmissionControllerConfiguration(config *apisconfig.AdmissionContro
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("server").Child("https").Child("tls").Child("serverCertDir"), config.Server.HTTPS.TLS.ServerCertDir, "The path to the TLS serving certificate of the Gardener Admission Controller must not be set. Instead, directly provide the certificates via the landscaper imports field gardenerAdmissionController.componentConfiguration.tls.certificate and gardenerAdmissionController.componentConfiguration.tls.key."))
 	}
 
-	allErrs = append(allErrs, admissionconfigvalidation.ValidateAdmissionControllerConfiguration(config)...)
+	if errorList := admissionconfigvalidation.ValidateAdmissionControllerConfiguration(config); len(errorList) > 0 {
+		for _, err := range errorList {
+			err.Field = fmt.Sprintf("%s.%s", fldPath.String(), err.Field)
+			allErrs = append(allErrs, err)
+		}
+	}
 
 	return allErrs
 }

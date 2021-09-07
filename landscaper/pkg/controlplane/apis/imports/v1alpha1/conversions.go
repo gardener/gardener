@@ -115,7 +115,7 @@ func Convert_imports_GardenerScheduler_To_v1alpha1_GardenerScheduler(in *imports
 		if !ok {
 			return fmt.Errorf("unknown Scheduler config object type")
 		}
-		raw, err := schedulerencoding.EncodeschedulerConfigurationToBytes(cfg)
+		raw, err := schedulerencoding.EncodeSchedulerConfigurationToBytes(cfg)
 		if err != nil {
 			return err
 		}

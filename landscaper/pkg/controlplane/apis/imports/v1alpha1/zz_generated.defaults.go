@@ -28,5 +28,13 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&Imports{}, func(obj interface{}) { SetObjectDefaults_Imports(obj.(*Imports)) })
 	return nil
+}
+
+func SetObjectDefaults_Imports(in *Imports) {
+	SetDefaults_Imports(in)
+	if in.GardenerScheduler != nil {
+		SetDefaults_GardenerScheduler(in.GardenerScheduler)
+	}
 }

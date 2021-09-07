@@ -57,9 +57,9 @@ func DecodeSchedulerConfigurationFromBytes(bytes []byte, withDefaults bool) (*sc
 	return cfg, nil
 }
 
-// EncodeschedulerConfiguration encodes the given external GardenletConfiguration version into a raw extension.
-func EncodeschedulerConfiguration(cfg *schedulerconfigv1alpha1.SchedulerConfiguration) (*runtime.RawExtension, error) {
-	raw, err := EncodeschedulerConfigurationToBytes(cfg)
+// EncodeSchedulerConfiguration encodes the given external GardenletConfiguration version into a raw extension.
+func EncodeSchedulerConfiguration(cfg *schedulerconfigv1alpha1.SchedulerConfiguration) (*runtime.RawExtension, error) {
+	raw, err := EncodeSchedulerConfigurationToBytes(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -69,8 +69,8 @@ func EncodeschedulerConfiguration(cfg *schedulerconfigv1alpha1.SchedulerConfigur
 	}, nil
 }
 
-// EncodeschedulerConfigurationToBytes encodes the given external schedulerConfiguration version into a byte slice.
-func EncodeschedulerConfigurationToBytes(cfg *schedulerconfigv1alpha1.SchedulerConfiguration) ([]byte, error) {
+// EncodeSchedulerConfigurationToBytes encodes the given external schedulerConfiguration version into a byte slice.
+func EncodeSchedulerConfigurationToBytes(cfg *schedulerconfigv1alpha1.SchedulerConfiguration) ([]byte, error) {
 	encoder, err := getEncoder(schedulerconfigv1alpha1.SchemeGroupVersion, runtime.ContentTypeJSON)
 	if err != nil {
 		return nil, err

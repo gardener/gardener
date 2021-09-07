@@ -76,8 +76,7 @@ type VirtualGarden struct {
 	// the runtime cluster (this should be done automatically by a preceding component when using the standard installation via the landscaper)
 	// and must be able to communicate with the Gardener Extension API server pod that will
 	// be deployed to the Garden namespace
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
+	Enabled bool `json:"enabled"`
 	// Kubeconfig is the landscaper target containing the kubeconfig to an existing "Virtual Garden" API server
 	// deployed in the runtime cluster.
 	// This is the kubeconfig of the Cluster

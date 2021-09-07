@@ -15,11 +15,17 @@
 package validation
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
+
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/client-go/util/keyutil"
 )
 
 // ValidateLandscaperImports validates an imports object.
@@ -30,7 +36,7 @@ func ValidateLandscaperImports(imports *imports.Imports) field.ErrorList {
 		allErrs = append(allErrs, field.Required(field.NewPath("gardenCluster"), "the runtime cluster kubeconfig has to be provided."))
 	}
 
-	if imports.VirtualGarden != nil && imports.VirtualGarden.Enabled != nil && *imports.VirtualGarden.Enabled && len(imports.VirtualGarden.Kubeconfig.Spec.Configuration.RawMessage) == 0 {
+	if imports.VirtualGarden != nil && imports.VirtualGarden.Enabled && len(imports.VirtualGarden.Kubeconfig.Spec.Configuration.RawMessage) == 0 {
 		allErrs = append(allErrs, field.Required(field.NewPath("seedCluster"), "the virtual Garden cluster kubeconfig has to be provided when the virtual Garden setup option is enabled."))
 	}
 
@@ -163,12 +169,136 @@ func ValidateCommonDeployment(deployment imports.CommonDeploymentConfiguration, 
 func ValidateCommonTLSServer(config imports.TLSServer, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(config.Certificate) == 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("crt"), config.Certificate, "the TLS certificate must be set"))
+	if len(config.Crt) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("crt"), config.Crt, "the TLS certificate must be set"))
+	} else {
+		allErrs = append(allErrs, ValidateTLSServingCertificate(config.Crt, fldPath.Child("crt"))...)
 	}
 
 	if len(config.Key) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("key"), config.Key, "the TLS key must be set"))
+	} else {
+		allErrs = append(allErrs, ValidatePrivateKey(config.Key, fldPath.Child("key"))...)
+	}
+
+	return allErrs
+}
+
+// ValidateCABundle validates that the given string contains a valid PEM encoded x509 CA certificate
+func ValidateCABundle(bundle string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	block, _ := pem.Decode([]byte(bundle))
+	if block == nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, "the TLS certificate provided is not a valid PEM encoded X509 certificate"))
+		return allErrs
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, fmt.Sprintf("the TLS certificate provided cannot be parses as a X509 certificate: %s", err.Error())))
+	}
+
+	// Test if parsed key is an RSA Public Key
+	var ok bool
+	if _, ok = cert.PublicKey.(*rsa.PublicKey); !ok {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, fmt.Sprintf("the TLS certificate provided doesn't contain valid RSA Public Key: %s", err.Error())))
+	}
+
+	if !cert.IsCA {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, "the TLS certificate provided is not a CA certificate"))
+	}
+
+	return allErrs
+}
+
+// ValidateTLSServingCertificate validates that the given string contains a valid PEM encoded x509 TLS serving certificate
+func ValidateTLSServingCertificate(certificate string, fldPath *field.Path) field.ErrorList {
+	return validateCertificate(certificate, x509.ExtKeyUsageServerAuth, fldPath)
+}
+
+// ValidateClientCertificate validates that the given string contains a valid PEM encoded x509 TLS client certificate
+func ValidateClientCertificate(certificate string, fldPath *field.Path) field.ErrorList {
+	return validateCertificate(certificate, x509.ExtKeyUsageClientAuth, fldPath)
+}
+
+func validateCertificate(certificate string, keyUsage x509.ExtKeyUsage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	block, _ := pem.Decode([]byte(certificate))
+	if block == nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, "the TLS certificate is not PEM encoded"))
+		return allErrs
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, fmt.Sprintf("the TLS certificate provided cannot be parses as a X509 certificate: %s", err.Error())))
+		return allErrs
+	}
+
+	// Test if parsed key is an RSA Public Key
+	var ok bool
+	if _, ok = cert.PublicKey.(*rsa.PublicKey); !ok {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, fmt.Sprintf("the TLS certificate provided doesn't contain valid RSA Public Key: %s", err.Error())))
+		return allErrs
+	}
+
+	found := false
+	for _, usage := range cert.ExtKeyUsage {
+		if usage == keyUsage {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, fmt.Sprintf("the X509 certificate provided is not valid (missing key usage %q)", keyUsage)))
+	}
+
+	return allErrs
+}
+
+// ValidatePrivateKey validates that the given string contains a valid PEM encoded x509 TLS private certificate
+func ValidatePrivateKey(key string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	_, err := keyutil.ParsePrivateKeyPEM([]byte(key))
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, fmt.Sprintf("the TLS certificate provided is not a valid PEM encoded X509 private key: %s", err.Error())))
+	}
+	return allErrs
+}
+
+// ValidateTLSServingCertificateAgainstCA validates the given PEM encoded X509 certificate against the given CA.
+func ValidateTLSServingCertificateAgainstCA(cert, ca string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	rootCAs := x509.NewCertPool()
+
+	if ok := rootCAs.AppendCertsFromPEM([]byte(ca)); !ok {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, "internal validation error occurred. Could not add the provided CA to validate against the given X509 certificate"))
+		return allErrs
+	}
+
+	block, _ := pem.Decode([]byte(cert))
+	if block == nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, "the TLS certificate is not PEM encoded"))
+		return allErrs
+	}
+	x509Cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, fmt.Sprintf("the TLS certificate provided cannot be parses as a X509 certificate: %s", err.Error())))
+		return allErrs
+	}
+
+	opts := x509.VerifyOptions{
+		Roots: rootCAs,
+		KeyUsages: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+		},
+	}
+
+	if _, err := x509Cert.Verify(opts); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, nil, fmt.Sprintf("failed to verify the TLS serving certificate against the given CA bundle: %s", err.Error())))
 	}
 
 	return allErrs
