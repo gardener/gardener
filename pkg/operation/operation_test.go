@@ -43,7 +43,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -137,7 +136,7 @@ var _ = Describe("operation", func() {
 
 				Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
 
-				Expect(o.ShootState).To(Equal(shootState))
+				Expect(o.GetShootState()).To(Equal(shootState))
 			})
 
 			It("should succeed and update Operation object if ShootState already exists", func() {
@@ -156,7 +155,7 @@ var _ = Describe("operation", func() {
 
 				Expect(o.EnsureShootStateExists(ctx)).To(Succeed())
 
-				Expect(o.ShootState).To(Equal(expectedShootState))
+				Expect(o.GetShootState()).To(Equal(expectedShootState))
 			})
 
 			It("should fail if Create returns an error other than alreadyExists", func() {
@@ -230,8 +229,13 @@ var _ = Describe("operation", func() {
 			k8sGardenRuntimeClient = mockclient.NewMockClient(ctrl)
 			o = &Operation{
 				K8sGardenClient: fakeclientset.NewClientSetBuilder().WithClient(k8sGardenRuntimeClient).Build(),
-				ShootState:      &gardencorev1alpha1.ShootState{},
 			}
+			shootState := &gardencorev1alpha1.ShootState{
+				ObjectMeta: metav1.ObjectMeta{
+					ResourceVersion: "1",
+				},
+			}
+			o.SetShootState(shootState)
 		})
 
 		AfterEach(func() {
@@ -247,12 +251,19 @@ var _ = Describe("operation", func() {
 				},
 			}
 
-			shootState := o.ShootState.DeepCopy()
+			shootState := o.GetShootState().DeepCopy()
 			shootState.Spec.Gardener = gardenerResourceList
-			test.EXPECTPatch(ctx, k8sGardenRuntimeClient, shootState, o.ShootState, types.MergePatchType)
+			test.EXPECTPatchWithOptimisticLock(ctx, k8sGardenRuntimeClient, shootState, o.GetShootState())
 
-			Expect(o.SaveGardenerResourcesInShootState(ctx, gardenerResourceList)).To(Succeed())
-			Expect(o.ShootState.Spec.Gardener).To(BeEquivalentTo(gardenerResourceList))
+			Expect(
+				o.SaveGardenerResourceDataInShootState(
+					ctx,
+					func(gardenerResources *[]gardencorev1alpha1.GardenerResourceData) error {
+						*gardenerResources = gardenerResourceList
+						return nil
+					},
+				)).To(Succeed())
+			Expect(o.GetShootState().Spec.Gardener).To(BeEquivalentTo(gardenerResourceList))
 		})
 	})
 

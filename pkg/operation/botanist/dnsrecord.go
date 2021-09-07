@@ -140,7 +140,7 @@ func (b *Botanist) MigrateInternalDNSRecord(ctx context.Context) error {
 
 func (b *Botanist) deployOrRestoreDNSRecord(ctx context.Context, dnsRecord component.DeployMigrateWaiter) error {
 	if b.isRestorePhase() {
-		return dnsRecord.Restore(ctx, b.ShootState)
+		return dnsRecord.Restore(ctx, b.GetShootState())
 	}
 	return dnsRecord.Deploy(ctx)
 }

@@ -106,7 +106,7 @@ func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
 	}
 
 	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.OperatingSystemConfig.Restore(ctx, b.ShootState)
+		return b.Shoot.Components.Extensions.OperatingSystemConfig.Restore(ctx, b.GetShootState())
 	}
 
 	return b.Shoot.Components.Extensions.OperatingSystemConfig.Deploy(ctx)

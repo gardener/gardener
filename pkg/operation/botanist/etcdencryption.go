@@ -18,8 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -170,21 +170,15 @@ func (b *Botanist) updateShootLabelsForEtcdEncryption(ctx context.Context, label
 }
 
 func (b *Botanist) persistEncryptionConfigInShootState(ctx context.Context) error {
-	gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener)
+	return b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
+		gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
+		if err := infodata.UpsertInfoData(&gardenerResourceList, common.ETCDEncryptionConfigDataName, b.Shoot.ETCDEncryption); err != nil {
+			return err
+		}
 
-	oldETCDEncryptionConfig, err := etcdencryption.GetEncryptionConfig(gardenerResourceList)
-	if err != nil {
-		return err
-	}
-	if reflect.DeepEqual(oldETCDEncryptionConfig, b.Shoot.ETCDEncryption) {
+		*gardenerResourceData = gardenerResourceList
 		return nil
-	}
-
-	if err := infodata.UpsertInfoData(&gardenerResourceList, common.ETCDEncryptionConfigDataName, b.Shoot.ETCDEncryption); err != nil {
-		return err
-	}
-
-	return b.SaveGardenerResourcesInShootState(ctx, gardenerResourceList)
+	})
 }
 
 func generateETCDEncryption(secret *corev1.Secret) (*etcdencryption.EncryptionConfig, error) {
