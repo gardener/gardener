@@ -43,15 +43,15 @@ type DaemonSetHealthChecker struct {
 type DaemonSetCheckType string
 
 const (
-	DaemonSetCheckTypeSeed  DaemonSetCheckType = "Seed"
-	DaemonSetCheckTypeShoot DaemonSetCheckType = "Shoot"
+	daemonSetCheckTypeSeed  DaemonSetCheckType = "Seed"
+	daemonSetCheckTypeShoot DaemonSetCheckType = "Shoot"
 )
 
 // NewSeedDaemonSetHealthChecker is a healthCheck function to check DaemonSets
 func NewSeedDaemonSetHealthChecker(name string) healthcheck.HealthCheck {
 	return &DaemonSetHealthChecker{
 		name:      name,
-		checkType: DaemonSetCheckTypeSeed,
+		checkType: daemonSetCheckTypeSeed,
 	}
 }
 
@@ -59,7 +59,7 @@ func NewSeedDaemonSetHealthChecker(name string) healthcheck.HealthCheck {
 func NewShootDaemonSetHealthChecker(name string) healthcheck.HealthCheck {
 	return &DaemonSetHealthChecker{
 		name:      name,
-		checkType: DaemonSetCheckTypeShoot,
+		checkType: daemonSetCheckTypeShoot,
 	}
 }
 
@@ -88,7 +88,7 @@ func (healthChecker *DaemonSetHealthChecker) DeepCopy() healthcheck.HealthCheck 
 func (healthChecker *DaemonSetHealthChecker) Check(ctx context.Context, request types.NamespacedName) (*healthcheck.SingleCheckResult, error) {
 	daemonSet := &appsv1.DaemonSet{}
 	var err error
-	if healthChecker.checkType == DaemonSetCheckTypeSeed {
+	if healthChecker.checkType == daemonSetCheckTypeSeed {
 		err = healthChecker.seedClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, daemonSet)
 	} else {
 		err = healthChecker.shootClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, daemonSet)

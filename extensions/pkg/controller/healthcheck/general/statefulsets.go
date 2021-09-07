@@ -43,15 +43,15 @@ type StatefulSetHealthChecker struct {
 type StatefulSetCheckType string
 
 const (
-	StatefulSetCheckTypeSeed  StatefulSetCheckType = "Seed"
-	StatefulSetCheckTypeShoot StatefulSetCheckType = "Shoot"
+	statefulSetCheckTypeSeed  StatefulSetCheckType = "Seed"
+	statefulSetCheckTypeShoot StatefulSetCheckType = "Shoot"
 )
 
 // NewSeedStatefulSetChecker is a healthCheck function to check StatefulSets
 func NewSeedStatefulSetChecker(name string) healthcheck.HealthCheck {
 	return &StatefulSetHealthChecker{
 		name:      name,
-		checkType: StatefulSetCheckTypeSeed,
+		checkType: statefulSetCheckTypeSeed,
 	}
 }
 
@@ -59,7 +59,7 @@ func NewSeedStatefulSetChecker(name string) healthcheck.HealthCheck {
 func NewShootStatefulSetChecker(name string) healthcheck.HealthCheck {
 	return &StatefulSetHealthChecker{
 		name:      name,
-		checkType: StatefulSetCheckTypeShoot,
+		checkType: statefulSetCheckTypeShoot,
 	}
 }
 
@@ -89,7 +89,7 @@ func (healthChecker *StatefulSetHealthChecker) Check(ctx context.Context, reques
 	statefulSet := &appsv1.StatefulSet{}
 
 	var err error
-	if healthChecker.checkType == StatefulSetCheckTypeSeed {
+	if healthChecker.checkType == statefulSetCheckTypeSeed {
 		err = healthChecker.seedClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, statefulSet)
 	} else {
 		err = healthChecker.shootClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, statefulSet)

@@ -36,14 +36,14 @@ import (
 )
 
 const (
-	NamePrefixSpecificProjectAdmin      = "gardener.cloud:system:project:"
-	NamePrefixSpecificProjectMember     = "gardener.cloud:system:project-member:"
-	NamePrefixSpecificProjectUAM        = "gardener.cloud:system:project-uam:"
-	NamePrefixSpecificProjectViewer     = "gardener.cloud:system:project-viewer:"
-	NamePrefixSpecificProjectExtensions = "gardener.cloud:extension:project:"
+	namePrefixSpecificProjectAdmin      = "gardener.cloud:system:project:"
+	namePrefixSpecificProjectMember     = "gardener.cloud:system:project-member:"
+	namePrefixSpecificProjectUAM        = "gardener.cloud:system:project-uam:"
+	namePrefixSpecificProjectViewer     = "gardener.cloud:system:project-viewer:"
+	namePrefixSpecificProjectExtensions = "gardener.cloud:extension:project:"
 
-	NameProjectMember = "gardener.cloud:system:project-member"
-	NameProjectViewer = "gardener.cloud:system:project-viewer"
+	nameProjectMember = "gardener.cloud:system:project-member"
+	nameProjectViewer = "gardener.cloud:system:project-viewer"
 )
 
 type Interface interface {
@@ -108,7 +108,7 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 		func(ctx context.Context) error {
 			return p.reconcileResources(
 				ctx,
-				NamePrefixSpecificProjectAdmin+p.project.Name,
+				namePrefixSpecificProjectAdmin+p.project.Name,
 				true,
 				nil,
 				nil,
@@ -135,7 +135,7 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 		func(ctx context.Context) error {
 			return p.reconcileResources(
 				ctx,
-				NamePrefixSpecificProjectUAM+p.project.Name,
+				namePrefixSpecificProjectUAM+p.project.Name,
 				true,
 				nil,
 				nil,
@@ -156,9 +156,9 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 		func(ctx context.Context) error {
 			return p.reconcileResources(
 				ctx,
-				NamePrefixSpecificProjectMember+p.project.Name,
+				namePrefixSpecificProjectMember+p.project.Name,
 				true,
-				pointer.String(NameProjectMember),
+				pointer.String(nameProjectMember),
 				nil,
 				members,
 				nil,
@@ -183,9 +183,9 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 		func(ctx context.Context) error {
 			return p.reconcileResources(
 				ctx,
-				NamePrefixSpecificProjectViewer+p.project.Name,
+				namePrefixSpecificProjectViewer+p.project.Name,
 				true,
-				pointer.String(NameProjectViewer),
+				pointer.String(nameProjectViewer),
 				nil,
 				viewers,
 				nil,
@@ -210,7 +210,7 @@ func (p *projectRBAC) Deploy(ctx context.Context) error {
 	// project extension roles resources
 	for _, roleName := range extensionRolesNames.List() {
 		var (
-			name            = fmt.Sprintf("%s%s:%s", NamePrefixSpecificProjectExtensions, p.project.Name, roleName)
+			name            = fmt.Sprintf("%s%s:%s", namePrefixSpecificProjectExtensions, p.project.Name, roleName)
 			subjects        = extensionRolesNameToSubjects[roleName]
 			aggregationRule = &rbacv1.AggregationRule{
 				ClusterRoleSelectors: []metav1.LabelSelector{
@@ -305,19 +305,19 @@ func (p *projectRBAC) Destroy(ctx context.Context) error {
 	}
 
 	return kutil.DeleteObjects(ctx, p.client,
-		emptyClusterRole(NamePrefixSpecificProjectAdmin+p.project.Name),
-		emptyClusterRoleBinding(NamePrefixSpecificProjectAdmin+p.project.Name),
+		emptyClusterRole(namePrefixSpecificProjectAdmin+p.project.Name),
+		emptyClusterRoleBinding(namePrefixSpecificProjectAdmin+p.project.Name),
 
-		emptyClusterRole(NamePrefixSpecificProjectUAM+p.project.Name),
-		emptyClusterRoleBinding(NamePrefixSpecificProjectUAM+p.project.Name),
+		emptyClusterRole(namePrefixSpecificProjectUAM+p.project.Name),
+		emptyClusterRoleBinding(namePrefixSpecificProjectUAM+p.project.Name),
 
-		emptyClusterRole(NamePrefixSpecificProjectMember+p.project.Name),
-		emptyClusterRoleBinding(NamePrefixSpecificProjectMember+p.project.Name),
-		emptyRoleBinding(NameProjectMember, *p.project.Spec.Namespace),
+		emptyClusterRole(namePrefixSpecificProjectMember+p.project.Name),
+		emptyClusterRoleBinding(namePrefixSpecificProjectMember+p.project.Name),
+		emptyRoleBinding(nameProjectMember, *p.project.Spec.Namespace),
 
-		emptyClusterRole(NamePrefixSpecificProjectViewer+p.project.Name),
-		emptyClusterRoleBinding(NamePrefixSpecificProjectViewer+p.project.Name),
-		emptyRoleBinding(NameProjectViewer, *p.project.Spec.Namespace),
+		emptyClusterRole(namePrefixSpecificProjectViewer+p.project.Name),
+		emptyClusterRoleBinding(namePrefixSpecificProjectViewer+p.project.Name),
+		emptyRoleBinding(nameProjectViewer, *p.project.Spec.Namespace),
 	)
 }
 
@@ -369,7 +369,7 @@ func (p *projectRBAC) getExtensionRolesResourceLabels() map[string]string {
 }
 
 func getExtensionRoleNameFromRBAC(resourceName, projectName string) string {
-	return strings.TrimPrefix(resourceName, NamePrefixSpecificProjectExtensions+projectName+":")
+	return strings.TrimPrefix(resourceName, namePrefixSpecificProjectExtensions+projectName+":")
 }
 
 func getExtensionRoleNameFromRole(role string) string {

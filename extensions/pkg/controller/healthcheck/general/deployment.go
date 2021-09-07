@@ -43,15 +43,15 @@ type DeploymentHealthChecker struct {
 type DeploymentCheckType string
 
 const (
-	DeploymentCheckTypeSeed  DeploymentCheckType = "Seed"
-	DeploymentCheckTypeShoot DeploymentCheckType = "Shoot"
+	deploymentCheckTypeSeed  DeploymentCheckType = "Seed"
+	deploymentCheckTypeShoot DeploymentCheckType = "Shoot"
 )
 
 // NewSeedDeploymentHealthChecker is a healthCheck function to check Deployments in the Seed cluster
 func NewSeedDeploymentHealthChecker(deploymentName string) healthcheck.HealthCheck {
 	return &DeploymentHealthChecker{
 		name:      deploymentName,
-		checkType: DeploymentCheckTypeSeed,
+		checkType: deploymentCheckTypeSeed,
 	}
 }
 
@@ -59,7 +59,7 @@ func NewSeedDeploymentHealthChecker(deploymentName string) healthcheck.HealthChe
 func NewShootDeploymentHealthChecker(deploymentName string) healthcheck.HealthCheck {
 	return &DeploymentHealthChecker{
 		name:      deploymentName,
-		checkType: DeploymentCheckTypeShoot,
+		checkType: deploymentCheckTypeShoot,
 	}
 }
 
@@ -89,7 +89,7 @@ func (healthChecker *DeploymentHealthChecker) Check(ctx context.Context, request
 	deployment := &appsv1.Deployment{}
 
 	var err error
-	if healthChecker.checkType == DeploymentCheckTypeSeed {
+	if healthChecker.checkType == deploymentCheckTypeSeed {
 		err = healthChecker.seedClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, deployment)
 	} else {
 		err = healthChecker.shootClient.Get(ctx, client.ObjectKey{Namespace: request.Namespace, Name: healthChecker.name}, deployment)
