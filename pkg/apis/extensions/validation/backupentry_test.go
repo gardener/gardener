@@ -32,8 +32,7 @@ var _ = Describe("BackupEntry validation tests", func() {
 	BeforeEach(func() {
 		be = &extensionsv1alpha1.BackupEntry{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-be",
-				Namespace: "test-namespace",
+				Name: "test-be",
 			},
 			Spec: extensionsv1alpha1.BackupEntrySpec{
 				DefaultSpec: extensionsv1alpha1.DefaultSpec{
@@ -55,9 +54,6 @@ var _ = Describe("BackupEntry validation tests", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.namespace"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.type"),

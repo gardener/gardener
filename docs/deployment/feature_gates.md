@@ -33,6 +33,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | UseDNSRecords | `false` | `Alpha` | `1.27` | |
 | DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | |
 | RotateSSHKeypairOnMaintenance | `false` | `Alpha` | `1.28` | |
+| DenyInvalidExtensionResources | `false` | `Alpha` | `1.31` | |
 
 ## Feature gates for graduated or deprecated features
 
@@ -96,3 +97,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `UseDNSRecords` enables using `DNSRecord` resources for Gardener DNS records instead of `DNSProvider`, `DNSEntry`, and `DNSOwner` resources. See [Contract: `DNSRecord` resources](../extensions/dnsrecord.md) for more details.
 * `DisallowKubeconfigRotationForShootInDeletion` when enabled, does not allow kubeconfig rotation to be requested for shoot cluster that is already in deletion phase, i.e. `metadata.deletionTimestamp` is set.
 * `RotateSSHKeypairOnMaintenance` enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager. Details can be found in [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md).
+* `DenyInvalidExtensionResources` causes the `seed-admission-controller` to deny invalid extension resources, instead of just logging validation errors.

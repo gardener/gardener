@@ -25,7 +25,7 @@ import (
 // ValidateBackupEntry validates a BackupEntry object.
 func ValidateBackupEntry(be *extensionsv1alpha1.BackupEntry) field.ErrorList {
 	allErrs := field.ErrorList{}
-	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&be.ObjectMeta, true, apivalidation.NameIsDNSSubdomain, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&be.ObjectMeta, false, apivalidation.NameIsDNSSubdomain, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateBackupEntrySpec(&be.Spec, field.NewPath("spec"))...)
 
 	return allErrs

@@ -20,14 +20,14 @@ import (
 	"strings"
 	"time"
 
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
-	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -164,6 +164,7 @@ spec:
         - /gardener-seed-admission-controller
         - --port=10250
         - --tls-cert-dir=/srv/gardener-seed-admission-controller
+        - --allow-invalid-extension-resources=true
         image: ` + image + `
         imagePullPolicy: IfNotPresent
         name: gardener-seed-admission-controller
@@ -297,6 +298,41 @@ webhooks:
     - v1alpha1
     operations:
     - DELETE
+    resources:
+    - backupbuckets
+    - backupentries
+    - bastions
+    - containerruntimes
+    - controlplanes
+    - dnsrecords
+    - extensions
+    - infrastructures
+    - networks
+    - operatingsystemconfigs
+    - workers
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUMrakNDQWVLZ0F3SUJBZ0lVVHAzWHZocldPVk04WkdlODZZb1hNVi9VSjdBd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZURVRNQkVHQTFVRUF4TUthM1ZpWlhKdVpYUmxjekFlRncweE9UQXlNamN4TlRNME1EQmFGdzB5TkRBeQpNall4TlRNME1EQmFNQlV4RXpBUkJnTlZCQU1UQ210MVltVnlibVYwWlhNd2dnRWlNQTBHQ1NxR1NJYjNEUUVCCkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDeWkwUUdPY3YyYlRmM044T0xOOTdSd3NnSDZRQXI4d1NwQU9ydHRCSmcKRm5mblUyVDFSSGd4bTdxZDE5MFdMOERDaHYwZFpmNzZkNmVTUTRacmpqeUFyVHp1ZmI0RHRQd2crVldxN1h2RgpCTnluKzJoZjRTeVNrd2Q2azdYTGhVVFJ4MDQ4SWJCeUM0ditGRXZtb0xBd3JjMGQwRzE0ZWM2c25EKzdqTzdlCmt5a1EvTmdBT0w3UDZrRHM5ejYrYk9mZ0YwbkdOK2JtZVdRcUplalIwdCtPeVFEQ3g1L0ZNdFVmRVZSNVFYODAKYWVlZmdwM0pGWmI2ZkF3OUtoTHRkUlYzRlAwdHo2aFMrZTRTZzBtd0FBT3FpalpzVjg3a1A1R1l6anRjZkExMgpsRFlsL25iMUd0VnZ2a1FENDlWblY3bURubDZtRzNMQ01OQ05INldsWk52M0FnTUJBQUdqUWpCQU1BNEdBMVVkCkR3RUIvd1FFQXdJQkJqQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01CMEdBMVVkRGdRV0JCU0ZBM0x2Sk0yMWQ4cXMKWlZWQ2U2UnJUVDl3aVRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQW5zL0VKM3lLc2p0SVNvdGVRNzE0cjJVbQpCTVB5VVlUVGRSSEQ4TFpNZDNSeWt2c2FjRjJsMnk4OE56NndKY0F1b1VqMWg4YUJEUDVvWFZ0Tm1GVDlqeWJTClRYclJ2V2krYWVZZGI1NTZuRUE1L2E5NGUrY2IrQ2szcXkvMXhnUW9TNDU3QVpRT0Rpc0RaTkJZV2tBRnMyTGMKdWNwY0F0WEp0SXRoVm03RmpvQUhZY3NyWTA0eUFpWUVKTEQwMlRqVURYZzRpR09HTWtWSGRtaGF3QkRCRjNBagplc2ZjcUZ3amk2SnlBS0ZSQUNQb3d5a1FPTkZ3VVNvbTg5dVlFU1NDSkZ2TkNrOU1KbWpKMlB6RFV0NkN5cFI0CmVwRmRkMWZYTHd1d243ZnZQTW1KcUQzSHRMYWxYMUFabVBrK0JJOGV6ZkFpVmNWcW5USlFNWGxZUHBZZTlBPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ==
+    service:
+      name: gardener-seed-admission-controller
+      namespace: shoot--foo--bar
+      path: /webhooks/validate-extension-resources
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: validation.extensions.seed.admission.core.gardener.cloud
+  namespaceSelector: {}
+  rules:
+  - apiGroups:
+    - extensions.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
     resources:
     - backupbuckets
     - backupentries

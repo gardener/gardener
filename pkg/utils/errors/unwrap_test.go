@@ -18,9 +18,8 @@ import (
 	"errors"
 	"fmt"
 
-	//utilerrors "github.com/gardener/gardener/pkg/utils/errors"
-
 	utilerrors "github.com/gardener/gardener/pkg/utils/errors"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedadmissioncontroller_test
+package extensionresources_test
 
 import (
 	"testing"
-
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-func TestSeedAdmissionController(t *testing.T) {
-	gardenletfeatures.RegisterFeatureGates()
-
+func TestExtensionResources(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Botanist Component SeedAdmissionController Suite")
+	RunSpecs(t, "SeedAdmissionController Admission ExtensionResources Suite")
 }
