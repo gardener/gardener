@@ -351,6 +351,7 @@ func (in *GardenletConfiguration) DeepCopyInto(out *GardenletConfiguration) {
 		*out = new(ServerConfiguration)
 		(*in).DeepCopyInto(*out)
 	}
+	in.Debugging.DeepCopyInto(&out.Debugging)
 	if in.FeatureGates != nil {
 		in, out := &in.FeatureGates, &out.FeatureGates
 		*out = make(map[string]bool, len(*in))

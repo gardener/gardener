@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	goruntime "runtime"
 
 	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -35,6 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/healthz"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
+	"github.com/gardener/gardener/pkg/server/routes"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
@@ -192,6 +194,7 @@ type Gardener struct {
 	Logger         *logrus.Logger
 	Recorder       record.EventRecorder
 	LeaderElection *leaderelection.LeaderElectionConfig
+	HealthManager  healthz.Manager
 }
 
 // NewGardener is the main entry point of instantiating a new Gardener controller manager.
@@ -273,28 +276,16 @@ func (g *Gardener) Run(ctx context.Context) error {
 	controllerCtx, controllerCancel := context.WithCancel(ctx)
 	defer controllerCancel()
 
+	// Initialize /healthz manager.
+	g.HealthManager = healthz.NewDefaultHealthz()
+
 	// Prepare a reusable run function.
 	run := func(ctx context.Context) error {
-		// Start controllers
-		if err := g.startControllers(ctx); err != nil {
-			return err
-		}
-		return nil
+		g.HealthManager.Start()
+		return g.startControllers(ctx)
 	}
 
-	// Initialize /healthz manager.
-	healthManager := healthz.NewDefaultHealthz()
-	healthManager.Start()
-
-	// Start HTTP server.
-	go server.
-		NewBuilder().
-		WithBindAddress(g.Config.Server.HTTP.BindAddress).
-		WithPort(g.Config.Server.HTTP.Port).
-		WithHandler("/metrics", promhttp.Handler()).
-		WithHandlerFunc("/healthz", healthz.HandlerFunc(healthManager)).
-		Build().
-		Start(ctx)
+	g.startServer(ctx)
 
 	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
 
@@ -324,6 +315,24 @@ func (g *Gardener) Run(ctx context.Context) error {
 	// Leader election is disabled, thus run directly until done.
 	leaderElectionCancel()
 	return run(controllerCtx)
+}
+
+func (g *Gardener) startServer(ctx context.Context) {
+	builder := server.
+		NewBuilder().
+		WithBindAddress(g.Config.Server.HTTP.BindAddress).
+		WithPort(g.Config.Server.HTTP.Port).
+		WithHandler("/metrics", promhttp.Handler()).
+		WithHandlerFunc("/healthz", healthz.HandlerFunc(g.HealthManager))
+
+	if g.Config.Debugging.EnableProfiling {
+		routes.Profiling{}.AddToBuilder(builder)
+		if g.Config.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
+	}
+
+	go builder.Build().Start(ctx)
 }
 
 func (g *Gardener) startControllers(ctx context.Context) error {

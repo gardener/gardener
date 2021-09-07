@@ -33,6 +33,8 @@ type AdmissionControllerConfiguration struct {
 	LogLevel string `json:"logLevel"`
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration `json:"server"`
+	// Debugging holds configuration for Debugging related features.
+	Debugging componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

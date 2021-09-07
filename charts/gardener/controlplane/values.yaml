@@ -313,6 +313,9 @@ global:
       #     apiGroup: rbac.authorization.k8s.io
       #   operationMode: log
         enableDebugHandlers: false
+      debugging:
+        enableProfiling: false
+        enableContentionProfiling: false
     seedRestriction:
       enabled: false
 
@@ -421,6 +424,9 @@ global:
               -----BEGIN RSA PRIVATE KEY-----
               ...
               -----END RSA PRIVATE KEY-----
+      debugging:
+        enableProfiling: false
+        enableContentionProfiling: false
       featureGates: {}
 
   # Gardener scheduler configuration values
@@ -464,6 +470,9 @@ global:
         metrics:
           bindAddress: 0.0.0.0
           port: 19251
+      debugging:
+        enableProfiling: false
+        enableContentionProfiling: false
 #     schedulers:
 #       backupBucket:
 #         concurrentSyncs: 5

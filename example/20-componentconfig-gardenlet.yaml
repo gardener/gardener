@@ -88,6 +88,9 @@ server:
   # tls:
   #   serverCertPath: dev/tls/gardenlet.crt
   #   serverKeyPath: dev/tls/gardenlet.key
+debugging:
+  enableProfiling: false
+  enableContentionProfiling: false
 featureGates:
   Logging: true
   HVPA: true

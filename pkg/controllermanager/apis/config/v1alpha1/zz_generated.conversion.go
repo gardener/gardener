@@ -369,6 +369,9 @@ func autoConvert_v1alpha1_ControllerManagerConfiguration_To_config_ControllerMan
 	if err := Convert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
+	if err := configv1alpha1.Convert_v1alpha1_DebuggingConfiguration_To_config_DebuggingConfiguration(&in.Debugging, &out.Debugging, s); err != nil {
+		return err
+	}
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
@@ -392,6 +395,9 @@ func autoConvert_config_ControllerManagerConfiguration_To_v1alpha1_ControllerMan
 	out.LogFormat = in.LogFormat
 	out.KubernetesLogLevel = klog.Level(in.KubernetesLogLevel)
 	if err := Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
+		return err
+	}
+	if err := configv1alpha1.Convert_config_DebuggingConfiguration_To_v1alpha1_DebuggingConfiguration(&in.Debugging, &out.Debugging, s); err != nil {
 		return err
 	}
 	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))

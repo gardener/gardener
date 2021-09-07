@@ -131,6 +131,9 @@ func autoConvert_v1alpha1_SchedulerConfiguration_To_config_SchedulerConfiguratio
 	if err := Convert_v1alpha1_ServerConfiguration_To_config_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
+	if err := configv1alpha1.Convert_v1alpha1_DebuggingConfiguration_To_config_DebuggingConfiguration(&in.Debugging, &out.Debugging, s); err != nil {
+		return err
+	}
 	if err := Convert_v1alpha1_SchedulerControllerConfiguration_To_config_SchedulerControllerConfiguration(&in.Schedulers, &out.Schedulers, s); err != nil {
 		return err
 	}
@@ -153,6 +156,9 @@ func autoConvert_config_SchedulerConfiguration_To_v1alpha1_SchedulerConfiguratio
 	out.LogLevel = in.LogLevel
 	out.LogFormat = in.LogFormat
 	if err := Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
+		return err
+	}
+	if err := configv1alpha1.Convert_config_DebuggingConfiguration_To_v1alpha1_DebuggingConfiguration(&in.Debugging, &out.Debugging, s); err != nil {
 		return err
 	}
 	if err := Convert_config_SchedulerControllerConfiguration_To_v1alpha1_SchedulerControllerConfiguration(&in.Schedulers, &out.Schedulers, s); err != nil {

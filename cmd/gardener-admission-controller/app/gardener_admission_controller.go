@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	goruntime "runtime"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -47,6 +48,7 @@ import (
 	seedauthorizergraph "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/auth/seed/graph"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	gardenerhealthz "github.com/gardener/gardener/pkg/healthz"
+	"github.com/gardener/gardener/pkg/server/routes"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -144,6 +146,15 @@ func (o *options) run(ctx context.Context) error {
 	})
 	if err != nil {
 		return err
+	}
+
+	if o.config.Debugging.EnableProfiling {
+		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
+		}
+		if o.config.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
 	}
 
 	log.Info("setting up healthcheck endpoints")

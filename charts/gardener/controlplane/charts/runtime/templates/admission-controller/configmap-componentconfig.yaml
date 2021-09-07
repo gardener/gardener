@@ -51,4 +51,9 @@ data:
         operationMode: {{ required ".Values.global.admission.config.server.resourceAdmissionConfiguration.operationMode is required" .Values.global.admission.config.server.resourceAdmissionConfiguration.operationMode }}
       {{- end }}
       enableDebugHandlers: {{ .Values.global.admission.config.server.enableDebugHandlers }}
+    {{- if .Values.global.admission.config.debugging }}
+    debugging:
+      enableProfiling: {{ .Values.global.admission.config.debugging.enableProfiling | default false }}
+      enableContentionProfiling: {{ .Values.global.admission.config.debugging.enableContentionProfiling | default false }}
+    {{- end }}
 {{- end }}

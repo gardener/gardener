@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	goruntime "runtime"
 	"strconv"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -30,13 +31,14 @@ import (
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/validation"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
 	schedulerfeatures "github.com/gardener/gardener/pkg/scheduler/features"
-	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"github.com/gardener/gardener/pkg/server/routes"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // Options has all the context and parameters needed to run a GardenerScheduler.
@@ -141,6 +143,15 @@ func runCommand(ctx context.Context, opts *Options) error {
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create controller manager: %w", err)
+	}
+
+	if cfg.Debugging.EnableProfiling {
+		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
+			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
+		}
+		if cfg.Debugging.EnableContentionProfiling {
+			goruntime.SetBlockProfileRate(1)
+		}
 	}
 
 	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {

@@ -143,5 +143,6 @@
 
 * [Alerting](monitoring/alerting.md)
 * [Connectivity](monitoring/connectivity.md)
-* [User Alerts](monitoring/user_alerts.md)
 * [Operator Alerts](monitoring/operator_alerts.md)
+* [Profiling Gardener Components](monitoring/profiling.md)
+* [User Alerts](monitoring/user_alerts.md)

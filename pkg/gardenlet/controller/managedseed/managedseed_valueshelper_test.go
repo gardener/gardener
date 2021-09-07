@@ -109,6 +109,10 @@ var _ = Describe("ValuesHelper", func() {
 					},
 				},
 			},
+			Debugging: componentbaseconfig.DebuggingConfiguration{
+				EnableProfiling:           false,
+				EnableContentionProfiling: false,
+			},
 			FeatureGates: map[string]bool{
 				string(features.Logging): true,
 				string(features.HVPA):    true,
@@ -228,6 +232,10 @@ var _ = Describe("ValuesHelper", func() {
 						},
 					},
 				},
+				Debugging: componentbaseconfigv1alpha1.DebuggingConfiguration{
+					EnableProfiling:           pointer.Bool(false),
+					EnableContentionProfiling: pointer.Bool(false),
+				},
 				FeatureGates: map[string]bool{
 					string(features.Logging):              false,
 					string(features.HVPA):                 true,
@@ -284,6 +292,10 @@ var _ = Describe("ValuesHelper", func() {
 									"bindAddress": "0.0.0.0",
 									"port":        float64(2720),
 								},
+							},
+							"debugging": map[string]interface{}{
+								"enableProfiling":           false,
+								"enableContentionProfiling": false,
 							},
 							"featureGates": map[string]interface{}{
 								"Logging":              false,

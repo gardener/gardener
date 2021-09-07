@@ -150,6 +150,11 @@ data:
           serverCertPath: /etc/gardener-controller-manager/srv/gardener-controller-manager.crt
           serverKeyPath: /etc/gardener-controller-manager/srv/gardener-controller-manager.key
       {{- end }}
+    {{- if .Values.global.controller.config.debugging }}
+    debugging:
+      enableProfiling: {{ .Values.global.controller.config.debugging.enableProfiling | default false }}
+      enableContentionProfiling: {{ .Values.global.controller.config.debugging.enableContentionProfiling | default false }}
+    {{- end }}
     {{- if .Values.global.controller.config.featureGates }}
     featureGates:
 {{ toYaml .Values.global.controller.config.featureGates | indent 6 }}

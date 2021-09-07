@@ -117,6 +117,8 @@ func SetDefaults_GardenletConfiguration(obj *GardenletConfiguration) {
 		obj.Server.HTTPS.Port = 2720
 	}
 
+	// TODO: consider enabling profiling by default (like in k8s components)
+
 	if obj.SNI == nil {
 		obj.SNI = &SNI{}
 	}

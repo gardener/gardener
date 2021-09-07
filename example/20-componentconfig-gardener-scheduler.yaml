@@ -21,6 +21,9 @@ server:
   metrics:
     bindAddress: 0.0.0.0
     port: 19252
+debugging:
+  enableProfiling: false
+  enableContentionProfiling: false
 #schedulers:
 #  backupBucket:
 #    concurrentSyncs: 5 # defaults to 5

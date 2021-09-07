@@ -46,6 +46,11 @@ data:
       metrics:
         bindAddress: {{ required ".Values.global.scheduler.config.server.metrics.bindAddress is required" .Values.global.scheduler.config.server.metrics.bindAddress }}
         port: {{ required ".Values.global.scheduler.config.server.metrics.port is required" .Values.global.scheduler.config.server.metrics.port }}
+    {{- if .Values.global.scheduler.config.debugging }}
+    debugging:
+      enableProfiling: {{ .Values.global.scheduler.config.debugging.enableProfiling | default false }}
+      enableContentionProfiling: {{ .Values.global.scheduler.config.debugging.enableContentionProfiling | default false }}
+    {{- end }}
     {{- if .Values.global.scheduler.config.schedulers }}
     schedulers:
       {{- if .Values.global.scheduler.config.schedulers.backupBucket }}
