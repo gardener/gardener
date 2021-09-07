@@ -55,7 +55,7 @@ func (b *Botanist) DefaultExtension(ctx context.Context) (extension.Interface, e
 // the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployExtensions(ctx context.Context) error {
 	if b.isRestorePhase() {
-		return b.Shoot.Components.Extensions.Extension.Restore(ctx, b.GetShootState())
+		return b.Shoot.Components.Extensions.Extension.Restore(ctx, b.ShootState)
 	}
 	return b.Shoot.Components.Extensions.Extension.Deploy(ctx)
 }

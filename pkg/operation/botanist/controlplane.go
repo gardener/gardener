@@ -263,7 +263,7 @@ func (b *Botanist) DeployControlPlaneExposure(ctx context.Context) error {
 
 func (b *Botanist) deployOrRestoreControlPlane(ctx context.Context, controlPlane extensionscontrolplane.Interface) error {
 	if b.isRestorePhase() {
-		return controlPlane.Restore(ctx, b.GetShootState())
+		return controlPlane.Restore(ctx, b.ShootState)
 	}
 	return controlPlane.Deploy(ctx)
 }

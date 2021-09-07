@@ -44,7 +44,6 @@ import (
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -526,7 +525,7 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	if err = o.K8sGardenClient.Client().Get(ctx, client.ObjectKeyFromObject(shootState), shootState); err != nil {
 		return err
 	}
-	o.SetShootState(shootState)
+	o.ShootState = shootState
 	gardenerResourceList := gardencorev1alpha1helper.GardenerResourceDataList(shootState.Spec.Gardener)
 	o.Shoot.ETCDEncryption, err = etcdencryption.GetEncryptionConfig(gardenerResourceList)
 	return err
@@ -550,46 +549,14 @@ func (o *Operation) DeleteShootState(ctx context.Context) error {
 	return client.IgnoreNotFound(o.K8sGardenClient.Client().Delete(ctx, shootState))
 }
 
-// GetShootState returns the shootstate resource of this Shoot in a concurrency safe way.
-// This method should be used only for reading the data of the returned shootstate resource. The returned shootstate
-// resource MUST NOT BE MODIFIED (except in test code) since this might interfere with other concurrent reads and writes.
-// To properly update the shootstate resource of this Shoot use SaveGardenerResourceDataInShootState.
-func (o *Operation) GetShootState() *gardencorev1alpha1.ShootState {
-	return o.shootState.Load().(*gardencorev1alpha1.ShootState)
-}
-
-// SetShootState sets the shootstate resource of this Shoot in a concurrency safe way.
-// This method is not protected by a mutex and does not update the shootstate resource in the cluster and so
-// should be used only in exceptional situations, or as a convenience in test code. The shootstate passed as a parameter
-// MUST NOT BE MODIFIED after the call to SetShootState (except in test code) since this might interfere with other concurrent reads and writes.
-// To properly update the shootstate resource of this Shoot use SaveGardenerResourceDataInShootState.
-func (o *Operation) SetShootState(shootState *gardencorev1alpha1.ShootState) {
-	o.shootState.Store(shootState)
-}
-
-// SaveGardenerResourceDataInShootState updates the shootstate resource of this Shoot in a concurrency safe way,
-// using the given context and mutate function.
-// The mutate function should modify the passed GardenerResourceData so that changes are persisted.
-// This method is protected by a mutex, so only a single SaveGardenerResourceDataInShootState operation can be
-// executed at any point in time.
-func (o *Operation) SaveGardenerResourceDataInShootState(ctx context.Context, f func(*[]gardencorev1alpha1.GardenerResourceData) error) error {
-	o.shootStateMutex.Lock()
-	defer o.shootStateMutex.Unlock()
-
-	shootState := o.GetShootState().DeepCopy()
-	original := shootState.DeepCopy()
-	patch := client.MergeFromWithOptions(original, client.MergeFromWithOptimisticLock{})
-
-	if err := f(&shootState.Spec.Gardener); err != nil {
+// SaveGardenerResourcesInShootState saves the provided GardenerResourcesDataList in the ShootState's `gardener` field
+func (o *Operation) SaveGardenerResourcesInShootState(ctx context.Context, resourceList gardencorev1alpha1helper.GardenerResourceDataList) error {
+	shootState := o.ShootState.DeepCopy()
+	shootState.Spec.Gardener = resourceList
+	if err := o.K8sGardenClient.Client().Patch(ctx, shootState, client.MergeFrom(o.ShootState)); err != nil {
 		return err
 	}
-	if equality.Semantic.DeepEqual(original.Spec.Gardener, shootState.Spec.Gardener) {
-		return nil
-	}
-	if err := o.K8sGardenClient.Client().Patch(ctx, shootState, patch); err != nil {
-		return err
-	}
-	o.SetShootState(shootState)
+	o.ShootState = shootState
 	return nil
 }
 

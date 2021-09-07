@@ -49,7 +49,7 @@ func (b *Botanist) DefaultCoreBackupEntry() component.DeployMigrateWaiter {
 // the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployBackupEntry(ctx context.Context) error {
 	if b.isRestorePhase() {
-		return b.Shoot.Components.BackupEntry.Restore(ctx, b.GetShootState())
+		return b.Shoot.Components.BackupEntry.Restore(ctx, b.ShootState)
 	}
 	return b.Shoot.Components.BackupEntry.Deploy(ctx)
 }

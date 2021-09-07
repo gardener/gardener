@@ -238,7 +238,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		persistETCDEncryptionConfiguration = g.Add(flow.Task{
 			Name:         "Persisting etcd encryption configuration in ShootState",
 			Fn:           flow.TaskFn(botanist.PersistEncryptionConfiguration),
-			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData),
+			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData, generateSecrets),
 		})
 		createOrUpdateETCDEncryptionConfiguration = g.Add(flow.Task{
 			Name:         "Applying etcd encryption configuration",

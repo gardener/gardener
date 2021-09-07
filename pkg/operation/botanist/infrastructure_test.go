@@ -59,8 +59,8 @@ var _ = Describe("Infrastructure", func() {
 					},
 				},
 			},
+			ShootState: shootState,
 		}}
-		botanist.SetShootState(shootState)
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 		botanist.StoreSecret("ssh-keypair", &corev1.Secret{Data: map[string][]byte{"id_rsa.pub": sshPublicKey}})
 	})

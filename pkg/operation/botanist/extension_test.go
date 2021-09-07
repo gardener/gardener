@@ -73,8 +73,8 @@ var _ = Describe("Extensions", func() {
 				},
 				SeedNamespace: namespace,
 			},
+			ShootState: shootState,
 		}}
-		botanist.SetShootState(shootState)
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 
 		gardenClientInterface.EXPECT().Client().Return(gardenClient).AnyTimes()
