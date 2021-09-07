@@ -56,11 +56,16 @@ func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 		hvpaEnabled = gardenletfeatures.FeatureGate.Enabled(features.HVPAForShootedSeed)
 	}
 
+	ingressClass, err := getIngressClass(b.Seed.GetInfo())
+	if err != nil {
+		return err
+	}
+
 	if b.isShootNodeLoggingEnabled() {
 		lokiValues["rbacSidecarEnabled"] = true
 		lokiValues["kubeRBACProxyKubeconfigCheckSum"] = b.LoadCheckSum(logging.SecretNameLokiKubeRBACProxyKubeconfig)
 		lokiValues["ingress"] = map[string]interface{}{
-			"class": getIngressClass(b.Seed.GetInfo().Spec.Ingress),
+			"class": ingressClass,
 			"hosts": []map[string]interface{}{
 				{
 					"hostName":    b.ComputeLokiHost(),

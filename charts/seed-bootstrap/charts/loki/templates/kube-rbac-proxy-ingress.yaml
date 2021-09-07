@@ -3,13 +3,18 @@ apiVersion: {{ include "ingressversion" . }}
 kind: Ingress
 metadata:
   annotations:
+{{- if semverCompare "<= 1.21.x" .Capabilities.KubeVersion.GitVersion }}
     kubernetes.io/ingress.class: {{ .Values.ingress.class }}
+{{- end }}
     nginx.ingress.kubernetes.io/configuration-snippet: "proxy_set_header X-Scope-OrgID operator;"
   name: loki
   namespace: {{ .Release.Namespace }}
   labels:
 {{ toYaml .Values.labels | indent 4 }}
 spec:
+{{- if semverCompare ">= 1.22" .Capabilities.KubeVersion.GitVersion }}
+  ingressClassName: {{ .Values.ingress.class }}
+{{- end }}
   tls:
   {{- range .Values.ingress.hosts }}
   - secretName: {{ required ".secretName is required" .secretName }}
