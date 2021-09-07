@@ -190,12 +190,23 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: k8s.gcr.io/ingress-nginx/controller
-  tag: "v0.41.2"
-  targetVersion: ">= 1.20"
+  tag: "v0.49.0"
+  targetVersion: ">= 1.20, < 1.22"
+- name: nginx-ingress-controller
+  sourceRepository: github.com/kubernetes/ingress-nginx
+  repository: k8s.gcr.io/ingress-nginx/controller
+  tag: "v1.0.0"
+  targetVersion: ">= 1.22"
 - name: nginx-ingress-controller-seed
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: k8s.gcr.io/ingress-nginx/controller
-  tag: "v0.41.2"
+  tag: "v0.49.0"
+  targetVersion: "< 1.22"
+- name: nginx-ingress-controller-seed
+  sourceRepository: github.com/kubernetes/ingress-nginx
+  repository: k8s.gcr.io/ingress-nginx/controller
+  tag: "v1.0.0"
+  targetVersion: ">= 1.22"
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend

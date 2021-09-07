@@ -48,6 +48,10 @@ spec:
           - --publish-service={{ template "nginx-ingress.controller.publishServicePath" . }}
           {{- end }}
           - --election-id={{ .Values.controller.electionID }}
+          {{- if semverCompare ">= 1.22" .Capabilities.KubeVersion.GitVersion }}
+          - --watch-ingress-without-class=true
+          - --controller-class={{ include "nginx-ingress.class" . }}
+          {{- end }}
           - --ingress-class={{ .Values.controller.ingressClass }}
           - --update-status=true
           - --annotations-prefix=nginx.ingress.kubernetes.io

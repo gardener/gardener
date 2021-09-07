@@ -61,6 +61,9 @@ spec:
             - --publish-service=garden/nginx-ingress-controller
             - --election-id=ingress-controller-seed-leader
             - --ingress-class={{ .Values.global.ingressClass }}
+            {{- if semverCompare ">= 1.22" .Capabilities.KubeVersion.GitVersion -}}
+            - --controller-class={{ include "nginx-ingress.class" . }}
+            {{- end }}
             - --update-status=true
             - --annotations-prefix=nginx.ingress.kubernetes.io
             - --configmap=garden/{{ include "nginx-ingress.config.name" . }}

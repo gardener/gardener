@@ -66,6 +66,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
@@ -878,10 +879,12 @@ func RunReconcileSeedFlow(
 		}
 	}
 
+	ingressClass := computeNginxIngressClass(seed, kubernetesVersion)
+
 	values := kubernetes.Values(map[string]interface{}{
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{
-			"ingressClass": getIngressClass(managedIngress(seed)),
+			"ingressClass": ingressClass,
 			"images":       imagevector.ImageMapToValues(images),
 		},
 		"reserveExcessCapacity": seed.GetInfo().Spec.Settings.ExcessCapacityReservation.Enabled,
@@ -959,15 +962,12 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	var ingressClass string
-	if managedIngress(seed) {
-		ingressClass = v1beta1constants.SeedNginxIngressClass
-	} else {
-		ingressClass = v1beta1constants.ShootNginxIngressClass
+	if !managedIngress(seed) {
 		if err := deleteIngressController(ctx, seedClient); err != nil {
 			return err
 		}
 	}
+
 	if err := migrateIngressClassForShootIngresses(ctx, gardenClient, seedClient, seed, ingressClass, kubernetesVersion); err != nil {
 		return err
 	}
@@ -1556,13 +1556,6 @@ func determineClusterIdentity(ctx context.Context, c client.Client) (string, err
 	return clusterIdentity.Data[v1beta1constants.ClusterIdentity], nil
 }
 
-func getIngressClass(seedIngressEnabled bool) string {
-	if seedIngressEnabled {
-		return v1beta1constants.SeedNginxIngressClass
-	}
-	return v1beta1constants.ShootNginxIngressClass
-}
-
 const annotationSeedIngressClass = "seed.gardener.cloud/ingress-class"
 
 func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, seedClient client.Client, seed *Seed, newClass string, kubernetesVersion *semver.Version) error {
@@ -1572,6 +1565,13 @@ func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, see
 
 	shootNamespaces := &corev1.NamespaceList{}
 	if err := seedClient.List(ctx, shootNamespaces, client.MatchingLabels{v1beta1constants.GardenRole: v1beta1constants.GardenRoleShoot}); err != nil {
+		return err
+	}
+
+	if err := switchIngressClass(ctx, seedClient, kutil.Key(v1beta1constants.GardenNamespace, "aggregate-prometheus"), newClass, kubernetesVersion); err != nil {
+		return err
+	}
+	if err := switchIngressClass(ctx, seedClient, kutil.Key(v1beta1constants.GardenNamespace, "grafana"), newClass, kubernetesVersion); err != nil {
 		return err
 	}
 
@@ -1597,11 +1597,27 @@ func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, see
 }
 
 func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKey types.NamespacedName, newClass string, kubernetesVersion *semver.Version) error {
-	var ingress client.Object = &networkingv1.Ingress{}
+	if versionutils.ConstraintK8sLessEqual121.Check(kubernetesVersion) {
+		ingress := &extensionsv1beta1.Ingress{}
 
-	if versionutils.ConstraintK8sLess119.Check(kubernetesVersion) {
-		ingress = &extensionsv1beta1.Ingress{}
+		if err := seedClient.Get(ctx, ingressKey, ingress); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+
+		annotations := ingress.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations[networkingv1beta1.AnnotationIngressClass] = newClass
+		ingress.SetAnnotations(annotations)
+
+		return seedClient.Update(ctx, ingress)
 	}
+
+	ingress := &networkingv1.Ingress{}
 
 	if err := seedClient.Get(ctx, ingressKey, ingress); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -1610,20 +1626,15 @@ func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKe
 		return err
 	}
 
-	annotations := ingress.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-	}
-	annotations["kubernetes.io/ingress.class"] = newClass
-	ingress.SetAnnotations(annotations)
+	ingress.Spec.IngressClassName = &newClass
+	delete(ingress.Annotations, networkingv1beta1.AnnotationIngressClass)
 
 	return seedClient.Update(ctx, ingress)
 }
 
 func computeNginxIngress(seed *Seed) map[string]interface{} {
 	values := map[string]interface{}{
-		"enabled":      managedIngress(seed),
-		"ingressClass": v1beta1constants.SeedNginxIngressClass,
+		"enabled": managedIngress(seed),
 	}
 
 	if seed.GetInfo().Spec.Ingress != nil && seed.GetInfo().Spec.Ingress.Controller.ProviderConfig != nil {
@@ -1631,6 +1642,17 @@ func computeNginxIngress(seed *Seed) map[string]interface{} {
 	}
 
 	return values
+}
+
+func computeNginxIngressClass(seed *Seed, kubernetesVersion *semver.Version) string {
+	managed := managedIngress(seed)
+	if managed && versionutils.ConstraintK8sGreaterEqual122.Check(kubernetesVersion) {
+		return v1beta1constants.SeedNginxIngressClass122
+	}
+	if managed {
+		return v1beta1constants.SeedNginxIngressClass
+	}
+	return v1beta1constants.ShootNginxIngressClass
 }
 
 func deleteIngressController(ctx context.Context, c client.Client) error {

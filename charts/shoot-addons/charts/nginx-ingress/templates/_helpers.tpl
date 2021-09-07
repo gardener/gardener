@@ -47,3 +47,11 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- $name := default .Chart.Name .Values.nameOverride -}}
 {{- printf "%s-%s-%s" .Release.Name $name .Values.defaultBackend.name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{- define "nginx-ingress.class" -}}
+{{- if semverCompare ">= 1.22" .Capabilities.KubeVersion.GitVersion -}}
+k8s.io/{{ .Values.controller.ingressClass }}
+{{- else -}}
+{{ .Values.controller.ingressClass }}
+{{- end }}
+{{- end }}
