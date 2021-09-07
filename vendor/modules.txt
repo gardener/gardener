@@ -439,6 +439,10 @@ go.etcd.io/etcd/raft/tracker
 go.etcd.io/etcd/version
 # go.uber.org/atomic v1.7.0
 go.uber.org/atomic
+# go.uber.org/goleak v1.1.10
+## explicit
+go.uber.org/goleak
+go.uber.org/goleak/internal/stack
 # go.uber.org/multierr v1.6.0
 go.uber.org/multierr
 # go.uber.org/zap v1.17.0
@@ -474,7 +478,7 @@ golang.org/x/crypto/salsa20/salsa
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
+# golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
 ## explicit
 golang.org/x/lint
 golang.org/x/lint/golint
@@ -535,7 +539,8 @@ golang.org/x/text/width
 # golang.org/x/time v0.0.0-20210611083556-38a9dc6acbc6
 ## explicit
 golang.org/x/time/rate
-# golang.org/x/tools v0.1.2
+# golang.org/x/tools v0.1.5
+## explicit
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/ast/inspector
 golang.org/x/tools/go/gcexportdata
@@ -552,6 +557,7 @@ golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors

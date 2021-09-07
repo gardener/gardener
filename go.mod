@@ -36,10 +36,12 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.0
 	github.com/texttheater/golang-levenshtein v0.0.0-20191208221605-eb6844b05fc6
+	go.uber.org/goleak v1.1.10
 	go.uber.org/zap v1.17.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
-	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
+	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
 	golang.org/x/time v0.0.0-20210611083556-38a9dc6acbc6
+	golang.org/x/tools v0.1.5 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0
 	gonum.org/v1/gonum v0.8.2
 	gopkg.in/yaml.v2 v2.4.0
