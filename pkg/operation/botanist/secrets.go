@@ -16,8 +16,8 @@ package botanist
 
 import (
 	"context"
+	"reflect"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -44,64 +44,64 @@ import (
 // credentials are computed which will be used to secure the Ingress resources and the kube-apiserver itself.
 // Server certificates for the exposed monitoring endpoints (via Ingress) are generated as well.
 func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
-	return b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
-		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
-		switch b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] {
-		case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
-			if err := b.rotateKubeconfigSecrets(ctx, &gardenerResourceDataList); err != nil {
-				return err
-			}
+	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener).DeepCopy()
 
-		case v1beta1constants.ShootOperationRotateSSHKeypair:
-			if err := b.rotateSSHKeypairSecrets(ctx, &gardenerResourceDataList); err != nil {
-				return err
-			}
-		}
-
-		if b.Shoot.GetInfo().DeletionTimestamp == nil {
-			if b.Shoot.ReversedVPNEnabled {
-				if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"); err != nil {
-					return err
-				}
-			} else {
-				if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, vpnseedserver.DeploymentName, vpnseedserver.VpnShootSecretName, vpnseedserver.VpnSeedServerTLSAuth); err != nil {
-					return err
-				}
-			}
-		}
-
-		shootWantsBasicAuth := gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo())
-		shootHasBasicAuth := gardenerResourceDataList.Get(common.BasicAuthSecretName) != nil
-		if shootWantsBasicAuth != shootHasBasicAuth {
-			if err := b.deleteBasicAuthDependantSecrets(ctx, &gardenerResourceDataList); err != nil {
-				return err
-			}
-		}
-
-		secretsManager := shootsecrets.NewSecretsManager(
-			gardenerResourceDataList,
-			b.generateStaticTokenConfig(),
-			b.wantedCertificateAuthorities(),
-			b.generateWantedSecretConfigs,
-		)
-
-		if shootWantsBasicAuth {
-			secretsManager = secretsManager.WithAPIServerBasicAuthConfig(basicAuthSecretAPIServer)
-		}
-
-		if err := secretsManager.Generate(); err != nil {
+	switch b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] {
+	case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
+		if err := b.rotateKubeconfigSecrets(ctx, &gardenerResourceDataList); err != nil {
 			return err
 		}
 
-		*gardenerResourceData = secretsManager.GardenerResourceDataList
+	case v1beta1constants.ShootOperationRotateSSHKeypair:
+		if err := b.rotateSSHKeypairSecrets(ctx, &gardenerResourceDataList); err != nil {
+			return err
+		}
+	}
 
+	if b.Shoot.GetInfo().DeletionTimestamp == nil {
+		if b.Shoot.ReversedVPNEnabled {
+			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, "vpn-seed", "vpn-seed-tlsauth", "vpn-shoot"); err != nil {
+				return err
+			}
+		} else {
+			if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, vpnseedserver.DeploymentName, vpnseedserver.VpnShootSecretName, vpnseedserver.VpnSeedServerTLSAuth); err != nil {
+				return err
+			}
+		}
+	}
+
+	shootWantsBasicAuth := gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo())
+	shootHasBasicAuth := gardenerResourceDataList.Get(common.BasicAuthSecretName) != nil
+	if shootWantsBasicAuth != shootHasBasicAuth {
+		if err := b.deleteBasicAuthDependantSecrets(ctx, &gardenerResourceDataList); err != nil {
+			return err
+		}
+	}
+
+	secretsManager := shootsecrets.NewSecretsManager(
+		gardenerResourceDataList,
+		b.generateStaticTokenConfig(),
+		b.wantedCertificateAuthorities(),
+		b.generateWantedSecretConfigs,
+	)
+
+	if shootWantsBasicAuth {
+		secretsManager = secretsManager.WithAPIServerBasicAuthConfig(basicAuthSecretAPIServer)
+	}
+
+	if err := secretsManager.Generate(); err != nil {
+		return err
+	}
+
+	if reflect.DeepEqual(secretsManager.GardenerResourceDataList, gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener)) {
 		return nil
-	})
+	}
+	return b.SaveGardenerResourcesInShootState(ctx, secretsManager.GardenerResourceDataList)
 }
 
 // DeploySecrets takes all existing secrets from the ShootState resource and deploys them in the shoot's control plane.
 func (b *Botanist) DeploySecrets(ctx context.Context) error {
-	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.GetShootState().Spec.Gardener)
+	gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(b.ShootState.Spec.Gardener)
 	existingSecrets, err := b.fetchExistingSecrets(ctx)
 	if err != nil {
 		return err

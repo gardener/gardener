@@ -52,8 +52,8 @@ var _ = Describe("ContainerRuntime", func() {
 					},
 				},
 			},
+			ShootState: shootState,
 		}}
-		botanist.SetShootState(shootState)
 		botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{})
 	})
 
