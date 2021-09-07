@@ -118,10 +118,6 @@ func (r *reconciler) reconcileBackupEntry(ctx context.Context, gardenClient kube
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(backupEntry.ObjectMeta, backupEntry.Status.LastOperation)
-	if kutil.HasMetaDataAnnotation(&backupEntry.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationRestore) {
-		operationType = gardencorev1beta1.LastOperationTypeRestore
-	}
-
 	if updateErr := r.updateBackupEntryStatusOperationStart(ctx, gardenClient.Client(), backupEntry, operationType); updateErr != nil {
 		backupEntryLogger.Errorf("Could not update the status after reconciliation start: %+v", updateErr)
 		return reconcile.Result{}, updateErr

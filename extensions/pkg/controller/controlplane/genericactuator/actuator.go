@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/controlplane"
 	"github.com/gardener/gardener/extensions/pkg/webhook"
 	extensionswebhookshoot "github.com/gardener/gardener/extensions/pkg/webhook/shoot"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	clientkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
@@ -279,17 +280,11 @@ func (a *actuator) reconcileControlPlane(
 		// then we requeue the `ControlPlane` CRD in order to give the provider-specific control plane components time to
 		// properly prepare the cluster for hibernation (whatever needs to be done). If the kube-apiserver is already scaled down
 		// then we allow continuing the reconciliation.
-		if cluster.Shoot.DeletionTimestamp == nil {
+		if cluster.Shoot.DeletionTimestamp == nil && (cluster.Shoot.Status.LastOperation == nil || cluster.Shoot.Status.LastOperation.Type != gardencorev1beta1.LastOperationTypeMigrate) {
 			if dep.Spec.Replicas != nil && *dep.Spec.Replicas > 0 {
 				requeue = true
 			} else {
 				scaledDown = true
-			}
-			// Similarly, if a hibernated shoot is deleted then we might need to wake up all the provider-specific components. We
-			// wait until the kube-apiserver is woken up again before we wake up the provider-specific components.
-		} else {
-			if dep.Spec.Replicas == nil || *dep.Spec.Replicas == 0 {
-				return true, nil
 			}
 		}
 	}
