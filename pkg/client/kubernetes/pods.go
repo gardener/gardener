@@ -104,7 +104,7 @@ func GetPodLogs(ctx context.Context, podInterface corev1client.PodInterface, nam
 // CheckForwardPodPort tries to open a portForward connection with the passed PortForwarder.
 // It returns nil if the port forward connection has been established successfully or an error otherwise.
 func CheckForwardPodPort(fw PortForwarder) error {
-	errChan := make(chan error)
+	errChan := make(chan error, 1)
 	go func() {
 		errChan <- fw.ForwardPorts()
 	}()
