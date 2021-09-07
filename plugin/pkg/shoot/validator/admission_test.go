@@ -288,7 +288,7 @@ var _ = Describe("validator", func() {
 			It("update should pass because the Seed has new non-tolerated taints that were added after the shoot was scheduled to it", func() {
 				seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 				oldShoot.Spec.SeedName = shoot.Spec.SeedName
-				shoot.Spec.Provider.Workers[0].Maximum += 1
+				shoot.Spec.Provider.Workers[0].Maximum++
 
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 				Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())

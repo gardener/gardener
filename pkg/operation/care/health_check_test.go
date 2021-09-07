@@ -410,7 +410,7 @@ var _ = Describe("health check", func() {
 			)
 
 			if !upToDate {
-				mr.Generation += 1
+				mr.Generation++
 			}
 
 			mr.Status.Conditions = conditions
