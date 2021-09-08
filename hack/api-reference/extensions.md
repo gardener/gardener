@@ -1983,7 +1983,7 @@ Kubernetes core/v1.LoadBalancerIngress
 <a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
 </p>
 <p>
-<p>CRI config is a structure contains configurations of the CRI library</p>
+<p>CRIConfig contains configurations of the CRI library.</p>
 </p>
 <table>
 <thead>
@@ -2024,7 +2024,7 @@ CRIName
 <a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigStatus">OperatingSystemConfigStatus</a>)
 </p>
 <p>
-<p>CloudConfig is a structure for containing the generated output for the given operating system
+<p>CloudConfig contains the generated output for the given operating system
 config spec. It contains a reference to a secret as the result may contain confidential data.</p>
 </p>
 <table>
@@ -2212,6 +2212,7 @@ DefaultStatus
 <a href="#extensions.gardener.cloud/v1alpha1.ContainerRuntimeSpec">ContainerRuntimeSpec</a>)
 </p>
 <p>
+<p>ContainerRuntimeWorkerPool identifies a Shoot worker pool by its name and selector.</p>
 </p>
 <table>
 <thead>
@@ -3419,7 +3420,7 @@ DefaultStatus
 <a href="#extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec</a>)
 </p>
 <p>
-<p>OperatingSystemConfigPurpose  is a string alias.</p>
+<p>OperatingSystemConfigPurpose is a string alias.</p>
 </p>
 <h3 id="extensions.gardener.cloud/v1alpha1.OperatingSystemConfigSpec">OperatingSystemConfigSpec
 </h3>

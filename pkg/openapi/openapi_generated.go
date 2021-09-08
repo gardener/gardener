@@ -2422,11 +2422,12 @@ func schema_pkg_apis_core_v1alpha1_DNSIncludeExclude(ref common.ReferenceCallbac
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "DNSIncludeExclude contains information about which domains shall be included/excluded.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"include": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Include is a list of resources that shall be included.",
+							Description: "Include is a list of domains that shall be included.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -2441,7 +2442,7 @@ func schema_pkg_apis_core_v1alpha1_DNSIncludeExclude(ref common.ReferenceCallbac
 					},
 					"exclude": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Exclude is a list of resources that shall be excluded.",
+							Description: "Exclude is a list of domains that shall be excluded.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4762,7 +4763,8 @@ func schema_pkg_apis_core_v1alpha1_Plant(ref common.ReferenceCallback) common.Op
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "Plant represents an external kubernetes cluster.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -5347,7 +5349,8 @@ func schema_pkg_apis_core_v1alpha1_Quota(ref common.ReferenceCallback) common.Op
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "Quota represents a quota on resources consumed by shoot clusters either per project or per provider secret.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -5628,7 +5631,8 @@ func schema_pkg_apis_core_v1alpha1_SecretBinding(ref common.ReferenceCallback) c
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "SecretBinding represents a binding to a secret in the same or another namespace.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -6543,7 +6547,8 @@ func schema_pkg_apis_core_v1alpha1_Shoot(ref common.ReferenceCallback) common.Op
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "Shoot represents a Shoot cluster created and managed by Gardener.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -9417,11 +9422,12 @@ func schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref common.ReferenceCallback
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "DNSIncludeExclude contains information about which domains shall be included/excluded.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"include": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Include is a list of resources that shall be included.",
+							Description: "Include is a list of domains that shall be included.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -9436,7 +9442,7 @@ func schema_pkg_apis_core_v1beta1_DNSIncludeExclude(ref common.ReferenceCallback
 					},
 					"exclude": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Exclude is a list of resources that shall be excluded.",
+							Description: "Exclude is a list of domains that shall be excluded.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -11471,7 +11477,8 @@ func schema_pkg_apis_core_v1beta1_Plant(ref common.ReferenceCallback) common.Ope
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "Plant represents an external kubernetes cluster.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -12056,7 +12063,8 @@ func schema_pkg_apis_core_v1beta1_Quota(ref common.ReferenceCallback) common.Ope
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "Quota represents a quota on resources consumed by shoot clusters either per project or per provider secret.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -12291,7 +12299,8 @@ func schema_pkg_apis_core_v1beta1_SecretBinding(ref common.ReferenceCallback) co
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "SecretBinding represents a binding to a secret in the same or another namespace.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -13265,7 +13274,8 @@ func schema_pkg_apis_core_v1beta1_Shoot(ref common.ReferenceCallback) common.Ope
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
+				Description: "Shoot represents a Shoot cluster created and managed by Gardener.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{

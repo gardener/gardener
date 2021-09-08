@@ -558,12 +558,13 @@ message DNS {
   repeated DNSProvider providers = 2;
 }
 
+// DNSIncludeExclude contains information about which domains shall be included/excluded.
 message DNSIncludeExclude {
-  // Include is a list of resources that shall be included.
+  // Include is a list of domains that shall be included.
   // +optional
   repeated string include = 1;
 
-  // Exclude is a list of resources that shall be excluded.
+  // Exclude is a list of domains that shall be excluded.
   // +optional
   repeated string exclude = 2;
 }
@@ -1489,6 +1490,7 @@ message OpenIDConnectClientAuthentication {
   optional string secret = 2;
 }
 
+// Plant represents an external kubernetes cluster.
 message Plant {
   // Standard object metadata.
   // +optional
@@ -1683,6 +1685,7 @@ message Provider {
   repeated Worker workers = 4;
 }
 
+// Quota represents a quota on resources consumed by shoot clusters either per project or per provider secret.
 message Quota {
   // Standard object metadata.
   // +optional
@@ -1757,6 +1760,7 @@ message ResourceWatchCacheSize {
   optional int32 size = 3;
 }
 
+// SecretBinding represents a binding to a secret in the same or another namespace.
 message SecretBinding {
   // Standard object metadata.
   // +optional
@@ -2071,6 +2075,7 @@ message ServiceAccountConfig {
   optional k8s.io.api.core.v1.LocalObjectReference signingKeySecretName = 2;
 }
 
+// Shoot represents a Shoot cluster created and managed by Gardener.
 message Shoot {
   // Standard object metadata.
   // +optional

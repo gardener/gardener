@@ -736,6 +736,7 @@ ControllerRegistrationDeployment
 <h3 id="core.gardener.cloud/v1beta1.Plant">Plant
 </h3>
 <p>
+<p>Plant represents an external kubernetes cluster.</p>
 </p>
 <table>
 <thead>
@@ -1021,6 +1022,7 @@ ProjectStatus
 <h3 id="core.gardener.cloud/v1beta1.Quota">Quota
 </h3>
 <p>
+<p>Quota represents a quota on resources consumed by shoot clusters either per project or per provider secret.</p>
 </p>
 <table>
 <thead>
@@ -1124,6 +1126,7 @@ Kubernetes core/v1.ObjectReference
 <h3 id="core.gardener.cloud/v1beta1.SecretBinding">SecretBinding
 </h3>
 <p>
+<p>SecretBinding represents a binding to a secret in the same or another namespace.</p>
 </p>
 <table>
 <thead>
@@ -1402,6 +1405,7 @@ SeedStatus
 <h3 id="core.gardener.cloud/v1beta1.Shoot">Shoot
 </h3>
 <p>
+<p>Shoot represents a Shoot cluster created and managed by Gardener.</p>
 </p>
 <table>
 <thead>
@@ -3284,6 +3288,7 @@ not a default domain is used.</p>
 <a href="#core.gardener.cloud/v1beta1.SeedDNSProvider">SeedDNSProvider</a>)
 </p>
 <p>
+<p>DNSIncludeExclude contains information about which domains shall be included/excluded.</p>
 </p>
 <table>
 <thead>
@@ -3302,7 +3307,7 @@ not a default domain is used.</p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Include is a list of resources that shall be included.</p>
+<p>Include is a list of domains that shall be included.</p>
 </td>
 </tr>
 <tr>
@@ -3314,7 +3319,7 @@ not a default domain is used.</p>
 </td>
 <td>
 <em>(Optional)</em>
-<p>Exclude is a list of resources that shall be excluded.</p>
+<p>Exclude is a list of domains that shall be excluded.</p>
 </td>
 </tr>
 </tbody>
