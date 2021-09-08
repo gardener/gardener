@@ -198,9 +198,9 @@ func (c *Controller) RunningWorkers() int {
 
 // CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
 func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
-	metric, err := prometheus.NewConstMetric(gardenlet.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "extensions")
+	metric, err := prometheus.NewConstMetric(gardenlet.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "networkpolicy")
 	if err != nil {
-		gardenlet.ScrapeFailures.With(prometheus.Labels{"kind": "extensions-controller"}).Inc()
+		gardenlet.ScrapeFailures.With(prometheus.Labels{"kind": "networkpolicy-controller"}).Inc()
 		return
 	}
 	ch <- metric
