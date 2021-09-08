@@ -16,13 +16,13 @@ package coredns_test
 
 import (
 	"context"
-	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	retryfake "github.com/gardener/gardener/pkg/utils/retry/fake"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
@@ -520,15 +520,30 @@ status:
 	})
 
 	Context("waiting functions", func() {
+		var (
+			fakeOps   *retryfake.Ops
+			resetVars func()
+		)
+
+		BeforeEach(func() {
+			fakeOps = &retryfake.Ops{MaxAttempts: 1}
+			resetVars = test.WithVars(
+				&retry.Until, fakeOps.Until,
+				&retry.UntilTimeout, fakeOps.UntilTimeout,
+			)
+		})
+
+		AfterEach(func() {
+			resetVars()
+		})
+
 		Describe("#Wait", func() {
 			It("should fail because reading the ManagedResource fails", func() {
 				Expect(component.Wait(ctx)).To(MatchError(ContainSubstring("not found")))
 			})
 
 			It("should fail because the ManagedResource doesn't become healthy", func() {
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Millisecond
+				fakeOps.MaxAttempts = 2
 
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
@@ -555,9 +570,7 @@ status:
 			})
 
 			It("should successfully wait for the managed resource to become healthy", func() {
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Millisecond
+				fakeOps.MaxAttempts = 2
 
 				Expect(c.Create(ctx, &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
@@ -585,42 +598,15 @@ status:
 		})
 
 		Describe("#WaitCleanup", func() {
-			timeNowFunc := func() time.Time { return time.Time{} }
-
 			It("should fail when the wait for the managed resource deletion times out", func() {
-				oldTimeNow := gutil.TimeNow
-				defer func() { gutil.TimeNow = oldTimeNow }()
-				gutil.TimeNow = timeNowFunc
-
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Millisecond
+				fakeOps.MaxAttempts = 2
 
 				Expect(c.Create(ctx, managedResource)).To(Succeed())
 
 				Expect(component.WaitCleanup(ctx)).To(MatchError(ContainSubstring("still exists")))
 			})
 
-			It("should successfully wait for the deletion", func() {
-				oldTimeNow := gutil.TimeNow
-				defer func() { gutil.TimeNow = oldTimeNow }()
-				gutil.TimeNow = timeNowFunc
-
-				oldTimeout := TimeoutWaitForManagedResource
-				defer func() { TimeoutWaitForManagedResource = oldTimeout }()
-				TimeoutWaitForManagedResource = time.Second
-
-				interval := time.Millisecond
-				oldIntervalWait := managedresources.IntervalWait
-				defer func() { managedresources.IntervalWait = oldIntervalWait }()
-				managedresources.IntervalWait = interval
-
-				go func() {
-					Expect(c.Create(ctx, managedResource)).To(Succeed())
-					time.Sleep(10 * interval)
-					Expect(c.Delete(ctx, managedResource)).To(Succeed())
-				}()
-
+			It("should not return an error when it's already removed", func() {
 				Expect(component.WaitCleanup(ctx)).To(Succeed())
 			})
 		})

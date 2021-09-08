@@ -48,9 +48,9 @@ const (
 	LabelValue = "kube-dns"
 	// ManagedResourceName is the name of the ManagedResource containing the resource specifications.
 	ManagedResourceName = "shoot-core-coredns"
-	// PortServiceServer is the target port used for the DNS server.
+	// PortServiceServer is the service port used for the DNS server.
 	PortServiceServer = 53
-	// PortServer is the service port used for the DNS server.
+	// PortServer is the target port used for the DNS server.
 	PortServer = 8053
 	// DeploymentName is the name of the coredns Deployment.
 	DeploymentName = "coredns"
