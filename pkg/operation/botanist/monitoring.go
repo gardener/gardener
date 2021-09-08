@@ -45,7 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// DeploySeedMonitoring will install the Helm release "seed-monitoring" in the Seed clusters. It comprises components
+// DeploySeedMonitoring installs the Helm release "seed-monitoring" in the Seed clusters. It comprises components
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
 func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeTesting {
@@ -294,6 +294,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	return nil
 }
 
+// DeploySeedGrafana deploys the grafana charts to the Seed cluster.
 func (b *Botanist) DeploySeedGrafana(ctx context.Context) error {
 	if b.Shoot.Purpose == gardencorev1beta1.ShootPurposeTesting {
 		return b.DeleteGrafana(ctx)

@@ -29,6 +29,7 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Shoot represents a Shoot cluster created and managed by Gardener.
 type Shoot struct {
 	metav1.TypeMeta
 	// Standard object metadata.
@@ -225,10 +226,11 @@ type DNSProvider struct {
 	Zones *DNSIncludeExclude
 }
 
+// DNSIncludeExclude contains information about which domains shall be included/excluded.
 type DNSIncludeExclude struct {
-	// Include is a list of resources that shall be included.
+	// Include is a list of domains that shall be included.
 	Include []string
-	// Exclude is a list of resources that shall be excluded.
+	// Exclude is a list of domains that shall be excluded.
 	Exclude []string
 }
 

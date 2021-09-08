@@ -174,6 +174,7 @@ func mergeLandscaperCommonConfig(base, overwrite *LandscaperCommonConfig) *Lands
 	return base
 }
 
+// GetInstallation creates and returns a landscaperv1alpha1.Installation for the given name.
 func (f *CommonFrameworkLandscaper) GetInstallation(name string) *landscaperv1alpha1.Installation {
 	name = fmt.Sprintf("%s-%s", name, f.ResourceSuffix)
 

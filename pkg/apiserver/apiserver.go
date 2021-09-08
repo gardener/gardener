@@ -27,10 +27,12 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 )
 
+// ExtraConfig contains non-generic Gardener API server configuration.
 type ExtraConfig struct {
 	AdminKubeconfigMaxExpiration time.Duration
 }
 
+// Config contains Gardener API server configuration.
 type Config struct {
 	GenericConfig *genericapiserver.RecommendedConfig
 	ExtraConfig   ExtraConfig
@@ -46,6 +48,7 @@ type completedConfig struct {
 	ExtraConfig   *ExtraConfig
 }
 
+// CompletedConfig contains completed Gardener API server configuration.
 type CompletedConfig struct {
 	*completedConfig
 }

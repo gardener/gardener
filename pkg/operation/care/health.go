@@ -59,6 +59,7 @@ type Health struct {
 	logger logrus.FieldLogger
 }
 
+// ShootClientInit is a function that initializes a kubernetes client for a Shoot.
 type ShootClientInit func() (kubernetes.Interface, bool, error)
 
 // NewHealth creates a new Health instance with the given parameters.

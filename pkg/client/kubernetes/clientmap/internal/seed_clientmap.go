@@ -71,6 +71,7 @@ func (f *SeedClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cli
 // SeedClientSetKey is a ClientSetKey for a Seed cluster.
 type SeedClientSetKey string
 
+// Key returns the string representation of the ClientSetKey.
 func (k SeedClientSetKey) Key() string {
 	return string(k)
 }

@@ -79,6 +79,7 @@ type ContainerRuntimeSpec struct {
 	DefaultSpec `json:",inline"`
 }
 
+// ContainerRuntimeWorkerPool identifies a Shoot worker pool by its name and selector.
 type ContainerRuntimeWorkerPool struct {
 	// Name specifies the name of the worker pool the container runtime should be available for.
 	Name string `json:"name"`

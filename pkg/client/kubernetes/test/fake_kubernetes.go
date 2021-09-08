@@ -48,6 +48,7 @@ func NewClientSetWithFakedServerVersion(kubernetes kubernetesclientset.Interface
 	}
 }
 
+// Discovery returns the discovery interface of this client set.
 func (c *ClientSet) Discovery() discovery.DiscoveryInterface {
 	return c.DiscoveryInterface
 }

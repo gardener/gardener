@@ -209,6 +209,7 @@ type ShootClientSetKey struct {
 	Namespace, Name string
 }
 
+// Key returns the string representation of the ClientSetKey.
 func (k ShootClientSetKey) Key() string {
 	return k.Namespace + "/" + k.Name
 }

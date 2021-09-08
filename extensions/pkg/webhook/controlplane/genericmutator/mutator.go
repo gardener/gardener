@@ -373,6 +373,7 @@ func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx
 	return nil
 }
 
+// CloudProviderConfigPath is the path to the cloudprovider.conf kubelet configuration file.
 const CloudProviderConfigPath = "/var/lib/kubelet/cloudprovider.conf"
 
 func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, osc *extensionsv1alpha1.OperatingSystemConfig) error {

@@ -16,6 +16,7 @@ package config
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+// HealthCheckConfig contains the health check controller configuration.
 type HealthCheckConfig struct {
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often the health check of Shoot clusters is performed (only if no operation is

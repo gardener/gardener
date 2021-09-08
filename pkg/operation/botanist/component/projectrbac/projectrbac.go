@@ -46,12 +46,13 @@ const (
 	nameProjectViewer = "gardener.cloud:system:project-viewer"
 )
 
+// Interface extends component.Deployer with a function to delete stale extension roles resources.
 type Interface interface {
 	component.Deployer
 	DeleteStaleExtensionRolesResources(context.Context) error
 }
 
-// New creates a new instance of DeployWaiter for the RBAC resources required to interact with Projects.
+// New creates a new instance of Interface for the RBAC resources required to interact with Projects.
 func New(client client.Client, project *gardencorev1beta1.Project) (Interface, error) {
 	if project.Spec.Namespace == nil {
 		return nil, fmt.Errorf("cannot create Interface for a project with `.spec.namespace=nil`")

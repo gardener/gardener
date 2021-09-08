@@ -59,6 +59,7 @@ const (
 	configFileName  = "dep-config.yaml"
 )
 
+// Values contains dependency-watchdog values.
 type Values struct {
 	Role Role
 	ValuesEndpoint
@@ -66,10 +67,12 @@ type Values struct {
 	Image string
 }
 
+// ValuesEndpoint contains the service dependants of dependency-watchdog.
 type ValuesEndpoint struct {
 	ServiceDependants restarterapi.ServiceDependants
 }
 
+// ValuesProbe contains the probe dependants list of dependency-watchdog.
 type ValuesProbe struct {
 	ProbeDependantsList scalerapi.ProbeDependantsList
 }

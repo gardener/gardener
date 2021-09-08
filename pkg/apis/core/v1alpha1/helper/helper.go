@@ -204,6 +204,7 @@ func TaintsHave(taints []gardencorev1alpha1.SeedTaint, key string) bool {
 	return false
 }
 
+// ShootedSeed contains the configuration of a shooted seed.
 type ShootedSeed struct {
 	DisableDNS                     *bool
 	DisableCapacityReservation     *bool
@@ -219,11 +220,13 @@ type ShootedSeed struct {
 	WithSecretRef                  bool
 }
 
+// ShootedSeedAPIServer contains the configuration of a shooted seed API server.
 type ShootedSeedAPIServer struct {
 	Replicas   *int32
 	Autoscaler *ShootedSeedAPIServerAutoscaler
 }
 
+// ShootedSeedAPIServerAutoscaler contains the configuration of a shooted seed API server autoscaler.
 type ShootedSeedAPIServerAutoscaler struct {
 	MinReplicas *int32
 	MaxReplicas int32

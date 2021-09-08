@@ -61,17 +61,20 @@ func NewActuator(provider, extensionKind string, getExtensionObjFunc GetExtensio
 	}
 }
 
+// InjectScheme injects the given runtime.Scheme into this Actuator.
 func (a *Actuator) InjectScheme(scheme *runtime.Scheme) error {
 	a.scheme = scheme
 	a.decoder = serializer.NewCodecFactory(a.scheme).UniversalDecoder()
 	return nil
 }
 
+// InjectClient injects the given client.Client into this Actuator.
 func (a *Actuator) InjectClient(client client.Client) error {
 	a.seedClient = client
 	return nil
 }
 
+// InjectConfig injects the given rest.Config into this Actuator.
 func (a *Actuator) InjectConfig(config *rest.Config) error {
 	a.restConfig = config
 	return nil

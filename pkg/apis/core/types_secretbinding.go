@@ -22,6 +22,7 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// SecretBinding represents a binding to a secret in the same or another namespace.
 type SecretBinding struct {
 	metav1.TypeMeta
 	// Standard object metadata.

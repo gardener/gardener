@@ -108,6 +108,7 @@ type DeleteOptions struct {
 // TolerateErrorFunc is a function for which err is tolerated.
 type TolerateErrorFunc func(err error) bool
 
+// MutateDeleteOptions applies this configuration to the given delete options.
 func (t TolerateErrorFunc) MutateDeleteOptions(opts *DeleteOptions) {
 	if opts.TolerateErrorFuncs == nil {
 		opts.TolerateErrorFuncs = []TolerateErrorFunc{}
@@ -116,6 +117,7 @@ func (t TolerateErrorFunc) MutateDeleteOptions(opts *DeleteOptions) {
 	opts.TolerateErrorFuncs = append(opts.TolerateErrorFuncs, t)
 }
 
+// MutateDeleteManifestOptions applies this configuration to the given delete manifest options.
 func (t TolerateErrorFunc) MutateDeleteManifestOptions(opts *DeleteManifestOptions) {
 	if opts.TolerateErrorFuncs == nil {
 		opts.TolerateErrorFuncs = []TolerateErrorFunc{}
