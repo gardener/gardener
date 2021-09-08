@@ -25,17 +25,20 @@ import (
 const (
 	monitoringPrometheusJobName = "coredns"
 
-	monitoringMetricBuildInfo                       = "coredns_build_info"
-	monitoringMetricCacheEntries                    = "coredns_cache_entries"
-	monitoringMetricCacheHitsTotal                  = "coredns_cache_hits_total"
-	monitoringMetricCacheMissesTotal                = "coredns_cache_misses_total"
-	monitoringMetricDnsRequestDurationSecondsCount  = "coredns_dns_request_duration_seconds_count"
-	monitoringMetricDnsRequestDurationSecondsBucket = "coredns_dns_request_duration_seconds_bucket"
-	monitoringMetricDnsResponsesTotal               = "coredns_dns_responses_total"
-	monitoringMetricForwardRequestsTotal            = "coredns_forward_requests_total"
-	monitoringMetricForwardResponsesTotal           = "coredns_forward_responses_total"
-	monitoringMetricProcessMaxFds                   = "process_max_fds"
-	monitoringMetricProcessOpenFds                  = "process_open_fds"
+	monitoringMetricBuildInfo                                     = "coredns_build_info"
+	monitoringMetricCacheEntries                                  = "coredns_cache_entries"
+	monitoringMetricCacheHitsTotal                                = "coredns_cache_hits_total"
+	monitoringMetricCacheMissesTotal                              = "coredns_cache_misses_total"
+	monitoringMetricDnsRequestDurationSecondsCount                = "coredns_dns_request_duration_seconds_count"
+	monitoringMetricDnsRequestDurationSecondsBucket               = "coredns_dns_request_duration_seconds_bucket"
+	monitoringMetricDnsResponsesTotal                             = "coredns_dns_responses_total"
+	monitoringMetricForwardRequestsTotal                          = "coredns_forward_requests_total"
+	monitoringMetricForwardResponsesTotal                         = "coredns_forward_responses_total"
+	monitoringMetricKubernetesDnsProgrammingDurationSecondsBucket = "coredns_kubernetes_dns_programming_duration_seconds_bucket"
+	monitoringMetricKubernetesDnsProgrammingDurationSecondsCount  = "coredns_kubernetes_dns_programming_duration_seconds_count"
+	monitoringMetricKubernetesDnsProgrammingDurationSecondsSum    = "coredns_kubernetes_dns_programming_duration_seconds_sum"
+	monitoringMetricProcessMaxFds                                 = "process_max_fds"
+	monitoringMetricProcessOpenFds                                = "process_open_fds"
 
 	monitoringAlertingRules = `groups:
 - name: coredns.rules
@@ -65,6 +68,9 @@ var (
 		monitoringMetricDnsResponsesTotal,
 		monitoringMetricForwardRequestsTotal,
 		monitoringMetricForwardResponsesTotal,
+		monitoringMetricKubernetesDnsProgrammingDurationSecondsBucket,
+		monitoringMetricKubernetesDnsProgrammingDurationSecondsCount,
+		monitoringMetricKubernetesDnsProgrammingDurationSecondsSum,
 		monitoringMetricProcessMaxFds,
 		monitoringMetricProcessOpenFds,
 	}
