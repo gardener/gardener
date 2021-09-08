@@ -350,7 +350,7 @@ import custom/*.server
 						Affinity: &corev1.Affinity{
 							PodAntiAffinity: &corev1.PodAntiAffinity{
 								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
-									Weight: 1,
+									Weight: 100,
 									PodAffinityTerm: corev1.PodAffinityTerm{
 										TopologyKey: corev1.LabelHostname,
 										LabelSelector: &metav1.LabelSelector{

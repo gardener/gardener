@@ -301,7 +301,7 @@ spec:
                   values:
                   - kube-dns
               topologyKey: kubernetes.io/hostname
-            weight: 1
+            weight: 100
       containers:
       - args:
         - -conf
