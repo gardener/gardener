@@ -1196,6 +1196,20 @@ Kubernetes core/v1.SecretReference
 <p>Quotas is a list of references to Quota objects in the same or another namespace.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>provider</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SecretBindingProvider">
+SecretBindingProvider
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Provider defines the provider type of the SecretBinding.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.Seed">Seed
@@ -7149,6 +7163,36 @@ int32
 </td>
 <td>
 <p>CacheSize specifies the watch cache size that should be configured for the specified resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SecretBindingProvider">SecretBindingProvider
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SecretBinding">SecretBinding</a>)
+</p>
+<p>
+<p>SecretBindingProvider defines the provider type of the SecretBinding.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>type</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>Type is the type of the provider.</p>
 </td>
 </tr>
 </tbody>

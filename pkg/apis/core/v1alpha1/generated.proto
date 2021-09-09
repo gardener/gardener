@@ -1776,6 +1776,10 @@ message SecretBinding {
   // Quotas is a list of references to Quota objects in the same or another namespace.
   // +optional
   repeated k8s.io.api.core.v1.ObjectReference quotas = 3;
+
+  // Provider defines the provider type of the SecretBinding.
+  // +optional
+  optional SecretBindingProvider provider = 4;
 }
 
 // SecretBindingList is a collection of SecretBindings.
@@ -1786,6 +1790,12 @@ message SecretBindingList {
 
   // Items is the list of SecretBindings.
   repeated SecretBinding items = 2;
+}
+
+// SecretBindingProvider defines the provider type of the SecretBinding.
+message SecretBindingProvider {
+  // Type is the type of the provider.
+  optional string type = 1;
 }
 
 // Seed represents an installation request for an external controller.
