@@ -124,6 +124,8 @@ type PortForwarder interface {
 
 // SetupPortForwarder sets up a PortForwarder which forwards the <remote> port of the pod with name <name> in namespace <namespace>
 // to the <local> port. If <local> equals zero, a free port will be chosen randomly.
+// When calling ForwardPorts on the returned PortForwarder, it will run until the given context is cancelled.
+// Hence, the given context should carry a timeout and should be cancelled once the forwarding is no longer needed.
 func SetupPortForwarder(ctx context.Context, config *rest.Config, namespace, name string, local, remote int) (PortForwarder, error) {
 	var (
 		readyChan = make(chan struct{}, 1)
