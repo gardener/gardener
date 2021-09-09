@@ -30,7 +30,7 @@ issues:
   - a blank import should be only in a main or test package, or have a comment justifying it
   - should not use dot imports
   - package comment should be of the form
-  - type name will be used as .* by other packages, and that stutters;
+  - (type|func) name will be used as .* by other packages, and that stutters;
   - exported func .* returns unexported type .*, which can be annoying to use
   - "`if` block ends with a `return` statement, so drop this `else` and outdent its block"
   - if block ends with a return statement, so drop this else and outdent its block (move short variable declaration to its own line if necessary)
