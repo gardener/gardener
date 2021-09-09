@@ -182,7 +182,7 @@ mkdir -p "/var/lib/cloud-config-downloader/downloads" "/var/lib/kubelet" "$PATH_
     done <<< "$DISK_DEVICES"
 
     if [ -z "$TARGET_DEVICE_NAME" ]; then
-      echo "No kubelet data device not found"
+      echo "No kubelet data device found"
       return
     fi
 
