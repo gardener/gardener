@@ -64,7 +64,8 @@ var _ = Describe("Executor", func() {
 			func(kubernetesVersion string, copyKubernetesBinariesFn func(*imagevector.Image) string, kubeletDataVol *gardencorev1beta1.DataVolume, kubeletDataVolSize *string) {
 				script, err := executor.Script(bootstrapToken, cloudConfigUserData, hyperkubeImage, kubernetesVersion, kubeletDataVol, reloadConfigCommand, units)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(string(script)).To(Equal(scriptFor(bootstrapToken, cloudConfigUserData, hyperkubeImage, copyKubernetesBinariesFn, kubeletDataVolSize, reloadConfigCommand, units)))
+				testScript := scriptFor(bootstrapToken, cloudConfigUserData, hyperkubeImage, copyKubernetesBinariesFn, kubeletDataVolSize, reloadConfigCommand, units)
+				Expect(string(script)).To(Equal(testScript))
 			},
 
 			Entry("k8s 1.15, w/o kubelet data volume", "1.15.1", copyKubernetesBinariesFromHyperkubeImageForVersionsLess117, nil, nil),
@@ -344,9 +345,13 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null || \
 	footerPart += `    echo "Successfully restarted all units referenced in the cloud config."
     cp "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD"
     md5sum ${PATH_CCD_SCRIPT} > "$PATH_CCD_SCRIPT_CHECKSUM_OLD" # As the file can be updated above, get fresh checksum.
+  else
+    echo "failed to apply the cloud config."
+    exit 1
   fi
 fi
 
+echo "Cloud config is up to date."
 rm "$PATH_CLOUDCONFIG" "$PATH_CCD_SCRIPT_CHECKSUM"
 
 # Now that the most recent cloud-config user data was applied, let's update the checksum/cloud-config-data annotation on
