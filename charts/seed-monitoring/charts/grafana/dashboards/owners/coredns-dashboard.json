@@ -15,9 +15,24 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1622450712296,
+  "id": 3,
+  "iteration": 1631101541091,
   "links": [],
   "panels": [
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 30,
+      "panels": [],
+      "title": "General",
+      "type": "row"
+    },
     {
       "aliasColors": {},
       "bars": false,
@@ -40,7 +55,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 1
       },
       "hiddenSeries": false,
       "id": 8,
@@ -65,7 +80,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -164,7 +179,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 0
+        "y": 1
       },
       "hiddenSeries": false,
       "id": 20,
@@ -189,7 +204,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -287,7 +302,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 7
+        "y": 8
       },
       "hiddenSeries": false,
       "id": 16,
@@ -308,7 +323,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -390,7 +405,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 7
+        "y": 8
       },
       "hiddenSeries": false,
       "id": 21,
@@ -411,7 +426,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -497,7 +512,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 14
+        "y": 15
       },
       "hiddenSeries": false,
       "id": 26,
@@ -522,7 +537,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -592,7 +607,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 22
       },
       "id": 18,
       "panels": [],
@@ -621,7 +636,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 22
+        "y": 23
       },
       "hiddenSeries": false,
       "id": 6,
@@ -642,7 +657,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -734,7 +749,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 23
       },
       "hiddenSeries": false,
       "id": 22,
@@ -755,7 +770,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -846,7 +861,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 30
       },
       "hiddenSeries": false,
       "id": 2,
@@ -867,7 +882,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -937,7 +952,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 37
       },
       "id": 14,
       "panels": [],
@@ -963,7 +978,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 37
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 10,
@@ -987,7 +1002,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1068,7 +1083,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 37
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 23,
@@ -1091,7 +1106,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1172,7 +1187,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 44
+        "y": 45
       },
       "hiddenSeries": false,
       "id": 25,
@@ -1193,7 +1208,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1273,7 +1288,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 44
+        "y": 45
       },
       "hiddenSeries": false,
       "id": 12,
@@ -1294,7 +1309,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.5.4",
+      "pluginVersion": "7.5.10",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1355,8 +1370,313 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 52
+      },
+      "id": 35,
+      "panels": [],
+      "repeat": "service_kind",
+      "scopedVars": {
+        "service_kind": {
+          "selected": true,
+          "text": "headless_with_selector",
+          "value": "headless_with_selector"
+        }
+      },
+      "title": "DNS Programming Latency ($service_kind)",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 53
+      },
+      "hiddenSeries": false,
+      "id": 32,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.10",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "scopedVars": {
+        "service_kind": {
+          "selected": true,
+          "text": "headless_with_selector",
+          "value": "headless_with_selector"
+        }
+      },
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "rate(coredns_kubernetes_dns_programming_duration_seconds_count{pod=~\"$pod\", service_kind=~\"$service_kind\"}[$__rate_interval])",
+          "interval": "",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Rate of DNS Programming Events",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:557",
+          "format": "hertz",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:558",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 53
+      },
+      "hiddenSeries": false,
+      "id": 33,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.10",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "scopedVars": {
+        "service_kind": {
+          "selected": true,
+          "text": "headless_with_selector",
+          "value": "headless_with_selector"
+        }
+      },
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "increase(coredns_kubernetes_dns_programming_duration_seconds_sum{pod=~\"$pod\", service_kind=~\"$service_kind\"}[$__rate_interval])",
+          "interval": "",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Increase in DNS Programming Seconds",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:557",
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:558",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 53
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 28,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.10",
+      "reverseYBuckets": false,
+      "scopedVars": {
+        "service_kind": {
+          "selected": true,
+          "text": "headless_with_selector",
+          "value": "headless_with_selector"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": false,
+          "expr": "sum by (le) (rate(coredns_kubernetes_dns_programming_duration_seconds_bucket{pod=~\"$pod\", service_kind=~\"$service_kind\"}[$__rate_interval]))",
+          "format": "heatmap",
+          "interval": "",
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "DNS Programming Heatmap",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "s",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "upper",
+      "yBucketNumber": null,
+      "yBucketSize": null
     }
   ],
+  "refresh": false,
   "schemaVersion": 27,
   "style": "dark",
   "tags": [
@@ -1392,6 +1712,43 @@
         },
         "refresh": 2,
         "regex": "coredns.*",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "headless_with_selector",
+          "value": "headless_with_selector"
+        },
+        "datasource": null,
+        "definition": "label_values(coredns_kubernetes_dns_programming_duration_seconds_count,service_kind)",
+        "description": null,
+        "error": null,
+        "hide": 2,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "service_kind",
+        "options": [
+          {
+            "selected": true,
+            "text": "headless_with_selector",
+            "value": "headless_with_selector"
+          }
+        ],
+        "query": {
+          "query": "label_values(coredns_kubernetes_dns_programming_duration_seconds_count,service_kind)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 0,
+        "regex": "",
         "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
