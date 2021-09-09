@@ -52,6 +52,7 @@ type cloudAwarePackage struct {
 	cloud networkpolicies.CloudAware
 }
 
+// NewPackages returns a function that returns generator.Packages for the given generator context and arguments.
 func NewPackages(cloud networkpolicies.CloudAware) func(p *generator.Context, arguments *args.GeneratorArgs) generator.Packages {
 	return (&cloudAwarePackage{cloud: cloud}).Packages
 }

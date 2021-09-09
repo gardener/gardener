@@ -131,6 +131,7 @@ func (a *AddArgs) RegisterExtension(getExtensionObjFunc GetExtensionObjectFunc, 
 	return nil
 }
 
+// GetExtensionGroupVersionKind returns the schema.GroupVersionKind of the registered extension of this AddArgs.
 func (a *AddArgs) GetExtensionGroupVersionKind() schema.GroupVersionKind {
 	return a.registeredExtension.groupVersionKind
 }

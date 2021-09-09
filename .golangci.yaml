@@ -10,12 +10,27 @@ run:
 
   skip-files:
   - ".*\\.pb\\.go$"
+  - "zz_generated\\..*\\.go$"
+  - "openapi_generated\\.go$"
 
 linters:
   disable:
   - unused
+  enable:
+  - revive
 
 issues:
+  exclude-use-default: false
+  exclude:
+  # errcheck: Almost all programs ignore errors on these functions and in most cases it's ok
+  - Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*printf?|os\.(Un)?Setenv). is not checked
+  # revive:
+  - var-naming # ((var|const|struct field|func) .* should be .*
+  - dot-imports # should not use dot imports
+  - package-comments # package comment should be of the form
+  - unexported-return # exported func .* returns unexported type .*, which can be annoying to use
+  - indent-error-flow # if block ends with a return statement, so drop this else and outdent its block
+  - "exported: (type|func) name will be used as .* by other packages, and that stutters;"
   exclude-rules:
   - linters:
     - staticcheck

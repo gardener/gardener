@@ -22,6 +22,7 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Quota represents a quota on resources consumed by shoot clusters either per project or per provider secret.
 type Quota struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.

@@ -35,7 +35,7 @@ import (
 const (
 	// NamePrefix is the prefix used for {Valida,Muta}tingWebhookConfigurations of extensions.
 	NamePrefix = "gardener-extension-"
-	// NameSuffixShoots is the suffix used for {Valida,Muta}tingWebhookConfigurations of extensions targeting a shoot.
+	// NameSuffixShoot is the suffix used for {Valida,Muta}tingWebhookConfigurations of extensions targeting a shoot.
 	NameSuffixShoot = "-shoot"
 )
 

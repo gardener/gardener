@@ -531,6 +531,7 @@ func (o *Operation) EnsureShootStateExists(ctx context.Context) error {
 	return err
 }
 
+// DeleteShootState deletes the ShootState resource for the corresponding shoot.
 func (o *Operation) DeleteShootState(ctx context.Context) error {
 	shootState := &gardencorev1alpha1.ShootState{
 		ObjectMeta: metav1.ObjectMeta{

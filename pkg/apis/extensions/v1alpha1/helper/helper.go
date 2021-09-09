@@ -35,9 +35,8 @@ func ClusterAutoscalerRequired(pools []extensionsv1alpha1.WorkerPool) bool {
 func GetDNSRecordType(address string) extensionsv1alpha1.DNSRecordType {
 	if ip := net.ParseIP(address); ip != nil && ip.To4() != nil {
 		return extensionsv1alpha1.DNSRecordTypeA
-	} else {
-		return extensionsv1alpha1.DNSRecordTypeCNAME
 	}
+	return extensionsv1alpha1.DNSRecordTypeCNAME
 }
 
 // GetDNSRecordTTL returns the value of the given ttl, or 120 if nil.

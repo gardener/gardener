@@ -109,7 +109,7 @@ func (d *DeletionConfirmation) SetExternalCoreInformerFactory(f externalcoreinfo
 	readyFuncs = append(readyFuncs, shootStateInformer.Informer().HasSynced)
 }
 
-// SetCoreClientset gets the clientset from the Kubernetes client.
+// SetInternalCoreClientset gets the clientset from the Kubernetes client.
 func (d *DeletionConfirmation) SetInternalCoreClientset(c internalversion.Interface) {
 	d.gardenCoreClient = c
 }

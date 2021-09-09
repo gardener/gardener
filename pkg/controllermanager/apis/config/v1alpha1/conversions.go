@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//nolint:revive
 package v1alpha1
 
 import (
@@ -25,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
-// Convert_v1alpha1_QuotaConfiguration_To_config_QuotaConfiguration converts the external QuotaConfiguration version to the internal one.
 func Convert_v1alpha1_QuotaConfiguration_To_config_QuotaConfiguration(in *QuotaConfiguration, out *config.QuotaConfiguration, s conversion.Scope) error {
 	err := autoConvert_v1alpha1_QuotaConfiguration_To_config_QuotaConfiguration(in, out, s)
 	if err != nil {

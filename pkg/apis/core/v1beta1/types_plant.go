@@ -22,6 +22,7 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Plant represents an external kubernetes cluster.
 type Plant struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.

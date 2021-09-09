@@ -153,10 +153,12 @@ func TestHealthCheckWithManagedResource(ctx context.Context, timeout time.Durati
 	}, healthConditionType, gardencorev1beta1.ConditionFalse, healthcheck.ReasonUnsuccessful)
 }
 
+// ControlPlaneHealthCheckDeleteSeedDeployment is a convenience function to delete the given deployment and check the control plane resource condition.
 func ControlPlaneHealthCheckDeleteSeedDeployment(ctx context.Context, f *framework.ShootFramework, controlPlaneName, deploymentName string, healthConditionType gardencorev1beta1.ConditionType) error {
 	return deleteSeedDeploymentCheck(ctx, f, extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.ControlPlaneResource), controlPlaneName, deploymentName, healthConditionType)
 }
 
+// WorkerHealthCheckDeleteSeedDeployment is a convenience function to delete the given deployment and check the worker resource condition.
 func WorkerHealthCheckDeleteSeedDeployment(ctx context.Context, f *framework.ShootFramework, controlPlaneName, deploymentName string, healthConditionType gardencorev1beta1.ConditionType) error {
 	return deleteSeedDeploymentCheck(ctx, f, extensionsv1alpha1.SchemeGroupVersion.WithKind(extensionsv1alpha1.WorkerResource), controlPlaneName, deploymentName, healthConditionType)
 }
@@ -188,6 +190,7 @@ func deleteSeedDeploymentCheck(ctx context.Context, f *framework.ShootFramework,
 	}, healthConditionType, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.ConditionCheckError)
 }
 
+// MachineDeletionHealthCheck is a convenience function to delete the first machine and check the worker resource condition.
 func MachineDeletionHealthCheck(ctx context.Context, f *framework.ShootFramework) error {
 	var err error
 	machineList := machinev1alpha1.MachineList{}

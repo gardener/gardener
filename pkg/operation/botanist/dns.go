@@ -495,11 +495,7 @@ func (d dnsRestoreDeployer) Deploy(ctx context.Context) error {
 	}
 
 	// Wait for the entry to become ready
-	if err := d.entry.Wait(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return d.entry.Wait(ctx)
 }
 
 func (d dnsRestoreDeployer) Destroy(_ context.Context) error { return nil }

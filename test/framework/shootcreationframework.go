@@ -348,6 +348,7 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	return shootCreationCfg
 }
 
+// CreateShoot creates a shoot using this framework's configuration.
 func (f *ShootCreationFramework) CreateShoot(ctx context.Context, initializeShootWithFlags, waitUntilShootIsReconciled bool) (*gardencorev1beta1.Shoot, error) {
 	if initializeShootWithFlags {
 		if err := f.InitializeShootWithFlags(ctx); err != nil {
@@ -398,6 +399,7 @@ func (f *ShootCreationFramework) CreateShoot(ctx context.Context, initializeShoo
 	return f.Shoot, nil
 }
 
+// InitializeShootWithFlags initializes a shoot to be created by this framework.
 func (f *ShootCreationFramework) InitializeShootWithFlags(ctx context.Context) error {
 	// if running in test machinery, test will be executed from root of the project
 	if !FileExists(fmt.Sprintf(".%s", f.Config.shootYamlPath)) {
@@ -427,11 +429,7 @@ func (f *ShootCreationFramework) InitializeShootWithFlags(ctx context.Context) e
 		return err
 	}
 
-	if err = setShootWorkerSettings(shootObject, f.Config, cloudProfile); err != nil {
-		return err
-	}
-
-	return nil
+	return setShootWorkerSettings(shootObject, f.Config, cloudProfile)
 }
 
 // newShootFramework creates a new ShootFramework with the Shoot created by the ShootCreationFramework

@@ -15,5 +15,6 @@
 package extensions
 
 const (
+	// GroupName is the name of the extensions API group.
 	GroupName = "extensions.gardener.cloud"
 )

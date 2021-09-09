@@ -83,7 +83,7 @@ var _ = Describe("Shoot reconciliation testing", func() {
 			}
 
 			if reconciledShoots != len(shoots.Items) {
-				err := fmt.Errorf("Reconciled %d of %d shoots. Waiting ...", reconciledShoots, len(shoots.Items))
+				err := fmt.Errorf("Reconciled %d of %d shoots. Waiting ...", reconciledShoots, len(shoots.Items)) //nolint:revive
 				f.Logger.Info(err.Error())
 				return retry.MinorError(err)
 			}

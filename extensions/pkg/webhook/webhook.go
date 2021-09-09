@@ -50,6 +50,7 @@ type Webhook struct {
 	Selector *metav1.LabelSelector
 }
 
+// Args contains Webhook creation arguments.
 type Args struct {
 	Provider   string
 	Name       string

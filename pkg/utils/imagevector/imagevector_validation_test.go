@@ -124,8 +124,5 @@ func write(w io.Writer, imageVector ImageVector) error {
 		Images: imageVector,
 	}
 
-	if err := yaml.NewEncoder(w).Encode(&vector); err != nil {
-		return err
-	}
-	return nil
+	return yaml.NewEncoder(w).Encode(&vector)
 }

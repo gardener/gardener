@@ -109,6 +109,7 @@ type PlantClientSetKey struct {
 	Namespace, Name string
 }
 
+// Key returns the string representation of the ClientSetKey.
 func (k PlantClientSetKey) Key() string {
 	return k.Namespace + "/" + k.Name
 }

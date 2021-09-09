@@ -29,6 +29,8 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
+// AllowToSeedAPIServer is the name of the Network Policy that allows egress to the Seed's Kubernetes API Server
+// endpoints in the default namespace.
 const AllowToSeedAPIServer = "allow-to-seed-apiserver"
 
 // GetEgressRules creates Network Policy egress rules from endpoint subsets.

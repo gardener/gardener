@@ -20,7 +20,7 @@ type causer interface {
 	Cause() error
 }
 
-// Unwraps and returns the root error. Multiple wrappings either via `fmt.Errorf` or via `causer` implementations are properly taken into account.
+// Unwrap unwraps and returns the root error. Multiple wrappings either via `fmt.Errorf` or via `causer` implementations are properly taken into account.
 func Unwrap(err error) error {
 	var cdone, udone bool
 

@@ -25,6 +25,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
+// MutateFn is a function that validates and if needed mutates the given extensionsv1alpha1.Network.
 type MutateFn func(new, old *extensionsv1alpha1.Network) error
 
 // NewMutator creates a new network mutator.

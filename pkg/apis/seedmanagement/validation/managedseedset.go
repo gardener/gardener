@@ -60,7 +60,7 @@ func ValidateManagedSeedSetUpdate(newManagedSeedSet, oldManagedSeedSet *seedmana
 	return allErrs
 }
 
-// ValidateManagedSeedStatusUpdate validates a ManagedSeedSet object before a status update.
+// ValidateManagedSeedSetStatusUpdate validates a ManagedSeedSet object before a status update.
 func ValidateManagedSeedSetStatusUpdate(newManagedSeedSet, oldManagedSeedSet *seedmanagement.ManagedSeedSet) field.ErrorList {
 	allErrs := field.ErrorList{}
 

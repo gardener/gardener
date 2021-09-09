@@ -96,6 +96,7 @@ func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.Cli
 // GardenClientSetKey is a ClientSetKey for the garden cluster.
 type GardenClientSetKey struct{}
 
+// Key returns the string representation of the ClientSetKey.
 func (k GardenClientSetKey) Key() string {
 	return "garden"
 }

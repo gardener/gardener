@@ -16,11 +16,11 @@ package kubernetes
 
 // DeleteManifestOption is some configuration that modifies options for a delete request.
 type DeleteManifestOption interface {
-	// MutateDeleteOptions applies this configuration to the given delete options.
+	// MutateDeleteManifestOptions applies this configuration to the given delete options.
 	MutateDeleteManifestOptions(opts *DeleteManifestOptions)
 }
 
-// DeleteOptions contains options for delete requests
+// DeleteManifestOptions contains options for delete requests.
 type DeleteManifestOptions struct {
 	// TolerateErrorFuncs are functions for which errors are tolerated.
 	TolerateErrorFuncs []TolerateErrorFunc

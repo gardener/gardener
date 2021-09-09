@@ -191,14 +191,14 @@ type OperatingSystemConfigStatus struct {
 	Units []string `json:"units,omitempty"`
 }
 
-// CloudConfig is a structure for containing the generated output for the given operating system
+// CloudConfig contains the generated output for the given operating system
 // config spec. It contains a reference to a secret as the result may contain confidential data.
 type CloudConfig struct {
 	// SecretRef is a reference to a secret that contains the actual result of the generated cloud config.
 	SecretRef corev1.SecretReference `json:"secretRef"`
 }
 
-// OperatingSystemConfigPurpose  is a string alias.
+// OperatingSystemConfigPurpose is a string alias.
 type OperatingSystemConfigPurpose string
 
 const (
@@ -216,7 +216,7 @@ const (
 	OperatingSystemConfigSecretDataKey = "cloud_config"
 )
 
-// CRI config is a structure contains configurations of the CRI library
+// CRIConfig contains configurations of the CRI library.
 type CRIConfig struct {
 	// Name is a mandatory string containing the name of the CRI library. Supported values are `docker` and `containerd`.
 	Name CRIName `json:"name"`

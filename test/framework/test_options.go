@@ -115,7 +115,7 @@ func WithAfterTests(funcs ...func()) TestOption {
 	return afterTests(funcs)
 }
 
-// WithAfterTests adds contextified functions to the current test that are called
+// WithCAfterTest adds contextified functions to the current test that are called
 // when the test has finished
 func WithCAfterTest(body func(ctx context.Context), timeout time.Duration) TestOption {
 	return &cAfterTestOption{

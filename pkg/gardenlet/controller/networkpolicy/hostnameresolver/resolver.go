@@ -127,7 +127,7 @@ func (l *resolver) Start(stopCtx context.Context) {
 	}
 }
 
-// Resolved returns a slice of resolved ip addresses.
+// Subset returns a slice of resolved ip addresses.
 func (l *resolver) Subset() []corev1.EndpointSubset {
 	l.lock.RLock()
 	defer l.lock.RUnlock()
@@ -207,6 +207,7 @@ func CreateForCluster(client kubernetes.Interface, logger logrus.FieldLogger) (P
 	return NewNoOpProvider(), nil
 }
 
+// NewNoOpProvider returns a no-op Provider.
 func NewNoOpProvider() Provider { return &noOpResover{} }
 
 // HasSynced always returns true.
@@ -215,7 +216,7 @@ func (*noOpResover) HasSynced() bool { return true }
 // Start does nothing.
 func (*noOpResover) Start(_ context.Context) {}
 
-// Resolved returns a slice of resolved ip addresses.
+// Subset returns an empty slice.
 func (*noOpResover) Subset() []corev1.EndpointSubset { return []corev1.EndpointSubset{} }
 
 // WithCallback does nothing.

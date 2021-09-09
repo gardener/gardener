@@ -355,11 +355,7 @@ func (f *GardenerFramework) AnnotateShoot(ctx context.Context, shoot *gardencore
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, annotationKey, annotationValue)
 	}
 
-	if err := f.GardenClient.Client().Patch(ctx, shoot, patch); err != nil {
-		return err
-	}
-
-	return nil
+	return f.GardenClient.Client().Patch(ctx, shoot, patch)
 }
 
 // RemoveShootAnnotation removes an annotation with key <annotationKey> from a shoot object
@@ -685,7 +681,7 @@ func (f *GardenerFramework) WaitForManagedSeedToBeCreated(ctx context.Context, m
 	})
 }
 
-// DeleteSeed deletes the given managed seed and waits for it to be deleted.
+// DeleteManagedSeed deletes the given managed seed and waits for it to be deleted.
 func (f *GardenerFramework) DeleteManagedSeed(ctx context.Context, managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 	// Delete the managed seed
 	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {

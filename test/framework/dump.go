@@ -228,6 +228,7 @@ func (f *GardenerFramework) dumpGardenerExtension(extension v1alpha1.Object) {
 	}
 }
 
+// DumpLogsForPodsWithLabelsInNamespace prints the logs of pods in the given namespace selected by the given list options.
 func (f *CommonFramework) DumpLogsForPodsWithLabelsInNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, namespace string, opts ...client.ListOption) error {
 	pods := &corev1.PodList{}
 	opts = append(opts, client.InNamespace(namespace))
@@ -244,6 +245,7 @@ func (f *CommonFramework) DumpLogsForPodsWithLabelsInNamespace(ctx context.Conte
 	return result
 }
 
+// DumpLogsForPodInNamespace prints the logs of the pod with the given namespace and name.
 func (f *CommonFramework) DumpLogsForPodInNamespace(ctx context.Context, ctxIdentifier string, k8sClient kubernetes.Interface, podNamespace, podName string) error {
 	f.Logger.Infof("%s [NAMESPACE %s] [POD %s] [LOGS]", ctxIdentifier, podNamespace, podName)
 	podIf := k8sClient.Kubernetes().CoreV1().Pods(podNamespace)

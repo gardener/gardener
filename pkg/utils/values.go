@@ -82,10 +82,7 @@ func convert(x, y interface{}) error {
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(jsonBytes, y); err != nil {
-		return err
-	}
-	return nil
+	return json.Unmarshal(jsonBytes, y)
 }
 
 // getFromValues returns the element at the specified location in the given values (either map or slice),

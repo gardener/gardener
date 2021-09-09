@@ -30,6 +30,7 @@ import (
 // +genclient:method=CreateAdminKubeconfigRequest,verb=create,subresource=adminkubeconfig,input=github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest,result=github.com/gardener/gardener/pkg/apis/authentication/v1alpha1.AdminKubeconfigRequest
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Shoot represents a Shoot cluster created and managed by Gardener.
 type Shoot struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
@@ -275,11 +276,12 @@ type DNSProvider struct {
 	Zones *DNSIncludeExclude `json:"zones,omitempty" protobuf:"bytes,5,opt,name=zones"`
 }
 
+// DNSIncludeExclude contains information about which domains shall be included/excluded.
 type DNSIncludeExclude struct {
-	// Include is a list of resources that shall be included.
+	// Include is a list of domains that shall be included.
 	// +optional
 	Include []string `json:"include,omitempty" protobuf:"bytes,1,rep,name=include"`
-	// Exclude is a list of resources that shall be excluded.
+	// Exclude is a list of domains that shall be excluded.
 	// +optional
 	Exclude []string `json:"exclude,omitempty" protobuf:"bytes,2,rep,name=exclude"`
 }
@@ -1176,8 +1178,10 @@ type CRI struct {
 type CRIName string
 
 const (
+	// CRINameContainerD is a constant for ContainerD CRI name.
 	CRINameContainerD CRIName = "containerd"
-	CRINameDocker     CRIName = "docker"
+	// CRINameDocker is a constant for Docker CRI name.
+	CRINameDocker CRIName = "docker"
 )
 
 // ContainerRuntime contains information about worker's available container runtime

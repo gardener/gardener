@@ -174,6 +174,7 @@ func mergeLandscaperCommonConfig(base, overwrite *LandscaperCommonConfig) *Lands
 	return base
 }
 
+// GetInstallation creates and returns a landscaperv1alpha1.Installation for the given name.
 func (f *CommonFrameworkLandscaper) GetInstallation(name string) *landscaperv1alpha1.Installation {
 	name = fmt.Sprintf("%s-%s", name, f.ResourceSuffix)
 
@@ -245,7 +246,7 @@ func (f *CommonFrameworkLandscaper) waitForInstallationToBeCreated(ctx context.C
 	})
 }
 
-// DeleteSeed deletes the given installation and waits for it to be deleted.
+// DeleteInstallation deletes the given installation and waits for it to be deleted.
 func (f *CommonFrameworkLandscaper) DeleteInstallation(ctx context.Context, name string) error {
 	installation := &landscaperv1alpha1.Installation{
 		ObjectMeta: metav1.ObjectMeta{
@@ -372,8 +373,5 @@ func (f *CommonFrameworkLandscaper) CreateTargetWithKubeconfig(ctx context.Conte
 		},
 	}
 
-	if err := f.LandscaperClient.Create(ctx, seedCluster); err != nil {
-		return err
-	}
-	return nil
+	return f.LandscaperClient.Create(ctx, seedCluster)
 }

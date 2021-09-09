@@ -249,6 +249,7 @@ func TaintsAreTolerated(taints []gardencorev1beta1.SeedTaint, tolerations []gard
 	return true
 }
 
+// ShootedSeed contains the configuration of a shooted seed.
 type ShootedSeed struct {
 	DisableDNS                      *bool
 	DisableCapacityReservation      *bool
@@ -269,16 +270,19 @@ type ShootedSeed struct {
 	Resources                       *ShootedSeedResources
 }
 
+// ShootedSeedAPIServer contains the configuration of a shooted seed API server.
 type ShootedSeedAPIServer struct {
 	Replicas   *int32
 	Autoscaler *ShootedSeedAPIServerAutoscaler
 }
 
+// ShootedSeedAPIServerAutoscaler contains the configuration of a shooted seed API server autoscaler.
 type ShootedSeedAPIServerAutoscaler struct {
 	MinReplicas *int32
 	MaxReplicas int32
 }
 
+// ShootedSeedResources contains the resources capacity and reserved values of a shooted seed.
 type ShootedSeedResources struct {
 	Capacity corev1.ResourceList
 	Reserved corev1.ResourceList
@@ -1016,6 +1020,7 @@ func FindPrimaryDNSProvider(providers []gardencorev1beta1.DNSProvider) *gardenco
 	return nil
 }
 
+// VersionPredicate is a function that evaluates a condition on the given versions.
 type VersionPredicate func(expirableVersion gardencorev1beta1.ExpirableVersion, version *semver.Version) (bool, error)
 
 // GetKubernetesVersionForPatchUpdate finds the latest Kubernetes patch version for its minor version in the <cloudProfile> compared

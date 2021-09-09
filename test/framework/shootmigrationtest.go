@@ -183,7 +183,7 @@ func (t *ShootMigrationTest) PopulateAfterMigrationComparisonElements(ctx contex
 	return
 }
 
-// CompareElementsAfterMigration compares the Machine details, Node names and Pod statuses before and after migration and returns error if there are diferences.
+// CompareElementsAfterMigration compares the Machine details, Node names and Pod statuses before and after migration and returns error if there are differences.
 func (t *ShootMigrationTest) CompareElementsAfterMigration() error {
 	if !reflect.DeepEqual(t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames) {
 		return fmt.Errorf("initial Machines %s, do not match after-migrate Machines %s", t.ComparisonElementsBeforeMigration.MachineNames, t.ComparisonElementsAfterMigration.MachineNames)
@@ -201,8 +201,8 @@ func (t *ShootMigrationTest) CompareElementsAfterMigration() error {
 	return nil
 }
 
-// Check the timestamp of all objects that the resource-manager creates in the Shoot cluster.
-// The timestamp should not be after the ShootMigrationTest.MigrationTime
+// CheckObjectsTimestamp checks the timestamp of all objects that the resource-manager creates in the Shoot cluster.
+// The timestamp should not be after ShootMigrationTest.MigrationTime.
 func (t *ShootMigrationTest) CheckObjectsTimestamp(ctx context.Context, mrExcludeList, resourcesWithGeneratedName []string) error {
 	mrList := &resourcesv1alpha1.ManagedResourceList{}
 	if err := t.TargetSeedClient.Client().List(

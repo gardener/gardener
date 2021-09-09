@@ -77,7 +77,7 @@ func NewConstraint(op *operation.Operation, shootClientInit ShootClientInit) *Co
 	}
 }
 
-// ConstraintsChecks conducts the constraints checks on all the given constraints.
+// Check checks all given constraints.
 func (c *Constraint) Check(
 	ctx context.Context,
 	constraints []gardencorev1beta1.Condition,

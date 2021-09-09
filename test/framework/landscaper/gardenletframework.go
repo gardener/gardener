@@ -74,7 +74,7 @@ type GardenletFramework struct {
 	ComponentConfiguration *configv1alpha1.GardenletConfiguration
 }
 
-// LandscaperCommonConfig is the configuration for the landscaper
+// GardenletConfig is the configuration of the gardenlet landscaper component.
 type GardenletConfig struct {
 	SeedKubeconfigPath             string
 	ImageVectorOverwrite           *string
@@ -84,7 +84,7 @@ type GardenletConfig struct {
 	LandscaperCommonConfig         *LandscaperCommonConfig
 }
 
-// NewManagedSeedFramework creates a new managed seed framework.
+// NewGardenletFramework creates a new GardenletFramework.
 func NewGardenletFramework(cfg *GardenletConfig) *GardenletFramework {
 	var gardenerConfig *GardenerConfig
 	if cfg != nil {
@@ -244,11 +244,7 @@ func (f *GardenletFramework) createGardenletLandscaperConfig(ctx context.Context
 		dataImportComponentConfiguration: string(re),
 	}
 
-	if err := f.CreateConfigMap(ctx, cmNameGardenletLandscaperConfig, data); err != nil {
-		return err
-	}
-
-	return nil
+	return f.CreateConfigMap(ctx, cmNameGardenletLandscaperConfig, data)
 }
 
 // CreateInstallation creates an Installation CRD in the landscaper cluster

@@ -19,7 +19,9 @@ import (
 	"strings"
 )
 
+// Flag is a flag that can be represented as a slice of strings.
 type Flag interface {
+	// Slice returns a representation of this Flag as a slice of strings.
 	Slice() []string
 }
 
@@ -70,18 +72,22 @@ func (f *stringSliceFlag) Slice() []string {
 	return []string{keyToFlag(f.key), strings.Join(f.value, ",")}
 }
 
+// IntFlag returns a Flag with the given key and integer value.
 func IntFlag(key string, value int) Flag {
 	return &intFlag{key, value}
 }
 
+// StringFlag returns a Flag with the given key and string value.
 func StringFlag(key, value string) Flag {
 	return &stringFlag{key, value}
 }
 
+// BoolFlag returns a Flag with the given key and boolean value.
 func BoolFlag(key string, value bool) Flag {
 	return &boolFlag{key, value}
 }
 
+// StringSliceFlag returns a flag with the given key and string slice value.
 func StringSliceFlag(key string, value ...string) Flag {
 	return &stringSliceFlag{key, value}
 }

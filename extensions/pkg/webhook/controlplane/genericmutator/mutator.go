@@ -270,11 +270,7 @@ func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx gcontext
 		return err
 	}
 
-	if err := m.ensurer.EnsureAdditionalUnits(ctx, gctx, &osc.Spec.Units, oldUnits); err != nil {
-		return err
-	}
-
-	return nil
+	return m.ensurer.EnsureAdditionalUnits(ctx, gctx, &osc.Spec.Units, oldUnits)
 }
 
 func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcontext.GardenContext, content, oldContent *string) error {
@@ -373,6 +369,7 @@ func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx
 	return nil
 }
 
+// CloudProviderConfigPath is the path to the cloudprovider.conf kubelet configuration file.
 const CloudProviderConfigPath = "/var/lib/kubelet/cloudprovider.conf"
 
 func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx gcontext.GardenContext, osc *extensionsv1alpha1.OperatingSystemConfig) error {

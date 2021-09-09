@@ -80,10 +80,7 @@ func SetupShootWorker(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1
 	// clear current workers
 	shoot.Spec.Provider.Workers = []gardencorev1beta1.Worker{}
 
-	if err := AddWorker(shoot, cloudProfile, cloudProfile.Spec.MachineImages[0], workerZone); err != nil {
-		return err
-	}
-	return nil
+	return AddWorker(shoot, cloudProfile, cloudProfile.Spec.MachineImages[0], workerZone)
 }
 
 // AddWorker adds a valid default worker to the shoot for the given machineImage and CloudProfile.

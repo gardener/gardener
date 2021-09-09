@@ -56,7 +56,7 @@ func (b *ShootClientMapBuilder) WithGardenClientMap(clientMap clientmap.ClientMa
 	return b
 }
 
-// WithGardenClientMap sets the ClientSet that should be used as the Garden client.
+// WithGardenClientSet sets the ClientSet that should be used as the Garden client.
 func (b *ShootClientMapBuilder) WithGardenClientSet(clientSet kubernetes.Interface) *ShootClientMapBuilder {
 	b.gardenClientFunc = func(ctx context.Context) (kubernetes.Interface, error) {
 		return clientSet, nil

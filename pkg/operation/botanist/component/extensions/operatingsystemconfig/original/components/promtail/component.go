@@ -33,15 +33,15 @@ const (
 	// PathPromtailAuthToken is the path for the promtail authentication token,
 	// which is used to auth agains the Loki sidecar proxy.
 	PathPromtailAuthToken = PathPromtailDirectory + "/auth-token"
-	// PathPromtailConfig is the path for the promtail's configuration file
+	// PathPromtailConfig is the path for the promtail's configuration file.
 	PathPromtailConfig = v1beta1constants.OperatingSystemConfigFilePathPromtailConfig
 	// PathPromtailCACert is the path for the loki-tls certificate authority.
 	PathPromtailCACert = PathPromtailDirectory + "/ca.crt"
-	// PromtailServerPort is the promtail listening port
+	// PromtailServerPort is the promtail listening port.
 	PromtailServerPort = 3001
-	// PromtailPositionFile is the path for storing the scraped file offsets
+	// PromtailPositionFile is the path for storing the scraped file offsets.
 	PromtailPositionFile = "/var/log/positions.yaml"
-	// PathSetActiveJournalFileScript
+	// PathSetActiveJournalFileScript is the path for the active journal file script.
 	PathSetActiveJournalFileScript = PathPromtailDirectory + "/scripts/set_active_journal_file.sh"
 )
 
