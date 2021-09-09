@@ -40,7 +40,7 @@ function format-data-device() {
     done <<< "$DISK_DEVICES"
 
     if [ -z "$TARGET_DEVICE_NAME" ]; then
-      echo "No kubelet data device not found"
+      echo "No kubelet data device found"
       return
     fi
 
