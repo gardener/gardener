@@ -241,11 +241,7 @@ func afterMigration(ctx context.Context, t *ShootMigrationTest, guestBookApp app
 	guestBookApp.Cleanup(ctx)
 
 	ginkgo.By("Checking timestamps of all resources...")
-	if err := t.CheckObjectsTimestamp(ctx, strings.Split(*mrExcludeList, ","), strings.Split(*resourcesWithGeneratedName, ",")); err != nil {
-		return err
-	}
-
-	return nil
+	return t.CheckObjectsTimestamp(ctx, strings.Split(*mrExcludeList, ","), strings.Split(*resourcesWithGeneratedName, ","))
 }
 
 func initGuestBookTest(ctx context.Context, t *ShootMigrationTest) (*applications.GuestBookTest, error) {

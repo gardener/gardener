@@ -429,11 +429,7 @@ func (f *ShootCreationFramework) InitializeShootWithFlags(ctx context.Context) e
 		return err
 	}
 
-	if err = setShootWorkerSettings(shootObject, f.Config, cloudProfile); err != nil {
-		return err
-	}
-
-	return nil
+	return setShootWorkerSettings(shootObject, f.Config, cloudProfile)
 }
 
 // newShootFramework creates a new ShootFramework with the Shoot created by the ShootCreationFramework

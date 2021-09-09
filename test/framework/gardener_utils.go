@@ -355,11 +355,7 @@ func (f *GardenerFramework) AnnotateShoot(ctx context.Context, shoot *gardencore
 		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, annotationKey, annotationValue)
 	}
 
-	if err := f.GardenClient.Client().Patch(ctx, shoot, patch); err != nil {
-		return err
-	}
-
-	return nil
+	return f.GardenClient.Client().Patch(ctx, shoot, patch)
 }
 
 // RemoveShootAnnotation removes an annotation with key <annotationKey> from a shoot object

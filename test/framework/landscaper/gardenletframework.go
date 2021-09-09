@@ -244,11 +244,7 @@ func (f *GardenletFramework) createGardenletLandscaperConfig(ctx context.Context
 		dataImportComponentConfiguration: string(re),
 	}
 
-	if err := f.CreateConfigMap(ctx, cmNameGardenletLandscaperConfig, data); err != nil {
-		return err
-	}
-
-	return nil
+	return f.CreateConfigMap(ctx, cmNameGardenletLandscaperConfig, data)
 }
 
 // CreateInstallation creates an Installation CRD in the landscaper cluster

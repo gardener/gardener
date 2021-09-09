@@ -172,11 +172,7 @@ func (b *Botanist) WakeUpKubeAPIServer(ctx context.Context) error {
 	if err := kubernetes.ScaleDeployment(ctx, b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeAPIServer), 1); err != nil {
 		return err
 	}
-	if err := b.Shoot.Components.ControlPlane.KubeAPIServer.Wait(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return b.Shoot.Components.ControlPlane.KubeAPIServer.Wait(ctx)
 }
 
 // ScaleKubeAPIServerToOne scales kube-apiserver replicas to one.

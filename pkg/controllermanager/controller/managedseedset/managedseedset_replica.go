@@ -284,10 +284,7 @@ func (r *replica) RetryShoot(ctx context.Context, c client.Client) error {
 	if r.shoot == nil {
 		return nil
 	}
-	if err := kutil.SetAnnotationAndUpdate(ctx, c, r.shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry); err != nil {
-		return err
-	}
-	return nil
+	return kutil.SetAnnotationAndUpdate(ctx, c, r.shoot, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRetry)
 }
 
 func shootReconcileSucceeded(shoot *gardencorev1beta1.Shoot) bool {

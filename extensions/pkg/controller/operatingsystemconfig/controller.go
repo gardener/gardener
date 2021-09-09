@@ -79,9 +79,5 @@ func add(mgr manager.Manager, options controller.Options, predicates []predicate
 		return err
 	}
 
-	if err := ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.OperatingSystemConfig{}}, &handler.EnqueueRequestForObject{}, predicates...); err != nil {
-		return err
-	}
-
-	return nil
+	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.OperatingSystemConfig{}}, &handler.EnqueueRequestForObject{}, predicates...)
 }

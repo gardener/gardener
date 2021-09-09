@@ -270,11 +270,7 @@ func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx gcontext
 		return err
 	}
 
-	if err := m.ensurer.EnsureAdditionalUnits(ctx, gctx, &osc.Spec.Units, oldUnits); err != nil {
-		return err
-	}
-
-	return nil
+	return m.ensurer.EnsureAdditionalUnits(ctx, gctx, &osc.Spec.Units, oldUnits)
 }
 
 func (m *mutator) ensureKubeletServiceUnitContent(ctx context.Context, gctx gcontext.GardenContext, content, oldContent *string) error {

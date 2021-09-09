@@ -373,8 +373,5 @@ func (f *CommonFrameworkLandscaper) CreateTargetWithKubeconfig(ctx context.Conte
 		},
 	}
 
-	if err := f.LandscaperClient.Create(ctx, seedCluster); err != nil {
-		return err
-	}
-	return nil
+	return f.LandscaperClient.Create(ctx, seedCluster)
 }
