@@ -17,6 +17,7 @@ package flow_test
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
@@ -77,6 +78,42 @@ var _ = Describe("task functions", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(err1, err2))
+		})
+	})
+
+	Describe("#ParallelExitOnError", func() {
+		It("should execute the functions in parallel", func() {
+			var (
+				ctx = context.Background()
+				f1  = mockflow.NewMockTaskFn(ctrl)
+				f2  = mockflow.NewMockTaskFn(ctrl)
+				f3  = mockflow.NewMockTaskFn(ctrl)
+			)
+
+			f1.EXPECT().Do(gomock.Any())
+			f2.EXPECT().Do(gomock.Any())
+			f3.EXPECT().Do(gomock.Any())
+
+			Expect(flow.ParallelExitOnError(f1.Do, f2.Do, f3.Do)(ctx)).To(Succeed())
+		})
+
+		It("should exit on error and cancel parallel functions", func() {
+			var (
+				ctx       = context.Background()
+				cancelled = make(chan struct{})
+
+				f1 = flow.TaskFn(func(ctx context.Context) error {
+					return fmt.Errorf("task1")
+				})
+				f2 = flow.TaskFn(func(ctx context.Context) error {
+					<-ctx.Done()
+					close(cancelled)
+					return fmt.Errorf("task2")
+				})
+			)
+
+			Expect(flow.ParallelExitOnError(f1, f2)(ctx)).To(MatchError("task1"))
+			Eventually(cancelled).Should(BeClosed())
 		})
 	})
 })
