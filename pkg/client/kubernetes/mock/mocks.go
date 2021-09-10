@@ -111,20 +111,6 @@ func (mr *MockInterfaceMockRecorder) ChartRenderer() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChartRenderer", reflect.TypeOf((*MockInterface)(nil).ChartRenderer))
 }
 
-// CheckForwardPodPort mocks base method.
-func (m *MockInterface) CheckForwardPodPort(arg0, arg1 string, arg2, arg3 int) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckForwardPodPort", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CheckForwardPodPort indicates an expected call of CheckForwardPodPort.
-func (mr *MockInterfaceMockRecorder) CheckForwardPodPort(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckForwardPodPort", reflect.TypeOf((*MockInterface)(nil).CheckForwardPodPort), arg0, arg1, arg2, arg3)
-}
-
 // Client mocks base method.
 func (m *MockInterface) Client() client.Client {
 	m.ctrl.T.Helper()

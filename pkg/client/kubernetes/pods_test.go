@@ -16,6 +16,7 @@ package kubernetes_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -23,11 +24,13 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"go.uber.org/goleak"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	fakerestclient "k8s.io/client-go/rest/fake"
 
 	. "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockcorev1 "github.com/gardener/gardener/pkg/mock/client-go/core/v1"
 	mockio "github.com/gardener/gardener/pkg/mock/go/io"
 )
@@ -73,6 +76,31 @@ var _ = Describe("Pods", func() {
 			actual, err := GetPodLogs(ctx, pods, name, options.DeepCopy())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(logs))
+		})
+	})
+
+	Describe("#CheckForwardPodPort", func() {
+		It("should create a forward connection successfully", func() {
+			defer goleak.VerifyNone(GinkgoT(), goleak.IgnoreCurrent())
+			fw := fake.PortForwarder{
+				ReadyChan: make(chan struct{}, 1),
+				DoneChan:  make(chan struct{}, 1),
+			}
+			close(fw.ReadyChan)
+			defer close(fw.DoneChan)
+
+			Expect(CheckForwardPodPort(fw)).To(Succeed())
+		})
+
+		It("should return error if port forward fails", func() {
+			defer goleak.VerifyNone(GinkgoT(), goleak.IgnoreCurrent())
+			fw := fake.PortForwarder{
+				Err:      fmt.Errorf("foo"),
+				DoneChan: make(chan struct{}, 1),
+			}
+			close(fw.DoneChan)
+
+			Expect(CheckForwardPodPort(fw)).To(MatchError(ContainSubstring("foo")))
 		})
 	})
 })

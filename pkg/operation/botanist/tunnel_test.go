@@ -17,12 +17,15 @@ package botanist_test
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -30,6 +33,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -39,7 +43,6 @@ var _ = Describe("Tunnel", func() {
 			ctrl *gomock.Controller
 
 			ctx        context.Context
-			checkFn    fake.CheckForwardPodPortFn
 			cl         *mockclient.MockClient
 			clientset  *fake.ClientSet
 			logEntry   logrus.FieldLogger
@@ -69,7 +72,6 @@ var _ = Describe("Tunnel", func() {
 		JustBeforeEach(func() {
 			clientset = fake.NewClientSetBuilder().
 				WithClient(cl).
-				WithCheckForwardPodPortFn(checkFn).
 				Build()
 		})
 
@@ -109,24 +111,27 @@ var _ = Describe("Tunnel", func() {
 					})
 			})
 			Context("established connection", func() {
-				BeforeEach(func() {
-					checkFn = func(_, _ string, _, _ int) error {
-						return nil
-					}
-				})
 				It("should succeed because pod is running and connection successful", func() {
+					fw := fake.PortForwarder{
+						ReadyChan: make(chan struct{}, 1),
+					}
+
+					defer test.WithVar(&botanist.SetupPortForwarder, func(context.Context, *rest.Config, string, string, int, int) (kubernetes.PortForwarder, error) {
+						return fw, nil
+					})()
+					close(fw.ReadyChan)
+
 					done, err := botanist.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
 					Expect(done).To(BeTrue())
 					Expect(err).ToNot(HaveOccurred())
 				})
 			})
 			Context("broken connection", func() {
-				BeforeEach(func() {
-					checkFn = func(_, _ string, _, _ int) error {
-						return errors.New("foo")
-					}
-				})
-				It("should fail because pod is running and but connection is not established", func() {
+				It("should fail because pod is running but connection is not established", func() {
+					defer test.WithVar(&botanist.SetupPortForwarder, func(context.Context, *rest.Config, string, string, int, int) (kubernetes.PortForwarder, error) {
+						return nil, fmt.Errorf("foo")
+					})()
+
 					done, err := botanist.CheckTunnelConnection(context.Background(), clientset, logEntry, tunnelName)
 					Expect(done).To(BeFalse())
 					Expect(err).To(HaveOccurred())

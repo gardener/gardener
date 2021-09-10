@@ -168,8 +168,6 @@ type Interface interface {
 
 	Kubernetes() kubernetesclientset.Interface
 
-	CheckForwardPodPort(string, string, int, int) error
-
 	// Version returns the server version of the targeted Kubernetes cluster.
 	Version() string
 	// DiscoverVersion tries to retrieve the server version of the targeted Kubernetes cluster and updates the

@@ -17,12 +17,10 @@ package kubernetes
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gardener/gardener/pkg/utils"
 
@@ -103,57 +101,71 @@ func GetPodLogs(ctx context.Context, podInterface corev1client.PodInterface, nam
 	return io.ReadAll(stream)
 }
 
-// CheckForwardPodPort tries to forward the <remote> port of the pod with name <name> in namespace <namespace> to
-// the <local> port. If <local> equals zero, a free port will be chosen randomly.
-// It returns true if the port forward connection has been established successfully or false otherwise.
-func (c *clientSet) CheckForwardPodPort(namespace, name string, local, remote int) error {
-	fw, stopChan, err := c.setupForwardPodPort(namespace, name, local, remote)
-	if err != nil {
-		return fmt.Errorf("could not setup pod port forwarding: %w", err)
-	}
-
-	errChan := make(chan error)
+// CheckForwardPodPort tries to open a portForward connection with the passed PortForwarder.
+// It returns nil if the port forward connection has been established successfully or an error otherwise.
+func CheckForwardPodPort(fw PortForwarder) error {
+	errChan := make(chan error, 1)
 	go func() {
 		errChan <- fw.ForwardPorts()
 	}()
-	defer close(stopChan)
 
 	select {
-	case err = <-errChan:
+	case err := <-errChan:
 		return fmt.Errorf("error forwarding ports: %w", err)
-	case <-fw.Ready:
+	case <-fw.Ready():
 		return nil
-	case <-time.After(time.Second * 5):
-		return errors.New("port forward connection could not be established within five seconds")
 	}
 }
 
-func (c *clientSet) setupForwardPodPort(namespace, name string, local, remote int) (*portforward.PortForwarder, chan struct{}, error) {
+// PortForwarder knows how to forward a port connection
+// Ready channel is expected to be closed once the connection becomes ready
+type PortForwarder interface {
+	ForwardPorts() error
+	Ready() chan struct{}
+}
+
+// SetupPortForwarder sets up a PortForwarder which forwards the <remote> port of the pod with name <name> in namespace <namespace>
+// to the <local> port. If <local> equals zero, a free port will be chosen randomly.
+// When calling ForwardPorts on the returned PortForwarder, it will run until the given context is cancelled.
+// Hence, the given context should carry a timeout and should be cancelled once the forwarding is no longer needed.
+func SetupPortForwarder(ctx context.Context, config *rest.Config, namespace, name string, local, remote int) (PortForwarder, error) {
 	var (
-		stopChan  = make(chan struct{}, 1)
 		readyChan = make(chan struct{}, 1)
 		out       = io.Discard
 		localPort int
 	)
 
-	u := c.kubernetes.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(name).SubResource("portforward").URL()
-
-	transport, upgrader, err := spdy.RoundTripperFor(c.config)
+	client, err := corev1client.NewForConfig(config)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
+	}
+
+	u := client.RESTClient().Post().Resource("pods").Namespace(namespace).Name(name).SubResource("portforward").URL()
+
+	transport, upgrader, err := spdy.RoundTripperFor(config)
+	if err != nil {
+		return nil, err
 	}
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, "POST", u)
 
 	if local == 0 {
 		localPort, err = utils.FindFreePort()
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
-	fw, err := portforward.New(dialer, []string{fmt.Sprintf("%d:%d", localPort, remote)}, stopChan, readyChan, out, out)
+	fw, err := portforward.New(dialer, []string{fmt.Sprintf("%d:%d", localPort, remote)}, ctx.Done(), readyChan, out, out)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return fw, stopChan, nil
+	return portForwarder{fw}, nil
+}
+
+type portForwarder struct {
+	*portforward.PortForwarder
+}
+
+func (p portForwarder) Ready() chan struct{} {
+	return p.PortForwarder.Ready
 }
