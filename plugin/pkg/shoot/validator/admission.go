@@ -23,7 +23,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Masterminds/semver"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/admission"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -35,15 +43,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-
-	"github.com/Masterminds/semver"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/admission"
 )
 
 const (
@@ -200,7 +199,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	if shoot.Spec.SeedName != nil {
 		seed, err = v.seedLister.Get(*shoot.Spec.SeedName)
 		if err != nil {
-			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
+			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed %q: %+v", *shoot.Spec.SeedName, err.Error()))
 		}
 	}
 
@@ -209,195 +208,40 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
 	}
 
-	switch a.GetOperation() {
-	case admission.Create:
-		// We currently use the identifier "shoot-<project-name>-<shoot-name> in nearly all places for old Shoots, but have
-		// changed that to "shoot--<project-name>-<shoot-name>": when creating infrastructure resources, Kubernetes resources,
-		// DNS names, etc., then this identifier is used to tag/name the resources. Some of those resources have length
-		// constraints that this identifier must not exceed 30 characters, thus we need to check whether Shoots do not exceed
-		// this limit. The project name is a label on the namespace. If it is not found, the namespace name itself is used as
-		// project name. These checks should only be performed for CREATE operations (we do not want to reject changes to existing
-		// Shoots in case the limits are changed in the future).
-		var lengthLimit = 21
-		if len(shoot.Name) == 0 && len(shoot.GenerateName) > 0 {
-			var randomLength = 5
-			if len(project.Name+shoot.GenerateName) > lengthLimit-randomLength {
-				return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, project.Name, shoot.GenerateName))
-			}
-		} else {
-			if len(project.Name+shoot.Name) > lengthLimit {
-				return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, project.Name, shoot.Name))
-			}
-		}
-		if strings.Contains(project.Name, "--") {
-			return apierrors.NewBadRequest(fmt.Sprintf("the project name must not contain two consecutive hyphens (project: %s)", project.Name))
-		}
-		// We don't want new Shoots to be created in Projects which were already marked for deletion.
-		if project.DeletionTimestamp != nil {
-			return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' in project '%s' already marked for deletion", shoot.Name, project.Name))
-		}
-		addInfrastructureDeploymentTask(shoot)
-	case admission.Delete:
-		if shoot.Status.LastOperation != nil && ((shoot.Status.LastOperation.Type == core.LastOperationTypeRestore &&
-			shoot.Status.LastOperation.State != core.LastOperationStateSucceeded) || shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate) {
-			return admission.NewForbidden(a, fmt.Errorf("cannot mark shoot %s/%s for deletion during %s operation that is in state %s", shoot.Namespace, shoot.Name, shoot.Status.LastOperation.Type, shoot.Status.LastOperation.State))
-		}
+	// begin of validation code
+	validationContext := &validationContext{
+		cloudProfile: cloudProfile,
+		project:      project,
+		seed:         seed,
+		shoot:        shoot,
+		oldShoot:     oldShoot,
 	}
 
-	mustCheckIfTaintsTolerated := a.GetOperation() == admission.Create || (a.GetOperation() == admission.Update && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName))
-	if mustCheckIfTaintsTolerated && seed != nil && !helper.TaintsAreTolerated(seed.Spec.Taints, shoot.Spec.Tolerations) {
-		return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seeds whose taints are not tolerated by the shoot"))
+	if err := validationContext.validateProjectMembership(a); err != nil {
+		return err
+	}
+	if err := validationContext.validateScheduling(a, v.shootLister, v.seedLister); err != nil {
+		return err
+	}
+	if err := validationContext.validateDeletion(a); err != nil {
+		return err
+	}
+	if err := validationContext.validateShootHibernation(a); err != nil {
+		return err
+	}
+	if err := validationContext.ensureMachineImages(); err != nil {
+		return err
 	}
 
-	// We don't allow shoot to be created on the seed which is already marked to be deleted.
-	if seed != nil && seed.DeletionTimestamp != nil && a.GetOperation() == admission.Create {
-		return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name))
-	}
+	validationContext.addMetadataAnnotations(a)
 
-	if oldShoot.Spec.SeedName != nil && !apiequality.Semantic.DeepEqual(shoot.Spec.SeedName, oldShoot.Spec.SeedName) &&
-		seed != nil {
-		if seed.Spec.Backup == nil {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name, because seed backup is not configured, for shoot %q", shoot.Name))
-		}
+	var allErrs field.ErrorList
+	allErrs = append(allErrs, validationContext.validateShootNetworks()...)
+	allErrs = append(allErrs, validationContext.validateKubernetes()...)
+	allErrs = append(allErrs, validationContext.validateRegion()...)
+	allErrs = append(allErrs, validationContext.validateProvider()...)
 
-		oldSeed, err := v.seedLister.Get(*oldShoot.Spec.SeedName)
-		if err != nil {
-			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
-		}
-		if oldSeed.Spec.Provider.Type != seed.Spec.Provider.Type {
-			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name, because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
-		}
-	}
-
-	if shoot.Spec.Provider.Type != cloudProfile.Spec.Type {
-		return apierrors.NewBadRequest(fmt.Sprintf("cloud provider in shoot (%s) is not equal to cloud provider in profile (%s)", shoot.Spec.Provider.Type, cloudProfile.Spec.Type))
-	}
-
-	var (
-		validationContext = &validationContext{
-			cloudProfile: cloudProfile,
-			seed:         seed,
-			shoot:        shoot,
-			oldShoot:     oldShoot,
-		}
-		allErrs field.ErrorList
-	)
-
-	if seed != nil && seed.DeletionTimestamp != nil {
-		newMeta := shoot.ObjectMeta
-		oldMeta := *oldShoot.ObjectMeta.DeepCopy()
-
-		// disallow any changes to the annotations of a shoot that references a seed which is already marked for deletion
-		// except changes to the deletion confirmation annotation
-		if !reflect.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-			newConfirmation, newHasConfirmation := newMeta.Annotations[gutil.ConfirmationDeletion]
-
-			// copy the new confirmation value to the old annotations to see if
-			// anything else was changed other than the confirmation annotation
-			if newHasConfirmation {
-				if oldMeta.Annotations == nil {
-					oldMeta.Annotations = make(map[string]string)
-				}
-				oldMeta.Annotations[gutil.ConfirmationDeletion] = newConfirmation
-			}
-
-			if !reflect.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
-				return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", shoot.Name, seed.Name, gutil.ConfirmationDeletion))
-			}
-		}
-
-		if !reflect.DeepEqual(shoot.Spec, oldShoot.Spec) {
-			return admission.NewForbidden(a, fmt.Errorf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", shoot.Name, seed.Name))
-		}
-	}
-
-	// Allow removal of `gardener` finalizer only if the Shoot deletion has completed successfully
-	if len(shoot.Status.TechnicalID) > 0 && shoot.Status.LastOperation != nil {
-		oldFinalizers := sets.NewString(oldShoot.Finalizers...)
-		newFinalizers := sets.NewString(shoot.Finalizers...)
-
-		if oldFinalizers.Has(core.GardenerName) && !newFinalizers.Has(core.GardenerName) {
-			lastOperation := shoot.Status.LastOperation
-			deletionSucceeded := lastOperation.Type == core.LastOperationTypeDelete && lastOperation.State == core.LastOperationStateSucceeded && lastOperation.Progress == 100
-
-			if !deletionSucceeded {
-				return admission.NewForbidden(a, fmt.Errorf("finalizer %q cannot be removed because shoot deletion has not completed successfully yet", core.GardenerName))
-			}
-		}
-	}
-
-	// Prevent Shoots from getting hibernated in case they have problematic webhooks.
-	// Otherwise, we can never wake up this shoot cluster again.
-	oldIsHibernated := oldShoot.Spec.Hibernation != nil && oldShoot.Spec.Hibernation.Enabled != nil && *oldShoot.Spec.Hibernation.Enabled
-	newIsHibernated := shoot.Spec.Hibernation != nil && shoot.Spec.Hibernation.Enabled != nil && *shoot.Spec.Hibernation.Enabled
-
-	if !oldIsHibernated && newIsHibernated {
-		if hibernationConstraint := helper.GetCondition(shoot.Status.Constraints, core.ShootHibernationPossible); hibernationConstraint != nil {
-			if hibernationConstraint.Status != core.ConditionTrue {
-				return admission.NewForbidden(a, fmt.Errorf(hibernationConstraint.Message))
-			}
-		}
-	}
-
-	if !newIsHibernated && oldIsHibernated {
-		addInfrastructureDeploymentTask(shoot)
-	}
-
-	if seed != nil {
-		if shoot.Spec.Networking.Pods == nil && seed.Spec.Networks.ShootDefaults != nil {
-			shoot.Spec.Networking.Pods = seed.Spec.Networks.ShootDefaults.Pods
-		}
-		if shoot.Spec.Networking.Services == nil && seed.Spec.Networks.ShootDefaults != nil {
-			shoot.Spec.Networking.Services = seed.Spec.Networks.ShootDefaults.Services
-		}
-	}
-
-	if !reflect.DeepEqual(oldShoot.Spec.Provider.InfrastructureConfig, shoot.Spec.Provider.InfrastructureConfig) {
-		addInfrastructureDeploymentTask(shoot)
-	}
-
-	if shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateSSHKeypair {
-		addInfrastructureDeploymentTask(shoot)
-	}
-
-	if shoot.Spec.Maintenance != nil && utils.IsTrue(shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
-		!apiequality.Semantic.DeepEqual(oldShoot.Spec, shoot.Spec) &&
-		shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == core.LastOperationStateFailed {
-		metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.FailedShootNeedsRetryOperation, "true")
-	}
-
-	if shoot.DeletionTimestamp == nil {
-		for idx, worker := range shoot.Spec.Provider.Workers {
-			image, err := ensureMachineImage(oldShoot.Spec.Provider.Workers, worker, cloudProfile.Spec.MachineImages)
-			if err != nil {
-				return err
-			}
-			shoot.Spec.Provider.Workers[idx].Machine.Image = image
-		}
-	}
-
-	if seed != nil {
-		if shoot.Spec.Networking.Pods == nil {
-			if seed.Spec.Networks.ShootDefaults != nil {
-				shoot.Spec.Networking.Pods = seed.Spec.Networks.ShootDefaults.Pods
-			} else {
-				allErrs = append(allErrs, field.Required(field.NewPath("spec", "networking", "pods"), "pods is required"))
-			}
-		}
-
-		if shoot.Spec.Networking.Services == nil {
-			if seed.Spec.Networks.ShootDefaults != nil {
-				shoot.Spec.Networking.Services = seed.Spec.Networks.ShootDefaults.Services
-			} else {
-				allErrs = append(allErrs, field.Required(field.NewPath("spec", "networking", "services"), "services is required"))
-			}
-		}
-	}
-
-	allErrs = append(allErrs, validateRegion(validationContext.cloudProfile.Spec.Regions, validationContext.shoot.Spec.Region, validationContext.oldShoot.Spec.Region, field.NewPath("spec", "region"))...)
-	allErrs = append(allErrs, validateProvider(validationContext)...)
-
-	dnsErrors, err := validateDNSDomainUniqueness(v.shootLister, shoot.Name, shoot.Spec.DNS)
+	dnsErrors, err := validationContext.validateDNSDomainUniqueness(v.shootLister)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
@@ -412,38 +256,287 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 
 type validationContext struct {
 	cloudProfile *core.CloudProfile
+	project      *core.Project
 	seed         *core.Seed
 	shoot        *core.Shoot
 	oldShoot     *core.Shoot
 }
 
-func validateProvider(c *validationContext) field.ErrorList {
+func (c *validationContext) validateProjectMembership(a admission.Attributes) error {
+	if a.GetOperation() != admission.Create {
+		return nil
+	}
+
+	// We currently use the identifier "shoot-<project-name>-<shoot-name> in nearly all places for old Shoots, but have
+	// changed that to "shoot--<project-name>-<shoot-name>": when creating infrastructure resources, Kubernetes resources,
+	// DNS names, etc., then this identifier is used to tag/name the resources. Some of those resources have length
+	// constraints that this identifier must not exceed 30 characters, thus we need to check whether Shoots do not exceed
+	// this limit. The project name is a label on the namespace. If it is not found, the namespace name itself is used as
+	// project name. These checks should only be performed for CREATE operations (we do not want to reject changes to existing
+	// Shoots in case the limits are changed in the future).
+	var lengthLimit = 21
+	if len(c.shoot.Name) == 0 && len(c.shoot.GenerateName) > 0 {
+		var randomLength = 5
+		if len(c.project.Name+c.shoot.GenerateName) > lengthLimit-randomLength {
+			return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot generateName and the project name must not exceed %d characters (project: %s; shoot with generateName: %s)", lengthLimit-randomLength, c.project.Name, c.shoot.GenerateName))
+		}
+	} else {
+		if len(c.project.Name+c.shoot.Name) > lengthLimit {
+			return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, c.project.Name, c.shoot.Name))
+		}
+	}
+
+	if c.project.DeletionTimestamp != nil {
+		return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' in project '%s' that is already marked for deletion", c.shoot.Name, c.project.Name))
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister) error {
 	var (
-		allErrs = field.ErrorList{}
-		path    = field.NewPath("spec", "provider")
+		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
+		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
+		mustCheckSchedulingConstraints = shootIsBeingScheduled || shootIsBeingRescheduled
 	)
 
-	if c.seed != nil && !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
-		allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
-			path.Child("networks"),
-			c.shoot.Spec.Networking.Nodes,
-			c.shoot.Spec.Networking.Pods,
-			c.shoot.Spec.Networking.Services,
-			c.seed.Spec.Networks.Nodes,
-			c.seed.Spec.Networks.Pods,
-			c.seed.Spec.Networks.Services,
-		)...)
+	if mustCheckSchedulingConstraints {
+		if c.seed.DeletionTimestamp != nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' that is already marked for deletion", c.shoot.Name, c.seed.Name))
+		}
+
+		if !helper.TaintsAreTolerated(c.seed.Spec.Taints, c.shoot.Spec.Tolerations) {
+			return admission.NewForbidden(a, fmt.Errorf("forbidden to use a seeds whose taints are not tolerated by the shoot"))
+		}
+
+		if allocatableShoots, ok := c.seed.Status.Allocatable[core.ResourceShoots]; ok {
+			scheduledShoots, err := getNumberOfShootsOnSeed(shootLister, c.seed.Name)
+			if err != nil {
+				return apierrors.NewInternalError(err)
+			}
+
+			if scheduledShoots >= allocatableShoots.Value() {
+				return admission.NewForbidden(a, fmt.Errorf("cannot schedule shoot '%s' on seed '%s' that already has the maximum number of shoots scheduled on it (%d)", c.shoot.Name, c.seed.Name, allocatableShoots.Value()))
+			}
+		}
 	}
+
+	if shootIsBeingRescheduled {
+		oldSeed, err := seedLister.Get(*c.oldShoot.Spec.SeedName)
+		if err != nil {
+			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
+		}
+
+		if oldSeed.Spec.Backup == nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because backup is not configured for old seed %q", oldSeed.Name))
+		}
+		if c.seed.Spec.Backup == nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change seed name because backup is not configured for seed %q", c.seed.Name))
+		}
+
+		if oldSeed.Spec.Provider.Type != c.seed.Spec.Provider.Type {
+			return admission.NewForbidden(a, fmt.Errorf("cannot change Seed because cloud provider for new seed (%s) is not equal to cloud provider for old seed (%s)", c.seed.Spec.Provider.Type, oldSeed.Spec.Provider.Type))
+		}
+	}
+
+	if c.seed != nil && c.seed.DeletionTimestamp != nil {
+		newMeta := c.shoot.ObjectMeta
+		oldMeta := *c.oldShoot.ObjectMeta.DeepCopy()
+
+		// disallow any changes to the annotations of a shoot that references a seed which is already marked for deletion
+		// except changes to the deletion confirmation annotation
+		if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
+			newConfirmation, newHasConfirmation := newMeta.Annotations[gutil.ConfirmationDeletion]
+
+			// copy the new confirmation value to the old annotations to see if
+			// anything else was changed other than the confirmation annotation
+			if newHasConfirmation {
+				if oldMeta.Annotations == nil {
+					oldMeta.Annotations = make(map[string]string)
+				}
+				oldMeta.Annotations[gutil.ConfirmationDeletion] = newConfirmation
+			}
+
+			if !apiequality.Semantic.DeepEqual(newMeta.Annotations, oldMeta.Annotations) {
+				return admission.NewForbidden(a, fmt.Errorf("cannot update annotations of shoot '%s' on seed '%s' already marked for deletion: only the '%s' annotation can be changed", c.shoot.Name, c.seed.Name, gutil.ConfirmationDeletion))
+			}
+		}
+
+		if !apiequality.Semantic.DeepEqual(c.shoot.Spec, c.oldShoot.Spec) {
+			return admission.NewForbidden(a, fmt.Errorf("cannot update spec of shoot '%s' on seed '%s' already marked for deletion", c.shoot.Name, c.seed.Name))
+		}
+	}
+
+	return nil
+}
+
+func getNumberOfShootsOnSeed(shootLister corelisters.ShootLister, seedName string) (int64, error) {
+	allShoots, err := shootLister.Shoots(metav1.NamespaceAll).List(labels.Everything())
+	if err != nil {
+		return 0, fmt.Errorf("could not list all shoots: %w", err)
+	}
+
+	count := int64(0)
+	for _, shoot := range allShoots {
+		if seed := shoot.Spec.SeedName; seed != nil && *seed == seedName {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (c *validationContext) validateDeletion(a admission.Attributes) error {
+	if a.GetOperation() == admission.Delete {
+		if c.shoot.Status.LastOperation != nil &&
+			((c.shoot.Status.LastOperation.Type == core.LastOperationTypeRestore && c.shoot.Status.LastOperation.State != core.LastOperationStateSucceeded) ||
+				c.shoot.Status.LastOperation.Type == core.LastOperationTypeMigrate) {
+			return admission.NewForbidden(a, fmt.Errorf("cannot mark shoot for deletion during %s operation that is in state %s", c.shoot.Status.LastOperation.Type, c.shoot.Status.LastOperation.State))
+		}
+	}
+
+	// Allow removal of `gardener` finalizer only if the Shoot deletion has completed successfully
+	if len(c.shoot.Status.TechnicalID) > 0 && c.shoot.Status.LastOperation != nil {
+		oldFinalizers := sets.NewString(c.oldShoot.Finalizers...)
+		newFinalizers := sets.NewString(c.shoot.Finalizers...)
+
+		if oldFinalizers.Has(core.GardenerName) && !newFinalizers.Has(core.GardenerName) {
+			lastOperation := c.shoot.Status.LastOperation
+			deletionSucceeded := lastOperation.Type == core.LastOperationTypeDelete && lastOperation.State == core.LastOperationStateSucceeded && lastOperation.Progress == 100
+
+			if !deletionSucceeded {
+				return admission.NewForbidden(a, fmt.Errorf("finalizer %q cannot be removed because shoot deletion has not completed successfully yet", core.GardenerName))
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *validationContext) validateShootHibernation(a admission.Attributes) error {
+	// Prevent Shoots from getting hibernated in case they have problematic webhooks.
+	// Otherwise, we can never wake up this shoot cluster again.
+	oldIsHibernated := c.oldShoot.Spec.Hibernation != nil && c.oldShoot.Spec.Hibernation.Enabled != nil && *c.oldShoot.Spec.Hibernation.Enabled
+	newIsHibernated := c.shoot.Spec.Hibernation != nil && c.shoot.Spec.Hibernation.Enabled != nil && *c.shoot.Spec.Hibernation.Enabled
+
+	if !oldIsHibernated && newIsHibernated {
+		if hibernationConstraint := helper.GetCondition(c.shoot.Status.Constraints, core.ShootHibernationPossible); hibernationConstraint != nil {
+			if hibernationConstraint.Status != core.ConditionTrue {
+				return admission.NewForbidden(a, fmt.Errorf(hibernationConstraint.Message))
+			}
+		}
+	}
+
+	if !newIsHibernated && oldIsHibernated {
+		addInfrastructureDeploymentTask(c.shoot)
+	}
+
+	return nil
+}
+
+func (c *validationContext) ensureMachineImages() error {
+	if c.shoot.DeletionTimestamp == nil {
+		for idx, worker := range c.shoot.Spec.Provider.Workers {
+			image, err := ensureMachineImage(c.oldShoot.Spec.Provider.Workers, worker, c.cloudProfile.Spec.MachineImages)
+			if err != nil {
+				return err
+			}
+			c.shoot.Spec.Provider.Workers[idx].Machine.Image = image
+		}
+	}
+
+	return nil
+}
+
+func (c *validationContext) addMetadataAnnotations(a admission.Attributes) {
+	if a.GetOperation() == admission.Create {
+		addInfrastructureDeploymentTask(c.shoot)
+	}
+
+	if !reflect.DeepEqual(c.oldShoot.Spec.Provider.InfrastructureConfig, c.shoot.Spec.Provider.InfrastructureConfig) {
+		addInfrastructureDeploymentTask(c.shoot)
+	}
+
+	if c.shoot.ObjectMeta.Annotations[v1beta1constants.GardenerOperation] == v1beta1constants.ShootOperationRotateSSHKeypair {
+		addInfrastructureDeploymentTask(c.shoot)
+	}
+
+	if c.shoot.Spec.Maintenance != nil && utils.IsTrue(c.shoot.Spec.Maintenance.ConfineSpecUpdateRollout) &&
+		!apiequality.Semantic.DeepEqual(c.oldShoot.Spec, c.shoot.Spec) &&
+		c.shoot.Status.LastOperation != nil && c.shoot.Status.LastOperation.State == core.LastOperationStateFailed {
+		metav1.SetMetaDataAnnotation(&c.shoot.ObjectMeta, v1beta1constants.FailedShootNeedsRetryOperation, "true")
+	}
+}
+
+func (c *validationContext) validateShootNetworks() field.ErrorList {
+	var (
+		allErrs field.ErrorList
+		path    = field.NewPath("spec", "networking")
+	)
+
+	if c.seed != nil {
+		if c.shoot.Spec.Networking.Pods == nil {
+			if c.seed.Spec.Networks.ShootDefaults != nil {
+				c.shoot.Spec.Networking.Pods = c.seed.Spec.Networks.ShootDefaults.Pods
+			} else {
+				allErrs = append(allErrs, field.Required(path.Child("pods"), "pods is required"))
+			}
+		}
+
+		if c.shoot.Spec.Networking.Services == nil {
+			if c.seed.Spec.Networks.ShootDefaults != nil {
+				c.shoot.Spec.Networking.Services = c.seed.Spec.Networks.ShootDefaults.Services
+			} else {
+				allErrs = append(allErrs, field.Required(path.Child("services"), "services is required"))
+			}
+		}
+
+		// validate network disjointedness with seed networks if shoot is being (re)scheduled
+		if !apiequality.Semantic.DeepEqual(c.oldShoot.Spec.SeedName, c.shoot.Spec.SeedName) {
+			allErrs = append(allErrs, cidrvalidation.ValidateNetworkDisjointedness(
+				path,
+				c.shoot.Spec.Networking.Nodes,
+				c.shoot.Spec.Networking.Pods,
+				c.shoot.Spec.Networking.Services,
+				c.seed.Spec.Networks.Nodes,
+				c.seed.Spec.Networks.Pods,
+				c.seed.Spec.Networks.Services,
+			)...)
+		}
+	}
+
+	return allErrs
+}
+
+func (c *validationContext) validateKubernetes() field.ErrorList {
+	var (
+		allErrs field.ErrorList
+		path    = field.NewPath("spec", "kubernetes")
+	)
 
 	ok, isDefaulted, validKubernetesVersions, versionDefault := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version)
 	if !ok {
-		err := field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions)
+		err := field.NotSupported(path.Child("version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions)
 		if isDefaulted {
 			err.Detail = fmt.Sprintf("unable to default version - couldn't find a suitable patch version for %s. Suitable patch versions have a non-expired expiration date and are no 'preview' versions. 'Preview'-classified versions have to be selected explicitly -  %s", c.shoot.Spec.Kubernetes.Version, err.Detail)
 		}
 		allErrs = append(allErrs, err)
 	} else if versionDefault != nil {
 		c.shoot.Spec.Kubernetes.Version = versionDefault.String()
+	}
+
+	return allErrs
+}
+
+func (c *validationContext) validateProvider() field.ErrorList {
+	var (
+		allErrs field.ErrorList
+		path    = field.NewPath("spec", "provider")
+	)
+
+	if c.shoot.Spec.Provider.Type != c.cloudProfile.Spec.Type {
+		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must equal provider type of referenced CloudProfile: %q", c.cloudProfile.Spec.Type)))
+		// exit early, all other validation errors will be misleading
+		return allErrs
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {
@@ -519,9 +612,10 @@ func validateVolumeSize(volumeTypeConstraints []core.VolumeType, machineTypeCons
 	return true, ""
 }
 
-func validateDNSDomainUniqueness(shootLister corelisters.ShootLister, name string, dns *core.DNS) (field.ErrorList, error) {
+func (c *validationContext) validateDNSDomainUniqueness(shootLister corelisters.ShootLister) (field.ErrorList, error) {
 	var (
-		allErrs = field.ErrorList{}
+		allErrs field.ErrorList
+		dns     = c.shoot.Spec.DNS
 		dnsPath = field.NewPath("spec", "dns", "domain")
 	)
 
@@ -535,7 +629,7 @@ func validateDNSDomainUniqueness(shootLister corelisters.ShootLister, name strin
 	}
 
 	for _, shoot := range shoots {
-		if shoot.Name == name {
+		if shoot.Name == c.shoot.Name {
 			continue
 		}
 
@@ -744,14 +838,19 @@ top:
 	return false, validValues
 }
 
-func validateRegion(constraints []core.Region, region, oldRegion string, fldPath *field.Path) field.ErrorList {
-	var validValues []string
+func (c *validationContext) validateRegion() field.ErrorList {
+	var (
+		fldPath     = field.NewPath("spec", "region")
+		validValues []string
+		region      = c.shoot.Spec.Region
+		oldRegion   = c.oldShoot.Spec.Region
+	)
 
 	if region == oldRegion {
 		return nil
 	}
 
-	for _, r := range constraints {
+	for _, r := range c.cloudProfile.Spec.Regions {
 		validValues = append(validValues, r.Name)
 		if r.Name == region {
 			return nil
