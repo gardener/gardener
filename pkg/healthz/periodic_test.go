@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"go.uber.org/goleak"
 	"k8s.io/apimachinery/pkg/util/clock"
 )
 
@@ -28,11 +29,17 @@ var _ = Describe("Periodic", func() {
 			fakeClock     *clock.FakeClock
 			p             *periodicHealthz
 			resetDuration = 5 * time.Second
+			ignoreCurrent goleak.Option
 		)
 
 		BeforeEach(func() {
+			ignoreCurrent = goleak.IgnoreCurrent()
 			fakeClock = clock.NewFakeClock(time.Now())
 			p = NewPeriodicHealthz(fakeClock, resetDuration).(*periodicHealthz)
+		})
+
+		AfterEach(func() {
+			goleak.VerifyNone(GinkgoT(), ignoreCurrent)
 		})
 
 		Describe("#Name", func() {
@@ -43,6 +50,8 @@ var _ = Describe("Periodic", func() {
 
 		Describe("#Start", func() {
 			It("should start the manager", func() {
+				defer p.Stop()
+
 				p.Start()
 				Expect(p.Get()).To(BeTrue())
 				Expect(p.timer).NotTo(BeNil())
@@ -75,12 +84,14 @@ var _ = Describe("Periodic", func() {
 
 		Describe("#Set", func() {
 			It("should correctly set the status to true", func() {
+				defer p.Stop()
 				p.Start()
 				p.Set(true)
 				Expect(p.Get()).To(BeTrue())
 			})
 
 			It("should correctly set the status to false", func() {
+				defer p.Stop()
 				p.Start()
 				p.Set(false)
 				Expect(p.Get()).To(BeFalse())
@@ -102,6 +113,7 @@ var _ = Describe("Periodic", func() {
 			})
 
 			It("should correctly set the status to false after the reset duration", func() {
+				defer p.Stop()
 				p.Start()
 
 				Expect(p.Get()).To(BeTrue())
@@ -110,6 +122,7 @@ var _ = Describe("Periodic", func() {
 			})
 
 			It("should correctly reset the timer if status is changed to true", func() {
+				defer p.Stop()
 				p.Start()
 
 				Expect(p.Get()).To(BeTrue())
