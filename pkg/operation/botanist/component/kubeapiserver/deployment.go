@@ -130,9 +130,8 @@ func (k *kubeAPIServer) reconcileDeployment(
 	secretServiceAccountSigningKey *corev1.Secret,
 ) error {
 	var (
-		maxSurge          = intstr.FromString("25%")
-		maxUnavailable    = intstr.FromInt(0)
-		directoryOrCreate = corev1.HostPathDirectoryOrCreate
+		maxSurge       = intstr.FromString("25%")
+		maxUnavailable = intstr.FromInt(0)
 	)
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
@@ -385,333 +384,14 @@ func (k *kubeAPIServer) reconcileDeployment(
 			},
 		}
 
-		if k.values.SNI.Enabled {
-			deployment.Labels[v1beta1constants.LabelAPIServerExposure] = v1beta1constants.LabelAPIServerExposureGardenerManaged
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--advertise-address=%s", k.values.SNI.AdvertiseAddress))
-		}
-
-		if !versionutils.ConstraintK8sGreaterEqual116.Check(k.values.Version) {
-			deployment.Spec.Template.Spec.Containers[0].Lifecycle = &corev1.Lifecycle{
-				PreStop: &corev1.Handler{
-					Exec: &corev1.ExecAction{
-						Command: []string{"sh", "-c", "sleep 5"},
-					},
-				},
-			}
-		} else {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--livez-grace-period=1m")
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--shutdown-delay-duration=15s")
-		}
-
-		if versionutils.ConstraintK8sGreaterEqual117.Check(k.values.Version) {
-			// locations are taken from
-			// https://github.com/golang/go/blob/1bb247a469e306c57a5e0eaba788efb8b3b1acef/src/crypto/x509/root_linux.go#L7-L15
-			// we cannot be sure on which Node OS the Seed Cluster is running so, it's safer to mount them all
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-				{
-					Name:      volumeNameFedora,
-					MountPath: volumeMountPathFedora,
-					ReadOnly:  true,
-				},
-				{
-					Name:      volumeNameCentOS,
-					MountPath: volumeMountPathCentOS,
-					ReadOnly:  true,
-				},
-				{
-					Name:      volumeNameEtcSSL,
-					MountPath: volumeMountPathEtcSSL,
-					ReadOnly:  true,
-				},
-				{
-					Name:      volumeNameUsrShareCaCerts,
-					MountPath: volumeMountPathUsrShareCaCerts,
-					ReadOnly:  true,
-				},
-			}...)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-				{
-					Name: volumeNameFedora,
-					VolumeSource: corev1.VolumeSource{
-						HostPath: &corev1.HostPathVolumeSource{
-							Path: volumeMountPathFedora,
-							Type: &directoryOrCreate,
-						},
-					},
-				},
-				{
-					Name: volumeNameCentOS,
-					VolumeSource: corev1.VolumeSource{
-						HostPath: &corev1.HostPathVolumeSource{
-							Path: volumeMountPathCentOS,
-							Type: &directoryOrCreate,
-						},
-					},
-				},
-				{
-					Name: volumeNameEtcSSL,
-					VolumeSource: corev1.VolumeSource{
-						HostPath: &corev1.HostPathVolumeSource{
-							Path: volumeMountPathEtcSSL,
-							Type: &directoryOrCreate,
-						},
-					},
-				},
-				{
-					Name: volumeNameUsrShareCaCerts,
-					VolumeSource: corev1.VolumeSource{
-						HostPath: &corev1.HostPathVolumeSource{
-							Path: volumeMountPathUsrShareCaCerts,
-							Type: &directoryOrCreate,
-						},
-					},
-				},
-			}...)
-		}
-
-		if k.values.BasicAuthenticationEnabled {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--basic-auth-file=%s/%s", volumeMountPathBasicAuthentication, secrets.DataKeyCSV))
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-				{
-					Name:      volumeNameBasicAuthentication,
-					MountPath: volumeMountPathBasicAuthentication,
-				},
-			}...)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-				{
-					Name: volumeNameBasicAuthentication,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: k.secrets.BasicAuthentication.Name,
-						},
-					},
-				},
-			}...)
-		}
-
-		if !k.values.VPN.ReversedVPNEnabled {
-			deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
-				Name:  "set-iptable-rules",
-				Image: k.values.Images.AlpineIPTables,
-				Command: []string{
-					"/bin/sh",
-					"-c",
-					"iptables -A INPUT -i tun0 -p icmp -j ACCEPT && iptables -A INPUT -i tun0 -m state --state NEW -j DROP",
-				},
-				SecurityContext: &corev1.SecurityContext{
-					Capabilities: &corev1.Capabilities{
-						Add: []corev1.Capability{"NET_ADMIN"},
-					},
-					Privileged: pointer.Bool(true),
-				},
-				VolumeMounts: []corev1.VolumeMount{{
-					Name:      volumeNameLibModules,
-					MountPath: volumeMountPathLibModules,
-				}},
-			}}
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
-				Name: volumeNameLibModules,
-				VolumeSource: corev1.VolumeSource{
-					HostPath: &corev1.HostPathVolumeSource{Path: "/lib/modules"},
-				},
-			})
-
-			vpnSeedContainer := corev1.Container{
-				Name:            containerNameVPNSeed,
-				Image:           k.values.Images.VPNSeed,
-				ImagePullPolicy: corev1.PullIfNotPresent,
-				Env: []corev1.EnvVar{
-					{
-						Name:  "MAIN_VPN_SEED",
-						Value: "true",
-					},
-					{
-						Name:  "OPENVPN_PORT",
-						Value: "4314",
-					},
-					{
-						Name:  "APISERVER_AUTH_MODE",
-						Value: "client-cert",
-					},
-					{
-						Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CA",
-						Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyCertificateCA,
-					},
-					{
-						Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CRT",
-						Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyCertificate,
-					},
-					{
-						Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_KEY",
-						Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyPrivateKey,
-					},
-					{
-						Name:  "SERVICE_NETWORK",
-						Value: k.values.VPN.ServiceNetworkCIDR,
-					},
-					{
-						Name:  "POD_NETWORK",
-						Value: k.values.VPN.PodNetworkCIDR,
-					},
-				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("100m"),
-						corev1.ResourceMemory: resource.MustParse("128Mi"),
-					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("500m"),
-						corev1.ResourceMemory: resource.MustParse("1000Mi"),
-					},
-				},
-				SecurityContext: &corev1.SecurityContext{
-					Capabilities: &corev1.Capabilities{
-						Add: []corev1.Capability{"NET_ADMIN"},
-					},
-					Privileged: pointer.Bool(true),
-				},
-				TerminationMessagePath:   corev1.TerminationMessagePathDefault,
-				TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      volumeNameVPNSeed,
-						MountPath: volumeMountPathVPNSeed,
-					},
-					{
-						Name:      volumeNameVPNSeedTLSAuth,
-						MountPath: volumeMountPathVPNSeedTLSAuth,
-					},
-				},
-			}
-
-			if k.values.VPN.NodeNetworkCIDR != nil {
-				vpnSeedContainer.Env = append(vpnSeedContainer.Env, corev1.EnvVar{
-					Name:  "NODE_NETWORK",
-					Value: *k.values.VPN.NodeNetworkCIDR,
-				})
-			}
-
-			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, vpnSeedContainer)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-				{
-					Name: volumeNameVPNSeed,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{SecretName: k.secrets.VPNSeed.Name},
-					},
-				},
-				{
-					Name: volumeNameVPNSeedTLSAuth,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{SecretName: k.secrets.VPNSeedTLSAuth.Name},
-					},
-				},
-			}...)
-		} else {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-				{
-					Name:      volumeNameHTTPProxy,
-					MountPath: volumeMountPathHTTPProxy,
-				},
-				{
-					Name:      volumeNameEgressSelector,
-					MountPath: volumeMountPathEgressSelector,
-				},
-			}...)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-				{
-					Name: volumeNameHTTPProxy,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: k.secrets.HTTPProxy.Name,
-						},
-					},
-				},
-				{
-					Name: volumeNameEgressSelector,
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: configMapEgressSelector.Name,
-							},
-						},
-					},
-				},
-			}...)
-		}
-
-		if k.values.OIDC != nil && k.values.OIDC.CABundle != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--oidc-ca-file=%s/%s", volumeMountPathOIDCCABundle, secretOIDCCABundleDataKeyCaCrt))
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-				{
-					Name:      volumeNameOIDCCABundle,
-					MountPath: volumeMountPathOIDCCABundle,
-				},
-			}...)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-				{
-					Name: volumeNameOIDCCABundle,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: secretOIDCCABundle.Name,
-						},
-					},
-				},
-			}...)
-		}
-
-		if k.values.ServiceAccount.SigningKey != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-				{
-					Name:      volumeNameServiceAccountSigningKey,
-					MountPath: volumeMountPathServiceAccountSigningKey,
-				},
-			}...)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-				{
-					Name: volumeNameServiceAccountSigningKey,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: secretServiceAccountSigningKey.Name,
-						},
-					},
-				},
-			}...)
-		} else {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
-		}
-
-		if k.values.SNI.PodMutatorEnabled {
-			deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
-				Name:  containerNameAPIServerProxyPodMutator,
-				Image: k.values.Images.APIServerProxyPodWebhook,
-				Args: []string{
-					"--apiserver-fqdn=" + k.values.SNI.APIServerFQDN,
-					"--host=localhost",
-					"--port=9443",
-					"--cert-dir=" + volumeMountPathServer,
-					"--cert-name=" + secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer),
-					"--key-name=" + secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer),
-				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("50m"),
-						corev1.ResourceMemory: resource.MustParse("128M"),
-					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("200m"),
-						corev1.ResourceMemory: resource.MustParse("500M"),
-					},
-				},
-				VolumeMounts: []corev1.VolumeMount{{
-					Name:      volumeNameServer,
-					MountPath: volumeMountPathServer,
-				}},
-			})
-		}
+		k.handleBasicAuthenticationSettings(deployment)
+		k.handleLifecycleSettings(deployment)
+		k.handleHostCertVolumes(deployment)
+		k.handleSNISettings(deployment)
+		k.handlePodMutatorSettings(deployment)
+		k.handleVPNSettings(deployment, configMapEgressSelector)
+		k.handleOIDCSettings(deployment, secretOIDCCABundle)
+		k.handleServiceAccountSigningKeySettings(deployment, secretServiceAccountSigningKey)
 
 		utilruntime.Must(references.InjectAnnotations(deployment))
 		return nil
@@ -792,40 +472,6 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 		}
 	}
 
-	if k.values.OIDC != nil {
-		if v := k.values.OIDC.IssuerURL; v != nil {
-			out = append(out, "--oidc-issuer-url="+*v)
-		}
-
-		if v := k.values.OIDC.ClientID; v != nil {
-			out = append(out, "--oidc-client-id="+*v)
-		}
-
-		if v := k.values.OIDC.UsernameClaim; v != nil {
-			out = append(out, "--oidc-username-claim="+*v)
-		}
-
-		if v := k.values.OIDC.GroupsClaim; v != nil {
-			out = append(out, "--oidc-groups-claim="+*v)
-		}
-
-		if v := k.values.OIDC.UsernamePrefix; v != nil {
-			out = append(out, "--oidc-username-prefix="+*v)
-		}
-
-		if v := k.values.OIDC.GroupsPrefix; v != nil {
-			out = append(out, "--oidc-groups-prefix="+*v)
-		}
-
-		if k.values.OIDC.SigningAlgs != nil {
-			out = append(out, "--oidc-signing-algs="+strings.Join(k.values.OIDC.SigningAlgs, ","))
-		}
-
-		for key, value := range k.values.OIDC.RequiredClaims {
-			out = append(out, "--oidc-required-claim="+fmt.Sprintf("%s=%s", key, value))
-		}
-	}
-
 	out = append(out, "--profiling=false")
 	out = append(out, fmt.Sprintf("--proxy-client-cert-file=%s/%s", volumeMountPathKubeAggregator, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameKubeAggregator)))
 	out = append(out, fmt.Sprintf("--proxy-client-key-file=%s/%s", volumeMountPathKubeAggregator, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameKubeAggregator)))
@@ -836,14 +482,6 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 
 	if k.values.RuntimeConfig != nil {
 		out = append(out, kutil.MapStringBoolToCommandLineParameter(k.values.RuntimeConfig, "--runtime-config="))
-	}
-
-	if k.values.ServiceAccount.SigningKey != nil {
-		out = append(out, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
-		out = append(out, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
-	} else {
-		out = append(out, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
-		out = append(out, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
 	}
 
 	out = append(out, "--service-account-issuer="+k.values.ServiceAccount.Issuer)
@@ -888,4 +526,390 @@ func (k *kubeAPIServer) admissionPluginNames() []string {
 	}
 
 	return out
+}
+
+func (k *kubeAPIServer) handleHostCertVolumes(deployment *appsv1.Deployment) {
+	if !versionutils.ConstraintK8sGreaterEqual117.Check(k.values.Version) {
+		return
+	}
+
+	directoryOrCreate := corev1.HostPathDirectoryOrCreate
+
+	// locations are taken from
+	// https://github.com/golang/go/blob/1bb247a469e306c57a5e0eaba788efb8b3b1acef/src/crypto/x509/root_linux.go#L7-L15
+	// we cannot be sure on which Node OS the Seed Cluster is running so, it's safer to mount them all
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+		{
+			Name:      volumeNameFedora,
+			MountPath: volumeMountPathFedora,
+			ReadOnly:  true,
+		},
+		{
+			Name:      volumeNameCentOS,
+			MountPath: volumeMountPathCentOS,
+			ReadOnly:  true,
+		},
+		{
+			Name:      volumeNameEtcSSL,
+			MountPath: volumeMountPathEtcSSL,
+			ReadOnly:  true,
+		},
+		{
+			Name:      volumeNameUsrShareCaCerts,
+			MountPath: volumeMountPathUsrShareCaCerts,
+			ReadOnly:  true,
+		},
+	}...)
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+		{
+			Name: volumeNameFedora,
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: volumeMountPathFedora,
+					Type: &directoryOrCreate,
+				},
+			},
+		},
+		{
+			Name: volumeNameCentOS,
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: volumeMountPathCentOS,
+					Type: &directoryOrCreate,
+				},
+			},
+		},
+		{
+			Name: volumeNameEtcSSL,
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: volumeMountPathEtcSSL,
+					Type: &directoryOrCreate,
+				},
+			},
+		},
+		{
+			Name: volumeNameUsrShareCaCerts,
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: volumeMountPathUsrShareCaCerts,
+					Type: &directoryOrCreate,
+				},
+			},
+		},
+	}...)
+}
+
+func (k *kubeAPIServer) handleBasicAuthenticationSettings(deployment *appsv1.Deployment) {
+	if !k.values.BasicAuthenticationEnabled {
+		return
+	}
+
+	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--basic-auth-file=%s/%s", volumeMountPathBasicAuthentication, secrets.DataKeyCSV))
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+		{
+			Name:      volumeNameBasicAuthentication,
+			MountPath: volumeMountPathBasicAuthentication,
+		},
+	}...)
+	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+		{
+			Name: volumeNameBasicAuthentication,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: k.secrets.BasicAuthentication.Name,
+				},
+			},
+		},
+	}...)
+}
+
+func (k *kubeAPIServer) handleSNISettings(deployment *appsv1.Deployment) {
+	if !k.values.SNI.Enabled {
+		return
+	}
+
+	deployment.Labels[v1beta1constants.LabelAPIServerExposure] = v1beta1constants.LabelAPIServerExposureGardenerManaged
+	deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--advertise-address=%s", k.values.SNI.AdvertiseAddress))
+}
+
+func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
+	if !versionutils.ConstraintK8sGreaterEqual116.Check(k.values.Version) {
+		deployment.Spec.Template.Spec.Containers[0].Lifecycle = &corev1.Lifecycle{
+			PreStop: &corev1.Handler{
+				Exec: &corev1.ExecAction{
+					Command: []string{"sh", "-c", "sleep 5"},
+				},
+			},
+		}
+	} else {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--livez-grace-period=1m")
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--shutdown-delay-duration=15s")
+	}
+}
+
+func (k *kubeAPIServer) handleVPNSettings(deployment *appsv1.Deployment, configMapEgressSelector *corev1.ConfigMap) {
+	if !k.values.VPN.ReversedVPNEnabled {
+		deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
+			Name:  "set-iptable-rules",
+			Image: k.values.Images.AlpineIPTables,
+			Command: []string{
+				"/bin/sh",
+				"-c",
+				"iptables -A INPUT -i tun0 -p icmp -j ACCEPT && iptables -A INPUT -i tun0 -m state --state NEW -j DROP",
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Capabilities: &corev1.Capabilities{
+					Add: []corev1.Capability{"NET_ADMIN"},
+				},
+				Privileged: pointer.Bool(true),
+			},
+			VolumeMounts: []corev1.VolumeMount{{
+				Name:      volumeNameLibModules,
+				MountPath: volumeMountPathLibModules,
+			}},
+		}}
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+			Name: volumeNameLibModules,
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{Path: "/lib/modules"},
+			},
+		})
+
+		vpnSeedContainer := corev1.Container{
+			Name:            containerNameVPNSeed,
+			Image:           k.values.Images.VPNSeed,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Env: []corev1.EnvVar{
+				{
+					Name:  "MAIN_VPN_SEED",
+					Value: "true",
+				},
+				{
+					Name:  "OPENVPN_PORT",
+					Value: "4314",
+				},
+				{
+					Name:  "APISERVER_AUTH_MODE",
+					Value: "client-cert",
+				},
+				{
+					Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CA",
+					Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyCertificateCA,
+				},
+				{
+					Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_CRT",
+					Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyCertificate,
+				},
+				{
+					Name:  "APISERVER_AUTH_MODE_CLIENT_CERT_KEY",
+					Value: volumeMountPathVPNSeed + "/" + secrets.DataKeyPrivateKey,
+				},
+				{
+					Name:  "SERVICE_NETWORK",
+					Value: k.values.VPN.ServiceNetworkCIDR,
+				},
+				{
+					Name:  "POD_NETWORK",
+					Value: k.values.VPN.PodNetworkCIDR,
+				},
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("500m"),
+					corev1.ResourceMemory: resource.MustParse("1000Mi"),
+				},
+			},
+			SecurityContext: &corev1.SecurityContext{
+				Capabilities: &corev1.Capabilities{
+					Add: []corev1.Capability{"NET_ADMIN"},
+				},
+				Privileged: pointer.Bool(true),
+			},
+			TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      volumeNameVPNSeed,
+					MountPath: volumeMountPathVPNSeed,
+				},
+				{
+					Name:      volumeNameVPNSeedTLSAuth,
+					MountPath: volumeMountPathVPNSeedTLSAuth,
+				},
+			},
+		}
+
+		if k.values.VPN.NodeNetworkCIDR != nil {
+			vpnSeedContainer.Env = append(vpnSeedContainer.Env, corev1.EnvVar{
+				Name:  "NODE_NETWORK",
+				Value: *k.values.VPN.NodeNetworkCIDR,
+			})
+		}
+
+		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, vpnSeedContainer)
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+			{
+				Name: volumeNameVPNSeed,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{SecretName: k.secrets.VPNSeed.Name},
+				},
+			},
+			{
+				Name: volumeNameVPNSeedTLSAuth,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{SecretName: k.secrets.VPNSeedTLSAuth.Name},
+				},
+			},
+		}...)
+	} else {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+			{
+				Name:      volumeNameHTTPProxy,
+				MountPath: volumeMountPathHTTPProxy,
+			},
+			{
+				Name:      volumeNameEgressSelector,
+				MountPath: volumeMountPathEgressSelector,
+			},
+		}...)
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+			{
+				Name: volumeNameHTTPProxy,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: k.secrets.HTTPProxy.Name,
+					},
+				},
+			},
+			{
+				Name: volumeNameEgressSelector,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: configMapEgressSelector.Name,
+						},
+					},
+				},
+			},
+		}...)
+	}
+}
+
+func (k *kubeAPIServer) handleOIDCSettings(deployment *appsv1.Deployment, secretOIDCCABundle *corev1.Secret) {
+	if k.values.OIDC != nil {
+		if k.values.OIDC.CABundle != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--oidc-ca-file=%s/%s", volumeMountPathOIDCCABundle, secretOIDCCABundleDataKeyCaCrt))
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+				{
+					Name:      volumeNameOIDCCABundle,
+					MountPath: volumeMountPathOIDCCABundle,
+				},
+			}...)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+				{
+					Name: volumeNameOIDCCABundle,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: secretOIDCCABundle.Name,
+						},
+					},
+				},
+			}...)
+		}
+
+		if v := k.values.OIDC.IssuerURL; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-issuer-url="+*v)
+		}
+
+		if v := k.values.OIDC.ClientID; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-client-id="+*v)
+		}
+
+		if v := k.values.OIDC.UsernameClaim; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-username-claim="+*v)
+		}
+
+		if v := k.values.OIDC.GroupsClaim; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-groups-claim="+*v)
+		}
+
+		if v := k.values.OIDC.UsernamePrefix; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-username-prefix="+*v)
+		}
+
+		if v := k.values.OIDC.GroupsPrefix; v != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-groups-prefix="+*v)
+		}
+
+		if k.values.OIDC.SigningAlgs != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-signing-algs="+strings.Join(k.values.OIDC.SigningAlgs, ","))
+		}
+
+		for key, value := range k.values.OIDC.RequiredClaims {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-required-claim="+fmt.Sprintf("%s=%s", key, value))
+		}
+	}
+}
+
+func (k *kubeAPIServer) handleServiceAccountSigningKeySettings(deployment *appsv1.Deployment, secretServiceAccountSigningKey *corev1.Secret) {
+	if k.values.ServiceAccount.SigningKey != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+			{
+				Name:      volumeNameServiceAccountSigningKey,
+				MountPath: volumeMountPathServiceAccountSigningKey,
+			},
+		}...)
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+			{
+				Name: volumeNameServiceAccountSigningKey,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secretServiceAccountSigningKey.Name,
+					},
+				},
+			},
+		}...)
+	} else {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
+	}
+}
+
+func (k *kubeAPIServer) handlePodMutatorSettings(deployment *appsv1.Deployment) {
+	if k.values.SNI.PodMutatorEnabled {
+		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, corev1.Container{
+			Name:  containerNameAPIServerProxyPodMutator,
+			Image: k.values.Images.APIServerProxyPodWebhook,
+			Args: []string{
+				"--apiserver-fqdn=" + k.values.SNI.APIServerFQDN,
+				"--host=localhost",
+				"--port=9443",
+				"--cert-dir=" + volumeMountPathServer,
+				"--cert-name=" + secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer),
+				"--key-name=" + secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer),
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("128M"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("200m"),
+					corev1.ResourceMemory: resource.MustParse("500M"),
+				},
+			},
+			VolumeMounts: []corev1.VolumeMount{{
+				Name:      volumeNameServer,
+				MountPath: volumeMountPathServer,
+			}},
+		})
+	}
 }
