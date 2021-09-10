@@ -1,4 +1,79 @@
-groups:
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package kubeapiserver_test
+
+import (
+	"path/filepath"
+
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/test"
+
+	. "github.com/onsi/ginkgo"
+)
+
+const testNS = "some-ns"
+
+var _ = Describe("Monitoring", func() {
+	var component component.MonitoringComponent
+
+	BeforeEach(func() {
+		component = New(nil, testNS, Values{})
+	})
+
+	It("should successfully test the scrape config", func() {
+		test.ScrapeConfigs(component, expectedScrapeConfig)
+	})
+
+	It("should successfully test the alerting rules", func() {
+		test.AlertingRulesWithPromtool(
+			component,
+			map[string]string{"kube-apiserver.rules.yaml": expectedAlertingRule},
+			filepath.Join("testdata", "monitoring_alertingrules.yaml"),
+		)
+	})
+})
+
+const (
+	expectedScrapeConfig = `job_name: kube-apiserver
+scheme: https
+kubernetes_sd_configs:
+- role: endpoints
+  namespaces:
+    names: [` + testNS + `]
+tls_config:
+  insecure_skip_verify: true
+  cert_file: /etc/prometheus/seed/prometheus.crt
+  key_file: /etc/prometheus/seed/prometheus.key
+relabel_configs:
+- source_labels:
+  - __meta_kubernetes_service_name
+  - __meta_kubernetes_endpoint_port_name
+  action: keep
+  regex: kube-apiserver;kube-apiserver
+- action: labelmap
+  regex: __meta_kubernetes_service_label_(.+)
+- source_labels: [ __meta_kubernetes_pod_name ]
+  target_label: pod
+metric_relabel_configs:
+- source_labels: [ __name__ ]
+  action: keep
+  regex: ^(authentication_attempts|authenticated_user_requests|apiserver_admission_controller_admission_duration_seconds_bucket|apiserver_admission_webhook_admission_duration_seconds_bucket|apiserver_admission_step_admission_duration_seconds_bucket|apiserver_admission_webhook_rejection_count|apiserver_audit_event_total|apiserver_audit_error_total|apiserver_audit_requests_rejected_total|apiserver_latency_seconds|apiserver_current_inflight_requests|apiserver_current_inqueue_requests|apiserver_response_sizes_bucket|apiserver_registered_watchers|apiserver_request_duration_seconds_bucket|apiserver_request_terminations_total|apiserver_request_total|apiserver_request_count|apiserver_storage_transformation_duration_seconds_bucket|apiserver_storage_transformation_operations_total|apiserver_init_events_total|apiserver_watch_events_sizes_bucket|apiserver_watch_events_total|etcd_db_total_size_in_bytes|etcd_object_counts|etcd_request_duration_seconds_bucket|go_.+|process_max_fds|process_open_fds|watch_cache_capacity_increase_total|watch_cache_capacity_decrease_total|watch_cache_capacity)$
+`
+
+	expectedAlertingRule = `groups:
 - name: kube-apiserver.rules
   rules:
   - alert: ApiServerNotReachable
@@ -46,7 +121,7 @@ groups:
       description: 'The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.'
       summary: 'The API server has too many open file descriptors'
   # Some verbs excluded because they are expected to be long-lasting:
-  # WATCHLIST is long-poll, CONNECT is `kubectl exec`.
+  # WATCHLIST is long-poll, CONNECT is "kubectl exec".
   - alert: KubeApiServerLatency
     expr: histogram_quantile(0.99, sum without (instance,resource) (rate(apiserver_request_duration_seconds_bucket{subresource!="log",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"}[5m]))) > 3
     for: 30m
@@ -58,7 +133,7 @@ groups:
     annotations:
       description: Kube API server latency for verb {{ $labels.verb }} is high. This could be because the shoot workers and the control plane are in different regions. 99th percentile of request latency is greater than 3 seconds.
       summary: Kubernetes API server latency is high
-  # TODO replace with better metrics in the future (wyb1)
+  # TODO(wyb1): replace with better metrics in the future
   - record: shoot:apiserver_watch_duration:quantile
     expr: histogram_quantile(0.2, sum(rate(apiserver_request_duration_seconds_bucket{verb="WATCH",resource=~"configmaps|deployments|secrets|daemonsets|services|nodes|pods|namespaces|endpoints|statefulsets|clusterroles|roles"}[5m])) by (le,scope,resource))
     labels:
@@ -111,3 +186,5 @@ groups:
 
   - record: shoot:kube_apiserver:sum_by_pod
     expr: sum(up{job="kube-apiserver"}) by (pod)
+`
+)

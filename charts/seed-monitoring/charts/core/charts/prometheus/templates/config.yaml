@@ -73,29 +73,6 @@ data:
         regex: true
         action: drop
     scrape_configs:
-    - job_name: kube-apiserver
-      scheme: https
-      kubernetes_sd_configs:
-      - role: endpoints
-        namespaces:
-          names: [{{ .Release.Namespace }}]
-      tls_config:
-        # This is needed because the api server's certificates are not are generated
-        # for a specific pod IP
-{{ include "prometheus.tls-config.kube-cert-auth-insecure" . | indent 8 }}
-      relabel_configs:
-      - source_labels:
-        - __meta_kubernetes_service_name
-        - __meta_kubernetes_endpoint_port_name
-        action: keep
-        regex: kube-apiserver;kube-apiserver
-      - action: labelmap
-        regex: __meta_kubernetes_service_label_(.+)
-      - source_labels: [ __meta_kubernetes_pod_name ]
-        target_label: pod
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeAPIServer | indent 6 }}
-
     - job_name: kube-kubelet
       honor_labels: false
       scheme: https

@@ -40,6 +40,8 @@ import (
 const (
 	// Port is the port exposed by the kube-apiserver.
 	Port = 443
+	// ServicePortName is the name of the port in the service.
+	ServicePortName = "kube-apiserver"
 	// UserName is the name of the kube-apiserver user when communicating with the kubelet.
 	UserName = "system:kube-apiserver:kubelet"
 )
@@ -47,6 +49,7 @@ const (
 // Interface contains functions for a kube-apiserver deployer.
 type Interface interface {
 	component.DeployWaiter
+	component.MonitoringComponent
 	// GetValues returns the current configuration values of the deployer.
 	GetValues() Values
 	// SetSecrets sets the secrets.
