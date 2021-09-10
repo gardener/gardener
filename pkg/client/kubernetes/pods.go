@@ -117,6 +117,8 @@ func CheckForwardPodPort(fw PortForwarder) error {
 	}
 }
 
+// PortForwarder knows how to forward a port connection
+// Ready channel is expected to be closed once the connection becomes ready
 type PortForwarder interface {
 	ForwardPorts() error
 	Ready() chan struct{}
