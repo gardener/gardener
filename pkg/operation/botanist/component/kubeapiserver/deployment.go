@@ -137,10 +137,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client.Client(), deployment, func() error {
 		deployment.Labels = GetLabels()
-		if k.values.SNI.Enabled {
-			deployment.Labels[v1beta1constants.LabelAPIServerExposure] = v1beta1constants.LabelAPIServerExposureGardenerManaged
-		}
-
 		deployment.Spec = appsv1.DeploymentSpec{
 			MinReadySeconds:      30,
 			RevisionHistoryLimit: pointer.Int32(2),
@@ -389,6 +385,11 @@ func (k *kubeAPIServer) reconcileDeployment(
 			},
 		}
 
+		if k.values.SNI.Enabled {
+			deployment.Labels[v1beta1constants.LabelAPIServerExposure] = v1beta1constants.LabelAPIServerExposureGardenerManaged
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--advertise-address=%s", k.values.SNI.AdvertiseAddress))
+		}
+
 		if !versionutils.ConstraintK8sGreaterEqual116.Check(k.values.Version) {
 			deployment.Spec.Template.Spec.Containers[0].Lifecycle = &corev1.Lifecycle{
 				PreStop: &corev1.Handler{
@@ -397,6 +398,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 					},
 				},
 			}
+		} else {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--livez-grace-period=1m")
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--shutdown-delay-duration=15s")
 		}
 
 		if versionutils.ConstraintK8sGreaterEqual117.Check(k.values.Version) {
@@ -466,6 +470,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		}
 
 		if k.values.BasicAuthenticationEnabled {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--basic-auth-file=%s/%s", volumeMountPathBasicAuthentication, secrets.DataKeyCSV))
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
 				{
 					Name:      volumeNameBasicAuthentication,
@@ -602,6 +607,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 				},
 			}...)
 		} else {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
 				{
 					Name:      volumeNameHTTPProxy,
@@ -635,6 +641,7 @@ func (k *kubeAPIServer) reconcileDeployment(
 		}
 
 		if k.values.OIDC != nil && k.values.OIDC.CABundle != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--oidc-ca-file=%s/%s", volumeMountPathOIDCCABundle, secretOIDCCABundleDataKeyCaCrt))
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
 				{
 					Name:      volumeNameOIDCCABundle,
@@ -654,6 +661,8 @@ func (k *kubeAPIServer) reconcileDeployment(
 		}
 
 		if k.values.ServiceAccount.SigningKey != nil {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountSigningKey, SecretServiceAccountSigningKeyDataKeySigningKey))
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
 				{
 					Name:      volumeNameServiceAccountSigningKey,
@@ -670,6 +679,9 @@ func (k *kubeAPIServer) reconcileDeployment(
 					},
 				},
 			}...)
+		} else {
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-signing-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
+			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--service-account-key-file=%s/%s", volumeMountPathServiceAccountKey, secrets.DataKeyRSAPrivateKey))
 		}
 
 		if k.values.SNI.PodMutatorEnabled {
@@ -735,10 +747,6 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 		out = append(out, "/hyperkube", "kube-apiserver")
 	}
 
-	if k.values.VPN.ReversedVPNEnabled {
-		out = append(out, fmt.Sprintf("--egress-selector-config-file=%s/%s", volumeMountPathEgressSelector, configMapEgressSelectorDataKey))
-	}
-
 	out = append(out, "--enable-admission-plugins="+strings.Join(k.admissionPluginNames(), ","))
 	out = append(out, fmt.Sprintf("--admission-control-config-file=%s/%s", volumeMountPathAdmissionConfiguration, configMapAdmissionDataKey))
 	out = append(out, "--allow-privileged=true")
@@ -749,16 +757,8 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--audit-log-maxbackup=5")
 	out = append(out, "--authorization-mode=Node,RBAC")
 
-	if k.values.SNI.Enabled {
-		out = append(out, fmt.Sprintf("--advertise-address=%s", k.values.SNI.AdvertiseAddress))
-	}
-
 	if len(k.values.APIAudiences) > 0 {
 		out = append(out, "--api-audiences="+strings.Join(k.values.APIAudiences, ","))
-	}
-
-	if k.values.BasicAuthenticationEnabled {
-		out = append(out, fmt.Sprintf("--basic-auth-file=%s/%s", volumeMountPathBasicAuthentication, secrets.DataKeyCSV))
 	}
 
 	out = append(out, fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA))
@@ -782,11 +782,6 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--kubelet-client-certificate=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameKubeAPIServerToKubelet)))
 	out = append(out, fmt.Sprintf("--kubelet-client-key=%s/%s", volumeMountPathKubeAPIServerToKubelet, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameKubeAPIServerToKubelet)))
 
-	if versionutils.ConstraintK8sGreaterEqual116.Check(k.values.Version) {
-		out = append(out, "--livez-grace-period=1m")
-		out = append(out, "--shutdown-delay-duration=15s")
-	}
-
 	if k.values.Requests != nil {
 		if k.values.Requests.MaxNonMutatingInflight != nil {
 			out = append(out, fmt.Sprintf("--max-requests-inflight=%d", *k.values.Requests.MaxNonMutatingInflight))
@@ -804,10 +799,6 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 
 		if v := k.values.OIDC.ClientID; v != nil {
 			out = append(out, "--oidc-client-id="+*v)
-		}
-
-		if k.values.OIDC.CABundle != nil {
-			out = append(out, fmt.Sprintf("--oidc-ca-file=%s/%s", volumeMountPathOIDCCABundle, secretOIDCCABundleDataKeyCaCrt))
 		}
 
 		if v := k.values.OIDC.UsernameClaim; v != nil {
