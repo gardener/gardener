@@ -366,18 +366,8 @@ func (b *Botanist) computeKubeAPIServerReplicas(autoscalingConfig kubeapiserver.
 	}
 }
 
-// GetLegacyDeployKubeAPIServerFunc is exposed for testing.
-// TODO: Remove this once the kube-apiserver component refactoring has been completed.
-var GetLegacyDeployKubeAPIServerFunc = func(botanist *Botanist) func(context.Context) error {
-	return botanist.deployKubeAPIServer
-}
-
 // DeployKubeAPIServer deploys the Kubernetes API server.
 func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
-	if err := GetLegacyDeployKubeAPIServerFunc(b)(ctx); err != nil {
-		return err
-	}
-
 	values := b.Shoot.Components.ControlPlane.KubeAPIServer.GetValues()
 
 	deployment := &appsv1.Deployment{}
@@ -437,7 +427,18 @@ func (b *Botanist) DeployKubeAPIServer(ctx context.Context) error {
 	}
 	b.Shoot.Components.ControlPlane.KubeAPIServer.SetServiceAccountConfig(serviceAccountConfig)
 
-	return b.Shoot.Components.ControlPlane.KubeAPIServer.Deploy(ctx)
+	if err := b.Shoot.Components.ControlPlane.KubeAPIServer.Deploy(ctx); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "audit-policy-config"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-admission-config"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-egress-selector-configuration"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-oidc-cabundle"}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "kube-apiserver-service-account-signing-key"}},
+	)
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.

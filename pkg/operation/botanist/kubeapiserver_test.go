@@ -884,12 +884,6 @@ var _ = Describe("KubeAPIServer", func() {
 					prepTest()
 				}
 
-				oldGetDeployKubeAPIServerFunc := GetLegacyDeployKubeAPIServerFunc
-				defer func() { GetLegacyDeployKubeAPIServerFunc = oldGetDeployKubeAPIServerFunc }()
-				GetLegacyDeployKubeAPIServerFunc = func(*Botanist) func(context.Context) error {
-					return func(context.Context) error { return nil }
-				}
-
 				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{Autoscaling: autoscalingConfig})
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(&expectedReplicas)
 				kubeAPIServer.EXPECT().SetSecrets(gomock.Any())
@@ -960,12 +954,6 @@ var _ = Describe("KubeAPIServer", func() {
 			func(prepTest func(), autoscalingConfig kubeapiserver.AutoscalingConfig, expectedResources *corev1.ResourceRequirements) {
 				if prepTest != nil {
 					prepTest()
-				}
-
-				oldGetDeployKubeAPIServerFunc := GetLegacyDeployKubeAPIServerFunc
-				defer func() { GetLegacyDeployKubeAPIServerFunc = oldGetDeployKubeAPIServerFunc }()
-				GetLegacyDeployKubeAPIServerFunc = func(*Botanist) func(context.Context) error {
-					return func(context.Context) error { return nil }
 				}
 
 				kubeAPIServer.EXPECT().GetValues().Return(kubeapiserver.Values{Autoscaling: autoscalingConfig})
@@ -1049,12 +1037,6 @@ var _ = Describe("KubeAPIServer", func() {
 					StaticToken:            component.Secret{Name: "static-token", Checksum: botanist.LoadCheckSum("static-token")},
 				}
 				mutateSecrets(&secrets)
-
-				oldGetDeployKubeAPIServerFunc := GetLegacyDeployKubeAPIServerFunc
-				defer func() { GetLegacyDeployKubeAPIServerFunc = oldGetDeployKubeAPIServerFunc }()
-				GetLegacyDeployKubeAPIServerFunc = func(*Botanist) func(context.Context) error {
-					return func(context.Context) error { return nil }
-				}
 
 				kubeAPIServer.EXPECT().GetValues().Return(values)
 				kubeAPIServer.EXPECT().SetAutoscalingReplicas(gomock.Any())
