@@ -244,15 +244,20 @@ func (c *Controller) runPrepareShootControlPlaneMigration(ctx context.Context, o
 			Fn:           flow.TaskFn(botanist.MigrateInternalDNSResources),
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
+		migrateOwnerDNSRecord = g.Add(flow.Task{
+			Name:         "Migrating owner domain DNS record",
+			Fn:           flow.TaskFn(botanist.MigrateOwnerDNSResources),
+			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
+		})
 		destroyDNSRecords = g.Add(flow.Task{
 			Name:         "Deleting DNSRecords from the Shoot namespace",
 			Fn:           botanist.DestroyDNSRecords,
-			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord),
+			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOwnerDNSRecord),
 		})
 		destroyDNSProviders = g.Add(flow.Task{
 			Name:         "Deleting DNS providers",
 			Fn:           flow.TaskFn(botanist.DeleteDNSProviders),
-			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord),
+			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOwnerDNSRecord),
 		})
 		createETCDSnapshot = g.Add(flow.Task{
 			Name:         "Creating ETCD Snapshot",

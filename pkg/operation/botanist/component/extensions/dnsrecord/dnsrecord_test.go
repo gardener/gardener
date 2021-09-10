@@ -218,6 +218,58 @@ var _ = Describe("DNSRecord", func() {
 			dnsRecord := dnsrecord.New(log, mc, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 			Expect(dnsRecord.Deploy(ctx)).To(MatchError(testErr))
 		})
+
+		It("should deploy the DNSRecord resource if CreateOnly is true and the DNSRecord is not found", func() {
+			values.CreateOnly = true
+			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
+
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+			dns := &extensionsv1alpha1.DNSRecord{}
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, dns)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dns).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+					Kind:       extensionsv1alpha1.DNSRecordResource,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+					Annotations: map[string]string{
+						v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					},
+					ResourceVersion: "1",
+				},
+				Spec: dns.Spec,
+			}))
+		})
+
+		It("should not deploy the DNSRecord resource if CreateOnly is true and the DNSRecord is found", func() {
+			values.CreateOnly = true
+			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
+			dns.Annotations = map[string]string{}
+			Expect(c.Create(ctx, dns)).To(Succeed())
+
+			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+			dns := &extensionsv1alpha1.DNSRecord{}
+			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, dns)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dns).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+					Kind:       extensionsv1alpha1.DNSRecordResource,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            name,
+					Namespace:       namespace,
+					ResourceVersion: "1",
+				},
+				Spec: dns.Spec,
+			}))
+		})
 	})
 
 	Describe("#Wait", func() {
