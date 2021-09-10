@@ -31,6 +31,9 @@ issues:
   - unexported-return # exported func .* returns unexported type .*, which can be annoying to use
   - indent-error-flow # if block ends with a return statement, so drop this else and outdent its block
   - "exported: (type|func) name will be used as .* by other packages, and that stutters;"
+  # typecheck:
+  - "undeclared name: `.*`"
+  - "\".*\" imported but not used"
   exclude-rules:
   - linters:
     - staticcheck
