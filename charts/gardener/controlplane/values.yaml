@@ -48,6 +48,7 @@ global:
     etcd:
       useSidecar: false # only meant for development purposes. if this is set to true, other etcd config values are ignored
       servers: https://etcd:2379
+      tlsSecretName:
       # caBundle: |
       #   -----BEGIN CERTIFICATE-----
       #   ...
@@ -64,6 +65,7 @@ global:
     insecureSkipTLSVerify: false
     groupPriorityMinimum: 10000
     versionPriority: 20
+    tlsSecretName:
     caBundle: |
       -----BEGIN CERTIFICATE-----
       ...
@@ -282,6 +284,7 @@ global:
         https:
           bindAddress: 0.0.0.0
           port: 2719
+          tlsSecretName:
           tls:
             caBundle: |
               -----BEGIN CERTIFICATE-----

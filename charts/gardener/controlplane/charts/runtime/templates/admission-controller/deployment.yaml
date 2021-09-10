@@ -93,9 +93,15 @@ spec:
         - name: gardener-admission-controller-config
           mountPath: /etc/gardener-admission-controller/config
       volumes:
+      {{- if .Values.global.admission.config.server.https.tlsSecretName }}
+      - name: gardener-admission-controller-cert
+        secret:
+          secretName: {{ .Values.global.admission.config.server.https.tlsSecretName }}
+      {{- else }}
       - name: gardener-admission-controller-cert
         secret:
           secretName: gardener-admission-controller-cert
+      {{- end }}
       {{- if .Values.global.admission.kubeconfig }}
       - name: gardener-admission-controller-kubeconfig
         secret:
