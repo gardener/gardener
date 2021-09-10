@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -168,7 +169,8 @@ var _ = Describe("Aggregator", func() {
 	})
 
 	Describe("#Start", func() {
-		It("should start all informers", func() {
+		It("should run all informers until context is cancelled", func() {
+			ctx, cancel := context.WithCancel(ctx)
 			testChan := make(chan struct{})
 
 			fallback.EXPECT().Start(ctx).DoAndReturn(func(ctx context.Context) error {
@@ -180,14 +182,19 @@ var _ = Describe("Aggregator", func() {
 				return nil
 			})
 
-			go func() {
+			var wg wait.Group
+			wg.Start(func() {
 				defer GinkgoRecover()
 				Expect(aggregator.Start(ctx)).To(Succeed())
-			}()
+			})
 
 			Eventually(testChan).Should(Receive())
 			Eventually(testChan).Should(Receive())
 			close(testChan)
+			// cancel ctx to stop aggregator cache
+			cancel()
+			// wait for aggregator.Start to return, otherwise test is not finished
+			wg.Wait()
 		})
 	})
 

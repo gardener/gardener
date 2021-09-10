@@ -35,7 +35,7 @@ import (
 // added to the wait group when started and marked done when finished.
 // The given context is injected into the `reconciler` if it implements `inject.Stoppable`.
 // Optionally passed inject functions are called with the `reconciler` but potentially returned errors are disregarded.
-func CreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler, waitGroup *sync.WaitGroup, workerCh chan int, injectFn ...inject.Func) {
+func CreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler, waitGroup *sync.WaitGroup, workerCh chan<- int, injectFn ...inject.Func) {
 	fns := append(injectFn, func(i interface{}) error {
 		_, err := inject.StopChannelInto(ctx.Done(), i)
 		return err
