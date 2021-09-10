@@ -221,7 +221,7 @@ format:
 
 .PHONY: test
 test:
-	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./extensions/test/e2e/framework/... ./pkg/... ./plugin/... ./landscaper/...
+	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/... ./landscaper/...
 
 .PHONY: test-integration
 test-integration:
@@ -229,7 +229,7 @@ test-integration:
 
 .PHONY: test-cov
 test-cov:
-	@./hack/test-cover.sh ./cmd/... ./extensions/pkg/... ./extensions/test/e2e/framework/... ./pkg/... ./plugin/... ./landscaper/...
+	@./hack/test-cover.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/... ./landscaper/...
 
 .PHONY: test-cov-clean
 test-cov-clean:
