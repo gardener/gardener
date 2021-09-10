@@ -151,10 +151,14 @@ func Parallel(fns ...TaskFn) TaskFn {
 func ParallelExitOnError(fns ...TaskFn) TaskFn {
 	return func(ctx context.Context) error {
 		var (
-			wg             sync.WaitGroup
-			errors         = make(chan error)
+			wg sync.WaitGroup
+			// make sure all other goroutines can send their result if one task fails to not block and leak them
+			errors         = make(chan error, len(fns))
 			subCtx, cancel = context.WithCancel(ctx)
 		)
+
+		// cancel any remaining parallel tasks on error,
+		// though we will not wait until all tasks have finished
 		defer cancel()
 
 		for _, fn := range fns {
@@ -167,6 +171,7 @@ func ParallelExitOnError(fns ...TaskFn) TaskFn {
 		}
 
 		go func() {
+			// close errors channel as soon as all tasks finished to stop range operator in for loop reading from channel
 			defer close(errors)
 			wg.Wait()
 		}()
