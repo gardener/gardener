@@ -113,24 +113,24 @@ func (c *ClientSet) DiscoverVersion() (*version.Info, error) {
 func (c *ClientSet) Start(context.Context) {
 }
 
-// WaitForCacheSync does nothing and return trues.
+// WaitForCacheSync does nothing and return true.
 func (c *ClientSet) WaitForCacheSync(context.Context) bool {
 	return true
 }
 
 // PortForwarder fakes the PortForwarder interface.
-// ForwardPorts returns Err as soon as DoneChan is closed.
-// Ready returns ReadyChan.
 type PortForwarder struct {
 	Err                 error
 	ReadyChan, DoneChan chan struct{}
 }
 
+// ForwardPorts returns Err as soon as DoneChan is closed.
 func (f PortForwarder) ForwardPorts() error {
 	<-f.DoneChan
 	return f.Err
 }
 
+// Ready returns ReadyChan.
 func (f PortForwarder) Ready() chan struct{} {
 	return f.ReadyChan
 }
