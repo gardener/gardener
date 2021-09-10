@@ -15,6 +15,8 @@
 package helper_test
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -555,6 +557,58 @@ var _ = Describe("helper", func() {
 					Kind:       "Seed",
 				},
 			}))
+		})
+	})
+
+	Describe("#CalculateSeedUsage", func() {
+		type shootCase struct {
+			specSeedName, statusSeedName string
+		}
+
+		test := func(shoots []shootCase, expectedUsage map[string]int) {
+			var shootList []*core.Shoot
+
+			for i, shoot := range shoots {
+				s := &core.Shoot{}
+				s.Name = fmt.Sprintf("shoot-%d", i)
+				if shoot.specSeedName != "" {
+					s.Spec.SeedName = pointer.String(shoot.specSeedName)
+				}
+				if shoot.statusSeedName != "" {
+					s.Status.SeedName = pointer.String(shoot.statusSeedName)
+				}
+				shootList = append(shootList, s)
+			}
+
+			ExpectWithOffset(1, CalculateSeedUsage(shootList)).To(Equal(expectedUsage))
+		}
+
+		It("no shoots", func() {
+			test([]shootCase{}, map[string]int{})
+		})
+		It("shoot with both fields unset", func() {
+			test([]shootCase{{}}, map[string]int{})
+		})
+		It("shoot with only spec set", func() {
+			test([]shootCase{{specSeedName: "seed"}}, map[string]int{"seed": 1})
+		})
+		It("shoot with only status set", func() {
+			test([]shootCase{{statusSeedName: "seed"}}, map[string]int{"seed": 1})
+		})
+		It("shoot with both fields set to same seed", func() {
+			test([]shootCase{{specSeedName: "seed", statusSeedName: "seed"}}, map[string]int{"seed": 1})
+		})
+		It("shoot with fields set to different seeds", func() {
+			test([]shootCase{{specSeedName: "seed", statusSeedName: "seed2"}}, map[string]int{"seed": 1, "seed2": 1})
+		})
+		It("multiple shoots", func() {
+			test([]shootCase{
+				{},
+				{specSeedName: "seed", statusSeedName: "seed2"},
+				{specSeedName: "seed2", statusSeedName: "seed2"},
+				{specSeedName: "seed3", statusSeedName: "seed2"},
+				{specSeedName: "seed3", statusSeedName: "seed4"},
+			}, map[string]int{"seed": 1, "seed2": 3, "seed3": 2, "seed4": 1})
 		})
 	})
 })

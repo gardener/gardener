@@ -25,8 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/scheduler/controller/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
-	"github.com/go-logr/logr"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -233,7 +233,7 @@ func filterCandidates(shoot *gardencorev1beta1.Shoot, shootList []gardencorev1be
 	var (
 		candidates      []gardencorev1beta1.Seed
 		candidateErrors = make(map[string]error)
-		seedUsage       = generateSeedUsageMap(shootList)
+		seedUsage       = gardencorev1beta1helper.CalculateSeedUsage(shootList)
 	)
 
 	for _, seed := range seedList {
@@ -271,7 +271,7 @@ func getSeedWithLeastShootsDeployed(seedList []gardencorev1beta1.Seed, shootList
 	var (
 		bestCandidate gardencorev1beta1.Seed
 		min           *int
-		seedUsage     = generateSeedUsageMap(shootList)
+		seedUsage     = gardencorev1beta1helper.CalculateSeedUsage(shootList)
 	)
 
 	for _, seed := range seedList {
@@ -345,18 +345,6 @@ func determineCandidatesWithMinimalDistanceStrategy(seeds []gardencorev1beta1.Se
 		}
 	}
 	return candidates
-}
-
-func generateSeedUsageMap(shootList []gardencorev1beta1.Shoot) map[string]int {
-	m := map[string]int{}
-
-	for _, shoot := range shootList {
-		if seed := shoot.Spec.SeedName; seed != nil {
-			m[*seed]++
-		}
-	}
-
-	return m
 }
 
 func networksAreDisjointed(seed *gardencorev1beta1.Seed, shoot *gardencorev1beta1.Shoot) (bool, error) {
