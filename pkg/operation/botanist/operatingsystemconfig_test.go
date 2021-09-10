@@ -84,13 +84,13 @@ var _ = Describe("operatingsystemconfig", func() {
 				},
 				Purpose: "development",
 			},
-			Seed:       &seedpkg.Seed{},
-			ShootState: shootState,
+			Seed: &seedpkg.Seed{},
 		}}
 		botanist.StoreSecret(v1beta1constants.SecretNameCACluster, &corev1.Secret{Data: map[string][]byte{"ca.crt": ca}})
 		botanist.StoreSecret(v1beta1constants.SecretNameCAKubelet, &corev1.Secret{Data: map[string][]byte{"ca.crt": caKubelet}})
 		botanist.StoreSecret(v1beta1constants.SecretNameSSHKeyPair, &corev1.Secret{Data: map[string][]byte{"id_rsa.pub": sshPublicKey}})
 		botanist.StoreSecret(v1beta1constants.SecretNameOldSSHKeyPair, &corev1.Secret{Data: map[string][]byte{"id_rsa.pub": sshPublicKeyOld}})
+		botanist.SetShootState(shootState)
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			Spec: gardencorev1beta1.SeedSpec{
 				DNS: gardencorev1beta1.SeedDNS{
