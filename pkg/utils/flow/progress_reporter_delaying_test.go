@@ -21,11 +21,14 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"go.uber.org/goleak"
 	"k8s.io/apimachinery/pkg/util/clock"
 )
 
 var _ = Describe("ProgressReporterDelaying", func() {
 	It("should behave correctly", func() {
+		defer goleak.VerifyNone(GinkgoT(), goleak.IgnoreCurrent())
+
 		var (
 			ctx           = context.TODO()
 			fakeClock     = clock.NewFakeClock(time.Now())
