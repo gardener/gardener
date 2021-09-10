@@ -40,6 +40,7 @@
 * [Reversed Cluster VPN](usage/reversed-vpn-tunnel.md)
 * [Seed Bootstrapping](usage/seed_bootstrapping.md)
 * [Seed Settings](usage/seed_settings.md)
+* [Secrets and Rotation](usage/secrets_rotation.md)
 * [Shoot cluster purposes](usage/shoot_purposes.md)
 * [Shoot Kubernetes and Operating System Versioning](usage/shoot_versions.md)
 * [Shoot Networking](usage/shoot_networking.md)
