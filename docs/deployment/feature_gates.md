@@ -27,9 +27,11 @@ The following tables are a summary of the feature gates that you can set on diff
 | ManagedIstio | `true` | `Beta` | `1.19` | |
 | APIServerSNI | `false` | `Alpha` | `1.7` | `1.18` |
 | APIServerSNI | `true` | `Beta` | `1.19` | |
+| CachedRuntimeClients | `false` | `Alpha` | `1.7` | |
 | SeedChange | `false` | `Alpha` | `1.12` | |
 | SeedKubeScheduler | `false` | `Alpha` | `1.15` | |
 | ReversedVPN | `false` | `Alpha` | `1.22` | |
+| AdminKubeconfigRequest | `false` | `Alpha` | `1.24` | |
 | UseDNSRecords | `false` | `Alpha` | `1.27` | |
 | DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | |
 | RotateSSHKeypairOnMaintenance | `false` | `Alpha` | `1.28` | |
@@ -86,10 +88,11 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 
 * `Logging` enables logging stack for Seed clusters.
 * `HVPA` enables simultaneous horizontal and vertical scaling in Seed Clusters.
-* `HVPAForShootedSeed`  enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters.
+* `HVPAForShootedSeed` enables simultaneous horizontal and vertical scaling in managed seed (aka "shooted seed") clusters.
 * `ManagedIstio` enables a Gardener-tailored [Istio](https://istio.io) in each Seed cluster. Disable this feature if Istio is already installed in the cluster. Istio is not automatically removed if this feature is disabled. See the [detailed documentation](../usage/istio.md) for more information.
 * `APIServerSNI` enables only one LoadBalancer to be used for every Shoot cluster API server in a Seed. Enable this feature when `ManagedIstio` is enabled or Istio is manually deployed in Seed cluster. See [GEP-8](../proposals/08-shoot-apiserver-via-sni.md) for more details.
 * `MountHostCADirectories` enables mounting common CA certificate directories in the Shoot API server pod that might be required for webhooks or OIDC.
+* `CachedRuntimeClients` enables a cache in the controller-runtime clients, that Gardener components use. If disabled all controller-runtime clients will directly talk to the API server instead of relying on a cache. The feature gate can be specified for gardenlet and gardener-controller-manager (and gardener-scheduler for the versions `< 1.29`).
 * `SeedChange` enables updating the `spec.seedName` field during shoot validation from a non-empty value in order to trigger shoot control plane migration.
 * `SeedKubeScheduler` adds custom `kube-scheduler` in `gardener-kube-scheduler` namespace. It schedules [pods with scheduler name](../concepts/seed-admission-controller.md#mutating-webhooks) `gardener-kube-scheduler` on Nodes with higher resource utilization. It requires Seed cluster with kubernetes version `1.18` or higher.
 * `ReversedVPN` reverses the connection setup of the vpn tunnel between the Seed and the Shoot cluster(s). It allows Seed and Shoot clusters to be in different networks with only direct access in one direction (Shoot -> Seed). In addition to that, it reduces the amount of load balancers required, i.e. no load balancers are required for the vpn tunnel anymore. It requires `APIServerSNI` and kubernetes version `1.18` or higher to work. Details can be found in [GEP-14](../proposals/14-reversed-cluster-vpn.md).
