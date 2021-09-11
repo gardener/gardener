@@ -543,7 +543,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 
 	f := g.Compile()
 
-	if err := f.Run(flow.Opts{
+	if err := f.Run(ctx, flow.Opts{
 		Logger:           o.Logger,
 		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,

@@ -62,9 +62,11 @@ var _ = Describe("Flow", func() {
 	cancel()
 
 	var (
+		ctx  context.Context
 		ctrl *gomock.Controller
 	)
 	BeforeEach(func() {
+		ctx = context.Background()
 		ctrl = gomock.NewController(GinkgoT())
 	})
 	AfterEach(func() {
@@ -92,7 +94,7 @@ var _ = Describe("Flow", func() {
 				f  = g.Compile()
 			)
 
-			Expect(f.Run(flow.Opts{})).ToNot(HaveOccurred())
+			Expect(f.Run(ctx, flow.Opts{})).ToNot(HaveOccurred())
 			values := list.Values()
 			Expect(values).To(HaveLen(6))
 			Expect(values[0:2]).To(ConsistOf("x1", "x2"))
@@ -112,7 +114,7 @@ var _ = Describe("Flow", func() {
 				f = g.Compile()
 			)
 
-			err := f.Run(flow.Opts{})
+			err := f.Run(ctx, flow.Opts{})
 			Expect(err).To(HaveOccurred())
 			causes := flow.Causes(err)
 			Expect(causes.Errors).To(ConsistOf(err1, err2))
@@ -128,7 +130,7 @@ var _ = Describe("Flow", func() {
 				f = g.Compile()
 			)
 
-			err := f.Run(flow.Opts{Context: canceledCtx})
+			err := f.Run(canceledCtx, flow.Opts{})
 			Expect(err).To(HaveOccurred())
 			Expect(flow.WasCanceled(err)).To(BeTrue())
 		})
@@ -140,12 +142,11 @@ var _ = Describe("Flow", func() {
 				_            = g.Add(flow.Task{Name: "x", Fn: func(ctx context.Context) error {
 					return nil
 				}})
-				ctx     = context.TODO()
 				f       = g.Compile()
 				cleaned bool
 			)
 
-			Expect(f.Run(flow.Opts{Context: ctx, ErrorContext: errorContext, ErrorCleaner: func(ctx context.Context, taskID string) {
+			Expect(f.Run(ctx, flow.Opts{ErrorContext: errorContext, ErrorCleaner: func(ctx context.Context, taskID string) {
 				cleaned = true
 			}})).To(Succeed())
 
@@ -154,10 +155,11 @@ var _ = Describe("Flow", func() {
 
 		It("should stop the execution after the context has been canceled in between tasks", func() {
 			var (
-				g           = flow.NewGraph("foo")
-				ctx, cancel = context.WithCancel(context.Background())
-				x           = g.Add(flow.Task{Name: "x", Fn: func(ctx context.Context) error {
-					cancel()
+				testCtx, cancelTestCtx = context.WithCancel(context.Background())
+
+				g = flow.NewGraph("foo")
+				x = g.Add(flow.Task{Name: "x", Fn: func(ctx context.Context) error {
+					cancelTestCtx()
 					return nil
 				}})
 				_ = g.Add(flow.Task{Name: "y", Fn: func(ctx context.Context) error {
@@ -167,9 +169,9 @@ var _ = Describe("Flow", func() {
 				f = g.Compile()
 			)
 			// prevent leakage
-			defer cancel()
+			defer cancelTestCtx()
 
-			err := f.Run(flow.Opts{Context: ctx})
+			err := f.Run(testCtx, flow.Opts{})
 			Expect(err).To(HaveOccurred())
 			Expect(flow.WasCanceled(err)).To(BeTrue())
 		})

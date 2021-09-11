@@ -121,10 +121,9 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 		f = g.Compile()
 	)
 
-	return f.Run(flow.Opts{
+	return f.Run(ctx, flow.Opts{
 		Logger:           a.logger,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupEntryProgress),
-		Context:          ctx,
 	})
 }
 
@@ -160,10 +159,9 @@ func (a *actuator) Delete(ctx context.Context) error {
 		f = g.Compile()
 	)
 
-	return f.Run(flow.Opts{
+	return f.Run(ctx, flow.Opts{
 		Logger:           a.logger,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupEntryProgress),
-		Context:          ctx,
 	})
 }
 
@@ -199,10 +197,9 @@ func (a *actuator) Migrate(ctx context.Context) error {
 		f = g.Compile()
 	)
 
-	return f.Run(flow.Opts{
+	return f.Run(ctx, flow.Opts{
 		Logger:           a.logger,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupEntryProgress),
-		Context:          ctx,
 	})
 }
 
