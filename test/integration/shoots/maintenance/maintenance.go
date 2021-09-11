@@ -71,7 +71,7 @@ import (
 )
 
 // TODO: this test is currently not executed, because it has to manipulate the CloudProfile. It should be refactor into
-// an envtest-style integration test, so that we can enable it again.
+//  an envtest-style integration test, so that we can enable it again.
 
 var (
 	testMachineryRun      = flag.Bool("test-machinery-run", false, "indicates whether the test is being executed by the test machinery or locally")
@@ -97,8 +97,6 @@ var (
 	cloudProfileCleanupNeeded     bool
 
 	// other
-	setupContextTimeout      = time.Minute * 2
-	restoreCtxTimeout        = time.Minute * 2
 	deprecatedClassification = gardencorev1beta1.ClassificationDeprecated
 	expirationDateInThePast  = metav1.Time{Time: time.Now().UTC().AddDate(0, 0, -1)}
 	err                      error
@@ -128,7 +126,7 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 			f.Logger.Info("Running in test Machinery")
 			// setup the integration test environment by manipulation the Gardener Components (namespace garden) in the garden cluster
 			// scale down the gardener-scheduler to 0 replicas
-			replicas, err := framework.ScaleGardenerScheduler(setupContextTimeout, f.GardenClient.Client(), pointer.Int32(0))
+			replicas, err := framework.ScaleGardenerScheduler(ctx, f.GardenClient.Client(), pointer.Int32(0))
 			gardenerSchedulerReplicaCount = replicas
 			gomega.Expect(err).To(gomega.BeNil())
 			f.Logger.Info("Environment for test-machinery run is prepared")
@@ -183,7 +181,7 @@ var _ = ginkgo.Describe("Shoot Maintenance testing", func() {
 			f.Logger.Infof("Cleaned Cloud Profile '%s'", testShootCloudProfile.Name)
 		}
 		if testMachineryRun != nil && *testMachineryRun {
-			_, err := framework.ScaleGardenerScheduler(restoreCtxTimeout, f.GardenClient.Client(), gardenerSchedulerReplicaCount)
+			_, err := framework.ScaleGardenerScheduler(ctx, f.GardenClient.Client(), gardenerSchedulerReplicaCount)
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			f.Logger.Infof("Environment is restored")
 		}

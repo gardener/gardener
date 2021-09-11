@@ -36,6 +36,7 @@ import (
 
 var _ = Describe("Handler", func() {
 	var (
+		ctx    context.Context
 		logger = logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter), logzap.Level(zapcore.Level(0)))
 
 		handler      http.HandlerFunc
@@ -43,7 +44,8 @@ var _ = Describe("Handler", func() {
 	)
 
 	BeforeEach(func() {
-		handler = NewHandler(logger, &fakeAuthorizer{fn: allow})
+		ctx = context.Background()
+		handler = NewHandler(ctx, logger, &fakeAuthorizer{fn: allow})
 		respRecorder = &httptest.ResponseRecorder{
 			Body: bytes.NewBuffer(nil),
 		}
@@ -104,7 +106,7 @@ var _ = Describe("Handler", func() {
 					Body:   nopCloser{Reader: bytes.NewBufferString(`{"apiVersion":"authorization.k8s.io/v1","kind":"SubjectAccessReview"}`)},
 				}
 
-				handler = NewHandler(logger, &fakeAuthorizer{fn: fn})
+				handler = NewHandler(ctx, logger, &fakeAuthorizer{fn: fn})
 				handler(respRecorder, req)
 
 				Expect(respRecorder.Body.String()).To(Equal(`{"kind":"SubjectAccessReview","apiVersion":"authorization.k8s.io/v1","metadata":{"creationTimestamp":null},"spec":{},"status":{` + expectedStatus + `}}

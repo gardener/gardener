@@ -140,7 +140,7 @@ func (f *ShootFramework) AfterEach(ctx context.Context) {
 		}
 		err = f.WaitUntilNamespaceIsDeleted(ctx, f.ShootClient, ns.Name)
 		if err != nil {
-			ctx2, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+			ctx2, cancel := context.WithTimeout(ctx, 1*time.Minute)
 			defer cancel()
 			err2 := f.dumpNamespaceResource(ctx2, fmt.Sprintf("[SHOOT %s] [NAMESPACE %s]", f.Shoot.Name, ns.Name), f.ShootClient, ns.Name)
 			ExpectNoError(err2)

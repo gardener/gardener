@@ -94,8 +94,8 @@ func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *f
 	})
 
 	if err != nil {
-		d := time.Now().Add(5 * time.Minute)
-		dumpLogsCtx, dumpLogsCancel := context.WithDeadline(context.Background(), d)
+		// ctx might have been cancelled already, make sure we still dump logs, so use context.Background()
+		dumpLogsCtx, dumpLogsCancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer dumpLogsCancel()
 
 		f.Logger.Info("Dump Loki logs")
