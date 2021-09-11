@@ -53,6 +53,12 @@ rules:
   - apiservices
   verbs:
   - '*'
+- apiGroup:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - '*'
 - apiGroups:
   - coordination.k8s.io
   resources:
@@ -83,7 +89,7 @@ aggregationRule:
       gardener.cloud/role: project-member
 rules: []
 
-# Cluster role granting viewer permissions for the resources in the gardener API group 
+# Cluster role granting viewer permissions for the resources in the gardener API group
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
@@ -161,6 +167,14 @@ rules:
   - apiregistration.k8s.io
   resources:
   - apiservices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroup:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
   verbs:
   - get
   - list
