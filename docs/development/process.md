@@ -18,8 +18,8 @@ Version | Week No     | Begin Validation Phase | Due Date           | Release Re
 ------- | ----------- | ---------------------- | -------------------| ------------------- |
 v1.32   | Week 37-38  | September 13, 2021     | September 26, 2021 | [@vpnachev](https://github.com/vpnachev)           |
 v1.33   | Week 39-40  | September 27, 2021     | October 10, 2021   | [@voelzmo](https://github.com/voelzmo)             |
-v1.34   | Week 41-42  | October 11, 2021       | October 24, 2021   | [@plkokanov](https://github.com/plkokanov)         |
-v1.35   | Week 43-44  | October 25, 2021       | November 7, 2021   | [@kris94](https://github.com/kris94)               |
+v1.34   | Week 41-42  | October 11, 2021       | October 24, 2021   | [@kris94](https://github.com/kris94)               |
+v1.35   | Week 43-44  | October 25, 2021       | November 7, 2021   | [@plkokanov](https://github.com/plkokanov)         |
 v1.36   | Week 45-46  | November 8, 2021       | November 21, 2021  | [@rfranzke](https://github.com/rfranzke)           |
 v1.37   | Week 47-48  | November 22, 2021      | December 5, 2021   | [@danielfoehrKn](https://github.com/danielfoehrKn) |
 v1.38   | Week 49-50  | December 6, 2021       | December 19, 2021  | [@timebertt](https://github.com/timebertt)         |
