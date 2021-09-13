@@ -2,7 +2,6 @@
 |Alertname|Severity|Type|Description|
 |---|---|---|---|
 |ApiServerUnreachableViaKubernetesService|critical|shoot|`The Api server has been unreachable for 3 minutes via the kubernetes service in the shoot.`|
-|CoreDNSDown|critical|shoot|`CoreDNS could not be found. Cluster DNS resolution will not work.`|
 |ApiServerNotReachable|blocker|seed|`API server not reachable via external endpoint: {{ $labels.instance }}.`|
 |KubeApiServerTooManyOpenFileDescriptors|warning|seed|`The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.`|
 |KubeApiServerTooManyOpenFileDescriptors|critical|seed|`The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.`|

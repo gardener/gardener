@@ -2,7 +2,6 @@
 |Alertname|Severity|Type|Description|
 |---|---|---|---|
 |ApiServerUnreachableViaKubernetesService|critical|shoot|`The Api server has been unreachable for 3 minutes via the kubernetes service in the shoot.`|
-|CoreDNSDown|critical|shoot|`CoreDNS could not be found. Cluster DNS resolution will not work.`|
 |ApiServerNotReachable|blocker|seed|`API server not reachable via external endpoint: {{ $labels.instance }}.`|
 |KubeApiserverDown|blocker|seed|`All API server replicas are down/unreachable, or all API server could not be found.`|
 |KubeApiServerTooManyAuditlogFailures|warning|seed|`The API servers cumulative failure rate in logging audit events is greater than 2%.`|
