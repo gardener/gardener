@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
@@ -290,11 +291,14 @@ func (h *Health) checkControlPlane(
 }
 
 var versionConstraintGreaterEqual131 *semver.Constraints
+var versionConstraintGreaterEqual132 *semver.Constraints
 
 func init() {
 	var err error
 
 	versionConstraintGreaterEqual131, err = semver.NewConstraint(">= 1.31")
+	utilruntime.Must(err)
+	versionConstraintGreaterEqual132, err = semver.NewConstraint(">= 1.32")
 	utilruntime.Must(err)
 }
 
@@ -312,6 +316,11 @@ func (h *Health) checkSystemComponents(
 	if versionConstraintGreaterEqual131.Check(checker.gardenerVersion) {
 		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
 		managedResources = append(managedResources, kubeapiserver.ManagedResourceName)
+	}
+
+	if versionConstraintGreaterEqual132.Check(checker.gardenerVersion) {
+		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
+		managedResources = append(managedResources, coredns.ManagedResourceName)
 	}
 
 	for _, name := range managedResources {

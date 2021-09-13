@@ -155,7 +155,7 @@ func constructNPAllowToDNS(namespace string, dnsServerAddress, nodeLocalIPVSAddr
 							MatchExpressions: []metav1.LabelSelectorRequirement{{
 								Key:      "k8s-app",
 								Operator: metav1.LabelSelectorOpIn,
-								Values:   []string{"kube-dns", "coredns"},
+								Values:   []string{"kube-dns"},
 							}},
 						},
 					}},

@@ -1,43 +1,9 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
+---
 apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy
 metadata:
-  annotations:
-    gardener.cloud/description: |
-      Allows CoreDNS to lookup DNS records, talk to the API Server. Also allows
-      CoreDNS to be reachable via its service and its metrics endpoint.
   name: gardener.cloud--allow-dns
   namespace: {{ .Release.Namespace }}
-spec:
-  podSelector:
-    matchExpressions:
-    - {key: k8s-app, operator: In, values: [kube-dns,coredns]}
-  egress:
-  - ports:
-    # Allow communication to API Server
-    - port: 443
-      protocol: TCP
-    # Lookup DNS due to cache miss
-    - port: 53
-      protocol: TCP
-    - port: 53
-      protocol: UDP
-  ingress:
-  - ports:
-    #  coredns metrics port
-    - port: 9153
-      protocol: TCP
-    # coredns dns port
-    - port: 8053
-      protocol: TCP
-    - port: 8053
-      protocol: UDP
-    from:
-    - namespaceSelector: {}
-      podSelector: {}
-    - ipBlock:
-        cidr: {{ .Values.global.podNetwork }}
-    - ipBlock:
-        cidr: {{ .Values.nodeNetwork }}
-  policyTypes:
-  - Egress
-  - Ingress
+  annotations:
+    resources.gardener.cloud/mode: Ignore

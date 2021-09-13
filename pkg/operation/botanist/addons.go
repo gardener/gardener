@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -27,7 +26,6 @@ import (
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	netpol "github.com/gardener/gardener/pkg/operation/botanist/addons/networkpolicy"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
@@ -38,8 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
-	appsv1 "k8s.io/api/apps/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,8 +44,6 @@ import (
 const (
 	// SecretLabelKeyManagedResource is a key for a label on a secret with the value 'managed-resource'.
 	SecretLabelKeyManagedResource = "managed-resource"
-	// gardenerRestartedAtKey is annotation key for timestamp used to restart components.
-	gardenerRestartedAtKey = "gardener.cloud/restarted-at"
 )
 
 // GenerateKubernetesDashboardConfig generates the values which are required to render the chart of
@@ -285,17 +279,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"podNetwork":        b.Shoot.Networks.Pods.String(),
 			"vpaEnabled":        b.Shoot.WantsVerticalPodAutoscaler,
 		}
-		coreDNSConfig = map[string]interface{}{
-			"nodeNetwork": b.Shoot.GetNodeNetwork(),
-			"service": map[string]interface{}{
-				"clusterDNS": b.Shoot.Networks.CoreDNS.String(),
-				// TODO: resolve conformance test issue before changing:
-				// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
-				"domain": map[string]interface{}{
-					"clusterDomain": gardencorev1beta1.DefaultDomain,
-				},
-			},
-		}
 		nodeLocalDNSConfig = map[string]interface{}{
 			"domain": gardencorev1beta1.DefaultDomain,
 		}
@@ -352,7 +335,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 
 	if b.APIServerSNIEnabled() {
-		coreDNSConfig["kubeAPIServerHost"] = kasFQDN
 		nodeProblemDetectorConfig["env"] = []interface{}{
 			map[string]interface{}{
 				"name":  "KUBERNETES_SERVICE_HOST",
@@ -382,25 +364,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		extensions = append(extensions, extensionType)
 	}
 	shootInfo["extensions"] = strings.Join(extensions, ",")
-
-	coreDNSRestartTimestamp, err := b.getCoreDNSRestartTimestamp(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if len(coreDNSRestartTimestamp) != 0 {
-		coreDNSConfig["deployment"] = map[string]interface{}{
-			"spec": map[string]interface{}{
-				"podAnnotations": map[string]interface{}{
-					gardenerRestartedAtKey: coreDNSRestartTimestamp,
-				},
-			},
-		}
-	}
-
-	coreDNS, err := b.InjectShootShootImages(coreDNSConfig, charts.ImageNameCoredns)
-	if err != nil {
-		return nil, err
-	}
 
 	// The node-local-dns interface cannot bind the kube-dns cluster IP since the interface
 	// used for IPVS load-balancing already uses this address.
@@ -457,7 +420,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 
 	values := map[string]interface{}{
 		"global":                 global,
-		"coredns":                coreDNS,
+		"coredns":                common.GenerateAddonConfig(nil, true),
 		"node-local-dns":         common.GenerateAddonConfig(nodelocalDNS, b.Shoot.NodeLocalDNSEnabled),
 		"kube-apiserver-kubelet": common.GenerateAddonConfig(nil, true),
 		"apiserver-proxy":        common.GenerateAddonConfig(apiserverProxy, b.APIServerSNIEnabled()),
@@ -597,30 +560,4 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 // available.
 func (b *Botanist) outOfClusterAPIServerFQDN() string {
 	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
-}
-
-// getCoreDNSRestartTimestamp returns a timestamp that can potentially restart the CoreDNS deployment.
-func (b *Botanist) getCoreDNSRestartTimestamp(ctx context.Context) (string, error) {
-	if controllerutils.HasTask(b.Shoot.GetInfo().Annotations, v1beta1constants.ShootTaskRestartCoreAddons) {
-		return time.Now().UTC().Format(time.RFC3339), nil
-	}
-
-	coreDNSDeployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.CoreDNSDeploymentName,
-			Namespace: metav1.NamespaceSystem,
-		},
-	}
-	if err := b.K8sShootClient.Client().Get(ctx, client.ObjectKeyFromObject(coreDNSDeployment), coreDNSDeployment); err != nil {
-		if apierrors.IsNotFound(err) {
-			return "", nil
-		}
-		return "", err
-	}
-
-	val, ok := coreDNSDeployment.Spec.Template.ObjectMeta.Annotations[gardenerRestartedAtKey]
-	if !ok {
-		return "", nil
-	}
-	return val, nil
 }

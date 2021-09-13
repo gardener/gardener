@@ -1,12 +1,9 @@
+# TODO(rfranzke): Delete this Helm chart in a future version.
+---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
 metadata:
   name: coredns
   namespace: {{ .Release.Namespace }}
-  labels:
-    k8s-app: kube-dns
-spec:
-  maxUnavailable: 1
-  selector:
-    matchLabels:
-      k8s-app: kube-dns
+  annotations:
+    resources.gardener.cloud/mode: Ignore

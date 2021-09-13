@@ -122,14 +122,6 @@ filter-kubernetes.conf: |-
       Parser              kubeapiserverParser
       Reserve_Data        True
 
-  [FILTER]
-      Name                parser
-      Match               kubernetes.*coredns*coredns*
-      Key_Name            log
-      Parser              corednsParser
-      Parser              kubeapiserverParser
-      Reserve_Data        True
-
   # Garden filters
   [FILTER]
       Name                parser
@@ -232,13 +224,6 @@ parsers.conf: |-
       Regex       ^level=(?<severity>\w+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+(?<log>.*)
       Time_Key    time
       Time_Format %Y-%m-%dT%H:%M:%S.%L
-
-  [PARSER]
-      Name        corednsParser
-      Format      regex
-      Regex       ^(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+\[(?<severity>\w*[^\]])\]\s+(?<log>.*)
-      Time_Key    time
-      Time_Format  %Y-%m-%dT%H:%M:%S.%L
 
   [PARSER]
       Name        vpnshootParser

@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
@@ -137,6 +138,7 @@ type Extensions struct {
 type SystemComponents struct {
 	ClusterIdentity clusteridentity.Interface
 	Namespaces      component.DeployWaiter
+	CoreDNS         coredns.Interface
 	MetricsServer   metricsserver.Interface
 }
 

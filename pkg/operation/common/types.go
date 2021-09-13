@@ -78,9 +78,6 @@ const (
 	// LokiPrefix is a constant for a prefix used for the Loki instance.
 	LokiPrefix = "l"
 
-	// CoreDNSDeploymentName is the name of the coredns deployment.
-	CoreDNSDeploymentName = "coredns"
-
 	// KubecfgUsername is the username for the token used for the kubeconfig the shoot.
 	KubecfgUsername = "system:cluster-admin"
 
