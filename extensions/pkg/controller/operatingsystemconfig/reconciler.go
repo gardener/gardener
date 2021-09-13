@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -97,17 +98,32 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("could not fetch operatingsystemconfig: %+v", err)
 	}
 
-	shoot, err := extensionscontroller.GetShoot(ctx, r.client, request.Namespace)
+	cluster, err := extensionscontroller.GetCluster(ctx, r.client, osc.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if extensionscontroller.IsShootFailed(shoot) {
-		r.logger.Info("Skip the reconciliation of operatingsystemconfig of failed shoot", "operatingsystemconfig", kutil.ObjectName(osc))
+	logger := r.logger.WithValues("operatingsystemconfig", kutil.ObjectName(osc))
+	if extensionscontroller.IsFailed(cluster) {
+		logger.Info("Skip the reconciliation of operatingsystemconfig of failed shoot")
 		return reconcile.Result{}, nil
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(osc.ObjectMeta, osc.Status.LastOperation)
+
+	if operationType != gardencorev1beta1.LastOperationTypeMigrate {
+		ok, watchdogCtx, cancel, err := common.StartOwnerCheckWatchdog(ctx, r.client, osc.Namespace, cluster.Shoot.Name, logger)
+		if err != nil {
+			return reconcile.Result{}, err
+		} else if !ok {
+			logger.Info("Skipping the reconciliation since this seed is not the owner of the shoot")
+			return reconcile.Result{}, nil
+		}
+		ctx = watchdogCtx
+		if cancel != nil {
+			defer cancel()
+		}
+	}
 
 	switch {
 	case extensionscontroller.ShouldSkipOperation(operationType, osc):

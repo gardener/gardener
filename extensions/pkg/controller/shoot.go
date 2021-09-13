@@ -56,6 +56,9 @@ func IsHibernated(cluster *Cluster) bool {
 
 // IsFailed returns true if the embedded shoot is failed, or false otherwise.
 func IsFailed(cluster *Cluster) bool {
+	if cluster == nil {
+		return false
+	}
 	return IsShootFailed(cluster.Shoot)
 }
 

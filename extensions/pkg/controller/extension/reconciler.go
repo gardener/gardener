@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -175,17 +176,32 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	var result reconcile.Result
 
-	shoot, err := extensionscontroller.GetShoot(ctx, r.client, request.Namespace)
+	cluster, err := extensionscontroller.GetCluster(ctx, r.client, ex.Namespace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if extensionscontroller.IsShootFailed(shoot) {
-		r.logger.Info("Skipping the reconciliation of extension of failed shoot", "extension", kutil.ObjectName(ex))
+	logger := r.logger.WithValues("extension", kutil.ObjectName(ex))
+	if extensionscontroller.IsFailed(cluster) {
+		logger.Info("Skipping the reconciliation of extension of failed shoot")
 		return reconcile.Result{}, nil
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(ex.ObjectMeta, ex.Status.LastOperation)
+
+	if operationType != gardencorev1beta1.LastOperationTypeMigrate {
+		ok, watchdogCtx, cancel, err := common.StartOwnerCheckWatchdog(ctx, r.client, ex.Namespace, cluster.Shoot.Name, logger)
+		if err != nil {
+			return reconcile.Result{}, err
+		} else if !ok {
+			logger.Info("Skipping the reconciliation since this seed is not the owner of the shoot")
+			return reconcile.Result{}, nil
+		}
+		ctx = watchdogCtx
+		if cancel != nil {
+			defer cancel()
+		}
+	}
 
 	switch {
 	case extensionscontroller.ShouldSkipOperation(operationType, ex):

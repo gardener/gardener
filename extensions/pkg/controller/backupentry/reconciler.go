@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -84,19 +85,34 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	shootTechnicalID, _ := ExtractShootDetailsFromBackupEntryName(be.Name)
-	shoot, err := extensionscontroller.GetShoot(ctx, r.client, shootTechnicalID)
+	cluster, err := extensionscontroller.GetCluster(ctx, r.client, shootTechnicalID)
 	// As BackupEntry continues to exist post deletion of a Shoot,
 	// we do not want to block its deletion when the Cluster is not found.
 	if client.IgnoreNotFound(err) != nil {
 		return reconcile.Result{}, err
 	}
 
-	if extensionscontroller.IsShootFailed(shoot) {
-		r.logger.Info("Skipping the reconciliation of backupentry of failed shoot", "name", kutil.ObjectName(be))
+	logger := r.logger.WithValues("backupentry", be.Name)
+	if extensionscontroller.IsFailed(cluster) {
+		logger.Info("Skipping the reconciliation of backupentry of failed shoot")
 		return reconcile.Result{}, nil
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
+
+	if cluster != nil && operationType != gardencorev1beta1.LastOperationTypeMigrate {
+		ok, watchdogCtx, cancel, err := common.StartOwnerCheckWatchdog(ctx, r.client, shootTechnicalID, cluster.Shoot.Name, logger)
+		if err != nil {
+			return reconcile.Result{}, err
+		} else if !ok {
+			logger.Info("Skipping the reconciliation since this seed is not the owner of the shoot")
+			return reconcile.Result{}, nil
+		}
+		ctx = watchdogCtx
+		if cancel != nil {
+			defer cancel()
+		}
+	}
 
 	switch {
 	case extensionscontroller.ShouldSkipOperation(operationType, be):
