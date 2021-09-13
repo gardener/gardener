@@ -75,6 +75,7 @@ type Interface interface {
 	SetPodAnnotations(map[string]string)
 }
 
+// Values is a set of configuration values for the coredns component.
 type Values struct {
 	// APIServerHost is the host of the kube-apiserver.
 	APIServerHost *string
