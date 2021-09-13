@@ -31,6 +31,7 @@ func ValidateSecretBinding(binding *core.SecretBinding) field.ErrorList {
 	for i, quota := range binding.Quotas {
 		allErrs = append(allErrs, validateObjectReferenceOptionalNamespace(quota, field.NewPath("quotas").Index(i))...)
 	}
+	allErrs = append(allErrs, validateSecretBindingProvider(binding.Provider, field.NewPath("provider"))...)
 
 	return allErrs
 }
@@ -72,6 +73,20 @@ func validateSecretReferenceOptionalNamespace(ref corev1.SecretReference, fldPat
 
 	if len(ref.Name) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
+	}
+
+	return allErrs
+}
+
+func validateSecretBindingProvider(provider *core.SecretBindingProvider, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if provider == nil {
+		return allErrs
+	}
+
+	if len(provider.Type) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must specify a provider type"))
 	}
 
 	return allErrs

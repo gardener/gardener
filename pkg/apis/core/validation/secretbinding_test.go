@@ -96,10 +96,11 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 		It("should forbid empty SecretBinding resources", func() {
 			secretBinding.ObjectMeta = metav1.ObjectMeta{}
 			secretBinding.SecretRef = corev1.SecretReference{}
+			secretBinding.Provider = &core.SecretBindingProvider{}
 
 			errorList := ValidateSecretBinding(secretBinding)
 
-			Expect(errorList).To(HaveLen(3))
+			Expect(errorList).To(HaveLen(4))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
@@ -111,6 +112,10 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("secretRef.name"),
+			}))
+			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("provider.type"),
 			}))
 		})
 
