@@ -95,6 +95,7 @@ const (
 	// for shoots that are already in the deletion phase, i.e. `metadata.deletionTimestamp` is set
 	// owner: @vpnachev
 	// alpha: v1.28.0
+	// beta: v1.32.0
 	DisallowKubeconfigRotationForShootInDeletion featuregate.Feature = "DisallowKubeconfigRotationForShootInDeletion"
 
 	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.

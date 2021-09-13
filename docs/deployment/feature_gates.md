@@ -33,7 +33,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | ReversedVPN | `false` | `Alpha` | `1.22` | |
 | AdminKubeconfigRequest | `false` | `Alpha` | `1.24` | |
 | UseDNSRecords | `false` | `Alpha` | `1.27` | |
-| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | |
+| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | `1.31` |
+| DisallowKubeconfigRotationForShootInDeletion | `true` | `Beta` | `1.32` | |
 | RotateSSHKeypairOnMaintenance | `false` | `Alpha` | `1.28` | |
 | DenyInvalidExtensionResources | `false` | `Alpha` | `1.31` | |
 
