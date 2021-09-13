@@ -22,7 +22,7 @@ v1.34   | Week 41-42  | October 11, 2021       | October 24, 2021   | [@kris94](
 v1.35   | Week 43-44  | October 25, 2021       | November 7, 2021   | [@plkokanov](https://github.com/plkokanov)         |
 v1.36   | Week 45-46  | November 8, 2021       | November 21, 2021  | [@rfranzke](https://github.com/rfranzke)           |
 v1.37   | Week 47-48  | November 22, 2021      | December 5, 2021   | [@danielfoehrKn](https://github.com/danielfoehrKn) |
-v1.38   | Week 49-50  | December 6, 2021       | December 19, 2021  | [@timebertt](https://github.com/timebertt)         |
+v1.38   | Week 49-50  | December 6, 2021       | December 19, 2021  | [@rfranzke](https://github.com/rfranzke)         |
 v1.39   | Week 01-02  | January 3, 2022        | January 16, 2022   | [@ialidzhikov](https://github.com/ialidzhikov)     |
 v1.40   | Week 03-04  | January 17, 2022       | January 30, 2022   | [@timuthy](https://github.com/timuthy)             |
 v1.41   | Week 05-06  | January 31, 2022       | February 13, 2022  | [@BeckerMax](https://github.com/BeckerMax)         |
