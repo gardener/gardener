@@ -50,7 +50,7 @@ func (g Landscaper) Delete(ctx context.Context) error {
 			return fmt.Errorf("cannot delete seed '%s' which is still used by at least one shoot", g.gardenletConfiguration.SeedConfig.Name)
 		}
 
-		err := g.deleteSeedAndWait(ctx, seed)
+		err = g.deleteSeedAndWait(ctx, seed)
 		if err != nil {
 			return err
 		}
