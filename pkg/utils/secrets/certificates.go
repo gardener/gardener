@@ -37,6 +37,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
+// CertType is a string alias for certificate types.
 type CertType string
 
 const (
