@@ -25,7 +25,6 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/googleapis/gnostic v0.5.5
 	github.com/hashicorp/go-multierror v1.1.0
-	github.com/huandu/xstrings v1.3.2
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
@@ -57,7 +56,6 @@ require (
 	k8s.io/cluster-bootstrap v0.21.2
 	k8s.io/code-generator v0.21.2
 	k8s.io/component-base v0.21.2
-	k8s.io/gengo v0.0.0-20201214224949-b6c5ce23f027
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.9.0
