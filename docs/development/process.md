@@ -12,30 +12,47 @@ The [@gardener-maintainers](https://github.com/orgs/gardener/teams/gardener-main
 
 Hotfixes are usually maintained for the latest three minor releases, though, there are no fixed release dates.
 
-### Release Responsible Plan 2021
+### Release Responsible Plan
 
 Version | Week No     | Begin Validation Phase | Due Date           | Release Responsible |
 ------- | ----------- | ---------------------- | -------------------| ------------------- |
-v1.17   | Week 07-08  | February 15, 2021      | February 28, 2021  | [@rfranzke](https://github.com/rfranzke)           |
-v1.18   | Week 09-10  | March 1, 2021          | March 14, 2021     | [@danielfoehrKn](https://github.com/danielfoehrKn) |
-v1.19   | Week 11-12  | March 15, 2021         | March 28, 2021     | [@timebertt](https://github.com/timebertt)         |
-v1.20   | Week 13-14  | March 29, 2021         | April 11, 2021     | [@vpnachev](https://github.com/vpnachev)           |
-v1.21   | Week 15-16  | April 12, 2021         | April 25, 2021     | [@timuthy](https://github.com/timuthy)             |
-v1.22   | Week 17-18  | April 26, 2021         | May 9, 2021        | [@BeckerMax](https://github.com/BeckerMax)         |
-v1.23   | Week 19-20  | May 10, 2021           | May 23, 2021       | [@ialidzhikov](https://github.com/ialidzhikov)     |
-v1.24   | Week 21-22  | May 24, 2021           | June 5, 2021       | [@stoyanr](https://github.com/stoyanr)             |
-v1.25   | Week 23-24  | June 7, 2021           | June 20, 2021      | [@rfranzke](https://github.com/rfranzke)           |
-v1.26   | Week 25-26  | June 21, 2021          | July 4, 2021       | [@danielfoehrKn](https://github.com/danielfoehrKn) |
-v1.27   | Week 27-28  | July 5, 2021           | July 18, 2021      | [@timebertt](https://github.com/timebertt)         |
-v1.28   | Week 29-30  | July 19, 2021          | August 1, 2021     | [@ialidzhikov](https://github.com/ialidzhikov)     |
-v1.29   | Week 31-32  | August 2, 2021         | August 15, 2021    | [@timuthy](https://github.com/timuthy)             |
-v1.30   | Week 33-34  | August 16, 2021        | August 29, 2021    | [@BeckerMax](https://github.com/BeckerMax)         |
-v1.31   | Week 35-36  | August 30, 2021        | September 12, 2021 | [@stoyanr](https://github.com/stoyanr)             |
 v1.32   | Week 37-38  | September 13, 2021     | September 26, 2021 | [@vpnachev](https://github.com/vpnachev)           |
 v1.33   | Week 39-40  | September 27, 2021     | October 10, 2021   | [@voelzmo](https://github.com/voelzmo)             |
+v1.34   | Week 41-42  | October 11, 2021       | October 24, 2021   | [@plkokanov](https://github.com/plkokanov)         |
+v1.35   | Week 43-44  | October 25, 2021       | November 7, 2021   | [@kris94](https://github.com/kris94)               |
+v1.36   | Week 45-46  | November 8, 2021       | November 21, 2021  | [@rfranzke](https://github.com/rfranzke)           |
+v1.37   | Week 47-48  | November 22, 2021      | December 5, 2021   | [@danielfoehrKn](https://github.com/danielfoehrKn) |
+v1.38   | Week 49-50  | December 6, 2021       | December 19, 2021  | [@timebertt](https://github.com/timebertt)         |
+v1.39   | Week 01-02  | January 3, 2021        | January 16, 2021   | [@ialidzhikov](https://github.com/ialidzhikov)     |
+v1.40   | Week 03-04  | January 17, 2021       | January 30, 2021   | [@timuthy](https://github.com/timuthy)             |
+v1.41   | Week 05-06  | January 31, 2021       | February 13, 2021  | [@BeckerMax](https://github.com/BeckerMax)         |
+v1.42   | Week 06-07  | February 14, 2021      | February 27, 2021  | [@stoyanr](https://github.com/stoyanr)             |
+v1.43   | Week 08-09  | February 28, 2021      | March 13, 2021     | [@vanjiii](https://github.com/vanjiii)             |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
+
+<details>
+  <summary>Click to expand the archived release responsible associations!</summary>
+
+  Version | Week No     | Begin Validation Phase | Due Date           | Release Responsible |
+  ------- | ----------- | ---------------------- | -------------------| ------------------- |
+  v1.17   | Week 07-08  | February 15, 2021      | February 28, 2021  | [@rfranzke](https://github.com/rfranzke)           |
+  v1.18   | Week 09-10  | March 1, 2021          | March 14, 2021     | [@danielfoehrKn](https://github.com/danielfoehrKn) |
+  v1.19   | Week 11-12  | March 15, 2021         | March 28, 2021     | [@timebertt](https://github.com/timebertt)         |
+  v1.20   | Week 13-14  | March 29, 2021         | April 11, 2021     | [@vpnachev](https://github.com/vpnachev)           |
+  v1.21   | Week 15-16  | April 12, 2021         | April 25, 2021     | [@timuthy](https://github.com/timuthy)             |
+  v1.22   | Week 17-18  | April 26, 2021         | May 9, 2021        | [@BeckerMax](https://github.com/BeckerMax)         |
+  v1.23   | Week 19-20  | May 10, 2021           | May 23, 2021       | [@ialidzhikov](https://github.com/ialidzhikov)     |
+  v1.24   | Week 21-22  | May 24, 2021           | June 5, 2021       | [@stoyanr](https://github.com/stoyanr)             |
+  v1.25   | Week 23-24  | June 7, 2021           | June 20, 2021      | [@rfranzke](https://github.com/rfranzke)           |
+  v1.26   | Week 25-26  | June 21, 2021          | July 4, 2021       | [@danielfoehrKn](https://github.com/danielfoehrKn) |
+  v1.27   | Week 27-28  | July 5, 2021           | July 18, 2021      | [@timebertt](https://github.com/timebertt)         |
+  v1.28   | Week 29-30  | July 19, 2021          | August 1, 2021     | [@ialidzhikov](https://github.com/ialidzhikov)     |
+  v1.29   | Week 31-32  | August 2, 2021         | August 15, 2021    | [@timuthy](https://github.com/timuthy)             |
+  v1.30   | Week 33-34  | August 16, 2021        | August 29, 2021    | [@BeckerMax](https://github.com/BeckerMax)         |
+  v1.31   | Week 35-36  | August 30, 2021        | September 12, 2021 | [@stoyanr](https://github.com/stoyanr)             |
+</details>
 
 ### Release Validation
 
