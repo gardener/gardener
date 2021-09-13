@@ -29,6 +29,8 @@
 * [Cleanup of Shoot clusters in deletion](usage/shoot_cleanup.md)
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
 * [(Custom) CSI components](usage/csi_components.md)
+* [Dockershim removal](usage/docker-shim-removal.md)
+* [ETCD](usage/etcd.md)
 * [ExposureClasses](usage/exposureclasses.md)
 * [Gardener configuration and usage](usage/configuration.md)
 * [`ManagedIstio` feature](usage/istio.md)

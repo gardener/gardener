@@ -12,7 +12,6 @@ In order to apply any provider-specific changes to the configuration provided by
 In order to support a new cloud provider you should install "controlplane" mutating webhooks for any of the following resources:
 
 * Deployment with name `kube-apiserver`, `kube-controller-manager`, or `kube-scheduler`
-* StatefulSet with name `etcd-main` or `etcd-events`
 * Service with name `kube-apiserver`
 * `OperatingSystemConfig` with any name and purpose `reconcile`
 
@@ -123,13 +122,9 @@ The kube-scheduler command line can't contain provider-specific flags, and it ma
 
 ### etcd-main and etcd-events
 
-To deploy etcd, Gardener **shall** create 2 StatefulSets named `etcd-main` and `etcd-events` in the Shoot namespace. They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
+To deploy etcd, Gardener **shall** create 2 [Etcd](https://github.com/gardener/etcd-druid/blob/1d427e9167adac1476d1847c0e265c2c09d6bc62/config/samples/druid_v1alpha1_etcd.yaml) named `etcd-main` and `etcd-events` in the Shoot namespace. They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
 
-The pod template of these 2 deployments **shall** contain a container named `etcd`. It **shall not** contain a sidecar container for etcd backups. If such a container is needed, it should be added by webhooks, together with any volumes it may need to mount.
-
-The `command` field of the `etcd` container **shall** contain the etcd command line. It **shall** contain only provider-independent flags that should be ignored by webhooks. It can't contain provider-specific flags, and it makes no sense to specify provider-specific environment variables or mount provider-specific `Secret` or `ConfigMap` resources as volumes.
-
-The `volumeClaimTemplates` section of these 2 StatefulSets **shall** contain a template named `etcd-main` or `etcd-events`. This template **shall** use the default storage class. The corresponding claim is mounted into the `etcd` container at `/var/etcd/data`. If it is desirable to use a non-default storage class, this should be done by webhooks.
+Gardener **shall** configure the `Etcd` resource completely to set up an etcd cluster which uses the default storage class of the seed cluster.
 
 ### cloud-controller-manager
 
