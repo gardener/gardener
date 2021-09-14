@@ -96,6 +96,7 @@ func UpdateGardenKubeconfigSecret(ctx context.Context, certClientConfig *rest.Co
 	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, seedClient, kubeconfigSecret, func() error {
+		delete(kubeconfigSecret.Annotations, v1beta1constants.GardenerOperation)
 		kubeconfigSecret.Data = map[string][]byte{kubernetes.KubeConfig: kubeconfig}
 		return nil
 	}); err != nil {

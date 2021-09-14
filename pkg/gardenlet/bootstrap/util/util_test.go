@@ -31,6 +31,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/keyutil"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
@@ -45,6 +46,7 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Util", func() {
@@ -137,40 +139,72 @@ var _ = Describe("Util", func() {
 		})
 
 		Describe("#UpdateGardenKubeconfigSecret", func() {
-			It("should create the kubeconfig secret", func() {
-				secretReference := corev1.SecretReference{
+			var (
+				secretReference        corev1.SecretReference
+				certClientConfig       *rest.Config
+				expectedSecret         *corev1.Secret
+				gardenClientConnection *config.GardenClientConnection
+			)
+
+			BeforeEach(func() {
+				secretReference = corev1.SecretReference{
 					Name:      "secret",
 					Namespace: "garden",
 				}
 
-				c.EXPECT().
-					Get(ctx, kutil.Key(secretReference.Namespace, secretReference.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
-					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, secretReference.Name))
-
-				certClientConfig := &rest.Config{Host: "testhost", TLSClientConfig: rest.TLSClientConfig{
+				certClientConfig = &rest.Config{Host: "testhost", TLSClientConfig: rest.TLSClientConfig{
 					Insecure: false,
 					CAFile:   "filepath",
 				}}
 
-				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
-				Expect(err).ToNot(HaveOccurred())
-
-				expectedSecret := &corev1.Secret{
+				expectedSecret = &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      secretReference.Name,
 						Namespace: secretReference.Namespace,
 					},
-					Data: map[string][]byte{kubernetes.KubeConfig: expectedKubeconfig},
 				}
-				c.EXPECT().Create(ctx, expectedSecret).
-					Return(nil)
 
-				gardenClientConnection := &config.GardenClientConnection{
+				gardenClientConnection = &config.GardenClientConnection{
 					KubeconfigSecret: &secretReference,
 				}
+			})
+
+			It("should create the kubeconfig secret", func() {
+				c.EXPECT().
+					Get(ctx, kutil.Key(secretReference.Namespace, secretReference.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "Secret"}, secretReference.Name))
+
+				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedSecret.Data = map[string][]byte{kubernetes.KubeConfig: expectedKubeconfig}
+
+				c.EXPECT().Create(ctx, expectedSecret)
 
 				kubeconfig, err := UpdateGardenKubeconfigSecret(ctx, certClientConfig, nil, nil, c, gardenClientConnection)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(kubeconfig).To(Equal(expectedKubeconfig))
+			})
 
+			It("should update the kubeconfig secret", func() {
+				expectedSecret.Annotations = map[string]string{"gardener.cloud/operation": "renew"}
+
+				c.EXPECT().
+					Get(ctx, kutil.Key(secretReference.Namespace, secretReference.Name), gomock.AssignableToTypeOf(&corev1.Secret{})).
+					DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *corev1.Secret) error {
+						expectedSecret.DeepCopyInto(obj)
+						return nil
+					})
+
+				expectedKubeconfig, err := CreateGardenletKubeconfigWithClientCertificate(certClientConfig, nil, nil)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedCopy := expectedSecret.DeepCopy()
+				delete(expectedCopy.Annotations, "gardener.cloud/operation")
+				expectedCopy.Data = map[string][]byte{kubernetes.KubeConfig: expectedKubeconfig}
+				test.EXPECTPatch(ctx, c, expectedCopy, expectedSecret, types.MergePatchType)
+
+				kubeconfig, err := UpdateGardenKubeconfigSecret(ctx, certClientConfig, nil, nil, c, gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(kubeconfig).To(Equal(expectedKubeconfig))
 			})
