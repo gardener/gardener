@@ -132,24 +132,21 @@ var _ = Describe("Worker validation tests", func() {
 			}))))
 		})
 
-		It("should prevent updating the type and region", func() {
+		It("should prevent updating the region", func() {
 			newWorker := prepareWorkerForUpdate(worker)
-			newWorker.Spec.Type = "changed-type"
 			newWorker.Spec.Region = "changed-region"
 
 			errorList := ValidateWorkerUpdate(newWorker, worker)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.type"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.region"),
 			}))))
 		})
 
-		It("should allow updating the name of the referenced secret, the infrastructure provider status, the ssh public key, or the worker pools", func() {
+		It("should allow updating the type, the name of the referenced secret, the infrastructure provider status, the ssh public key, or the worker pools", func() {
 			newWorker := prepareWorkerForUpdate(worker)
+			newWorker.Spec.Type = "changed-type"
 			newWorker.Spec.SecretRef.Name = "changed-secretref-name"
 			newWorker.Spec.InfrastructureProviderStatus = nil
 			newWorker.Spec.SSHPublicKey = []byte("other-key")
