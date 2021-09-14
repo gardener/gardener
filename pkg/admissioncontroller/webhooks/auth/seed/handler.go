@@ -50,9 +50,8 @@ func init() {
 }
 
 // NewHandler creates a new HTTP handler for authorizing requests for resources related to a Seed.
-func NewHandler(ctx context.Context, logger logr.Logger, authorizer auth.Authorizer) http.HandlerFunc {
+func NewHandler(logger logr.Logger, authorizer auth.Authorizer) http.HandlerFunc {
 	h := &handler{
-		ctx:        ctx,
 		logger:     logger,
 		authorizer: authorizer,
 	}
@@ -60,16 +59,17 @@ func NewHandler(ctx context.Context, logger logr.Logger, authorizer auth.Authori
 }
 
 type handler struct {
-	ctx        context.Context
 	logger     logr.Logger
 	authorizer auth.Authorizer
 }
 
 func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	var (
-		body []byte
-		err  error
+		ctx, cancel = context.WithTimeout(r.Context(), DecisionTimeout)
+		body        []byte
+		err         error
 	)
+	defer cancel()
 
 	// Verify that body is non-empty
 	if r.Body == nil {
@@ -114,9 +114,6 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	h.logger.V(1).Info("received request", keysAndValues...)
 
 	// Consult authorizer for result and write the response
-	ctx, cancel := context.WithTimeout(h.ctx, DecisionTimeout)
-	defer cancel()
-
 	decision, reason, err := h.authorizer.Authorize(ctx, AuthorizationAttributesFrom(*sarSpec))
 	if err != nil {
 		h.logger.Error(err, "error when consulting authorizer for opinion")
