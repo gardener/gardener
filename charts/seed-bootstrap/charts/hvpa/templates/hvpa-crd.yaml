@@ -216,6 +216,7 @@ spec:
                         metadata:
                           description: Metadata of the pods created from this template.
                           type: object
+                          x-kubernetes-preserve-unknown-fields: true
                         spec:
                           description: Spec defines the behavior of a HPA.
                           properties:
@@ -828,6 +829,7 @@ spec:
                         metadata:
                           description: Metadata of the pods created from this template.
                           type: object
+                          x-kubernetes-preserve-unknown-fields: true
                         spec:
                           description: Spec defines the behavior of a VPA.
                           properties:
