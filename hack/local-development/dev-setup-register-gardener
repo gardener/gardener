@@ -367,7 +367,7 @@ $ADMISSION_CONTROLLER_PORT_STRING
   - apiGroups:
     - ""
     apiVersions:
-    - "*"
+    - v1
     operations:
     - CREATE
     resources:
@@ -376,7 +376,7 @@ $ADMISSION_CONTROLLER_PORT_STRING
   - apiGroups:
     - rbac.authorization.k8s.io
     apiVersions:
-    - "*"
+    - v1
     operations:
     - CREATE
     resources:
@@ -384,7 +384,7 @@ $ADMISSION_CONTROLLER_PORT_STRING
   - apiGroups:
     - coordination.k8s.io
     apiVersions:
-    - "*"
+    - v1
     operations:
     - CREATE
     resources:
@@ -392,12 +392,13 @@ $ADMISSION_CONTROLLER_PORT_STRING
   - apiGroups:
     - certificates.k8s.io
     apiVersions:
-    - "*"
+    - v1beta1
     operations:
     - CREATE
     resources:
     - certificatesigningrequests
   failurePolicy: Fail
+  matchPolicy: Equivalent
   clientConfig:
     service:
       namespace: garden
@@ -412,7 +413,7 @@ $ADMISSION_CONTROLLER_PORT_STRING
   - apiGroups:
     - core.gardener.cloud
     apiVersions:
-    - "*"
+    - v1beta1
     operations:
     - CREATE
     resources:
@@ -421,7 +422,7 @@ $ADMISSION_CONTROLLER_PORT_STRING
   - apiGroups:
     - core.gardener.cloud
     apiVersions:
-    - "*"
+    - v1beta1
     operations:
     - CREATE
     - DELETE
@@ -430,7 +431,7 @@ $ADMISSION_CONTROLLER_PORT_STRING
   - apiGroups:
     - operations.gardener.cloud
     apiVersions:
-    - "*"
+    - v1alpha1
     operations:
     - CREATE
     resources:
@@ -438,7 +439,7 @@ $ADMISSION_CONTROLLER_PORT_STRING
   - apiGroups:
     - core.gardener.cloud
     apiVersions:
-    - "*"
+    - v1beta1
     operations:
     - CREATE
     - UPDATE
@@ -446,6 +447,7 @@ $ADMISSION_CONTROLLER_PORT_STRING
     resources:
     - seeds
   failurePolicy: Fail
+  matchPolicy: Equivalent
   clientConfig:
     url: https://127.0.0.1:$ADMISSION_CONTROLLER_SECURE_PORT/webhooks/admission/seedrestriction
     caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZRENDQWtpZ0F3SUJBZ0lVYWEyY0ZPL0NTVnJ2cThPLzBnZXVNdFhMT3NJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1NERUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdUQWtOQk1SWXdGQVlEVlFRSEV3MVRZVzRnUm5KaApibU5wYzJOdk1SUXdFZ1lEVlFRREV3dGxlR0Z0Y0d4bExtNWxkREFlRncweE9EQTRNVFl5TURNeU1EQmFGdzB5Ck16QTRNVFV5TURNeU1EQmFNRWd4Q3pBSkJnTlZCQVlUQWxWVE1Rc3dDUVlEVlFRSUV3SkRRVEVXTUJRR0ExVUUKQnhNTlUyRnVJRVp5WVc1amFYTmpiekVVTUJJR0ExVUVBeE1MWlhoaGJYQnNaUzV1WlhRd2dnRWlNQTBHQ1NxRwpTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDNUM4L3ZoWHVFeWQwZlQ2YmxIcGtrbERiY251ckQ0SzZTCmJGaGRMWmVHQ0krdktXMzRPdEFzOFNwQXZrSmsxL0FPZ0ZsZFBGaTdGYThZbWdKQ3piR255bEZxcXJhd2RCaEgKdFZZeENBZTE0dTJTZGlxMXNPZ3VyRHRRM0doK0V1NXUrUDBsMTZ5MGR5UXhsNGREdHdIZno0anJOVmFkbldEYwpULytQUHNkNDZpMCtjT1loa0RrN1I1NEV1Rysxa1hha0c0c1hWcEt5MVRNd295bnJCVmg0MkwzYnNrcXJWbnBUCitnY0F6Q3RvaWE4WFJKL2pob3NjWHRSMHIxdEtpM2cxSjRxQTd1WDRJOXJUc2dPQmNrMGV4SlBSZ0Vtd3VPNUYKc1o0NEU4TUlveCtGVkg5TkRUY0JkSVQ5NVhVbGNhbkhKK1Baa1JVWFp5c2lNOWxuSWpCakFnTUJBQUdqUWpCQQpNQTRHQTFVZER3RUIvd1FFQXdJQkJqQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01CMEdBMVVkRGdRV0JCUVVKVTJJCmlDcll0dEhoTmhqNWh3c1FJK01JbGpBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQVRlOTNldkVBSThtZGlwZG0KanBGQjkrMFczQzJrTzEvQ3RCdWpOM1B2ZWc5OGxVOXBrS2lVOVdRL3orYlpEV3pUeklTdlYzMk9WSkNtUVN6cgpWRFJUMDNjbGpQaUJYOW9GNTc3TTE2TzNacnZQV3QxUXo2WHptYk9hdjVidkJXaTlpVWRMSEptOHA2Q0RIS1lYCklEZXdsVUg4K0FGaU10d0xlcjRRZFdRUnkrMGlOZG5YQjhCYnZ3QmxhcU1oUlphancyaW83eUdaZ3FXVmI5cnkKNlRsNnF1ZVpaazJOeUszSURtbTdhMWV4TFhQUjh2U2QyUUI2YlNCTVI3NXAvRm1jVkN1VzY0MlRZTnEwUW9VcwpXOXlUM3YxcHhRZlhraTZWTGQ3L3Y4QnhwTlEzazFWM01LWGlLOEIwOEdzRDZJa2s5R2dNVmNkWDRaQmVtWmYzCjBjVUQyUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
