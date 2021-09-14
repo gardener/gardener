@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidvalidation "github.com/gardener/etcd-druid/api/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/extensions/validation"
 
@@ -102,6 +104,16 @@ func New(logger logr.Logger, allowInvalidExtensionResources bool) *handler {
 			},
 			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				return validation.ValidateDNSRecordUpdate(n.(*extensionsv1alpha1.DNSRecord), o.(*extensionsv1alpha1.DNSRecord))
+			},
+		},
+
+		gvr("etcds"): {
+			newObject: func() client.Object { return new(druidv1alpha1.Etcd) },
+			validateCreateResource: func(n, _ client.Object) field.ErrorList {
+				return druidvalidation.ValidateEtcd(n.(*druidv1alpha1.Etcd))
+			},
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
+				return druidvalidation.ValidateEtcdUpdate(n.(*druidv1alpha1.Etcd), o.(*druidv1alpha1.Etcd))
 			},
 		},
 

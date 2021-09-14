@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"strings"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
@@ -126,6 +127,20 @@ var (
 			Name:        "api.gcp.foobar.shoot.example.com",
 			RecordType:  "A",
 			Values:      []string{"1.2.3.4"},
+		},
+	}
+
+	etcd = &druidv1alpha1.Etcd{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "etcd-name",
+			Namespace: "shoot1-ns",
+		},
+		Spec: druidv1alpha1.EtcdSpec{
+			Backup: druidv1alpha1.BackupSpec{
+				Store: &druidv1alpha1.StoreSpec{
+					Prefix: "shoot1-ns--F1A38EDD-E506-412A-82E6-E0FA839D0707/etcd-name",
+				},
+			},
 		},
 	}
 
@@ -256,6 +271,7 @@ var _ = Describe("handler", func() {
 				Entry("for containerruntime", "containerruntimes", containerRuntime),
 				Entry("for controlplanes", "controlplanes", controlPlane),
 				Entry("for dnsrecords", "dnsrecords", dnsrecord),
+				Entry("for etcds", "etcds", etcd),
 				Entry("for extensions", "extensions", extension),
 				Entry("for infrastructures", "infrastructures", infrastructure),
 				Entry("for networks", "networks", network),
@@ -288,6 +304,7 @@ var _ = Describe("handler", func() {
 				Entry("for containerruntime", "containerruntimes", newContainerRuntime("2"), newContainerRuntime("1")),
 				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", ""), newControlPlane("1", "", "")),
 				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", ""), newDNSRecord("1", "", "")),
+				Entry("for etcds", "etcds", newEtcd("2", "", "new-service-name"), newEtcd("1", "", "service-name")),
 				Entry("for extensions", "extensions", newExtension("2", "", &runtime.RawExtension{}), newExtension("1", "", nil)),
 				Entry("for infrastructures", "infrastructures", newInfrastructure("2", "infrastructure-external", ""), newInfrastructure("1", "", "")),
 				Entry("for networks", "networks", newNetwork("2", ""), newNetwork("1", "")),
@@ -306,6 +323,7 @@ var _ = Describe("handler", func() {
 				// TODO: Introduce entry for ContainerRuntime with #4561
 				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", "azure"), newControlPlane("1", "", "")),
 				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", "TXT"), newDNSRecord("1", "", "")),
+				Entry("for etcds", "etcds", newEtcd("2", "new-prefix", "new-service-name"), newEtcd("1", "", "service-name")),
 				Entry("for extensions", "extensions", newExtension("2", "azure", nil), newExtension("1", "", nil)),
 				Entry("for infrastructures", "infrastructures", newInfrastructure("2", "infrastructure-external", "azure"), newInfrastructure("2", "infrastructure-external", "")),
 				Entry("for networks", "networks", newNetwork("2", "1.1.1.1/16"), newNetwork("1", "")),
@@ -448,6 +466,22 @@ func newDNSRecord(resourcesVersion, secretRefName, recordType string) runtime.Ob
 	}
 
 	return d
+}
+
+func newEtcd(resourceVersion, prefix, serviceName string) runtime.Object {
+	e := etcd.DeepCopy()
+
+	if resourceVersion != "" {
+		e.ResourceVersion = resourceVersion
+	}
+	if prefix != "" {
+		e.Spec.Backup.Store.Prefix = prefix
+	}
+	if serviceName != "" {
+		e.Status.ServiceName = pointer.String(serviceName)
+	}
+
+	return e
 }
 
 func newExtension(resourcesVersion, specType string, config *runtime.RawExtension) runtime.Object {
