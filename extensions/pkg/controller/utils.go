@@ -185,6 +185,11 @@ func IsMigrated(obj extensionsv1alpha1.Object) bool {
 		lastOp.State == gardencorev1beta1.LastOperationStateSucceeded
 }
 
+// ShouldSkipOperation checks if the current operation should be skipped depending on the lastOperation of the extension object.
+func ShouldSkipOperation(operationType gardencorev1beta1.LastOperationType, obj extensionsv1alpha1.Object) bool {
+	return operationType != gardencorev1beta1.LastOperationTypeMigrate && operationType != gardencorev1beta1.LastOperationTypeRestore && IsMigrated(obj)
+}
+
 // GetObjectByReference gets an object by the given reference, in the given namespace.
 // If the object kind doesn't match the given reference kind this will result in an error.
 func GetObjectByReference(ctx context.Context, c client.Client, ref *autoscalingv1.CrossVersionObjectReference, namespace string, obj client.Object) error {
