@@ -94,7 +94,7 @@ func (c *aggregator) GetInformerForKind(ctx context.Context, gvk schema.GroupVer
 
 func (c *aggregator) Start(ctx context.Context) error {
 	// NB: this function might leak goroutines, when the context for this aggregator cache is cancelled.
-	// There is no way of waiting for caches to stop, so we there's no point in waiting for the following
+	// There is no way of waiting for caches to stop, so there's no point in waiting for the following
 	// goroutines to finish, because there might still be goroutines running under the hood of caches.
 	// However, this is not problematic, as long as the aggregator cache is not in any client set, that might
 	// be invalidated during runtime.

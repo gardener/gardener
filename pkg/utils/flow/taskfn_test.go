@@ -46,17 +46,28 @@ var _ = Describe("task functions", func() {
 	Describe("#Parallel", func() {
 		It("should execute the functions in parallel", func() {
 			var (
-				ctx = context.TODO()
-				f1  = mockflow.NewMockTaskFn(ctrl)
-				f2  = mockflow.NewMockTaskFn(ctrl)
-				f3  = mockflow.NewMockTaskFn(ctrl)
+				allTasksStarted = make(chan struct{})
+				started         = make(chan struct{}, 3)
+
+				ctx = context.Background()
+				fn  = flow.TaskFn(func(ctx context.Context) error {
+					started <- struct{}{}
+					// block until all tasks were started to verify parallel execution of tasks
+					<-allTasksStarted
+					return nil
+				})
 			)
 
-			f1.EXPECT().Do(ctx)
-			f2.EXPECT().Do(ctx)
-			f3.EXPECT().Do(ctx)
+			go func() {
+				defer GinkgoRecover()
+				Eventually(started).Should(Receive())
+				Eventually(started).Should(Receive())
+				Eventually(started).Should(Receive())
+				close(allTasksStarted)
+			}()
 
-			Expect(flow.Parallel(f1.Do, f2.Do, f3.Do)(ctx)).To(Succeed())
+			Expect(flow.Parallel(fn, fn, fn)(ctx)).To(Succeed())
+			Eventually(allTasksStarted).Should(BeClosed())
 		})
 
 		It("should execute the functions and collect their errors", func() {
@@ -84,17 +95,28 @@ var _ = Describe("task functions", func() {
 	Describe("#ParallelExitOnError", func() {
 		It("should execute the functions in parallel", func() {
 			var (
+				allTasksStarted = make(chan struct{})
+				started         = make(chan struct{}, 3)
+
 				ctx = context.Background()
-				f1  = mockflow.NewMockTaskFn(ctrl)
-				f2  = mockflow.NewMockTaskFn(ctrl)
-				f3  = mockflow.NewMockTaskFn(ctrl)
+				fn  = flow.TaskFn(func(ctx context.Context) error {
+					started <- struct{}{}
+					// block until all tasks were started to verify parallel execution of tasks
+					<-allTasksStarted
+					return nil
+				})
 			)
 
-			f1.EXPECT().Do(gomock.Any())
-			f2.EXPECT().Do(gomock.Any())
-			f3.EXPECT().Do(gomock.Any())
+			go func() {
+				defer GinkgoRecover()
+				Eventually(started).Should(Receive())
+				Eventually(started).Should(Receive())
+				Eventually(started).Should(Receive())
+				close(allTasksStarted)
+			}()
 
-			Expect(flow.ParallelExitOnError(f1.Do, f2.Do, f3.Do)(ctx)).To(Succeed())
+			Expect(flow.ParallelExitOnError(fn, fn, fn)(ctx)).To(Succeed())
+			Eventually(allTasksStarted).Should(BeClosed())
 		})
 
 		It("should exit on error and cancel parallel functions", func() {

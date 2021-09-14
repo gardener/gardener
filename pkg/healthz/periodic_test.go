@@ -50,9 +50,9 @@ var _ = Describe("Periodic", func() {
 
 		Describe("#Start", func() {
 			It("should start the manager", func() {
+				p.Start()
 				defer p.Stop()
 
-				p.Start()
 				Expect(p.Get()).To(BeTrue())
 				Expect(p.timer).NotTo(BeNil())
 				Expect(p.started).To(BeTrue())
@@ -84,15 +84,17 @@ var _ = Describe("Periodic", func() {
 
 		Describe("#Set", func() {
 			It("should correctly set the status to true", func() {
-				defer p.Stop()
 				p.Start()
+				defer p.Stop()
+
 				p.Set(true)
 				Expect(p.Get()).To(BeTrue())
 			})
 
 			It("should correctly set the status to false", func() {
-				defer p.Stop()
 				p.Start()
+				defer p.Stop()
+
 				p.Set(false)
 				Expect(p.Get()).To(BeFalse())
 			})
@@ -113,8 +115,8 @@ var _ = Describe("Periodic", func() {
 			})
 
 			It("should correctly set the status to false after the reset duration", func() {
-				defer p.Stop()
 				p.Start()
+				defer p.Stop()
 
 				Expect(p.Get()).To(BeTrue())
 				fakeClock.Step(resetDuration)
@@ -122,8 +124,8 @@ var _ = Describe("Periodic", func() {
 			})
 
 			It("should correctly reset the timer if status is changed to true", func() {
-				defer p.Stop()
 				p.Start()
+				defer p.Stop()
 
 				Expect(p.Get()).To(BeTrue())
 				fakeClock.Step(resetDuration)
