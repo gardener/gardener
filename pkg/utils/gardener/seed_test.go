@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	gomegatypes "github.com/onsi/gomega/types"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 )
 
 var _ = Describe("utils", func() {
@@ -56,7 +56,7 @@ var _ = Describe("utils", func() {
 	)
 
 	DescribeTable("#IsSeedClientCert",
-		func(x509cr *x509.CertificateRequest, usages []certificatesv1beta1.KeyUsage, matcher gomegatypes.GomegaMatcher) {
+		func(x509cr *x509.CertificateRequest, usages []certificatesv1.KeyUsage, matcher gomegatypes.GomegaMatcher) {
 			Expect(IsSeedClientCert(x509cr, usages)).To(matcher)
 		},
 
@@ -65,7 +65,7 @@ var _ = Describe("utils", func() {
 		Entry("email addresses given", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}}, EmailAddresses: []string{"foo"}}, nil, BeFalse()),
 		Entry("ip addresses given", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}}, IPAddresses: []net.IP{{}}}, nil, BeFalse()),
 		Entry("usages do not match", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}}}, nil, BeFalse()),
-		Entry("common name does not match", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}}}, []certificatesv1beta1.KeyUsage{certificatesv1beta1.UsageKeyEncipherment, certificatesv1beta1.UsageDigitalSignature, certificatesv1beta1.UsageClientAuth}, BeFalse()),
-		Entry("everything matches", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}, CommonName: "gardener.cloud:system:seed:foo"}}, []certificatesv1beta1.KeyUsage{certificatesv1beta1.UsageKeyEncipherment, certificatesv1beta1.UsageDigitalSignature, certificatesv1beta1.UsageClientAuth}, BeTrue()),
+		Entry("common name does not match", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, BeFalse()),
+		Entry("everything matches", &x509.CertificateRequest{Subject: pkix.Name{Organization: []string{"gardener.cloud:system:seeds"}, CommonName: "gardener.cloud:system:seed:foo"}}, []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth}, BeTrue()),
 	)
 })

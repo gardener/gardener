@@ -36,6 +36,7 @@ import (
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -975,6 +976,7 @@ var _ = Describe("handler", func() {
 				request.UserInfo = seedUser
 				request.Resource = metav1.GroupVersionResource{
 					Group:    certificatesv1beta1.SchemeGroupVersion.Group,
+					Version:  "v1beta1",
 					Resource: "certificatesigningrequests",
 				}
 			})
@@ -1018,10 +1020,15 @@ var _ = Describe("handler", func() {
 					}))
 				})
 
-				It("should forbid the request because the CSR is not a valid seed-related CSR", func() {
-					objData, err := runtime.Encode(encoder, &certificatesv1beta1.CertificateSigningRequest{
-						Spec: certificatesv1beta1.CertificateSigningRequestSpec{
-							Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
+				Context("v1beta1", func() {
+					It("should forbid the request because the CSR is not a valid seed-related CSR", func() {
+						objData, err := runtime.Encode(encoder, &certificatesv1beta1.CertificateSigningRequest{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: certificatesv1beta1.SchemeGroupVersion.String(),
+								Kind:       "CertificateSigningRequest",
+							},
+							Spec: certificatesv1beta1.CertificateSigningRequestSpec{
+								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
 MIIClzCCAX8CAQAwUjEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
 ZWRzMSowKAYDVQQDEyFnYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpteXNlZWQw
 ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCzNgJWhogJrCSzAhKKmHkJ
@@ -1037,26 +1044,30 @@ TRVg+MWlcLqCjALr9Y4N39DOzf4/SJts8AZJJ+lyyxnY3XIPXx7SdADwNWC8BX0U
 OK8CwMwN3iiBQ4redVeMK7LU1unV899q/PWB+NXFcKVr+Grm/Kom5VxuhXSzcHEp
 yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 -----END CERTIFICATE REQUEST-----`),
-						},
-					})
-					Expect(err).NotTo(HaveOccurred())
-					request.Object.Raw = objData
-
-					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-						AdmissionResponse: admissionv1.AdmissionResponse{
-							Allowed: false,
-							Result: &metav1.Status{
-								Code:    int32(http.StatusForbidden),
-								Message: "can only create CSRs for seed clusters",
 							},
-						},
-					}))
-				})
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
 
-				It("should forbid the request because the seed name of the csr does not match", func() {
-					objData, err := runtime.Encode(encoder, &certificatesv1beta1.CertificateSigningRequest{
-						Spec: certificatesv1beta1.CertificateSigningRequestSpec{
-							Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "can only create CSRs for seed clusters",
+								},
+							},
+						}))
+					})
+
+					It("should forbid the request because the seed name of the csr does not match", func() {
+						objData, err := runtime.Encode(encoder, &certificatesv1beta1.CertificateSigningRequest{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: certificatesv1beta1.SchemeGroupVersion.String(),
+								Kind:       "CertificateSigningRequest",
+							},
+							Spec: certificatesv1beta1.CertificateSigningRequestSpec{
+								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
 MIIClzCCAX8CAQAwUjEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
 ZWRzMSowKAYDVQQDEyFnYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpteXNlZWQw
 ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCzNgJWhogJrCSzAhKKmHkJ
@@ -1072,31 +1083,35 @@ TRVg+MWlcLqCjALr9Y4N39DOzf4/SJts8AZJJ+lyyxnY3XIPXx7SdADwNWC8BX0U
 OK8CwMwN3iiBQ4redVeMK7LU1unV899q/PWB+NXFcKVr+Grm/Kom5VxuhXSzcHEp
 yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 -----END CERTIFICATE REQUEST-----`),
-							Usages: []certificatesv1beta1.KeyUsage{
-								certificatesv1beta1.UsageKeyEncipherment,
-								certificatesv1beta1.UsageDigitalSignature,
-								certificatesv1beta1.UsageClientAuth,
+								Usages: []certificatesv1beta1.KeyUsage{
+									certificatesv1beta1.UsageKeyEncipherment,
+									certificatesv1beta1.UsageDigitalSignature,
+									certificatesv1beta1.UsageClientAuth,
+								},
 							},
-						},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to seed %q", seedName),
+								},
+							},
+						}))
 					})
-					Expect(err).NotTo(HaveOccurred())
-					request.Object.Raw = objData
 
-					Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-						AdmissionResponse: admissionv1.AdmissionResponse{
-							Allowed: false,
-							Result: &metav1.Status{
-								Code:    int32(http.StatusForbidden),
-								Message: fmt.Sprintf("object does not belong to seed %q", seedName),
+					It("should allow the request because seed name matches", func() {
+						objData, err := runtime.Encode(encoder, &certificatesv1beta1.CertificateSigningRequest{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: certificatesv1beta1.SchemeGroupVersion.String(),
+								Kind:       "CertificateSigningRequest",
 							},
-						},
-					}))
-				})
-
-				It("should allow the request because seed name matches", func() {
-					objData, err := runtime.Encode(encoder, &certificatesv1beta1.CertificateSigningRequest{
-						Spec: certificatesv1beta1.CertificateSigningRequestSpec{
-							Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
+							Spec: certificatesv1beta1.CertificateSigningRequestSpec{
+								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
 MIIClTCCAX0CAQAwUDEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
 ZWRzMSgwJgYDVQQDEx9nYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpzZWVkMIIB
 IjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsDqibMtE5PXULTT12u0TYW1U
@@ -1112,23 +1127,27 @@ tHu5PlIwWS6CP+03s3/gjbHX7VL+V3RF5BIHDWcp9QfjN0zEx0R2WVXKIbhC8RTR
 BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
 2L4LgmHdCmMFOtPkykwLK6wV1YW7Ce8AxU3j+q4kgZQ+51HJDQDdB74=
 -----END CERTIFICATE REQUEST-----`),
-							Usages: []certificatesv1beta1.KeyUsage{
-								certificatesv1beta1.UsageKeyEncipherment,
-								certificatesv1beta1.UsageDigitalSignature,
-								certificatesv1beta1.UsageClientAuth,
+								Usages: []certificatesv1beta1.KeyUsage{
+									certificatesv1beta1.UsageKeyEncipherment,
+									certificatesv1beta1.UsageDigitalSignature,
+									certificatesv1beta1.UsageClientAuth,
+								},
 							},
-						},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
-					Expect(err).NotTo(HaveOccurred())
-					request.Object.Raw = objData
 
-					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
-				})
-
-				It("should allow the request because seed name is ambiguous", func() {
-					objData, err := runtime.Encode(encoder, &certificatesv1beta1.CertificateSigningRequest{
-						Spec: certificatesv1beta1.CertificateSigningRequestSpec{
-							Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
+					It("should allow the request because seed name is ambiguous", func() {
+						objData, err := runtime.Encode(encoder, &certificatesv1beta1.CertificateSigningRequest{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: certificatesv1beta1.SchemeGroupVersion.String(),
+								Kind:       "CertificateSigningRequest",
+							},
+							Spec: certificatesv1beta1.CertificateSigningRequestSpec{
+								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
 MIIClzCCAX8CAQAwUjEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
 ZWRzMSowKAYDVQQDEyFnYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpteXNlZWQw
 ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCzNgJWhogJrCSzAhKKmHkJ
@@ -1144,19 +1163,187 @@ TRVg+MWlcLqCjALr9Y4N39DOzf4/SJts8AZJJ+lyyxnY3XIPXx7SdADwNWC8BX0U
 OK8CwMwN3iiBQ4redVeMK7LU1unV899q/PWB+NXFcKVr+Grm/Kom5VxuhXSzcHEp
 yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 -----END CERTIFICATE REQUEST-----`),
-							Usages: []certificatesv1beta1.KeyUsage{
-								certificatesv1beta1.UsageKeyEncipherment,
-								certificatesv1beta1.UsageDigitalSignature,
-								certificatesv1beta1.UsageClientAuth,
+								Usages: []certificatesv1beta1.KeyUsage{
+									certificatesv1beta1.UsageKeyEncipherment,
+									certificatesv1beta1.UsageDigitalSignature,
+									certificatesv1beta1.UsageClientAuth,
+								},
 							},
-						},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						request.UserInfo = ambiguousUser
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
-					Expect(err).NotTo(HaveOccurred())
-					request.Object.Raw = objData
+				})
 
-					request.UserInfo = ambiguousUser
+				Context("v1", func() {
+					BeforeEach(func() {
+						request.Resource = metav1.GroupVersionResource{
+							Group:    certificatesv1.SchemeGroupVersion.Group,
+							Version:  "v1",
+							Resource: "certificatesigningrequests",
+						}
+					})
 
-					Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					It("should forbid the request because the CSR is not a valid seed-related CSR", func() {
+						objData, err := runtime.Encode(encoder, &certificatesv1.CertificateSigningRequest{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: certificatesv1.SchemeGroupVersion.String(),
+								Kind:       "CertificateSigningRequest",
+							},
+							Spec: certificatesv1.CertificateSigningRequestSpec{
+								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
+MIIClzCCAX8CAQAwUjEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
+ZWRzMSowKAYDVQQDEyFnYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpteXNlZWQw
+ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCzNgJWhogJrCSzAhKKmHkJ
+FuooKAbxpWRGDOe5DiB8jPdgCoRCkZYnF7D9x9cDzliljA9IeBad3P3E9oegtSV/
+sXFJYqb+lRuhJQ5oo2eBC6WRg+Oxglp+n7o7xt0bO7JHS977mqNrqsJ1d1FnJHTB
+MPHPxqoqkgIbdW4t219ckSA20aWzC3PU7I7+Z9OD+YfuuYgzkWG541XyBBKVSD2w
+Ix2yGu6zrslqZ1eVBZ4IoxpWrQNmLSMFQVnABThyEUi0U1eVtW0vPNwSnBf0mufX
+Z0PpqAIPVjr64Z4s3HHml2GSu64iOxaG5wwb9qIPcdyFaQCep/sFh7kq1KjNI1Ql
+AgMBAAGgADANBgkqhkiG9w0BAQsFAAOCAQEAb+meLvm7dgHpzhu0XQ39w41FgpTv
+S7p78ABFwzDNcP1NwfrEUft0T/rUwPiMlN9zve2rRicaZX5Z7Bol/newejsu8H5z
+OdotvtKjE7zBCMzwnXZwO/0pA0cuUFcAy50DPcr35gdGjGlzV9ogO+HPKPTieS3n
+TRVg+MWlcLqCjALr9Y4N39DOzf4/SJts8AZJJ+lyyxnY3XIPXx7SdADwNWC8BX0U
+OK8CwMwN3iiBQ4redVeMK7LU1unV899q/PWB+NXFcKVr+Grm/Kom5VxuhXSzcHEp
+yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
+-----END CERTIFICATE REQUEST-----`),
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: "can only create CSRs for seed clusters",
+								},
+							},
+						}))
+					})
+
+					It("should forbid the request because the seed name of the csr does not match", func() {
+						objData, err := runtime.Encode(encoder, &certificatesv1.CertificateSigningRequest{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: certificatesv1.SchemeGroupVersion.String(),
+								Kind:       "CertificateSigningRequest",
+							},
+							Spec: certificatesv1.CertificateSigningRequestSpec{
+								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
+MIIClzCCAX8CAQAwUjEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
+ZWRzMSowKAYDVQQDEyFnYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpteXNlZWQw
+ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCzNgJWhogJrCSzAhKKmHkJ
+FuooKAbxpWRGDOe5DiB8jPdgCoRCkZYnF7D9x9cDzliljA9IeBad3P3E9oegtSV/
+sXFJYqb+lRuhJQ5oo2eBC6WRg+Oxglp+n7o7xt0bO7JHS977mqNrqsJ1d1FnJHTB
+MPHPxqoqkgIbdW4t219ckSA20aWzC3PU7I7+Z9OD+YfuuYgzkWG541XyBBKVSD2w
+Ix2yGu6zrslqZ1eVBZ4IoxpWrQNmLSMFQVnABThyEUi0U1eVtW0vPNwSnBf0mufX
+Z0PpqAIPVjr64Z4s3HHml2GSu64iOxaG5wwb9qIPcdyFaQCep/sFh7kq1KjNI1Ql
+AgMBAAGgADANBgkqhkiG9w0BAQsFAAOCAQEAb+meLvm7dgHpzhu0XQ39w41FgpTv
+S7p78ABFwzDNcP1NwfrEUft0T/rUwPiMlN9zve2rRicaZX5Z7Bol/newejsu8H5z
+OdotvtKjE7zBCMzwnXZwO/0pA0cuUFcAy50DPcr35gdGjGlzV9ogO+HPKPTieS3n
+TRVg+MWlcLqCjALr9Y4N39DOzf4/SJts8AZJJ+lyyxnY3XIPXx7SdADwNWC8BX0U
+OK8CwMwN3iiBQ4redVeMK7LU1unV899q/PWB+NXFcKVr+Grm/Kom5VxuhXSzcHEp
+yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
+-----END CERTIFICATE REQUEST-----`),
+								Usages: []certificatesv1.KeyUsage{
+									certificatesv1.UsageKeyEncipherment,
+									certificatesv1.UsageDigitalSignature,
+									certificatesv1.UsageClientAuth,
+								},
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+							AdmissionResponse: admissionv1.AdmissionResponse{
+								Allowed: false,
+								Result: &metav1.Status{
+									Code:    int32(http.StatusForbidden),
+									Message: fmt.Sprintf("object does not belong to seed %q", seedName),
+								},
+							},
+						}))
+					})
+
+					It("should allow the request because seed name matches", func() {
+						objData, err := runtime.Encode(encoder, &certificatesv1.CertificateSigningRequest{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: certificatesv1.SchemeGroupVersion.String(),
+								Kind:       "CertificateSigningRequest",
+							},
+							Spec: certificatesv1.CertificateSigningRequestSpec{
+								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
+MIIClTCCAX0CAQAwUDEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
+ZWRzMSgwJgYDVQQDEx9nYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpzZWVkMIIB
+IjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsDqibMtE5PXULTT12u0TYW1U
+EI2f2MFImNPdEdmyTO8kjy61JzBQxUz6NLLmZWks7dnhZOrhfXqJjVzLWi7gAAIH
+hkoxnu8spKTV53l6eY5RrivVsNFRuPF763bKd6JvsF1p9QD9y8uk6bY4NbLAjgMJ
+MH64Sj398AnvLlIL+8XIFKtT/SjvOp99oGkKxWHBvokcz9MLUJc/2/JcOdsZ62ue
+ZAsqimh0F085+BoG2YtLa4kLNAAiNsijgJ5QCXc7/F8uqkj4uy436LGgGmDfcQxC
+9W2snEqriv1dsjF5R/kjh+UbTd+ZdHoAaNaiE7lfZcwe/ap6SNeZaszcDoR//wID
+AQABoAAwDQYJKoZIhvcNAQELBQADggEBAKGWWWDHGHdUkOvE1L+tR/v3sDvLfmO7
+jWtF/Sq7kRCrr6xEHLKmVA4wRovpzOML0ntrDCu3npKAWqN+U56L1ZeZSsxyOhvN
+dXjk2wPg0+IXPscd33hq0wGZRtBc5MHNWwYLv3ERKnHNbPE2ifkYy6FQ/h/2Kx55
+tHu5PlIwWS6CP+03s3/gjbHX7VL+V3RF5BIHDWcp9QfjN0zEx0R2WVXKIbhC8RTR
+BkEao/FEz4eQuV5atSD0S78+aF4BriEtWKKjXECTCxMuqcA24vGOgHIrEbKd7zSC
+2L4LgmHdCmMFOtPkykwLK6wV1YW7Ce8AxU3j+q4kgZQ+51HJDQDdB74=
+-----END CERTIFICATE REQUEST-----`),
+								Usages: []certificatesv1.KeyUsage{
+									certificatesv1.UsageKeyEncipherment,
+									certificatesv1.UsageDigitalSignature,
+									certificatesv1.UsageClientAuth,
+								},
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should allow the request because seed name is ambiguous", func() {
+						objData, err := runtime.Encode(encoder, &certificatesv1.CertificateSigningRequest{
+							TypeMeta: metav1.TypeMeta{
+								APIVersion: certificatesv1.SchemeGroupVersion.String(),
+								Kind:       "CertificateSigningRequest",
+							},
+							Spec: certificatesv1.CertificateSigningRequestSpec{
+								Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
+MIIClzCCAX8CAQAwUjEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
+ZWRzMSowKAYDVQQDEyFnYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpteXNlZWQw
+ggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCzNgJWhogJrCSzAhKKmHkJ
+FuooKAbxpWRGDOe5DiB8jPdgCoRCkZYnF7D9x9cDzliljA9IeBad3P3E9oegtSV/
+sXFJYqb+lRuhJQ5oo2eBC6WRg+Oxglp+n7o7xt0bO7JHS977mqNrqsJ1d1FnJHTB
+MPHPxqoqkgIbdW4t219ckSA20aWzC3PU7I7+Z9OD+YfuuYgzkWG541XyBBKVSD2w
+Ix2yGu6zrslqZ1eVBZ4IoxpWrQNmLSMFQVnABThyEUi0U1eVtW0vPNwSnBf0mufX
+Z0PpqAIPVjr64Z4s3HHml2GSu64iOxaG5wwb9qIPcdyFaQCep/sFh7kq1KjNI1Ql
+AgMBAAGgADANBgkqhkiG9w0BAQsFAAOCAQEAb+meLvm7dgHpzhu0XQ39w41FgpTv
+S7p78ABFwzDNcP1NwfrEUft0T/rUwPiMlN9zve2rRicaZX5Z7Bol/newejsu8H5z
+OdotvtKjE7zBCMzwnXZwO/0pA0cuUFcAy50DPcr35gdGjGlzV9ogO+HPKPTieS3n
+TRVg+MWlcLqCjALr9Y4N39DOzf4/SJts8AZJJ+lyyxnY3XIPXx7SdADwNWC8BX0U
+OK8CwMwN3iiBQ4redVeMK7LU1unV899q/PWB+NXFcKVr+Grm/Kom5VxuhXSzcHEp
+yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
+-----END CERTIFICATE REQUEST-----`),
+								Usages: []certificatesv1.KeyUsage{
+									certificatesv1.UsageKeyEncipherment,
+									certificatesv1.UsageDigitalSignature,
+									certificatesv1.UsageClientAuth,
+								},
+							},
+						})
+						Expect(err).NotTo(HaveOccurred())
+						request.Object.Raw = objData
+
+						request.UserInfo = ambiguousUser
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
 				})
 			})
 		})
