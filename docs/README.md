@@ -18,6 +18,7 @@
   * [Gardener Seed Admission Controller](concepts/seed-admission-controller.md)
   * [Gardenlet](concepts/gardenlet.md)
 * [Backup Restore](concepts/backup-restore.md)
+* [ETCD](concepts/etcd.md)
 * [Network Policies](concepts/network_policies.md)
 * [Relation between Gardener API and Cluster API](concepts/cluster-api.md)
 
@@ -30,7 +31,6 @@
 * [Custom `CoreDNS` configuration](usage/custom-dns.md)
 * [(Custom) CSI components](usage/csi_components.md)
 * [Dockershim removal](usage/docker-shim-removal.md)
-* [ETCD](usage/etcd.md)
 * [ExposureClasses](usage/exposureclasses.md)
 * [Gardener configuration and usage](usage/configuration.md)
 * [`ManagedIstio` feature](usage/istio.md)

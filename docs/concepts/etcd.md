@@ -7,8 +7,8 @@ makes it an essential part of a [Kubernetes control plane](https://kubernetes.io
 ## Shoot cluster persistence
 
 Each shoot cluster gets its very own persistence for the control plane. It runs in the shoot namespace on the respective
-seed cluster and is managed by a `StatefulSet`. Concretely, there are two `StatefulSets`s (with `volumeClaimTemplates`)
-or etcd instances per shoot cluster which the `Kube-Apiserver` is configured to use in the following way:
+seed cluster. Concretely, there are two etcd instances per shoot cluster which the `Kube-Apiserver` is configured
+to use in the following way:
 
 * etcd-main
 
@@ -38,7 +38,7 @@ Gardenlet maintains [HVPA](https://github.com/gardener/hvpa-controller/blob/mast
 objects for etcd `StatefulSet`s if the corresponding [feature gate](../deployment/feature_gates.md) is enabled. This enables
 a vertical scaling for `etcd`. Downscaling is handled more pessimistic to prevent many subsequent `etcd` restarts. Thus,
 for `production` clusters downscaling is deactivated and for all other clusters lower advertised requests/limits are only
-considered during a shoot's maintenance time window.
+applied during a shoot's maintenance time window.
 
 ## Backup
 
@@ -59,5 +59,5 @@ How long backups are stored in the bucket after a shoot has been deleted, depend
 
 [etcd maintenance tasks](https://etcd.io/docs/v3.3/op-guide/maintenance/) must be performed from time to time in order
 to re-gain database storage and to ensure the system's reliability. The [backup-restore](https://github.com/gardener/etcd-backup-restore)
-_sidecar_ takes care about this job, as well. Gardener chooses a random time **within the shoot's maintenance time** to
-configure these tasks.
+_sidecar_ takes care about this job as well. Gardener chooses a random time **within the shoot's maintenance time** to
+schedule these tasks.
