@@ -133,6 +133,20 @@ func (mr *MockInterfaceMockRecorder) WaitCleanup(arg0 interface{}) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanup", reflect.TypeOf((*MockInterface)(nil).WaitCleanup), arg0)
 }
 
+// WaitCleanupStaleResources mocks base method.
+func (m *MockInterface) WaitCleanupStaleResources(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitCleanupStaleResources", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WaitCleanupStaleResources indicates an expected call of WaitCleanupStaleResources.
+func (mr *MockInterfaceMockRecorder) WaitCleanupStaleResources(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitCleanupStaleResources", reflect.TypeOf((*MockInterface)(nil).WaitCleanupStaleResources), arg0)
+}
+
 // WaitMigrate mocks base method.
 func (m *MockInterface) WaitMigrate(arg0 context.Context) error {
 	m.ctrl.T.Helper()
