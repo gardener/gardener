@@ -53,7 +53,7 @@ rules:
   - apiservices
   verbs:
   - '*'
-- apiGroup:
+- apiGroups:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions
@@ -171,7 +171,7 @@ rules:
   - get
   - list
   - watch
-- apiGroup:
+- apiGroups:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions
