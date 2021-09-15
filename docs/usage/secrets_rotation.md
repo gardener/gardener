@@ -26,7 +26,7 @@ To put it in use, a cloudprovider secret is bound to one more namespaces (and th
 
 ### Gardener generated secrets
 
-####Kubeconfig
+#### Kubeconfig
 
 *Name*: <shoot-name>.kubeconfig
 
@@ -35,17 +35,19 @@ To put it in use, a cloudprovider secret is bound to one more namespaces (and th
 ---
 **NOTE**
 
-This Kubeconfig contains the highest privileges in the cluster. We strongly discourage distributing or using this Kubeconfig
-on a daily basis. Use dedicated [Service Accounts](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/),
+This Kubeconfig contains the highest privileges in the cluster. We strongly discourage distributing or using this Kubeconfig. 
+Instead, configure dedicated [Service Accounts](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/),
 [OIDC](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#openid-connect-tokens) or similar alternatives
 to grant role-based and revocable access for a broader audience.
 
 ---
 
 *Rotation*: Kubeconfig can be rotated by annotating the shoot resource with `gardener.cloud/operation: rotate-kubeconfig-credentials`.
-The substituted Kubeconfig are provided after the initialized reconciliation was performed. 
+The substituted Kubeconfig are provided after the initialized reconciliation was performed. Please note, shoot clusters 
+which were created with Gardener version `<= 0.28.0` used to have a Kubeconfig based on a client certificate instead of a static token.
+These client certificates are not revocable and thus a full credential rotation is not supported.
 
-####Monitoring
+#### Monitoring
 
 *Name*: <shoot-name>.monitoring
 
@@ -53,7 +55,7 @@ The substituted Kubeconfig are provided after the initialized reconciliation was
 
 *Rotation*: Not supported yet.
 
-###SSH-Keypair
+### SSH-Keypair
 
 *Name*: <shoot-name>.ssh-keypair
 
