@@ -335,7 +335,7 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			oscName := Key(worker.Name, o.values.KubernetesVersion) + purposeToKeySuffix(purpose)
+			oscName := Key(worker.Name, o.values.KubernetesVersion) + keySuffix(worker.Machine.Image.Name, purpose)
 
 			osc, ok := o.oscs[oscName]
 			if !ok {
@@ -625,12 +625,12 @@ func Key(workerName string, kubernetesVersion *semver.Version) string {
 	return fmt.Sprintf("cloud-config-%s-%s", workerName, utils.ComputeSHA256Hex([]byte(kubernetesMajorMinorVersion))[:5])
 }
 
-func purposeToKeySuffix(purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
+func keySuffix(machineImageName string, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) string {
 	switch purpose {
 	case extensionsv1alpha1.OperatingSystemConfigPurposeProvision:
-		return "-downloader"
+		return "-" + machineImageName + "-downloader"
 	case extensionsv1alpha1.OperatingSystemConfigPurposeReconcile:
-		return "-original"
+		return "-" + machineImageName + "-original"
 	}
 	return ""
 }
