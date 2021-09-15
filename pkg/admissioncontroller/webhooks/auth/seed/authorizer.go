@@ -31,7 +31,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 
 	"github.com/go-logr/logr"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	eventsv1 "k8s.io/api/events/v1"
@@ -66,7 +66,7 @@ var (
 	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
 	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
 	bastionResource                   = gardenoperationsv1alpha1.Resource("bastions")
-	certificateSigningRequestResource = certificatesv1beta1.Resource("certificatesigningrequests")
+	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	cloudProfileResource              = gardencorev1beta1.Resource("cloudprofiles")
 	clusterRoleBindingResource        = rbacv1.Resource("clusterrolebindings")
 	configMapResource                 = corev1.Resource("configmaps")
