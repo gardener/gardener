@@ -57,18 +57,7 @@ func WaitUntilExtensionObjectReady(
 	timeout time.Duration,
 	postReadyFunc func() error,
 ) error {
-	return WaitUntilObjectReadyWithHealthFunction(
-		ctx,
-		c,
-		logger,
-		health.CheckExtensionObject,
-		obj,
-		kind,
-		interval,
-		severeThreshold,
-		timeout,
-		postReadyFunc,
-	)
+	return WaitUntilObjectReadyWithHealthFunction(ctx, c, logger, health.CheckExtensionObject, obj, kind, interval, severeThreshold, timeout, postReadyFunc)
 }
 
 // WaitUntilObjectReadyWithHealthFunction waits until the given object has become ready. It takes the health check
@@ -168,7 +157,7 @@ func DeleteExtensionObject(
 	return client.IgnoreNotFound(c.Delete(ctx, obj, deleteOpts...))
 }
 
-// DeleteExtensionObjects lists all extension objects and loops over them. It executes the given <predicateFunc> for
+// DeleteExtensionObjects lists all extension objects and loops over them. It executes the given predicateFunc for
 // each of them, and if it evaluates to true then the object will be deleted.
 func DeleteExtensionObjects(
 	ctx context.Context,
@@ -179,12 +168,7 @@ func DeleteExtensionObjects(
 	deleteOpts ...client.DeleteOption,
 ) error {
 	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, predicateFunc, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
-		return DeleteExtensionObject(
-			ctx,
-			c,
-			obj,
-			deleteOpts...,
-		)
+		return DeleteExtensionObject(ctx, c, obj, deleteOpts...)
 	})
 	if err != nil {
 		return err
@@ -194,8 +178,9 @@ func DeleteExtensionObjects(
 }
 
 // WaitUntilExtensionObjectsDeleted lists all extension objects and loops over them. It executes the given
-// <predicateFunc> for each of them, and if it evaluates to true and the object is already marked for deletion,
-// then it waits for the object to be deleted.
+// predicateFunc for each of them, and if it evaluates to true, then it waits for the object to be deleted.
+// If the component needs to wait for a given subset of all extension objects to be deleted (e.g. after deleting
+// unwanted objects), it should pass a predicateFunc that filters objects to wait for by name.
 func WaitUntilExtensionObjectsDeleted(
 	ctx context.Context,
 	c client.Client,
@@ -207,32 +192,9 @@ func WaitUntilExtensionObjectsDeleted(
 	timeout time.Duration,
 	predicateFunc func(obj extensionsv1alpha1.Object) bool,
 ) error {
-	fns, err := applyFuncToExtensionObjects(
-		ctx,
-		c,
-		listObj,
-		namespace,
-		func(obj extensionsv1alpha1.Object) bool {
-			if obj.GetDeletionTimestamp() == nil {
-				return false
-			}
-			if predicateFunc != nil && !predicateFunc(obj) {
-				return false
-			}
-			return true
-		},
-		func(ctx context.Context, obj extensionsv1alpha1.Object) error {
-			return WaitUntilExtensionObjectDeleted(
-				ctx,
-				c,
-				logger,
-				obj,
-				kind,
-				interval,
-				timeout,
-			)
-		},
-	)
+	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, predicateFunc, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
+		return WaitUntilExtensionObjectDeleted(ctx, c, logger, obj, kind, interval, timeout)
+	})
 	if err != nil {
 		return err
 	}
@@ -448,13 +410,7 @@ func WaitUntilExtensionObjectsMigrated(
 	timeout time.Duration,
 ) error {
 	fns, err := applyFuncToExtensionObjects(ctx, c, listObj, namespace, nil, func(ctx context.Context, obj extensionsv1alpha1.Object) error {
-		return WaitUntilExtensionObjectMigrated(
-			ctx,
-			c,
-			obj,
-			interval,
-			timeout,
-		)
+		return WaitUntilExtensionObjectMigrated(ctx, c, obj, interval, timeout)
 	})
 	if err != nil {
 		return err
