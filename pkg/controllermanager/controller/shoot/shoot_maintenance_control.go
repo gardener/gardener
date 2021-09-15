@@ -232,7 +232,7 @@ func MaintainMachineImages(shootLogger *logrus.Entry, shoot *gardencorev1beta1.S
 
 		shoot.Spec.Provider.Workers[i].Machine.Image = updatedMachineImage
 
-		message := fmt.Sprintf("image of worker-pool '%s' from '%s' version '%s' to version '%s'. Reason: %s", worker.Name, workerImage.Name, *workerImage.Version, *updatedMachineImage.Version, *reason)
+		message := fmt.Sprintf("image of worker-pool %q from %q version %q to version %q. Reason: %s", worker.Name, workerImage.Name, *workerImage.Version, *updatedMachineImage.Version, *reason)
 		reasonsForUpdate = append(reasonsForUpdate, message)
 	}
 
@@ -256,7 +256,7 @@ func MaintainKubernetesVersion(shoot *gardencorev1beta1.Shoot, profile *gardenco
 	if updatedKubernetesVersion == nil {
 		return nil, nil
 	}
-	reasonForKubernetesUpdate := fmt.Sprintf("Kubernetes version '%s' to version '%s'. Reason: %s", shoot.Spec.Kubernetes.Version, *updatedKubernetesVersion, *reason)
+	reasonForKubernetesUpdate := fmt.Sprintf("Kubernetes version %q to version %q. Reason: %s", shoot.Spec.Kubernetes.Version, *updatedKubernetesVersion, *reason)
 	shoot.Spec.Kubernetes.Version = *updatedKubernetesVersion
 	return &reasonForKubernetesUpdate, err
 }
@@ -279,7 +279,7 @@ func determineKubernetesVersion(shoot *gardencorev1beta1.Shoot, profile *gardenc
 		}
 		// cannot update as there is no consecutive minor version available (e.g shoot is on 1.16.X, but there is only 1.18.X, available and not 1.17.X)
 		if !newMinorAvailable {
-			return nil, fmt.Errorf("cannot perform minor Kubernetes version update for expired Kubernetes version '%s'. No suitable version found in CloudProfile - this is most likely a misconfiguration of the CloudProfile", shoot.Spec.Kubernetes.Version)
+			return nil, fmt.Errorf("cannot perform minor Kubernetes version update for expired Kubernetes version %q. No suitable version found in CloudProfile - this is most likely a misconfiguration of the CloudProfile", shoot.Spec.Kubernetes.Version)
 		}
 
 		return &latestPatchVersionNewMinor, nil
@@ -381,7 +381,7 @@ func determineMachineImage(cloudProfile *gardencorev1beta1.CloudProfile, shootMa
 		return gardencorev1beta1.MachineImage{}, fmt.Errorf("failure while determining the default machine image in the CloudProfile: %s", err.Error())
 	}
 	if !machineImagesFound {
-		return gardencorev1beta1.MachineImage{}, fmt.Errorf("failure while determining the default machine image in the CloudProfile: no machineImage with name '%s' (specified in shoot) could be found in the cloudProfile '%s'", shootMachineImage.Name, cloudProfile.Name)
+		return gardencorev1beta1.MachineImage{}, fmt.Errorf("failure while determining the default machine image in the CloudProfile: no machineImage with name %q (specified in shoot) could be found in the cloudProfile %q", shootMachineImage.Name, cloudProfile.Name)
 	}
 
 	return machineImageFromCloudProfile, nil
