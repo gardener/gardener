@@ -27,9 +27,12 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 
 	"github.com/prometheus/client_golang/prometheus"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	ctrlruntimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -58,9 +61,19 @@ func NewCSRController(
 		return nil, err
 	}
 
-	csrInformer, err := gardenClient.Cache().GetInformer(ctx, &certificatesv1beta1.CertificateSigningRequest{})
+	var csrInformer ctrlruntimecache.Informer
+
+	csrInformer, err = gardenClient.Cache().GetInformer(ctx, &certificatesv1.CertificateSigningRequest{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to get CSR Informer: %w", err)
+		if !meta.IsNoMatchError(err) {
+			return nil, fmt.Errorf("failed to get CSR Informer: %w", err)
+		}
+
+		// fallback to v1beta1
+		csrInformer, err = gardenClient.Cache().GetInformer(ctx, &certificatesv1beta1.CertificateSigningRequest{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get CSR Informer: %w", err)
+		}
 	}
 
 	csrController := &Controller{

@@ -29,10 +29,14 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/sirupsen/logrus"
 	authorizationv1 "k8s.io/api/authorization/v1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -64,75 +68,129 @@ type csrReconciler struct {
 }
 
 func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	csr := &certificatesv1beta1.CertificateSigningRequest{}
-	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, csr); err != nil {
+	var (
+		csrLogger = logger.NewFieldLogger(logger.Logger, "csr", request.Name)
+
+		cert               []byte
+		finalState         bool
+		req                []byte
+		usages             []certificatesv1.KeyUsage
+		extra              = make(map[string]authorizationv1.ExtraValue)
+		username           string
+		uid                string
+		groups             []string
+		updateConditionsFn func() error
+	)
+
+	csrV1 := &certificatesv1.CertificateSigningRequest{}
+	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, csrV1); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
 			return reconcile.Result{}, nil
 		}
-		r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
-		return reconcile.Result{}, err
+
+		if !meta.IsNoMatchError(err) {
+			r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+			return reconcile.Result{}, err
+		}
+
+		// fallback to v1beta1
+		csrV1beta1 := &certificatesv1beta1.CertificateSigningRequest{}
+		if err2 := r.gardenClient.Client().Get(ctx, request.NamespacedName, csrV1beta1); err2 != nil {
+			if apierrors.IsNotFound(err2) {
+				r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err2)
+				return reconcile.Result{}, nil
+			}
+
+			r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err2)
+			return reconcile.Result{}, err2
+		} else {
+			for _, c := range csrV1beta1.Status.Conditions {
+				if c.Type == certificatesv1beta1.CertificateApproved || c.Type == certificatesv1beta1.CertificateDenied {
+					finalState = true
+				}
+			}
+			for k, v := range csrV1beta1.Spec.Extra {
+				extra[k] = authorizationv1.ExtraValue(v)
+			}
+			cert = csrV1beta1.Status.Certificate
+			req = csrV1beta1.Spec.Request
+			usages = kutil.CertificatesV1beta1UsagesToCertificatesV1Usages(csrV1beta1.Spec.Usages)
+			username = csrV1beta1.Spec.Username
+			uid = csrV1beta1.Spec.UID
+			groups = csrV1beta1.Spec.Groups
+			updateConditionsFn = func() error {
+				csrV1beta1.Status.Conditions = append(csrV1beta1.Status.Conditions, certificatesv1beta1.CertificateSigningRequestCondition{
+					Type:    certificatesv1beta1.CertificateApproved,
+					Reason:  "AutoApproved",
+					Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
+				})
+				_, err3 := r.gardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(ctx, csrV1beta1, kubernetes.DefaultUpdateOptions())
+				return err3
+			}
+		}
+	} else {
+		for _, c := range csrV1.Status.Conditions {
+			if c.Type == certificatesv1.CertificateApproved || c.Type == certificatesv1.CertificateDenied {
+				finalState = true
+			}
+		}
+		for k, v := range csrV1.Spec.Extra {
+			extra[k] = authorizationv1.ExtraValue(v)
+		}
+		cert = csrV1.Status.Certificate
+		req = csrV1.Spec.Request
+		usages = csrV1.Spec.Usages
+		username = csrV1.Spec.Username
+		uid = csrV1.Spec.UID
+		groups = csrV1.Spec.Groups
+		updateConditionsFn = func() error {
+			csrV1.Status.Conditions = append(csrV1.Status.Conditions, certificatesv1.CertificateSigningRequestCondition{
+				Type:    certificatesv1.CertificateApproved,
+				Reason:  "AutoApproved",
+				Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
+			})
+			_, err3 := r.gardenClient.Kubernetes().CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csrV1.Name, csrV1, kubernetes.DefaultUpdateOptions())
+			return err3
+		}
 	}
 
-	csrLogger := logger.NewFieldLogger(logger.Logger, "csr", csr.Name)
-
-	if len(csr.Status.Certificate) != 0 {
+	if len(cert) != 0 || finalState {
 		return reconcile.Result{}, nil
 	}
 
-	for _, c := range csr.Status.Conditions {
-		if c.Type == certificatesv1beta1.CertificateApproved {
-			return reconcile.Result{}, nil
-		}
-		if c.Type == certificatesv1beta1.CertificateDenied {
-			return reconcile.Result{}, nil
-		}
-	}
-
-	x509cr, err := utils.DecodeCertificateRequest(csr.Spec.Request)
+	x509cr, err := utils.DecodeCertificateRequest(req)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("unable to parse csr %q: %w", csr.Name, err)
+		return reconcile.Result{}, fmt.Errorf("unable to parse csr %q: %w", request.Name, err)
 	}
 
-	if !gutil.IsSeedClientCert(x509cr, csr.Spec.Usages) {
+	if !gutil.IsSeedClientCert(x509cr, usages) {
 		return reconcile.Result{}, nil
 	}
 
-	csrLogger.Infof("[CSR APPROVER] %s", csr.Name)
+	csrLogger.Infof("[CSR APPROVER] %s", request.Name)
 
-	approved, err := authorize(ctx, r.gardenClient.Client(), csr, authorizationv1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
+	approved, err := authorize(ctx, r.gardenClient.Client(), username, uid, groups, extra, authorizationv1.ResourceAttributes{Group: "certificates.k8s.io", Resource: "certificatesigningrequests", Verb: "create", Subresource: "seedclient"})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if approved {
-		csrLogger.Infof("[CSR APPROVER] Auto-approving %s", csr.Name)
-
-		csr.Status.Conditions = append(csr.Status.Conditions, certificatesv1beta1.CertificateSigningRequestCondition{
-			Type:    certificatesv1beta1.CertificateApproved,
-			Reason:  "AutoApproved",
-			Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
-		})
-		_, err := r.gardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(ctx, csr, kubernetes.DefaultUpdateOptions())
-		return reconcile.Result{}, err
+		csrLogger.Infof("[CSR APPROVER] Auto-approving %s", request.Name)
+		return reconcile.Result{}, updateConditionsFn()
 	}
 
-	message := fmt.Sprintf("recognized csr %q but subject access review was not approved", csr.Name)
+	message := fmt.Sprintf("recognized csr %q but subject access review was not approved", request.Name)
 	csrLogger.Errorf("[CSR APPROVER] %s", message)
 	return reconcile.Result{}, fmt.Errorf(message)
 }
 
-func authorize(ctx context.Context, c client.Client, csr *certificatesv1beta1.CertificateSigningRequest, resourceAttributes authorizationv1.ResourceAttributes) (bool, error) {
-	extra := make(map[string]authorizationv1.ExtraValue)
-	for k, v := range csr.Spec.Extra {
-		extra[k] = authorizationv1.ExtraValue(v)
-	}
-
+func authorize(ctx context.Context, c client.Client, username, uid string, groups []string, extra map[string]authorizationv1.ExtraValue, resourceAttributes authorizationv1.ResourceAttributes) (bool, error) {
 	sar := &authorizationv1.SubjectAccessReview{
 		Spec: authorizationv1.SubjectAccessReviewSpec{
-			User:               csr.Spec.Username,
-			UID:                csr.Spec.UID,
-			Groups:             csr.Spec.Groups,
+			User:               username,
+			UID:                uid,
+			Groups:             groups,
 			Extra:              extra,
 			ResourceAttributes: &resourceAttributes,
 		},
