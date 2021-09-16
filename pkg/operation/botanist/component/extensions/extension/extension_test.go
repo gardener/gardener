@@ -262,20 +262,13 @@ var _ = Describe("Extension", func() {
 	})
 
 	Describe("#WaitCleanup", func() {
-		It("should not return error when resources are removed", func() {
+		It("should not return error if all resources are gone", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
 		})
 
-		It("should not return error if resources exist but they don't have deletionTimestamp", func() {
+		It("should return error if resources still exist", func() {
 			Expect(c.Create(ctx, expected[0])).To(Succeed())
-			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
-		})
-
-		It("should return error if resources with deletionTimestamp still exist", func() {
-			timeNow := metav1.Now()
-			expected[0].DeletionTimestamp = &timeNow
-			Expect(c.Create(ctx, expected[0])).To(Succeed())
-			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("is still present")))
+			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/name1 is still present")))
 		})
 	})
 
@@ -424,7 +417,7 @@ var _ = Describe("Extension", func() {
 			staleExtension := expected[0].DeepCopy()
 			staleExtension.Name = "new-name"
 			staleExtension.Spec.Type = newType
-			Expect(c.Create(ctx, staleExtension)).To(Succeed(), "creating extensions succeeds")
+			Expect(c.Create(ctx, staleExtension)).To(Succeed(), "creating stale extensions succeeds")
 
 			for _, e := range expected {
 				Expect(c.Create(ctx, e)).To(Succeed(), "creating extensions succeeds")
@@ -439,6 +432,26 @@ var _ = Describe("Extension", func() {
 			for _, item := range extensionList.Items {
 				Expect(item.Spec.Type).ToNot(Equal(newType))
 			}
+		})
+	})
+
+	Describe("#WaitCleanupStaleResources", func() {
+		It("should not return error if all resources are gone", func() {
+			Expect(defaultDepWaiter.WaitCleanupStaleResources(ctx)).To(Succeed())
+		})
+
+		It("should not return error if wanted resources exist", func() {
+			Expect(c.Create(ctx, expected[0])).To(Succeed())
+			Expect(defaultDepWaiter.WaitCleanupStaleResources(ctx)).To(Succeed())
+		})
+
+		It("should return error if stale resources still exist", func() {
+			staleExtension := expected[0].DeepCopy()
+			staleExtension.Name = "new-name"
+			staleExtension.Spec.Type = "new-type"
+			Expect(c.Create(ctx, staleExtension)).To(Succeed(), "creating stale extensions succeeds")
+
+			Expect(defaultDepWaiter.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("Extension test-namespace/new-name is still present")))
 		})
 	})
 })
