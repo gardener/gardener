@@ -329,4 +329,80 @@ var _ = Describe("Actuator", func() {
 			}
 		})
 	})
+
+	Describe("#restoreMachineSetsAndMachines", func() {
+		var (
+			ctx    = context.TODO()
+			logger = log.Log.WithName("test")
+
+			c client.Client
+			a *genericActuator
+
+			machineDeployments worker.MachineDeployments
+			expectedMachineSet machinev1alpha1.MachineSet
+			expectedMachine    machinev1alpha1.Machine
+		)
+
+		BeforeEach(func() {
+			s := runtime.NewScheme()
+			Expect(machinev1alpha1.AddToScheme(s)).To(Succeed())
+			c = fake.NewClientBuilder().WithScheme(s).Build()
+			a = &genericActuator{client: c}
+
+			expectedMachineSet = machinev1alpha1.MachineSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "machineset",
+					Namespace: "test-ns",
+				},
+			}
+
+			expectedMachine = machinev1alpha1.Machine{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "machine",
+					Namespace: "test-ns",
+				},
+				Status: machinev1alpha1.MachineStatus{
+					Node: "node-name",
+				},
+			}
+
+			machineDeployments = worker.MachineDeployments{
+				{
+					State: &worker.MachineDeploymentState{
+						Replicas: 1,
+						MachineSets: []machinev1alpha1.MachineSet{
+							expectedMachineSet,
+						},
+						Machines: []machinev1alpha1.Machine{
+							expectedMachine,
+						},
+					},
+				},
+			}
+		})
+
+		It("should deploy machinesets and machines present in the machine deployments' state", func() {
+			Expect(a.restoreMachineSetsAndMachines(ctx, logger, machineDeployments)).To(Succeed())
+
+			createdMachine := &machinev1alpha1.Machine{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(&expectedMachine), createdMachine)).To(Succeed())
+			Expect(createdMachine.Status).To(Equal(expectedMachine.Status))
+
+			createdMachineSet := &machinev1alpha1.MachineSet{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(&expectedMachineSet), createdMachineSet)).To(Succeed())
+		})
+
+		It("should update the machine status if machineset and machine already exist", func() {
+			Expect(c.Create(ctx, (&expectedMachine).DeepCopy())).To(Succeed())
+			Expect(c.Create(ctx, (&expectedMachineSet).DeepCopy())).To(Succeed())
+			Expect(a.restoreMachineSetsAndMachines(ctx, logger, machineDeployments)).To(Succeed())
+
+			createdMachine := &machinev1alpha1.Machine{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(&expectedMachine), createdMachine)).To(Succeed())
+			Expect(expectedMachine.Status).To(Equal(expectedMachine.Status))
+
+			createdMachineSet := &machinev1alpha1.MachineSet{}
+			Expect(c.Get(ctx, client.ObjectKeyFromObject(&expectedMachineSet), createdMachineSet)).To(Succeed())
+		})
+	})
 })
