@@ -9,7 +9,7 @@ nginx-ingress-controller-{{ include "nginx-ingress.config.data" . | sha256sum | 
 {{- end }}
 
 {{- define "nginx-ingress.class" -}}
-{{- if semverCompare ">= 1.22" .Capabilities.KubeVersion.GitVersion -}}
+{{- if semverCompare ">= 1.22-0" .Capabilities.KubeVersion.GitVersion -}}
 k8s.io/{{ .Values.global.ingressClass }}
 {{- else -}}
 {{ .Values.global.ingressClass }}
