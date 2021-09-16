@@ -215,5 +215,5 @@ If CRI configurations are not supported it is recommended create a validating we
 
 * [`OperatingSystemConfig` API (Golang specification)](../../pkg/apis/extensions/v1alpha1/types_operatingsystemconfig.go)
 * [`downloader` script](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader/templates/scripts/download-cloud-config.tpl.sh) (fetching the "original" user-data and the execution script)
-* [Original user-data templates](../../charts/seed-operatingsystemconfig/original/templates)
+* [Original user-data templates](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components)
 * [Execution script](../../pkg/operation/botanist/component/extensions/operatingsystemconfig/executor/templates/scripts/execute-cloud-config.tpl.sh)  (applying the "original" user-data)
