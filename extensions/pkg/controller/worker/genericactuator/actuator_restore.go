@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
@@ -31,7 +30,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	gardeneretry "github.com/gardener/gardener/pkg/utils/retry"
 )
 
 // Restore uses the Worker's spec to figure out the wanted MachineDeployments. Then it parses the Worker's state.
@@ -82,7 +80,7 @@ func (a *genericActuator) Restore(ctx context.Context, worker *extensionsv1alpha
 	}
 
 	// Do the actual restoration
-	if err := a.deployMachineSetsAndMachines(ctx, logger, wantedMachineDeployments); err != nil {
+	if err := a.restoreMachineSetsAndMachines(ctx, logger, wantedMachineDeployments); err != nil {
 		return fmt.Errorf("failed restoration of the machineSet and the machines: %w", err)
 	}
 
@@ -116,30 +114,24 @@ func (a *genericActuator) addStateToMachineDeployment(worker *extensionsv1alpha1
 	return nil
 }
 
-func (a *genericActuator) deployMachineSetsAndMachines(ctx context.Context, logger logr.Logger, wantedMachineDeployments workercontroller.MachineDeployments) error {
+func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, logger logr.Logger, wantedMachineDeployments workercontroller.MachineDeployments) error {
 	logger.Info("Deploying Machines and MachineSets")
 	for _, wantedMachineDeployment := range wantedMachineDeployments {
-		machineSets := wantedMachineDeployment.State.MachineSets
-
-		for _, machineSet := range machineSets {
-			// Create the MachineSet if not already exists. We do not care about the MachineSet status
-			// because the MCM will update it
+		for _, machineSet := range wantedMachineDeployment.State.MachineSets {
 			if err := a.client.Create(ctx, &machineSet); kutil.IgnoreAlreadyExists(err) != nil {
 				return err
 			}
 		}
 
-		// Deploy each machine owned by the MachineSet which was restored above
 		for _, machine := range wantedMachineDeployment.State.Machines {
-			// Create the machine if it not exists already
-			if err := a.client.Create(ctx, &machine); kutil.IgnoreAlreadyExists(err) != nil {
+			newMachine := (&machine).DeepCopy()
+			newMachine.Status = machinev1alpha1.MachineStatus{}
+			if err := a.client.Create(ctx, newMachine); kutil.IgnoreAlreadyExists(err) != nil {
 				return err
 			}
 
-			// Attach the Shoot node to the Machine status
-			node := machine.Status.Node
-			if err := a.waitUntilStatusIsUpdates(ctx, &machine, func() error {
-				machine.Status.Node = node
+			if err := extensionscontroller.TryPatchStatus(ctx, retry.DefaultBackoff, a.client, newMachine, func() error {
+				newMachine.Status = machine.Status
 				return nil
 			}); err != nil {
 				return err
@@ -148,18 +140,6 @@ func (a *genericActuator) deployMachineSetsAndMachines(ctx context.Context, logg
 	}
 
 	return nil
-}
-
-func (a *genericActuator) waitUntilStatusIsUpdates(ctx context.Context, obj client.Object, transform func() error) error {
-	return gardeneretry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		if err := extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, a.client, obj, transform); err != nil {
-			if apierrors.IsNotFound(err) {
-				return gardeneretry.NotOk()
-			}
-			return gardeneretry.SevereError(err)
-		}
-		return gardeneretry.Ok()
-	})
 }
 
 func removeWantedDeploymentWithoutState(wantedMachineDeployments workercontroller.MachineDeployments) workercontroller.MachineDeployments {
