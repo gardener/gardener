@@ -78,7 +78,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 // Add creates a new Worker Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator, common.OwnerCheckWatchdogStarterFunc(common.StartOwnerCheckWatchdog))
+	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator, common.GetDefaultOwnerCheckWatchdogManager())
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	if err := add(mgr, args, predicates); err != nil {
 		return err

@@ -106,16 +106,16 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	operationType := gardencorev1beta1helper.ComputeOperationType(infrastructure.ObjectMeta, infrastructure.Status.LastOperation)
 
 	if operationType != gardencorev1beta1.LastOperationTypeMigrate {
-		ok, watchdogCtx, cancel, err := common.StartOwnerCheckWatchdog(ctx, r.client, infrastructure.Namespace, cluster.Shoot.Name, logger)
+		key := "infrastructure:" + kutil.ObjectName(infrastructure)
+		ok, watchdogCtx, cleanup, err := common.GetOwnerCheckResultAndContext(ctx, r.client, infrastructure.Namespace, cluster.Shoot.Name, key)
 		if err != nil {
 			return reconcile.Result{}, err
 		} else if !ok {
-			logger.Info("Skipping the reconciliation since this seed is not the owner of the shoot")
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, fmt.Errorf("this seed is not the owner of shoot %s", kutil.ObjectName(cluster.Shoot))
 		}
 		ctx = watchdogCtx
-		if cancel != nil {
-			defer cancel()
+		if cleanup != nil {
+			defer cleanup()
 		}
 	}
 

@@ -50,7 +50,7 @@ var _ = Describe("Worker Reconcile", func() {
 	type fields struct {
 		logger          logr.Logger
 		actuator        func(ctrl *gomock.Controller) worker.Actuator
-		watchdogStarter func(ctrl *gomock.Controller) common.OwnerCheckWatchdogStarter
+		watchdogManager func(ctrl *gomock.Controller) common.WatchdogManager
 		ctx             context.Context
 		client          client.Client
 	}
@@ -108,19 +108,19 @@ var _ = Describe("Worker Reconcile", func() {
 			}
 		}
 
-		newMockWatchdogStarter = func(start, ok bool, err error) func(ctrl *gomock.Controller) common.OwnerCheckWatchdogStarter {
-			return func(ctrl *gomock.Controller) common.OwnerCheckWatchdogStarter {
-				ws := mockcommon.NewMockOwnerCheckWatchdogStarter(ctrl)
+		newMockWatchdogManager = func(start, ok bool, err error) func(ctrl *gomock.Controller) common.WatchdogManager {
+			return func(ctrl *gomock.Controller) common.WatchdogManager {
+				watchdogManager := mockcommon.NewMockWatchdogManager(ctrl)
 				if start {
-					ws.EXPECT().Start(ctx, gomock.Any(), "test", "test", gomock.Any()).Return(ok, ctx, nil, err)
+					watchdogManager.EXPECT().GetResultAndContext(ctx, gomock.Any(), "test", "test", "worker:test/workerTestReconcile").Return(ok, ctx, nil, err)
 				}
-				return ws
+				return watchdogManager
 			}
 		}
 	)
 
 	DescribeTable("Reconcile function", func(t *test) {
-		reconciler := worker.NewReconciler(t.fields.actuator(ctrl), t.fields.watchdogStarter(ctrl))
+		reconciler := worker.NewReconciler(t.fields.actuator(ctrl), t.fields.watchdogManager(ctrl))
 		expectInject(inject.ClientInto(t.fields.client, reconciler))
 		expectInject(inject.InjectorInto(func(i interface{}) error {
 			expectInject(inject.ClientInto(t.fields.client, i))
@@ -136,7 +136,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("reconcile", nil),
-				watchdogStarter: newMockWatchdogStarter(true, true, nil),
+				watchdogManager: newMockWatchdogManager(true, true, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
@@ -152,7 +152,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("", nil),
-				watchdogStarter: newMockWatchdogStarter(false, false, nil),
+				watchdogManager: newMockWatchdogManager(false, false, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addDeletionTimestampToWorker(
@@ -173,7 +173,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("migrate", nil),
-				watchdogStarter: newMockWatchdogStarter(false, false, nil),
+				watchdogManager: newMockWatchdogManager(false, false, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
@@ -189,7 +189,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("migrate", errors.New("test")),
-				watchdogStarter: newMockWatchdogStarter(false, false, nil),
+				watchdogManager: newMockWatchdogManager(false, false, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
@@ -205,7 +205,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("migrate", nil),
-				watchdogStarter: newMockWatchdogStarter(false, false, nil),
+				watchdogManager: newMockWatchdogManager(false, false, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
@@ -223,7 +223,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("migrate", errors.New("test")),
-				watchdogStarter: newMockWatchdogStarter(false, false, nil),
+				watchdogManager: newMockWatchdogManager(false, false, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
@@ -241,7 +241,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("delete", nil),
-				watchdogStarter: newMockWatchdogStarter(true, true, nil),
+				watchdogManager: newMockWatchdogManager(true, true, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addFinalizerToWorker(addDeletionTimestampToWorker(getWorker()), worker.FinalizerName),
@@ -255,7 +255,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("delete", errors.New("test")),
-				watchdogStarter: newMockWatchdogStarter(true, true, nil),
+				watchdogManager: newMockWatchdogManager(true, true, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addFinalizerToWorker(addDeletionTimestampToWorker(getWorker()), worker.FinalizerName),
@@ -269,7 +269,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("restore", nil),
-				watchdogStarter: newMockWatchdogStarter(true, true, nil),
+				watchdogManager: newMockWatchdogManager(true, true, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
@@ -285,7 +285,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("restore", errors.New("test")),
-				watchdogStarter: newMockWatchdogStarter(true, true, nil),
+				watchdogManager: newMockWatchdogManager(true, true, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
@@ -301,7 +301,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("reconcile", nil),
-				watchdogStarter: newMockWatchdogStarter(true, true, nil),
+				watchdogManager: newMockWatchdogManager(true, true, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
@@ -319,7 +319,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("reconcile", nil),
-				watchdogStarter: newMockWatchdogStarter(true, true, nil),
+				watchdogManager: newMockWatchdogManager(true, true, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
@@ -337,7 +337,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("reconcile", errors.New("test")),
-				watchdogStarter: newMockWatchdogStarter(true, true, nil),
+				watchdogManager: newMockWatchdogManager(true, true, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
@@ -355,7 +355,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("reconcile", errors.New("test")),
-				watchdogStarter: newMockWatchdogStarter(true, true, nil),
+				watchdogManager: newMockWatchdogManager(true, true, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addLastOperationToWorker(
@@ -373,7 +373,7 @@ var _ = Describe("Worker Reconcile", func() {
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("", nil),
-				watchdogStarter: newMockWatchdogStarter(true, false, nil),
+				watchdogManager: newMockWatchdogManager(true, false, nil),
 				ctx:             context.TODO(),
 				client: fake.NewClientBuilder().WithScheme(kubernetes.SeedScheme).WithObjects(
 					addOperationAnnotationToWorker(
@@ -383,7 +383,7 @@ var _ = Describe("Worker Reconcile", func() {
 			},
 			args:    arguments,
 			want:    reconcile.Result{},
-			wantErr: false,
+			wantErr: true,
 		}),
 	)
 })

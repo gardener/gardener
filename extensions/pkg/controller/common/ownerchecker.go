@@ -27,7 +27,7 @@ type Resolver interface {
 	LookupTXT(ctx context.Context, name string) ([]string, error)
 }
 
-// Checker provides a method for checking if a certain condition is true.
+// Checker checks if a certain condition is true.
 type Checker interface {
 	// Check checks that a certain condition is true.
 	Check(ctx context.Context) (bool, error)
@@ -53,6 +53,7 @@ type ownerChecker struct {
 
 // Check returns true if the owner domain name resolves to the owner ID, false otherwise.
 func (c *ownerChecker) Check(ctx context.Context) (bool, error) {
+	c.logger.V(1).Info("Resolving owner domain name", "ownerName", c.ownerName)
 	owner, err := c.resolver.LookupTXT(ctx, c.ownerName)
 	if err != nil {
 		return false, fmt.Errorf("could not resolve owner domain name %s: %w", c.ownerName, err)

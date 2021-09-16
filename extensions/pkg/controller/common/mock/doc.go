@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -destination=mocks.go -package=mock github.com/gardener/gardener/extensions/pkg/controller/common Resolver,Checker,OwnerCheckWatchdogStarter
+//go:generate mockgen -destination=mocks.go -package=mock github.com/gardener/gardener/extensions/pkg/controller/common Resolver,Checker,CheckerFactory,Watchdog,WatchdogFactory,WatchdogManager
 
 package mock

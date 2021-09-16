@@ -23,10 +23,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// GetOwnerNameAndID reads the owner DNS name and ID from the owner DNSRecord extension resource in the given namespace.
-func GetOwnerNameAndID(ctx context.Context, c client.Client, namespace, name string) (string, string, error) {
+// GetOwnerNameAndID reads the owner domain name and ID from the owner DNSRecord extension resource in the given namespace.
+func GetOwnerNameAndID(ctx context.Context, c client.Client, namespace, shootName string) (string, string, error) {
 	dns := &extensionsv1alpha1.DNSRecord{}
-	if err := c.Get(ctx, kutil.Key(namespace, name+"-owner"), dns); client.IgnoreNotFound(err) != nil {
+	if err := c.Get(ctx, kutil.Key(namespace, shootName+"-owner"), dns); client.IgnoreNotFound(err) != nil {
 		return "", "", err
 	}
 

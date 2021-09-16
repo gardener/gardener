@@ -39,7 +39,7 @@ import (
 type reconciler struct {
 	logger          logr.Logger
 	actuator        Actuator
-	watchdogStarter common.OwnerCheckWatchdogStarter
+	watchdogManager common.WatchdogManager
 
 	client        client.Client
 	reader        client.Reader
@@ -48,7 +48,7 @@ type reconciler struct {
 
 // NewReconciler creates a new reconcile.Reconciler that reconciles
 // Worker resources of Gardener's `extensions.gardener.cloud` API group.
-func NewReconciler(actuator Actuator, watchdogStarter common.OwnerCheckWatchdogStarter) reconcile.Reconciler {
+func NewReconciler(actuator Actuator, watchdogManager common.WatchdogManager) reconcile.Reconciler {
 	logger := log.Log.WithName(ControllerName)
 
 	return extensionscontroller.OperationAnnotationWrapper(
@@ -56,7 +56,7 @@ func NewReconciler(actuator Actuator, watchdogStarter common.OwnerCheckWatchdogS
 		&reconciler{
 			logger:          logger,
 			actuator:        actuator,
-			watchdogStarter: watchdogStarter,
+			watchdogManager: watchdogManager,
 			statusUpdater:   extensionscontroller.NewStatusUpdater(logger),
 		},
 	)
@@ -100,16 +100,16 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	operationType := gardencorev1beta1helper.ComputeOperationType(worker.ObjectMeta, worker.Status.LastOperation)
 
 	if operationType != gardencorev1beta1.LastOperationTypeMigrate {
-		ok, watchdogCtx, cancel, err := r.watchdogStarter.Start(ctx, r.client, worker.Namespace, cluster.Shoot.Name, logger)
+		key := "worker:" + kutil.ObjectName(worker)
+		ok, watchdogCtx, cleanup, err := r.watchdogManager.GetResultAndContext(ctx, r.client, worker.Namespace, cluster.Shoot.Name, key)
 		if err != nil {
 			return reconcile.Result{}, err
 		} else if !ok {
-			logger.Info("Skipping the reconciliation since this seed is not the owner of the shoot")
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, fmt.Errorf("this seed is not the owner of shoot %s", kutil.ObjectName(cluster.Shoot))
 		}
 		ctx = watchdogCtx
-		if cancel != nil {
-			defer cancel()
+		if cleanup != nil {
+			defer cleanup()
 		}
 	}
 

@@ -21,7 +21,6 @@ import (
 	. "github.com/gardener/gardener/extensions/pkg/controller/common"
 	mockcommon "github.com/gardener/gardener/extensions/pkg/controller/common/mock"
 
-	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -38,18 +37,14 @@ var _ = Describe("OwnerChecker", func() {
 		ctrl         *gomock.Controller
 		resolver     *mockcommon.MockResolver
 		ctx          context.Context
-		logger       logr.Logger
 		ownerChecker Checker
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		resolver = mockcommon.NewMockResolver(ctrl)
-
 		ctx = context.TODO()
-		logger = log.Log.WithName("test")
-
-		ownerChecker = NewOwnerChecker(ownerName, ownerID, resolver, logger)
+		ownerChecker = NewOwnerChecker(ownerName, ownerID, resolver, log.Log.WithName("test"))
 	})
 
 	AfterEach(func() {
