@@ -879,7 +879,10 @@ func RunReconcileSeedFlow(
 		}
 	}
 
-	ingressClass := computeNginxIngressClass(seed, kubernetesVersion)
+	ingressClass, err := computeNginxIngressClass(seed, kubernetesVersion)
+	if err != nil {
+		return err
+	}
 
 	values := kubernetes.Values(map[string]interface{}{
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
@@ -1597,7 +1600,14 @@ func migrateIngressClassForShootIngresses(ctx context.Context, gardenClient, see
 }
 
 func switchIngressClass(ctx context.Context, seedClient client.Client, ingressKey types.NamespacedName, newClass string, kubernetesVersion *semver.Version) error {
-	if versionutils.ConstraintK8sLessEqual121.Check(kubernetesVersion) {
+	// We need to use `versionutils.CompareVersions` because this function normalizes the seed version first.
+	// This is especially necessary if the seed cluster is a non Gardener managed cluster and thus might have some
+	// custom version suffix.
+	lessEqual121, err := versionutils.CompareVersions(kubernetesVersion.String(), "<=", "1.21.x")
+	if err != nil {
+		return err
+	}
+	if lessEqual121 {
 		ingress := &extensionsv1beta1.Ingress{}
 
 		if err := seedClient.Get(ctx, ingressKey, ingress); err != nil {
@@ -1644,15 +1654,24 @@ func computeNginxIngress(seed *Seed) map[string]interface{} {
 	return values
 }
 
-func computeNginxIngressClass(seed *Seed, kubernetesVersion *semver.Version) string {
+func computeNginxIngressClass(seed *Seed, kubernetesVersion *semver.Version) (string, error) {
 	managed := managedIngress(seed)
-	if managed && versionutils.ConstraintK8sGreaterEqual122.Check(kubernetesVersion) {
-		return v1beta1constants.SeedNginxIngressClass122
+
+	// We need to use `versionutils.CompareVersions` because this function normalizes the seed version first.
+	// This is especially necessary if the seed cluster is a non Gardener managed cluster and thus might have some
+	// custom version suffix.
+	greaterEqual122, err := versionutils.CompareVersions(kubernetesVersion.String(), ">=", "1.22")
+	if err != nil {
+		return "", err
+	}
+
+	if managed && greaterEqual122 {
+		return v1beta1constants.SeedNginxIngressClass122, nil
 	}
 	if managed {
-		return v1beta1constants.SeedNginxIngressClass
+		return v1beta1constants.SeedNginxIngressClass, nil
 	}
-	return v1beta1constants.ShootNginxIngressClass
+	return v1beta1constants.ShootNginxIngressClass, nil
 }
 
 func deleteIngressController(ctx context.Context, c client.Client) error {
