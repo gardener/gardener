@@ -25,8 +25,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("helper", func() {
@@ -96,10 +94,6 @@ var _ = Describe("helper", func() {
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: configv1alpha1.SchemeGroupVersion.String(),
 					Kind:       "GardenletConfiguration",
-				},
-				Debugging: componentbaseconfigv1alpha1.DebuggingConfiguration{
-					EnableProfiling:           pointer.Bool(false),
-					EnableContentionProfiling: pointer.Bool(false),
 				},
 			}))
 		})

@@ -755,7 +755,7 @@ func ComputeExpectedGardenletConfiguration(
 				Port:        2720,
 			},
 		}},
-		Debugging: baseconfigv1alpha1.DebuggingConfiguration{
+		Debugging: &baseconfigv1alpha1.DebuggingConfiguration{
 			EnableProfiling:           pointer.Bool(false),
 			EnableContentionProfiling: pointer.Bool(false),
 		},
