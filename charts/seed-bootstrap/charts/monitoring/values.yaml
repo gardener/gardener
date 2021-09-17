@@ -1,0 +1,39 @@
+global:
+  images:
+    prometheus: image-repository:image-tag
+    configmap-reloader: image-repository:image-tag
+
+prometheus:
+  resources:
+    prometheus:
+      limits:
+        cpu: 500m
+        memory: 2Gi
+      requests:
+        cpu: 300m
+        memory: 1Gi
+    prometheus-config-reloader:
+      limits:
+        cpu: 20m
+        memory: 50Mi
+      requests:
+        cpu: 10m
+        memory: 25Mi
+  port: 9090
+  storage: 100Gi
+  retention:
+    size: 85GB
+
+allowedMetrics:
+  cadvisor:
+  - container_cpu_cfs_periods_total
+  - container_cpu_cfs_throttled_seconds_total
+  - container_cpu_cfs_throttled_periods_total
+  - container_cpu_usage_seconds_total
+  - container_fs_inodes_total
+  - container_fs_limit_bytes
+  - container_fs_usage_bytes
+  - container_last_seen
+  - container_memory_working_set_bytes
+  - container_network_receive_bytes_total
+  - container_network_transmit_bytes_total

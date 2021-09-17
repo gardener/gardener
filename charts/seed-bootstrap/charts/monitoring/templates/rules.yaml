@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seed-prometheus-rules
+  namespace: {{ .Release.Namespace }}
+data:
+{{ (.Files.Glob "seed-prometheus-rules/**").AsConfig | indent 2 }}

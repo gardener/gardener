@@ -117,6 +117,7 @@ var _ = Describe("Bootstrap", func() {
 		It("should successfully deploy all the resources (w/o any special configuration)", func() {
 			registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 			Expect(registry.Add(constructNPAllowToAggregatePrometheus(namespace))).To(Succeed())
+			Expect(registry.Add(constructNPAllowToSeedPrometheus(namespace))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToAllShootAPIServers(namespace, values.SNIEnabled))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToBlockedCIDRs(namespace, values.BlockedAddresses))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))).To(Succeed())
@@ -155,6 +156,7 @@ var _ = Describe("Bootstrap", func() {
 
 			registry := managedresources.NewRegistry(kubernetes.SeedScheme, kubernetes.SeedCodec, kubernetes.SeedSerializer)
 			Expect(registry.Add(constructNPAllowToAggregatePrometheus(namespace))).To(Succeed())
+			Expect(registry.Add(constructNPAllowToSeedPrometheus(namespace))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToAllShootAPIServers(namespace, values.SNIEnabled))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToBlockedCIDRs(namespace, values.BlockedAddresses))).To(Succeed())
 			Expect(registry.Add(constructNPAllowToDNS(namespace, values.DNSServerAddress, values.NodeLocalIPVSAddress))).To(Succeed())
