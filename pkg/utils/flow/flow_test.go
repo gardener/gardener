@@ -24,9 +24,9 @@ import (
 	mockflow "github.com/gardener/gardener/pkg/utils/flow/mock"
 
 	"github.com/golang/mock/gomock"
-	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"go.uber.org/goleak"
 )
 
 type AtomicStringList struct {
@@ -62,15 +62,18 @@ var _ = Describe("Flow", func() {
 	cancel()
 
 	var (
-		ctx  context.Context
-		ctrl *gomock.Controller
+		ctx           context.Context
+		ctrl          *gomock.Controller
+		ignoreCurrent goleak.Option
 	)
 	BeforeEach(func() {
 		ctx = context.Background()
 		ctrl = gomock.NewController(GinkgoT())
+		ignoreCurrent = goleak.IgnoreCurrent()
 	})
 	AfterEach(func() {
 		ctrl.Finish()
+		goleak.VerifyNone(GinkgoT(), ignoreCurrent)
 	})
 
 	Describe("#Run", func() {
@@ -223,44 +226,6 @@ var _ = Describe("Flow", func() {
 			err := flow.Sequential(f1.Do, f2.Do)(ctx)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(ctx.Err()))
-		})
-	})
-
-	Describe("#Parallel", func() {
-		It("should execute the functions in parallel", func() {
-			var (
-				ctx = context.TODO()
-				f1  = mockflow.NewMockTaskFn(ctrl)
-				f2  = mockflow.NewMockTaskFn(ctrl)
-				f3  = mockflow.NewMockTaskFn(ctrl)
-			)
-
-			f1.EXPECT().Do(ctx)
-			f2.EXPECT().Do(ctx)
-			f3.EXPECT().Do(ctx)
-
-			Expect(flow.Parallel(f1.Do, f2.Do, f3.Do)(ctx)).To(Succeed())
-		})
-
-		It("should execute the functions and collect their errors", func() {
-			var (
-				ctx = context.TODO()
-				f1  = mockflow.NewMockTaskFn(ctrl)
-				f2  = mockflow.NewMockTaskFn(ctrl)
-				f3  = mockflow.NewMockTaskFn(ctrl)
-
-				err1 = errors.New("e1")
-				err2 = errors.New("e2")
-			)
-
-			f1.EXPECT().Do(ctx).Return(err1)
-			f2.EXPECT().Do(ctx).Return(err2)
-			f3.EXPECT().Do(ctx)
-
-			err := flow.Parallel(f1.Do, f2.Do, f3.Do)(ctx)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
-			Expect(err.(*multierror.Error).Errors).To(ConsistOf(err1, err2))
 		})
 	})
 })

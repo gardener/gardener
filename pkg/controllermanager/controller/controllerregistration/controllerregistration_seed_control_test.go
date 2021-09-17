@@ -34,6 +34,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"go.uber.org/goleak"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -537,6 +538,16 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 	})
 
 	Describe("#computeKindTypesForShoots", func() {
+		var (
+			ignoreCurrent goleak.Option
+		)
+		BeforeEach(func() {
+			ignoreCurrent = goleak.IgnoreCurrent()
+		})
+		AfterEach(func() {
+			goleak.VerifyNone(GinkgoT(), ignoreCurrent)
+		})
+
 		It("should correctly compute the result for a seed without DNS taint if the feature gate is disabled", func() {
 			defer test.WithFeatureGate(controllermanagerfeatures.FeatureGate, features.UseDNSRecords, false)()
 
@@ -630,7 +641,7 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 		})
 
 		It("should correctly compute types for shoot that has the Seed`s name as status not spec", func() {
-			shootList := []gardencorev1beta1.Shoot{
+			shootList = []gardencorev1beta1.Shoot{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "s4",
