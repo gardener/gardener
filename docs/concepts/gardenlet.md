@@ -79,8 +79,9 @@ gardenlet configuration to share it with the gardenlet.
 ## Gardenlet Certificate Rotation
 
 The certificate used to authenticate the gardenlet against the API server
-is valid for a year.
-After about 10 months, the gardenlet tries to automatically replace
+has a certain validity based on the configuration of the garden cluster
+(`--cluster-signing-duration` flag of the `kube-controller-manager` (default `1y`)). 
+After about 80% of the validity expired, the gardenlet tries to automatically replace
 the current certificate with a new one (certificate rotation).
 
 To use certificate rotation, you need to specify the secret to store
@@ -95,6 +96,12 @@ using the Bootstrap `kubeconfig`, certificates can be rotated automatically.
 The same control loop in the `gardener-controller-manager` that signs
 the CSRs during the initial TLS Bootstrapping also automatically signs
 the CSR during a certificate rotation.
+
+ℹ️ You can trigger an immediate renewal by annotating the `Secret` in the seed
+cluster stated in the `.gardenClientConnection.kubeconfigSecret` field with
+`gardener.cloud/operation=renew` and restarting the gardenlet. After it booted
+up again, gardenlet will issue a new certificate independent of the remaining
+validity  of the existing one.
 
 ### Rotate Certificate Using Custom `kubeconfig`
 
