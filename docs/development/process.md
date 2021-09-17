@@ -20,14 +20,15 @@ v1.32   | Week 37-38  | September 13, 2021     | September 26, 2021 | [@vpnachev
 v1.33   | Week 39-40  | September 27, 2021     | October 10, 2021   | [@voelzmo](https://github.com/voelzmo)             |
 v1.34   | Week 41-42  | October 11, 2021       | October 24, 2021   | [@kris94](https://github.com/kris94)               |
 v1.35   | Week 43-44  | October 25, 2021       | November 7, 2021   | [@plkokanov](https://github.com/plkokanov)         |
-v1.36   | Week 45-46  | November 8, 2021       | November 21, 2021  | [@timebertt](https://github.com/timebertt)           |
+v1.36   | Week 45-46  | November 8, 2021       | November 21, 2021  | [@timebertt](https://github.com/timebertt)         |
 v1.37   | Week 47-48  | November 22, 2021      | December 5, 2021   | [@danielfoehrKn](https://github.com/danielfoehrKn) |
-v1.38   | Week 49-50  | December 6, 2021       | December 19, 2021  | [@rfranzke](https://github.com/rfranzke)         |
+v1.38   | Week 49-50  | December 6, 2021       | December 19, 2021  | [@rfranzke](https://github.com/rfranzke)           |
 v1.39   | Week 01-02  | January 3, 2022        | January 16, 2022   | [@ialidzhikov](https://github.com/ialidzhikov)     |
 v1.40   | Week 03-04  | January 17, 2022       | January 30, 2022   | [@timuthy](https://github.com/timuthy)             |
 v1.41   | Week 05-06  | January 31, 2022       | February 13, 2022  | [@BeckerMax](https://github.com/BeckerMax)         |
 v1.42   | Week 06-07  | February 14, 2022      | February 27, 2022  | [@stoyanr](https://github.com/stoyanr)             |
 v1.43   | Week 08-09  | February 28, 2022      | March 13, 2022     | [@vanjiii](https://github.com/vanjiii)             |
+v1.44   | Week 10-11  | March 14, 2022         | March 27, 2022     | [@voelzmo](https://github.com/voelzmo)             |
 
 Apart from the release of the next version, the release responsible is also taking care of potential hotfix releases of the last three minor versions.
 The release responsible is the main contact person for coordinating new feature PRs for the next minor versions or cherry-pick PRs for the last three minor versions.
