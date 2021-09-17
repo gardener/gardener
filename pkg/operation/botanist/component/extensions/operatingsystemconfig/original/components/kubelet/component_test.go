@@ -15,11 +15,13 @@
 package kubelet_test
 
 import (
+	"github.com/gardener/gardener/charts"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
@@ -43,7 +45,8 @@ var _ = Describe("Component", func() {
 	})
 
 	DescribeTable("#Config",
-		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, kubeletFlags, kubeletConfig string) {
+		func(kubernetesVersion string, criName extensionsv1alpha1.CRIName, kubeletConfig string) {
+
 			ctx.CRIName = criName
 			ctx.KubernetesVersion = semver.MustParse(kubernetesVersion)
 			ctx.KubeletCACertificate = kubeletCACertificate
@@ -59,7 +62,7 @@ var _ = Describe("Component", func() {
 					Tag:        pointer.String(pauseContainerImageTag),
 				},
 			}
-
+			cliFlags := CLIFlags(ctx.KubernetesVersion, ctx.CRIName, ctx.Images[charts.ImageNamePauseContainer], ctx.KubeletCLIFlags)
 			units, files, err := component.Config(ctx)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -80,7 +83,8 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=-/var/lib/kubelet/extra_args
 ExecStartPre=/var/lib/kubelet/copy-kubernetes-binary.sh kubelet
-ExecStart=/opt/bin/kubelet \` + kubeletFlags),
+ExecStart=/opt/bin/kubelet \
+    ` + utils.Indent(strings.Join(cliFlags, " \\\n"), 4) + ` $KUBELET_EXTRA_ARGS`),
 				},
 				extensionsv1alpha1.Unit{
 					Name:    "kubelet-monitor.service",
@@ -136,14 +140,12 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.15, w/ docker",
 			"1.15.1",
 			extensionsv1alpha1.CRINameDocker,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
 		Entry(
 			"kubernetes 1.15, w/ containerd",
 			"1.15.1",
 			extensionsv1alpha1.CRINameContainerD,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
 
@@ -151,14 +153,12 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.16, w/ docker",
 			"1.16.1",
 			extensionsv1alpha1.CRINameDocker,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
 		Entry(
 			"kubernetes 1.16, w/ containerd",
 			"1.16.1",
 			extensionsv1alpha1.CRINameContainerD,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
 
@@ -166,14 +166,12 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.17, w/ docker",
 			"1.17.1",
 			extensionsv1alpha1.CRINameDocker,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
 		Entry(
 			"kubernetes 1.17, w/ containerd",
 			"1.17.1",
 			extensionsv1alpha1.CRINameContainerD,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
 
@@ -181,14 +179,12 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.18, w/ docker",
 			"1.18.1",
 			extensionsv1alpha1.CRINameDocker,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, true),
 			kubeletConfig(true, false),
 		),
 		Entry(
 			"kubernetes 1.18, w/ containerd",
 			"1.18.1",
 			extensionsv1alpha1.CRINameContainerD,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, true),
 			kubeletConfig(true, false),
 		),
 
@@ -196,14 +192,12 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.19, w/ docker",
 			"1.19.1",
 			extensionsv1alpha1.CRINameDocker,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false),
 			kubeletConfig(true, true),
 		),
 		Entry(
 			"kubernetes 1.19, w/ containerd",
 			"1.19.1",
 			extensionsv1alpha1.CRINameContainerD,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false),
 			kubeletConfig(true, true),
 		),
 
@@ -211,14 +205,12 @@ ExecStart=/opt/bin/health-monitor-kubelet`),
 			"kubernetes 1.20, w/ docker",
 			"1.20.1",
 			extensionsv1alpha1.CRINameDocker,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameDocker, false),
 			kubeletConfig(true, true),
 		),
 		Entry(
 			"kubernetes 1.20, w/ containerd",
 			"1.20.1",
 			extensionsv1alpha1.CRINameContainerD,
-			kubeletFlagsDocker(extensionsv1alpha1.CRINameContainerD, false),
 			kubeletConfig(true, true),
 		),
 	)
@@ -359,40 +351,6 @@ func unitConfigAfterCRI(criName extensionsv1alpha1.CRIName) string {
 	}
 	return `After=docker.service
 Wants=docker.socket rpc-statd.service`
-}
-
-func kubeletFlagsDocker(criName extensionsv1alpha1.CRIName, volumePluginDir bool) string {
-	var out string
-
-	out += `
-    --bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap \
-    --config=/var/lib/kubelet/config/kubelet \
-    --cni-bin-dir=/opt/cni/bin/ \
-    --cni-conf-dir=/etc/cni/net.d/ \
-    --image-pull-progress-deadline=1m0s \`
-
-	out += `
-    --kubeconfig=/var/lib/kubelet/kubeconfig-real \
-    --network-plugin=cni \`
-
-	if volumePluginDir {
-		out += `
-    --volume-plugin-dir=/var/lib/kubelet/volumeplugins \`
-	}
-
-	if criName == extensionsv1alpha1.CRINameContainerD {
-		out += `
-    --container-runtime=remote \
-    --container-runtime-endpoint=unix:///run/containerd/containerd.sock \`
-	} else {
-		out += `
-    --pod-infra-container-image=foo.io:v1.2.3 \`
-	}
-
-	out += `
-    --v=2 $KUBELET_EXTRA_ARGS`
-
-	return out
 }
 
 func kubeletConfig(
