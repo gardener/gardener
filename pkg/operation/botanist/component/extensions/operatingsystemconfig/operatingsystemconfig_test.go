@@ -219,7 +219,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				oscDownloader := &extensionsv1alpha1.OperatingSystemConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cloud-config-" + worker.Name + "-77ac3-downloader",
+						Name:      "cloud-config-" + worker.Name + "-77ac3-" + worker.Machine.Image.Name + "-downloader",
 						Namespace: namespace,
 						Annotations: map[string]string{
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
@@ -240,7 +240,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				oscOriginal := &extensionsv1alpha1.OperatingSystemConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cloud-config-" + worker.Name + "-77ac3-original",
+						Name:      "cloud-config-" + worker.Name + "-77ac3-" + worker.Machine.Image.Name + "-original",
 						Namespace: namespace,
 						Annotations: map[string]string{
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
@@ -317,13 +317,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 				for _, worker := range workers {
 					extensions = append(extensions,
 						gardencorev1alpha1.ExtensionResourceState{
-							Name:    pointer.String("cloud-config-" + worker.Name + "-77ac3-downloader"),
+							Name:    pointer.String("cloud-config-" + worker.Name + "-77ac3-" + worker.Machine.Image.Name + "-downloader"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
 							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
 							State:   &runtime.RawExtension{Raw: stateDownloader},
 						},
 						gardencorev1alpha1.ExtensionResourceState{
-							Name:    pointer.String("cloud-config-" + worker.Name + "-77ac3-original"),
+							Name:    pointer.String("cloud-config-" + worker.Name + "-77ac3-" + worker.Machine.Image.Name + "-original"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
 							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
 							State:   &runtime.RawExtension{Raw: stateOriginal},
@@ -564,37 +564,37 @@ var _ = Describe("OperatingSystemConfig", func() {
 				Expect(defaultDepWaiter.WorkerNameToOperatingSystemConfigsMap()).To(Equal(map[string]*OperatingSystemConfigs{
 					worker1Name: {
 						Downloader: Data{
-							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-downloader",
-							Command: pointer.String("foo-cloud-config-" + worker1Name + "-77ac3-downloader"),
+							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
+							Command: pointer.String("foo-cloud-config-" + worker1Name + "-77ac3-type1-downloader"),
 							Units: []string{
-								"bar-cloud-config-" + worker1Name + "-77ac3-downloader",
-								"baz-cloud-config-" + worker1Name + "-77ac3-downloader",
+								"bar-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
+								"baz-cloud-config-" + worker1Name + "-77ac3-type1-downloader",
 							},
 						},
 						Original: Data{
-							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-original",
-							Command: pointer.String("foo-cloud-config-" + worker1Name + "-77ac3-original"),
+							Content: "foobar-cloud-config-" + worker1Name + "-77ac3-type1-original",
+							Command: pointer.String("foo-cloud-config-" + worker1Name + "-77ac3-type1-original"),
 							Units: []string{
-								"bar-cloud-config-" + worker1Name + "-77ac3-original",
-								"baz-cloud-config-" + worker1Name + "-77ac3-original",
+								"bar-cloud-config-" + worker1Name + "-77ac3-type1-original",
+								"baz-cloud-config-" + worker1Name + "-77ac3-type1-original",
 							},
 						},
 					},
 					worker2Name: {
 						Downloader: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-77ac3-downloader",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-77ac3-downloader"),
+							Content: "foobar-cloud-config-" + worker2Name + "-77ac3-type2-downloader",
+							Command: pointer.String("foo-cloud-config-" + worker2Name + "-77ac3-type2-downloader"),
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-77ac3-downloader",
-								"baz-cloud-config-" + worker2Name + "-77ac3-downloader",
+								"bar-cloud-config-" + worker2Name + "-77ac3-type2-downloader",
+								"baz-cloud-config-" + worker2Name + "-77ac3-type2-downloader",
 							},
 						},
 						Original: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-77ac3-original",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-77ac3-original"),
+							Content: "foobar-cloud-config-" + worker2Name + "-77ac3-type2-original",
+							Command: pointer.String("foo-cloud-config-" + worker2Name + "-77ac3-type2-original"),
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-77ac3-original",
-								"baz-cloud-config-" + worker2Name + "-77ac3-original",
+								"bar-cloud-config-" + worker2Name + "-77ac3-type2-original",
+								"baz-cloud-config-" + worker2Name + "-77ac3-type2-original",
 							},
 						},
 					},
