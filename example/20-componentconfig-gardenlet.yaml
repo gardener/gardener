@@ -101,6 +101,7 @@ featureGates:
   SeedKubeScheduler: false
   ReversedVPN: false
   UseDNSRecords: true
+  DenyInvalidExtensionResources: true
 # seedConfig:
 #   metadata:
 #     name: my-seed
