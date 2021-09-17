@@ -67,6 +67,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// TODO: this test is currently not executed, because it scales down gardener-controller-manager (probably from times
+//  before the gardenlet). It should be refactor into an envtest-style integration test, so that we can enable it again.
+
 var (
 	hostKubeconfig   = flag.String("host-kubeconfig", "", "the path to the kubeconfig  of the cluster that hosts the gardener controlplane")
 	testMachineryRun = flag.Bool("test-machinery-run", false, "indicates whether the test is being executed by the test machinery or locally")
@@ -77,9 +80,6 @@ var (
 const (
 	WaitForCreateDeleteTimeout = 600 * time.Second
 	InitializationTimeout      = 600 * time.Second
-	// timeouts
-	setupContextTimeout = time.Minute * 2
-	restoreCtxTimeout   = time.Minute * 2
 )
 
 func init() {
@@ -138,7 +138,7 @@ var _ = Describe("Scheduler testing", func() {
 
 		if testMachineryRun != nil && *testMachineryRun {
 			f.Logger.Info("Running in test Machinery")
-			replicas, err := framework.ScaleGardenerControllerManager(setupContextTimeout, f.GardenClient.Client(), pointer.Int32(0))
+			replicas, err := framework.ScaleGardenerControllerManager(ctx, f.GardenClient.Client(), pointer.Int32(0))
 			Expect(err).To(BeNil())
 			gardenerSchedulerReplicaCount = replicas
 			f.Logger.Info("Environment for test-machinery run is prepared")
@@ -154,7 +154,7 @@ var _ = Describe("Scheduler testing", func() {
 		}
 		if testMachineryRun != nil && *testMachineryRun {
 			// Scale up ControllerManager again to restore state before this test.
-			_, err := framework.ScaleGardenerControllerManager(restoreCtxTimeout, f.GardenClient.Client(), gardenerSchedulerReplicaCount)
+			_, err := framework.ScaleGardenerControllerManager(ctx, f.GardenClient.Client(), gardenerSchedulerReplicaCount)
 			framework.ExpectNoError(err)
 			f.Logger.Infof("Environment is restored")
 		}

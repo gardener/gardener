@@ -242,15 +242,12 @@ func DeleteAndWaitForResource(ctx context.Context, k8sClient kubernetes.Interfac
 }
 
 // ScaleDeployment scales a deployment and waits until it is scaled
-func ScaleDeployment(timeout time.Duration, client client.Client, desiredReplicas *int32, name, namespace string) (*int32, error) {
+func ScaleDeployment(ctx context.Context, client client.Client, desiredReplicas *int32, name, namespace string) (*int32, error) {
 	if desiredReplicas == nil {
 		return nil, nil
 	}
 
-	ctxSetup, cancelCtxSetup := context.WithTimeout(context.Background(), timeout)
-	defer cancelCtxSetup()
-
-	replicas, err := GetDeploymentReplicas(ctxSetup, client, namespace, name)
+	replicas, err := GetDeploymentReplicas(ctx, client, namespace, name)
 	if apierrors.IsNotFound(err) {
 		return nil, nil
 	}
@@ -262,12 +259,12 @@ func ScaleDeployment(timeout time.Duration, client client.Client, desiredReplica
 	}
 
 	// scale the deployment
-	if err := kubernetes.ScaleDeployment(ctxSetup, client, kutil.Key(namespace, name), *desiredReplicas); err != nil {
+	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(namespace, name), *desiredReplicas); err != nil {
 		return nil, fmt.Errorf("failed to scale the replica count of deployment %q: '%w'", name, err)
 	}
 
 	// wait until scaled
-	if err := WaitUntilDeploymentScaled(ctxSetup, client, namespace, name, *desiredReplicas); err != nil {
+	if err := WaitUntilDeploymentScaled(ctx, client, namespace, name, *desiredReplicas); err != nil {
 		return nil, fmt.Errorf("failed to wait until deployment %q is scaled: '%w'", name, err)
 	}
 	return replicas, nil

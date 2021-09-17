@@ -293,7 +293,7 @@ func (c *Controller) runPrepareShootControlPlaneMigration(ctx context.Context, o
 		f = g.Compile()
 	)
 
-	if err := f.Run(flow.Opts{
+	if err := f.Run(ctx, flow.Opts{
 		Logger:           o.Logger,
 		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,

@@ -560,13 +560,13 @@ func ParseSchedulerConfiguration(configuration *corev1.ConfigMap) (*config.Sched
 }
 
 // ScaleGardenerScheduler scales the gardener-scheduler to the desired replicas
-func ScaleGardenerScheduler(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-scheduler", v1beta1constants.GardenNamespace)
+func ScaleGardenerScheduler(ctx context.Context, client client.Client, desiredReplicas *int32) (*int32, error) {
+	return ScaleDeployment(ctx, client, desiredReplicas, "gardener-scheduler", v1beta1constants.GardenNamespace)
 }
 
 // ScaleGardenerControllerManager scales the gardener-controller-manager to the desired replicas
-func ScaleGardenerControllerManager(setupContextTimeout time.Duration, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return ScaleDeployment(setupContextTimeout, client, desiredReplicas, "gardener-controller-manager", v1beta1constants.GardenNamespace)
+func ScaleGardenerControllerManager(ctx context.Context, client client.Client, desiredReplicas *int32) (*int32, error) {
+	return ScaleDeployment(ctx, client, desiredReplicas, "gardener-controller-manager", v1beta1constants.GardenNamespace)
 }
 
 // CreateSeed creates a seed from a seed Object and waits until it is successfully reconciled

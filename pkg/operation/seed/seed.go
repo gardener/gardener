@@ -1096,7 +1096,7 @@ func runCreateSeedFlow(
 		})
 	)
 
-	if err := g.Compile().Run(flow.Opts{Logger: log}); err != nil {
+	if err := g.Compile().Run(ctx, flow.Opts{Logger: log}); err != nil {
 		return flow.Errors(err)
 	}
 
@@ -1206,7 +1206,7 @@ func RunDeleteSeedFlow(
 		})
 	)
 
-	if err := g.Compile().Run(flow.Opts{Logger: log}); err != nil {
+	if err := g.Compile().Run(ctx, flow.Opts{Logger: log}); err != nil {
 		return flow.Errors(err)
 	}
 

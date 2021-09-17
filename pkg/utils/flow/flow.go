@@ -105,17 +105,11 @@ type Opts struct {
 	ErrorCleaner func(ctx context.Context, taskID string)
 	// ErrorContext is used to store any error related context.
 	ErrorContext *utilerrors.ErrorContext
-	// Context is the context used during flow execution.
-	Context context.Context
 }
 
 // Run starts an execution of a Flow.
 // It blocks until the Flow has finished and returns the error, if any.
-func (f *Flow) Run(opts Opts) error {
-	ctx := opts.Context
-	if ctx == nil {
-		ctx = context.Background()
-	}
+func (f *Flow) Run(ctx context.Context, opts Opts) error {
 	return newExecution(f, opts.Logger, opts.ProgressReporter, opts.ErrorCleaner, opts.ErrorContext).run(ctx)
 }
 

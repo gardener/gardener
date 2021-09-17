@@ -19,16 +19,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/api/extensions"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/utils/retry"
-	"github.com/gardener/gardener/test/framework"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/api/extensions"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/utils/retry"
+	"github.com/gardener/gardener/test/framework"
 )
 
 // WaitForExtensionCondition waits for the extension to contain the condition type, status and reason
@@ -60,6 +61,6 @@ func WaitForExtensionCondition(ctx context.Context, logger *logrus.Logger, seedC
 }
 
 // ScaleGardenerResourceManager scales the gardener-resource-manager to the desired replicas
-func ScaleGardenerResourceManager(setupContextTimeout time.Duration, namespace string, client client.Client, desiredReplicas *int32) (*int32, error) {
-	return framework.ScaleDeployment(setupContextTimeout, client, desiredReplicas, v1beta1constants.DeploymentNameGardenerResourceManager, namespace)
+func ScaleGardenerResourceManager(ctx context.Context, namespace string, client client.Client, desiredReplicas *int32) (*int32, error) {
+	return framework.ScaleDeployment(ctx, client, desiredReplicas, v1beta1constants.DeploymentNameGardenerResourceManager, namespace)
 }

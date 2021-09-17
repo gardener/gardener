@@ -580,7 +580,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		f = g.Compile()
 	)
 
-	if err := f.Run(flow.Opts{
+	if err := f.Run(ctx, flow.Opts{
 		Logger:           o.Logger,
 		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
 		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,

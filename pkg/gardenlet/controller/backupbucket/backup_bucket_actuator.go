@@ -28,13 +28,13 @@ import (
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -97,10 +97,9 @@ func (a *actuator) Reconcile(ctx context.Context) error {
 		f = g.Compile()
 	)
 
-	return f.Run(flow.Opts{
+	return f.Run(ctx, flow.Opts{
 		Logger:           a.logger,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupBucketProgress),
-		Context:          ctx,
 	})
 }
 
@@ -135,10 +134,9 @@ func (a *actuator) Delete(ctx context.Context) error {
 		f = g.Compile()
 	)
 
-	return f.Run(flow.Opts{
+	return f.Run(ctx, flow.Opts{
 		Logger:           a.logger,
 		ProgressReporter: flow.NewImmediateProgressReporter(a.reportBackupBucketProgress),
-		Context:          ctx,
 	})
 }
 

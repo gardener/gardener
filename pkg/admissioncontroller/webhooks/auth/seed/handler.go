@@ -65,9 +65,11 @@ type handler struct {
 
 func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	var (
-		body []byte
-		err  error
+		ctx, cancel = context.WithTimeout(r.Context(), DecisionTimeout)
+		body        []byte
+		err         error
 	)
+	defer cancel()
 
 	// Verify that body is non-empty
 	if r.Body == nil {
@@ -112,9 +114,6 @@ func (h *handler) Handle(w http.ResponseWriter, r *http.Request) {
 	h.logger.V(1).Info("received request", keysAndValues...)
 
 	// Consult authorizer for result and write the response
-	ctx, cancel := context.WithTimeout(context.Background(), DecisionTimeout)
-	defer cancel()
-
 	decision, reason, err := h.authorizer.Authorize(ctx, AuthorizationAttributesFrom(*sarSpec))
 	if err != nil {
 		h.logger.Error(err, "error when consulting authorizer for opinion")
