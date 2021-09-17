@@ -17,7 +17,7 @@
         },
         {
             "typeMatchPrefix": "^github\\.com/gardener/gardener/pkg/apis/core/",
-            "docsURLTemplate": "../core#core.gardener.cloud/v1alpha1.{{.TypeIdentifier}}"
+            "docsURLTemplate": "../core.md#core.gardener.cloud/v1alpha1.{{.TypeIdentifier}}"
         },
         {
             "typeMatchPrefix": "^k8s\\.io/(api|apimachinery/pkg/apis)/",
