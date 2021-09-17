@@ -32,7 +32,7 @@ import (
 	"github.com/onsi/gomega/matchers"
 	gomegatypes "github.com/onsi/gomega/types"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -106,7 +106,7 @@ var _ = Describe("graph", func() {
 		managedSeed1SecretRef              = corev1.SecretReference{Namespace: "ms1secret2", Name: "ms1secret2"}
 
 		seedNameInCSR = "myseed"
-		csr1          *certificatesv1beta1.CertificateSigningRequest
+		csr1          *certificatesv1.CertificateSigningRequest
 
 		serviceAccount1Secret1 = "sa1secret1"
 		serviceAccount1Secret2 = "sa1secret2"
@@ -133,17 +133,17 @@ var _ = Describe("graph", func() {
 		fakeInformers = &informertest.FakeInformers{
 			Scheme: scheme,
 			InformersByGVK: map[schema.GroupVersionKind]toolscache.SharedIndexInformer{
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):                        fakeInformerSeed,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):                       fakeInformerShoot,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):                     fakeInformerProject,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"):                fakeInformerBackupBucket,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):                 fakeInformerBackupEntry,
-				gardenoperationsv1alpha1.SchemeGroupVersion.WithKind("Bastion"):              fakeInformerBastion,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"):               fakeInformerSecretBinding,
-				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"):      fakeInformerControllerInstallation,
-				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):            fakeInformerManagedSeed,
-				certificatesv1beta1.SchemeGroupVersion.WithKind("CertificateSigningRequest"): fakeInformerCertificateSigningRequest,
-				corev1.SchemeGroupVersion.WithKind("ServiceAccount"):                         fakeInformerServiceAccount,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Seed"):                   fakeInformerSeed,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Shoot"):                  fakeInformerShoot,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("Project"):                fakeInformerProject,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupBucket"):           fakeInformerBackupBucket,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("BackupEntry"):            fakeInformerBackupEntry,
+				gardenoperationsv1alpha1.SchemeGroupVersion.WithKind("Bastion"):         fakeInformerBastion,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("SecretBinding"):          fakeInformerSecretBinding,
+				gardencorev1beta1.SchemeGroupVersion.WithKind("ControllerInstallation"): fakeInformerControllerInstallation,
+				seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed"):       fakeInformerManagedSeed,
+				certificatesv1.SchemeGroupVersion.WithKind("CertificateSigningRequest"): fakeInformerCertificateSigningRequest,
+				corev1.SchemeGroupVersion.WithKind("ServiceAccount"):                    fakeInformerServiceAccount,
 			},
 		}
 
@@ -263,9 +263,9 @@ var _ = Describe("graph", func() {
 			},
 		}
 
-		csr1 = &certificatesv1beta1.CertificateSigningRequest{
+		csr1 = &certificatesv1.CertificateSigningRequest{
 			ObjectMeta: metav1.ObjectMeta{Name: "csr1"},
-			Spec: certificatesv1beta1.CertificateSigningRequestSpec{
+			Spec: certificatesv1.CertificateSigningRequestSpec{
 				Request: []byte(`-----BEGIN CERTIFICATE REQUEST-----
 MIIClzCCAX8CAQAwUjEkMCIGA1UEChMbZ2FyZGVuZXIuY2xvdWQ6c3lzdGVtOnNl
 ZWRzMSowKAYDVQQDEyFnYXJkZW5lci5jbG91ZDpzeXN0ZW06c2VlZDpteXNlZWQw
@@ -282,10 +282,10 @@ TRVg+MWlcLqCjALr9Y4N39DOzf4/SJts8AZJJ+lyyxnY3XIPXx7SdADwNWC8BX0U
 OK8CwMwN3iiBQ4redVeMK7LU1unV899q/PWB+NXFcKVr+Grm/Kom5VxuhXSzcHEp
 yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 -----END CERTIFICATE REQUEST-----`),
-				Usages: []certificatesv1beta1.KeyUsage{
-					certificatesv1beta1.UsageKeyEncipherment,
-					certificatesv1beta1.UsageDigitalSignature,
-					certificatesv1beta1.UsageClientAuth,
+				Usages: []certificatesv1.KeyUsage{
+					certificatesv1.UsageKeyEncipherment,
+					certificatesv1.UsageDigitalSignature,
+					certificatesv1.UsageClientAuth,
 				},
 			},
 		}
@@ -959,7 +959,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
 	})
 
-	It("should behave as expected for certificatesv1beta1.CertificateSigningRequest", func() {
+	It("should behave as expected for certificatesv1.CertificateSigningRequest", func() {
 		By("add")
 		fakeInformerCertificateSigningRequest.Add(csr1)
 		Expect(graph.graph.Nodes().Len()).To(Equal(2))

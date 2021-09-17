@@ -40,6 +40,8 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
+	certificatesv1 "k8s.io/api/certificates/v1"
+	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1497,5 +1499,59 @@ var _ = Describe("kubernetes", func() {
 			Entry("w/  container name, logs of current  container", []corev1.ContainerStatus{{}, {Name: containerName, State: corev1.ContainerState{Waiting: &corev1.ContainerStateWaiting{}}}}, containerName, false),
 			Entry("w/  container name, logs of previous container", []corev1.ContainerStatus{{}, {Name: containerName, State: corev1.ContainerState{Running: &corev1.ContainerStateRunning{}}}}, containerName, true),
 		)
+	})
+
+	Describe("#CertificatesV1beta1UsagesToCertificatesV1Usages", func() {
+		It("should correctly convert", func() {
+			Expect(CertificatesV1beta1UsagesToCertificatesV1Usages([]certificatesv1beta1.KeyUsage{
+				certificatesv1beta1.UsageSigning,
+				certificatesv1beta1.UsageDigitalSignature,
+				certificatesv1beta1.UsageContentCommitment,
+				certificatesv1beta1.UsageKeyEncipherment,
+				certificatesv1beta1.UsageKeyAgreement,
+				certificatesv1beta1.UsageDataEncipherment,
+				certificatesv1beta1.UsageCertSign,
+				certificatesv1beta1.UsageCRLSign,
+				certificatesv1beta1.UsageEncipherOnly,
+				certificatesv1beta1.UsageDecipherOnly,
+				certificatesv1beta1.UsageAny,
+				certificatesv1beta1.UsageServerAuth,
+				certificatesv1beta1.UsageClientAuth,
+				certificatesv1beta1.UsageCodeSigning,
+				certificatesv1beta1.UsageEmailProtection,
+				certificatesv1beta1.UsageSMIME,
+				certificatesv1beta1.UsageIPsecEndSystem,
+				certificatesv1beta1.UsageIPsecTunnel,
+				certificatesv1beta1.UsageIPsecUser,
+				certificatesv1beta1.UsageTimestamping,
+				certificatesv1beta1.UsageOCSPSigning,
+				certificatesv1beta1.UsageMicrosoftSGC,
+				certificatesv1beta1.UsageNetscapeSGC,
+			})).To(Equal([]certificatesv1.KeyUsage{
+				certificatesv1.UsageSigning,
+				certificatesv1.UsageDigitalSignature,
+				certificatesv1.UsageContentCommitment,
+				certificatesv1.UsageKeyEncipherment,
+				certificatesv1.UsageKeyAgreement,
+				certificatesv1.UsageDataEncipherment,
+				certificatesv1.UsageCertSign,
+				certificatesv1.UsageCRLSign,
+				certificatesv1.UsageEncipherOnly,
+				certificatesv1.UsageDecipherOnly,
+				certificatesv1.UsageAny,
+				certificatesv1.UsageServerAuth,
+				certificatesv1.UsageClientAuth,
+				certificatesv1.UsageCodeSigning,
+				certificatesv1.UsageEmailProtection,
+				certificatesv1.UsageSMIME,
+				certificatesv1.UsageIPsecEndSystem,
+				certificatesv1.UsageIPsecTunnel,
+				certificatesv1.UsageIPsecUser,
+				certificatesv1.UsageTimestamping,
+				certificatesv1.UsageOCSPSigning,
+				certificatesv1.UsageMicrosoftSGC,
+				certificatesv1.UsageNetscapeSGC,
+			}))
+		})
 	})
 })

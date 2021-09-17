@@ -34,6 +34,7 @@ import (
 
 	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -60,7 +61,7 @@ var (
 	backupBucketResource              = gardencorev1beta1.Resource("backupbuckets")
 	backupEntryResource               = gardencorev1beta1.Resource("backupentries")
 	bastionResource                   = gardenoperationsv1alpha1.Resource("bastions")
-	certificateSigningRequestResource = certificatesv1beta1.Resource("certificatesigningrequests")
+	certificateSigningRequestResource = certificatesv1.Resource("certificatesigningrequests")
 	clusterRoleBindingResource        = rbacv1.Resource("clusterrolebindings")
 	leaseResource                     = coordinationv1.Resource("leases")
 	secretResource                    = corev1.Resource("secrets")
@@ -209,17 +210,37 @@ func (h *handler) admitCertificateSigningRequest(seedName string, request admiss
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("unexpected operation: %q", request.Operation))
 	}
 
-	csr := &certificatesv1beta1.CertificateSigningRequest{}
-	if err := h.decoder.Decode(request, csr); err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
+	var (
+		req    []byte
+		usages []certificatesv1.KeyUsage
+	)
+
+	switch request.Resource.Version {
+	case "v1":
+		csr := &certificatesv1.CertificateSigningRequest{}
+		if err := h.decoder.Decode(request, csr); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		req = csr.Spec.Request
+		usages = csr.Spec.Usages
+
+	case "v1beta1":
+		csr := &certificatesv1beta1.CertificateSigningRequest{}
+		if err := h.decoder.Decode(request, csr); err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+
+		req = csr.Spec.Request
+		usages = kutil.CertificatesV1beta1UsagesToCertificatesV1Usages(csr.Spec.Usages)
 	}
 
-	x509cr, err := utils.DecodeCertificateRequest(csr.Spec.Request)
+	x509cr, err := utils.DecodeCertificateRequest(req)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if !gutil.IsSeedClientCert(x509cr, csr.Spec.Usages) {
+	if !gutil.IsSeedClientCert(x509cr, usages) {
 		return admission.Errored(http.StatusForbidden, fmt.Errorf("can only create CSRs for seed clusters"))
 	}
 

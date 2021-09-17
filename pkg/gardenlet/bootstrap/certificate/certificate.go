@@ -154,7 +154,7 @@ func waitForCertificate(ctx context.Context, client kubernetesclientset.Interfac
 			return retry.Ok()
 		}
 
-		// fall back to v1beta1
+		// fallback to v1beta1
 		if csr, err := client.CertificatesV1beta1().CertificateSigningRequests().Get(ctx, reqName, metav1.GetOptions{}); err == nil {
 			if csr.UID != reqUID {
 				return retry.SevereError(fmt.Errorf("csr %q changed UIDs", csr.Name))

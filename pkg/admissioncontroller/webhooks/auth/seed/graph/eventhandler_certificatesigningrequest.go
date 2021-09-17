@@ -21,7 +21,9 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -30,27 +32,36 @@ import (
 func (g *graph) setupCertificateSigningRequestWatch(_ context.Context, informer cache.Informer) {
 	informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			certificateSigningRequest, ok := obj.(*certificatesv1beta1.CertificateSigningRequest)
-			if !ok {
+			if csrV1, ok := obj.(*certificatesv1.CertificateSigningRequest); ok {
+				g.handleCertificateSigningRequestCreate(csrV1.Name, csrV1.Spec.Request, csrV1.Spec.Usages)
 				return
 			}
-			g.handleCertificateSigningRequestCreate(certificateSigningRequest)
+
+			if csrV1beta1, ok := obj.(*certificatesv1beta1.CertificateSigningRequest); ok {
+				g.handleCertificateSigningRequestCreate(csrV1beta1.Name, csrV1beta1.Spec.Request, kutil.CertificatesV1beta1UsagesToCertificatesV1Usages(csrV1beta1.Spec.Usages))
+				return
+			}
 		},
 
 		DeleteFunc: func(obj interface{}) {
 			if tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown); ok {
 				obj = tombstone.Obj
 			}
-			certificateSigningRequest, ok := obj.(*certificatesv1beta1.CertificateSigningRequest)
-			if !ok {
+
+			if csrV1, ok := obj.(*certificatesv1.CertificateSigningRequest); ok {
+				g.handleCertificateSigningRequestDelete(csrV1.Name)
 				return
 			}
-			g.handleCertificateSigningRequestDelete(certificateSigningRequest)
+
+			if csrV1beta1, ok := obj.(*certificatesv1beta1.CertificateSigningRequest); ok {
+				g.handleCertificateSigningRequestDelete(csrV1beta1.Name)
+				return
+			}
 		},
 	})
 }
 
-func (g *graph) handleCertificateSigningRequestCreate(certificateSigningRequest *certificatesv1beta1.CertificateSigningRequest) {
+func (g *graph) handleCertificateSigningRequestCreate(name string, request []byte, usages []certificatesv1.KeyUsage) {
 	start := time.Now()
 	defer func() {
 		metricUpdateDuration.WithLabelValues("CertificateSigningRequest", "Create").Observe(time.Since(start).Seconds())
@@ -58,24 +69,24 @@ func (g *graph) handleCertificateSigningRequestCreate(certificateSigningRequest 
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	x509cr, err := utils.DecodeCertificateRequest(certificateSigningRequest.Spec.Request)
+	x509cr, err := utils.DecodeCertificateRequest(request)
 	if err != nil {
 		return
 	}
-	if !gutil.IsSeedClientCert(x509cr, certificateSigningRequest.Spec.Usages) {
+	if !gutil.IsSeedClientCert(x509cr, usages) {
 		return
 	}
 	seedName, _ := seedidentity.FromCertificateSigningRequest(x509cr)
 
 	var (
-		certificateSigningRequestVertex = g.getOrCreateVertex(VertexTypeCertificateSigningRequest, "", certificateSigningRequest.Name)
+		certificateSigningRequestVertex = g.getOrCreateVertex(VertexTypeCertificateSigningRequest, "", name)
 		seedVertex                      = g.getOrCreateVertex(VertexTypeSeed, "", seedName)
 	)
 
 	g.addEdge(certificateSigningRequestVertex, seedVertex)
 }
 
-func (g *graph) handleCertificateSigningRequestDelete(certificateSigningRequest *certificatesv1beta1.CertificateSigningRequest) {
+func (g *graph) handleCertificateSigningRequestDelete(name string) {
 	start := time.Now()
 	defer func() {
 		metricUpdateDuration.WithLabelValues("CertificateSigningRequest", "Delete").Observe(time.Since(start).Seconds())
@@ -83,5 +94,5 @@ func (g *graph) handleCertificateSigningRequestDelete(certificateSigningRequest 
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
-	g.deleteVertex(VertexTypeCertificateSigningRequest, "", certificateSigningRequest.Name)
+	g.deleteVertex(VertexTypeCertificateSigningRequest, "", name)
 }
