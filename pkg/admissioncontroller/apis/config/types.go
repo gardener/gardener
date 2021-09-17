@@ -34,7 +34,7 @@ type AdmissionControllerConfiguration struct {
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration
 	// Debugging holds configuration for Debugging related features.
-	Debugging componentbaseconfig.DebuggingConfiguration
+	Debugging *componentbaseconfig.DebuggingConfiguration
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.
