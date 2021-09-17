@@ -100,7 +100,7 @@ webhooks:
   - apiGroups:
     - ""
     apiVersions:
-    - "*"
+    - v1
     operations:
     - CREATE
     resources:
@@ -109,7 +109,7 @@ webhooks:
   - apiGroups:
     - rbac.authorization.k8s.io
     apiVersions:
-    - "*"
+    - v1
     operations:
     - CREATE
     resources:
@@ -117,7 +117,7 @@ webhooks:
   - apiGroups:
     - coordination.k8s.io
     apiVersions:
-    - "*"
+    - v1
     operations:
     - CREATE
     resources:
@@ -125,7 +125,7 @@ webhooks:
   - apiGroups:
     - certificates.k8s.io
     apiVersions:
-    - "*"
+    - v1beta1
     operations:
     - CREATE
     resources:
@@ -133,7 +133,7 @@ webhooks:
   - apiGroups:
     - core.gardener.cloud
     apiVersions:
-    - "*"
+    - v1beta1
     operations:
     - CREATE
     resources:
@@ -142,7 +142,7 @@ webhooks:
   - apiGroups:
     - core.gardener.cloud
     apiVersions:
-    - "*"
+    - v1beta1
     operations:
     - CREATE
     - DELETE
@@ -151,7 +151,7 @@ webhooks:
   - apiGroups:
     - operations.gardener.cloud
     apiVersions:
-    - "*"
+    - v1alpha1
     operations:
     - CREATE
     resources:
@@ -159,7 +159,7 @@ webhooks:
   - apiGroups:
     - core.gardener.cloud
     apiVersions:
-    - "*"
+    - v1beta1
     operations:
     - CREATE
     - UPDATE
@@ -167,6 +167,7 @@ webhooks:
     resources:
     - seeds
   failurePolicy: Fail
+  matchPolicy: Equivalent
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
     url: https://gardener-admission-controller.garden/webhooks/admission/seedrestriction
