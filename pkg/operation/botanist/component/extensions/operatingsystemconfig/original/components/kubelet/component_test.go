@@ -15,13 +15,14 @@
 package kubelet_test
 
 import (
+	"strings"
+
 	"github.com/gardener/gardener/charts"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"strings"
 
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
