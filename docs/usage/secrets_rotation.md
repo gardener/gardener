@@ -28,7 +28,7 @@ To put it in use, a cloudprovider secret is bound to one more namespaces (and th
 
 #### Kubeconfig
 
-*Name*: <shoot-name>.kubeconfig
+*Name*: `<shoot-name>.kubeconfig`
 
 *Description*: Admin Kubeconfig provided by Gardener for the managed shoot cluster.
 
@@ -49,7 +49,7 @@ These client certificates are not revocable and thus a full credential rotation 
 
 #### Monitoring
 
-*Name*: <shoot-name>.monitoring
+*Name*: `<shoot-name>.monitoring`
 
 *Description*: Username/password for accessing the user Grafana instance of a shoot cluster.
 
@@ -57,7 +57,7 @@ These client certificates are not revocable and thus a full credential rotation 
 
 ### SSH-Keypair
 
-*Name*: <shoot-name>.ssh-keypair
+*Name*: `<shoot-name>.ssh-keypair`
 
 *Description*: SSH-Keypair that is propagated to the worker nodes of the shoot cluster.
 The private key can be used to establish an SSH connection to the workers for troubleshooting purposes.
