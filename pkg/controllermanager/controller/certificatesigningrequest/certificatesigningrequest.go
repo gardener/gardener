@@ -61,7 +61,10 @@ func NewCSRController(
 		return nil, err
 	}
 
-	var csrInformer ctrlruntimecache.Informer
+	var (
+		csrInformer            ctrlruntimecache.Informer
+		certificatesAPIVersion = "v1"
+	)
 
 	csrInformer, err = gardenClient.Cache().GetInformer(ctx, &certificatesv1.CertificateSigningRequest{})
 	if err != nil {
@@ -74,10 +77,11 @@ func NewCSRController(
 		if err != nil {
 			return nil, fmt.Errorf("failed to get CSR Informer: %w", err)
 		}
+		certificatesAPIVersion = "v1beta1"
 	}
 
 	csrController := &Controller{
-		reconciler: NewCSRReconciler(logger.Logger, gardenClient),
+		reconciler: NewCSRReconciler(logger.Logger, gardenClient, certificatesAPIVersion),
 		csrQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CertificateSigningRequest"),
 		workerCh:   make(chan int),
 	}

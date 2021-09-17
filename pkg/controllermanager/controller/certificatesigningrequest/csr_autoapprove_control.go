@@ -36,7 +36,6 @@ import (
 	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -55,16 +54,18 @@ func (c *Controller) csrUpdate(_, newObj interface{}) {
 }
 
 // NewCSRReconciler creates a new instance of a reconciler which reconciles CSRs.
-func NewCSRReconciler(l logrus.FieldLogger, gardenClient kubernetes.Interface) reconcile.Reconciler {
+func NewCSRReconciler(l logrus.FieldLogger, gardenClient kubernetes.Interface, certificatesAPIVersion string) reconcile.Reconciler {
 	return &csrReconciler{
-		logger:       l,
-		gardenClient: gardenClient,
+		logger:                 l,
+		gardenClient:           gardenClient,
+		certificatesAPIVersion: certificatesAPIVersion,
 	}
 }
 
 type csrReconciler struct {
-	logger       logrus.FieldLogger
-	gardenClient kubernetes.Interface
+	logger                 logrus.FieldLogger
+	gardenClient           kubernetes.Interface
+	certificatesAPIVersion string
 }
 
 func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -82,54 +83,18 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 		updateConditionsFn func() error
 	)
 
-	csrV1 := &certificatesv1.CertificateSigningRequest{}
-	if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, csrV1); err != nil {
-		if apierrors.IsNotFound(err) {
-			r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
-			return reconcile.Result{}, nil
-		}
-
-		if !meta.IsNoMatchError(err) {
+	switch r.certificatesAPIVersion {
+	case "v1":
+		csrV1 := &certificatesv1.CertificateSigningRequest{}
+		if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, csrV1); err != nil {
+			if apierrors.IsNotFound(err) {
+				r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+				return reconcile.Result{}, nil
+			}
 			r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
 			return reconcile.Result{}, err
 		}
 
-		// fallback to v1beta1
-		csrV1beta1 := &certificatesv1beta1.CertificateSigningRequest{}
-		if err2 := r.gardenClient.Client().Get(ctx, request.NamespacedName, csrV1beta1); err2 != nil {
-			if apierrors.IsNotFound(err2) {
-				r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err2)
-				return reconcile.Result{}, nil
-			}
-
-			r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err2)
-			return reconcile.Result{}, err2
-		} else {
-			for _, c := range csrV1beta1.Status.Conditions {
-				if c.Type == certificatesv1beta1.CertificateApproved || c.Type == certificatesv1beta1.CertificateDenied {
-					finalState = true
-				}
-			}
-			for k, v := range csrV1beta1.Spec.Extra {
-				extra[k] = authorizationv1.ExtraValue(v)
-			}
-			cert = csrV1beta1.Status.Certificate
-			req = csrV1beta1.Spec.Request
-			usages = kutil.CertificatesV1beta1UsagesToCertificatesV1Usages(csrV1beta1.Spec.Usages)
-			username = csrV1beta1.Spec.Username
-			uid = csrV1beta1.Spec.UID
-			groups = csrV1beta1.Spec.Groups
-			updateConditionsFn = func() error {
-				csrV1beta1.Status.Conditions = append(csrV1beta1.Status.Conditions, certificatesv1beta1.CertificateSigningRequestCondition{
-					Type:    certificatesv1beta1.CertificateApproved,
-					Reason:  "AutoApproved",
-					Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
-				})
-				_, err3 := r.gardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(ctx, csrV1beta1, kubernetes.DefaultUpdateOptions())
-				return err3
-			}
-		}
-	} else {
 		for _, c := range csrV1.Status.Conditions {
 			if c.Type == certificatesv1.CertificateApproved || c.Type == certificatesv1.CertificateDenied {
 				finalState = true
@@ -150,8 +115,43 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 				Reason:  "AutoApproved",
 				Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
 			})
-			_, err3 := r.gardenClient.Kubernetes().CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csrV1.Name, csrV1, kubernetes.DefaultUpdateOptions())
-			return err3
+			_, err := r.gardenClient.Kubernetes().CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csrV1.Name, csrV1, kubernetes.DefaultUpdateOptions())
+			return err
+		}
+
+	case "v1beta1":
+		csrV1beta1 := &certificatesv1beta1.CertificateSigningRequest{}
+		if err := r.gardenClient.Client().Get(ctx, request.NamespacedName, csrV1beta1); err != nil {
+			if apierrors.IsNotFound(err) {
+				r.logger.Infof("Object %q is gone, stop reconciling: %v", request.Name, err)
+				return reconcile.Result{}, nil
+			}
+			r.logger.Infof("Unable to retrieve object %q from store: %v", request.Name, err)
+			return reconcile.Result{}, err
+		}
+
+		for _, c := range csrV1beta1.Status.Conditions {
+			if c.Type == certificatesv1beta1.CertificateApproved || c.Type == certificatesv1beta1.CertificateDenied {
+				finalState = true
+			}
+		}
+		for k, v := range csrV1beta1.Spec.Extra {
+			extra[k] = authorizationv1.ExtraValue(v)
+		}
+		cert = csrV1beta1.Status.Certificate
+		req = csrV1beta1.Spec.Request
+		usages = kutil.CertificatesV1beta1UsagesToCertificatesV1Usages(csrV1beta1.Spec.Usages)
+		username = csrV1beta1.Spec.Username
+		uid = csrV1beta1.Spec.UID
+		groups = csrV1beta1.Spec.Groups
+		updateConditionsFn = func() error {
+			csrV1beta1.Status.Conditions = append(csrV1beta1.Status.Conditions, certificatesv1beta1.CertificateSigningRequestCondition{
+				Type:    certificatesv1beta1.CertificateApproved,
+				Reason:  "AutoApproved",
+				Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
+			})
+			_, err := r.gardenClient.Kubernetes().CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(ctx, csrV1beta1, kubernetes.DefaultUpdateOptions())
+			return err
 		}
 	}
 
