@@ -35,6 +35,7 @@ import (
 	authorizationv1 "k8s.io/api/authorization/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -114,6 +115,7 @@ func (r *csrReconciler) Reconcile(ctx context.Context, request reconcile.Request
 				Type:    certificatesv1.CertificateApproved,
 				Reason:  "AutoApproved",
 				Message: "Auto approving gardenlet client certificate after SubjectAccessReview.",
+				Status:  v1.ConditionTrue,
 			})
 			_, err := r.gardenClient.Kubernetes().CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csrV1.Name, csrV1, kubernetes.DefaultUpdateOptions())
 			return err
