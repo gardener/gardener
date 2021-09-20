@@ -145,7 +145,7 @@ func runCommand(ctx context.Context, opts *Options) error {
 		return fmt.Errorf("failed to create controller manager: %w", err)
 	}
 
-	if cfg.Debugging.EnableProfiling {
+	if cfg.Debugging != nil && cfg.Debugging.EnableProfiling {
 		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
 		}

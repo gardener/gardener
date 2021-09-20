@@ -325,7 +325,7 @@ func (g *Gardener) startServer(ctx context.Context) {
 		WithHandler("/metrics", promhttp.Handler()).
 		WithHandlerFunc("/healthz", healthz.HandlerFunc(g.HealthManager))
 
-	if g.Config.Debugging.EnableProfiling {
+	if g.Config.Debugging != nil && g.Config.Debugging.EnableProfiling {
 		routes.Profiling{}.AddToBuilder(builder)
 		if g.Config.Debugging.EnableContentionProfiling {
 			goruntime.SetBlockProfileRate(1)

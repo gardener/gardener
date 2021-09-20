@@ -34,7 +34,8 @@ type AdmissionControllerConfiguration struct {
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
-	Debugging componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging"`
+	// +optional
+	Debugging *componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging,omitempty"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

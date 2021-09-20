@@ -44,7 +44,8 @@ type ControllerManagerConfiguration struct {
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration `json:"server"`
 	// Debugging holds configuration for Debugging related features.
-	Debugging componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging"`
+	// +optional
+	Debugging *componentbaseconfigv1alpha1.DebuggingConfiguration `json:"debugging,omitempty"`
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/gardener/pkg/controllermanager/features/features.go".
