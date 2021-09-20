@@ -42,6 +42,16 @@ func patchFinalizers(ctx context.Context, writer client.Writer, obj client.Objec
 	return writer.Patch(ctx, obj, patchFunc(beforePatch))
 }
 
+// StrategicMergePatchAddFinalizers adds the given finalizers to the object via a strategic merge patch request
+// (without optimistic locking).
+// Note: we can't do the same for removing finalizers, because removing the last finalizer results in the following patch:
+//  {"metadata":{"finalizers":null}}
+// which is not safe to issue without optimistic locking. Also, $deleteFromPrimitiveList is not idempotent, see
+// https://github.com/kubernetes/kubernetes/issues/105146.
+func StrategicMergePatchAddFinalizers(ctx context.Context, writer client.Writer, obj client.Object, finalizers ...string) error {
+	return patchFinalizers(ctx, writer, obj, strategicMergeFrom, controllerutil.AddFinalizer, finalizers...)
+}
+
 // EnsureFinalizer ensures that a finalizer of the given name is set on the given object with exponential backoff.
 // If the finalizer is not set, it adds it to the list of finalizers and patches the remote object.
 // Use PatchAddFinalizers instead, if the controller is able to tolerate conflict errors caused by stale reads.
