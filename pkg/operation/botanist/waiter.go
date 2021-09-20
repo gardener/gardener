@@ -53,19 +53,14 @@ func (b *Botanist) WaitUntilVpnShootServiceIsReady(ctx context.Context) error {
 // WaitUntilTunnelConnectionExists waits until a port forward connection to the tunnel pod (vpn-shoot) in the kube-system
 // namespace of the Shoot cluster can be established.
 func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 15*time.Minute)
-	defer cancel()
+	const timeout = 15 * time.Minute
 
-	return retry.Until(timeoutCtx, 5*time.Second, func(ctx context.Context) (bool, error) {
-		done, err := CheckTunnelConnection(ctx, b.K8sShootClient, b.Logger, common.VPNTunnel)
-
-		// If the tunnel connection check failed but is not yet "done" (i.e., will be retried, hence, it didn't fail
-		// with a severe error), and if the classic VPN solution is used for the shoot cluster then let's try to fetch
+	if err := retry.UntilTimeout(ctx, 5*time.Second, timeout, func(ctx context.Context) (bool, error) {
+		return CheckTunnelConnection(ctx, b.K8sShootClient, b.Logger, common.VPNTunnel)
+	}); err != nil {
+		// If the classic VPN solution is used for the shoot cluster then let's try to fetch
 		// the last events of the vpn-shoot service (potentially indicating an error with the load balancer service).
-		if err != nil &&
-			!done &&
-			!b.Shoot.ReversedVPNEnabled {
-
+		if !b.Shoot.ReversedVPNEnabled {
 			b.Logger.Errorf("error %v occurred while checking the tunnel connection", err)
 
 			service := &corev1.Service{
@@ -82,16 +77,20 @@ func (b *Botanist) WaitUntilTunnelConnectionExists(ctx context.Context) error {
 			eventsErrorMessage, err2 := kutil.FetchEventMessages(ctx, b.K8sShootClient.Client().Scheme(), b.K8sShootClient.Client(), service, corev1.EventTypeWarning, 2)
 			if err2 != nil {
 				b.Logger.Errorf("error %v occurred while fetching events for VPN load balancer service", err2)
-				return retry.SevereError(fmt.Errorf("'%w' occurred but could not fetch events for more information", err))
+				return fmt.Errorf("'%w' occurred but could not fetch events for more information", err)
 			}
 
 			if eventsErrorMessage != "" {
-				return retry.SevereError(fmt.Errorf("%s\n\n%s", err.Error(), eventsErrorMessage))
+				return fmt.Errorf("%s\n\n%s", err.Error(), eventsErrorMessage)
 			}
+
+			return err
 		}
 
-		return done, err
-	})
+		return err
+	}
+
+	return nil
 }
 
 // WaitUntilNodesDeleted waits until no nodes exist in the shoot cluster anymore.
