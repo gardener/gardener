@@ -62,8 +62,10 @@ var TimeNow = time.Now
 // Interface is an interface for managing OperatingSystemConfigs.
 type Interface interface {
 	component.DeployMigrateWaiter
-	// DeleteStaleResources deletes stale OperatingSystemConfig resources.
+	// DeleteStaleResources deletes unused OperatingSystemConfig resources from the shoot namespace in the seed.
 	DeleteStaleResources(context.Context) error
+	// WaitCleanupStaleResources waits until all unused OperatingSystemConfig resources are cleaned up.
+	WaitCleanupStaleResources(context.Context) error
 	// SetCABundle sets the CABundle value.
 	SetCABundle(*string)
 	// SetKubeletCACertificate sets the KubeletCACertificate value.
@@ -298,8 +300,22 @@ func (o *operatingSystemConfig) deleteOperatingSystemConfigResources(ctx context
 	)
 }
 
-// WaitCleanup waits until the OperatingSystemConfig CRD is deleted
+// WaitCleanup waits until all OperatingSystemConfig resources are cleaned up.
 func (o *operatingSystemConfig) WaitCleanup(ctx context.Context) error {
+	return o.waitCleanup(ctx, sets.NewString())
+}
+
+// DeleteStaleResources deletes unused OperatingSystemConfig resources from the shoot namespace in the seed.
+func (o *operatingSystemConfig) DeleteStaleResources(ctx context.Context) error {
+	return o.deleteOperatingSystemConfigResources(ctx, o.getWantedOSCNames())
+}
+
+// WaitCleanupStaleResources waits until all unused OperatingSystemConfig resources are cleaned up.
+func (o *operatingSystemConfig) WaitCleanupStaleResources(ctx context.Context) error {
+	return o.waitCleanup(ctx, o.getWantedOSCNames())
+}
+
+func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames sets.String) error {
 	return extensions.WaitUntilExtensionObjectsDeleted(
 		ctx,
 		o.client,
@@ -309,20 +325,31 @@ func (o *operatingSystemConfig) WaitCleanup(ctx context.Context) error {
 		o.values.Namespace,
 		o.waitInterval,
 		o.waitTimeout,
-		nil,
+		func(obj extensionsv1alpha1.Object) bool {
+			return !wantedOSCNames.Has(obj.GetName())
+		},
 	)
 }
 
-// DeleteStaleResources deletes unused OperatingSystemConfig resources from the shoot namespace in the seed.
-func (o *operatingSystemConfig) DeleteStaleResources(ctx context.Context) error {
+// getWantedOSCNames returns the names of all OSC resources, that are currently needed based
+// on the configured worker pools.
+func (o *operatingSystemConfig) getWantedOSCNames() sets.String {
 	wantedOSCNames := sets.NewString()
 
-	_ = o.forEachWorkerPoolAndPurpose(func(osc *extensionsv1alpha1.OperatingSystemConfig, _ gardencorev1beta1.Worker, _ extensionsv1alpha1.OperatingSystemConfigPurpose) error {
-		wantedOSCNames.Insert(osc.GetName())
-		return nil
-	})
+	for _, worker := range o.values.Workers {
+		if worker.Machine.Image == nil {
+			continue
+		}
 
-	return o.deleteOperatingSystemConfigResources(ctx, wantedOSCNames)
+		for _, purpose := range []extensionsv1alpha1.OperatingSystemConfigPurpose{
+			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
+			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
+		} {
+			wantedOSCNames.Insert(Key(worker.Name, o.values.KubernetesVersion) + keySuffix(worker.Machine.Image.Name, purpose))
+		}
+	}
+
+	return wantedOSCNames
 }
 
 func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv1alpha1.OperatingSystemConfig, gardencorev1beta1.Worker, extensionsv1alpha1.OperatingSystemConfigPurpose) error) error {

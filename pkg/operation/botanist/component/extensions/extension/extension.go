@@ -51,6 +51,8 @@ type Interface interface {
 	component.DeployMigrateWaiter
 	// DeleteStaleResources deletes unused Extension resources from the shoot namespace in the seed.
 	DeleteStaleResources(context.Context) error
+	// WaitCleanupStaleResources waits until all unused Extension resources are cleaned up.
+	WaitCleanupStaleResources(context.Context) error
 	// Extensions returns the map of extensions where the key is the type and the value is an Extension structure.
 	Extensions() map[string]Extension
 }
@@ -149,17 +151,7 @@ func (e *extension) Wait(ctx context.Context) error {
 
 // WaitCleanup waits until the Extension resources are cleaned up.
 func (e *extension) WaitCleanup(ctx context.Context) error {
-	return extensions.WaitUntilExtensionObjectsDeleted(
-		ctx,
-		e.client,
-		e.logger,
-		&extensionsv1alpha1.ExtensionList{},
-		extensionsv1alpha1.ExtensionResource,
-		e.values.Namespace,
-		e.waitInterval,
-		e.waitTimeout,
-		nil,
-	)
+	return e.waitCleanup(ctx, sets.NewString())
 }
 
 // Restore uses the seed client and the ShootState to create the Extension resources and restore their state.
@@ -203,11 +195,12 @@ func (e *extension) WaitMigrate(ctx context.Context) error {
 
 // DeleteStaleResources deletes unused Extension resources from the shoot namespace in the seed.
 func (e *extension) DeleteStaleResources(ctx context.Context) error {
-	wantedExtensionTypes := sets.NewString()
-	for _, extension := range e.values.Extensions {
-		wantedExtensionTypes.Insert(extension.Spec.Type)
-	}
-	return e.deleteExtensionResources(ctx, wantedExtensionTypes)
+	return e.deleteExtensionResources(ctx, e.getWantedExtensionTypes())
+}
+
+// WaitCleanupStaleResources waits until all unused Extension resources are cleaned up.
+func (e *extension) WaitCleanupStaleResources(ctx context.Context) error {
+	return e.waitCleanup(ctx, e.getWantedExtensionTypes())
 }
 
 func (e *extension) deleteExtensionResources(ctx context.Context, wantedExtensionTypes sets.String) error {
@@ -220,6 +213,32 @@ func (e *extension) deleteExtensionResources(ctx context.Context, wantedExtensio
 			return !wantedExtensionTypes.Has(obj.GetExtensionSpec().GetExtensionType())
 		},
 	)
+}
+
+func (e *extension) waitCleanup(ctx context.Context, wantedExtensionTypes sets.String) error {
+	return extensions.WaitUntilExtensionObjectsDeleted(
+		ctx,
+		e.client,
+		e.logger,
+		&extensionsv1alpha1.ExtensionList{},
+		extensionsv1alpha1.ExtensionResource,
+		e.values.Namespace,
+		e.waitInterval,
+		e.waitTimeout,
+		func(obj extensionsv1alpha1.Object) bool {
+			return !wantedExtensionTypes.Has(obj.GetExtensionSpec().GetExtensionType())
+		},
+	)
+}
+
+// getWantedExtensionTypes returns the types of all extension resources, that are currently needed based
+// on the configured shoot settings and globally enabled extensions.
+func (e *extension) getWantedExtensionTypes() sets.String {
+	wantedExtensionTypes := sets.NewString()
+	for _, ext := range e.values.Extensions {
+		wantedExtensionTypes.Insert(ext.Spec.Type)
+	}
+	return wantedExtensionTypes
 }
 
 func (e *extension) forEach(fn func(ctx context.Context, ext *extensionsv1alpha1.Extension, extType string, providerConfig *runtime.RawExtension, timeout time.Duration) error) []flow.TaskFn {

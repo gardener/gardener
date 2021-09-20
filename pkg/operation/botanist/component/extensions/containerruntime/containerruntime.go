@@ -50,7 +50,10 @@ var TimeNow = time.Now
 // Interface is an interface for managing ContainerRuntimes.
 type Interface interface {
 	component.DeployMigrateWaiter
+	// DeleteStaleResources deletes unused container runtime resources from the shoot namespace in the seed.
 	DeleteStaleResources(ctx context.Context) error
+	// WaitCleanupStaleResources waits until all unused ContainerRuntime resources are cleaned up.
+	WaitCleanupStaleResources(ctx context.Context) error
 }
 
 // Values contains the values used to create a ContainerRuntime resources.
@@ -142,19 +145,9 @@ func (c *containerRuntime) Wait(ctx context.Context) error {
 	return flow.ParallelExitOnError(fns...)(ctx)
 }
 
-// WaitCleanup waits until the ContainerRuntime resources are cleaned up.
+// WaitCleanup waits until all ContainerRuntime resources are cleaned up.
 func (c *containerRuntime) WaitCleanup(ctx context.Context) error {
-	return extensions.WaitUntilExtensionObjectsDeleted(
-		ctx,
-		c.client,
-		c.logger,
-		&extensionsv1alpha1.ContainerRuntimeList{},
-		extensionsv1alpha1.ContainerRuntimeResource,
-		c.values.Namespace,
-		c.waitInterval,
-		c.waitTimeout,
-		nil,
-	)
+	return c.waitCleanup(ctx, sets.NewString())
 }
 
 // Restore uses the seed client and the ShootState to create the ContainerRuntime resources and restore their state.
@@ -192,27 +185,54 @@ func (c *containerRuntime) WaitMigrate(ctx context.Context) error {
 
 // DeleteStaleResources deletes unused container runtime resources from the shoot namespace in the seed.
 func (c *containerRuntime) DeleteStaleResources(ctx context.Context) error {
-	wantedContainerRuntimeTypes := sets.NewString()
-	for _, worker := range c.values.Workers {
-		if worker.CRI != nil {
-			for _, cr := range worker.CRI.ContainerRuntimes {
-				wantedContainerRuntimeTypes.Insert(getContainerRuntimeName(cr.Type, worker.Name))
-			}
-		}
-	}
-	return c.deleteContainerRuntimeResources(ctx, wantedContainerRuntimeTypes)
+	return c.deleteContainerRuntimeResources(ctx, c.getWantedContainerRuntimeNames())
 }
 
-func (c *containerRuntime) deleteContainerRuntimeResources(ctx context.Context, wantedContainerRuntimeTypes sets.String) error {
+func (c *containerRuntime) deleteContainerRuntimeResources(ctx context.Context, wantedContainerRuntimeNames sets.String) error {
 	return extensions.DeleteExtensionObjects(
 		ctx,
 		c.client,
 		&extensionsv1alpha1.ContainerRuntimeList{},
 		c.values.Namespace,
 		func(obj extensionsv1alpha1.Object) bool {
-			return !wantedContainerRuntimeTypes.Has(obj.GetName())
+			return !wantedContainerRuntimeNames.Has(obj.GetName())
 		},
 	)
+}
+
+// WaitCleanupStaleResources waits until all unused ContainerRuntime resources are cleaned up.
+func (c *containerRuntime) WaitCleanupStaleResources(ctx context.Context) error {
+	return c.waitCleanup(ctx, c.getWantedContainerRuntimeNames())
+}
+
+func (c *containerRuntime) waitCleanup(ctx context.Context, wantedContainerRuntimeNames sets.String) error {
+	return extensions.WaitUntilExtensionObjectsDeleted(
+		ctx,
+		c.client,
+		c.logger,
+		&extensionsv1alpha1.ContainerRuntimeList{},
+		extensionsv1alpha1.ContainerRuntimeResource,
+		c.values.Namespace,
+		c.waitInterval,
+		c.waitTimeout,
+		func(obj extensionsv1alpha1.Object) bool {
+			return !wantedContainerRuntimeNames.Has(obj.GetName())
+		},
+	)
+}
+
+// getWantedContainerRuntimeNames returns the names of all container runtime resources, that are currently needed based
+// on the configured worker pools.
+func (c *containerRuntime) getWantedContainerRuntimeNames() sets.String {
+	wantedContainerRuntimeNames := sets.NewString()
+	for _, worker := range c.values.Workers {
+		if worker.CRI != nil {
+			for _, cr := range worker.CRI.ContainerRuntimes {
+				wantedContainerRuntimeNames.Insert(getContainerRuntimeName(cr.Type, worker.Name))
+			}
+		}
+	}
+	return wantedContainerRuntimeNames
 }
 
 func (c *containerRuntime) forEachContainerRuntime(fn func(ctx context.Context, cr *extensionsv1alpha1.ContainerRuntime, coreCR gardencorev1beta1.ContainerRuntime, workerName string) error) []flow.TaskFn {

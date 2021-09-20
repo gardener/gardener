@@ -335,7 +335,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until stale operating system config resources are deleted",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanup).SkipIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.OperatingSystemConfig.WaitCleanupStaleResources).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deleteStaleOperatingSystemConfigResources),
 		})
 		deployGardenerResourceManager = g.Add(flow.Task{
@@ -506,7 +506,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until stale extension resources are deleted",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.WaitCleanup).SkipIf(o.Shoot.HibernationEnabled),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Extension.WaitCleanupStaleResources).SkipIf(o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deleteStaleExtensionResources),
 		})
 		deployContainerRuntimeResources = g.Add(flow.Task{
@@ -519,15 +519,15 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 			Fn:           botanist.Shoot.Components.Extensions.ContainerRuntime.Wait,
 			Dependencies: flow.NewTaskIDs(deployContainerRuntimeResources),
 		})
-		deleteStaleResources = g.Add(flow.Task{
+		deleteStaleContainerRuntimeResources = g.Add(flow.Task{
 			Name:         "Delete stale container runtime resources",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ContainerRuntime.DeleteStaleResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until stale container runtime resources are deleted",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ContainerRuntime.WaitCleanup).SkipIf(o.Shoot.HibernationEnabled),
-			Dependencies: flow.NewTaskIDs(deleteStaleResources),
+			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.ContainerRuntime.WaitCleanupStaleResources).SkipIf(o.Shoot.HibernationEnabled),
+			Dependencies: flow.NewTaskIDs(deleteStaleContainerRuntimeResources),
 		})
 		_ = g.Add(flow.Task{
 			Name: "Restart control plane pods",

@@ -307,20 +307,13 @@ var _ = Describe("#ContainerRuntime", func() {
 	})
 
 	Describe("#WaitCleanup", func() {
-		It("should not return error when resources are removed", func() {
+		It("should not return error if all resources are gone", func() {
 			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
 		})
 
-		It("should not return error if resources exist but they don't have deletionTimestamp", func() {
+		It("should return error if resources still exist", func() {
 			Expect(c.Create(ctx, expected[0])).To(Succeed())
-			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(Succeed())
-		})
-
-		It("should return error if resources with deletionTimestamp still exist", func() {
-			timeNow := metav1.Now()
-			expected[0].DeletionTimestamp = &timeNow
-			Expect(c.Create(ctx, expected[0])).To(Succeed())
-			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(HaveOccurred())
+			Expect(defaultDepWaiter.WaitCleanup(ctx)).To(MatchError(ContainSubstring("ContainerRuntime test-namespace/type1-worker1 is still present")))
 		})
 	})
 
@@ -481,7 +474,7 @@ var _ = Describe("#ContainerRuntime", func() {
 			staleContainerRuntime := expected[0].DeepCopy()
 			staleContainerRuntime.Name = fmt.Sprintf("%s-%s", "new-type", workerNames[0])
 			staleContainerRuntime.Spec.Type = "new-type"
-			Expect(c.Create(ctx, staleContainerRuntime)).To(Succeed(), "creating containerruntime succeeds")
+			Expect(c.Create(ctx, staleContainerRuntime)).To(Succeed(), "creating stale containerruntime succeeds")
 
 			for _, e := range expected {
 				Expect(c.Create(ctx, e)).To(Succeed(), "creating containerruntime succeeds")
@@ -496,6 +489,26 @@ var _ = Describe("#ContainerRuntime", func() {
 			for _, item := range containerRuntimeList.Items {
 				Expect(item.Spec.Type).ToNot(Equal("new-type"))
 			}
+		})
+	})
+
+	Describe("#WaitCleanupStaleResources", func() {
+		It("should not return error if all resources are gone", func() {
+			Expect(defaultDepWaiter.WaitCleanupStaleResources(ctx)).To(Succeed())
+		})
+
+		It("should not return error if wanted resources exist", func() {
+			Expect(c.Create(ctx, expected[0])).To(Succeed())
+			Expect(defaultDepWaiter.WaitCleanupStaleResources(ctx)).To(Succeed())
+		})
+
+		It("should return error if stale resources still exist", func() {
+			staleContainerRuntime := expected[0].DeepCopy()
+			staleContainerRuntime.Name = fmt.Sprintf("%s-%s", "new-type", workerNames[0])
+			staleContainerRuntime.Spec.Type = "new-type"
+			Expect(c.Create(ctx, staleContainerRuntime)).To(Succeed(), "creating stale containerruntime succeeds")
+
+			Expect(defaultDepWaiter.WaitCleanupStaleResources(ctx)).To(MatchError(ContainSubstring("ContainerRuntime test-namespace/new-type-worker1 is still present")))
 		})
 	})
 })

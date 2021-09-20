@@ -404,39 +404,95 @@ var _ = Describe("extensions", func() {
 	})
 
 	Describe("#WaitUntilExtensionObjectsDeleted", func() {
-		It("should return error if atleast one extension object is not deleted", func() {
-			list := &extensionsv1alpha1.WorkerList{}
+		Context("no predicate given", func() {
+			It("should return error if at least one extension object is not deleted", func() {
+				list := &extensionsv1alpha1.WorkerList{}
 
-			deletionTimestamp := metav1.Now()
-			expected.ObjectMeta.DeletionTimestamp = &deletionTimestamp
+				Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
 
-			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
+				err := WaitUntilExtensionObjectsDeleted(
+					ctx,
+					c,
+					log,
+					list,
+					extensionsv1alpha1.WorkerResource,
+					namespace, defaultInterval, defaultTimeout,
+					nil,
+				)
 
-			err := WaitUntilExtensionObjectsDeleted(
-				ctx,
-				c,
-				log,
-				list,
-				extensionsv1alpha1.WorkerResource,
-				namespace, defaultInterval, defaultTimeout,
-				func(object extensionsv1alpha1.Object) bool { return true })
+				Expect(err).To(HaveOccurred())
+			})
 
-			Expect(err).To(HaveOccurred())
+			It("should return success if all extensions CRs are deleted", func() {
+				list := &extensionsv1alpha1.WorkerList{}
+				err := WaitUntilExtensionObjectsDeleted(
+					ctx,
+					c,
+					log,
+					list,
+					extensionsv1alpha1.WorkerResource,
+					namespace, defaultInterval, defaultTimeout,
+					nil,
+				)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 
-		It("should return success if all extensions CRs are deleted", func() {
-			list := &extensionsv1alpha1.WorkerList{}
-			err := WaitUntilExtensionObjectsDeleted(
-				ctx,
-				c,
-				log,
-				list,
-				extensionsv1alpha1.WorkerResource,
-				namespace, defaultInterval, defaultTimeout,
-				func(object extensionsv1alpha1.Object) bool { return true })
-			Expect(err).NotTo(HaveOccurred())
-		})
+		Context("predicate given", func() {
+			It("should return error if at least one extension object is not deleted", func() {
+				list := &extensionsv1alpha1.WorkerList{}
 
+				Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
+
+				err := WaitUntilExtensionObjectsDeleted(
+					ctx,
+					c,
+					log,
+					list,
+					extensionsv1alpha1.WorkerResource,
+					namespace, defaultInterval, defaultTimeout,
+					func(obj extensionsv1alpha1.Object) bool {
+						return obj.GetName() == expected.GetName()
+					},
+				)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should return success if all extensions CRs matching the predicate are deleted", func() {
+				list := &extensionsv1alpha1.WorkerList{}
+
+				Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
+
+				err := WaitUntilExtensionObjectsDeleted(
+					ctx,
+					c,
+					log,
+					list,
+					extensionsv1alpha1.WorkerResource,
+					namespace, defaultInterval, defaultTimeout,
+					func(obj extensionsv1alpha1.Object) bool {
+						return obj.GetName() != expected.GetName()
+					},
+				)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return success if all extensions CRs are deleted", func() {
+				list := &extensionsv1alpha1.WorkerList{}
+				err := WaitUntilExtensionObjectsDeleted(
+					ctx,
+					c,
+					log,
+					list,
+					extensionsv1alpha1.WorkerResource,
+					namespace, defaultInterval, defaultTimeout,
+					nil,
+				)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 
 	Describe("#WaitUntilExtensionObjectDeleted", func() {
