@@ -148,7 +148,7 @@ func (o *options) run(ctx context.Context) error {
 		return err
 	}
 
-	if o.config.Debugging.EnableProfiling {
+	if o.config.Debugging != nil && o.config.Debugging.EnableProfiling {
 		if err := (routes.Profiling{}).AddToManager(mgr); err != nil {
 			return fmt.Errorf("failed adding profiling handlers to manager: %w", err)
 		}
