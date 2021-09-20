@@ -41,6 +41,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -134,8 +135,10 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 }
 
 func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, log logrus.FieldLogger) error {
-	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient, controllerInstallation, FinalizerName); err != nil {
-		return err
+	if !controllerutil.ContainsFinalizer(controllerInstallation, FinalizerName) {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, controllerInstallation, FinalizerName); err != nil {
+			return err
+		}
 	}
 
 	var (

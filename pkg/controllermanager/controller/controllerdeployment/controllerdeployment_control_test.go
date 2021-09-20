@@ -192,7 +192,7 @@ var _ = Describe("Controller", func() {
 				errToReturn := apierrors.NewNotFound(schema.GroupResource{}, controllerDeploymentName)
 
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerDeployment{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
+					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"]}}`, finalizerName)))
 					return errToReturn
 				})
 
@@ -203,7 +203,7 @@ var _ = Describe("Controller", func() {
 
 			It("should ensure the finalizer (no error)", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerDeployment{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
+					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"]}}`, finalizerName)))
 					return nil
 				})
 

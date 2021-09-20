@@ -30,6 +30,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -114,9 +115,11 @@ func (r *cloudProfileReconciler) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, fmt.Errorf("Cannot delete CloudProfile %q, because the following Shoots are still referencing it: %+v", cloudProfile.Name, associatedShoots)
 	}
 
-	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
-		cloudProfileLogger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(cloudProfile, gardencorev1beta1.GardenerName) {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, cloudProfile, gardencorev1beta1.GardenerName); err != nil {
+			cloudProfileLogger.Errorf("could not add finalizer to CloudProfile: %s", err.Error())
+			return reconcile.Result{}, err
+		}
 	}
 
 	// TODO voelzmo - this migration step ensures that all MachineImageVersions in the Cloud Profile contain `docker` in their list of supported Container Runtimes

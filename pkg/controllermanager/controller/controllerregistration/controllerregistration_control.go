@@ -93,5 +93,9 @@ func (r *controllerRegistrationReconciler) Reconcile(ctx context.Context, reques
 		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, controllerRegistration, FinalizerName)
 	}
 
-	return reconcile.Result{}, controllerutils.PatchAddFinalizers(ctx, r.gardenClient, controllerRegistration, FinalizerName)
+	if !controllerutil.ContainsFinalizer(controllerRegistration, FinalizerName) {
+		return reconcile.Result{}, controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, controllerRegistration, FinalizerName)
+	}
+
+	return reconcile.Result{}, nil
 }

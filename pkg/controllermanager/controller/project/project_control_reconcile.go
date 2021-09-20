@@ -37,17 +37,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1beta1.Project, gardenClient client.Client, gardenReader client.Reader) (reconcile.Result, error) {
-	var (
-		generation = project.Generation
-		err        error
-	)
-
-	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not add finalizer to Project: %w", err)
+	if !controllerutil.ContainsFinalizer(project, gardencorev1beta1.GardenerName) {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, project, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("could not add finalizer to Project: %w", err)
+		}
 	}
 
 	// Ensure that we really get the latest version of the project to prevent working with an outdated version that has
@@ -145,7 +143,7 @@ func (r *projectReconciler) reconcile(ctx context.Context, project *gardencorev1
 	// Update the project status to mark it as 'ready'.
 	if err := updateStatus(ctx, gardenClient, project, func() {
 		project.Status.Phase = gardencorev1beta1.ProjectReady
-		project.Status.ObservedGeneration = generation
+		project.Status.ObservedGeneration = project.Generation
 	}); err != nil {
 		r.reportEvent(project, true, gardencorev1beta1.ProjectEventNamespaceReconcileFailed, "Error while trying to mark project as ready: %+v", err)
 		return reconcile.Result{}, err

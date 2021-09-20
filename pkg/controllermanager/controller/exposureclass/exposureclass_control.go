@@ -20,6 +20,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/logger"
 
@@ -30,6 +31,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -89,10 +91,13 @@ func (r *exposureClassReconciler) Reconcile(ctx context.Context, request reconci
 }
 
 func (r *exposureClassReconciler) reconcile(ctx context.Context, exposureClass *gardencorev1alpha1.ExposureClass) (reconcile.Result, error) {
-	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient, exposureClass, gardencorev1alpha1.GardenerName); err != nil {
-		r.logger.Errorf("could not add finalizer to ExposureClass: %s", err.Error())
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(exposureClass, gardencorev1beta1.GardenerName) {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, exposureClass, gardencorev1alpha1.GardenerName); err != nil {
+			r.logger.Errorf("could not add finalizer to ExposureClass: %s", err.Error())
+			return reconcile.Result{}, err
+		}
 	}
+
 	return reconcile.Result{}, nil
 }
 

@@ -38,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -91,9 +92,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kubernetes.Interface, backupBucket *gardencorev1beta1.BackupBucket) (reconcile.Result, error) {
 	backupBucketLogger := logger.NewFieldLogger(logger.Logger, "backupbucket", backupBucket.Name)
 
-	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
-		backupBucketLogger.Errorf("Failed to ensure gardener finalizer on backupbucket: %+v", err)
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(backupBucket, gardencorev1beta1.GardenerName) {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient.Client(), backupBucket, gardencorev1beta1.GardenerName); err != nil {
+			backupBucketLogger.Errorf("Failed to ensure gardener finalizer on backupbucket: %+v", err)
+			return reconcile.Result{}, err
+		}
 	}
 
 	if updateErr := updateBackupBucketStatusProcessing(ctx, gardenClient.Client(), backupBucket, "Reconciliation of Backup Bucket state in progress.", 2); updateErr != nil {
@@ -109,9 +112,11 @@ func (r *reconciler) reconcileBackupBucket(ctx context.Context, gardenClient kub
 		return reconcile.Result{}, err
 	}
 
-	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-		backupBucketLogger.Errorf("Failed to ensure external gardener finalizer on referred secret: %+v", err)
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient.Client(), secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+			backupBucketLogger.Errorf("Failed to ensure external gardener finalizer on referred secret: %+v", err)
+			return reconcile.Result{}, err
+		}
 	}
 
 	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*backupBucket.Spec.SeedName))

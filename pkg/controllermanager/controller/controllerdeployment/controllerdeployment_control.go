@@ -90,5 +90,9 @@ func (c *controllerDeploymentReconciler) Reconcile(ctx context.Context, req reco
 		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, c.gardenClient, controllerDeployment, FinalizerName)
 	}
 
-	return reconcile.Result{}, controllerutils.PatchAddFinalizers(ctx, c.gardenClient, controllerDeployment, FinalizerName)
+	if !controllerutil.ContainsFinalizer(controllerDeployment, FinalizerName) {
+		return reconcile.Result{}, controllerutils.StrategicMergePatchAddFinalizers(ctx, c.gardenClient, controllerDeployment, FinalizerName)
+	}
+
+	return reconcile.Result{}, nil
 }
