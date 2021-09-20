@@ -34,6 +34,7 @@
 * [Dockershim removal](usage/docker-shim-removal.md)
 * [ExposureClasses](usage/exposureclasses.md)
 * [Gardener configuration and usage](usage/configuration.md)
+* [Hibernate a Cluster](usage/shoot_hibernate.md)
 * [`ManagedIstio` feature](usage/istio.md)
 * [Network Policies in the Shoot Cluster](usage/shoot_network_policies.md)
 * [`NodeLocalDNS` feature](usage/node-local-dns.md)
