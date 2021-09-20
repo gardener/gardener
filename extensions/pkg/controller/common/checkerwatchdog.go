@@ -46,14 +46,15 @@ type Watchdog interface {
 // every given interval, using the given clock and logger.
 func NewCheckerWatchdog(checker Checker, interval, timeout time.Duration, clock clock.Clock, logger logr.Logger) Watchdog {
 	return &checkerWatchdog{
-		checker:        checker,
-		interval:       interval,
-		timeout:        timeout,
-		clock:          clock,
-		logger:         logger,
-		ctxCancelFuncs: make(map[string]context.CancelFunc),
-		resultChan:     make(chan chan struct{}),
-		timerChan:      make(chan bool),
+		checker:         checker,
+		interval:        interval,
+		timeout:         timeout,
+		clock:           clock,
+		logger:          logger,
+		ctxCancelFuncs:  make(map[string]context.CancelFunc),
+		resultChan:      make(chan struct{}),
+		resultReadyChan: make(chan struct{}),
+		timerChan:       make(chan bool),
 	}
 }
 
@@ -70,7 +71,8 @@ type checkerWatchdog struct {
 	err                 error
 	resultTime          time.Time
 	resultMutex         sync.RWMutex
-	resultChan          chan chan struct{}
+	resultChan          chan struct{}
+	resultReadyChan     chan struct{}
 	timerChan           chan bool
 }
 
@@ -84,7 +86,6 @@ func (w *checkerWatchdog) Start(ctx context.Context) {
 	go func() {
 		for {
 			// Wait for a timer event or a result request
-			var ch chan struct{}
 			select {
 			case <-ctx.Done():
 				return
@@ -96,10 +97,10 @@ func (w *checkerWatchdog) Start(ctx context.Context) {
 					timer.Reset(w.interval)
 				}
 				continue
-			case ch = <-w.resultChan:
+			case <-w.resultChan:
 				// If the last result is not older than w.interval, use it
 				if !time.Now().After(w.resultTime.Add(w.interval)) {
-					ch <- struct{}{}
+					w.resultReadyChan <- struct{}{}
 					continue
 				}
 			case <-timer.C():
@@ -113,8 +114,9 @@ func (w *checkerWatchdog) Start(ctx context.Context) {
 			w.setResult(result, err)
 
 			// If a result was requested, notify the requester that the new result is available
-			if ch != nil {
-				ch <- struct{}{}
+			select {
+			case w.resultReadyChan <- struct{}{}:
+			default:
 			}
 
 			// If the check failed or returned false, cancel all contexts
@@ -177,9 +179,8 @@ func (w *checkerWatchdog) RemoveContext(key string) bool {
 // Result returns the result of the last condition check.
 func (w *checkerWatchdog) Result() (bool, error) {
 	// Request the result and wait for it to be updated if needed
-	ch := make(chan struct{})
-	w.resultChan <- ch
-	<-ch
+	w.resultChan <- struct{}{}
+	<-w.resultReadyChan
 
 	w.resultMutex.RLock()
 	defer w.resultMutex.RUnlock()

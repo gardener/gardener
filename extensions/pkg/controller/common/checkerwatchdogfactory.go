@@ -49,6 +49,8 @@ type checkerWatchdogFactory struct {
 }
 
 // NewWatchdog creates a new Watchdog using the given context, client, namespace, and shoot name.
+// It uses the checker factory to create a new Checker that is then passed to NewCheckerWatchdog.
+// If the checker factory returns a nil Checker, this method returns a nil Watchdog.
 func (f *checkerWatchdogFactory) NewWatchdog(ctx context.Context, c client.Client, namespace, shootName string) (Watchdog, error) {
 	checker, err := f.checkerFactory.NewChecker(ctx, c, namespace, shootName)
 	if err != nil {

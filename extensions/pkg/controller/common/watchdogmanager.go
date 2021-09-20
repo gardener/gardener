@@ -105,16 +105,23 @@ type watchdogManager struct {
 
 // GetResultAndContext returns the result and context from the watchdog for the given namespace.
 // If the watchdog does not exist yet, it is created using the given context, client, namespace, and shoot name.
+// If the watchdog factory returns a nil watchdog, this method returns true.
+// If the watchdog result is false or error, it is returned immediately.
 // If the watchdog result is true, the given context is added to the watchdog mapped to the given key,
 // and a cleanup function for properly removing it is also returned.
 func (m *watchdogManager) GetResultAndContext(ctx context.Context, c client.Client, namespace, shootName, key string) (bool, context.Context, func(), error) {
+	// Get ot create the watchdog for the given namespace
 	watchdog, err := m.getWatchdog(ctx, c, namespace, shootName)
 	if err != nil {
 		return false, ctx, nil, err
 	}
+
+	// If a nil watchdog was returned by the watchdog factory, return true
 	if watchdog == nil {
 		return true, ctx, nil, nil
 	}
+
+	// Get watchdog result and return false if it's false or error
 	result, err := watchdog.Result()
 	if err != nil {
 		return false, ctx, nil, err
@@ -122,12 +129,16 @@ func (m *watchdogManager) GetResultAndContext(ctx context.Context, c client.Clie
 	if !result {
 		return false, ctx, nil, nil
 	}
+
+	// Add the given context to the watchdog mapped to the given key and return a cleanup function for removing it
 	var firstAdded bool
 	if ctx, firstAdded = watchdog.AddContext(ctx, key); firstAdded {
+		// Prevent the watchdog from being stopped and removed if it has contexts
 		m.cancelWatchdogRemoval(namespace)
 	}
 	cleanup := func() {
 		if lastRemoved := watchdog.RemoveContext(key); lastRemoved {
+			// Ensure that the watchdog is eventually stopped and removed if has no contexts
 			m.scheduleWatchdogRemoval(namespace)
 		}
 	}
@@ -151,6 +162,8 @@ func (m *watchdogManager) getWatchdog(ctx context.Context, c client.Client, name
 
 		m.logger.Info("Starting watchdog", "namespace", namespace)
 		watchdog.Start(context.Background())
+		// Ensure that the watchdog is eventually stopped and removed
+		// even if no context are ever added to it (because e.g. its result is always false or error)
 		m.scheduleWatchdogRemoval(namespace)
 
 		m.watchdogs[namespace] = watchdog

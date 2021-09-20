@@ -43,6 +43,9 @@ type ownerCheckerFactory struct {
 }
 
 // NewChecker creates a new Checker using the given context, client, namespace, and shoot name.
+// It reads the owner domain name and ID from the owner DNSRecord extension resource in the given namespace
+// so that it can pass them to NewOwnerChecker.
+// If the owner domain name and ID are empty strings, this method returns a nil Checker.
 func (f *ownerCheckerFactory) NewChecker(ctx context.Context, c client.Client, namespace, shootName string) (Checker, error) {
 	ownerName, ownerID, err := extensionscontroller.GetOwnerNameAndID(ctx, c, namespace, shootName)
 	if err != nil {

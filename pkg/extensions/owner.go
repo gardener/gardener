@@ -24,6 +24,7 @@ import (
 )
 
 // GetOwnerNameAndID reads the owner domain name and ID from the owner DNSRecord extension resource in the given namespace.
+// If the owner DNSRecord resource is not found, it returns empty strings.
 func GetOwnerNameAndID(ctx context.Context, c client.Client, namespace, shootName string) (string, string, error) {
 	dns := &extensionsv1alpha1.DNSRecord{}
 	if err := c.Get(ctx, kutil.Key(namespace, shootName+"-owner"), dns); client.IgnoreNotFound(err) != nil {
