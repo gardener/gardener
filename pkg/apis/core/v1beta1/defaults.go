@@ -348,6 +348,9 @@ func SetDefaults_ClusterAutoscaler(obj *ClusterAutoscaler) {
 	if obj.MaxNodeProvisionTime == nil {
 		obj.MaxNodeProvisionTime = &metav1.Duration{Duration: 20 * time.Minute}
 	}
+	if obj.MaxGracefulTerminationSeconds == nil {
+		obj.MaxGracefulTerminationSeconds = pointer.Int32(600)
+	}
 }
 
 // SetDefaults_NginxIngress sets default values for NginxIngress objects.

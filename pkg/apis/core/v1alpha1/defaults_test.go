@@ -553,6 +553,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ScanInterval).To(PointTo(Equal(metav1.Duration{Duration: 10 * time.Second})))
 			Expect(obj.MaxNodeProvisionTime).To(PointTo(Equal(metav1.Duration{Duration: 20 * time.Minute})))
 			Expect(obj.Expander).To(PointTo(Equal(expanderLeastWaste)))
+			Expect(obj.MaxGracefulTerminationSeconds).To(PointTo(Equal(int32(600))))
 		})
 
 		It("should not default explicitly set fields", func() {
@@ -565,6 +566,7 @@ var _ = Describe("Defaults", func() {
 				ScanInterval:                  &metav1.Duration{Duration: 5 * time.Hour},
 				Expander:                      &expanderRandom,
 				MaxNodeProvisionTime:          &metav1.Duration{Duration: 6 * time.Hour},
+				MaxGracefulTerminationSeconds: pointer.Int32(60 * 60 * 24),
 			}
 
 			SetDefaults_ClusterAutoscaler(obj)
@@ -576,6 +578,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ScanInterval).To(PointTo(Equal(metav1.Duration{Duration: 5 * time.Hour})))
 			Expect(obj.MaxNodeProvisionTime).To(PointTo(Equal(metav1.Duration{Duration: 6 * time.Hour})))
 			Expect(obj.Expander).To(PointTo(Equal(ClusterAutoscalerExpanderRandom)))
+			Expect(obj.MaxGracefulTerminationSeconds).To(PointTo(Equal(int32(60 * 60 * 24))))
 		})
 	})
 

@@ -358,6 +358,7 @@ func (c *clusterAutoscaler) computeCommand() []string {
 
 	command = append(command,
 		fmt.Sprintf("--expander=%s", *c.config.Expander),
+		fmt.Sprintf("--max-graceful-termination-sec=%d", *c.config.MaxGracefulTerminationSeconds),
 		fmt.Sprintf("--max-node-provision-time=%s", c.config.MaxNodeProvisionTime.Duration),
 		fmt.Sprintf("--scale-down-utilization-threshold=%f", *c.config.ScaleDownUtilizationThreshold),
 		fmt.Sprintf("--scale-down-unneeded-time=%s", c.config.ScaleDownUnneededTime.Duration),

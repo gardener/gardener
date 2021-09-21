@@ -2676,6 +2676,18 @@ Kubernetes meta/v1.Duration
 <p>MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>maxGracefulTerminationSeconds</code></br>
+<em>
+int32
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ClusterInfo">ClusterInfo

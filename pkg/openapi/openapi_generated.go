@@ -1714,6 +1714,13 @@ func schema_pkg_apis_core_v1alpha1_ClusterAutoscaler(ref common.ReferenceCallbac
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
+					"maxGracefulTerminationSeconds": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
 				},
 			},
 		},
@@ -8712,6 +8719,13 @@ func schema_pkg_apis_core_v1beta1_ClusterAutoscaler(ref common.ReferenceCallback
 						SchemaProps: spec.SchemaProps{
 							Description: "MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"maxGracefulTerminationSeconds": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).",
+							Type:        []string{"integer"},
+							Format:      "int32",
 						},
 					},
 				},

@@ -232,6 +232,7 @@ spec:
   #     SomeKubernetesFeature: true
   # clusterAutoscaler:
   #   expander: "least-waste" # see: https://github.com/gardener/autoscaler/blob/machine-controller-manager-provider/cluster-autoscaler/FAQ.md#what-are-expanders
+  #   maxGracefulTerminationSeconds: 600
   #   maxNodeProvisionTime: 20m
   #   scaleDownUtilizationThreshold: 0.5
   #   scaleDownUnneededTime: 30m
