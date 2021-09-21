@@ -101,15 +101,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	operationType := gardencorev1beta1helper.ComputeOperationType(dns.ObjectMeta, dns.Status.LastOperation)
 
 	switch {
+	case extensionscontroller.ShouldSkipOperation(operationType, dns):
+		return reconcile.Result{}, nil
 	case operationType == gardencorev1beta1.LastOperationTypeMigrate:
-		if extensionscontroller.IsMigrated(dns) {
-			return reconcile.Result{}, nil
-		}
 		return r.migrate(ctx, dns, cluster)
 	case dns.DeletionTimestamp != nil:
-		if extensionscontroller.IsMigrated(dns) {
-			return reconcile.Result{}, nil
-		}
 		return r.delete(ctx, dns, cluster)
 	case operationType == gardencorev1beta1.LastOperationTypeRestore:
 		return r.restore(ctx, dns, cluster)

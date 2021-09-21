@@ -180,6 +180,128 @@ var _ = Describe("Utils", func() {
 		})
 	})
 
+	Describe("#ShouldSkipOperation", func() {
+		var (
+			worker *extensionsv1alpha1.Worker
+		)
+
+		BeforeEach(func() {
+			worker = &extensionsv1alpha1.Worker{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Worker",
+					APIVersion: "TestApi",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-worker",
+					Namespace: "test-namespace",
+				},
+			}
+		})
+
+		Context("reconcile operation", func() {
+			var (
+				operationType = gardencorev1beta1.LastOperationTypeReconcile
+			)
+
+			It("should return false when lastOperation is missing", func() {
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+			})
+
+			It("should return true when lastOperation is migrate and succeeded", func() {
+				worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:  gardencorev1beta1.LastOperationTypeMigrate,
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+				}
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeTrue())
+			})
+
+			It("should return false when lastOperation is not migrate", func() {
+				worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type: gardencorev1beta1.LastOperationTypeRestore,
+				}
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+			})
+		})
+
+		Context("restore operation", func() {
+			var (
+				operationType = gardencorev1beta1.LastOperationTypeRestore
+			)
+
+			It("should return false when lastOperation is missing", func() {
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+			})
+
+			It("should return false when lastOperation is migrate and succeeded", func() {
+				worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:  gardencorev1beta1.LastOperationTypeMigrate,
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+				}
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+			})
+
+			It("should return false when lastOperation is not migrate", func() {
+				worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:  gardencorev1beta1.LastOperationTypeReconcile,
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+				}
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+			})
+		})
+
+		Context("delete operation", func() {
+			var (
+				operationType = gardencorev1beta1.LastOperationTypeDelete
+			)
+
+			It("should return false when lastOperation is missing", func() {
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+			})
+
+			It("should return true when lastOperation is migrate and succeeded", func() {
+				worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:  gardencorev1beta1.LastOperationTypeMigrate,
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+				}
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeTrue())
+			})
+
+			It("should return false when lastOperation is not migrate", func() {
+				worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:  gardencorev1beta1.LastOperationTypeReconcile,
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+				}
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+			})
+		})
+
+		Context("migrate operation", func() {
+			var (
+				operationType = gardencorev1beta1.LastOperationTypeRestore
+			)
+
+			It("should return false when lastOperation is missing", func() {
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+			})
+
+			It("should return false when lastOperation is migrate and succeeded", func() {
+				worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:  gardencorev1beta1.LastOperationTypeMigrate,
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+				}
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+			})
+
+			It("should return false when lastOperation is not migrate", func() {
+				worker.Status.LastOperation = &gardencorev1beta1.LastOperation{
+					Type:  gardencorev1beta1.LastOperationTypeReconcile,
+					State: gardencorev1beta1.LastOperationStateSucceeded,
+				}
+				Expect(controller.ShouldSkipOperation(operationType, worker)).To(BeFalse())
+			})
+		})
+	})
+
 	Describe("#IsMigrated", func() {
 		var (
 			worker *extensionsv1alpha1.Worker
