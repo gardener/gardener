@@ -225,7 +225,7 @@ images:
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-bit
   repository: fluent/fluent-bit
-  tag: "1.7.8"
+  tag: "1.8.7"
 - name: fluent-bit-plugin-installer
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluent-bit-to-loki
@@ -245,7 +245,7 @@ images:
 - name: promtail
   sourceRepository: github.com/grafana/loki
   repository: "docker.io/grafana/promtail"
-  tag: "2.1.0"
+  tag: "2.2.1"
 - name: telegraf
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/telegraf-iptables

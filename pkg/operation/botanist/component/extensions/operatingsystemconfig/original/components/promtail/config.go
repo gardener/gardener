@@ -39,6 +39,7 @@ type config struct {
 }
 
 type server struct {
+	Disable        bool   `yaml:"disable,omitempty"`
 	LogLevel       string `yaml:"log_level,omitempty"`
 	HTTPListenPort int    `yaml:"http_listen_port,omitempty"`
 }
@@ -63,6 +64,7 @@ type scrapeConfigs []job
 
 var defaultConfig = config{
 	Server: server{
+		Disable:        true,
 		LogLevel:       "info",
 		HTTPListenPort: PromtailServerPort,
 	},
