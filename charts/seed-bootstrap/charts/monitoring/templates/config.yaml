@@ -62,6 +62,7 @@ data:
         - '{job="cadvisor",namespace=~"extension-(.+)"}'
         - '{job="cadvisor",namespace="garden"}'
         - '{job="cadvisor",namespace=~"istio-(.+)"}'
+        - '{job="cadvisor",namespace="kube-system"}'
       static_configs:
       - targets:
         - prometheus-web.garden.svc
