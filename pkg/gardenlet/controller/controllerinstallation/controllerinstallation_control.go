@@ -330,9 +330,17 @@ func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, con
 		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource secret %q failed: %+v", controllerInstallation.Name, err))
 	}
 
-	if err := seedClient.Client().Delete(ctx, getNamespaceForControllerInstallation(controllerInstallation)); client.IgnoreNotFound(err) != nil {
+	namespace := getNamespaceForControllerInstallation(controllerInstallation)
+	err = seedClient.Client().Delete(ctx, namespace)
+	if err == nil || apierrors.IsConflict(err) {
+		message := fmt.Sprintf("Deletion of Namespace %q is still pending.", namespace.Name)
+		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionPending", message)
+		return errors.New(message)
+	} else if !apierrors.IsNotFound(err) {
+		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of Namespace %q failed: %+v", namespace.Name, err))
 		return err
 	}
+
 	conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
 	return controllerutils.PatchRemoveFinalizers(ctx, gardenClient, controllerInstallation.DeepCopy(), FinalizerName)
