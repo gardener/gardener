@@ -32,6 +32,9 @@ data:
         regex: __meta_kubernetes_pod_label_(.+)
 
     - job_name: garden
+      scheme: https
+      tls_config:
+        insecure_skip_verify: true
       kubernetes_sd_configs:
       - role: pod
       relabel_configs:
