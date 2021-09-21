@@ -2,6 +2,8 @@
 
 ## Roles of the different Prometheus instances
 
+![monitoring](./images/monitoring.png)
+
 ### Prometheus
 
 Deployed in the `garden` namespace. Important scrape targets:
@@ -37,8 +39,6 @@ prometheus.io/port=<port>
 - cadvisor metrics from pods in the garden and extension namespaces
 
 **Purpose**: Entrypoint for operators when debugging issues with extensions or other garden components.
-
-![monitoring](./images/monitoring.png)
 
 ### Shoot Prometheus
 
