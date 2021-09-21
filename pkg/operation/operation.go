@@ -556,7 +556,11 @@ func (o *Operation) DeleteShootState(ctx context.Context) error {
 // resource MUST NOT BE MODIFIED (except in test code) since this might interfere with other concurrent reads and writes.
 // To properly update the shootstate resource of this Shoot use SaveGardenerResourceDataInShootState.
 func (o *Operation) GetShootState() *gardencorev1alpha1.ShootState {
-	return o.shootState.Load().(*gardencorev1alpha1.ShootState)
+	shootState, ok := o.shootState.Load().(*gardencorev1alpha1.ShootState)
+	if !ok {
+		return nil
+	}
+	return shootState
 }
 
 // SetShootState sets the shootstate resource of this Shoot in a concurrency safe way.
