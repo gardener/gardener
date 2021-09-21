@@ -68,3 +68,6 @@ data:
         - prometheus-web.garden.svc
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cadvisor | indent 6 }}
+    - job_name: prometheus
+      static_configs:
+      - targets: [ localhost:9090 ]
