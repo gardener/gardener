@@ -47,6 +47,7 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 )
 
@@ -206,6 +207,7 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 	// Initialize logger
 	logger := logger.NewLogger(cfg.LogLevel, cfg.LogFormat)
 	logger.Info("Starting Gardener controller manager...")
+	logger.Infof("Version: %+v", version.Get())
 	logger.Infof("Feature Gates: %s", controllermanagerfeatures.FeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {

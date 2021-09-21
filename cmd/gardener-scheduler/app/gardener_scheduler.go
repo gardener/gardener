@@ -35,6 +35,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -117,7 +118,8 @@ func runCommand(ctx context.Context, opts *Options) error {
 	zapLogr := logger.NewZapLogr(zapLogger)
 	ctrlruntimelog.SetLogger(zapLogr)
 
-	zapLogr.Info("Starting Gardener scheduler ...", "features", schedulerfeatures.FeatureGate.String())
+	zapLogr.Info("Starting Gardener scheduler...", "version", version.Get())
+	zapLogr.Info("Feature Gates", "featureGates", schedulerfeatures.FeatureGate.String())
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.

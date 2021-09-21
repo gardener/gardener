@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -121,6 +122,8 @@ func (o *options) validate() error {
 // run runs gardener-admission-controller using the specified options.
 func (o *options) run(ctx context.Context) error {
 	log := logf.Log
+
+	log.Info("Starting Gardener admission controller...", "version", version.Get())
 
 	log.Info("getting rest config")
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
