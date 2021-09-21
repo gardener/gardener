@@ -194,7 +194,11 @@ spec:
               value: Bearer {{ .Values.probeCredentials }}
           successThreshold: 1
           failureThreshold: 3
+          {{- if semverCompare ">= 1.16" .Values.kubernetesVersion }}
+          initialDelaySeconds: 60
+          {{- else }}
           initialDelaySeconds: 15
+          {{- end }}
           periodSeconds: 10
           timeoutSeconds: 15
         readinessProbe:
