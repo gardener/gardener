@@ -15,6 +15,7 @@
 package worker
 
 import (
+	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -77,7 +78,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 // Add creates a new Worker Controller and adds it to the Manager.
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator)
+	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator, common.GetDefaultOwnerCheckWatchdogManager())
 	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
 	if err := add(mgr, args, predicates); err != nil {
 		return err

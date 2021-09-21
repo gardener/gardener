@@ -27,12 +27,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	"github.com/gardener/gardener/extensions/pkg/controller/common"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/operation/botanist"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -84,6 +86,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
+	logger := r.logger.WithValues("dnsrecord", kutil.ObjectName(dns))
 	var cluster *extensions.Cluster
 	if dns.Namespace != v1beta1constants.GardenNamespace {
 		var err error
@@ -93,12 +96,26 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		}
 
 		if extensionscontroller.IsFailed(cluster) {
-			r.logger.Info("Skipping the reconciliation of dnsrecord of failed shoot", "dnsrecord", kutil.ObjectName(dns))
+			logger.Info("Skipping the reconciliation of dnsrecord of failed shoot")
 			return reconcile.Result{}, nil
 		}
 	}
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(dns.ObjectMeta, dns.Status.LastOperation)
+
+	if cluster != nil && dns.Name != cluster.Shoot.Name+"-"+botanist.DNSOwnerName && operationType != gardencorev1beta1.LastOperationTypeMigrate {
+		key := "dnsrecord:" + kutil.ObjectName(dns)
+		ok, watchdogCtx, cleanup, err := common.GetOwnerCheckResultAndContext(ctx, r.client, dns.Namespace, cluster.Shoot.Name, key)
+		if err != nil {
+			return reconcile.Result{}, err
+		} else if !ok {
+			return reconcile.Result{}, fmt.Errorf("this seed is not the owner of shoot %s", kutil.ObjectName(cluster.Shoot))
+		}
+		ctx = watchdogCtx
+		if cleanup != nil {
+			defer cleanup()
+		}
+	}
 
 	switch {
 	case extensionscontroller.ShouldSkipOperation(operationType, dns):
