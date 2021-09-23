@@ -32,6 +32,9 @@ data:
         regex: __meta_kubernetes_pod_label_(.+)
 
     - job_name: garden
+      scheme: https
+      tls_config:
+        insecure_skip_verify: true
       kubernetes_sd_configs:
       - role: pod
       relabel_configs:
@@ -59,8 +62,34 @@ data:
         - '{job="cadvisor",namespace=~"extension-(.+)"}'
         - '{job="cadvisor",namespace="garden"}'
         - '{job="cadvisor",namespace=~"istio-(.+)"}'
+        - '{job="cadvisor",namespace="kube-system"}'
       static_configs:
       - targets:
         - prometheus-web.garden.svc
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cadvisor | indent 6 }}
+
+    - job_name: kube-state-metrics
+      # Service is used, because we only care about metric from one kube-state-metrics instance
+      # and not multiple in HA setup
+      kubernetes_sd_configs:
+      - role: service
+        namespaces:
+          names: [ garden ]
+      relabel_configs:
+      - source_labels: [ __meta_kubernetes_service_label_component ]
+        regex: kube-state-metrics
+        action: keep
+      - source_labels: [ __meta_kubernetes_service_port_name ]
+        regex: metrics
+        action: keep
+      - target_label: instance
+        replacement: kube-state-metrics
+      metric_relabel_configs:
+      - source_labels: [ namespace ]
+        regex: shoot-.+
+        action: drop
+
+    - job_name: prometheus
+      static_configs:
+      - targets: [ localhost:9090 ]
