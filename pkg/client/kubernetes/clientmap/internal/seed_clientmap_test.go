@@ -31,6 +31,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -104,6 +105,10 @@ var _ = Describe("SeedClientMap", func() {
 				Expect(fns).To(ConsistOfConfigFuncs(
 					kubernetes.WithClientConnectionOptions(clientConnectionConfig),
 					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.SeedScheme}),
+					kubernetes.WithUncached(
+						&corev1.Event{},
+						&eventsv1.Event{},
+					),
 				))
 				return fakeCS, nil
 			}

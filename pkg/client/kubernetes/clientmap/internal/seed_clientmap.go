@@ -19,6 +19,8 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	eventsv1 "k8s.io/api/events/v1"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -64,6 +66,10 @@ func (f *SeedClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cli
 			client.Options{
 				Scheme: kubernetes.SeedScheme,
 			},
+		),
+		kubernetes.WithUncached(
+			&corev1.Event{},
+			&eventsv1.Event{},
 		),
 	)
 }
