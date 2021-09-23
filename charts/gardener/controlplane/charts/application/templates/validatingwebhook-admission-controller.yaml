@@ -30,6 +30,7 @@ webhooks:
       path: /webhooks/validate-namespace-deletion
     {{- end }}
     caBundle: {{ required ".Values.global.admission.config.server.https.tls.caBundle is required" (b64enc .Values.global.admission.config.server.https.tls.caBundle) }}
+  sideEffects: None
 - name: validate-kubeconfig-secrets.gardener.cloud
   admissionReviewVersions: ["v1", "v1beta1"]
   timeoutSeconds: 10
