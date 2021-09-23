@@ -17,9 +17,9 @@ package controllerinstallation
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -129,15 +129,15 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	if controllerInstallation.DeletionTimestamp != nil {
-		return reconcile.Result{}, r.delete(ctx, gardenClient.Client(), controllerInstallation, log)
+		return r.delete(ctx, gardenClient.Client(), controllerInstallation, log)
 	}
-	return reconcile.Result{}, r.reconcile(ctx, gardenClient.Client(), controllerInstallation, log)
+	return r.reconcile(ctx, gardenClient.Client(), controllerInstallation, log)
 }
 
-func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, log logrus.FieldLogger) error {
+func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, log logrus.FieldLogger) (reconcile.Result, error) {
 	if !controllerutil.ContainsFinalizer(controllerInstallation, FinalizerName) {
 		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, controllerInstallation, FinalizerName); err != nil {
-			return err
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -159,7 +159,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		} else {
 			conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionUnknown, "RegistrationReadError", fmt.Sprintf("Referenced ControllerRegistration cannot be read: %+v", err))
 		}
-		return err
+		return reconcile.Result{}, err
 	}
 
 	seed := &gardencorev1beta1.Seed{}
@@ -169,20 +169,20 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		} else {
 			conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Referenced Seed cannot be read: %+v", err))
 		}
-		return err
+		return reconcile.Result{}, err
 	}
 
 	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(seed.Name))
 	if err != nil {
 		conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Failed to get Seed client for referenced Seed: %+v", err))
-		return fmt.Errorf("failed to get seed client: %w", err)
+		return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
 	}
 
 	var providerConfig *runtime.RawExtension
 	if deploymentRef := controllerInstallation.Spec.DeploymentRef; deploymentRef != nil {
 		controllerDeployment := &gardencorev1beta1.ControllerDeployment{}
 		if err := gardenClient.Get(ctx, kutil.Key(deploymentRef.Name), controllerDeployment); err != nil {
-			return err
+			return reconcile.Result{}, err
 		}
 		providerConfig = &controllerDeployment.ProviderConfig
 	} else {
@@ -193,7 +193,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 
 	if err := json.Unmarshal(providerConfig.Raw, &helmDeployment); err != nil {
 		conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "ChartInformationInvalid", fmt.Sprintf("Chart Information cannot be unmarshalled: %+v", err))
-		return err
+		return reconcile.Result{}, err
 	}
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
@@ -202,7 +202,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		kutil.SetMetaDataLabel(&namespace.ObjectMeta, v1beta1constants.LabelControllerRegistrationName, controllerRegistration.Name)
 		return nil
 	}); err != nil {
-		return err
+		return reconcile.Result{}, err
 	}
 
 	var (
@@ -218,7 +218,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 	}
 
 	if seed.Status.ClusterIdentity == nil {
-		return fmt.Errorf("cluster-identity of seed '%s' not set", seed.Name)
+		return reconcile.Result{}, fmt.Errorf("cluster-identity of seed '%s' not set", seed.Name)
 	}
 	seedClusterIdentity := *seed.Status.ClusterIdentity
 
@@ -257,13 +257,13 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 	release, err := seedClient.ChartRenderer().RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, utils.MergeMaps(helmDeployment.Values, gardenerValues))
 	if err != nil {
 		conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionFalse, "ChartCannotBeRendered", fmt.Sprintf("Chart rendering process failed: %+v", err))
-		return err
+		return reconcile.Result{}, err
 	}
 	conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionTrue, "RegistrationValid", "Chart could be rendered successfully.")
 
 	if err := managedresources.Create(ctx, seedClient.Client(), v1beta1constants.GardenNamespace, controllerInstallation.Name, false, v1beta1constants.SeedResourceManagerClass, release.AsSecretData(), nil, nil, nil); err != nil {
 		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Creation of ManagedResource %q failed: %+v", controllerInstallation.Name, err))
-		return err
+		return reconcile.Result{}, err
 	}
 
 	if conditionInstalled.Status == gardencorev1beta1.ConditionUnknown {
@@ -272,10 +272,10 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "InstallationPending", fmt.Sprintf("Installation of ManagedResource %q is still pending.", controllerInstallation.Name))
 	}
 
-	return nil
+	return reconcile.Result{}, nil
 }
 
-func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, log logrus.FieldLogger) error {
+func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, controllerInstallation *gardencorev1beta1.ControllerInstallation, log logrus.FieldLogger) (reconcile.Result, error) {
 	var (
 		newConditions      = gardencorev1beta1helper.MergeConditions(controllerInstallation.Status.Conditions, gardencorev1beta1helper.InitCondition(gardencorev1beta1.ControllerInstallationValid), gardencorev1beta1helper.InitCondition(gardencorev1beta1.ControllerInstallationInstalled))
 		conditionValid     = newConditions[0]
@@ -295,13 +295,13 @@ func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, con
 		} else {
 			conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Referenced Seed cannot be read: %+v", err))
 		}
-		return err
+		return reconcile.Result{}, err
 	}
 
 	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(seed.Name))
 	if err != nil {
 		conditionValid = gardencorev1beta1helper.UpdatedCondition(conditionValid, gardencorev1beta1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Failed to get Seed client for referenced Seed: %+v", err))
-		return fmt.Errorf("failed to get seed client: %w", err)
+		return reconcile.Result{}, fmt.Errorf("failed to get seed client: %w", err)
 	}
 
 	mr := &resourcesv1alpha1.ManagedResource{
@@ -314,10 +314,11 @@ func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, con
 	if err == nil {
 		message := fmt.Sprintf("Deletion of ManagedResource %q is still pending.", controllerInstallation.Name)
 		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionPending", message)
-		return errors.New(message)
+		log.Info(message)
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	} else if !apierrors.IsNotFound(err) {
 		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of ManagedResource %q failed: %+v", controllerInstallation.Name, err))
-		return err
+		return reconcile.Result{}, err
 	}
 
 	secret := &corev1.Secret{
@@ -335,15 +336,16 @@ func (r *reconciler) delete(ctx context.Context, gardenClient client.Client, con
 	if err == nil || apierrors.IsConflict(err) {
 		message := fmt.Sprintf("Deletion of Namespace %q is still pending.", namespace.Name)
 		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionPending", message)
-		return errors.New(message)
+		log.Info(message)
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 	} else if !apierrors.IsNotFound(err) {
 		conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of Namespace %q failed: %+v", namespace.Name, err))
-		return err
+		return reconcile.Result{}, err
 	}
 
 	conditionInstalled = gardencorev1beta1helper.UpdatedCondition(conditionInstalled, gardencorev1beta1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
-	return controllerutils.PatchRemoveFinalizers(ctx, gardenClient, controllerInstallation.DeepCopy(), FinalizerName)
+	return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, gardenClient, controllerInstallation.DeepCopy(), FinalizerName)
 }
 
 func patchConditions(ctx context.Context, c client.StatusClient, controllerInstallation *gardencorev1beta1.ControllerInstallation, conditions ...gardencorev1beta1.Condition) error {
