@@ -215,6 +215,17 @@ var _ = Describe("operation", func() {
 				Expect(o.DeleteShootState(ctx)).To(Equal(fakeErr))
 			})
 		})
+
+		Describe("#GetShootState", func() {
+			It("should not panic if ShootState was not stored", func() {
+				Expect(o.GetShootState()).To(BeNil())
+			})
+
+			It("should return the correct ShootState", func() {
+				o.SetShootState(shootState)
+				Expect(o.GetShootState()).To(Equal(shootState))
+			})
+		})
 	})
 
 	Describe("#SaveGardenerResourcesInShootState", func() {
