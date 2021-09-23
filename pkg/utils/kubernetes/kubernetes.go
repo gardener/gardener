@@ -345,7 +345,7 @@ func FetchEventMessages(ctx context.Context, scheme *runtime.Scheme, reader clie
 		"type":                      eventType,
 	}
 	eventList := &corev1.EventList{}
-	if err := reader.List(ctx, eventList, fieldSelector); err != nil {
+	if err := reader.List(ctx, eventList, fieldSelector, client.InNamespace(obj.GetNamespace())); err != nil {
 		return "", fmt.Errorf("error '%w' occurred while fetching more details", err)
 	}
 
