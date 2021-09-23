@@ -27,8 +27,7 @@ if ! command -v setup-envtest &> /dev/null ; then
 fi
 
 # --use-env allows overwriting the envtest tools path via the KUBEBUILDER_ASSETS env var just like it was before
-setup-envtest use --use-env -p env ${ENVTEST_K8S_VERSION}
-source <(setup-envtest use --use-env -p env ${ENVTEST_K8S_VERSION})
+export KUBEBUILDER_ASSETS="$(setup-envtest use --use-env -p path ${ENVTEST_K8S_VERSION})"
 echo "using envtest tools installed at '$KUBEBUILDER_ASSETS'"
 
 echo "> Integration Tests"
