@@ -520,7 +520,7 @@ func getGardenGardenletRole(labels map[string]string) *rbacv1.Role {
 			{
 				APIGroups: []string{""},
 				Resources: []string{"events"},
-				Verbs:     []string{"create", "patch", "update"},
+				Verbs:     []string{"get", "list", "create", "patch", "update"},
 			},
 			{
 				APIGroups:     []string{"apps"},
