@@ -19,7 +19,20 @@ import (
 	"fmt"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
+	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
+
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -37,18 +50,6 @@ import (
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/features"
-	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
-	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/managedresources"
 )
 
 const (
@@ -397,26 +398,36 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 			TimeoutSeconds:          pointer.Int32(10),
 		}, {
 			Name: "validation.extensions.seed.admission.core.gardener.cloud",
-			Rules: []admissionregistrationv1.RuleWithOperations{{
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
-					APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
-					Resources: []string{
-						"backupbuckets",
-						"backupentries",
-						"bastions",
-						"containerruntimes",
-						"controlplanes",
-						"dnsrecords",
-						"extensions",
-						"infrastructures",
-						"networks",
-						"operatingsystemconfigs",
-						"workers",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
+						APIVersions: []string{druidv1alpha1.GroupVersion.Version},
+						Resources:   []string{"etcds"},
 					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 				},
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
-			}},
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
+							"backupbuckets",
+							"backupentries",
+							"bastions",
+							"containerruntimes",
+							"controlplanes",
+							"dnsrecords",
+							"extensions",
+							"infrastructures",
+							"networks",
+							"operatingsystemconfigs",
+							"workers",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
 			FailurePolicy:     &failurePolicy,
 			NamespaceSelector: &metav1.LabelSelector{},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{

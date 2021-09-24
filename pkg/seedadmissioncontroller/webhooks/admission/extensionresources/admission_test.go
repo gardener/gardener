@@ -243,44 +243,44 @@ var _ = Describe("handler", func() {
 
 		Context("ignored requests", func() {
 			It("should ignore DELETE operations", func() {
-				request = newRequest(admissionv1.Delete, "dnsrecords", nil, nil)
+				request = newExtensionsRequest(admissionv1.Delete, "dnsrecords", nil, nil)
 				expectAllowed(handler.Handle(ctx, *request), ContainSubstring("operation is not CREATE or UPDATE"))
 			})
 
 			It("should ignore CONNECT operations", func() {
-				request = newRequest(admissionv1.Connect, "dnsrecords", nil, nil)
+				request = newExtensionsRequest(admissionv1.Connect, "dnsrecords", nil, nil)
 				expectAllowed(handler.Handle(ctx, *request), ContainSubstring("operation is not CREATE or UPDATE"))
 			})
 
 			It("should ignore different resources", func() {
-				request = newRequest(admissionv1.Create, "customresourcedefinitions", nil, nil)
+				request = newExtensionsRequest(admissionv1.Create, "customresourcedefinitions", nil, nil)
 				expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation not found for the given resource"))
 			})
 		})
 
 		Context("create resources", func() {
 			DescribeTable("should create successfully the resource",
-				func(kind string, obj runtime.Object, opts ...topts) {
-					request = newRequest(admissionv1.Create, kind, obj, nil, opts...)
+				func(kind string, obj runtime.Object, newRequest newReqFunc) {
+					request = newRequest(admissionv1.Create, kind, obj, nil)
 					expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation successful"), resourceToId(request.Resource))
 				},
 
-				Entry("for backupbuckets", "backupbuckets", backupBucket),
-				Entry("for backupentries", "backupentries", backupEntry),
-				Entry("for bastions", "bastions", bastion),
-				Entry("for containerruntime", "containerruntimes", containerRuntime),
-				Entry("for controlplanes", "controlplanes", controlPlane),
-				Entry("for dnsrecords", "dnsrecords", dnsrecord),
-				Entry("for etcds", "etcds", etcd, withGroup(druidv1alpha1.GroupVersion.Group)),
-				Entry("for extensions", "extensions", extension),
-				Entry("for infrastructures", "infrastructures", infrastructure),
-				Entry("for networks", "networks", network),
-				Entry("for operatingsystemconfigs", "operatingsystemconfigs", osc),
-				Entry("for workers", "workers", worker),
+				Entry("for backupbuckets", "backupbuckets", backupBucket, newExtensionsRequest),
+				Entry("for backupentries", "backupentries", backupEntry, newExtensionsRequest),
+				Entry("for bastions", "bastions", bastion, newExtensionsRequest),
+				Entry("for containerruntime", "containerruntimes", containerRuntime, newExtensionsRequest),
+				Entry("for controlplanes", "controlplanes", controlPlane, newExtensionsRequest),
+				Entry("for dnsrecords", "dnsrecords", dnsrecord, newExtensionsRequest),
+				Entry("for etcds", "etcds", etcd, newDruidRequest),
+				Entry("for extensions", "extensions", extension, newExtensionsRequest),
+				Entry("for infrastructures", "infrastructures", infrastructure, newExtensionsRequest),
+				Entry("for networks", "networks", network, newExtensionsRequest),
+				Entry("for operatingsystemconfigs", "operatingsystemconfigs", osc, newExtensionsRequest),
+				Entry("for workers", "workers", worker, newExtensionsRequest),
 			)
 
 			It("decoding of new dns record should fail", func() {
-				request = newRequest(admissionv1.Create, "dnsrecords", dnsrecord, nil)
+				request = newExtensionsRequest(admissionv1.Create, "dnsrecords", dnsrecord, nil)
 
 				// intentionally break JSON validity
 				obj := string(request.Object.Raw)
@@ -292,70 +292,78 @@ var _ = Describe("handler", func() {
 
 		Context("update resources", func() {
 			DescribeTable("should update successfully the resource",
-				func(kind string, new, old runtime.Object, opts ...topts) {
-					request = newRequest(admissionv1.Update, kind, new, old, opts...)
+				func(kind string, new, old runtime.Object, newRequest newReqFunc) {
+					request = newRequest(admissionv1.Update, kind, new, old)
 					expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation successful"), resourceToId(request.Resource))
 				},
 
-				Entry("for backupbuckets", "backupbuckets", newBackupBucket("2", "backupbucket-external", ""), newBackupBucket("2", "backupbucket-external-2", "")),
-				Entry("for backupentries", "backupentries", newBackupEntry("2", "backupentry-external-2", ""), newBackupEntry("1", "", "")),
-				Entry("for bastions", "bastions", newBastion("2", "1.1.1.1/16", ""), newBastion("1", "", "")),
+				Entry("for backupbuckets", "backupbuckets", newBackupBucket("2", "backupbucket-external", ""), newBackupBucket("2", "backupbucket-external-2", ""), newExtensionsRequest),
+				Entry("for backupentries", "backupentries", newBackupEntry("2", "backupentry-external-2", ""), newBackupEntry("1", "", ""), newExtensionsRequest),
+				Entry("for bastions", "bastions", newBastion("2", "1.1.1.1/16", ""), newBastion("1", "", ""), newExtensionsRequest),
 				// TODO: Fix this with #4561
-				Entry("for containerruntime", "containerruntimes", newContainerRuntime("2"), newContainerRuntime("1")),
-				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", ""), newControlPlane("1", "", "")),
-				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", ""), newDNSRecord("1", "", "")),
-				Entry("for etcds", "etcds", newEtcd("2", "", "new-service-name"), newEtcd("1", "", "service-name"), withGroup(druidv1alpha1.GroupVersion.Group)),
-				Entry("for extensions", "extensions", newExtension("2", "", &runtime.RawExtension{}), newExtension("1", "", nil)),
-				Entry("for infrastructures", "infrastructures", newInfrastructure("2", "infrastructure-external", ""), newInfrastructure("1", "", "")),
-				Entry("for networks", "networks", newNetwork("2", ""), newNetwork("1", "")),
-				Entry("for operatingsystemconfigs", "operatingsystemconfigs", newOSC("2", "path/to/file", ""), newOSC("1", "", "")),
-				Entry("for workers", "workers", newWorker("2", "workers-external", ""), newWorker("1", "", "")),
+				Entry("for containerruntime", "containerruntimes", newContainerRuntime("2"), newContainerRuntime("1"), newExtensionsRequest),
+				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", ""), newControlPlane("1", "", ""), newExtensionsRequest),
+				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", ""), newDNSRecord("1", "", ""), newExtensionsRequest),
+				Entry("for etcds", "etcds", newEtcd("2", "", "new-service-name"), newEtcd("1", "", "service-name"), newDruidRequest),
+				Entry("for extensions", "extensions", newExtension("2", "", &runtime.RawExtension{}), newExtension("1", "", nil), newExtensionsRequest),
+				Entry("for infrastructures", "infrastructures", newInfrastructure("2", "infrastructure-external", ""), newInfrastructure("1", "", ""), newExtensionsRequest),
+				Entry("for networks", "networks", newNetwork("2", ""), newNetwork("1", ""), newExtensionsRequest),
+				Entry("for operatingsystemconfigs", "operatingsystemconfigs", newOSC("2", "path/to/file", ""), newOSC("1", "", ""), newExtensionsRequest),
+				Entry("for workers", "workers", newWorker("2", "workers-external", ""), newWorker("1", "", ""), newExtensionsRequest),
 			)
 
 			DescribeTable("update should fail",
-				func(kind string, wrong, old runtime.Object, opts ...topts) {
-					request = newRequest(admissionv1.Update, kind, wrong, old, opts...)
+				func(kind string, wrong, old runtime.Object, newRequest newReqFunc) {
+					request = newRequest(admissionv1.Update, kind, wrong, old)
 					expectDenied(handler.Handle(ctx, *request), ContainSubstring(""), resourceToId(request.Resource))
 				},
-				Entry("for backupbuckets", "backupbuckets", newBackupBucket("2", "backupbucket-external", "azure"), newBackupBucket("1", "", "")),
-				Entry("for backupentries", "backupentries", newBackupEntry("2", "backupentry-external", "azure"), newBackupEntry("1", "", "")),
-				Entry("for bastions", "bastions", newBastion("2", "1.1.1.1/16", "azure"), newBastion("1", "", "")),
+				Entry("for backupbuckets", "backupbuckets", newBackupBucket("2", "backupbucket-external", "azure"), newBackupBucket("1", "", ""), newExtensionsRequest),
+				Entry("for backupentries", "backupentries", newBackupEntry("2", "backupentry-external", "azure"), newBackupEntry("1", "", ""), newExtensionsRequest),
+				Entry("for bastions", "bastions", newBastion("2", "1.1.1.1/16", "azure"), newBastion("1", "", ""), newExtensionsRequest),
 				// TODO: Introduce entry for ContainerRuntime with #4561
-				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", "azure"), newControlPlane("1", "", "")),
-				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", "TXT"), newDNSRecord("1", "", "")),
-				Entry("for etcds", "etcds", newEtcd("2", "new-prefix", "new-service-name"), newEtcd("1", "", "service-name"), withGroup(druidv1alpha1.GroupVersion.Group)),
-				Entry("for extensions", "extensions", newExtension("2", "azure", nil), newExtension("1", "", nil)),
-				Entry("for infrastructures", "infrastructures", newInfrastructure("2", "infrastructure-external", "azure"), newInfrastructure("2", "infrastructure-external", "")),
-				Entry("for networks", "networks", newNetwork("2", "1.1.1.1/16"), newNetwork("1", "")),
-				Entry("for operatingsystemconfigs", "operatingsystemconfigs", newOSC("2", "", "azure"), newOSC("2", "", "")),
-				Entry("for workers", "workers", newWorker("2", "", "azure"), newWorker("1", "", "")),
+				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", "azure"), newControlPlane("1", "", ""), newExtensionsRequest),
+				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", "TXT"), newDNSRecord("1", "", ""), newExtensionsRequest),
+				Entry("for etcds", "etcds", newEtcd("2", "new-prefix", "new-service-name"), newEtcd("1", "", "service-name"), newDruidRequest),
+				Entry("for extensions", "extensions", newExtension("2", "azure", nil), newExtension("1", "", nil), newExtensionsRequest),
+				Entry("for infrastructures", "infrastructures", newInfrastructure("2", "infrastructure-external", "azure"), newInfrastructure("2", "infrastructure-external", ""), newExtensionsRequest),
+				Entry("for networks", "networks", newNetwork("2", "1.1.1.1/16"), newNetwork("1", ""), newExtensionsRequest),
+				Entry("for operatingsystemconfigs", "operatingsystemconfigs", newOSC("2", "", "azure"), newOSC("2", "", ""), newExtensionsRequest),
+				Entry("for workers", "workers", newWorker("2", "", "azure"), newWorker("1", "", ""), newExtensionsRequest),
 			)
 		})
 	})
 })
 
-type topts func(*admission.Request)
+type newReqFunc func(operation admissionv1.Operation, kind string, obj, oldobj runtime.Object) *admission.Request
 
-func withGroup(g string) topts {
-	return func(r *admission.Request) {
-		r.Resource.Group = g
-	}
+func newRequest(operation admissionv1.Operation, kind string, obj, oldobj runtime.Object) *admission.Request {
+	r := new(admission.Request)
+	r.Operation = operation
+	r.Object = runtime.RawExtension{Raw: marshalObject(obj)}
+	r.OldObject = runtime.RawExtension{Raw: marshalObject(oldobj)}
+
+	return r
 }
 
-func newRequest(operation admissionv1.Operation, kind string, obj, oldobj runtime.Object, opts ...topts) *admission.Request {
-	r := new(admission.Request)
+func newExtensionsRequest(operation admissionv1.Operation, kind string, obj, oldobj runtime.Object) *admission.Request {
+	r := newRequest(operation, kind, obj, oldobj)
 
-	r.Operation = operation
 	r.Resource = metav1.GroupVersionResource{
 		Group:    extensionsv1alpha1.SchemeGroupVersion.Group,
 		Version:  extensionsv1alpha1.SchemeGroupVersion.Version,
 		Resource: kind,
 	}
-	r.Object = runtime.RawExtension{Raw: marshalObject(obj)}
-	r.OldObject = runtime.RawExtension{Raw: marshalObject(oldobj)}
 
-	for _, opt := range opts {
-		opt(r)
+	return r
+}
+
+func newDruidRequest(operation admissionv1.Operation, kind string, obj, oldobj runtime.Object) *admission.Request {
+	r := newRequest(operation, kind, obj, oldobj)
+
+	r.Resource = metav1.GroupVersionResource{
+		Group:    druidv1alpha1.GroupVersion.Group,
+		Version:  druidv1alpha1.GroupVersion.Version,
+		Resource: kind,
 	}
 
 	return r
