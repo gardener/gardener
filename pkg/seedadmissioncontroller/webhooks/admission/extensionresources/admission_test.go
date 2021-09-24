@@ -260,8 +260,8 @@ var _ = Describe("handler", func() {
 
 		Context("create resources", func() {
 			DescribeTable("should create successfully the resource",
-				func(kind string, obj runtime.Object) {
-					request = newRequest(admissionv1.Create, kind, obj, nil)
+				func(kind string, obj runtime.Object, opts ...topts) {
+					request = newRequest(admissionv1.Create, kind, obj, nil, opts...)
 					expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation successful"), resourceToId(request.Resource))
 				},
 
@@ -271,7 +271,7 @@ var _ = Describe("handler", func() {
 				Entry("for containerruntime", "containerruntimes", containerRuntime),
 				Entry("for controlplanes", "controlplanes", controlPlane),
 				Entry("for dnsrecords", "dnsrecords", dnsrecord),
-				Entry("for etcds", "etcds", etcd),
+				Entry("for etcds", "etcds", etcd, withGroup(druidv1alpha1.GroupVersion.Group)),
 				Entry("for extensions", "extensions", extension),
 				Entry("for infrastructures", "infrastructures", infrastructure),
 				Entry("for networks", "networks", network),
@@ -292,8 +292,8 @@ var _ = Describe("handler", func() {
 
 		Context("update resources", func() {
 			DescribeTable("should update successfully the resource",
-				func(kind string, new, old runtime.Object) {
-					request = newRequest(admissionv1.Update, kind, new, old)
+				func(kind string, new, old runtime.Object, opts ...topts) {
+					request = newRequest(admissionv1.Update, kind, new, old, opts...)
 					expectAllowed(handler.Handle(ctx, *request), ContainSubstring("validation successful"), resourceToId(request.Resource))
 				},
 
@@ -304,7 +304,7 @@ var _ = Describe("handler", func() {
 				Entry("for containerruntime", "containerruntimes", newContainerRuntime("2"), newContainerRuntime("1")),
 				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", ""), newControlPlane("1", "", "")),
 				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", ""), newDNSRecord("1", "", "")),
-				Entry("for etcds", "etcds", newEtcd("2", "", "new-service-name"), newEtcd("1", "", "service-name")),
+				Entry("for etcds", "etcds", newEtcd("2", "", "new-service-name"), newEtcd("1", "", "service-name"), withGroup(druidv1alpha1.GroupVersion.Group)),
 				Entry("for extensions", "extensions", newExtension("2", "", &runtime.RawExtension{}), newExtension("1", "", nil)),
 				Entry("for infrastructures", "infrastructures", newInfrastructure("2", "infrastructure-external", ""), newInfrastructure("1", "", "")),
 				Entry("for networks", "networks", newNetwork("2", ""), newNetwork("1", "")),
@@ -313,8 +313,8 @@ var _ = Describe("handler", func() {
 			)
 
 			DescribeTable("update should fail",
-				func(kind string, wrong, old runtime.Object) {
-					request = newRequest(admissionv1.Update, kind, wrong, old)
+				func(kind string, wrong, old runtime.Object, opts ...topts) {
+					request = newRequest(admissionv1.Update, kind, wrong, old, opts...)
 					expectDenied(handler.Handle(ctx, *request), ContainSubstring(""), resourceToId(request.Resource))
 				},
 				Entry("for backupbuckets", "backupbuckets", newBackupBucket("2", "backupbucket-external", "azure"), newBackupBucket("1", "", "")),
@@ -323,7 +323,7 @@ var _ = Describe("handler", func() {
 				// TODO: Introduce entry for ContainerRuntime with #4561
 				Entry("for controlplanes", "controlplanes", newControlPlane("2", "cloudprovider", "azure"), newControlPlane("1", "", "")),
 				Entry("for dnsrecords", "dnsrecords", newDNSRecord("2", "dnsrecord-external", "TXT"), newDNSRecord("1", "", "")),
-				Entry("for etcds", "etcds", newEtcd("2", "new-prefix", "new-service-name"), newEtcd("1", "", "service-name")),
+				Entry("for etcds", "etcds", newEtcd("2", "new-prefix", "new-service-name"), newEtcd("1", "", "service-name"), withGroup(druidv1alpha1.GroupVersion.Group)),
 				Entry("for extensions", "extensions", newExtension("2", "azure", nil), newExtension("1", "", nil)),
 				Entry("for infrastructures", "infrastructures", newInfrastructure("2", "infrastructure-external", "azure"), newInfrastructure("2", "infrastructure-external", "")),
 				Entry("for networks", "networks", newNetwork("2", "1.1.1.1/16"), newNetwork("1", "")),
@@ -334,7 +334,15 @@ var _ = Describe("handler", func() {
 	})
 })
 
-func newRequest(operation admissionv1.Operation, kind string, obj, oldobj runtime.Object) *admission.Request {
+type topts func(*admission.Request)
+
+func withGroup(g string) topts {
+	return func(r *admission.Request) {
+		r.Resource.Group = g
+	}
+}
+
+func newRequest(operation admissionv1.Operation, kind string, obj, oldobj runtime.Object, opts ...topts) *admission.Request {
 	r := new(admission.Request)
 
 	r.Operation = operation
@@ -345,6 +353,10 @@ func newRequest(operation admissionv1.Operation, kind string, obj, oldobj runtim
 	}
 	r.Object = runtime.RawExtension{Raw: marshalObject(obj)}
 	r.OldObject = runtime.RawExtension{Raw: marshalObject(oldobj)}
+
+	for _, opt := range opts {
+		opt(r)
+	}
 
 	return r
 }

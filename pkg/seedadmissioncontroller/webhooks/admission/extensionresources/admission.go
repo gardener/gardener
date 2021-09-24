@@ -107,7 +107,7 @@ func New(logger logr.Logger, allowInvalidExtensionResources bool) *handler {
 			},
 		},
 
-		gvr("etcds"): {
+		gvr("etcds", gvrWithGroup(druidv1alpha1.GroupVersion.Group)): {
 			newObject: func() client.Object { return new(druidv1alpha1.Etcd) },
 			validateCreateResource: func(n, _ client.Object) field.ErrorList {
 				return druidvalidation.ValidateEtcd(n.(*druidv1alpha1.Etcd))
@@ -252,8 +252,8 @@ func (h handler) handleValidation(request admission.Request, newObject newObject
 			Kind:  request.Kind.Kind,
 		}, kutil.ObjectName(obj), errors)
 
+		h.logger.Info("Invalid extension resource detected", "operation", request.Operation, "error", err.Error())
 		if h.allowInvalidExtensionResources {
-			h.logger.Info("Invalid extension resource detected", "operation", request.Operation, "error", err.Error())
 			return admission.Allowed(err.Error())
 		}
 		return admission.Denied(err.Error())
@@ -262,10 +262,24 @@ func (h handler) handleValidation(request admission.Request, newObject newObject
 	return admission.Allowed("validation successful")
 }
 
-func gvr(resource string) metav1.GroupVersionResource {
-	return metav1.GroupVersionResource{
+type gvrOpts func(*metav1.GroupVersionResource)
+
+func gvr(resource string, opts ...gvrOpts) metav1.GroupVersionResource {
+	gres := metav1.GroupVersionResource{
 		Group:    extensionsv1alpha1.SchemeGroupVersion.Group,
 		Version:  extensionsv1alpha1.SchemeGroupVersion.Version,
 		Resource: resource,
+	}
+
+	for _, opt := range opts {
+		opt(&gres)
+	}
+
+	return gres
+}
+
+func gvrWithGroup(g string) gvrOpts {
+	return func(gvr *metav1.GroupVersionResource) {
+		gvr.Group = g
 	}
 }
