@@ -51,6 +51,7 @@ webhooks:
   rules:
     - apiGroups:
       - extensions.gardener.cloud
+      - druid.gardener.cloud
       apiVersions:
       - v1alpha1
       operations:
