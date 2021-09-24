@@ -3120,7 +3120,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3171,7 +3171,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PodPIDsLimit: &podPIDsLimit,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -3185,7 +3185,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PodPIDsLimit: &podPIDsLimit,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -3199,7 +3199,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					PodPIDsLimit: &podPIDsLimit,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 				Expect(errList).To(BeEmpty())
 			})
@@ -3220,7 +3220,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3246,7 +3246,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					},
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3265,7 +3265,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					EvictionPressureTransitionPeriod: &evictionPressureTransitionPeriod,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3290,7 +3290,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							PID:              pid,
 						},
 					}
-					Expect(ValidateKubeletConfig(kubeletConfig, "", nil)).To(matcher)
+					Expect(ValidateKubeletConfig(kubeletConfig, "", true, nil)).To(matcher)
 				},
 
 				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, HaveLen(0)),
@@ -3314,7 +3314,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 							PID:              pid,
 						},
 					}
-					Expect(ValidateKubeletConfig(kubeletConfig, "", nil)).To(matcher)
+					Expect(ValidateKubeletConfig(kubeletConfig, "", true, nil)).To(matcher)
 				},
 
 				Entry("valid configuration (cpu)", &validResourceQuantity, nil, nil, nil, HaveLen(0)),
@@ -3330,20 +3330,26 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		DescribeTable("validate the kubelet configuration - ImagePullProgressDeadline",
-			func(imagePullProgressDeadline metav1.Duration, matcher gomegatypes.GomegaMatcher) {
+			func(imagePullProgressDeadline metav1.Duration, dockerConfigured bool, matcher gomegatypes.GomegaMatcher) {
 				kubeletConfig := core.KubeletConfig{
 					ImagePullProgressDeadline: &imagePullProgressDeadline,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", dockerConfigured, nil)
 
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid configuration", validDuration, HaveLen(0)),
-			Entry("only allow positive Duration", invalidDuration, ConsistOf(
+			Entry("valid configuration", validDuration, true, HaveLen(0)),
+			Entry("only allow positive Duration", invalidDuration, true, ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(field.NewPath("imagePullProgressDeadline").String()),
+				})),
+			)),
+			Entry("not allowed to be configured when not using docker, as it has no effect on other runtimes", validDuration, false, ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(field.NewPath("imagePullProgressDeadline").String()),
 				})),
 			)),
@@ -3355,7 +3361,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					ImageGCHighThresholdPercent: pointer.Int32(int32(imageGCHighThresholdPercent)),
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3381,7 +3387,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					ImageGCLowThresholdPercent: pointer.Int32(int32(imageGCLowThresholdPercent)),
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3407,7 +3413,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				ImageGCHighThresholdPercent: pointer.Int32(1),
 			}
 
-			errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+			errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 			Expect(errList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -3423,7 +3429,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					EvictionMaxPodGracePeriod: &evictionMaxPodGracePeriod,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 				Expect(errList).To(matcher)
 			},
@@ -3443,7 +3449,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 					MaxPods: &maxPods,
 				}
 
-				errList := ValidateKubeletConfig(kubeletConfig, "", nil)
+				errList := ValidateKubeletConfig(kubeletConfig, "", true, nil)
 
 				Expect(errList).To(matcher)
 			},
