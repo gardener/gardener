@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -208,6 +209,8 @@ var wantedCertificateAuthorities = map[string]*secretsutils.CertificateSecretCon
 		CertType:   secretsutils.CACert,
 	},
 }
+
+var rewriteTagRegex = regexp.MustCompile(`\$tag\s+(.+?)\s+user-exposed\.\$TAG\s+true`)
 
 const (
 	grafanaPrefix = "g-seed"
@@ -584,10 +587,10 @@ func RunReconcileSeedFlow(
 		}
 
 		loggingRewriteTagFilter := `[FILTER]
-    Name          rewrite_tag
+    Name          modify
     Match         kubernetes.*
-    Rule          $tag ^kubernetes\.var\.log\.containers\.(` + strings.Join(userAllowedComponents, "-.+?|") + `-.+?)_ ` + userExposedComponentTagPrefix + `.$TAG true
-    Emitter_Name  re_emitted-garden-embedded-rewrite-tag
+    Condition     Key_value_matches tag ^kubernetes\.var\.log\.containers\.(` + strings.Join(userAllowedComponents, "|") + `)-.+?_
+    Add           __gardener_multitenant_id__ operator;user
 `
 		filters.WriteString(fmt.Sprintln(loggingRewriteTagFilter))
 
@@ -601,10 +604,34 @@ func RunReconcileSeedFlow(
 
 		// Need stable order before passing the dashboards to Grafana config to avoid unnecessary changes
 		kutil.ByName().Sort(existingConfigMaps)
-
+		modifyFilter := `
+    Name          modify
+    Match         kubernetes.*
+    Condition     Key_value_matches tag __PLACE_HOLDER__
+    Add           __gardener_multitenant_id__ operator;user
+`
 		// Read all filters and parsers coming from the extension provider configurations
 		for _, cm := range existingConfigMaps.Items {
-			filters.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapKubernetesFilter]))
+			// Remove the extensions rewrite_tag filters.
+			// TODO (vlvasilev): When all custom rewrite_tag filters are removed from the extensions this code snipped must be removed
+			flbFilters := cm.Data[v1beta1constants.FluentBitConfigMapKubernetesFilter]
+			tokens := strings.Split(flbFilters, "[FILTER]")
+			var sb strings.Builder
+			for _, token := range tokens {
+				if strings.Contains(token, "rewrite_tag") {
+					result := rewriteTagRegex.FindAllStringSubmatch(token, 1)
+					if len(result) < 1 || len(result[0]) < 2 {
+						continue
+					}
+					token = strings.Replace(modifyFilter, "__PLACE_HOLDER__", result[0][1], 1)
+				}
+				// In case we are processing the first token
+				if strings.TrimSpace(token) != "" {
+					sb.WriteString("[FILTER]")
+				}
+				sb.WriteString(token)
+			}
+			filters.WriteString(fmt.Sprintln(strings.TrimRight(sb.String(), " ")))
 			parsers.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.FluentBitConfigMapParser]))
 		}
 

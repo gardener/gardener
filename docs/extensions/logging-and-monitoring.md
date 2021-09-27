@@ -134,10 +134,9 @@ data:
 
 ##### How to expose logs to the users
 
-To expose logs from extension components to the users, the extension owners have to specify a `rewrite_tag` filter which will prefix the tag with `user-exposed`, thus telling the fluent-bit to send those logs to Loki under user tenant.
-Logs can be found in `Controlplane Logs Dashboard` Grafana dashboard.
+To expose logs from extension components to the users, the extension owners have to specify a `modify` filter which will add `__gardener_multitenant_id__=operator;user` entry to the log record. This entry contains all of the tenants, which have to receive this log. The tenants are semicolon separated. This specific dedicated entry will be extracted and removed from the log in the `gardener fluent-bit-to-loki` output plugin and added to the label set of that log. Then it will be parsed and removed from the label set. Any whitespace will be truncated during the parsing. The extension components logs can be found in `Controlplane Logs Dashboard` Grafana dashboard.
 
-**Example:** In this example we configure fluent-bit when it finds a log with field `tag`, which match the `Rule`, to prefix the log's tag with `user-exposed` and to re-emit the new record by setting the last argument to `true`.
+**Example:** In this example we configure fluent-bit when it finds a log with field `tag`, which match the `Condition`, to add `__gardener_multitenant_id__=operator;user` into the log record.
 
 ```yaml
 apiVersion: v1
@@ -150,15 +149,13 @@ metadata:
 data:
   filter-kubernetes.conf: |
     [FILTER]
-        Name                rewrite_tag
-        Match               kubernetes.*
-        Rule                $tag ^kubernetes\.var\.log\.containers\.(cloud-controller-manager-.+?_.+?_aws-cloud-controller-manager|csi-driver-controller-.+?_.+?_aws-csi) user-exposed.$TAG true
-        Emitter_Name        re_emitted-provider-aws
+        Name          modify
+        Match         kubernetes.*
+        Condition     Key_value_matches tag ^kubernetes\.var\.log\.containers\.(cloud-controller-manager-.+?_.+?_aws-cloud-controller-manager|csi-driver-controller-.+?_.+?_aws-csi)_.+?
+        Add           __gardener_multitenant_id__ operator;user
 ```
 In this case we have predefined filter which copies the log's tag into the log record under the `tag` field. The tag consists of the container logs directories path, plus `<pod_name>_<shoot_controlplane_namespace>_<container_name>_<container_id>`, so here we say:
-> When you see a record from pod `cloud-controller-manager` and some of the `aws-cloud-controller-manager`, `csi-driver-controller` or  `aws-csi` containers change the tag to `user-exposed.<old_tag>` and instead of replacing the tag inline, copy the record and re-emit it as new one, keeping the old record unchanged."
-
-**Note:** If you don't re-emit the record the operators will not see the logs from those components.
+> When you see a record from pod `cloud-controller-manager` and some of the `aws-cloud-controller-manager`, `csi-driver-controller` or  `aws-csi` containers add `__gardener_multitenant_id__` key with `operator;user` value into the log record.
 
 Further details how to define parsers and use them with examples can be found in the following [guide](../development/log_parsers.md).
 
