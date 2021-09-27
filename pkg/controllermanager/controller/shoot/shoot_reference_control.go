@@ -154,7 +154,7 @@ func (r *shootReferenceReconciler) reconcileShootReferences(ctx context.Context,
 	// Manage finalizers on shoot.
 	hasFinalizer := controllerutil.ContainsFinalizer(shoot, FinalizerName)
 	if needsFinalizer && !hasFinalizer {
-		return controllerutils.PatchAddFinalizers(ctx, r.gardenClient.Client(), shoot, FinalizerName)
+		return controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient.Client(), shoot, FinalizerName)
 	}
 	if !needsFinalizer && hasFinalizer {
 		return controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient.Client(), shoot, FinalizerName)
@@ -188,7 +188,7 @@ func (r *shootReferenceReconciler) handleReferencedSecrets(ctx context.Context, 
 			if controllerutil.ContainsFinalizer(secret, FinalizerName) {
 				return nil
 			}
-			return controllerutils.PatchAddFinalizers(ctx, c, secret, FinalizerName)
+			return controllerutils.StrategicMergePatchAddFinalizers(ctx, c, secret, FinalizerName)
 		})
 	}
 	err := flow.Parallel(fns...)(ctx)
@@ -208,7 +208,7 @@ func (r *shootReferenceReconciler) handleReferencedConfigMap(ctx context.Context
 				return true, nil
 			}
 
-			return true, controllerutils.PatchAddFinalizers(ctx, c, configMap, FinalizerName)
+			return true, controllerutils.StrategicMergePatchAddFinalizers(ctx, c, configMap, FinalizerName)
 		}
 	}
 

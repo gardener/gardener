@@ -33,6 +33,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -156,8 +157,10 @@ func (r *plantReconciler) reconcile(ctx context.Context, plant *gardencorev1beta
 	logger.Infof("[PLANT RECONCILE] %s", plant.Name)
 
 	// Add Finalizers to Plant
-	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient, plant, FinalizerName); err != nil {
-		return fmt.Errorf("failed to ensure finalizer on plant: %w", err)
+	if !controllerutil.ContainsFinalizer(plant, FinalizerName) {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, plant, FinalizerName); err != nil {
+			return fmt.Errorf("failed to ensure finalizer on plant: %w", err)
+		}
 	}
 
 	var (
@@ -173,8 +176,10 @@ func (r *plantReconciler) reconcile(ctx context.Context, plant *gardencorev1beta
 		return fmt.Errorf("failed to get plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
 	}
 
-	if err := controllerutils.PatchAddFinalizers(ctx, gardenClient, kubeconfigSecret, FinalizerName); err != nil {
-		return fmt.Errorf("failed to ensure finalizer on plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
+	if !controllerutil.ContainsFinalizer(kubeconfigSecret, FinalizerName) {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, kubeconfigSecret, FinalizerName); err != nil {
+			return fmt.Errorf("failed to ensure finalizer on plant secret '%s/%s': %w", plant.Namespace, plant.Spec.SecretRef.Name, err)
+		}
 	}
 
 	plantClient, err := r.clientMap.GetClient(ctx, keys.ForPlant(plant))

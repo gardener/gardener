@@ -69,7 +69,7 @@ var _ = Describe("Finalizers", func() {
 					obj.SetFinalizers(existingFinalizers)
 					mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 						Expect(patch.Type()).To(Equal(types.MergePatchType))
-						Expect(patch.Data(o)).To(BeEquivalentTo(expectedJSONPatch(expectedPatchFinalizers)))
+						Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatch(expectedPatchFinalizers)))
 						return nil
 					})
 
@@ -98,7 +98,7 @@ var _ = Describe("Finalizers", func() {
 					obj.SetFinalizers(existingFinalizers)
 					mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 						Expect(patch.Type()).To(Equal(types.MergePatchType))
-						Expect(patch.Data(o)).To(BeEquivalentTo(expectedJSONPatch(expectedPatchFinalizers)))
+						Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatch(expectedPatchFinalizers)))
 						return nil
 					})
 
@@ -120,6 +120,30 @@ var _ = Describe("Finalizers", func() {
 				Expect(PatchRemoveFinalizers(ctx, mockWriter, obj, "foo")).To(MatchError(ContainSubstring("conflict")))
 			})
 		})
+
+		Describe("StrategicMergePatchAddFinalizers", func() {
+			test := func(description string, expectedPatch string, existingFinalizers, finalizers []string) {
+				It(description+fmt.Sprintf(" %v, %v", existingFinalizers, finalizers), func() {
+					obj.SetFinalizers(existingFinalizers)
+					mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
+						Expect(patch.Type()).To(Equal(types.StrategicMergePatchType))
+						Expect(patch.Data(o)).To(BeEquivalentTo(expectedPatch))
+						return nil
+					})
+
+					Expect(StrategicMergePatchAddFinalizers(ctx, mockWriter, obj, finalizers...)).To(Succeed())
+				})
+			}
+			test("should add given finalizers via patch", `{"metadata":{"finalizers":["foo"]}}`, nil, []string{"foo"})
+			test("should add given finalizers via patch", `{"metadata":{"finalizers":["foo","bar"]}}`, nil, []string{"foo", "bar"})
+			test("should add given finalizers via patch", `{"metadata":{"$setElementOrder/finalizers":["bar","foo"],"finalizers":["foo"]}}`, []string{"bar"}, []string{"foo"})
+			test("should add given finalizers via patch", `{"metadata":{"$setElementOrder/finalizers":["bar","foo"],"finalizers":["foo"]}}`, []string{"bar"}, []string{"foo", "bar"})
+			test("should not add finalizers if already present", `{}`, []string{"foo"}, []string{"foo"})
+			test("should not add finalizers if already present", `{"metadata":{"$setElementOrder/finalizers":["foo","bar"]}}`, []string{"foo", "bar"}, []string{"bar"})
+			test("should do nothing if no finalizers are given", `{}`, nil, nil)
+			test("should do nothing if no finalizers are given", `{}`, []string{"foo"}, nil)
+			test("should do nothing if no finalizers are given", `{"metadata":{"$setElementOrder/finalizers":["foo","bar"]}}`, []string{"foo", "bar"}, nil)
+		})
 	})
 
 	Context("with retry on conflict", func() {
@@ -134,7 +158,7 @@ var _ = Describe("Finalizers", func() {
 							}),
 							mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 								Expect(patch.Type()).To(Equal(types.MergePatchType))
-								Expect(patch.Data(o)).To(BeEquivalentTo(expectedJSONPatch(expectedPatchFinalizers)))
+								Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatch(expectedPatchFinalizers)))
 								return nil
 							}),
 						)
@@ -163,7 +187,7 @@ var _ = Describe("Finalizers", func() {
 							}),
 							mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 								Expect(patch.Type()).To(Equal(types.MergePatchType))
-								Expect(patch.Data(o)).To(BeEquivalentTo(expectedJSONPatch(expectedPatchFinalizers)))
+								Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatch(expectedPatchFinalizers)))
 								return nil
 							}),
 						)
@@ -193,7 +217,7 @@ var _ = Describe("Finalizers", func() {
 							}),
 							mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 								Expect(patch.Type()).To(Equal(types.MergePatchType))
-								Expect(patch.Data(o)).To(BeEquivalentTo(expectedJSONPatch(expectedPatchFinalizers)))
+								Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatch(expectedPatchFinalizers)))
 								return nil
 							}),
 						)
@@ -223,7 +247,7 @@ var _ = Describe("Finalizers", func() {
 							}),
 							mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 								Expect(patch.Type()).To(Equal(types.MergePatchType))
-								Expect(patch.Data(o)).To(BeEquivalentTo(expectedJSONPatch(expectedPatchFinalizers)))
+								Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatch(expectedPatchFinalizers)))
 								return nil
 							}),
 						)
@@ -250,7 +274,7 @@ var _ = Describe("Finalizers", func() {
 							}),
 							mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 								Expect(patch.Type()).To(Equal(types.MergePatchType))
-								Expect(patch.Data(o)).To(BeEquivalentTo(expectedJSONPatch(expectedPatchFinalizers)))
+								Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatch(expectedPatchFinalizers)))
 								return nil
 							}),
 						)
@@ -279,7 +303,7 @@ var _ = Describe("Finalizers", func() {
 							}),
 							mockWriter.EXPECT().Patch(ctx, obj, gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
 								Expect(patch.Type()).To(Equal(types.MergePatchType))
-								Expect(patch.Data(o)).To(BeEquivalentTo(expectedJSONPatch(expectedPatchFinalizers)))
+								Expect(patch.Data(o)).To(BeEquivalentTo(expectedMergePatch(expectedPatchFinalizers)))
 								return nil
 							}),
 						)
@@ -296,7 +320,7 @@ var _ = Describe("Finalizers", func() {
 	})
 })
 
-func expectedJSONPatch(expectedPatchFinalizers string) string {
+func expectedMergePatch(expectedPatchFinalizers string) string {
 	finalizersJSONString := ""
 	if expectedPatchFinalizers != "" {
 		finalizersJSONString = fmt.Sprintf(`"finalizers":%s,`, expectedPatchFinalizers)

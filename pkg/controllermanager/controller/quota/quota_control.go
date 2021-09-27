@@ -31,6 +31,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -116,9 +117,11 @@ func (r *quotaReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, errors.New("quota still has references")
 	}
 
-	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient, quota, gardencorev1beta1.GardenerName); err != nil {
-		quotaLogger.Errorf("Could not add finalizer to Quota: %s", err.Error())
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(quota, gardencorev1beta1.GardenerName) {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, quota, gardencorev1beta1.GardenerName); err != nil {
+			quotaLogger.Errorf("Could not add finalizer to Quota: %s", err.Error())
+			return reconcile.Result{}, err
+		}
 	}
 
 	return reconcile.Result{}, nil

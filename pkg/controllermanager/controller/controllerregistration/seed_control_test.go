@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -34,6 +33,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Controller", func() {
@@ -222,7 +222,7 @@ var _ = Describe("seedReconciler", func() {
 				errToReturn := apierrors.NewNotFound(schema.GroupResource{}, seedName)
 
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
+					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"]}}`, finalizerName)))
 					return errToReturn
 				})
 
@@ -233,7 +233,7 @@ var _ = Describe("seedReconciler", func() {
 
 			It("should ensure the finalizer (no error)", func() {
 				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{}), gomock.Any()).DoAndReturn(func(_ context.Context, o client.Object, patch client.Patch, opts ...client.PatchOption) error {
-					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"],"resourceVersion":"42"}}`, finalizerName)))
+					Expect(patch.Data(o)).To(BeEquivalentTo(fmt.Sprintf(`{"metadata":{"finalizers":["%s"]}}`, finalizerName)))
 					return nil
 				})
 

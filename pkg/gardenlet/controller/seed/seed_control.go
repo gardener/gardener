@@ -275,10 +275,8 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 
 	log.Infof("[SEED RECONCILE]")
 
-	// TODO(timebertt): replace with strategic merge, so we can run without optimistic locking
-	// (make use of $deleteFromPrimitiveList directive)
 	if !controllerutil.ContainsFinalizer(seed, gardencorev1beta1.GardenerName) {
-		if err := controllerutils.PatchAddFinalizers(ctx, gardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, seed, gardencorev1beta1.GardenerName); err != nil {
 			err = fmt.Errorf("could not add finalizer to Seed: %s", err.Error())
 			log.Error(err)
 			return err
@@ -293,9 +291,11 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 			log.Error(err.Error())
 			return err
 		}
-		if err := controllerutils.PatchAddFinalizers(ctx, gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
-			log.Error(err.Error())
-			return err
+		if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
+			if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+				log.Error(err.Error())
+				return err
+			}
 		}
 	}
 

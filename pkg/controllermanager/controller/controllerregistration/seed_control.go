@@ -108,5 +108,9 @@ func (r *seedReconciler) Reconcile(ctx context.Context, request reconcile.Reques
 		return reconcile.Result{}, controllerutils.PatchRemoveFinalizers(ctx, r.gardenClient, seed, FinalizerName)
 	}
 
-	return reconcile.Result{}, controllerutils.PatchAddFinalizers(ctx, r.gardenClient, seed, FinalizerName)
+	if !controllerutil.ContainsFinalizer(seed, FinalizerName) {
+		return reconcile.Result{}, controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, seed, FinalizerName)
+	}
+
+	return reconcile.Result{}, nil
 }

@@ -75,9 +75,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 func (r *reconciler) reconcile(ctx context.Context, set *seedmanagementv1alpha1.ManagedSeedSet) (result reconcile.Result, err error) {
 	// Ensure gardener finalizer
-	r.getLogger(set).Debug("Ensuring finalizer")
-	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
-		return reconcile.Result{}, fmt.Errorf("could not ensure gardener finalizer: %w", err)
+	if !controllerutil.ContainsFinalizer(set, gardencorev1beta1.GardenerName) {
+		r.getLogger(set).Debug("Adding finalizer")
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient.Client(), set, gardencorev1beta1.GardenerName); err != nil {
+			return reconcile.Result{}, fmt.Errorf("could not ensure gardener finalizer: %w", err)
+		}
 	}
 
 	var status *seedmanagementv1alpha1.ManagedSeedSetStatus

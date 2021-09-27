@@ -23,23 +23,33 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// PatchAddFinalizers adds the given finalizers to the object via a patch request.
+// PatchAddFinalizers adds the given finalizers to the object via a merge patch request with optimistic locking.
 func PatchAddFinalizers(ctx context.Context, writer client.Writer, obj client.Object, finalizers ...string) error {
-	return patchFinalizers(ctx, writer, obj, controllerutil.AddFinalizer, finalizers...)
+	return patchFinalizers(ctx, writer, obj, mergeFromWithOptimisticLock, controllerutil.AddFinalizer, finalizers...)
 }
 
-// PatchRemoveFinalizers removes the given finalizers from the object via a patch request.
+// PatchRemoveFinalizers removes the given finalizers from the object via a merge patch request with optimistic locking.
 func PatchRemoveFinalizers(ctx context.Context, writer client.Writer, obj client.Object, finalizers ...string) error {
-	return patchFinalizers(ctx, writer, obj, controllerutil.RemoveFinalizer, finalizers...)
+	return patchFinalizers(ctx, writer, obj, mergeFromWithOptimisticLock, controllerutil.RemoveFinalizer, finalizers...)
 }
 
-func patchFinalizers(ctx context.Context, writer client.Writer, obj client.Object, mutate func(client.Object, string), finalizers ...string) error {
+func patchFinalizers(ctx context.Context, writer client.Writer, obj client.Object, patchFunc patchFn, mutate func(client.Object, string), finalizers ...string) error {
 	beforePatch := obj.DeepCopyObject().(client.Object)
 	for _, finalizer := range finalizers {
 		mutate(obj, finalizer)
 	}
 
-	return writer.Patch(ctx, obj, client.MergeFromWithOptions(beforePatch, client.MergeFromWithOptimisticLock{}))
+	return writer.Patch(ctx, obj, patchFunc(beforePatch))
+}
+
+// StrategicMergePatchAddFinalizers adds the given finalizers to the object via a strategic merge patch request
+// (without optimistic locking).
+// Note: we can't do the same for removing finalizers, because removing the last finalizer results in the following patch:
+//  {"metadata":{"finalizers":null}}
+// which is not safe to issue without optimistic locking. Also, $deleteFromPrimitiveList is not idempotent, see
+// https://github.com/kubernetes/kubernetes/issues/105146.
+func StrategicMergePatchAddFinalizers(ctx context.Context, writer client.Writer, obj client.Object, finalizers ...string) error {
+	return patchFinalizers(ctx, writer, obj, strategicMergeFrom, controllerutil.AddFinalizer, finalizers...)
 }
 
 // EnsureFinalizer ensures that a finalizer of the given name is set on the given object with exponential backoff.
@@ -75,7 +85,7 @@ func tryPatchFinalizers(ctx context.Context, reader client.Reader, writer client
 			return err
 		}
 
-		return patchFinalizers(ctx, writer, obj, mutate, finalizer)
+		return patchFinalizers(ctx, writer, obj, mergeFromWithOptimisticLock, mutate, finalizer)
 	})
 }
 
@@ -91,5 +101,5 @@ func tryPatchObject(ctx context.Context, reader client.Reader, writer client.Wri
 func patchObject(ctx context.Context, writer client.Writer, obj client.Object, mutate func(client.Object)) error {
 	beforePatch := obj.DeepCopyObject().(client.Object)
 	mutate(obj)
-	return writer.Patch(ctx, obj, client.MergeFromWithOptions(beforePatch, client.MergeFromWithOptimisticLock{}))
+	return writer.Patch(ctx, obj, mergeFromWithOptimisticLock(beforePatch))
 }

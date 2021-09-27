@@ -137,9 +137,11 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 		return reconcile.Result{}, errors.New("SecretBinding still has references")
 	}
 
-	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient, secretBinding, gardencorev1beta1.GardenerName); err != nil {
-		secretBindingLogger.Errorf("Could not add finalizer to SecretBinding: %s", err.Error())
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(secretBinding, gardencorev1beta1.GardenerName) {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, secretBinding, gardencorev1beta1.GardenerName); err != nil {
+			secretBindingLogger.Errorf("Could not add finalizer to SecretBinding: %s", err.Error())
+			return reconcile.Result{}, err
+		}
 	}
 
 	// Add the Gardener finalizer to the referenced SecretBinding secret to protect it from deletion as long as
@@ -150,9 +152,11 @@ func (r *secretBindingReconciler) Reconcile(ctx context.Context, request reconci
 		return reconcile.Result{}, err
 	}
 
-	if err := controllerutils.PatchAddFinalizers(ctx, r.gardenClient, secret.DeepCopy(), gardencorev1beta1.ExternalGardenerName); err != nil {
-		secretBindingLogger.Errorf("Could not add finalizer to Secret referenced in SecretBinding: %s", err.Error())
-		return reconcile.Result{}, err
+	if !controllerutil.ContainsFinalizer(secret, gardencorev1beta1.ExternalGardenerName) {
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.gardenClient, secret, gardencorev1beta1.ExternalGardenerName); err != nil {
+			secretBindingLogger.Errorf("Could not add finalizer to Secret referenced in SecretBinding: %s", err.Error())
+			return reconcile.Result{}, err
+		}
 	}
 
 	return reconcile.Result{}, nil
