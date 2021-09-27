@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo"
@@ -52,16 +51,19 @@ var _ = BeforeSuite(func() {
 	logger = logrus.NewEntry(log)
 
 	By("starting test environment")
-	testEnv = &envtest.Environment{}
+	extensionsCRDs := filepath.Join("..", "..", "..", "..", "..", "pkg", "operation", "botanist", "component", "extensions", "crds", "templates")
+	testEnv = &envtest.Environment{
+		CRDInstallOptions: envtest.CRDInstallOptions{
+			Paths: []string{
+				filepath.Join(extensionsCRDs, "crd-backupbucket.tpl.yaml"),
+				filepath.Join(extensionsCRDs, "crd-cluster.tpl.yaml"),
+			},
+		},
+	}
 	restConfig, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(restConfig).ToNot(BeNil())
 
-	By("installing CRDs")
-	applier, err := kubernetes.NewChartApplierForConfig(restConfig)
-	Expect(err).NotTo(HaveOccurred())
-	repoRoot := filepath.Join("..", "..", "..", "..", "..")
-	Expect(applier.Apply(ctx, filepath.Join(repoRoot, "charts", "seed-bootstrap", "charts", "extensions"), "extensions", "")).To(Succeed())
 })
 
 var _ = AfterSuite(func() {

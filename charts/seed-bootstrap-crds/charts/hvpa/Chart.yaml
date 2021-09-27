@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Helm chart containing CRD for the HVPA resources
+name: hvpa
+version: 0.1.0

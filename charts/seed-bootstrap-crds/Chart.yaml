@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Helm chart containing CRD definitions required for seed bootstrapping.
+name: seed-bootstrap-crds
+version: 0.1.0

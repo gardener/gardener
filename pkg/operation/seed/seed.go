@@ -38,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/crds"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/gardenerkubescheduler"
@@ -335,6 +336,7 @@ func RunReconcileSeedFlow(
 	conf *config.GardenletConfiguration,
 	log logrus.FieldLogger,
 ) error {
+	applier := seedClientSet.Applier()
 	seedClient := seedClientSet.Client()
 	chartApplier := seedClientSet.ChartApplier()
 	kubernetesVersion, err := semver.NewVersion(seedClientSet.Version())
@@ -356,7 +358,10 @@ func RunReconcileSeedFlow(
 		}
 	}
 
-	const chartName = "seed-bootstrap"
+	const (
+		seedBoostrapChartName     = "seed-bootstrap"
+		seedBoostrapCRDsChartName = "seed-bootstrap-crds"
+	)
 	var (
 		loggingConfig   = conf.Logging
 		gardenNamespace = &corev1.Namespace{
@@ -447,6 +452,24 @@ func RunReconcileSeedFlow(
 		if err := kutil.DeleteObjects(ctx, seedClient, resources...); err != nil {
 			return err
 		}
+	}
+
+	// Deploy the CRDs in the seed cluster.
+	crdsChartValues := kubernetes.Values(map[string]interface{}{
+		"hvpa": map[string]interface{}{
+			"enabled": hvpaEnabled,
+		},
+		"vpa": map[string]interface{}{
+			"enabled": vpaEnabled,
+		},
+	})
+
+	if err := chartApplier.Apply(ctx, filepath.Join(charts.Path, seedBoostrapCRDsChartName), v1beta1constants.GardenNamespace, seedBoostrapCRDsChartName, crdsChartValues); err != nil {
+		return err
+	}
+
+	if err := crds.NewExtensionsCRD(applier).Deploy(ctx); err != nil {
+		return err
 	}
 
 	// Fetch component-specific central monitoring configuration
@@ -950,7 +973,7 @@ func RunReconcileSeedFlow(
 		},
 	})
 
-	if err := chartApplier.Apply(ctx, filepath.Join(charts.Path, chartName), v1beta1constants.GardenNamespace, chartName, values, applierOptions); err != nil {
+	if err := chartApplier.Apply(ctx, filepath.Join(charts.Path, seedBoostrapChartName), v1beta1constants.GardenNamespace, seedBoostrapChartName, values, applierOptions); err != nil {
 		return err
 	}
 
