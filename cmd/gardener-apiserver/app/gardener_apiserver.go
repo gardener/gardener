@@ -40,6 +40,7 @@ import (
 	seedmanagementinformer "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/openapi"
 
 	"github.com/spf13/cobra"
@@ -247,6 +248,11 @@ func (o *Options) config(kubeAPIServerConfig *rest.Config, kubeClient *kubernete
 
 // Run runs gardener-apiserver with the given Options.
 func (o *Options) Run(ctx context.Context) error {
+	logger := logger.NewLogger("", "")
+	logger.Info("Starting Gardener API server...")
+	logger.Infof("Version: %+v", version.Get())
+	logger.Infof("Feature Gates: %s", utilfeature.DefaultFeatureGate)
+
 	// Create clientset for the native Kubernetes API group
 	// Use remote kubeconfig file (if set) or in-cluster config to create a new Kubernetes client for the native Kubernetes API groups
 	kubeAPIServerConfig, err := clientcmd.BuildConfigFromFlags("", o.Recommended.CoreAPI.CoreAPIKubeconfigPath)

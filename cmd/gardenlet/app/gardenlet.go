@@ -240,6 +240,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	// Initialize logger
 	logger := logger.NewLogger(*cfg.LogLevel, *cfg.LogFormat)
 	logger.Info("Starting Gardenlet...")
+	logger.Infof("Version: %+v", version.Get())
 	logger.Infof("Feature Gates: %s", gardenletfeatures.FeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {

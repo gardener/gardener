@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -131,6 +132,8 @@ func (o *Options) validate() error {
 // Run runs gardener-seed-admission-controller using the specified options.
 func (o *Options) Run(ctx context.Context) error {
 	log := logf.Log
+
+	log.Info("Starting Gardener Seed admission controller...", "version", version.Get())
 
 	log.Info("getting rest config")
 	restConfig, err := config.GetConfig()
