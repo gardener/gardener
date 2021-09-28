@@ -634,7 +634,7 @@ func (k *kubeAPIServer) handleSNISettings(deployment *appsv1.Deployment) {
 }
 
 func (k *kubeAPIServer) handleLifecycleSettings(deployment *appsv1.Deployment) {
-	if !versionutils.ConstraintK8sGreaterEqual116.Check(k.values.Version) {
+	if versionutils.ConstraintK8sLess116.Check(k.values.Version) {
 		deployment.Spec.Template.Spec.Containers[0].Lifecycle = &corev1.Lifecycle{
 			PreStop: &corev1.Handler{
 				Exec: &corev1.ExecAction{
@@ -802,58 +802,60 @@ func (k *kubeAPIServer) handleVPNSettings(deployment *appsv1.Deployment, configM
 }
 
 func (k *kubeAPIServer) handleOIDCSettings(deployment *appsv1.Deployment, secretOIDCCABundle *corev1.Secret) {
-	if k.values.OIDC != nil {
-		if k.values.OIDC.CABundle != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--oidc-ca-file=%s/%s", volumeMountPathOIDCCABundle, secretOIDCCABundleDataKeyCaCrt))
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
-				{
-					Name:      volumeNameOIDCCABundle,
-					MountPath: volumeMountPathOIDCCABundle,
-				},
-			}...)
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
-				{
-					Name: volumeNameOIDCCABundle,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: secretOIDCCABundle.Name,
-						},
+	if k.values.OIDC == nil {
+		return
+	}
+
+	if k.values.OIDC.CABundle != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, fmt.Sprintf("--oidc-ca-file=%s/%s", volumeMountPathOIDCCABundle, secretOIDCCABundleDataKeyCaCrt))
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, []corev1.VolumeMount{
+			{
+				Name:      volumeNameOIDCCABundle,
+				MountPath: volumeMountPathOIDCCABundle,
+			},
+		}...)
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, []corev1.Volume{
+			{
+				Name: volumeNameOIDCCABundle,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: secretOIDCCABundle.Name,
 					},
 				},
-			}...)
-		}
+			},
+		}...)
+	}
 
-		if v := k.values.OIDC.IssuerURL; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-issuer-url="+*v)
-		}
+	if v := k.values.OIDC.IssuerURL; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-issuer-url="+*v)
+	}
 
-		if v := k.values.OIDC.ClientID; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-client-id="+*v)
-		}
+	if v := k.values.OIDC.ClientID; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-client-id="+*v)
+	}
 
-		if v := k.values.OIDC.UsernameClaim; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-username-claim="+*v)
-		}
+	if v := k.values.OIDC.UsernameClaim; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-username-claim="+*v)
+	}
 
-		if v := k.values.OIDC.GroupsClaim; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-groups-claim="+*v)
-		}
+	if v := k.values.OIDC.GroupsClaim; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-groups-claim="+*v)
+	}
 
-		if v := k.values.OIDC.UsernamePrefix; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-username-prefix="+*v)
-		}
+	if v := k.values.OIDC.UsernamePrefix; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-username-prefix="+*v)
+	}
 
-		if v := k.values.OIDC.GroupsPrefix; v != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-groups-prefix="+*v)
-		}
+	if v := k.values.OIDC.GroupsPrefix; v != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-groups-prefix="+*v)
+	}
 
-		if k.values.OIDC.SigningAlgs != nil {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-signing-algs="+strings.Join(k.values.OIDC.SigningAlgs, ","))
-		}
+	if k.values.OIDC.SigningAlgs != nil {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-signing-algs="+strings.Join(k.values.OIDC.SigningAlgs, ","))
+	}
 
-		for key, value := range k.values.OIDC.RequiredClaims {
-			deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-required-claim="+fmt.Sprintf("%s=%s", key, value))
-		}
+	for key, value := range k.values.OIDC.RequiredClaims {
+		deployment.Spec.Template.Spec.Containers[0].Command = append(deployment.Spec.Template.Spec.Containers[0].Command, "--oidc-required-claim="+fmt.Sprintf("%s=%s", key, value))
 	}
 }
 

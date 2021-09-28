@@ -473,32 +473,32 @@ type Secrets struct {
 
 type secret struct {
 	*component.Secret
-	requiredConditionFn func(Values) bool
+	isRequired func(Values) bool
 }
 
 func (s *Secrets) all() map[string]secret {
 	return map[string]secret{
-		"BasicAuthentication":    {Secret: s.BasicAuthentication, requiredConditionFn: func(v Values) bool { return v.BasicAuthenticationEnabled }},
+		"BasicAuthentication":    {Secret: s.BasicAuthentication, isRequired: func(v Values) bool { return v.BasicAuthenticationEnabled }},
 		"CA":                     {Secret: &s.CA},
 		"CAEtcd":                 {Secret: &s.CAEtcd},
 		"CAFrontProxy":           {Secret: &s.CAFrontProxy},
 		"Etcd":                   {Secret: &s.Etcd},
 		"EtcdEncryptionConfig":   {Secret: &s.EtcdEncryptionConfig},
-		"HTTPProxy":              {Secret: s.HTTPProxy, requiredConditionFn: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
+		"HTTPProxy":              {Secret: s.HTTPProxy, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
 		"KubeAggregator":         {Secret: &s.KubeAggregator},
 		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},
 		"Server":                 {Secret: &s.Server},
 		"ServiceAccountKey":      {Secret: &s.ServiceAccountKey},
 		"StaticToken":            {Secret: &s.StaticToken},
-		"VPNSeed":                {Secret: s.VPNSeed, requiredConditionFn: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
-		"VPNSeedTLSAuth":         {Secret: s.VPNSeedTLSAuth, requiredConditionFn: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
-		"VPNSeedServerTLSAuth":   {Secret: s.VPNSeedServerTLSAuth, requiredConditionFn: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
+		"VPNSeed":                {Secret: s.VPNSeed, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
+		"VPNSeedTLSAuth":         {Secret: s.VPNSeedTLSAuth, isRequired: func(v Values) bool { return !v.VPN.ReversedVPNEnabled }},
+		"VPNSeedServerTLSAuth":   {Secret: s.VPNSeedServerTLSAuth, isRequired: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
 	}
 }
 
 func (s *Secrets) verify(values Values) error {
 	for name, secret := range s.all() {
-		if secret.requiredConditionFn != nil && !secret.requiredConditionFn(values) {
+		if secret.isRequired != nil && !secret.isRequired(values) {
 			continue
 		}
 
