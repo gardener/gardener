@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardenoperationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -929,6 +930,40 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 		Expect(graph.graph.Edges().Len()).To(Equal(3))
 		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1BackupSecretRef.Namespace, managedSeed1BackupSecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.Backup.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.Backup.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())
+
+		By("update (annotation), seed exists but with expired client cert")
+		seed = &gardencorev1beta1.Seed{
+			ObjectMeta: metav1.ObjectMeta{Name: managedSeed1.Name},
+			Status:     gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}},
+		}
+		Expect(fakeClient.Delete(ctx, seed)).To(Succeed())
+		Expect(fakeClient.Create(ctx, seed)).To(Succeed())
+		managedSeed1Copy = managedSeed1.DeepCopy()
+		managedSeed1.Annotations = map[string]string{"gardener.cloud/operation": "reconcile"}
+		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(5))
+		Expect(graph.graph.Edges().Len()).To(Equal(4))
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.Backup.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.Backup.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
+
+		By("update (annotation), seed exists with non-expired client cert")
+		seed = &gardencorev1beta1.Seed{
+			ObjectMeta: metav1.ObjectMeta{Name: managedSeed1.Name},
+			Status:     gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(time.Hour)}},
+		}
+		Expect(fakeClient.Delete(ctx, seed)).To(Succeed())
+		Expect(fakeClient.Create(ctx, seed)).To(Succeed())
+		managedSeed1Copy = managedSeed1.DeepCopy()
+		managedSeed1.Annotations = map[string]string{"gardener.cloud/operation": "reconcile-again"}
+		fakeInformerManagedSeed.Update(managedSeed1Copy, managedSeed1)
+		Expect(graph.graph.Nodes().Len()).To(Equal(4))
+		Expect(graph.graph.Edges().Len()).To(Equal(3))
+		Expect(graph.HasPathFrom(VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name, VertexTypeShoot, managedSeed1.Namespace, managedSeed1.Spec.Shoot.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.Backup.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.Backup.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Namespace, managedSeed1.Spec.SeedTemplate.Spec.SecretRef.Name, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeTrue())
 		Expect(graph.HasPathFrom(VertexTypeSecret, managedSeedBootstrapTokenNamespace, managedSeedBootstrapTokenName, VertexTypeManagedSeed, managedSeed1.Namespace, managedSeed1.Name)).To(BeFalse())

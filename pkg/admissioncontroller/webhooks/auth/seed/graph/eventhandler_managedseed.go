@@ -19,13 +19,11 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	seedmanagementv1alpha1helper "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1/helper"
 	bootstraputil "github.com/gardener/gardener/pkg/gardenlet/bootstrap/util"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	toolscache "k8s.io/client-go/tools/cache"
@@ -44,31 +42,11 @@ func (g *graph) setupManagedSeedWatch(ctx context.Context, informer cache.Inform
 		},
 
 		UpdateFunc: func(oldObj, newObj interface{}) {
-			oldManagedSeed, ok := oldObj.(*seedmanagementv1alpha1.ManagedSeed)
-			if !ok {
-				return
-			}
-
 			newManagedSeed, ok := newObj.(*seedmanagementv1alpha1.ManagedSeed)
 			if !ok {
 				return
 			}
-
-			oldSeedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(oldManagedSeed)
-			if err != nil {
-				return
-			}
-			newSeedTemplate, _, err := seedmanagementv1alpha1helper.ExtractSeedTemplateAndGardenletConfig(newManagedSeed)
-			if err != nil {
-				return
-			}
-
-			if oldManagedSeed.Spec.Shoot.Name != newManagedSeed.Spec.Shoot.Name ||
-				!gardencorev1beta1helper.SeedBackupSecretRefEqual(oldSeedTemplate.Spec.Backup, newSeedTemplate.Spec.Backup) ||
-				!apiequality.Semantic.DeepEqual(oldSeedTemplate.Spec.SecretRef, newSeedTemplate.Spec.SecretRef) ||
-				!gardenletBootstrapModeEqual(oldManagedSeed.Spec.Gardenlet, newManagedSeed.Spec.Gardenlet) {
-				g.handleManagedSeedCreateOrUpdate(ctx, newManagedSeed)
-			}
+			g.handleManagedSeedCreateOrUpdate(ctx, newManagedSeed)
 		},
 
 		DeleteFunc: func(obj interface{}) {
@@ -121,33 +99,42 @@ func (g *graph) handleManagedSeedCreateOrUpdate(ctx context.Context, managedSeed
 		}
 	}
 
-	if gardenletConfig != nil {
-		if err := g.client.Get(ctx, kutil.Key(managedSeed.Name), &gardencorev1beta1.Seed{}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return
-			}
+	if gardenletConfig == nil || managedSeed.Spec.Gardenlet.Bootstrap == nil {
+		return
+	}
 
-			if managedSeed.Spec.Gardenlet.Bootstrap == nil {
-				return
-			}
+	allowBootstrap := false
 
-			switch *managedSeed.Spec.Gardenlet.Bootstrap {
-			case seedmanagementv1alpha1.BootstrapToken:
-				secretVertex := g.getOrCreateVertex(VertexTypeSecret, metav1.NamespaceSystem, bootstraptokenapi.BootstrapTokenSecretPrefix+bootstraputil.TokenID(managedSeed.ObjectMeta))
-				g.addEdge(secretVertex, managedSeedVertex)
+	seed := &gardencorev1beta1.Seed{}
+	if err := g.client.Get(ctx, kutil.Key(managedSeed.Name), seed); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return
+		}
 
-			case seedmanagementv1alpha1.BootstrapServiceAccount:
-				var (
-					serviceAccountName     = bootstraputil.ServiceAccountName(managedSeed.Name)
-					clusterRoleBindingName = bootstraputil.ClusterRoleBindingName(managedSeed.Namespace, serviceAccountName)
+		// Seed is not yet registered, so let's allow bootstrapping it.
+		allowBootstrap = true
+	} else if seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(time.Now().UTC()) {
+		// Seed is registered but the client certificate expiration timestamp is expired.
+		allowBootstrap = true
+	}
 
-					serviceAccountVertex     = g.getOrCreateVertex(VertexTypeServiceAccount, managedSeed.Namespace, serviceAccountName)
-					clusterRoleBindingVertex = g.getOrCreateVertex(VertexTypeClusterRoleBinding, "", clusterRoleBindingName)
-				)
+	if allowBootstrap {
+		switch *managedSeed.Spec.Gardenlet.Bootstrap {
+		case seedmanagementv1alpha1.BootstrapToken:
+			secretVertex := g.getOrCreateVertex(VertexTypeSecret, metav1.NamespaceSystem, bootstraptokenapi.BootstrapTokenSecretPrefix+bootstraputil.TokenID(managedSeed.ObjectMeta))
+			g.addEdge(secretVertex, managedSeedVertex)
 
-				g.addEdge(serviceAccountVertex, managedSeedVertex)
-				g.addEdge(clusterRoleBindingVertex, managedSeedVertex)
-			}
+		case seedmanagementv1alpha1.BootstrapServiceAccount:
+			var (
+				serviceAccountName     = bootstraputil.ServiceAccountName(managedSeed.Name)
+				clusterRoleBindingName = bootstraputil.ClusterRoleBindingName(managedSeed.Namespace, serviceAccountName)
+
+				serviceAccountVertex     = g.getOrCreateVertex(VertexTypeServiceAccount, managedSeed.Namespace, serviceAccountName)
+				clusterRoleBindingVertex = g.getOrCreateVertex(VertexTypeClusterRoleBinding, "", clusterRoleBindingName)
+			)
+
+			g.addEdge(serviceAccountVertex, managedSeedVertex)
+			g.addEdge(clusterRoleBindingVertex, managedSeedVertex)
 		}
 	}
 }
@@ -161,16 +148,4 @@ func (g *graph) handleManagedSeedDelete(managedSeed *seedmanagementv1alpha1.Mana
 	defer g.lock.Unlock()
 
 	g.deleteVertex(VertexTypeManagedSeed, managedSeed.Namespace, managedSeed.Name)
-}
-
-func gardenletBootstrapModeEqual(oldGardenlet, newGardenlet *seedmanagementv1alpha1.Gardenlet) bool {
-	if oldGardenlet == nil && newGardenlet == nil {
-		return true
-	}
-
-	if oldGardenlet != nil && newGardenlet != nil {
-		return apiequality.Semantic.DeepEqual(oldGardenlet.Bootstrap, newGardenlet.Bootstrap)
-	}
-
-	return false
 }

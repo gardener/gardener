@@ -39,17 +39,7 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) {
 				return
 			}
 			g.handleSeedCreateOrUpdate(seed)
-
-			// Check if seed belongs to a ManagedSeed and enqueue it if necessary
-			managedSeed := &seedmanagementv1alpha1.ManagedSeed{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      seed.Name,
-					Namespace: v1beta1constants.GardenNamespace,
-				},
-			}
-			if err := g.client.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err == nil {
-				g.handleManagedSeedCreateOrUpdate(ctx, managedSeed)
-			}
+			g.handleManagedSeedIfSeedBelongsToIt(ctx, seed.Name)
 		},
 
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -67,6 +57,18 @@ func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) {
 				!gardencorev1beta1helper.SeedBackupSecretRefEqual(oldSeed.Spec.Backup, newSeed.Spec.Backup) ||
 				!seedDNSProviderSecretRefEqual(oldSeed.Spec.DNS.Provider, newSeed.Spec.DNS.Provider) {
 				g.handleSeedCreateOrUpdate(newSeed)
+			}
+
+			newGardenletReadyCondition := gardencorev1beta1helper.GetCondition(newSeed.Status.Conditions, gardencorev1beta1.SeedGardenletReady)
+
+			// When the GardenletReady condition transitions to 'Unknown' then the client certificate might be expired.
+			// Hence, check if seed belongs to a ManagedSeed and reconcile it to potentially allow re-bootstrapping it.
+			if (newGardenletReadyCondition != nil && newGardenletReadyCondition.Status == gardencorev1beta1.ConditionUnknown) ||
+				// When the client certificate expiration timestamp changes then we check if seed belongs to a ManagedSeed
+				// and reconcile it to potentially forbid to bootstrap it again.
+				!apiequality.Semantic.DeepEqual(oldSeed.Status.ClientCertificateExpirationTimestamp, newSeed.Status.ClientCertificateExpirationTimestamp) {
+
+				g.handleManagedSeedIfSeedBelongsToIt(ctx, newSeed.Name)
 			}
 		},
 
@@ -127,6 +129,18 @@ func (g *graph) handleSeedDelete(seed *gardencorev1beta1.Seed) {
 	defer g.lock.Unlock()
 
 	g.deleteVertex(VertexTypeSeed, "", seed.Name)
+}
+
+func (g *graph) handleManagedSeedIfSeedBelongsToIt(ctx context.Context, seedName string) {
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      seedName,
+			Namespace: v1beta1constants.GardenNamespace,
+		},
+	}
+	if err := g.client.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err == nil {
+		g.handleManagedSeedCreateOrUpdate(ctx, managedSeed)
+	}
 }
 
 func seedDNSProviderSecretRefEqual(oldDNS, newDNS *gardencorev1beta1.SeedDNSProvider) bool {

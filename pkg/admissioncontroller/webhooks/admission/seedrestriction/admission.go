@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gardener/gardener/pkg/admissioncontroller/seedidentity"
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
@@ -502,10 +503,13 @@ func (h *handler) allowIfManagedSeedIsNotYetBootstrapped(ctx context.Context, se
 		return response
 	}
 
-	if err := h.cacheReader.Get(ctx, kutil.Key(managedSeedName), &gardencorev1beta1.Seed{}); err != nil {
+	seed := &gardencorev1beta1.Seed{}
+	if err := h.cacheReader.Get(ctx, kutil.Key(managedSeedName), seed); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
+		return admission.Allowed("")
+	} else if seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(time.Now().UTC()) {
 		return admission.Allowed("")
 	}
 
