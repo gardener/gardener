@@ -4471,6 +4471,7 @@ func autoConvert_v1beta1_SeedStatus_To_core_SeedStatus(in *SeedStatus, out *core
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	out.Capacity = *(*v1.ResourceList)(unsafe.Pointer(&in.Capacity))
 	out.Allocatable = *(*v1.ResourceList)(unsafe.Pointer(&in.Allocatable))
+	out.ClientCertificateExpirationTimestamp = (*metav1.Time)(unsafe.Pointer(in.ClientCertificateExpirationTimestamp))
 	return nil
 }
 
@@ -4487,6 +4488,7 @@ func autoConvert_core_SeedStatus_To_v1beta1_SeedStatus(in *core.SeedStatus, out 
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	out.Capacity = *(*v1.ResourceList)(unsafe.Pointer(&in.Capacity))
 	out.Allocatable = *(*v1.ResourceList)(unsafe.Pointer(&in.Allocatable))
+	out.ClientCertificateExpirationTimestamp = (*metav1.Time)(unsafe.Pointer(in.ClientCertificateExpirationTimestamp))
 	return nil
 }
 

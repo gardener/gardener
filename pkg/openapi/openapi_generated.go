@@ -6414,11 +6414,17 @@ func schema_pkg_apis_core_v1alpha1_SeedStatus(ref common.ReferenceCallback) comm
 							Format:      "",
 						},
 					},
+					"clientCertificateExpirationTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClientCertificateExpirationTimestamp is the Kubernetes version of the seed cluster.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Gardener", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -13132,11 +13138,17 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 							},
 						},
 					},
+					"clientCertificateExpirationTimestamp": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClientCertificateExpirationTimestamp is the Kubernetes version of the seed cluster.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1beta1.Gardener", "k8s.io/apimachinery/pkg/api/resource.Quantity", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

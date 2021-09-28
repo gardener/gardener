@@ -2030,6 +2030,10 @@ message SeedStatus {
   // ClusterIdentity is the identity of the Seed cluster
   // +optional
   optional string clusterIdentity = 5;
+
+  // ClientCertificateExpirationTimestamp is the Kubernetes version of the seed cluster.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Time clientCertificateExpirationTimestamp = 6;
 }
 
 // SeedTaint describes a taint on a seed.
