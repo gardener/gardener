@@ -177,7 +177,7 @@ func readCertificateFromKubeconfigSecret(ctx context.Context, logger logrus.Fiel
 		return nil, nil, err
 	}
 
-	cert, err := getCurrentCertificate(logger, kubeconfigSecret.Data[kubernetes.KubeConfig], gardenClientConnection)
+	cert, err := GetCurrentCertificate(logger, kubeconfigSecret.Data[kubernetes.KubeConfig], gardenClientConnection)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -185,7 +185,8 @@ func readCertificateFromKubeconfigSecret(ctx context.Context, logger logrus.Fiel
 	return kubeconfigSecret, cert, nil
 }
 
-func getCurrentCertificate(logger logrus.FieldLogger, gardenKubeconfig []byte, gardenClientConnection *config.GardenClientConnection) (*tls.Certificate, error) {
+// GetCurrentCertificate returns the client certificate which is currently used to communicate with the garden cluster.
+func GetCurrentCertificate(logger logrus.FieldLogger, gardenKubeconfig []byte, gardenClientConnection *config.GardenClientConnection) (*tls.Certificate, error) {
 	secretName := gardenClientConnection.KubeconfigSecret.Name
 	secretNamespace := gardenClientConnection.KubeconfigSecret.Namespace
 

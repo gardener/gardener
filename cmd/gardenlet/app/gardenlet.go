@@ -291,6 +291,13 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 			return nil, fmt.Errorf("the configuration file needs to either specify a Garden API Server kubeconfig under `.gardenClientConnection.kubeconfig` or provide bootstrapping information. " +
 				"To configure the Gardenlet for bootstrapping, provide the secret containing the bootstrap kubeconfig under `.gardenClientConnection.kubeconfigSecret` and also the secret name where the created kubeconfig should be stored for further use via`.gardenClientConnection.kubeconfigSecret`")
 		}
+	} else {
+		gardenClientCert, err := certificate.GetCurrentCertificate(logger, kubeconfigFromBootstrap, cfg.GardenClientConnection)
+		if err != nil {
+			return nil, err
+		}
+
+		logger.Infof("The client certificate used to communicate with the garden cluster has expiration date %s", gardenClientCert.Leaf.NotAfter)
 	}
 
 	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection.ClientConnectionConfiguration, kubeconfigFromBootstrap)
