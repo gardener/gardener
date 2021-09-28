@@ -17,6 +17,7 @@ package managedseed
 import (
 	"context"
 	"path/filepath"
+	"time"
 
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -495,13 +496,19 @@ var _ = Describe("Actuator", func() {
 			vh.EXPECT().MergeGardenletConfiguration(managedSeed.Spec.Gardenlet.Config.Object).Return(mergedGardenletConfig, nil)
 		}
 
-		expectPrepareGardenClientConnection = func() {
-			// Check if kubeconfig secret exists
-			shc.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, "gardenlet-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
-				func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret) error {
-					return apierrors.NewNotFound(corev1.Resource("secret"), "gardenlet-kubeconfig")
-				},
-			)
+		expectDeleteKubeconfigSecret = func() {
+			shc.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: v1beta1constants.GardenNamespace, Name: "gardenlet-kubeconfig"}})
+		}
+
+		expectPrepareGardenClientConnection = func(withAlreadyBootstrappedCheck bool) {
+			if withAlreadyBootstrappedCheck {
+				// Check if kubeconfig secret exists
+				shc.EXPECT().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, "gardenlet-kubeconfig"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+					func(_ context.Context, _ client.ObjectKey, _ *corev1.Secret) error {
+						return apierrors.NewNotFound(corev1.Resource("secret"), "gardenlet-kubeconfig")
+					},
+				)
+			}
 
 			// Create bootstrap token secret
 			gc.EXPECT().Get(ctx, kutil.Key(metav1.NamespaceSystem, "bootstrap-token-a82f8a"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
@@ -642,6 +649,7 @@ var _ = Describe("Actuator", func() {
 
 			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap)", func() {
 				expectGetShoot()
+				expectGetSeed(false)
 				expectCheckSeedSpec()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
 				expectCreateGardenNamespace()
@@ -649,7 +657,74 @@ var _ = Describe("Actuator", func() {
 				expectCreateSeedSecrets()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
 				expectMergeWithParent()
-				expectPrepareGardenClientConnection()
+				expectPrepareGardenClientConnection(true)
+				expectGetGardenletChartValues(true)
+				expectApplyGardenletChart()
+
+				status, wait, err := actuator.Reconcile(ctx, managedSeed)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+						"Status": Equal(gardencorev1beta1.ConditionTrue),
+						"Reason": Equal(gardencorev1beta1.EventReconciled),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionTrue),
+						"Reason": Equal(gardencorev1beta1.EventReconciled),
+					}),
+				))
+				Expect(wait).To(Equal(false))
+			})
+
+			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap and non-expired gardenlet client cert)", func() {
+				seed.Status.ClientCertificateExpirationTimestamp = &metav1.Time{Time: time.Now().Add(time.Hour)}
+
+				expectGetShoot()
+				expectGetSeed(true)
+				expectCheckSeedSpec()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+				expectCreateGardenNamespace()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s secrets", name)
+				expectCreateSeedSecrets()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
+				expectMergeWithParent()
+				expectPrepareGardenClientConnection(true)
+				expectGetGardenletChartValues(true)
+				expectApplyGardenletChart()
+
+				status, wait, err := actuator.Reconcile(ctx, managedSeed)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(status.Conditions).To(ConsistOf(
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedShootReconciled),
+						"Status": Equal(gardencorev1beta1.ConditionTrue),
+						"Reason": Equal(gardencorev1beta1.EventReconciled),
+					}),
+					MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(seedmanagementv1alpha1.ManagedSeedSeedRegistered),
+						"Status": Equal(gardencorev1beta1.ConditionTrue),
+						"Reason": Equal(gardencorev1beta1.EventReconciled),
+					}),
+				))
+				Expect(wait).To(Equal(false))
+			})
+
+			It("should create the garden namespace and seed secrets, and deploy gardenlet (with bootstrap and expired gardenlet client cert)", func() {
+				seed.Status.ClientCertificateExpirationTimestamp = &metav1.Time{Time: time.Now().Add(-time.Hour)}
+
+				expectGetShoot()
+				expectDeleteKubeconfigSecret()
+				expectGetSeed(true)
+				expectCheckSeedSpec()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
+				expectCreateGardenNamespace()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating seed %s secrets", name)
+				expectCreateSeedSecrets()
+				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
+				expectMergeWithParent()
+				expectPrepareGardenClientConnection(false)
 				expectGetGardenletChartValues(true)
 				expectApplyGardenletChart()
 
@@ -674,6 +749,7 @@ var _ = Describe("Actuator", func() {
 				managedSeed.Spec.Gardenlet.Bootstrap = bootstrapPtr(seedmanagementv1alpha1.BootstrapNone)
 
 				expectGetShoot()
+				expectGetSeed(false)
 				expectCheckSeedSpec()
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Creating or updating garden namespace in shoot %s", kutil.ObjectName(shoot))
 				expectCreateGardenNamespace()
@@ -823,7 +899,7 @@ var _ = Describe("Actuator", func() {
 				expectGetGardenletDeployment(true)
 				recorder.EXPECT().Eventf(managedSeed, corev1.EventTypeNormal, gardencorev1beta1.EventDeleting, "Deleting gardenlet from shoot %s", kutil.ObjectName(shoot))
 				expectMergeWithParent()
-				expectPrepareGardenClientConnection()
+				expectPrepareGardenClientConnection(true)
 				expectGetGardenletChartValues(true)
 				expectDeleteGardenletChart()
 
