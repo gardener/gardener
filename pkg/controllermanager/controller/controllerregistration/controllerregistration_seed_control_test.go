@@ -881,26 +881,15 @@ var _ = Describe("controllerRegistrationReconciler", func() {
 			})
 
 			It("should return an error when needed controller installation is being deleted", func() {
-				installation3 := controllerInstallation3.DeepCopy()
-				installation3.DeletionTimestamp = &now
+				installation2 := controllerInstallation2.DeepCopy()
+				installation2.DeletionTimestamp = &now
 				var (
-					wantedControllerRegistrations  = sets.NewString(controllerRegistration2.Name, controllerRegistration3.Name)
+					wantedControllerRegistrations  = sets.NewString(controllerRegistration2.Name)
 					registrationNameToInstallation = map[string]*gardencorev1beta1.ControllerInstallation{
 						controllerRegistration1.Name: controllerInstallation1,
-						controllerRegistration2.Name: controllerInstallation2,
-						controllerRegistration3.Name: installation3,
+						controllerRegistration2.Name: installation2,
 					}
 				)
-
-				installation2 := controllerInstallation2.DeepCopy()
-				installation2.Labels = map[string]string{
-					common.ControllerDeploymentHash: "d37bba62f222c81b",
-					common.RegistrationSpecHash:     "61ca93a1782c5fa3",
-					common.SeedSpecHash:             "a5e0943b25bc6cab",
-				}
-
-				k8sClient.EXPECT().Get(ctx, kutil.Key(controllerInstallation2.Name), gomock.AssignableToTypeOf(&gardencorev1beta1.ControllerInstallation{}))
-				k8sClient.EXPECT().Patch(ctx, installation2, gomock.Any())
 
 				err := deployNeededInstallations(ctx, nopLogger, k8sClient, seedWithShootDNSEnabled, wantedControllerRegistrations, controllerRegistrations, registrationNameToInstallation)
 
