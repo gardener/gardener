@@ -484,7 +484,7 @@ func (s *Secrets) all() map[string]secret {
 		"CAFrontProxy":           {Secret: &s.CAFrontProxy},
 		"Etcd":                   {Secret: &s.Etcd},
 		"EtcdEncryptionConfig":   {Secret: &s.EtcdEncryptionConfig},
-		"HTTPProxy":              {Secret: s.HTTPProxy},
+		"HTTPProxy":              {Secret: s.HTTPProxy, requiredConditionFn: func(v Values) bool { return v.VPN.ReversedVPNEnabled }},
 		"KubeAggregator":         {Secret: &s.KubeAggregator},
 		"KubeAPIServerToKubelet": {Secret: &s.KubeAPIServerToKubelet},
 		"Server":                 {Secret: &s.Server},

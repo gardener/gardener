@@ -61,7 +61,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 
 		if b.Shoot.GetInfo().DeletionTimestamp == nil {
 			if b.Shoot.ReversedVPNEnabled {
-				if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, kubeapiserver.SecretNameVPNSeedTLSAuth, kubeapiserver.SecretNameVPNSeedTLSAuth, "vpn-shoot"); err != nil {
+				if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, kubeapiserver.SecretNameVPNSeed, kubeapiserver.SecretNameVPNSeedTLSAuth, "vpn-shoot"); err != nil {
 					return err
 				}
 			} else {
