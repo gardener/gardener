@@ -142,16 +142,16 @@ func (r *controllerRegistrationSeedReconciler) Reconcile(ctx context.Context, re
 		return reconcile.Result{}, err
 	}
 
-	registrationNameToInstallationName, err := computeRegistrationNameToInstallationNameMap(controllerInstallationList, controllerRegistrations, seed.Name)
+	registrationNameToInstallation, err := computeRegistrationNameToInstallationMap(controllerInstallationList, controllerRegistrations, seed.Name)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := deployNeededInstallations(ctx, logger, r.gardenClient.Client(), seed, wantedControllerRegistrationNames, controllerRegistrations, registrationNameToInstallationName); err != nil {
+	if err := deployNeededInstallations(ctx, logger, r.gardenClient.Client(), seed, wantedControllerRegistrationNames, controllerRegistrations, registrationNameToInstallation); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	if err := deleteUnneededInstallations(ctx, logger, r.gardenClient.Client(), wantedControllerRegistrationNames, registrationNameToInstallationName); err != nil {
+	if err := deleteUnneededInstallations(ctx, logger, r.gardenClient.Client(), wantedControllerRegistrationNames, registrationNameToInstallation); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -370,17 +370,17 @@ func installedAndRequiredRegistrationNames(controllerInstallationList *gardencor
 	return requiredControllerRegistrationNames
 }
 
-// computeRegistrationNameToInstallationNameMap computes a map that maps the name of a ControllerRegistration to the name of an
+// computeRegistrationNameToInstallationMap computes a map that maps the name of a ControllerRegistration to an
 // existing ControllerInstallation object that references this registration.
-func computeRegistrationNameToInstallationNameMap(
+func computeRegistrationNameToInstallationMap(
 	controllerInstallationList *gardencorev1beta1.ControllerInstallationList,
 	controllerRegistrations map[string]controllerRegistration,
 	seedName string,
 ) (
-	map[string]string,
+	map[string]*gardencorev1beta1.ControllerInstallation,
 	error,
 ) {
-	registrationNameToInstallationName := make(map[string]string)
+	registrationNameToInstallationName := make(map[string]*gardencorev1beta1.ControllerInstallation)
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
 		if controllerInstallation.Spec.SeedRef.Name != seedName {
@@ -391,7 +391,8 @@ func computeRegistrationNameToInstallationNameMap(
 			return nil, fmt.Errorf("ControllerRegistration %q does not exist", controllerInstallation.Spec.RegistrationRef.Name)
 		}
 
-		registrationNameToInstallationName[controllerInstallation.Spec.RegistrationRef.Name] = controllerInstallation.Name
+		controllerInstallationObj := controllerInstallation
+		registrationNameToInstallationName[controllerInstallation.Spec.RegistrationRef.Name] = &controllerInstallationObj
 	}
 
 	return registrationNameToInstallationName, nil
@@ -407,7 +408,7 @@ func deployNeededInstallations(
 	seed *gardencorev1beta1.Seed,
 	wantedControllerRegistrations sets.String,
 	controllerRegistrations map[string]controllerRegistration,
-	registrationNameToInstallationName map[string]string,
+	registrationNameToInstallation map[string]*gardencorev1beta1.ControllerInstallation,
 ) error {
 	for _, registrationName := range wantedControllerRegistrations.UnsortedList() {
 		// Sometimes an operator needs to migrate to a new controller registration that supports the required
@@ -435,7 +436,12 @@ func deployNeededInstallations(
 			}
 		}
 
-		if err := deployNeededInstallation(ctx, c, seed, controllerDeployment, controllerRegistration, registrationNameToInstallationName[registrationName]); err != nil {
+		existingControllerInstallation := registrationNameToInstallation[registrationName]
+		if existingControllerInstallation != nil && existingControllerInstallation.DeletionTimestamp != nil {
+			return fmt.Errorf("cannot deploy new ControllerInstallation for %q because the deletion of the old ControllerInstallation is still pending", registrationName)
+		}
+
+		if err := deployNeededInstallation(ctx, c, seed, controllerDeployment, controllerRegistration, existingControllerInstallation); err != nil {
 			return err
 		}
 	}
@@ -449,7 +455,7 @@ func deployNeededInstallation(
 	seed *gardencorev1beta1.Seed,
 	controllerDeployment *gardencorev1beta1.ControllerDeployment,
 	controllerRegistration *gardencorev1beta1.ControllerRegistration,
-	controllerInstallationName string,
+	existingControllerInstallation *gardencorev1beta1.ControllerInstallation,
 ) error {
 	installationSpec := gardencorev1beta1.ControllerInstallationSpec{
 		SeedRef: corev1.ObjectReference{
@@ -503,11 +509,11 @@ func deployNeededInstallation(
 		return nil
 	}
 
-	if controllerInstallationName != "" {
+	if existingControllerInstallation != nil {
 		// The installation already exists, however, we do not have the latest version of the ControllerInstallation object.
 		// Hence, we are running the `GetAndCreateOrMergePatch` function as it first GETs the current objects and then runs the
 		// mutate() func before sending the PATCH. This way we ensure that we have applied our mutations to the latest version.
-		controllerInstallation.Name = controllerInstallationName
+		controllerInstallation.Name = existingControllerInstallation.Name
 		_, err := controllerutils.GetAndCreateOrMergePatch(ctx, c, controllerInstallation, mutate)
 		return err
 	}
@@ -528,13 +534,13 @@ func deleteUnneededInstallations(
 	logger *logrus.Entry,
 	c client.Client,
 	wantedControllerRegistrationNames sets.String,
-	registrationNameToInstallationName map[string]string,
+	registrationNameToInstallation map[string]*gardencorev1beta1.ControllerInstallation,
 ) error {
-	for registrationName, installationName := range registrationNameToInstallationName {
+	for registrationName, installation := range registrationNameToInstallation {
 		if !wantedControllerRegistrationNames.Has(registrationName) {
-			logger.Infof("Deleting unneeded ControllerInstallation %q", installationName)
+			logger.Infof("Deleting unneeded ControllerInstallation %q", installation.Name)
 
-			if err := c.Delete(ctx, &gardencorev1beta1.ControllerInstallation{ObjectMeta: metav1.ObjectMeta{Name: installationName}}); client.IgnoreNotFound(err) != nil {
+			if err := c.Delete(ctx, installation); client.IgnoreNotFound(err) != nil {
 				return err
 			}
 		}
