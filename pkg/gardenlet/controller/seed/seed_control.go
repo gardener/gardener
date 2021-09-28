@@ -86,27 +86,30 @@ func newReconciler(
 	imageVector imagevector.ImageVector,
 	componentImageVectors imagevector.ComponentImageVectors,
 	identity *gardencorev1beta1.Gardener,
+	clientCertificateExpirationTimestamp *metav1.Time,
 	config *config.GardenletConfiguration,
 ) reconcile.Reconciler {
 	return &reconciler{
-		clientMap:             clientMap,
-		recorder:              recorder,
-		logger:                l,
-		imageVector:           imageVector,
-		componentImageVectors: componentImageVectors,
-		identity:              identity,
-		config:                config,
+		clientMap:                            clientMap,
+		recorder:                             recorder,
+		logger:                               l,
+		imageVector:                          imageVector,
+		componentImageVectors:                componentImageVectors,
+		identity:                             identity,
+		clientCertificateExpirationTimestamp: clientCertificateExpirationTimestamp,
+		config:                               config,
 	}
 }
 
 type reconciler struct {
-	clientMap             clientmap.ClientMap
-	recorder              record.EventRecorder
-	logger                logrus.FieldLogger
-	imageVector           imagevector.ImageVector
-	componentImageVectors imagevector.ComponentImageVectors
-	identity              *gardencorev1beta1.Gardener
-	config                *config.GardenletConfiguration
+	clientMap                            clientmap.ClientMap
+	recorder                             record.EventRecorder
+	logger                               logrus.FieldLogger
+	imageVector                          imagevector.ImageVector
+	componentImageVectors                imagevector.ComponentImageVectors
+	identity                             *gardencorev1beta1.Gardener
+	clientCertificateExpirationTimestamp *metav1.Time
+	config                               *config.GardenletConfiguration
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -353,6 +356,7 @@ func (r *reconciler) patchSeedStatus(
 	seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, updateConditions...)
 	seed.Status.ObservedGeneration = seed.Generation
 	seed.Status.Gardener = r.identity
+	seed.Status.ClientCertificateExpirationTimestamp = r.clientCertificateExpirationTimestamp
 	seed.Status.KubernetesVersion = &seedVersion
 	seed.Status.Capacity = capacity
 	seed.Status.Allocatable = allocatable

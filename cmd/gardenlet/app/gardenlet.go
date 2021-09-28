@@ -218,15 +218,16 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Gardenlet represents all the parameters required to start the
 // Gardenlet.
 type Gardenlet struct {
-	Config                *config.GardenletConfiguration
-	Identity              *gardencorev1beta1.Gardener
-	GardenClusterIdentity string
-	ClientMap             clientmap.ClientMap
-	Logger                *logrus.Logger
-	Recorder              record.EventRecorder
-	LeaderElection        *leaderelection.LeaderElectionConfig
-	HealthManager         healthz.Manager
-	CertificateManager    *certificate.Manager
+	Config                               *config.GardenletConfiguration
+	Identity                             *gardencorev1beta1.Gardener
+	GardenClusterIdentity                string
+	ClientMap                            clientmap.ClientMap
+	Logger                               *logrus.Logger
+	Recorder                             record.EventRecorder
+	LeaderElection                       *leaderelection.LeaderElectionConfig
+	HealthManager                        healthz.Manager
+	CertificateManager                   *certificate.Manager
+	ClientCertificateExpirationTimestamp *metav1.Time
 }
 
 // NewGardenlet is the main entry point of instantiating a new Gardenlet.
@@ -257,10 +258,11 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}
 
 	var (
-		kubeconfigFromBootstrap []byte
-		csrName                 string
-		seedName                string
-		err                     error
+		clientCertificateExpirationTimestamp *metav1.Time
+		kubeconfigFromBootstrap              []byte
+		csrName                              string
+		seedName                             string
+		err                                  error
 	)
 
 	// constructs a seed client for `SeedClientConnection.kubeconfig` or if not set,
@@ -292,12 +294,13 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 				"To configure the Gardenlet for bootstrapping, provide the secret containing the bootstrap kubeconfig under `.gardenClientConnection.kubeconfigSecret` and also the secret name where the created kubeconfig should be stored for further use via`.gardenClientConnection.kubeconfigSecret`")
 		}
 	} else {
-		gardenClientCert, err := certificate.GetCurrentCertificate(logger, kubeconfigFromBootstrap, cfg.GardenClientConnection)
+		gardenClientCertificate, err := certificate.GetCurrentCertificate(logger, kubeconfigFromBootstrap, cfg.GardenClientConnection)
 		if err != nil {
 			return nil, err
 		}
 
-		logger.Infof("The client certificate used to communicate with the garden cluster has expiration date %s", gardenClientCert.Leaf.NotAfter)
+		clientCertificateExpirationTimestamp = &metav1.Time{Time: gardenClientCertificate.Leaf.NotAfter}
+		logger.Infof("The client certificate used to communicate with the garden cluster has expiration date %s", gardenClientCertificate.Leaf.NotAfter)
 	}
 
 	restCfg, err := kubernetes.RESTConfigFromClientConnectionConfiguration(&cfg.GardenClientConnection.ClientConnectionConfiguration, kubeconfigFromBootstrap)
@@ -404,14 +407,15 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 	}
 
 	return &Gardenlet{
-		Identity:              identity,
-		GardenClusterIdentity: clusterIdentity,
-		Config:                cfg,
-		Logger:                logger,
-		Recorder:              recorder,
-		ClientMap:             clientMap,
-		LeaderElection:        leaderElectionConfig,
-		CertificateManager:    certificateManager,
+		Identity:                             identity,
+		GardenClusterIdentity:                clusterIdentity,
+		Config:                               cfg,
+		Logger:                               logger,
+		Recorder:                             recorder,
+		ClientMap:                            clientMap,
+		LeaderElection:                       leaderElectionConfig,
+		CertificateManager:                   certificateManager,
+		ClientCertificateExpirationTimestamp: clientCertificateExpirationTimestamp,
 	}, nil
 }
 
@@ -517,6 +521,7 @@ func (g *Gardenlet) startControllers(ctx context.Context) error {
 		g.GardenClusterIdentity,
 		g.Recorder,
 		g.HealthManager,
+		g.ClientCertificateExpirationTimestamp,
 	).Run(ctx)
 }
 
