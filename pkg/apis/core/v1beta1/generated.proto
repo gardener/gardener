@@ -344,6 +344,10 @@ message ClusterAutoscaler {
   // MaxNodeProvisionTime defines how long CA waits for node to be provisioned (default: 20 mins).
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration maxNodeProvisionTime = 8;
+
+  // MaxGracefulTerminationSeconds is the number of seconds CA waits for pod termination when trying to scale down a node (default: 600).
+  // +optional
+  optional int32 maxGracefulTerminationSeconds = 9;
 }
 
 // ClusterInfo contains information about the Plant cluster

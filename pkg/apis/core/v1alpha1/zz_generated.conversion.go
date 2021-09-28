@@ -2040,6 +2040,7 @@ func autoConvert_v1alpha1_ClusterAutoscaler_To_core_ClusterAutoscaler(in *Cluste
 	out.ScanInterval = (*metav1.Duration)(unsafe.Pointer(in.ScanInterval))
 	out.Expander = (*core.ExpanderMode)(unsafe.Pointer(in.Expander))
 	out.MaxNodeProvisionTime = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeProvisionTime))
+	out.MaxGracefulTerminationSeconds = (*int32)(unsafe.Pointer(in.MaxGracefulTerminationSeconds))
 	return nil
 }
 
@@ -2057,6 +2058,7 @@ func autoConvert_core_ClusterAutoscaler_To_v1alpha1_ClusterAutoscaler(in *core.C
 	out.ScanInterval = (*metav1.Duration)(unsafe.Pointer(in.ScanInterval))
 	out.Expander = (*ExpanderMode)(unsafe.Pointer(in.Expander))
 	out.MaxNodeProvisionTime = (*metav1.Duration)(unsafe.Pointer(in.MaxNodeProvisionTime))
+	out.MaxGracefulTerminationSeconds = (*int32)(unsafe.Pointer(in.MaxGracefulTerminationSeconds))
 	return nil
 }
 

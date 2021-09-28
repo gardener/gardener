@@ -67,16 +67,18 @@ var _ = Describe("ClusterAutoscaler", func() {
 			{Name: machineDeployment2Name, Minimum: machineDeployment2Min, Maximum: machineDeployment2Max},
 		}
 
-		configExpander                      = gardencorev1beta1.ClusterAutoscalerExpanderRandom
-		configMaxNodeProvisionTime          = &metav1.Duration{Duration: time.Second}
-		configScaleDownDelayAfterAdd        = &metav1.Duration{Duration: time.Second}
-		configScaleDownDelayAfterDelete     = &metav1.Duration{Duration: time.Second}
-		configScaleDownDelayAfterFailure    = &metav1.Duration{Duration: time.Second}
-		configScaleDownUnneededTime         = &metav1.Duration{Duration: time.Second}
-		configScaleDownUtilizationThreshold = pointer.Float64(1.2345)
-		configScanInterval                  = &metav1.Duration{Duration: time.Second}
-		configFull                          = &gardencorev1beta1.ClusterAutoscaler{
+		configExpander                            = gardencorev1beta1.ClusterAutoscalerExpanderRandom
+		configMaxGracefulTerminationSeconds int32 = 60 * 60 * 24
+		configMaxNodeProvisionTime                = &metav1.Duration{Duration: time.Second}
+		configScaleDownDelayAfterAdd              = &metav1.Duration{Duration: time.Second}
+		configScaleDownDelayAfterDelete           = &metav1.Duration{Duration: time.Second}
+		configScaleDownDelayAfterFailure          = &metav1.Duration{Duration: time.Second}
+		configScaleDownUnneededTime               = &metav1.Duration{Duration: time.Second}
+		configScaleDownUtilizationThreshold       = pointer.Float64(1.2345)
+		configScanInterval                        = &metav1.Duration{Duration: time.Second}
+		configFull                                = &gardencorev1beta1.ClusterAutoscaler{
 			Expander:                      &configExpander,
+			MaxGracefulTerminationSeconds: &configMaxGracefulTerminationSeconds,
 			MaxNodeProvisionTime:          configMaxNodeProvisionTime,
 			ScaleDownDelayAfterAdd:        configScaleDownDelayAfterAdd,
 			ScaleDownDelayAfterDelete:     configScaleDownDelayAfterDelete,
@@ -182,6 +184,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			if !withConfig {
 				commandConfigFlags = append(commandConfigFlags,
 					"--expander=least-waste",
+					"--max-graceful-termination-sec=600",
 					"--max-node-provision-time=20m0s",
 					"--scale-down-utilization-threshold=0.500000",
 					"--scale-down-unneeded-time=30m0s",
@@ -193,6 +196,7 @@ var _ = Describe("ClusterAutoscaler", func() {
 			} else {
 				commandConfigFlags = append(commandConfigFlags,
 					fmt.Sprintf("--expander=%s", string(configExpander)),
+					fmt.Sprintf("--max-graceful-termination-sec=%d", configMaxGracefulTerminationSeconds),
 					fmt.Sprintf("--max-node-provision-time=%s", configMaxNodeProvisionTime.Duration),
 					fmt.Sprintf("--scale-down-utilization-threshold=%f", *configScaleDownUtilizationThreshold),
 					fmt.Sprintf("--scale-down-unneeded-time=%s", configScaleDownUnneededTime.Duration),

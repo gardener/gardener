@@ -1842,11 +1842,13 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		var (
-			negativeDuration   = metav1.Duration{Duration: -time.Second}
-			expanderLeastWaste = core.ClusterAutoscalerExpanderLeastWaste
-			expanderMostPods   = core.ClusterAutoscalerExpanderMostPods
-			expanderPriority   = core.ClusterAutoscalerExpanderPriority
-			expanderRandom     = core.ClusterAutoscalerExpanderRandom
+			negativeDuration         = metav1.Duration{Duration: -time.Second}
+			negativeInteger    int32 = -100
+			positiveInteger    int32 = 100
+			expanderLeastWaste       = core.ClusterAutoscalerExpanderLeastWaste
+			expanderMostPods         = core.ClusterAutoscalerExpanderMostPods
+			expanderPriority         = core.ClusterAutoscalerExpanderPriority
+			expanderRandom           = core.ClusterAutoscalerExpanderRandom
 		)
 
 		Context("ClusterAutoscaler validation", func() {
@@ -1870,6 +1872,12 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("invalid with negative maxNodeProvisionTime", core.ClusterAutoscaler{
 					MaxNodeProvisionTime: &negativeDuration,
 				}, ConsistOf(field.Invalid(field.NewPath("maxNodeProvisionTime"), negativeDuration, "can not be negative"))),
+				Entry("valid with maxGracefulTerminationSeconds", core.ClusterAutoscaler{
+					MaxGracefulTerminationSeconds: &positiveInteger,
+				}, BeEmpty()),
+				Entry("invalid with negative maxGracefulTerminationSeconds", core.ClusterAutoscaler{
+					MaxGracefulTerminationSeconds: &negativeInteger,
+				}, ConsistOf(field.Invalid(field.NewPath("maxGracefulTerminationSeconds"), negativeInteger, "can not be negative"))),
 				Entry("valid with expander least waste", core.ClusterAutoscaler{
 					Expander: &expanderLeastWaste,
 				}, BeEmpty()),

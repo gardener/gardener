@@ -636,6 +636,11 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(metav1.Duration)
 		**out = **in
 	}
+	if in.MaxGracefulTerminationSeconds != nil {
+		in, out := &in.MaxGracefulTerminationSeconds, &out.MaxGracefulTerminationSeconds
+		*out = new(int32)
+		**out = **in
+	}
 	return
 }
 
