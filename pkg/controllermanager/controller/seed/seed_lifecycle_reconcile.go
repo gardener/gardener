@@ -20,7 +20,9 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
@@ -124,6 +126,25 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 		seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, newCondition)
 		if err := c.gardenClient.Client().Status().Update(ctx, seed); err != nil {
 			return reconcileResult(err)
+		}
+	}
+
+	// If the gardenlet's client certificate is expired and the seed belongs to a `ManagedSeed` then we reconcile it in
+	// order to re-bootstrap the gardenlet.
+	if seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(time.Now().UTC()) {
+		managedSeed := &seedmanagementv1alpha1.ManagedSeed{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      seed.Name,
+				Namespace: v1beta1constants.GardenNamespace,
+			},
+		}
+		if err := c.gardenClient.Client().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil && !apierrors.IsNotFound(err) {
+			return reconcileResult(err)
+		} else if err == nil {
+			metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+			if err2 := c.gardenClient.Client().Status().Update(ctx, managedSeed); err2 != nil {
+				return reconcileResult(err2)
+			}
 		}
 	}
 
