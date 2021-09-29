@@ -42,6 +42,7 @@ type Interface interface {
 // Chart represents a Helm chart (and its sub-charts) that can be applied and deleted.
 type Chart struct {
 	Name      string
+	Namespace string
 	Path      string
 	Images    []string
 	Objects   []*Object
@@ -54,8 +55,11 @@ type Object struct {
 	Name string
 }
 
-// Apply applies this chart in the given namespace using the given ChartApplier. Before applying the chart,
-// it collects its values, injecting images and merging the given values as needed.
+// Apply applies this chart in the given namespace using the given ChartApplier.
+// If the value of Chart.Namespace is not blank, it will override what is passed to it,
+// giving the ability to specify a chart going into a particular namespace.
+// This is the equivalent of passing "helm install --namespace" to the Applier.
+// Before applying the chart, it collects its values, injecting images and merging the given values as needed.
 func (c *Chart) Apply(
 	ctx context.Context,
 	chartApplier gardenerkubernetes.ChartApplier,
@@ -71,10 +75,15 @@ func (c *Chart) Apply(
 		return err
 	}
 
+	ns := c.Namespace
+	if c.Namespace == "" {
+		ns = namespace
+	}
+
 	// Apply chart
-	err = chartApplier.Apply(ctx, c.Path, namespace, c.Name, gardenerkubernetes.Values(utils.MergeMaps(values, additionalValues)))
+	err = chartApplier.Apply(ctx, c.Path, ns, c.Name, gardenerkubernetes.Values(utils.MergeMaps(values, additionalValues)))
 	if err != nil {
-		return fmt.Errorf("could not apply chart '%s' in namespace '%s': %w", c.Name, namespace, err)
+		return fmt.Errorf("could not apply chart '%s' in namespace '%s': %w", c.Name, ns, err)
 	}
 	return nil
 }
@@ -95,10 +104,15 @@ func (c *Chart) Render(
 		return "", nil, err
 	}
 
+	ns := c.Namespace
+	if c.Namespace == "" {
+		ns = namespace
+	}
+
 	// Apply chart
-	rc, err := chartRenderer.Render(c.Path, c.Name, namespace, utils.MergeMaps(values, additionalValues))
+	rc, err := chartRenderer.Render(c.Path, c.Name, ns, utils.MergeMaps(values, additionalValues))
 	if err != nil {
-		return "", nil, fmt.Errorf("could not render chart '%s' in namespace '%s': %w", c.Name, namespace, err)
+		return "", nil, fmt.Errorf("could not render chart '%s' in ns '%s': %w", c.Name, ns, err)
 	}
 	return rc.ChartName, rc.Manifest(), nil
 }
@@ -133,16 +147,21 @@ func (c *Chart) injectImages(
 
 // Delete deletes this chart's objects from the given namespace using the given client.
 func (c *Chart) Delete(ctx context.Context, client client.Client, namespace string) error {
+	ns := c.Namespace
+	if c.Namespace == "" {
+		ns = namespace
+	}
+
 	// Delete objects
 	for _, o := range c.Objects {
-		if err := o.Delete(ctx, client, namespace); err != nil {
+		if err := o.Delete(ctx, client, ns); err != nil {
 			return fmt.Errorf("could not delete chart object: %w", err)
 		}
 	}
 
 	// Delete subchart objects
 	for _, sc := range c.SubCharts {
-		if err := sc.Delete(ctx, client, namespace); err != nil {
+		if err := sc.Delete(ctx, client, ns); err != nil {
 			return err
 		}
 	}
