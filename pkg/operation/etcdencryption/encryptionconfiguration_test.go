@@ -193,7 +193,7 @@ resources:
 			passiveConf.TypeMeta = typeMeta
 			secret := &corev1.Secret{
 				Data: map[string][]byte{
-					common.EtcdEncryptionSecretFileName: yamlData,
+					"encryption-configuration.yaml": yamlData,
 				},
 			}
 
@@ -218,7 +218,7 @@ resources:
 			secret := &corev1.Secret{}
 
 			Expect(UpdateSecret(secret, passiveConf)).To(Succeed())
-			Expect(secret.Data[common.EtcdEncryptionSecretFileName]).To(Equal(yamlData))
+			Expect(secret.Data["encryption-configuration.yaml"]).To(Equal(yamlData))
 		})
 	})
 })

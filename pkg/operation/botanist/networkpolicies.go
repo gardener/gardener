@@ -32,7 +32,7 @@ var NewNetworkPoliciesDeployer = networkpolicies.New
 // to use annotations to declare their desire to transmit/receive traffic to/from other Pods/IP addresses.
 func (b *Botanist) DefaultNetworkPolicies(sniPhase component.Phase) (component.Deployer, error) {
 	var shootCIDRNetworks []string
-	if v := b.Shoot.GetNodeNetwork(); v != nil {
+	if v := b.Shoot.GetInfo().Spec.Networking.Nodes; v != nil {
 		shootCIDRNetworks = append(shootCIDRNetworks, *v)
 	}
 	if v := b.Shoot.GetInfo().Spec.Networking.Pods; v != nil {

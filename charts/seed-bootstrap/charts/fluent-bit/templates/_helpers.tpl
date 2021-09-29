@@ -60,20 +60,6 @@ filter-kubernetes.conf: |-
   # Shoot controlplane filters
   [FILTER]
       Name                parser
-      Match               kubernetes.*kube-apiserver*kube-apiserver*
-      Key_Name            log
-      Parser              kubeapiserverParser
-      Reserve_Data        True
-
-  [FILTER]
-      Name                parser
-      Match               kubernetes.*kube-apiserver*vpn-seed*
-      Key_Name            log
-      Parser              vpnshootParser
-      Reserve_Data        True
-
-  [FILTER]
-      Name                parser
       Match               kubernetes.*kube-state-metrics*kube-state-metrics*
       Key_Name            log
       Parser              kubeapiserverParser

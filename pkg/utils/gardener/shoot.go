@@ -15,7 +15,6 @@
 package gardener
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -25,7 +24,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -136,11 +134,6 @@ func EffectiveShootMaintenanceTimeWindow(shoot *v1beta1.Shoot) *utils.Maintenanc
 	}
 
 	return EffectiveMaintenanceTimeWindow(timeWindow)
-}
-
-// GardenEtcdEncryptionSecretName returns the name to the 'backup' of the etcd encryption secret in the Garden cluster.
-func GardenEtcdEncryptionSecretName(shootName string) string {
-	return fmt.Sprintf("%s.%s", shootName, common.EtcdEncryptionSecretName)
 }
 
 // GetShootNameFromOwnerReferences attempts to get the name of the Shoot object which owns the passed in object.

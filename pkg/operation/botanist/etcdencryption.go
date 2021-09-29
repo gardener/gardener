@@ -22,6 +22,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
 	"github.com/gardener/gardener/pkg/utils"
@@ -40,7 +41,7 @@ import (
 // GenerateEncryptionConfiguration generates new encryption configuration data or syncs it from the etcd encryption configuration secret if it already exists.
 func (b *Botanist) GenerateEncryptionConfiguration(ctx context.Context) error {
 	secret := &corev1.Secret{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.EtcdEncryptionSecretName), secret); err != nil {
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, kubeapiserver.SecretNameEtcdEncryption), secret); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return err
 		}
@@ -73,7 +74,7 @@ func (b *Botanist) PersistEncryptionConfiguration(ctx context.Context) error {
 // Kubernetes secrets in etcd.
 func (b *Botanist) ApplyEncryptionConfiguration(ctx context.Context) error {
 	var (
-		secret = &corev1.Secret{ObjectMeta: kutil.ObjectMeta(b.Shoot.SeedNamespace, common.EtcdEncryptionSecretName)}
+		secret = &corev1.Secret{ObjectMeta: kutil.ObjectMeta(b.Shoot.SeedNamespace, kubeapiserver.SecretNameEtcdEncryption)}
 		conf   *apiserverconfigv1.EncryptionConfiguration
 	)
 	if b.Shoot.ETCDEncryption == nil {
@@ -96,7 +97,7 @@ func (b *Botanist) ApplyEncryptionConfiguration(ctx context.Context) error {
 		return err
 	}
 
-	b.StoreCheckSum(common.EtcdEncryptionSecretName, checksum)
+	b.StoreCheckSum(kubeapiserver.SecretNameEtcdEncryption, checksum)
 
 	return nil
 }
@@ -118,7 +119,7 @@ func (b *Botanist) RewriteShootSecretsIfEncryptionConfigurationChanged(ctx conte
 		return nil
 	}
 
-	checksum := b.LoadCheckSum(common.EtcdEncryptionSecretName)
+	checksum := b.LoadCheckSum(kubeapiserver.SecretNameEtcdEncryption)
 	shortChecksum := kutil.TruncateLabelValue(checksum)
 
 	// Add checksum label to all secrets in shoot so that they get rewritten now, and also so that we don't rewrite them again in

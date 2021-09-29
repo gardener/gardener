@@ -45,7 +45,7 @@ func (b *Botanist) DefaultCoreDNS() (coredns.Interface, error) {
 		ClusterIP:       b.Shoot.Networks.CoreDNS.String(),
 		Image:           image.String(),
 		PodNetworkCIDR:  b.Shoot.Networks.Pods.String(),
-		NodeNetworkCIDR: b.Shoot.GetNodeNetwork(),
+		NodeNetworkCIDR: b.Shoot.GetInfo().Spec.Networking.Nodes,
 	}
 
 	if b.APIServerSNIEnabled() {

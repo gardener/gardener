@@ -37,11 +37,12 @@ import (
 	"github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
 var basicAuthSecretAPIServer = &secrets.BasicAuthSecretConfig{
-	Name:           common.BasicAuthSecretName,
+	Name:           kubeapiserver.SecretNameBasicAuth,
 	Format:         secrets.BasicAuthFormatCSV,
 	Username:       "admin",
 	PasswordLength: 32,
@@ -87,7 +88,7 @@ var vpaSecrets = map[string]string{
 
 func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig {
 	staticTokenConfig := &secrets.StaticTokenSecretConfig{
-		Name: common.StaticTokenSecretName,
+		Name: kubeapiserver.SecretNameStaticToken,
 		Tokens: map[string]secrets.TokenConfig{
 			common.KubecfgUsername: {
 				Username: common.KubecfgUsername,
@@ -134,11 +135,11 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			b.Shoot.Networks.APIServer,
 		}
 		apiServerCertDNSNames = append([]string{
-			"kube-apiserver",
-			fmt.Sprintf("kube-apiserver.%s", b.Shoot.SeedNamespace),
-			fmt.Sprintf("kube-apiserver.%s.svc", b.Shoot.SeedNamespace),
+			v1beta1constants.DeploymentNameKubeAPIServer,
+			fmt.Sprintf("%s.%s", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
+			fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, b.Shoot.SeedNamespace),
 			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
-		}, kubernetes.DNSNamesForService("kubernetes", "default")...)
+		}, kubernetes.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
 
 		kubeControllerManagerCertDNSNames = kubernetes.DNSNamesForService(kubecontrollermanager.ServiceName, b.Shoot.SeedNamespace)
 		kubeSchedulerCertDNSNames         = kubernetes.DNSNamesForService(kubescheduler.ServiceName, b.Shoot.SeedNamespace)
@@ -167,7 +168,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// Secret definition for kube-apiserver
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kube-apiserver",
+				Name: kubeapiserver.SecretNameServer,
 
 				CommonName:   v1beta1constants.DeploymentNameKubeAPIServer,
 				Organization: nil,
@@ -181,7 +182,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// Secret definition for kube-apiserver to kubelets communication
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kube-apiserver-kubelet",
+				Name: kubeapiserver.SecretNameKubeAPIServerToKubelet,
 
 				CommonName:   kubeapiserver.UserName,
 				Organization: nil,
@@ -196,7 +197,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		// Secret definition for kube-aggregator
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kube-aggregator",
+				Name: kubeapiserver.SecretNameKubeAggregator,
 
 				CommonName:   "system:kube-aggregator",
 				Organization: nil,
@@ -696,7 +697,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 			// Secret definition for kube-apiserver http proxy client
 			&secrets.CertificateSecretConfig{
-				Name:       "kube-apiserver-http-proxy",
+				Name:       kubeapiserver.SecretNameHTTPProxy,
 				CommonName: "kube-apiserver-http-proxy",
 				CertType:   secrets.ClientCert,
 				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
@@ -714,14 +715,14 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 
 			// Secret definition for vpn-seed (OpenVPN client side)
 			&secrets.CertificateSecretConfig{
-				Name:       "vpn-seed",
+				Name:       kubeapiserver.SecretNameVPNSeed,
 				CommonName: "vpn-seed",
 				CertType:   secrets.ClientCert,
 				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
 
 			&secrets.VPNTLSAuthConfig{
-				Name: "vpn-seed-tlsauth",
+				Name: kubeapiserver.SecretNameVPNSeedTLSAuth,
 			},
 		)
 	}

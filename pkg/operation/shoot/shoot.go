@@ -409,13 +409,6 @@ func (s *Shoot) GetMaxNodeCount() int32 {
 	return nodeCount
 }
 
-// GetNodeNetwork returns the nodes network CIDR for the Shoot cluster. If the infrastructure extension
-// controller has generated a nodes network then this CIDR will take priority. Otherwise, the nodes network
-// CIDR specified in the shoot will be returned (if possible). If no CIDR was specified then nil is returned.
-func (s *Shoot) GetNodeNetwork() *string {
-	return s.GetInfo().Spec.Networking.Nodes
-}
-
 // GetReplicas returns the given <wokenUp> number if the shoot is not hibernated, or zero otherwise.
 func (s *Shoot) GetReplicas(wokenUp int32) int32 {
 	if s.HibernationEnabled {

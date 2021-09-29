@@ -33,11 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	servicePortName = "kube-apiserver"
-	servicePort     = 443
-)
-
 // ServiceValues configure the kube-apiserver service.
 type ServiceValues struct {
 	Annotations map[string]string
@@ -153,9 +148,9 @@ func (s *service) Deploy(ctx context.Context) error {
 		obj.Spec.Selector = getLabels()
 		obj.Spec.Ports = kutil.ReconcileServicePorts(obj.Spec.Ports, []corev1.ServicePort{
 			{
-				Name:       servicePortName,
+				Name:       kubeapiserver.ServicePortName,
 				Protocol:   corev1.ProtocolTCP,
-				Port:       servicePort,
+				Port:       kubeapiserver.Port,
 				TargetPort: intstr.FromInt(kubeapiserver.Port),
 			},
 		}, s.values.serviceType)
