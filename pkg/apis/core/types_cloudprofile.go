@@ -187,7 +187,7 @@ const (
 	VolumeClassPremium string = "premium"
 )
 
-// VersionClassification is the logical state of a version according to https://github.com/gardener/gardener/blob/master/docs/operations/versioning.md
+// VersionClassification is the logical state of a version.
 type VersionClassification string
 
 const (
@@ -195,7 +195,7 @@ const (
 	// ClassificationPreview versions will not be considered for automatic Kubernetes and Machine Image patch version updates.
 	ClassificationPreview VersionClassification = "preview"
 	// ClassificationSupported indicates that a patch version is the recommended version for a shoot.
-	// Using VersionMaintenance (see: https://github.com/gardener/gardener/docs/operation/versioning.md) there is one supported version per maintained minor version.
+	// Only one "supported" version is allowed per minor version.
 	// Supported versions are eligible for the automated Kubernetes and Machine image patch version update for shoot clusters in Gardener.
 	ClassificationSupported VersionClassification = "supported"
 	// ClassificationDeprecated indicates that a patch version should not be used anymore, should be updated to a new version
