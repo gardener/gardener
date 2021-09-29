@@ -122,6 +122,10 @@ func CloudConfigUpdatedForAllWorkerPools(workers []gardencorev1beta1.Worker, wor
 		}
 
 		for _, node := range workerPoolToNodes[worker.Name] {
+			if nodeToBeDeleted(node) {
+				continue
+			}
+
 			if nodeChecksum, ok := node.Annotations[executor.AnnotationKeyChecksum]; ok && nodeChecksum != secretChecksum {
 				result = multierror.Append(result, fmt.Errorf("the last successfully applied cloud config on node %q is outdated (current: %s, desired: %s)", node.Name, nodeChecksum, secretChecksum))
 			}
@@ -129,6 +133,23 @@ func CloudConfigUpdatedForAllWorkerPools(workers []gardencorev1beta1.Worker, wor
 	}
 
 	return result
+}
+
+const (
+	// MCMPreferNoScheduleKey is used to identify machineSet nodes on which PreferNoSchedule taint is added on
+	// older machineSets during a rolling update
+	MCMPreferNoScheduleKey = "deployment.machine.sapcloud.io/prefer-no-schedule"
+)
+
+// nodeToBeDeleted checks if the MCM has set the node to be deleted.
+func nodeToBeDeleted(node corev1.Node) bool {
+	for _, taint := range node.Spec.Taints {
+		if taint.Key == MCMPreferNoScheduleKey && taint.Effect == corev1.TaintEffectPreferNoSchedule {
+			return true
+		}
+	}
+
+	return false
 }
 
 // exposed for testing

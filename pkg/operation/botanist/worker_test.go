@@ -259,6 +259,12 @@ var _ = Describe("Worker", func() {
 			map[string]string{"pool1": "foo"},
 			MatchError(ContainSubstring("is outdated")),
 		),
+		Entry("skip node in deletion",
+			[]gardencorev1beta1.Worker{{Name: "pool1"}},
+			map[string][]corev1.Node{"pool1": {{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{"checksum/cloud-config-data": "outdated"}}, Spec: corev1.NodeSpec{Taints: []corev1.Taint{{Key: MCMPreferNoScheduleKey, Effect: corev1.TaintEffectPreferNoSchedule}}}}}},
+			map[string]string{"pool1": "foo"},
+			BeNil(),
+		),
 		Entry("everything up-to-date",
 			[]gardencorev1beta1.Worker{{Name: "pool1"}, {Name: "pool2"}},
 			map[string][]corev1.Node{
