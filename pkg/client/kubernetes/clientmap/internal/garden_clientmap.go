@@ -71,8 +71,8 @@ func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.Cli
 		kubernetes.WithUncached(f.UncachedObjects...),
 	}
 
-	// Use multi-namespaced caches for Secrets which only consider seed namespaces
-	// because Gardenlet is not permitted to open a watch for Secrets on any other namespace.
+	// Use multi-namespaced caches for Secrets which only consider the seed namespace.
+	// Gardenlet is not permitted to open a watch for Secrets on any other namespace.
 	if seedName := f.SeedName; len(seedName) > 0 {
 		configFns = append(configFns, kubernetes.WithNewCacheFunc(
 			kubernetes.AggregatorCacheFunc(
@@ -83,11 +83,6 @@ func (f *GardenClientSetFactory) NewClientSet(_ context.Context, k clientmap.Cli
 				kubernetes.GardenScheme,
 			),
 		))
-	} else {
-		// We need to disable caching for Secrets if Gardenlet is potentially responsible for multiple seeds
-		// because we cannot (yet) handle seed additions/removals dynamically for the Garden client at runtime.
-		// https://github.com/gardener/gardener/pull/3700#discussion_r593070505
-		configFns = append(configFns, kubernetes.WithUncached(&corev1.Secret{}))
 	}
 
 	return NewClientSetWithConfig(configFns...)

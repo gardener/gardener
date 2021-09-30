@@ -318,11 +318,8 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 			&corev1.ConfigMap{},
 			&corev1.Event{},
 			&eventsv1.Event{},
-		)
-
-	if seedConfig := cfg.SeedConfig; seedConfig != nil {
-		gardenClientMapBuilder = gardenClientMapBuilder.ForSeed(seedConfig.Name)
-	}
+		).
+		ForSeed(cfg.SeedConfig.Name)
 
 	seedClientMapBuilder := clientmapbuilder.NewSeedClientMapBuilder().
 		WithClientConnectionConfig(&cfg.SeedClientConnection.ClientConnectionConfiguration)
