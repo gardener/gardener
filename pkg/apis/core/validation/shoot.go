@@ -720,6 +720,16 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured bool, fldPa
 			}
 		}
 
+		if kubeAPIServer.ServiceAccountConfig != nil {
+			if kubeAPIServer.ServiceAccountConfig.ExtendTokenExpiration != nil && !geqKubernetes119 {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "extendTokenExpiration"), "this field is only available in Kubernetes v1.19+"))
+			}
+
+			if kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration != nil && kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration.Duration < 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "serviceAccountConfig", "maxTokenExpiration"), *kubeAPIServer.ServiceAccountConfig.MaxTokenExpiration, "can not be negative"))
+			}
+		}
+
 		allErrs = append(allErrs, ValidateFeatureGates(kubeAPIServer.FeatureGates, kubernetes.Version, fldPath.Child("kubeAPIServer", "featureGates"))...)
 	}
 
