@@ -2,10 +2,6 @@
 |Alertname|Severity|Type|Description|
 |---|---|---|---|
 |ApiServerUnreachableViaKubernetesService|critical|shoot|`The Api server has been unreachable for 3 minutes via the kubernetes service in the shoot.`|
-|ApiServerNotReachable|blocker|seed|`API server not reachable via external endpoint: {{ $labels.instance }}.`|
-|KubeApiServerTooManyOpenFileDescriptors|warning|seed|`The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.`|
-|KubeApiServerTooManyOpenFileDescriptors|critical|seed|`The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.`|
-|KubeApiServerLatency|warning|seed|`Kube API server latency for verb {{ $labels.verb }} is high. This could be because the shoot workers and the control plane are in different regions. 99th percentile of request latency is greater than 3 seconds.`|
 |KubeKubeletNodeDown|warning|shoot|`The kubelet {{ $labels.instance }} has been unavailable/unreachable for more than 1 hour. Workloads on the affected node may not be schedulable.`|
 |KubeletTooManyOpenFileDescriptorsShoot|warning|shoot|`Shoot-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.`|
 |KubeletTooManyOpenFileDescriptorsShoot|critical|shoot|`Shoot-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.`|
