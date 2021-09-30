@@ -148,18 +148,16 @@ func (o *Options) validate(args []string) error {
 }
 
 func run(ctx context.Context, o *Options) error {
-	if len(o.ConfigFile) > 0 {
-		c, err := o.loadConfigFromFile(o.ConfigFile)
-		if err != nil {
-			return fmt.Errorf("unable to read the configuration file: %w", err)
-		}
-
-		if errs := configvalidation.ValidateGardenletConfiguration(c, nil, false); len(errs) > 0 {
-			return fmt.Errorf("errors validating the configuration: %+v", errs)
-		}
-
-		o.config = c
+	c, err := o.loadConfigFromFile(o.ConfigFile)
+	if err != nil {
+		return fmt.Errorf("unable to read the configuration file: %w", err)
 	}
+
+	if errs := configvalidation.ValidateGardenletConfiguration(c, nil, false); len(errs) > 0 {
+		return fmt.Errorf("errors validating the configuration: %+v", errs)
+	}
+
+	o.config = c
 
 	// Add feature flags
 	if err := gardenletfeatures.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
