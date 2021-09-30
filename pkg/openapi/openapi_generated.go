@@ -6542,11 +6542,24 @@ func schema_pkg_apis_core_v1alpha1_ServiceAccountConfig(ref common.ReferenceCall
 							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
 						},
 					},
+					"extendTokenExpiration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExtendTokenExpiration turns on projected service account expiration extension during token generation, which helps safe transition from legacy token to bound service account token feature. If this flag is enabled, admission injected tokens would be extended up to 1 year to prevent unexpected failure during transition, ignoring value of service-account-max-token-expiration.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"maxTokenExpiration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued with a validity duration of this value.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.LocalObjectReference"},
+			"k8s.io/api/core/v1.LocalObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -13276,11 +13289,24 @@ func schema_pkg_apis_core_v1beta1_ServiceAccountConfig(ref common.ReferenceCallb
 							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
 						},
 					},
+					"extendTokenExpiration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExtendTokenExpiration turns on projected service account expiration extension during token generation, which helps safe transition from legacy token to bound service account token feature. If this flag is enabled, admission injected tokens would be extended up to 1 year to prevent unexpected failure during transition, ignoring value of service-account-max-token-expiration.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"maxTokenExpiration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued with a validity duration of this value.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.LocalObjectReference"},
+			"k8s.io/api/core/v1.LocalObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 

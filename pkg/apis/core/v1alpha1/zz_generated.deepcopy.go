@@ -3705,6 +3705,16 @@ func (in *ServiceAccountConfig) DeepCopyInto(out *ServiceAccountConfig) {
 		*out = new(v1.LocalObjectReference)
 		**out = **in
 	}
+	if in.ExtendTokenExpiration != nil {
+		in, out := &in.ExtendTokenExpiration, &out.ExtendTokenExpiration
+		*out = new(bool)
+		**out = **in
+	}
+	if in.MaxTokenExpiration != nil {
+		in, out := &in.MaxTokenExpiration, &out.MaxTokenExpiration
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 
