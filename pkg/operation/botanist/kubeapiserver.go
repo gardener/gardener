@@ -308,6 +308,9 @@ func (b *Botanist) computeKubeAPIServerServiceAccountConfig(ctx context.Context,
 		return out, nil
 	}
 
+	out.ExtendTokenExpiration = config.ServiceAccountConfig.ExtendTokenExpiration
+	out.MaxTokenExpiration = config.ServiceAccountConfig.MaxTokenExpiration
+
 	if config.ServiceAccountConfig.Issuer != nil {
 		out.Issuer = *config.ServiceAccountConfig.Issuer
 	}
