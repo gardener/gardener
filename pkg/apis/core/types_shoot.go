@@ -445,6 +445,15 @@ type ServiceAccountConfig struct {
 	// service account token issuer. The issuer will sign issued ID tokens with this private key.
 	// Only useful if service account tokens are also issued by another external system.
 	SigningKeySecret *corev1.LocalObjectReference
+	// ExtendTokenExpiration turns on projected service account expiration extension during token generation, which
+	// helps safe transition from legacy token to bound service account token feature. If this flag is enabled,
+	// admission injected tokens would be extended up to 1 year to prevent unexpected failure during transition,
+	// ignoring value of service-account-max-token-expiration.
+	ExtendTokenExpiration *bool
+	// MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
+	// otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
+	// with a validity duration of this value.
+	MaxTokenExpiration *metav1.Duration
 }
 
 // AuditConfig contains settings for audit of the api server
