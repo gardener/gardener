@@ -9328,7 +9328,7 @@ string
 <a href="#core.gardener.cloud/v1beta1.ExpirableVersion">ExpirableVersion</a>)
 </p>
 <p>
-<p>VersionClassification is the logical state of a version according to <a href="https://github.com/gardener/gardener/blob/master/docs/operations/versioning.md">https://github.com/gardener/gardener/blob/master/docs/operations/versioning.md</a></p>
+<p>VersionClassification is the logical state of a version.</p>
 </p>
 <h3 id="core.gardener.cloud/v1beta1.VerticalPodAutoscaler">VerticalPodAutoscaler
 </h3>
