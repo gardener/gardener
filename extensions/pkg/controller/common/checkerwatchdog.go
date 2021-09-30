@@ -86,6 +86,7 @@ func (w *checkerWatchdog) Start(ctx context.Context) {
 	go func() {
 		for {
 			// Wait for a timer event or a result request
+			resultRequested := false
 			select {
 			case <-ctx.Done():
 				return
@@ -98,6 +99,7 @@ func (w *checkerWatchdog) Start(ctx context.Context) {
 				}
 				continue
 			case <-w.resultChan:
+				resultRequested = true
 				// If the last result is not older than w.interval, use it
 				if !time.Now().After(w.resultTime.Add(w.interval)) {
 					w.resultReadyChan <- struct{}{}
@@ -114,9 +116,8 @@ func (w *checkerWatchdog) Start(ctx context.Context) {
 			w.setResult(result, err)
 
 			// If a result was requested, notify the requester that the new result is available
-			select {
-			case w.resultReadyChan <- struct{}{}:
-			default:
+			if resultRequested {
+				w.resultReadyChan <- struct{}{}
 			}
 
 			// If the check failed or returned false, cancel all contexts
