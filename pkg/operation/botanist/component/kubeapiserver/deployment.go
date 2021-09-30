@@ -485,6 +485,13 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	}
 
 	out = append(out, "--service-account-issuer="+k.values.ServiceAccount.Issuer)
+	if k.values.ServiceAccount.ExtendTokenExpiration != nil {
+		out = append(out, fmt.Sprintf("--service-account-extend-token-expiration=%s", strconv.FormatBool(*k.values.ServiceAccount.ExtendTokenExpiration)))
+	}
+	if k.values.ServiceAccount.MaxTokenExpiration != nil {
+		out = append(out, fmt.Sprintf("--service-account-max-token-expiration=%s", k.values.ServiceAccount.MaxTokenExpiration.Duration))
+	}
+
 	out = append(out, fmt.Sprintf("--service-cluster-ip-range=%s", k.values.VPN.ServiceNetworkCIDR))
 	out = append(out, fmt.Sprintf("--secure-port=%d", Port))
 	out = append(out, fmt.Sprintf("--token-auth-file=%s/%s", volumeMountPathStaticToken, secrets.DataKeyStaticTokenCSV))

@@ -33,6 +33,7 @@ import (
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -166,6 +167,10 @@ type ServiceAccountConfig struct {
 	Issuer string
 	// SigningKey is the key used when service accounts are signed.
 	SigningKey []byte
+	// ExtendTokenExpiration states whether the service account token expirations should be extended.
+	ExtendTokenExpiration *bool
+	// MaxTokenExpiration states what the maximal token expiration should be.
+	MaxTokenExpiration *metav1.Duration
 }
 
 // SNIConfig contains information for configuring SNI settings for the kube-apiserver.
