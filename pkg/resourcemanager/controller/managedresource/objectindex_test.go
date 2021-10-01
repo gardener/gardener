@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("ObjectIndex", func() {
+var _ = Describe("objectIndex", func() {
 	Describe("#NewObjectIndex, #Lookup", func() {
 		It("without equivalences", func() {
 			oldRef := v1alpha1.ObjectReference{

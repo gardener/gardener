@@ -37,11 +37,8 @@ func CheckManagedResource(mr *v1alpha1.ManagedResource) error {
 	if err := CheckManagedResourceApplied(mr); err != nil {
 		return err
 	}
-	if err := CheckManagedResourceHealthy(mr); err != nil {
-		return err
-	}
 
-	return nil
+	return CheckManagedResourceHealthy(mr)
 }
 
 // CheckManagedResourceApplied checks if the condition 'ResourcesApplied' of a ManagedResource
@@ -56,7 +53,8 @@ func CheckManagedResourceApplied(mr *v1alpha1.ManagedResource) error {
 
 	if conditionApplied == nil {
 		return fmt.Errorf("condition %s for managed resource %s/%s has not been reported yet", v1alpha1.ResourcesApplied, mr.GetNamespace(), mr.GetName())
-	} else if conditionApplied.Status != v1alpha1.ConditionTrue {
+	}
+	if conditionApplied.Status != v1alpha1.ConditionTrue {
 		return fmt.Errorf("condition %s of managed resource %s/%s is %s: %s", v1alpha1.ResourcesApplied, mr.GetNamespace(), mr.GetName(), conditionApplied.Status, conditionApplied.Message)
 	}
 
@@ -207,11 +205,7 @@ func CheckJob(job *batchv1.Job) error {
 	if condition == nil {
 		return nil
 	}
-	if err := checkConditionState(string(batchv1.JobFailed), string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
-		return err
-	}
-
-	return nil
+	return checkConditionState(string(batchv1.JobFailed), string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message)
 }
 
 var healthyPodPhases = []corev1.PodPhase{

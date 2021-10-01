@@ -39,7 +39,7 @@ func AddToManagerWithOptions(mgr manager.Manager, opts AddOptions) error {
 	return mgr.AddHealthzCheck("healthz", c.Check)
 }
 
-// AddToManagerWithOptions adds the healthz checker to a Manager using the default options.
+// AddToManager adds the healthz checker to a Manager using the default options.
 func AddToManager(mgr manager.Manager) error {
 	return AddToManagerWithOptions(mgr, DefaultAddOptions)
 }

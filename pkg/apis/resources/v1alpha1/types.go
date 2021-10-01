@@ -71,6 +71,7 @@ type ManagedResourceList struct {
 	Items []ManagedResource `json:"items"`
 }
 
+// ManagedResourceSpec contains the specification of this managed resource.
 type ManagedResourceSpec struct {
 	// Class holds the resource class used to control the responsibility for multiple resource manager instances
 	// +optional
@@ -109,6 +110,7 @@ type ManagedResourceStatus struct {
 	Resources []ObjectReference `json:"resources,omitempty"`
 }
 
+// ObjectReference is a reference to another object.
 type ObjectReference struct {
 	corev1.ObjectReference `json:",inline"`
 	// Labels is a map of labels that were used during last update of the resource.

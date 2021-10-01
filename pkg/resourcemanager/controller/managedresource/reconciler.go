@@ -26,8 +26,8 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/utils"
@@ -618,7 +618,7 @@ func keyExistsAndValueTrue(kv map[string]string, key string) bool {
 	return exists && valueTrue
 }
 
-func (r *Reconciler) cleanOldResources(ctx context.Context, index *ObjectIndex, mr *resourcesv1alpha1.ManagedResource) (bool, error) {
+func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, mr *resourcesv1alpha1.ManagedResource) (bool, error) {
 	type output struct {
 		obj             client.Object
 		deletionPending bool

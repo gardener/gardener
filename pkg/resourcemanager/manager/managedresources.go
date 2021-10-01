@@ -20,17 +20,18 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+// ManagedResource is a structure managing a ManagedResource.
 type ManagedResource struct {
 	client   client.Client
 	resource *resourcesv1alpha1.ManagedResource
 }
 
+// NewManagedResource creates a new manager for a ManagedResource.
 func NewManagedResource(client client.Client) *ManagedResource {
 	return &ManagedResource{
 		client:   client,
@@ -38,22 +39,26 @@ func NewManagedResource(client client.Client) *ManagedResource {
 	}
 }
 
+// WithNamespacedName sets the namespace and name.
 func (m *ManagedResource) WithNamespacedName(namespace, name string) *ManagedResource {
 	m.resource.Namespace = namespace
 	m.resource.Name = name
 	return m
 }
 
+// WithLabels sets the labels.
 func (m *ManagedResource) WithLabels(labels map[string]string) *ManagedResource {
 	m.resource.Labels = labels
 	return m
 }
 
+// WithAnnotations sets the annotations.
 func (m *ManagedResource) WithAnnotations(annotations map[string]string) *ManagedResource {
 	m.resource.Annotations = annotations
 	return m
 }
 
+// WithClass sets the Class field.
 func (m *ManagedResource) WithClass(name string) *ManagedResource {
 	if name == "" {
 		m.resource.Spec.Class = nil
@@ -63,41 +68,49 @@ func (m *ManagedResource) WithClass(name string) *ManagedResource {
 	return m
 }
 
+// WithSecretRef adds a reference with the given name to the SecretRefs field.
 func (m *ManagedResource) WithSecretRef(secretRefName string) *ManagedResource {
 	m.resource.Spec.SecretRefs = append(m.resource.Spec.SecretRefs, corev1.LocalObjectReference{Name: secretRefName})
 	return m
 }
 
+// WithSecretRefs sets the SecretRefs field.
 func (m *ManagedResource) WithSecretRefs(secretRefs []corev1.LocalObjectReference) *ManagedResource {
 	m.resource.Spec.SecretRefs = append(m.resource.Spec.SecretRefs, secretRefs...)
 	return m
 }
 
+// WithInjectedLabels sets the InjectLabels field.
 func (m *ManagedResource) WithInjectedLabels(labelsToInject map[string]string) *ManagedResource {
 	m.resource.Spec.InjectLabels = labelsToInject
 	return m
 }
 
+// ForceOverwriteAnnotations sets the ForceOverwriteAnnotations field.
 func (m *ManagedResource) ForceOverwriteAnnotations(v bool) *ManagedResource {
 	m.resource.Spec.ForceOverwriteAnnotations = &v
 	return m
 }
 
+// ForceOverwriteLabels sets the ForceOverwriteLabels field.
 func (m *ManagedResource) ForceOverwriteLabels(v bool) *ManagedResource {
 	m.resource.Spec.ForceOverwriteLabels = &v
 	return m
 }
 
+// KeepObjects sets the KeepObjects field.
 func (m *ManagedResource) KeepObjects(v bool) *ManagedResource {
 	m.resource.Spec.KeepObjects = &v
 	return m
 }
 
+// DeletePersistentVolumeClaims sets the DeletePersistentVolumeClaims field.
 func (m *ManagedResource) DeletePersistentVolumeClaims(v bool) *ManagedResource {
 	m.resource.Spec.DeletePersistentVolumeClaims = &v
 	return m
 }
 
+// Reconcile creates or updates the ManagedResource.
 func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	resource := &resourcesv1alpha1.ManagedResource{
 		ObjectMeta: metav1.ObjectMeta{Name: m.resource.Name, Namespace: m.resource.Namespace},
@@ -112,9 +125,7 @@ func (m *ManagedResource) Reconcile(ctx context.Context) error {
 	return err
 }
 
+// Delete deletes the ManagedResource.
 func (m *ManagedResource) Delete(ctx context.Context) error {
-	if err := m.client.Delete(ctx, m.resource); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	return nil
+	return client.IgnoreNotFound(m.client.Delete(ctx, m.resource))
 }

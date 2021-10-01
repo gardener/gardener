@@ -18,12 +18,12 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+// Secret is a structure for managing a secret.
 type Secret struct {
 	client client.Client
 
@@ -31,6 +31,7 @@ type Secret struct {
 	secret    *corev1.Secret
 }
 
+// NewSecret creates a new manager for a secret.
 func NewSecret(client client.Client) *Secret {
 	return &Secret{
 		client:    client,
@@ -39,27 +40,32 @@ func NewSecret(client client.Client) *Secret {
 	}
 }
 
+// WithNamespacedName sets the namespace and name.
 func (s *Secret) WithNamespacedName(namespace, name string) *Secret {
 	s.secret.Namespace = namespace
 	s.secret.Name = name
 	return s
 }
 
+// WithLabels sets the labels.
 func (s *Secret) WithLabels(labels map[string]string) *Secret {
 	s.secret.Labels = labels
 	return s
 }
 
+// WithAnnotations sets the annotations.
 func (s *Secret) WithAnnotations(annotations map[string]string) *Secret {
 	s.secret.Annotations = annotations
 	return s
 }
 
+// WithKeyValues sets the data map.
 func (s *Secret) WithKeyValues(keyValues map[string][]byte) *Secret {
 	s.secret.Data = keyValues
 	return s
 }
 
+// Reconcile creates or updates the secret.
 func (s *Secret) Reconcile(ctx context.Context) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: s.secret.Name, Namespace: s.secret.Namespace},
@@ -75,19 +81,19 @@ func (s *Secret) Reconcile(ctx context.Context) error {
 	return err
 }
 
+// Delete deletes the secret.
 func (s *Secret) Delete(ctx context.Context) error {
-	if err := s.client.Delete(ctx, s.secret); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	return nil
+	return client.IgnoreNotFound(s.client.Delete(ctx, s.secret))
 }
 
+// Secrets is a structure for managing multiple secrets.
 type Secrets struct {
 	client client.Client
 
 	secrets []Secret
 }
 
+// NewSecrets creates a Manager for multiple secrets.
 func NewSecrets(client client.Client) *Secrets {
 	return &Secrets{
 		client:  client,
@@ -95,16 +101,19 @@ func NewSecrets(client client.Client) *Secrets {
 	}
 }
 
+// WithSecretList sets the secrets list.
 func (s *Secrets) WithSecretList(secrets []Secret) *Secrets {
 	s.secrets = append(s.secrets, secrets...)
 	return s
 }
 
+// WithSecret adds the given secret to the secrets list.
 func (s *Secrets) WithSecret(secrets Secret) *Secrets {
 	s.secrets = append(s.secrets, secrets)
 	return s
 }
 
+// Reconcile reconciles all secrets.
 func (s *Secrets) Reconcile(ctx context.Context) error {
 	for _, secret := range s.secrets {
 		if err := secret.Reconcile(ctx); err != nil {
@@ -114,6 +123,7 @@ func (s *Secrets) Reconcile(ctx context.Context) error {
 	return nil
 }
 
+// Delete deletes all secrets.
 func (s *Secrets) Delete(ctx context.Context) error {
 	for _, secret := range s.secrets {
 		if err := secret.Delete(ctx); err != nil {

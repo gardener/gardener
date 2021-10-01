@@ -23,5 +23,5 @@ import (
 
 func TestManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Manager Suite")
+	RunSpecs(t, "ResourceManager Manager Suite")
 }

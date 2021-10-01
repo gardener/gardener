@@ -85,7 +85,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	return nil
 }
 
-// AddToManagerWithOptions adds the controller to a Manager using the default config.
+// AddToManager adds the controller to a Manager using the default config.
 func AddToManager(mgr manager.Manager) error {
 	return AddToManagerWithOptions(mgr, defaultControllerConfig)
 }
