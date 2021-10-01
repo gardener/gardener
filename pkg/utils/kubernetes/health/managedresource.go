@@ -17,8 +17,9 @@ package health
 import (
 	"fmt"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 )
 
 // CheckManagedResource checks if all conditions of a ManagedResource ('ResourcesApplied' and 'ResourcesHealthy')
@@ -39,12 +40,12 @@ func CheckManagedResourceApplied(mr *resourcesv1alpha1.ManagedResource) error {
 		return fmt.Errorf("observed generation of managed resource %s/%s outdated (%d/%d)", mr.GetNamespace(), mr.GetName(), status.ObservedGeneration, mr.GetGeneration())
 	}
 
-	conditionApplied := resourcesv1alpha1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesApplied)
+	conditionApplied := v1beta1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesApplied)
 
 	if conditionApplied == nil {
 		return fmt.Errorf("condition %s for managed resource %s/%s has not been reported yet", resourcesv1alpha1.ResourcesApplied, mr.GetNamespace(), mr.GetName())
 	}
-	if conditionApplied.Status != resourcesv1alpha1.ConditionTrue {
+	if conditionApplied.Status != gardencorev1beta1.ConditionTrue {
 		return fmt.Errorf("condition %s of managed resource %s/%s is %s: %s", resourcesv1alpha1.ResourcesApplied, mr.GetNamespace(), mr.GetName(), conditionApplied.Status, conditionApplied.Message)
 	}
 
@@ -54,11 +55,11 @@ func CheckManagedResourceApplied(mr *resourcesv1alpha1.ManagedResource) error {
 // CheckManagedResourceHealthy checks if the condition 'ResourcesHealthy' of a ManagedResource is True
 func CheckManagedResourceHealthy(mr *resourcesv1alpha1.ManagedResource) error {
 	status := mr.Status
-	conditionHealthy := resourcesv1alpha1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesHealthy)
+	conditionHealthy := v1beta1helper.GetCondition(status.Conditions, resourcesv1alpha1.ResourcesHealthy)
 
 	if conditionHealthy == nil {
 		return fmt.Errorf("condition %s for managed resource %s/%s has not been reported yet", resourcesv1alpha1.ResourcesHealthy, mr.GetNamespace(), mr.GetName())
-	} else if conditionHealthy.Status != resourcesv1alpha1.ConditionTrue {
+	} else if conditionHealthy.Status != gardencorev1beta1.ConditionTrue {
 		return fmt.Errorf("condition %s of managed resource %s/%s is %s: %s", resourcesv1alpha1.ResourcesHealthy, mr.GetNamespace(), mr.GetName(), conditionHealthy.Status, conditionHealthy.Message)
 	}
 

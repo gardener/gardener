@@ -15,6 +15,7 @@
 package predicate_test
 
 import (
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	. "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
@@ -34,7 +35,7 @@ var _ = Describe("#ConditionStatusChanged", func() {
 		updateEvent     event.UpdateEvent
 		deleteEvent     event.DeleteEvent
 		genericEvent    event.GenericEvent
-		conditionType   resourcesv1alpha1.ConditionType
+		conditionType   gardencorev1beta1.ConditionType
 	)
 
 	BeforeEach(func() {
@@ -114,13 +115,13 @@ var _ = Describe("#ConditionStatusChanged", func() {
 	})
 
 	DescribeTable("DefaultConditionChange",
-		func(old, new *resourcesv1alpha1.ManagedResourceCondition, matcher types.GomegaMatcher) {
+		func(old, new *gardencorev1beta1.Condition, matcher types.GomegaMatcher) {
 			managedResourceNew := managedResource.DeepCopy()
 			if old != nil {
-				managedResource.Status.Conditions = []resourcesv1alpha1.ManagedResourceCondition{*old}
+				managedResource.Status.Conditions = []gardencorev1beta1.Condition{*old}
 			}
 			if new != nil {
-				managedResourceNew.Status.Conditions = []resourcesv1alpha1.ManagedResourceCondition{*new}
+				managedResourceNew.Status.Conditions = []gardencorev1beta1.Condition{*new}
 			}
 			updateEvent.ObjectOld = managedResource
 			updateEvent.ObjectNew = managedResourceNew
@@ -134,29 +135,29 @@ var _ = Describe("#ConditionStatusChanged", func() {
 		},
 		Entry("should match on update (condition added)",
 			nil,
-			condition(resourcesv1alpha1.ConditionTrue),
+			condition(gardencorev1beta1.ConditionTrue),
 			BeTrue(),
 		),
 		Entry("should match on update (condition removed)",
-			condition(resourcesv1alpha1.ConditionTrue),
+			condition(gardencorev1beta1.ConditionTrue),
 			nil,
 			BeTrue(),
 		),
 		Entry("should match on update (condition status changed)",
-			condition(resourcesv1alpha1.ConditionProgressing),
-			condition(resourcesv1alpha1.ConditionTrue),
+			condition(gardencorev1beta1.ConditionProgressing),
+			condition(gardencorev1beta1.ConditionTrue),
 			BeTrue(),
 		),
 	)
 
 	DescribeTable("ConditionChangedToUnhealthy",
-		func(old, new *resourcesv1alpha1.ManagedResourceCondition, matcher types.GomegaMatcher) {
+		func(old, new *gardencorev1beta1.Condition, matcher types.GomegaMatcher) {
 			managedResourceNew := managedResource.DeepCopy()
 			if old != nil {
-				managedResource.Status.Conditions = []resourcesv1alpha1.ManagedResourceCondition{*old}
+				managedResource.Status.Conditions = []gardencorev1beta1.Condition{*old}
 			}
 			if new != nil {
-				managedResourceNew.Status.Conditions = []resourcesv1alpha1.ManagedResourceCondition{*new}
+				managedResourceNew.Status.Conditions = []gardencorev1beta1.Condition{*new}
 			}
 			updateEvent.ObjectNew = managedResourceNew
 
@@ -169,34 +170,34 @@ var _ = Describe("#ConditionStatusChanged", func() {
 		},
 		Entry("should not match on update (condition added)",
 			nil,
-			condition(resourcesv1alpha1.ConditionTrue),
+			condition(gardencorev1beta1.ConditionTrue),
 			BeFalse(),
 		),
 		Entry("should not match on update (status changed to true)",
-			condition(resourcesv1alpha1.ConditionFalse),
-			condition(resourcesv1alpha1.ConditionTrue),
+			condition(gardencorev1beta1.ConditionFalse),
+			condition(gardencorev1beta1.ConditionTrue),
 			BeFalse(),
 		),
 		Entry("should not match on update (no status change)",
-			condition(resourcesv1alpha1.ConditionTrue),
-			condition(resourcesv1alpha1.ConditionTrue),
+			condition(gardencorev1beta1.ConditionTrue),
+			condition(gardencorev1beta1.ConditionTrue),
 			BeFalse(),
 		),
 		Entry("should match on update (condition added)",
 			nil,
-			condition(resourcesv1alpha1.ConditionFalse),
+			condition(gardencorev1beta1.ConditionFalse),
 			BeTrue(),
 		),
 		Entry("should match on update (status changed to false)",
-			condition(resourcesv1alpha1.ConditionTrue),
-			condition(resourcesv1alpha1.ConditionFalse),
+			condition(gardencorev1beta1.ConditionTrue),
+			condition(gardencorev1beta1.ConditionFalse),
 			BeTrue(),
 		),
 	)
 })
 
-func condition(status resourcesv1alpha1.ConditionStatus) *resourcesv1alpha1.ManagedResourceCondition {
-	return &resourcesv1alpha1.ManagedResourceCondition{
+func condition(status gardencorev1beta1.ConditionStatus) *gardencorev1beta1.Condition {
+	return &gardencorev1beta1.Condition{
 		Type:   resourcesv1alpha1.ResourcesApplied,
 		Status: status,
 	}

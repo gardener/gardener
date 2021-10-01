@@ -238,7 +238,7 @@ func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Conditi
 		return &c
 	}
 
-	toProcess := map[resourcesv1alpha1.ConditionType]struct{}{
+	toProcess := map[gardencorev1beta1.ConditionType]struct{}{
 		resourcesv1alpha1.ResourcesApplied: {},
 		resourcesv1alpha1.ResourcesHealthy: {},
 	}
@@ -248,7 +248,7 @@ func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Conditi
 		if !ok {
 			continue
 		}
-		if cond.Status == resourcesv1alpha1.ConditionFalse {
+		if cond.Status == gardencorev1beta1.ConditionFalse {
 			c := b.FailedCondition(condition, cond.Reason, cond.Message)
 			return &c
 		}

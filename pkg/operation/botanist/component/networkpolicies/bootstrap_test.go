@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -27,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -204,14 +205,14 @@ var _ = Describe("Bootstrap", func() {
 						},
 						Status: resourcesv1alpha1.ManagedResourceStatus{
 							ObservedGeneration: 1,
-							Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+							Conditions: []gardencorev1beta1.Condition{
 								{
 									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: resourcesv1alpha1.ConditionFalse,
+									Status: gardencorev1beta1.ConditionFalse,
 								},
 								{
 									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: resourcesv1alpha1.ConditionFalse,
+									Status: gardencorev1beta1.ConditionFalse,
 								},
 							},
 						},
@@ -232,14 +233,14 @@ var _ = Describe("Bootstrap", func() {
 						},
 						Status: resourcesv1alpha1.ManagedResourceStatus{
 							ObservedGeneration: 1,
-							Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+							Conditions: []gardencorev1beta1.Condition{
 								{
 									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: resourcesv1alpha1.ConditionTrue,
+									Status: gardencorev1beta1.ConditionTrue,
 								},
 								{
 									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: resourcesv1alpha1.ConditionTrue,
+									Status: gardencorev1beta1.ConditionTrue,
 								},
 							},
 						},

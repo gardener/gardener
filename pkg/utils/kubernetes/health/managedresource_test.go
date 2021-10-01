@@ -15,6 +15,7 @@
 package health_test
 
 import (
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
@@ -36,14 +37,14 @@ var _ = Describe("Managedresource", func() {
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
-					Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+					Conditions: []gardencorev1beta1.Condition{
 						{
 							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: resourcesv1alpha1.ConditionFalse,
+							Status: gardencorev1beta1.ConditionFalse,
 						},
 						{
 							Type:   resourcesv1alpha1.ResourcesHealthy,
-							Status: resourcesv1alpha1.ConditionTrue,
+							Status: gardencorev1beta1.ConditionTrue,
 						},
 					},
 				},
@@ -52,14 +53,14 @@ var _ = Describe("Managedresource", func() {
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
-					Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+					Conditions: []gardencorev1beta1.Condition{
 						{
 							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: resourcesv1alpha1.ConditionTrue,
+							Status: gardencorev1beta1.ConditionTrue,
 						},
 						{
 							Type:   resourcesv1alpha1.ResourcesHealthy,
-							Status: resourcesv1alpha1.ConditionFalse,
+							Status: gardencorev1beta1.ConditionFalse,
 						},
 					},
 				},
@@ -68,14 +69,14 @@ var _ = Describe("Managedresource", func() {
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
-					Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+					Conditions: []gardencorev1beta1.Condition{
 						{
 							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: resourcesv1alpha1.ConditionTrue,
+							Status: gardencorev1beta1.ConditionTrue,
 						},
 						{
 							Type:   resourcesv1alpha1.ResourcesHealthy,
-							Status: resourcesv1alpha1.ConditionTrue,
+							Status: gardencorev1beta1.ConditionTrue,
 						},
 					},
 				},
@@ -84,10 +85,10 @@ var _ = Describe("Managedresource", func() {
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
-					Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+					Conditions: []gardencorev1beta1.Condition{
 						{
 							Type:   resourcesv1alpha1.ResourcesHealthy,
-							Status: resourcesv1alpha1.ConditionTrue,
+							Status: gardencorev1beta1.ConditionTrue,
 						},
 					},
 				},
@@ -96,10 +97,10 @@ var _ = Describe("Managedresource", func() {
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
-					Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+					Conditions: []gardencorev1beta1.Condition{
 						{
 							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: resourcesv1alpha1.ConditionTrue,
+							Status: gardencorev1beta1.ConditionTrue,
 						},
 					},
 				},
@@ -132,10 +133,10 @@ var _ = Describe("Managedresource", func() {
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
-					Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+					Conditions: []gardencorev1beta1.Condition{
 						{
 							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: resourcesv1alpha1.ConditionFalse,
+							Status: gardencorev1beta1.ConditionFalse,
 						},
 					},
 				},
@@ -144,10 +145,10 @@ var _ = Describe("Managedresource", func() {
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
-					Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+					Conditions: []gardencorev1beta1.Condition{
 						{
 							Type:   resourcesv1alpha1.ResourcesApplied,
-							Status: resourcesv1alpha1.ConditionTrue,
+							Status: gardencorev1beta1.ConditionTrue,
 						},
 					},
 				},
@@ -156,7 +157,7 @@ var _ = Describe("Managedresource", func() {
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
-					Conditions:         []resourcesv1alpha1.ManagedResourceCondition{},
+					Conditions:         []gardencorev1beta1.Condition{},
 				},
 			}, HaveOccurred()),
 			Entry("no conditions", resourcesv1alpha1.ManagedResource{
@@ -187,10 +188,10 @@ var _ = Describe("Managedresource", func() {
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
-					Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+					Conditions: []gardencorev1beta1.Condition{
 						{
 							Type:   resourcesv1alpha1.ResourcesHealthy,
-							Status: resourcesv1alpha1.ConditionFalse,
+							Status: gardencorev1beta1.ConditionFalse,
 						},
 					},
 				},
@@ -199,10 +200,10 @@ var _ = Describe("Managedresource", func() {
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
-					Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+					Conditions: []gardencorev1beta1.Condition{
 						{
 							Type:   resourcesv1alpha1.ResourcesHealthy,
-							Status: resourcesv1alpha1.ConditionTrue,
+							Status: gardencorev1beta1.ConditionTrue,
 						},
 					},
 				},
@@ -211,7 +212,7 @@ var _ = Describe("Managedresource", func() {
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: resourcesv1alpha1.ManagedResourceStatus{
 					ObservedGeneration: 1,
-					Conditions:         []resourcesv1alpha1.ManagedResourceCondition{},
+					Conditions:         []gardencorev1beta1.Condition{},
 				},
 			}, HaveOccurred()),
 			Entry("no conditions", resourcesv1alpha1.ManagedResource{

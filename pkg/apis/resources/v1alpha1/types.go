@@ -15,6 +15,8 @@
 package v1alpha1
 
 import (
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -102,7 +104,7 @@ type ManagedResourceSpec struct {
 
 // ManagedResourceStatus is the status of a managed resource.
 type ManagedResourceStatus struct {
-	Conditions []ManagedResourceCondition `json:"conditions,omitempty"`
+	Conditions []gardencorev1beta1.Condition `json:"conditions,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this resource.
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Resources is a list of objects that have been created.
@@ -119,32 +121,14 @@ type ObjectReference struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
-// ConditionType is the type of a condition.
-type ConditionType string
-
 const (
 	// ResourcesApplied is a condition type that indicates whether all resources are applied to the target cluster.
-	ResourcesApplied ConditionType = "ResourcesApplied"
+	ResourcesApplied gardencorev1beta1.ConditionType = "ResourcesApplied"
 	// ResourcesHealthy is a condition type that indicates whether all resources are present and healthy.
-	ResourcesHealthy ConditionType = "ResourcesHealthy"
+	ResourcesHealthy gardencorev1beta1.ConditionType = "ResourcesHealthy"
 )
 
-// ConditionStatus is the status of a condition.
-type ConditionStatus string
-
-// These are valid condition statuses.
-const (
-	// ConditionTrue means a resource is in the condition.
-	ConditionTrue ConditionStatus = "True"
-	// ConditionFalse means a resource is not in the condition.
-	ConditionFalse ConditionStatus = "False"
-	// ConditionUnknown means that the controller can't decide if a resource is in the condition or not
-	ConditionUnknown ConditionStatus = "Unknown"
-	// ConditionProgressing means that the controller is currently acting on the resource and the condition is therefore progressing.
-	ConditionProgressing ConditionStatus = "Progressing"
-)
-
-// These are well-known reasons for ManagedResourceConditions.
+// These are well-known reasons for Conditions.
 const (
 	// ConditionApplySucceeded indicates that the `ResourcesApplied` condition is `True`,
 	// because all resources have been applied successfully.
@@ -171,19 +155,3 @@ const (
 	// because the health checks have not been completely executed yet for the current set of resources.
 	ConditionHealthChecksPending = "HealthChecksPending"
 )
-
-// ManagedResourceCondition describes the state of a deployment at a certain period.
-type ManagedResourceCondition struct {
-	// Type of the ManagedResource condition.
-	Type ConditionType `json:"type"`
-	// Status of the ManagedResource condition.
-	Status ConditionStatus `json:"status"`
-	// Last time the condition was updated.
-	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
-	// Last time the condition transitioned from one status to another.
-	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
-	// The reason for the condition's last transition.
-	Reason string `json:"reason"`
-	// A human readable message indicating details about the transition.
-	Message string `json:"message"`
-}

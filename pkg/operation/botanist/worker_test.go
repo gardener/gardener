@@ -350,14 +350,14 @@ var _ = Describe("Worker", func() {
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
-						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+						Conditions: []gardencorev1beta1.Condition{
 							{
 								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 							{
 								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
 					},
@@ -414,14 +414,14 @@ var _ = Describe("Worker", func() {
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
-						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+						Conditions: []gardencorev1beta1.Condition{
 							{
 								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 							{
 								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
 					},

@@ -119,7 +119,7 @@ A ManagedResource has an optional `.spec.class` field that allows to indicate th
 
 #### Conditions
 
-A ManagedResource has a ManagedResourceStatus, which has an array of ManagedResourceConditions. ManagedResourceConditions currently include:
+A ManagedResource has a ManagedResourceStatus, which has an array of Conditions. Conditions currently include:
 
 | Condition          | Description                                               |
 | ------------------ | --------------------------------------------------------- |

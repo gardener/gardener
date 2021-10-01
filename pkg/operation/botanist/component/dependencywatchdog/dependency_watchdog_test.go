@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
@@ -467,14 +468,14 @@ status: {}
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
-						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+						Conditions: []gardencorev1beta1.Condition{
 							{
 								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: resourcesv1alpha1.ConditionFalse,
+								Status: gardencorev1beta1.ConditionFalse,
 							},
 							{
 								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: resourcesv1alpha1.ConditionFalse,
+								Status: gardencorev1beta1.ConditionFalse,
 							},
 						},
 					},
@@ -496,14 +497,14 @@ status: {}
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
-						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+						Conditions: []gardencorev1beta1.Condition{
 							{
 								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 							{
 								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
 					},

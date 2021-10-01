@@ -15,18 +15,19 @@
 package predicate
 
 import (
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 // ConditionChangeFn is a type for comparing two conditions.
-type ConditionChangeFn func(con1, con2 *resourcesv1alpha1.ManagedResourceCondition) bool
+type ConditionChangeFn func(con1, con2 *gardencorev1beta1.Condition) bool
 
 // DefaultConditionChange compares the given conditions and returns `true` if the `Status` has changed.
-var DefaultConditionChange ConditionChangeFn = func(con1, con2 *resourcesv1alpha1.ManagedResourceCondition) bool {
+var DefaultConditionChange ConditionChangeFn = func(con1, con2 *gardencorev1beta1.Condition) bool {
 	if con1 == nil {
 		// trigger if condition was added
 		return con2 != nil
@@ -40,13 +41,13 @@ var DefaultConditionChange ConditionChangeFn = func(con1, con2 *resourcesv1alpha
 }
 
 // ConditionChangedToUnhealthy compares the given conditions and returns `true` if the `Status` has changed to an unhealthy state.
-var ConditionChangedToUnhealthy ConditionChangeFn = func(con1, con2 *resourcesv1alpha1.ManagedResourceCondition) bool {
-	return (con1 == nil || con1.Status == resourcesv1alpha1.ConditionTrue) &&
-		(con2 != nil && con2.Status == resourcesv1alpha1.ConditionFalse)
+var ConditionChangedToUnhealthy ConditionChangeFn = func(con1, con2 *gardencorev1beta1.Condition) bool {
+	return (con1 == nil || con1.Status == gardencorev1beta1.ConditionTrue) &&
+		(con2 != nil && con2.Status == gardencorev1beta1.ConditionFalse)
 }
 
 // ConditionStatusChanged is a predicate that detects changes to the status of a Condition with a given type.
-func ConditionStatusChanged(conditionType resourcesv1alpha1.ConditionType, changeFn ConditionChangeFn) predicate.Predicate {
+func ConditionStatusChanged(conditionType gardencorev1beta1.ConditionType, changeFn ConditionChangeFn) predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			if e.ObjectOld == nil {
@@ -69,8 +70,8 @@ func ConditionStatusChanged(conditionType resourcesv1alpha1.ConditionType, chang
 				return false
 			}
 
-			oldCondition := resourcesv1alpha1helper.GetCondition(old.Status.Conditions, conditionType)
-			newCondition := resourcesv1alpha1helper.GetCondition(new.Status.Conditions, conditionType)
+			oldCondition := v1beta1helper.GetCondition(old.Status.Conditions, conditionType)
+			newCondition := v1beta1helper.GetCondition(new.Status.Conditions, conditionType)
 
 			return changeFn(oldCondition, newCondition)
 		},

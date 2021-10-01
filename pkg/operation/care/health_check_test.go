@@ -403,7 +403,7 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckManagedResource",
-		func(conditions []resourcesv1alpha1.ManagedResourceCondition, upToDate bool, conditionMatcher types.GomegaMatcher) {
+		func(conditions []gardencorev1beta1.Condition, upToDate bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				mr      = new(resourcesv1alpha1.ManagedResource)
 				checker = care.NewHealthChecker(map[gardencorev1beta1.ConditionType]time.Duration{}, nil, nil, kubernetesVersion, gardenerVersion)
@@ -423,67 +423,67 @@ var _ = Describe("health check", func() {
 			true,
 			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceMissingConditionError, ""))),
 		Entry("one true condition, one missing",
-			[]resourcesv1alpha1.ManagedResourceCondition{
+			[]gardencorev1beta1.Condition{
 				{
 					Type:   resourcesv1alpha1.ResourcesApplied,
-					Status: resourcesv1alpha1.ConditionTrue,
+					Status: gardencorev1beta1.ConditionTrue,
 				},
 			},
 			true,
 			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, gardencorev1beta1.ManagedResourceMissingConditionError, string(resourcesv1alpha1.ResourcesHealthy)))),
 		Entry("multiple true conditions",
-			[]resourcesv1alpha1.ManagedResourceCondition{
+			[]gardencorev1beta1.Condition{
 				{
-					Status: resourcesv1alpha1.ConditionTrue,
+					Status: gardencorev1beta1.ConditionTrue,
 				},
 				{
 					Type:   resourcesv1alpha1.ResourcesHealthy,
-					Status: resourcesv1alpha1.ConditionTrue,
+					Status: gardencorev1beta1.ConditionTrue,
 				},
 				{
 					Type:   resourcesv1alpha1.ResourcesApplied,
-					Status: resourcesv1alpha1.ConditionTrue,
+					Status: gardencorev1beta1.ConditionTrue,
 				},
 			},
 			true,
 			BeNil()),
 		Entry("one false condition ResourcesApplied",
-			[]resourcesv1alpha1.ManagedResourceCondition{
+			[]gardencorev1beta1.Condition{
 				{
 					Type:   resourcesv1alpha1.ResourcesApplied,
-					Status: resourcesv1alpha1.ConditionFalse,
+					Status: gardencorev1beta1.ConditionFalse,
 				},
 				{
 					Type:   resourcesv1alpha1.ResourcesHealthy,
-					Status: resourcesv1alpha1.ConditionTrue,
+					Status: gardencorev1beta1.ConditionTrue,
 				},
 			},
 			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("one false condition ResourcesHealthy",
-			[]resourcesv1alpha1.ManagedResourceCondition{
+			[]gardencorev1beta1.Condition{
 				{
 					Type:   resourcesv1alpha1.ResourcesApplied,
-					Status: resourcesv1alpha1.ConditionTrue,
+					Status: gardencorev1beta1.ConditionTrue,
 				},
 				{
 					Type:   resourcesv1alpha1.ResourcesHealthy,
-					Status: resourcesv1alpha1.ConditionFalse,
+					Status: gardencorev1beta1.ConditionFalse,
 				},
 			},
 			true,
 			PointTo(beConditionWithStatus(gardencorev1beta1.ConditionFalse))),
 		Entry("multiple false conditions with reason & message",
-			[]resourcesv1alpha1.ManagedResourceCondition{
+			[]gardencorev1beta1.Condition{
 				{
 					Type:    resourcesv1alpha1.ResourcesApplied,
-					Status:  resourcesv1alpha1.ConditionFalse,
+					Status:  gardencorev1beta1.ConditionFalse,
 					Reason:  "fooFailed",
 					Message: "foo is unhealthy",
 				},
 				{
 					Type:    resourcesv1alpha1.ResourcesHealthy,
-					Status:  resourcesv1alpha1.ConditionFalse,
+					Status:  gardencorev1beta1.ConditionFalse,
 					Reason:  "barFailed",
 					Message: "bar is unhealthy",
 				},
@@ -491,16 +491,16 @@ var _ = Describe("health check", func() {
 			true,
 			PointTo(beConditionWithStatusAndMsg(gardencorev1beta1.ConditionFalse, "fooFailed", "foo is unhealthy"))),
 		Entry("outdated managed resource",
-			[]resourcesv1alpha1.ManagedResourceCondition{
+			[]gardencorev1beta1.Condition{
 				{
 					Type:    resourcesv1alpha1.ResourcesApplied,
-					Status:  resourcesv1alpha1.ConditionFalse,
+					Status:  gardencorev1beta1.ConditionFalse,
 					Reason:  "fooFailed",
 					Message: "foo is unhealthy",
 				},
 				{
 					Type:    resourcesv1alpha1.ResourcesHealthy,
-					Status:  resourcesv1alpha1.ConditionFalse,
+					Status:  gardencorev1beta1.ConditionFalse,
 					Reason:  "barFailed",
 					Message: "bar is unhealthy",
 				},
