@@ -73,7 +73,7 @@ Usually, the new release is triggered in the beginning of the second week if all
 
 ## Contributing new Features or Fixes
 
-Please refer to the [Gardener contributor guide](https://github.com/gardener/documentation/blob/master/CONTRIBUTING.md).
+Please refer to the [Gardener contributor guide](https://gardener.cloud/docs/contribute/).
 Besides a lot of a general information, it also provides a checklist for newly created pull requests that may help you to prepare your changes for an efficient review process.
 If you are contributing a fix or major improvement, please take care to open cherry-pick PRs to all affected and still supported versions once the change is approved and merged in the `master` branch.
 

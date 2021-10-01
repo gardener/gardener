@@ -66,7 +66,7 @@ Alternatively you can use our [garden setup](https://github.com/gardener/garden-
 
 Feedback and contributions are always welcome!
 
-All channels for getting in touch or learning about our project are listed under the [community](https://github.com/gardener/documentation/blob/master/CONTRIBUTING.md#community) section. We are cordially inviting interested parties to join our [bi-weekly meetings](https://github.com/gardener/documentation/blob/master/CONTRIBUTING.md#bi-weekly-meetings).
+All channels for getting in touch or learning about our project are listed under the [community](https://gardener.cloud/docs/contribute/#community) section. We are cordially inviting interested parties to join our [bi-weekly meetings](https://gardener.cloud/docs/contribute/#bi-weekly-meetings).
 
 Please report bugs or suggestions about our Kubernetes clusters as such or the Gardener itself as [GitHub issues](https://github.com/gardener/gardener/issues) or join our [Slack channel #gardener](https://kubernetes.slack.com/messages/gardener) (please invite yourself to the Kubernetes workspace [here](http://slack.k8s.io)).
 

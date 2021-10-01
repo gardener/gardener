@@ -22,13 +22,13 @@ Before starting your work and creating a GEP, please take some time to familiari
 general [Gardener Contribution Guidelines](https://gardener.cloud/docs/contribute/).
 
 It is recommended to discuss and outline the motivation of your prospective GEP as a draft with the community before you take the investment of creating the actual GEP. This early briefing supports the understanding for the broad community and leads to a fast feedback for your proposal from the respective experts in the community.
-An appropriate format for this may be the regular [Gardener community meeting](https://github.com/gardener/documentation/blob/master/CONTRIBUTING.md#weekly-meeting).
+An appropriate format for this may be the regular [Gardener community meetings](https://gardener.cloud/docs/contribute/#bi-weekly-meetings).
 
 ## How to file a GEP
 
 GEPs should be created as Markdown `.md` files and are submitted through a GitHub pull request to their current home in [docs/proposals](https://github.com/gardener/gardener/tree/master/docs/proposals). Please use the provided [template](./00-template.md) or follow the structure of existing [GEPs]( https://github.com/gardener/gardener/tree/master/docs/proposals) which makes reviewing easier and faster. Additionally, please link the new GEP in our documentation [index](../README.md#Proposals).
 
-If not already done, please present your GEP in the [regular community meeting](https://github.com/gardener/documentation/blob/master/CONTRIBUTING.md#weekly-meeting) to brief the community about your proposal (we strive for personal communication :) ). Also consider that this may be an important step to raise awareness and understanding for everyone involved.
+If not already done, please present your GEP in the [regular community meetings](https://gardener.cloud/docs/contribute/#bi-weekly-meetings) to brief the community about your proposal (we strive for personal communication :) ). Also consider that this may be an important step to raise awareness and understanding for everyone involved.
 
 The GEP template contains a small set of metadata, which is helpful for keeping track of the enhancement
 in general and especially of who is responsible for implementing and reviewing PRs that are part of
