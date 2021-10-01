@@ -65,18 +65,18 @@ resources:
       memory: 12Mi
   kubeRBACproxy:
     limits:
-      cpu: 20m
-      memory: 30Mi
+      cpu: 60m
+      memory: 50Mi
     requests:
-      cpu: 5m
+      cpu: 30m
       memory: 15Mi 
   telegraf:
     limits:
-      cpu: 5m
-      memory: 50Mi
+      cpu: 15m
+      memory: 100Mi
     requests:
-      cpu: 2m
-      memory: 24Mi
+      cpu: 5m
+      memory: 35Mi
 
 securityContext:
   fsGroup: 10001
