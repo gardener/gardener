@@ -16,6 +16,7 @@
   * [Gardener Scheduler](concepts/scheduler.md)
   * [Gardener Admission Controller](concepts/admission-controller.md)
   * [Gardener Seed Admission Controller](concepts/seed-admission-controller.md)
+  * [Gardener Resource Manager](concepts/resource-manager.md)
   * [Gardenlet](concepts/gardenlet.md)
 * [Backup Restore](concepts/backup-restore.md)
 * [ETCD](concepts/etcd.md)
