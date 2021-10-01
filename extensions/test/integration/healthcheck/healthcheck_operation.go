@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"time"
 
-	resourcev1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	resourcev1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -133,18 +133,18 @@ func TestHealthCheckWithManagedResource(ctx context.Context, timeout time.Durati
 		}, healthConditionType, gardencorev1beta1.ConditionTrue, healthcheck.ReasonSuccessful)
 		framework.ExpectNoError(err)
 	}()
-	managedResource := resourcev1alpha1.ManagedResource{}
+	managedResource := resourcesv1alpha1.ManagedResource{}
 	if err = f.SeedClient.Client().Get(ctx, kutil.Key(f.ShootSeedNamespace(), managedResourceName), &managedResource); err != nil {
 		return err
 	}
 	// overwrite Condition with type ResourcesHealthy on the managed resource to make the health check in the provider fail
-	managedResourceCondition := resourcev1alpha1.ManagedResourceCondition{
-		Type:   resourcev1alpha1.ResourcesHealthy,
-		Status: resourcev1alpha1.ConditionFalse,
+	managedResourceCondition := resourcesv1alpha1.ManagedResourceCondition{
+		Type:   resourcesv1alpha1.ResourcesHealthy,
+		Status: resourcesv1alpha1.ConditionFalse,
 		Reason: "dummyFailureReason",
 	}
 	if err = extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, f.SeedClient.Client(), &managedResource, func() error {
-		newConditions := resourcev1alpha1helper.MergeConditions(managedResource.Status.Conditions, managedResourceCondition)
+		newConditions := resourcesv1alpha1helper.MergeConditions(managedResource.Status.Conditions, managedResourceCondition)
 		managedResource.Status.Conditions = newConditions
 		return nil
 	}); err != nil {

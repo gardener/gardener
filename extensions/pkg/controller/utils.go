@@ -25,7 +25,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	resourcemanagerv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -43,7 +43,7 @@ var (
 	localSchemeBuilder = runtime.NewSchemeBuilder(
 		scheme.AddToScheme,
 		extensionsv1alpha1.AddToScheme,
-		resourcemanagerv1alpha1.AddToScheme,
+		resourcesv1alpha1.AddToScheme,
 	)
 
 	// AddToScheme adds the Kubernetes and extension scheme to the given scheme.
