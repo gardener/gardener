@@ -218,6 +218,18 @@ func (b *Botanist) fetchExistingSecrets(ctx context.Context) (map[string]*corev1
 	return existingSecretsMap, nil
 }
 
+// deleteSecrets removes the given secrets from the shoot namespace in the seed
+// as well as removes it from the given `gardenerResourceDataList`.
+func (b *Botanist) deleteSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList, secretNames ...string) error {
+	for _, secretName := range secretNames {
+		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		gardenerResourceDataList.Delete(secretName)
+	}
+	return nil
+}
+
 func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
 	secrets := []string{
 		kubeapiserver.SecretNameStaticToken,
@@ -229,11 +241,8 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 		secrets = append(secrets, logging.SecretNameLokiKubeRBACProxyKubeconfig)
 	}
 
-	for _, secretName := range secrets {
-		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		gardenerResourceDataList.Delete(secretName)
+	if err := b.deleteSecrets(ctx, gardenerResourceDataList, secrets...); err != nil {
+		return err
 	}
 
 	// remove operation annotation
@@ -275,13 +284,7 @@ func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResource
 }
 
 func (b *Botanist) deleteBasicAuthDependantSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
-	for _, secretName := range []string{kubeapiserver.SecretNameBasicAuth, common.KubecfgSecretName} {
-		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		gardenerResourceDataList.Delete(secretName)
-	}
-	return nil
+	return b.deleteSecrets(ctx, gardenerResourceDataList, kubeapiserver.SecretNameBasicAuth, common.KubecfgSecretName)
 }
 
 func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secrets.StaticToken) error {
