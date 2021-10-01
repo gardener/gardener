@@ -73,6 +73,15 @@ WORKDIR /
 
 ENTRYPOINT ["/gardener-seed-admission-controller"]
 
+############# resource-manager #############
+FROM base AS resource-manager
+
+COPY --from=builder /go/bin/gardener-resource-manager /gardener-resource-manager
+
+WORKDIR /
+
+ENTRYPOINT ["/gardener-resource-manager"]
+
 ############# landscaper-gardenlet #############
 FROM base AS landscaper-gardenlet
 
