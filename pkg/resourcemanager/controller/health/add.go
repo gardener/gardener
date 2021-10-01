@@ -31,7 +31,6 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
-	"github.com/gardener/gardener/pkg/resourcemanager/filter"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
@@ -52,7 +51,7 @@ type ControllerConfig struct {
 	MaxConcurrentWorkers int
 	SyncPeriod           time.Duration
 
-	ClassFilter        filter.ClassFilter
+	ClassFilter        managerpredicate.ClassFilter
 	TargetClientConfig resourcemanagercmd.TargetClientConfig
 }
 

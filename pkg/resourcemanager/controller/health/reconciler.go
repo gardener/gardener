@@ -23,7 +23,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/utils"
-	"github.com/gardener/gardener/pkg/resourcemanager/filter"
+	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -42,7 +42,7 @@ type Reconciler struct {
 	client       client.Client
 	targetClient client.Client
 	targetScheme *runtime.Scheme
-	classFilter  *filter.ClassFilter
+	classFilter  *predicate.ClassFilter
 	syncPeriod   time.Duration
 }
 

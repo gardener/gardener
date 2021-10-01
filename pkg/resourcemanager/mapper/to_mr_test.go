@@ -21,8 +21,8 @@ import (
 	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	filter2 "github.com/gardener/gardener/pkg/resourcemanager/filter"
 	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
+	filter2 "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"

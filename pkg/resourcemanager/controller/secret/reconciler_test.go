@@ -19,6 +19,11 @@ import (
 	"fmt"
 	"time"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
+	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
+
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -32,11 +37,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
-	"github.com/gardener/gardener/pkg/resourcemanager/filter"
 )
 
 var _ = Describe("SecretReconciler", func() {
@@ -47,7 +47,7 @@ var _ = Describe("SecretReconciler", func() {
 		c    *mockclient.MockClient
 
 		r           *secretcontroller.Reconciler
-		classFilter *filter.ClassFilter
+		classFilter *predicate.ClassFilter
 		secret      *corev1.Secret
 		secretReq   reconcile.Request
 	)
@@ -56,7 +56,7 @@ var _ = Describe("SecretReconciler", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
 
-		classFilter = filter.NewClassFilter("seed")
+		classFilter = predicate.NewClassFilter("seed")
 		r = &secretcontroller.Reconciler{ClassFilter: classFilter}
 
 		Expect(inject.ClientInto(c, r)).To(BeTrue())

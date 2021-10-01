@@ -20,8 +20,14 @@ import (
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
+	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardenerconstantsv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
+	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
+	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+
 	"github.com/go-logr/logr"
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
@@ -34,15 +40,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
-
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
-	"github.com/gardener/gardener/pkg/resourcemanager/filter"
-	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 // ControllerName is the name of the managedresource controller.
@@ -64,7 +61,7 @@ type ControllerOptions struct {
 type ControllerConfig struct {
 	MaxConcurrentWorkers      int
 	SyncPeriod                time.Duration
-	ClassFilter               *filter.ClassFilter
+	ClassFilter               *managerpredicate.ClassFilter
 	AlwaysUpdate              bool
 	ClusterID                 string
 	GarbageCollectorActivated bool
@@ -125,7 +122,7 @@ func AddToManager(mgr manager.Manager) error {
 func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&o.maxConcurrentWorkers, "max-concurrent-workers", 10, "number of worker threads for concurrent reconciliation of resources")
 	fs.DurationVar(&o.syncPeriod, "sync-period", time.Minute, "duration how often existing resources should be synced")
-	fs.StringVar(&o.resourceClass, "resource-class", filter.DefaultClass, "resource class used to filter resource resources")
+	fs.StringVar(&o.resourceClass, "resource-class", managerpredicate.DefaultClass, "resource class used to filter resource resources")
 	fs.StringVar(&o.clusterID, "cluster-id", "", "optional cluster id for source cluster")
 	fs.BoolVar(&o.alwaysUpdate, "always-update", false, "if set to false then a resource will only be updated if its desired state differs from the actual state. otherwise, an update request will be always sent.")
 }
@@ -133,13 +130,13 @@ func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 // Complete completes the given command line flags and set the defaultControllerConfig accordingly.
 func (o *ControllerOptions) Complete() error {
 	if o.resourceClass == "" {
-		o.resourceClass = filter.DefaultClass
+		o.resourceClass = managerpredicate.DefaultClass
 	}
 
 	defaultControllerConfig = ControllerConfig{
 		MaxConcurrentWorkers: o.maxConcurrentWorkers,
 		SyncPeriod:           o.syncPeriod,
-		ClassFilter:          filter.NewClassFilter(o.resourceClass),
+		ClassFilter:          managerpredicate.NewClassFilter(o.resourceClass),
 		AlwaysUpdate:         o.alwaysUpdate,
 		ClusterID:            o.clusterID,
 	}
@@ -152,7 +149,7 @@ func (o *ControllerOptions) Completed() *ControllerConfig {
 }
 
 // ApplyClassFilter sets filter to the ClassFilter of this config.
-func (c *ControllerConfig) ApplyClassFilter(filter *filter.ClassFilter) {
+func (c *ControllerConfig) ApplyClassFilter(filter *managerpredicate.ClassFilter) {
 	*filter = *c.ClassFilter
 }
 

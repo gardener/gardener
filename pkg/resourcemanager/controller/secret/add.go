@@ -18,6 +18,9 @@ import (
 	"fmt"
 
 	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
+	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
@@ -26,11 +29,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/filter"
-	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
 // ControllerName is the name of the secret controller.
@@ -48,7 +46,7 @@ type ControllerOptions struct {
 type ControllerConfig struct {
 	MaxConcurrentWorkers int
 
-	ClassFilter filter.ClassFilter
+	ClassFilter managerpredicate.ClassFilter
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.

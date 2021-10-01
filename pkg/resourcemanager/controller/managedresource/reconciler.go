@@ -28,14 +28,14 @@ import (
 	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/hashicorp/go-multierror"
-
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/utils"
-	"github.com/gardener/gardener/pkg/resourcemanager/filter"
+	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	errorutils "github.com/gardener/gardener/pkg/utils/errors"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
+	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -71,7 +71,7 @@ type Reconciler struct {
 	targetRESTMapper meta.RESTMapper
 	targetScheme     *runtime.Scheme
 
-	class                     *filter.ClassFilter
+	class                     *predicate.ClassFilter
 	alwaysUpdate              bool
 	syncPeriod                time.Duration
 	garbageCollectorActivated bool

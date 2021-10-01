@@ -15,28 +15,28 @@
  *
  */
 
-package filter_test
+package predicate_test
 
 import (
 	"fmt"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	. "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/filter"
 )
 
 var _ = Describe("ClassFilter", func() {
 	var (
 		classOld     *string = nil
-		finalizerOld         = filter.FinalizerName
+		finalizerOld         = FinalizerName
 
 		classNew     = "new"
-		finalizerNew = fmt.Sprintf("%s-%s", filter.FinalizerName, classNew)
+		finalizerNew = fmt.Sprintf("%s-%s", FinalizerName, classNew)
 
 		mrOldClass = &resourcesv1alpha1.ManagedResource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -68,7 +68,7 @@ var _ = Describe("ClassFilter", func() {
 
 	DescribeTable("Active",
 		func(mr *resourcesv1alpha1.ManagedResource, class string, action, responsible bool) {
-			filter := filter.NewClassFilter(class)
+			filter := NewClassFilter(class)
 
 			act, resp := filter.Active(mr)
 			Expect(act).To(Equal(action))
@@ -82,7 +82,7 @@ var _ = Describe("ClassFilter", func() {
 
 	DescribeTable("Generic",
 		func(mr *resourcesv1alpha1.ManagedResource, class string, expectation bool) {
-			filter := filter.NewClassFilter(class)
+			filter := NewClassFilter(class)
 
 			result := filter.Generic(event.GenericEvent{
 				Object: mr,
@@ -97,7 +97,7 @@ var _ = Describe("ClassFilter", func() {
 
 	DescribeTable("Create",
 		func(mr *resourcesv1alpha1.ManagedResource, class string, expectation bool) {
-			filter := filter.NewClassFilter(class)
+			filter := NewClassFilter(class)
 
 			result := filter.Create(event.CreateEvent{
 				Object: mr,
@@ -112,7 +112,7 @@ var _ = Describe("ClassFilter", func() {
 
 	DescribeTable("Delete",
 		func(mr *resourcesv1alpha1.ManagedResource, class string, expectation bool) {
-			filter := filter.NewClassFilter(class)
+			filter := NewClassFilter(class)
 
 			result := filter.Delete(event.DeleteEvent{
 				Object: mr,
@@ -127,7 +127,7 @@ var _ = Describe("ClassFilter", func() {
 
 	DescribeTable("Update",
 		func(mr *resourcesv1alpha1.ManagedResource, class string, expectation bool) {
-			filter := filter.NewClassFilter(class)
+			filter := NewClassFilter(class)
 
 			result := filter.Update(event.UpdateEvent{
 				ObjectNew: mr,

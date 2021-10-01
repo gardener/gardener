@@ -21,7 +21,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/utils"
-	"github.com/gardener/gardener/pkg/resourcemanager/filter"
+	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +37,7 @@ type Reconciler struct {
 	log    logr.Logger
 	client client.Client
 
-	ClassFilter *filter.ClassFilter
+	ClassFilter *predicate.ClassFilter
 }
 
 // InjectClient injects a client into the reconciler.
