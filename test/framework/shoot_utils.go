@@ -47,11 +47,8 @@ func (f *ShootFramework) ShootKubeconfigSecretName() string {
 }
 
 // GetLokiLogs gets logs from the last 1 hour for <key>, <value> from the loki instance in <lokiNamespace>
-func (f *ShootFramework) GetLokiLogs(ctx context.Context, tenant, lokiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
-	lokiLabels := labels.SelectorFromSet(labels.Set(map[string]string{
-		"app":  lokiLogging,
-		"role": "logging",
-	}))
+func (f *ShootFramework) GetLokiLogs(ctx context.Context, lokiLabels map[string]string, tenant, lokiNamespace, key, value string, client kubernetes.Interface) (*SearchResponse, error) {
+	lokiLabelsSelector := labels.SelectorFromSet(labels.Set(lokiLabels))
 
 	if tenant == "" {
 		tenant = "fake"
@@ -64,7 +61,7 @@ func (f *ShootFramework) GetLokiLogs(ctx context.Context, tenant, lokiNamespace,
 	var reader io.Reader
 	err := retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (bool, error) {
 		var err error
-		reader, err = PodExecByLabel(ctx, lokiLabels, lokiLogging, command, lokiNamespace, client)
+		reader, err = PodExecByLabel(ctx, lokiLabelsSelector, lokiLogging, command, lokiNamespace, client)
 
 		if err != nil {
 			f.Logger.Warn(err)

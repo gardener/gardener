@@ -32,6 +32,7 @@ import (
 	"github.com/onsi/ginkgo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
@@ -63,9 +64,9 @@ func checkRequiredResources(ctx context.Context, k8sSeedClient kubernetes.Interf
 }
 
 // WaitUntilLokiReceivesLogs waits until the loki instance in <lokiNamespace> receives <expected> logs for <key>=<value>
-func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *framework.ShootFramework, tenant, lokiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
+func WaitUntilLokiReceivesLogs(ctx context.Context, interval time.Duration, f *framework.ShootFramework, lokiLabels map[string]string, tenant, lokiNamespace, key, value string, expected, delta int, c kubernetes.Interface) error {
 	err := retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
-		search, err := f.GetLokiLogs(ctx, tenant, lokiNamespace, key, value, c)
+		search, err := f.GetLokiLogs(ctx, lokiLabels, tenant, lokiNamespace, key, value, c)
 		if err != nil {
 			return retry.SevereError(err)
 		}
@@ -171,10 +172,7 @@ func getLokiShootService(number int) *corev1.Service {
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceType(corev1.ServiceTypeExternalName),
-			ExternalName: "loki.garden.svc.cluster.local",
-			// Ports: []corev1.ServicePort{
-			// 	{Port: 80},
-			// },
+			ExternalName: "loki-shoots.garden.svc.cluster.local",
 		},
 	}
 }
@@ -220,4 +218,29 @@ func getConfigMapName(volumes []corev1.Volume, wantedVolumeName string) string {
 		}
 	}
 	return ""
+}
+
+func newEmptyDirVolume(name, size string) corev1.Volume {
+	lokiDataVolumeSize := resource.MustParse(size)
+	return corev1.Volume{
+		Name: name,
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				SizeLimit: &lokiDataVolumeSize,
+			},
+		},
+	}
+}
+
+func newPodAntiAffinity(matchLabels map[string]string) *corev1.PodAntiAffinity {
+	return &corev1.PodAntiAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+			{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: matchLabels,
+				},
+				TopologyKey: "kubernetes.io/hostname",
+			},
+		},
+	}
 }

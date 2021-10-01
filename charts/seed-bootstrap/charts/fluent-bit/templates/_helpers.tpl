@@ -8,6 +8,7 @@ input.conf: |-
 {{- include "input.conf" . }}
 
 filter-kubernetes.conf: |-
+  # Lua filter to add the tag into the record
   [FILTER]
       Name                lua
       Match               kubernetes.*
@@ -164,16 +165,6 @@ filter-kubernetes.conf: |-
 {{- toString .Values.additionalFilters | indent 2 }}
 {{- end }}
 
-  [FILTER]
-      Name record_modifier
-      Match {{ .Values.exposedComponentsTagPrefix }}.*
-      Record gardenuser user
-
-  [FILTER]
-      Name                rewrite_tag
-      Match               {{ .Values.exposedComponentsTagPrefix }}.*
-      Rule                $tag ^.+? kubernetes.$TAG false
-      Emitter_Name        re_emitted-reversed-rewrite-tag
   # Scripts
   [FILTER]
       Name                lua

@@ -51,7 +51,20 @@ spec:
 {{ else }}
           value: 0s
 {{- end }}
+        resources:
+          limits:
+            cpu: 8m
+            memory: 20Mi
+          requests:
+            cpu: 4m
+            memory: 3Mi
       securityContext:
         fsGroup: 65532
         runAsUser: 65532
         runAsNonRoot: true
+{{ if .NodeName }}
+      nodeName: {{ .NodeName }}
+{{- end }}
+{{ if .NodeSelector }}
+      nodeSelector: {{ .NodeSelector }}
+{{- end }}
