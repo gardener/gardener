@@ -3,6 +3,7 @@ module github.com/gardener/gardener
 go 1.16
 
 require (
+	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
@@ -14,8 +15,6 @@ require (
 	github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
 	github.com/gardener/etcd-druid/api v0.0.0-00010101000000-000000000000
 	github.com/gardener/external-dns-management v0.7.18
-	github.com/gardener/gardener-resource-manager v0.25.0
-	github.com/gardener/gardener-resource-manager/api v0.0.0-00010101000000-000000000000
 	github.com/gardener/hvpa-controller v0.3.1
 	github.com/gardener/landscaper/apis v0.7.0
 	github.com/gardener/machine-controller-manager v0.33.0
@@ -28,7 +27,9 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/googleapis/gnostic v0.5.5
 	github.com/hashicorp/go-multierror v1.1.0
+	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.4
 	github.com/mholt/archiver v3.1.1+incompatible
+	github.com/mitchellh/copystructure v1.1.1 // indirect
 	github.com/nwaples/rardecode v1.1.2 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
@@ -82,7 +83,6 @@ replace (
 	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
 	github.com/gardener/etcd-druid => github.com/gardener/etcd-druid v0.6.0
 	github.com/gardener/etcd-druid/api => github.com/gardener/etcd-druid/api v0.6.1-0.20211004135640-0828abe1338b
-	github.com/gardener/gardener-resource-manager/api => github.com/gardener/gardener-resource-manager/api v0.25.0
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.0 // keep this value in sync with sigs.k8s.io/controller-runtime
 	google.golang.org/grpc => google.golang.org/grpc v1.27.1 // keep this value in sync with k8s.io/apiserver
