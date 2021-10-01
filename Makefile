@@ -214,6 +214,7 @@ generate-sequential:
 .PHONY: generate-extensions-crds
 generate-extensions-crds:
 	@controller-gen crd paths=./pkg/apis/extensions/... output:crd:dir=./dev/extensions-crds output:stdout
+	@controller-gen crd paths=./pkg/apis/resources/... output:crd:dir=./example/resource-manager output:stdout && mv ./example/resource-manager/resources.gardener.cloud_managedresources.yaml ./example/resource-manager/10-crd-managedresource.yaml
 
 .PHONY: format
 format:
