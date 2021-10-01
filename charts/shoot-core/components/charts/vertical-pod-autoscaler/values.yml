@@ -1,0 +1,49 @@
+global:
+  images:
+    vpa-admission-controller: image-repository:image-tag
+    vpa-recommender: image-repository:image-tag
+    vpa-updater: image-repository:image-tag
+    vpa-exporter: image-repository:image-tag
+
+
+application:
+  labels:
+    gardener.cloud/role: vpa
+
+  clusterType: shoot
+
+  admissionController:
+    replicas: 1
+    enabled: true
+    podAnnotations: {}
+    podLabels: {}
+    enableServiceAccount: true
+    caCert: abcd
+    controlNamespace: abcd
+    port: 10250
+    servicePort: 443
+
+  recommender:
+    replicas: 1
+    enabled: true
+    podAnnotations: {}
+    podLabels: {}
+    enableServiceAccount: true
+    interval: 1m0s
+    recommendationMarginFraction: 0.05
+
+  updater:
+    replicas: 1
+    enabled: true
+    podAnnotations: {}
+    podLabels: {}
+    enableServiceAccount: true
+    evictAfterOOMThreshold: 48h
+    evictionRateBurst: 1
+    evictionRateLimit: -1
+    evictionTolerance: 1
+    interval: 1m0s
+
+crds:
+  labels:
+    gardener.cloud/role: vpa

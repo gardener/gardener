@@ -296,14 +296,16 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"enableIPVS": b.Shoot.IPVSEnabled(),
 		}
 		verticalPodAutoscaler = map[string]interface{}{
-			"clusterType": "shoot",
-			"admissionController": map[string]interface{}{
-				"enableServiceAccount": false,
-				"controlNamespace":     b.Shoot.SeedNamespace,
+			"application": map[string]interface{}{
+				"clusterType": "shoot",
+				"admissionController": map[string]interface{}{
+					"enableServiceAccount": false,
+					"controlNamespace":     b.Shoot.SeedNamespace,
+				},
+				"exporter":    map[string]interface{}{"enableServiceAccount": false},
+				"recommender": map[string]interface{}{"enableServiceAccount": false},
+				"updater":     map[string]interface{}{"enableServiceAccount": false},
 			},
-			"exporter":    map[string]interface{}{"enableServiceAccount": false},
-			"recommender": map[string]interface{}{"enableServiceAccount": false},
-			"updater":     map[string]interface{}{"enableServiceAccount": false},
 		}
 
 		shootInfo = map[string]interface{}{
@@ -345,7 +347,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 
 	if vpaSecret := b.LoadSecret(common.VPASecretName); vpaSecret != nil {
-		verticalPodAutoscaler["admissionController"].(map[string]interface{})["caCert"] = vpaSecret.Data[secrets.DataKeyCertificateCA]
+		verticalPodAutoscaler["application"].(map[string]interface{})["admissionController"].(map[string]interface{})["caCert"] = vpaSecret.Data[secrets.DataKeyCertificateCA]
 	}
 
 	proxyConfig := b.Shoot.GetInfo().Spec.Kubernetes.KubeProxy
