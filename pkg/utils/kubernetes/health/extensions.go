@@ -101,4 +101,3 @@ func CheckBackupEntry(obj client.Object) error {
 	}
 	return checkExtensionObject(be.Generation, be.Status.ObservedGeneration, be.Annotations, be.Status.LastError, be.Status.LastOperation)
 }
-

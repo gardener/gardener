@@ -35,4 +35,3 @@ func EvalGenericPredicate(obj client.Object, predicates ...predicate.Predicate) 
 
 	return true
 }
-

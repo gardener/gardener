@@ -60,4 +60,3 @@ func CheckAPIServerAvailability(ctx context.Context, condition gardencorev1beta1
 
 // Now determines the current time.
 var Now = time.Now
-
