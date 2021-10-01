@@ -36,8 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// Reconciler performs health checks for resources managed by ManagedResources.
-type Reconciler struct {
+type reconciler struct {
 	log          logr.Logger
 	client       client.Client
 	targetClient client.Client
@@ -47,19 +46,19 @@ type Reconciler struct {
 }
 
 // InjectClient injects a client into the reconciler.
-func (r *Reconciler) InjectClient(c client.Client) error {
+func (r *reconciler) InjectClient(c client.Client) error {
 	r.client = c
 	return nil
 }
 
 // InjectLogger injects a logger into the reconciler.
-func (r *Reconciler) InjectLogger(l logr.Logger) error {
+func (r *reconciler) InjectLogger(l logr.Logger) error {
 	r.log = l.WithName(ControllerName)
 	return nil
 }
 
 // Reconcile performs health checks.
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.log.WithValues("object", req)
 	log.Info("Starting ManagedResource health checks")
 

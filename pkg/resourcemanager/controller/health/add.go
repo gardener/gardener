@@ -59,7 +59,7 @@ type ControllerConfig struct {
 func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	healthController, err := controller.New("health-controller", mgr, controller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-		Reconciler: &Reconciler{
+		Reconciler: &reconciler{
 			syncPeriod:   conf.SyncPeriod,
 			classFilter:  &conf.ClassFilter,
 			targetClient: conf.TargetClientConfig.Client,
