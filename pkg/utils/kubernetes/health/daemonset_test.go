@@ -27,33 +27,48 @@ import (
 )
 
 var _ = Describe("Daemonset", func() {
-	Describe("#CheckDaemonSet", func() {
-		oneUnavailable := intstr.FromInt(1)
+	oneUnavailable := intstr.FromInt(1)
 
-		DescribeTable("daemonsets",
-			func(daemonSet *appsv1.DaemonSet, matcher types.GomegaMatcher) {
-				err := health.CheckDaemonSet(daemonSet)
-				Expect(err).To(matcher)
-			},
-			Entry("healthy", &appsv1.DaemonSet{}, BeNil()),
-			Entry("healthy with one unavailable", &appsv1.DaemonSet{
-				Spec: appsv1.DaemonSetSpec{UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
-					Type: appsv1.RollingUpdateDaemonSetStrategyType,
-					RollingUpdate: &appsv1.RollingUpdateDaemonSet{
-						MaxUnavailable: &oneUnavailable,
-					},
-				}},
-				Status: appsv1.DaemonSetStatus{
-					DesiredNumberScheduled: 2,
-					CurrentNumberScheduled: 1,
+	DescribeTable("#CheckDaemonSet",
+		func(daemonSet *appsv1.DaemonSet, matcher types.GomegaMatcher) {
+			err := health.CheckDaemonSet(daemonSet)
+			Expect(err).To(matcher)
+		},
+		Entry("not observed at latest version", &appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{Generation: 1},
+		}, HaveOccurred()),
+		Entry("not enough scheduled", &appsv1.DaemonSet{
+			Status: appsv1.DaemonSetStatus{DesiredNumberScheduled: 1},
+		}, HaveOccurred()),
+		Entry("misscheduled pods", &appsv1.DaemonSet{
+			Status: appsv1.DaemonSetStatus{NumberMisscheduled: 1},
+		}, HaveOccurred()),
+		Entry("too many unavailable pods", &appsv1.DaemonSet{
+			Spec: appsv1.DaemonSetSpec{UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+				Type: appsv1.RollingUpdateDaemonSetStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDaemonSet{
+					MaxUnavailable: &oneUnavailable,
 				},
-			}, BeNil()),
-			Entry("not observed at latest version", &appsv1.DaemonSet{
-				ObjectMeta: metav1.ObjectMeta{Generation: 1},
-			}, HaveOccurred()),
-			Entry("not enough updated scheduled", &appsv1.DaemonSet{
-				Status: appsv1.DaemonSetStatus{DesiredNumberScheduled: 1},
-			}, HaveOccurred()),
-		)
-	})
+			}},
+			Status: appsv1.DaemonSetStatus{
+				DesiredNumberScheduled: 2,
+				CurrentNumberScheduled: 2,
+				NumberUnavailable:      2,
+				NumberReady:            0,
+			},
+		}, HaveOccurred()),
+		Entry("too less ready pods", &appsv1.DaemonSet{
+			Status: appsv1.DaemonSetStatus{
+				DesiredNumberScheduled: 1,
+				CurrentNumberScheduled: 1,
+			},
+		}, HaveOccurred()),
+		Entry("healthy", &appsv1.DaemonSet{
+			Status: appsv1.DaemonSetStatus{
+				DesiredNumberScheduled: 1,
+				CurrentNumberScheduled: 1,
+				NumberReady:            1,
+			},
+		}, BeNil()),
+	)
 })

@@ -17,6 +17,8 @@
 package health
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -50,4 +52,18 @@ func GetPodCondition(status *corev1.PodStatus, conditionType corev1.PodCondition
 		}
 	}
 	return -1, nil
+}
+
+var healthyPodPhases = []corev1.PodPhase{corev1.PodRunning, corev1.PodSucceeded}
+
+// CheckPod checks whether the given Pod is healthy.
+// A Pod is considered healthy if its `.status.phase` is `Running` or `Succeeded`.
+func CheckPod(pod *corev1.Pod) error {
+	for _, healthyPhase := range healthyPodPhases {
+		if pod.Status.Phase == healthyPhase {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("pod is in invalid phase %q (expected one of %q)", pod.Status.Phase, healthyPodPhases)
 }

@@ -60,7 +60,7 @@ func checkSeed(seed *gardencorev1beta1.Seed, identity *gardencorev1beta1.Gardene
 		if condition == nil {
 			return requiredConditionMissing(conditionType)
 		}
-		if err := checkConditionState(string(gardencorev1beta1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(condition.Type), string(gardencorev1beta1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}

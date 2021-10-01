@@ -40,7 +40,7 @@ func CheckManagedSeed(managedSeed *seedmanagementv1alpha1.ManagedSeed) error {
 		if condition == nil {
 			return requiredConditionMissing(string(conditionType))
 		}
-		if err := checkConditionState(string(gardencorev1beta1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(condition.Type), string(gardencorev1beta1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}

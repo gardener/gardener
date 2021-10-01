@@ -15,27 +15,25 @@
 package health
 
 import (
-	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
-// CheckAPIService checks whether the given APIService is healthy.
-// An APIService is considered healthy if it has the `Available` condition and its status is `True`.
-func CheckAPIService(apiService *apiregistrationv1.APIService) error {
-	const (
-		requiredCondition       = apiregistrationv1.Available
-		requiredConditionStatus = apiregistrationv1.ConditionTrue
-	)
+// CheckJob checks whether the given Job is healthy.
+// A Job is considered healthy if its `JobFailed` condition is missing or has status `False`.
+func CheckJob(job *batchv1.Job) error {
+	condition := getJobCondition(job.Status.Conditions, batchv1.JobFailed)
+	if condition == nil {
+		return nil
+	}
+	return checkConditionState(string(condition.Type), string(batchv1.JobFailed), string(corev1.ConditionFalse), condition.Reason, condition.Message)
+}
 
-	for _, condition := range apiService.Status.Conditions {
-		if condition.Type == requiredCondition {
-			return checkConditionState(
-				string(condition.Type),
-				string(requiredConditionStatus),
-				string(condition.Status),
-				condition.Reason,
-				condition.Message,
-			)
+func getJobCondition(conditions []batchv1.JobCondition, conditionType batchv1.JobConditionType) *batchv1.JobCondition {
+	for _, condition := range conditions {
+		if condition.Type == conditionType {
+			return &condition
 		}
 	}
-	return requiredConditionMissing(string(requiredCondition))
+	return nil
 }

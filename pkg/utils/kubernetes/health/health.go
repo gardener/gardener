@@ -16,7 +16,6 @@ package health
 
 import (
 	"fmt"
-	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -27,9 +26,10 @@ func requiredConditionMissing(conditionType string) error {
 	return fmt.Errorf("condition %q is missing", conditionType)
 }
 
-func checkConditionState(expected, actual, reason, message string) error {
+func checkConditionState(conditionType, expected, actual, reason, message string) error {
 	if expected != actual {
-		return fmt.Errorf("%s (%s)", strings.Trim(message, "."), reason)
+		return fmt.Errorf("condition %q has invalid status %s (expected %s) due to %s: %s",
+			conditionType, actual, expected, reason, message)
 	}
 	return nil
 }

@@ -50,7 +50,7 @@ func CheckNode(node *corev1.Node) error {
 		if condition == nil {
 			return requiredConditionMissing(conditionType)
 		}
-		if err := checkConditionState(string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(condition.Type), string(corev1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}
@@ -60,7 +60,7 @@ func CheckNode(node *corev1.Node) error {
 		if condition == nil {
 			continue
 		}
-		if err := checkConditionState(string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
+		if err := checkConditionState(string(condition.Type), string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}

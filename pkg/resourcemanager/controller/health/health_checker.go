@@ -17,8 +17,7 @@ package health
 import (
 	"context"
 
-	"github.com/gardener/gardener/pkg/resourcemanager/health"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -27,6 +26,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // CheckHealth checks whether the given `runtime.Unstructured` is healthy.
