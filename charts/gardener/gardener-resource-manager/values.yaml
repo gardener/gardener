@@ -1,0 +1,37 @@
+image:
+  repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
+  tag: latest
+  pullPolicy: IfNotPresent
+
+resources: {}
+
+metricsPort: 8080
+healthPort: 8081
+
+controllers:
+# cacheResyncPeriod: 24h0m0s
+  managedResource:
+    syncPeriod: 1m0s
+    concurrentSyncs: 10
+    alwaysUpdate: false
+  managedResourceHealth:
+    syncPeriod: 1m0s
+    concurrentSyncs: 10
+  garbageCollector:
+    syncPeriod: ""
+
+leaderElection:
+  enabled: true
+  resourceLock: leases
+  leaseDuration: 15s
+  renewDeadline: 10s
+  retryPeriod: 2s
+
+# targetKubeconfig: |
+#   apiVersion: v1
+#   clusters:
+#   - cluster:
+#       insecure-skip-tls-verify: true
+#       server: https://127.0.0.1:6443
+#     name: docker-desktop
+#   ...
