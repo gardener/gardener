@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"time"
 
-	resourcev1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
-	resourcev1alpha1helper "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1/helper"
+	resourcev1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	resourcev1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
