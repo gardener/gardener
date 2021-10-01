@@ -8388,6 +8388,37 @@ service account token issuer. The issuer will sign issued ID tokens with this pr
 Only useful if service account tokens are also issued by another external system.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>extendTokenExpiration</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExtendTokenExpiration turns on projected service account expiration extension during token generation, which
+helps safe transition from legacy token to bound service account token feature. If this flag is enabled,
+admission injected tokens would be extended up to 1 year to prevent unexpected failure during transition,
+ignoring value of service-account-max-token-expiration.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>maxTokenExpiration</code></br>
+<em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration">
+Kubernetes meta/v1.Duration
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>MaxTokenExpiration is the maximum validity duration of a token created by the service account token issuer. If an
+otherwise valid TokenRequest with a validity duration larger than this value is requested, a token will be issued
+with a validity duration of this value.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.ShootAdvertisedAddress">ShootAdvertisedAddress

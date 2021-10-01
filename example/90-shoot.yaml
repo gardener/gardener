@@ -172,6 +172,12 @@ spec:
   #     maxNonMutatingInflight: 400
   #     maxMutatingInflight: 200
   #   enableAnonymousAuthentication: false # See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
+  #   serviceAccountConfig:
+  #     issuer: foo
+  #     signingKeySecretName:
+  #       name: my-signing-key-secret
+  #     extendTokenExpiration: true
+  #     maxTokenExpiration: 1y
   # kubeControllerManager:
   #   nodeCIDRMaskSize: 24
   #   podEvictionTimeout: 2m0s

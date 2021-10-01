@@ -17,6 +17,7 @@ package botanist
 import (
 	"context"
 	"net"
+	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
@@ -1106,8 +1107,10 @@ var _ = Describe("KubeAPIServer", func() {
 
 		Describe("ServiceAccountConfig", func() {
 			var (
-				signingKey       = []byte("some-key")
-				signingKeySecret *corev1.Secret
+				signingKey            = []byte("some-key")
+				signingKeySecret      *corev1.Secret
+				maxTokenExpiration    = metav1.Duration{Duration: time.Hour}
+				extendTokenExpiration = false
 			)
 
 			BeforeEach(func() {
@@ -1157,6 +1160,29 @@ var _ = Describe("KubeAPIServer", func() {
 						})
 					},
 					kubeapiserver.ServiceAccountConfig{Issuer: "https://api." + internalClusterDomain},
+					false,
+					Not(HaveOccurred()),
+				),
+				Entry("Issuer is not provided",
+					func() {
+						botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+							Spec: gardencorev1beta1.ShootSpec{
+								Kubernetes: gardencorev1beta1.Kubernetes{
+									KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+										ServiceAccountConfig: &gardencorev1beta1.ServiceAccountConfig{
+											ExtendTokenExpiration: &extendTokenExpiration,
+											MaxTokenExpiration:    &maxTokenExpiration,
+										},
+									},
+								},
+							},
+						})
+					},
+					kubeapiserver.ServiceAccountConfig{
+						Issuer:                "https://api." + internalClusterDomain,
+						ExtendTokenExpiration: &extendTokenExpiration,
+						MaxTokenExpiration:    &maxTokenExpiration,
+					},
 					false,
 					Not(HaveOccurred()),
 				),

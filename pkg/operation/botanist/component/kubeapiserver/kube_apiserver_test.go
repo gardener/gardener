@@ -16,6 +16,7 @@ package kubeapiserver_test
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -1688,12 +1689,14 @@ rules:
 									corev1.ResourceMemory: resource.MustParse("4Gi"),
 								},
 							}
-							admissionPlugin1     = "foo"
-							admissionPlugin2     = "foo"
-							admissionPlugins     = []gardencorev1beta1.AdmissionPlugin{{Name: admissionPlugin1}, {Name: admissionPlugin2}}
-							externalHostname     = "api.foo.bar.com"
-							serviceAccountIssuer = "issuer"
-							serviceNetworkCIDR   = "1.2.3.4/5"
+							admissionPlugin1                    = "foo"
+							admissionPlugin2                    = "foo"
+							admissionPlugins                    = []gardencorev1beta1.AdmissionPlugin{{Name: admissionPlugin1}, {Name: admissionPlugin2}}
+							externalHostname                    = "api.foo.bar.com"
+							serviceAccountIssuer                = "issuer"
+							serviceAccountMaxTokenExpiration    = time.Hour
+							serviceAccountExtendTokenExpiration = false
+							serviceNetworkCIDR                  = "1.2.3.4/5"
 						)
 
 						kapi = New(kubernetesInterface, namespace, Values{
@@ -1701,9 +1704,13 @@ rules:
 							Autoscaling:      AutoscalingConfig{APIServerResources: apiServerResources},
 							ExternalHostname: externalHostname,
 							Images:           images,
-							ServiceAccount:   ServiceAccountConfig{Issuer: serviceAccountIssuer},
-							Version:          version,
-							VPN:              VPNConfig{ServiceNetworkCIDR: serviceNetworkCIDR},
+							ServiceAccount: ServiceAccountConfig{
+								Issuer:                serviceAccountIssuer,
+								MaxTokenExpiration:    &metav1.Duration{Duration: serviceAccountMaxTokenExpiration},
+								ExtendTokenExpiration: &serviceAccountExtendTokenExpiration,
+							},
+							Version: version,
+							VPN:     VPNConfig{ServiceNetworkCIDR: serviceNetworkCIDR},
 						})
 						kapi.SetSecrets(secrets)
 						deployAndRead()
@@ -1749,6 +1756,8 @@ rules:
 							"--secure-port=443",
 							"--service-cluster-ip-range="+serviceNetworkCIDR,
 							"--service-account-issuer="+serviceAccountIssuer,
+							"--service-account-max-token-expiration="+serviceAccountMaxTokenExpiration.String(),
+							"--service-account-extend-token-expiration="+strconv.FormatBool(serviceAccountExtendTokenExpiration),
 							"--service-account-key-file=/srv/kubernetes/service-account-key/id_rsa",
 							"--service-account-signing-key-file=/srv/kubernetes/service-account-key/id_rsa",
 							"--token-auth-file=/srv/kubernetes/token/static_tokens.csv",

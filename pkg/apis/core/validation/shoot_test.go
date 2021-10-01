@@ -1557,38 +1557,68 @@ var _ = Describe("Shoot Validation Tests", func() {
 			)
 		})
 
-		It("should not allow too high values for max inflight requests fields", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.KubeAPIServerRequests{
-				MaxNonMutatingInflight: pointer.Int32(123123123),
-				MaxMutatingInflight:    pointer.Int32(412412412),
-			}
+		Context("requests", func() {
+			It("should not allow too high values for max inflight requests fields", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.KubeAPIServerRequests{
+					MaxNonMutatingInflight: pointer.Int32(123123123),
+					MaxMutatingInflight:    pointer.Int32(412412412),
+				}
 
-			errorList := ValidateShoot(shoot)
+				errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxNonMutatingInflight"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxMutatingInflight"),
-			}))))
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxNonMutatingInflight"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxMutatingInflight"),
+				}))))
+			})
+
+			It("should not allow negative values for max inflight requests fields", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.KubeAPIServerRequests{
+					MaxNonMutatingInflight: pointer.Int32(-1),
+					MaxMutatingInflight:    pointer.Int32(-1),
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxNonMutatingInflight"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxMutatingInflight"),
+				}))))
+			})
 		})
 
-		It("should not allow negative values for max inflight requests fields", func() {
-			shoot.Spec.Kubernetes.KubeAPIServer.Requests = &core.KubeAPIServerRequests{
-				MaxNonMutatingInflight: pointer.Int32(-1),
-				MaxMutatingInflight:    pointer.Int32(-1),
-			}
+		Context("service account config", func() {
+			It("should not allow too specify a negative max token duration", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+					MaxTokenExpiration: &metav1.Duration{Duration: -1},
+				}
 
-			errorList := ValidateShoot(shoot)
+				errorList := ValidateShoot(shoot)
 
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxNonMutatingInflight"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.kubernetes.kubeAPIServer.requests.maxMutatingInflight"),
-			}))))
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.maxTokenExpiration"),
+				}))))
+			})
+
+			It("should not allow too specify the 'extend' flag if kubernetes is lower than 1.19", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.ServiceAccountConfig = &core.ServiceAccountConfig{
+					ExtendTokenExpiration: pointer.Bool(true),
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.serviceAccountConfig.extendTokenExpiration"),
+				}))))
+			})
 		})
 
 		Context("KubeControllerManager validation", func() {
