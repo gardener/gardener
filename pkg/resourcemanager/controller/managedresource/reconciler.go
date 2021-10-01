@@ -32,7 +32,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/utils"
 	"github.com/gardener/gardener/pkg/resourcemanager/filter"
-
+	errorutils "github.com/gardener/gardener/pkg/utils/errors"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -410,7 +410,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newRe
 		results   = make(chan error)
 		wg        sync.WaitGroup
 		errorList = &multierror.Error{
-			ErrorFormat: utils.NewErrorFormatFuncWithPrefix("Could not apply all new resources"),
+			ErrorFormat: errorutils.NewErrorFormatFuncWithPrefix("Could not apply all new resources"),
 		}
 	)
 
@@ -631,7 +631,7 @@ func (r *Reconciler) cleanOldResources(ctx context.Context, index *objectIndex, 
 		deletePVCs      = mr.Spec.DeletePersistentVolumeClaims != nil && *mr.Spec.DeletePersistentVolumeClaims
 		deletionPending = false
 		errorList       = &multierror.Error{
-			ErrorFormat: utils.NewErrorFormatFuncWithPrefix("Could not clean all old resources"),
+			ErrorFormat: errorutils.NewErrorFormatFuncWithPrefix("Could not clean all old resources"),
 		}
 	)
 
@@ -746,7 +746,7 @@ func (r *Reconciler) releaseOrphanedResources(ctx context.Context, orphanedResou
 		results   = make(chan error)
 		wg        sync.WaitGroup
 		errorList = &multierror.Error{
-			ErrorFormat: utils.NewErrorFormatFuncWithPrefix("Could not release all orphaned resources"),
+			ErrorFormat: errorutils.NewErrorFormatFuncWithPrefix("Could not release all orphaned resources"),
 		}
 	)
 

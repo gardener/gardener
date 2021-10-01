@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/utils"
+	errorutils "github.com/gardener/gardener/pkg/utils/errors"
 
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
@@ -117,7 +117,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 	var (
 		results   = make(chan error, 1)
 		wg        wait.Group
-		errorList = &multierror.Error{ErrorFormat: utils.NewErrorFormatFuncWithPrefix("Could not delete all unused resources")}
+		errorList = &multierror.Error{ErrorFormat: errorutils.NewErrorFormatFuncWithPrefix("Could not delete all unused resources")}
 	)
 
 	for id := range objectsToGarbageCollect {

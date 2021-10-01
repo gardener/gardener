@@ -20,27 +20,25 @@ import (
 	"sync"
 	"time"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"k8s.io/component-base/version"
-	"k8s.io/component-base/version/verflag"
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	garbagecollectorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	healthcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
 	resourcecontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	"github.com/gardener/gardener/pkg/resourcemanager/healthz"
-	logpkg "github.com/gardener/gardener/pkg/resourcemanager/log"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"k8s.io/component-base/version"
+	"k8s.io/component-base/version/verflag"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 var log = runtimelog.Log.WithName("gardener-resource-manager")
 
 // NewResourceManagerCommand creates a new command for running a gardener resource manager controllers.
-func NewResourceManagerCommand() *cobra.Command {
-	runtimelog.SetLogger(logpkg.ZapLogger(false))
+func NewResourceManagerCommand() (*cobra.Command, error) {
 	entryLog := log.WithName("entrypoint")
 
 	managerOpts := &resourcemanagercmd.ManagerOptions{}
@@ -172,5 +170,5 @@ func NewResourceManagerCommand() *cobra.Command {
 	)
 	verflag.AddFlags(cmd.Flags())
 
-	return cmd
+	return cmd, nil
 }

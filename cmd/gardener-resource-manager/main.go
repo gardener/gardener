@@ -15,10 +15,11 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/gardener/gardener/cmd/gardener-resource-manager/app"
-	"github.com/gardener/gardener/pkg/resourcemanager/log"
+	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/client-go/rest"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -33,10 +34,21 @@ func main() {
 		}),
 	)
 
-	runtimelog.SetLogger(log.ZapLogger(false))
+	zapLogger, err := logger.NewZapLogger("info", "json")
+	if err != nil {
+		panic(fmt.Errorf("failed to init logger: %w", err))
+	}
+	runtimelog.SetLogger(logger.NewZapLogr(zapLogger))
+
 	ctx := signals.SetupSignalHandler()
 
-	if err := app.NewResourceManagerCommand().ExecuteContext(ctx); err != nil {
+	cmd, err := app.NewResourceManagerCommand()
+	if err != nil {
+		runtimelog.Log.Error(err, "error creating the main controller command")
+		os.Exit(1)
+	}
+
+	if err := cmd.ExecuteContext(ctx); err != nil {
 		runtimelog.Log.Error(err, "error executing the main controller command")
 		os.Exit(1)
 	}

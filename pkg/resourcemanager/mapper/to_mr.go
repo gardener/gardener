@@ -17,10 +17,11 @@ package mapper
 import (
 	"context"
 
+	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/utils"
+	contextutils "github.com/gardener/gardener/pkg/utils/context"
 
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,7 +41,7 @@ func (m *secretToManagedResourceMapper) InjectClient(client client.Client) error
 }
 
 func (m *secretToManagedResourceMapper) InjectStopChannel(stopCh <-chan struct{}) error {
-	m.ctx = utils.ContextFromStopChannel(stopCh)
+	m.ctx = contextutils.FromStopChannel(stopCh)
 	return nil
 }
 
