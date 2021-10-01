@@ -82,7 +82,6 @@ var _ = Describe("GardenClientMap", func() {
 					kubernetes.WithRESTConfig(restConfig),
 					kubernetes.WithClientOptions(client.Options{Scheme: kubernetes.GardenScheme}),
 					kubernetes.WithUncached(&corev1.ConfigMap{}),
-					kubernetes.WithUncached(&corev1.Secret{}),
 				))
 				return fakeCS, nil
 			}
