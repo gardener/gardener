@@ -219,8 +219,8 @@ var _ = Describe("DNSRecord", func() {
 			Expect(dnsRecord.Deploy(ctx)).To(MatchError(testErr))
 		})
 
-		It("should deploy the DNSRecord resource if CreateOnly is true and the DNSRecord is not found", func() {
-			values.CreateOnly = true
+		It("should deploy the DNSRecord resource if ReconcileOnce is true and the DNSRecord is not found", func() {
+			values.ReconcileOnce = true
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
@@ -246,10 +246,12 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
-		It("should not deploy the DNSRecord resource if CreateOnly is true and the DNSRecord is found", func() {
-			values.CreateOnly = true
+		It("should update the timestamp annotation if ReconcileOnce is true and the DNSRecord is found", func() {
+			values.ReconcileOnce = true
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
-			dns.Annotations = map[string]string{}
+			delete(dns.Annotations, v1beta1constants.GardenerOperation)
+			// set old timestamp (e.g. added on creation / earlier Deploy call)
+			metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
 			Expect(c.Create(ctx, dns)).To(Succeed())
 
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
@@ -265,7 +267,10 @@ var _ = Describe("DNSRecord", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            name,
 					Namespace:       namespace,
-					ResourceVersion: "1",
+					ResourceVersion: "2",
+					Annotations: map[string]string{
+						v1beta1constants.GardenerTimestamp: now.UTC().String(),
+					},
 				},
 				Spec: dns.Spec,
 			}))
