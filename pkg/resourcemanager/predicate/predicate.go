@@ -14,6 +14,25 @@
 
 package predicate
 
-import runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+import (
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+)
 
 var log = runtimelog.Log.WithName("gardener-resource-manager")
+
+// EvalGenericPredicate returns true if all predicates match for the given object.
+func EvalGenericPredicate(obj client.Object, predicates ...predicate.Predicate) bool {
+	e := event.GenericEvent{Object: obj}
+
+	for _, p := range predicates {
+		if !p.Generic(e) {
+			return false
+		}
+	}
+
+	return true
+}
+

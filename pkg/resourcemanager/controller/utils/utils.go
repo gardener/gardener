@@ -27,22 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
-
-// EvalGenericPredicate returns true if all predicates match for the given object.
-func EvalGenericPredicate(obj client.Object, predicates ...predicate.Predicate) bool {
-	e := event.GenericEvent{Object: obj}
-
-	for _, p := range predicates {
-		if !p.Generic(e) {
-			return false
-		}
-	}
-
-	return true
-}
 
 // TryUpdate tries to apply the given transformation function onto the given object, and to update it afterwards.
 // It retries the update with an exponential backoff.
