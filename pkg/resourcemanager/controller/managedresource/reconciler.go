@@ -28,7 +28,6 @@ import (
 	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/utils"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	errorutils "github.com/gardener/gardener/pkg/utils/errors"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -438,7 +437,7 @@ func (r *Reconciler) applyNewResources(ctx context.Context, origin string, newRe
 			r.log.Info("Applying", "resource", resource)
 
 			results <- retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-				if operationResult, err := utils.TypedCreateOrUpdate(ctx, r.targetClient, r.targetScheme, current, r.alwaysUpdate, func() error {
+				if operationResult, err := controllerutils.TypedCreateOrUpdate(ctx, r.targetClient, r.targetScheme, current, r.alwaysUpdate, func() error {
 					metadata, err := meta.Accessor(obj.obj)
 					if err != nil {
 						return fmt.Errorf("error getting metadata of object %q: %s", resource, err)
@@ -841,7 +840,7 @@ func tryUpdateManagedResourceStatus(
 	mr *resourcesv1alpha1.ManagedResource,
 	resources []resourcesv1alpha1.ObjectReference,
 	updatedConditions ...resourcesv1alpha1.ManagedResourceCondition) error {
-	return utils.TryUpdateStatus(ctx, retry.DefaultBackoff, c, mr, func() error {
+	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, c, mr, func() error {
 		mr.Status.Conditions = resourcesv1alpha1helper.MergeConditions(mr.Status.Conditions, updatedConditions...)
 		mr.Status.Resources = resources
 		mr.Status.ObservedGeneration = mr.Generation
@@ -850,7 +849,7 @@ func tryUpdateManagedResourceStatus(
 }
 
 func tryUpdateManagedResourceConditions(ctx context.Context, c client.Client, mr *resourcesv1alpha1.ManagedResource, conditions ...resourcesv1alpha1.ManagedResourceCondition) error {
-	return utils.TryUpdateStatus(ctx, retry.DefaultBackoff, c, mr, func() error {
+	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, c, mr, func() error {
 		newConditions := resourcesv1alpha1helper.MergeConditions(mr.Status.Conditions, conditions...)
 		mr.Status.Conditions = newConditions
 		return nil

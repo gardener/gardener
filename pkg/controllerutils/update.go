@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package controllerutils
 
 import (
 	"context"
@@ -28,12 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
-
-// TryUpdate tries to apply the given transformation function onto the given object, and to update it afterwards.
-// It retries the update with an exponential backoff.
-func TryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, transform func() error) error {
-	return tryUpdate(ctx, backoff, c, obj, c.Update, transform)
-}
 
 // TypedCreateOrUpdate is like controllerutil.CreateOrUpdate, it retrieves the current state of the object from the
 // API server, applies the given mutate func and creates or updates it afterwards. In contrast to
@@ -89,6 +83,12 @@ func TypedCreateOrUpdate(ctx context.Context, c client.Client, scheme *runtime.S
 	return controllerutil.OperationResultUpdated, c.Update(ctx, obj)
 }
 
+// TryUpdate tries to apply the given transformation function onto the given object, and to update it afterwards.
+// It retries the update with an exponential backoff.
+func TryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, transform func() error) error {
+	return tryUpdate(ctx, backoff, c, obj, c.Update, transform)
+}
+
 // TryUpdateStatus tries to apply the given transformation function onto the given object, and to update its
 // status afterwards. It retries the status update with an exponential backoff.
 func TryUpdateStatus(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, transform func() error) error {
@@ -96,10 +96,9 @@ func TryUpdateStatus(ctx context.Context, backoff wait.Backoff, c client.Client,
 }
 
 func tryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, updateFunc func(context.Context, client.Object, ...client.UpdateOption) error, transform func() error) error {
-	key := client.ObjectKeyFromObject(obj)
-
+	resetCopy := obj.DeepCopyObject()
 	return exponentialBackoff(ctx, backoff, func() (bool, error) {
-		if err := c.Get(ctx, key, obj); err != nil {
+		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			return false, err
 		}
 
@@ -114,6 +113,12 @@ func tryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj c
 
 		if err := updateFunc(ctx, obj); err != nil {
 			if apierrors.IsConflict(err) {
+				// In case of a conflict we are resetting the obj to its original version, as it was
+				// passed to the function, to ensure that, on the next iteration the
+				// equality check of the obj recieved from the server and the object after
+				// its transformation would be valid. Otherwise the obj would be with mutated
+				// fields in result of the transform function from previous iteration.
+				reflect.ValueOf(obj).Elem().Set(reflect.ValueOf(resetCopy).Elem())
 				return false, nil
 			}
 			return false, err

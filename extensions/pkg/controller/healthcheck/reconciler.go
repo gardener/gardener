@@ -36,6 +36,7 @@ import (
 	gardenv1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -267,7 +268,7 @@ type condition struct {
 }
 
 func (r *reconciler) updateExtensionConditions(ctx context.Context, extension extensionsv1alpha1.Object, conditions ...condition) error {
-	return extensionscontroller.TryPatchStatus(ctx, retry.DefaultBackoff, r.client, extension, func() error {
+	return controllerutils.TryPatchStatus(ctx, retry.DefaultBackoff, r.client, extension, func() error {
 		for _, cond := range conditions {
 			now := metav1.Now()
 			if c := gardencorev1beta1helper.GetCondition(extension.GetExtensionStatus().GetConditions(), gardencorev1beta1.ConditionType(cond.healthConditionType)); c != nil {

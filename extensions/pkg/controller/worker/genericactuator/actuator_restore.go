@@ -29,6 +29,7 @@ import (
 	workercontroller "github.com/gardener/gardener/extensions/pkg/controller/worker"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -130,7 +131,7 @@ func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log
 				return err
 			}
 
-			if err := extensionscontroller.TryPatchStatus(ctx, retry.DefaultBackoff, a.client, newMachine, func() error {
+			if err := controllerutils.TryPatchStatus(ctx, retry.DefaultBackoff, a.client, newMachine, func() error {
 				newMachine.Status = machine.Status
 				return nil
 			}); err != nil {

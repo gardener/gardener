@@ -23,6 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -112,7 +113,7 @@ func (a *AddToManagerBuilder) AddToManager(m manager.Manager) error {
 
 // DeleteAllFinalizers removes all finalizers from the object and issues an  update.
 func DeleteAllFinalizers(ctx context.Context, client client.Client, obj client.Object) error {
-	return TryUpdate(ctx, retry.DefaultBackoff, client, obj, func() error {
+	return controllerutils.TryUpdate(ctx, retry.DefaultBackoff, client, obj, func() error {
 		obj.SetFinalizers(nil)
 		return nil
 	})

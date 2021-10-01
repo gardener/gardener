@@ -20,7 +20,7 @@ import (
 	"time"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/go-logr/logr"
@@ -99,7 +99,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	if addFinalizer || removeFinalizer {
-		if err := utils.TryUpdate(ctx, retry.DefaultBackoff, r.client, secret, func() error {
+		if err := controllerutils.TryUpdate(ctx, retry.DefaultBackoff, r.client, secret, func() error {
 			secretFinalizers := sets.NewString(secret.Finalizers...)
 			if addFinalizer {
 				secretFinalizers.Insert(controllerFinalizer)

@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils_test
+package controllerutils
 
 import (
 	"context"
+	"encoding/json"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	. "github.com/gardener/gardener/pkg/resourcemanager/controller/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/golang/mock/gomock"
@@ -33,8 +36,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	autoscalerv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -299,3 +304,63 @@ var _ = Describe("utils", func() {
 		})
 	})
 })
+
+var _ = Describe("#tryUpdate", func() {
+	It("should set state to obj, when conflict occurs", func() {
+		s := runtime.NewScheme()
+		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
+		objInFakeClient := newInfraObj()
+		objInFakeClient.Status.Conditions = []gardencorev1beta1.Condition{
+			{Type: "Health", Reason: "reason", Message: "messages", Status: "status", LastUpdateTime: metav1.Now()},
+		}
+
+		c := fake.NewClientBuilder().WithScheme(s).WithObjects(objInFakeClient).Build()
+		infraObj := newInfraObj()
+		transform := func() error {
+			infraState, _ := json.Marshal(state{"someState"})
+			infraObj.GetExtensionStatus().SetState(&runtime.RawExtension{Raw: infraState})
+			return nil
+		}
+
+		u := &conflictErrManager{
+			conflictsBeforeUpdate: 2,
+			client:                c,
+		}
+
+		tryUpdateErr := tryUpdate(context.TODO(), retry.DefaultRetry, c, infraObj, u.updateFunc, transform)
+		Expect(tryUpdateErr).NotTo(HaveOccurred())
+
+		objFromFakeClient := &extensionsv1alpha1.Infrastructure{}
+		err := c.Get(context.TODO(), kutil.Key("infraNamespace", "infraName"), objFromFakeClient)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(objFromFakeClient).To(Equal(infraObj))
+	})
+})
+
+type state struct {
+	Name string `json:"name"`
+}
+
+func newInfraObj() *extensionsv1alpha1.Infrastructure {
+	return &extensionsv1alpha1.Infrastructure{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "infraName",
+			Namespace: "infraNamespace",
+		},
+	}
+}
+
+type conflictErrManager struct {
+	conflictsBeforeUpdate int
+	conflictsOccured      int
+	client                client.Client
+}
+
+func (c *conflictErrManager) updateFunc(ctx context.Context, obj client.Object, o ...client.UpdateOption) error {
+	if c.conflictsBeforeUpdate == c.conflictsOccured {
+		return c.client.Status().Update(ctx, obj, o...)
+	}
+
+	c.conflictsOccured++
+	return apierrors.NewConflict(schema.GroupResource{}, "", nil)
+}

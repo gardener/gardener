@@ -22,7 +22,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	resourcesv1alpha1helper "github.com/gardener/gardener/pkg/apis/resources/v1alpha1/helper"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/utils"
+	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/go-logr/logr"
@@ -177,7 +177,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 func tryUpdateManagedResourceCondition(ctx context.Context, c client.Client, mr *resourcesv1alpha1.ManagedResource, condition resourcesv1alpha1.ManagedResourceCondition) error {
-	return utils.TryUpdateStatus(ctx, retry.DefaultBackoff, c, mr, func() error {
+	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, c, mr, func() error {
 		mr.Status.Conditions = resourcesv1alpha1helper.MergeConditions(mr.Status.Conditions, condition)
 		return nil
 	})

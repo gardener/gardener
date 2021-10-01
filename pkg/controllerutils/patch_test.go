@@ -12,11 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllerutils_test
+package controllerutils
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -28,12 +35,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	corescheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	. "github.com/gardener/gardener/pkg/controllerutils"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/utils/test"
 )
 
 var _ = Describe("Patch", func() {
@@ -226,4 +231,46 @@ var _ = Describe("Patch", func() {
 		Describe("#CreateOrGetAndMergePatch", func() { testSuite(CreateOrGetAndMergePatch, types.MergePatchType) })
 		Describe("#CreateOrGetAndStrategicMergePatch", func() { testSuite(CreateOrGetAndStrategicMergePatch, types.StrategicMergePatchType) })
 	})
+
+	Describe("#TryPatch", func() {
+		It("should set state to obj, when conflict occurs", func() {
+			s := runtime.NewScheme()
+			Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
+			objInFakeClient := newInfraObj()
+			objInFakeClient.SetResourceVersion("1")
+			objInFakeClient.Status.Conditions = []v1beta1.Condition{
+				{Type: "Health", Reason: "reason", Message: "messages", Status: "status", LastUpdateTime: metav1.Now()},
+			}
+
+			c := fake.NewClientBuilder().WithScheme(s).WithObjects(objInFakeClient).Build()
+			infraObj := objInFakeClient.DeepCopy()
+			transform := func() error {
+				infraState, _ := json.Marshal(state{"someState"})
+				infraObj.GetExtensionStatus().SetState(&runtime.RawExtension{Raw: infraState})
+				return nil
+			}
+
+			u := &conflictErrManager{
+				conflictsBeforeUpdate: 2,
+				client:                c,
+			}
+
+			tryPatchErr := tryPatch(context.Background(), retry.DefaultRetry, c, infraObj, u.patchFunc, transform)
+			Expect(tryPatchErr).NotTo(HaveOccurred())
+
+			objFromFakeClient := &extensionsv1alpha1.Infrastructure{}
+			err := c.Get(context.Background(), kutil.Key("infraNamespace", "infraName"), objFromFakeClient)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(objFromFakeClient).To(Equal(infraObj))
+		})
+	})
 })
+
+func (c *conflictErrManager) patchFunc(ctx context.Context, obj client.Object, patch client.Patch, o ...client.PatchOption) error {
+	if c.conflictsBeforeUpdate == c.conflictsOccured {
+		return c.client.Status().Patch(ctx, obj, patch, o...)
+	}
+
+	c.conflictsOccured++
+	return apierrors.NewConflict(schema.GroupResource{}, "", nil)
+}
