@@ -443,14 +443,6 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 			}
 		}
 
-		// TODO(beckermax) remove in a future version
-		// Leave garden.sapcloud.io/role in controlplane pods for compatibility reasons
-		if v, ok := deployment.Labels[v1beta1constants.GardenRole]; ok && v == v1beta1constants.GardenRoleControlPlane {
-			deployment.Spec.Template.ObjectMeta.Labels = utils.MergeStringMaps(deployment.Spec.Template.ObjectMeta.Labels, map[string]string{
-				v1beta1constants.DeprecatedGardenRole: v1beta1constants.GardenRoleControlPlane,
-			})
-		}
-
 		return nil
 	})
 	return err
