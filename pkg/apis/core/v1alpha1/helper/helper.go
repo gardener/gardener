@@ -28,6 +28,7 @@ import (
 	"github.com/Masterminds/semver"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -87,19 +88,16 @@ func GetOrInitCondition(conditions []gardencorev1alpha1.Condition, conditionType
 
 // UpdatedCondition updates the properties of one specific condition.
 func UpdatedCondition(condition gardencorev1alpha1.Condition, status gardencorev1alpha1.ConditionStatus, reason, message string, codes ...gardencorev1alpha1.ErrorCode) gardencorev1alpha1.Condition {
-	newCondition := gardencorev1alpha1.Condition{
-		Type:               condition.Type,
-		Status:             status,
-		Reason:             reason,
-		Message:            message,
-		LastTransitionTime: condition.LastTransitionTime,
-		LastUpdateTime:     Now(),
-		Codes:              codes,
-	}
+	builder, err := NewConditionBuilder(condition.Type)
+	utilruntime.Must(err)
+	newCondition, _ := builder.
+		WithOldCondition(condition).
+		WithStatus(status).
+		WithReason(reason).
+		WithMessage(message).
+		WithCodes(codes...).
+		Build()
 
-	if condition.Status != status {
-		newCondition.LastTransitionTime = Now()
-	}
 	return newCondition
 }
 
