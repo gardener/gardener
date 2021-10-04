@@ -252,7 +252,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 								"app":                              "kubernetes",
 								"role":                             "cluster-autoscaler",
 								"gardener.cloud/role":              "controlplane",
-								"garden.sapcloud.io/role":          "controlplane",
 								"networking.gardener.cloud/to-dns": "allowed",
 								"networking.gardener.cloud/to-seed-apiserver":  "allowed",
 								"networking.gardener.cloud/to-shoot-apiserver": "allowed",
