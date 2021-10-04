@@ -805,6 +805,10 @@ message KubeAPIServerConfig {
   // See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
   // +optional
   optional bool enableAnonymousAuthentication = 11;
+
+  // EventTTL controls the amount of time to retain events.
+  // +optional
+  optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration eventTTL = 12;
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.

@@ -2947,6 +2947,7 @@ func autoConvert_v1alpha1_KubeAPIServerConfig_To_core_KubeAPIServerConfig(in *Ku
 	out.WatchCacheSizes = (*core.WatchCacheSizes)(unsafe.Pointer(in.WatchCacheSizes))
 	out.Requests = (*core.KubeAPIServerRequests)(unsafe.Pointer(in.Requests))
 	out.EnableAnonymousAuthentication = (*bool)(unsafe.Pointer(in.EnableAnonymousAuthentication))
+	out.EventTTL = (*metav1.Duration)(unsafe.Pointer(in.EventTTL))
 	return nil
 }
 
@@ -2969,6 +2970,7 @@ func autoConvert_core_KubeAPIServerConfig_To_v1alpha1_KubeAPIServerConfig(in *co
 	out.WatchCacheSizes = (*WatchCacheSizes)(unsafe.Pointer(in.WatchCacheSizes))
 	out.Requests = (*KubeAPIServerRequests)(unsafe.Pointer(in.Requests))
 	out.EnableAnonymousAuthentication = (*bool)(unsafe.Pointer(in.EnableAnonymousAuthentication))
+	out.EventTTL = (*metav1.Duration)(unsafe.Pointer(in.EventTTL))
 	return nil
 }
 
