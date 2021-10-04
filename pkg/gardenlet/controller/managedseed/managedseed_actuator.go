@@ -87,7 +87,6 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 	defer func() {
 		if err != nil {
 			a.reconcileErrorEventf(ms, err.Error())
-			updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconcileError, err.Error())
 		}
 	}()
 
@@ -104,9 +103,6 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 		return status, true, nil
 	}
 	updateCondition(status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled, "")
-
-	// Update SeedRegistered condition
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionProgressing, gardencorev1beta1.EventReconciling, "")
 
 	// Get shoot client
 	shootClient, err := a.clientMap.GetClient(ctx, keys.ForShoot(shoot))
@@ -151,7 +147,18 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 		}
 	}
 
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled, "")
+	seed, err := a.getSeed(ctx, ms)
+	if err != nil {
+		updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.EventReconciling, err.Error())
+		return status, true, fmt.Errorf("failed to get seed %s: %w", ms.Name, err)
+	}
+
+	if seed == nil {
+		updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionProgressing, gardencorev1beta1.EventReconciling, fmt.Sprintf("Seed %s is still not created.", ms.Name))
+		return status, true, fmt.Errorf("Seed %s is still not created", ms.Name)
+	}
+
+	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled, fmt.Sprintf("Seed %s has been created.", ms.Name))
 	return status, false, nil
 }
 
@@ -164,12 +171,8 @@ func (a *actuator) Delete(ctx context.Context, ms *seedmanagementv1alpha1.Manage
 	defer func() {
 		if err != nil {
 			a.deleteErrorEventf(ms, err.Error())
-			updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleteError, err.Error())
 		}
 	}()
-
-	// Update SeedRegistered condition
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting, "")
 
 	// Get shoot
 	shoot := &gardencorev1beta1.Shoot{}
@@ -192,6 +195,8 @@ func (a *actuator) Delete(ctx context.Context, ms *seedmanagementv1alpha1.Manage
 	// Delete seed if it still exists and is not already deleting
 	seed, err := a.getSeed(ctx, ms)
 	if err != nil {
+		// it is unknown if the seed still exist or not
+		updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionUnknown, gardencorev1beta1.EventDeleteError, err.Error())
 		return status, false, false, fmt.Errorf("could not get seed %s: %w", ms.Name, err)
 	}
 	if seed != nil {
@@ -200,11 +205,16 @@ func (a *actuator) Delete(ctx context.Context, ms *seedmanagementv1alpha1.Manage
 			if err := a.deleteSeed(ctx, ms); err != nil {
 				return status, false, false, fmt.Errorf("could not delete seed %s: %w", ms.Name, err)
 			}
+			// seed exists and the deletion timestamp was just set, set it to progressing
+			updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionProgressing, gardencorev1beta1.EventDeleting, fmt.Sprintf("Seed %s is in deletion.s", ms.Name))
 		} else {
 			a.deletingInfoEventf(ms, "Waiting for seed %s to be deleted", ms.Name)
 		}
 		return status, false, false, nil
 	}
+
+	// The seed is gone
+	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleted, fmt.Sprintf("Seed %s has been deleted.", ms.Name))
 
 	if ms.Spec.Gardenlet != nil {
 		// Delete gardenlet from the shoot if it still exists and is not already deleting
@@ -259,7 +269,6 @@ func (a *actuator) Delete(ctx context.Context, ms *seedmanagementv1alpha1.Manage
 		return status, true, false, nil
 	}
 
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleted, "")
 	return status, false, true, nil
 }
 
