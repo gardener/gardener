@@ -84,12 +84,12 @@ func NewGenericClientMap(factory clientmap.ClientSetFactory, logger logrus.Field
 // rediscover the server version of the targeted cluster and check if the config hash has changed and recreate the
 // ClientSet if a config hash change is detected.
 func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientSetKey) (kubernetes.Interface, error) {
-	entry, started, found := func() (*clientMapEntry, bool, bool) {
+	entry, found := func() (*clientMapEntry, bool) {
 		cm.lock.RLock()
 		defer cm.lock.RUnlock()
 
 		entry, found := cm.clientSets[key]
-		return entry, cm.started, found
+		return entry, found
 	}()
 
 	if found {
@@ -133,46 +133,34 @@ func (cm *GenericClientMap) GetClient(ctx context.Context, key clientmap.ClientS
 
 	if !found {
 		var err error
-		if entry, started, err = cm.addClientSet(ctx, key); err != nil {
+		if entry, err = cm.addClientSet(ctx, key); err != nil {
 			return nil, err
-		}
-	}
-
-	if started {
-		// limit the amount of time to wait for a cache sync, as this can block controller worker routines
-		// and we don't want to block all workers if it takes a long time to sync some caches
-		waitContext, cancel := context.WithTimeout(ctx, waitForCacheSyncTimeout)
-		defer cancel()
-
-		// make sure the ClientSet has synced before returning
-		if !waitForClientSetCacheSync(waitContext, entry) {
-			return nil, fmt.Errorf("timed out waiting for caches of ClientSet with key %q to sync", key.Key())
 		}
 	}
 
 	return entry.clientSet, nil
 }
 
-func (cm *GenericClientMap) addClientSet(ctx context.Context, key clientmap.ClientSetKey) (*clientMapEntry, bool, error) {
+func (cm *GenericClientMap) addClientSet(ctx context.Context, key clientmap.ClientSetKey) (*clientMapEntry, error) {
 	cm.lock.Lock()
 	defer cm.lock.Unlock()
 
 	// ClientSet might have been created in the meanwhile (e.g. two goroutines might concurrently call
 	// GetClient() when the ClientSet is not yet created)
 	if entry, found := cm.clientSets[key]; found {
-		return entry, cm.started, nil
+		return entry, nil
 	}
 
 	cm.log.Infof("Creating new ClientSet for key %q", key.Key())
 	cs, err := cm.factory.NewClientSet(ctx, key)
 	if err != nil {
-		return nil, false, fmt.Errorf("error creating new ClientSet for key %q: %w", key.Key(), err)
+		return nil, fmt.Errorf("error creating new ClientSet for key %q: %w", key.Key(), err)
 	}
 
 	// save hash of client set configuration to detect if it should be recreated later on
 	hash, err := cm.factory.CalculateClientSetHash(ctx, key)
 	if err != nil {
-		return nil, false, fmt.Errorf("error calculating ClientSet hash for key %q: %w", key.Key(), err)
+		return nil, fmt.Errorf("error calculating ClientSet hash for key %q: %w", key.Key(), err)
 	}
 
 	entry := &clientMapEntry{
@@ -189,10 +177,12 @@ func (cm *GenericClientMap) addClientSet(ctx context.Context, key clientmap.Clie
 
 	// if ClientMap is not started, then don't automatically start new ClientSets
 	if cm.started {
-		cm.startClientSet(entry)
+		if err := cm.startClientSet(key, entry); err != nil {
+			return nil, err
+		}
 	}
 
-	return entry, cm.started, nil
+	return entry, nil
 }
 
 // InvalidateClient removes the ClientSet identified by the given key from the ClientMap after stopping its cache.
@@ -233,8 +223,14 @@ func (cm *GenericClientMap) Start(stopCh <-chan struct{}) error {
 
 	cm.stopCh = stopCh
 
-	for _, entry := range cm.clientSets {
-		cm.startClientSet(entry)
+	// start any ClientSets that have been added before starting the ClientMap
+	// there will probably be only a garden client in here on startup, no other clients
+	for key, entry := range cm.clientSets {
+		// each call to startClientSet will also wait for the respective caches to sync.
+		// doing this in the loop here is not problematic, as
+		if err := cm.startClientSet(key, entry); err != nil {
+			return err
+		}
 	}
 
 	// set started to true, so we immediately start all newly created clientsets
@@ -242,7 +238,7 @@ func (cm *GenericClientMap) Start(stopCh <-chan struct{}) error {
 	return nil
 }
 
-func (cm *GenericClientMap) startClientSet(entry *clientMapEntry) {
+func (cm *GenericClientMap) startClientSet(key clientmap.ClientSetKey, entry *clientMapEntry) error {
 	clientSetContext, clientSetCancel := context.WithCancel(context.Background())
 	go func() {
 		select {
@@ -255,11 +251,24 @@ func (cm *GenericClientMap) startClientSet(entry *clientMapEntry) {
 	entry.cancel = clientSetCancel
 
 	entry.clientSet.Start(clientSetContext)
+
+	// limit the amount of time to wait for a cache sync, as this can block controller worker routines
+	// and we don't want to block all workers if it takes a long time to sync some caches
+	waitContext, cancel := context.WithTimeout(clientSetContext, waitForCacheSyncTimeout)
+	defer cancel()
+
+	// make sure the ClientSet has synced before returning
+	// callers of Start/GetClient expect that cached clients can be used immediately after retrieval from a started
+	// ClientMap or after starting the ClientMap respectively
+	if !waitForClientSetCacheSync(waitContext, entry) {
+		return fmt.Errorf("timed out waiting for caches of ClientSet with key %q to sync", key.Key())
+	}
+
+	return nil
 }
 
 func waitForClientSetCacheSync(ctx context.Context, entry *clientMapEntry) bool {
-	// We don't need a lock here, as waiting in multiple goroutines is not harmful.
-	// But RLocking here (for every GetClient) would be blocking creating new clients, so we should avoid that.
+	// don't need a lock here, as caller already holds lock
 	if entry.synced {
 		return true
 	}
