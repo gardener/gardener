@@ -637,6 +637,32 @@ var _ = Describe("KubeAPIServer", func() {
 			)
 		})
 
+		Describe("EventTTL", func() {
+			It("should not set the event ttl field", func() {
+				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(kubeAPIServer.GetValues().EventTTL).To(BeNil())
+			})
+
+			It("should set the field to the configured values", func() {
+				eventTTL := &metav1.Duration{Duration: 2 * time.Hour}
+
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Kubernetes: gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								EventTTL: eventTTL,
+							},
+						},
+					},
+				})
+
+				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(kubeAPIServer.GetValues().EventTTL).To(Equal(eventTTL))
+			})
+		})
+
 		Describe("FeatureGates", func() {
 			It("should set the field to nil by default", func() {
 				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
