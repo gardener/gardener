@@ -423,6 +423,8 @@ type KubeAPIServerConfig struct {
 	// of the API server should be allowed (flag `--anonymous-auth`).
 	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
 	EnableAnonymousAuthentication *bool
+	// EventTTL controls the amount of time to retain events.
+	EventTTL *metav1.Duration
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.
