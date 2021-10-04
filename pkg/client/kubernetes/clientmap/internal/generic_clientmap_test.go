@@ -265,13 +265,24 @@ var _ = Describe("GenericClientMap", func() {
 				Expect(cm.Start(ctx.Done())).To(Succeed())
 			})
 
-			It("should start ClientSets already contained in the ClientMap", func() {
+			It("should start ClientSets already contained in the ClientMap and wait for caches to sync", func() {
 				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
 				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
 				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
 
 				cs.EXPECT().Start(gomock.Any())
+				cs.EXPECT().WaitForCacheSync(gomock.Any()).Return(true)
 				Expect(cm.Start(ctx.Done())).To(Succeed())
+			})
+
+			It("should fail if caches cannot be synced", func() {
+				factory.EXPECT().NewClientSet(ctx, key).Return(cs, nil)
+				factory.EXPECT().CalculateClientSetHash(ctx, key).Return("", nil)
+				Expect(cm.GetClient(ctx, key)).To(BeIdenticalTo(cs))
+
+				cs.EXPECT().Start(gomock.Any())
+				cs.EXPECT().WaitForCacheSync(gomock.Any()).Return(false)
+				Expect(cm.Start(ctx.Done())).To(MatchError(ContainSubstring("timed out waiting for caches of ClientSet")))
 			})
 		})
 	})
