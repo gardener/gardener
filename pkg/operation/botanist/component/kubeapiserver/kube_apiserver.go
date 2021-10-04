@@ -85,6 +85,8 @@ type Values struct {
 	Autoscaling AutoscalingConfig
 	// BasicAuthenticationEnabled states whether basic authentication is enabled.
 	BasicAuthenticationEnabled bool
+	// EventTTL is the amount of time to retain events.
+	EventTTL *metav1.Duration
 	// ExternalHostname is the external hostname which should be exposed by the kube-apiserver.
 	ExternalHostname string
 	// FeatureGates is the set of feature gates.

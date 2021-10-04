@@ -1692,6 +1692,7 @@ rules:
 							admissionPlugin1                    = "foo"
 							admissionPlugin2                    = "foo"
 							admissionPlugins                    = []gardencorev1beta1.AdmissionPlugin{{Name: admissionPlugin1}, {Name: admissionPlugin2}}
+							eventTTL                            = 2 * time.Hour
 							externalHostname                    = "api.foo.bar.com"
 							serviceAccountIssuer                = "issuer"
 							serviceAccountMaxTokenExpiration    = time.Hour
@@ -1702,6 +1703,7 @@ rules:
 						kapi = New(kubernetesInterface, namespace, Values{
 							AdmissionPlugins: admissionPlugins,
 							Autoscaling:      AutoscalingConfig{APIServerResources: apiServerResources},
+							EventTTL:         &metav1.Duration{Duration: eventTTL},
 							ExternalHostname: externalHostname,
 							Images:           images,
 							ServiceAccount: ServiceAccountConfig{
@@ -1739,6 +1741,7 @@ rules:
 							"--etcd-servers=https://etcd-main-client:2379",
 							"--etcd-servers-overrides=/events#https://etcd-events-client:2379",
 							"--encryption-provider-config=/etc/kubernetes/etcd-encryption-secret/encryption-configuration.yaml",
+							"--event-ttl="+eventTTL.String(),
 							"--external-hostname="+externalHostname,
 							"--insecure-port=0",
 							"--kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP",
