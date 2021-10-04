@@ -58,7 +58,7 @@ var _ = Describe("CheckerWatchdog", func() {
 
 	Describe("#Start / #Stop / #AddContext / #RemoveContext / #Result", func() {
 		It("should not cancel the context returned by AddContext if the checker returns true", func() {
-			checker.EXPECT().Check(gomock.Any()).Return(true, nil).AnyTimes()
+			checker.EXPECT().Check(gomock.Any()).Return(true, nil).Times(2)
 
 			watchdog.Start(ctx)
 			defer watchdog.Stop()
@@ -73,11 +73,14 @@ var _ = Describe("CheckerWatchdog", func() {
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(BeTrue())
 			fakeClock.Step(interval)
+			result2, err := watchdog.Result()
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result2).To(BeTrue())
 			Eventually(newCtx.Done()).Should(Not(BeClosed()))
 		})
 
 		It("should cancel the context returned by AddContext if the checker returns false", func() {
-			checker.EXPECT().Check(gomock.Any()).Return(false, nil).AnyTimes()
+			checker.EXPECT().Check(gomock.Any()).Return(false, nil).Times(2)
 
 			watchdog.Start(ctx)
 			defer watchdog.Stop()
@@ -92,11 +95,14 @@ var _ = Describe("CheckerWatchdog", func() {
 			Expect(err).To(Not(HaveOccurred()))
 			Expect(result).To(BeFalse())
 			fakeClock.Step(interval)
+			result2, err := watchdog.Result()
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(result2).To(BeFalse())
 			Eventually(newCtx.Done()).Should(BeClosed())
 		})
 
 		It("should cancel the context returned by AddContext if the checker returns an error", func() {
-			checker.EXPECT().Check(gomock.Any()).Return(false, errors.New("text")).AnyTimes()
+			checker.EXPECT().Check(gomock.Any()).Return(false, errors.New("text")).Times(2)
 
 			watchdog.Start(ctx)
 			defer watchdog.Stop()
@@ -110,6 +116,8 @@ var _ = Describe("CheckerWatchdog", func() {
 			_, err := watchdog.Result()
 			Expect(err).To(HaveOccurred())
 			fakeClock.Step(interval)
+			_, err = watchdog.Result()
+			Expect(err).To(HaveOccurred())
 			Eventually(newCtx.Done()).Should(BeClosed())
 		})
 
@@ -124,7 +132,7 @@ var _ = Describe("CheckerWatchdog", func() {
 						return false, errors.New("context cancelled")
 					}
 				}
-			}).AnyTimes()
+			}).Times(2)
 
 			watchdog.Start(ctx)
 			defer watchdog.Stop()
@@ -138,6 +146,8 @@ var _ = Describe("CheckerWatchdog", func() {
 			_, err := watchdog.Result()
 			Expect(err).To(HaveOccurred())
 			fakeClock.Step(interval)
+			_, err = watchdog.Result()
+			Expect(err).To(HaveOccurred())
 			Eventually(newCtx.Done()).Should(BeClosed())
 		})
 	})
