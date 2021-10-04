@@ -61,9 +61,10 @@ type Values struct {
 	Name string
 	// SecretName is the name of the secret referenced by the DNSRecord resource.
 	SecretName string
-	// CreateOnly specifies that the DNSRecord resource should only be created, never updated.
+	// ReconcileOnce specifies that the DNSRecord resource should only be created and never reconciled after that again.
+	// However, on Deploy it is still updated with the timestamp annotation.
 	// This mode is used for owner DNS records.
-	CreateOnly bool
+	ReconcileOnce bool
 	// Type is the type of the DNSRecord provider.
 	Type string
 	// SecretData is the secret data of the DNSRecord (containing provider credentials, etc.)
@@ -161,13 +162,24 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 		return nil
 	}
 
-	if c.values.CreateOnly {
+	if c.values.ReconcileOnce {
 		if err := c.client.Get(ctx, client.ObjectKeyFromObject(c.dnsRecord), c.dnsRecord); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return nil, err
 			}
+
+			// DNSRecord doesn't exist yet, create it.
 			_ = mutateFn()
 			if err := c.client.Create(ctx, c.dnsRecord); err != nil {
+				return nil, err
+			}
+		} else {
+			// DNSRecord already exists, just update the timestamp annotation.
+			// If the object is still annotated with the operation annotation (e.g. not reconciled yet) this will send a watch
+			// event to the extension controller triggering a new reconciliation.
+			patch := client.MergeFrom(c.dnsRecord.DeepCopy())
+			metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+			if err := c.client.Patch(ctx, c.dnsRecord, patch); err != nil {
 				return nil, err
 			}
 		}
