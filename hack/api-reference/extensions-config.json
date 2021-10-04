@@ -16,8 +16,8 @@
             "docsURLTemplate": "https://godoc.org/k8s.io/apimachinery/pkg/util/intstr#IntOrString"
         },
         {
-            "typeMatchPrefix": "^github\\.com/gardener/gardener/pkg/apis/core/",
-            "docsURLTemplate": "../core.md#core.gardener.cloud/v1alpha1.{{.TypeIdentifier}}"
+            "typeMatchPrefix": "^github\\.com/gardener/gardener/pkg/apis/core/v1beta1",
+            "docsURLTemplate": "./core.md#core.gardener.cloud/v1beta1.{{.TypeIdentifier}}"
         },
         {
             "typeMatchPrefix": "^k8s\\.io/(api|apimachinery/pkg/apis)/",
