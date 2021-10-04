@@ -151,6 +151,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight == nil {
 		obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight = pointer.Int32(200)
 	}
+	if obj.Spec.Kubernetes.KubeAPIServer.EventTTL == nil {
+		obj.Spec.Kubernetes.KubeAPIServer.EventTTL = &metav1.Duration{Duration: time.Hour}
+	}
 
 	if obj.Spec.Kubernetes.KubeControllerManager == nil {
 		obj.Spec.Kubernetes.KubeControllerManager = &KubeControllerManagerConfig{}
