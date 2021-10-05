@@ -125,15 +125,6 @@ fi
 md5sum ${PATH_CCD_SCRIPT} > ${PATH_CCD_SCRIPT_CHECKSUM}
 
 if [[ ! -f "{{ .pathKubeletKubeconfigReal }}" ]] || [[ ! -f "{{ .pathKubeletDirectory }}/pki/kubelet-client-current.pem" ]]; then
-  BOOTSTRAP_TOKEN="{{ .bootstrapToken }}"
-  # If a bootstrap token file exists and the placeholder got replaced by the Worker extension then use it
-  if [[ -f "{{ .pathBootstrapToken }}" ]]; then
-    FILE_CONTENT="$(cat "{{ .pathBootstrapToken }}")"
-    if [[ $FILE_CONTENT != "{{ .bootstrapTokenPlaceholder }}" ]] && [[ $FILE_CONTENT != "{{ .bootstrapTokenPlaceholderB64 }}" ]]; then
-      BOOTSTRAP_TOKEN="$FILE_CONTENT"
-    fi
-  fi
-
   cat <<EOF > "{{ .pathKubeletKubeconfigBootstrap }}"
 ---
 apiVersion: v1
@@ -153,7 +144,7 @@ users:
 - name: kubelet-bootstrap
   user:
     as-user-extra: {}
-    token: "$BOOTSTRAP_TOKEN"
+    token: "$(cat "{{ .pathBootstrapToken }}")"
 EOF
 
 else
