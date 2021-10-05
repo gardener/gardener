@@ -38,7 +38,7 @@ import (
 var log = runtimelog.Log.WithName("gardener-resource-manager")
 
 // NewResourceManagerCommand creates a new command for running a gardener resource manager controllers.
-func NewResourceManagerCommand() (*cobra.Command, error) {
+func NewResourceManagerCommand() *cobra.Command {
 	entryLog := log.WithName("entrypoint")
 
 	managerOpts := &resourcemanagercmd.ManagerOptions{}
@@ -170,5 +170,5 @@ func NewResourceManagerCommand() (*cobra.Command, error) {
 	)
 	verflag.AddFlags(cmd.Flags())
 
-	return cmd, nil
+	return cmd
 }

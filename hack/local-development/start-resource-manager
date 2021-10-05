@@ -23,8 +23,8 @@ trap cleanup_kubeconfig EXIT
 GO111MODULE=on \
     go run \
 	    -mod=vendor \
-		  -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
-		  "$(dirname $0)"/../../cmd/gardener-resource-manager \
+	    -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
+	    "$(dirname $0)"/../../cmd/gardener-resource-manager \
 	    --garbage-collector-sync-period=1m \
 	    --kubeconfig="${KUBECONFIG:-$kubeconfig}" \
 	    --leader-election=false \

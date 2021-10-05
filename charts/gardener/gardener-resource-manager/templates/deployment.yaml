@@ -4,15 +4,14 @@ metadata:
   name: gardener-resource-manager
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/name: gardener-resource-manager
-    helm.sh/chart: gardener-resource-manager
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    app: gardener
+    role: resource-manager
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: gardener-resource-manager
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      app: gardener
+      role: resource-manager
   template:
     metadata:
       {{- if .Values.targetKubeconfig }}
@@ -20,8 +19,8 @@ spec:
         checksum/secret-gardener-resource-manager-target-kubeconfig: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
       {{- end }}
       labels:
-        app.kubernetes.io/name: gardener-resource-manager
-        app.kubernetes.io/instance: {{ .Release.Name }}
+        app: gardener
+        role: resource-manager
     spec:
       serviceAccountName: gardener-resource-manager
       containers:

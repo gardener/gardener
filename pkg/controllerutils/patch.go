@@ -153,12 +153,18 @@ func createOrGetAndPatch(ctx context.Context, c client.Client, obj client.Object
 
 // TryPatch tries to apply the given transformation function onto the given object, and to patch it afterwards with optimistic locking.
 // It retries the patch with an exponential backoff.
+// Deprecated: This function is deprecated and will be removed in a future version. Please don't consider using it.
+// See https://github.com/gardener/gardener/blob/master/docs/development/kubernetes-clients.md#dont-retry-on-conflict
+// for more information.
 func TryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, transform func() error) error {
 	return tryPatch(ctx, backoff, c, obj, c.Patch, transform)
 }
 
 // TryPatchStatus tries to apply the given transformation function onto the given object, and to patch its
 // status afterwards with optimistic locking. It retries the status patch with an exponential backoff.
+// Deprecated: This function is deprecated and will be removed in a future version. Please don't consider using it.
+// See https://github.com/gardener/gardener/blob/master/docs/development/kubernetes-clients.md#dont-retry-on-conflict
+// for more information.
 func TryPatchStatus(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, transform func() error) error {
 	return tryPatch(ctx, backoff, c, obj, c.Status().Patch, transform)
 }

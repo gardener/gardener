@@ -4,9 +4,8 @@ kind: ClusterRole
 metadata:
   name: gardener-resource-manager
   labels:
-    app.kubernetes.io/name: gardener-resource-manager
-    helm.sh/chart: gardener-resource-manager
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    app: gardener
+    role: resource-manager
 rules:
 - apiGroups:
   - resources.gardener.cloud
@@ -69,9 +68,8 @@ kind: ClusterRoleBinding
 metadata:
   name: gardener-resource-manager
   labels:
-    app.kubernetes.io/name: gardener-resource-manager
-    helm.sh/chart: gardener-resource-manager
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    app: gardener
+    role: resource-manager
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
