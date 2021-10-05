@@ -96,10 +96,13 @@ func (b *Botanist) ScaleKubeControllerManagerToOne(ctx context.Context) error {
 }
 
 func (b *Botanist) determineKubeControllerManagerReplicas(ctx context.Context) (int32, error) {
-	isCreateOperation := b.Shoot.GetInfo().Status.LastOperation != nil && b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate
-	if isCreateOperation && b.Shoot.HibernationEnabled ||
-		!isCreateOperation && b.Shoot.HibernationEnabled == b.Shoot.GetInfo().Status.IsHibernated {
-		// shoot is being created with .spec.hibernation.enabled=true or
+	isCreateOrRestoreOperation := b.Shoot.GetInfo().Status.LastOperation != nil &&
+		(b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate ||
+			b.Shoot.GetInfo().Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeRestore)
+
+	if isCreateOrRestoreOperation && b.Shoot.HibernationEnabled ||
+		!isCreateOrRestoreOperation && b.Shoot.HibernationEnabled == b.Shoot.GetInfo().Status.IsHibernated {
+		// shoot is being created or restored with .spec.hibernation.enabled=true or
 		// shoot is being reconciled with .spec.hibernation.enabled=.status.isHibernated,
 		// so keep the replicas which are already available.
 		return kutil.CurrentReplicaCountForDeployment(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, v1beta1constants.DeploymentNameKubeControllerManager)
