@@ -54,7 +54,6 @@ spec:
 {{- end }}
       labels:
         gardener.cloud/role: monitoring
-        garden.sapcloud.io/role: monitoring
         app: prometheus
         role: monitoring
         networking.gardener.cloud/to-dns: allowed
