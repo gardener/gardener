@@ -362,7 +362,7 @@ message ClusterInfo {
 
 // Condition holds the information about the state of a resource.
 message Condition {
-  // Type of the Shoot condition.
+  // Type of the condition.
   optional string type = 1;
 
   // Status of the condition, one of True, False, Unknown.

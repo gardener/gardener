@@ -20,7 +20,7 @@ import (
 
 // Condition holds the information about the state of a resource.
 type Condition struct {
-	// Type of the Shoot condition.
+	// Type of the condition.
 	Type ConditionType
 	// Status of the condition, one of True, False, Unknown.
 	Status ConditionStatus

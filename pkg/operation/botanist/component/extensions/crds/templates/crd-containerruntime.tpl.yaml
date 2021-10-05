@@ -160,7 +160,7 @@ spec:
                         description: Status of the condition, one of True, False, Unknown.
                         type: string
                       type:
-                        description: Type of the Shoot condition.
+                        description: Type of the condition.
                         type: string
                     required:
                       - lastTransitionTime

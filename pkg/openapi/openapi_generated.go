@@ -1768,7 +1768,7 @@ func schema_pkg_apis_core_v1alpha1_Condition(ref common.ReferenceCallback) commo
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type of the Shoot condition.",
+							Description: "Type of the condition.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -8794,7 +8794,7 @@ func schema_pkg_apis_core_v1beta1_Condition(ref common.ReferenceCallback) common
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type of the Shoot condition.",
+							Description: "Type of the condition.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",

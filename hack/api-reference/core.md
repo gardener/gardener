@@ -2765,7 +2765,7 @@ ConditionType
 </em>
 </td>
 <td>
-<p>Type of the Shoot condition.</p>
+<p>Type of the condition.</p>
 </td>
 </tr>
 <tr>
