@@ -151,7 +151,7 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 
 		// Deploy gardenlet into the shoot, it will register the seed automatically
 		a.reconcilingInfoEventf(ms, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
-		if err := a.deployGardenlet(ctx, shootClient, ms, gardenletConfig, seed, shoot); err != nil {
+		if err := a.deployGardenlet(ctx, shootClient, ms, seed, gardenletConfig, shoot); err != nil {
 			return status, false, fmt.Errorf("could not deploy gardenlet into shoot %s: %w", kutil.ObjectName(shoot), err)
 		}
 	}
@@ -348,8 +348,8 @@ func (a *actuator) deployGardenlet(
 	ctx context.Context,
 	shootClient kubernetes.Interface,
 	managedSeed *seedmanagementv1alpha1.ManagedSeed,
-	gardenletConfig *configv1alpha1.GardenletConfiguration,
 	seed *gardencorev1beta1.Seed,
+	gardenletConfig *configv1alpha1.GardenletConfiguration,
 	shoot *gardencorev1beta1.Shoot,
 ) error {
 	// Prepare gardenlet chart values
