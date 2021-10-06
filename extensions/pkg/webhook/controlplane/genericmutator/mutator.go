@@ -29,6 +29,7 @@ import (
 
 	"github.com/coreos/go-systemd/v22/unit"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -244,7 +245,7 @@ func (m *mutator) mutateOperatingSystemConfig(ctx context.Context, gctx gcontext
 
 	// Mutate 99 kubernetes general configuration file, if present
 	if content := getKubernetesGeneralConfiguration(osc); content != nil {
-		if err := m.ensureKubernetesGeneralConfiguration(ctx, gctx, content, getKubernetesGeneralConfiguration(oldOSC)); err != nil {
+		if err := m.ensureKubernetesGeneralConfiguration(ctx, gctx, content, getKubernetesGeneralConfiguration(oldOSC), kutil.ObjectName(osc)); err != nil {
 			return err
 		}
 	}
@@ -335,7 +336,7 @@ func (m *mutator) ensureKubeletConfigFileContent(ctx context.Context, gctx gcont
 	return nil
 }
 
-func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx gcontext.GardenContext, fci, oldFCI *extensionsv1alpha1.FileContentInline) error {
+func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx gcontext.GardenContext, fci, oldFCI *extensionsv1alpha1.FileContentInline, objectName string) error {
 	var (
 		data, oldData []byte
 		err           error
@@ -359,6 +360,12 @@ func (m *mutator) ensureKubernetesGeneralConfiguration(ctx context.Context, gctx
 		return err
 	}
 
+	if len(s) == 0 {
+		// File entries with empty content are not valid, so we do not add them to the OperatingSystemConfig resource.
+		m.logger.Info("skipping modification of kubernetes general configuration file entry because the new content is empty", "operatingsystemconfig", objectName)
+		return nil
+	}
+
 	// Encode kubernetes general configuration into inline content
 	var newFCI *extensionsv1alpha1.FileContentInline
 	if newFCI, err = m.fciCodec.Encode([]byte(s), fci.Encoding); err != nil {
@@ -379,6 +386,12 @@ func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx gco
 	var s string
 	if err = m.ensurer.EnsureKubeletCloudProviderConfig(ctx, gctx, &s, osc.Namespace); err != nil {
 		return err
+	}
+
+	if len(s) == 0 {
+		// File entries with empty content are not valid, so we do not add them to the OperatingSystemConfig resource.
+		m.logger.Info("skipping addition of kubelet cloud provider config file entry because its content is empty", "operatingsystemconfig", kutil.ObjectName(osc))
+		return nil
 	}
 
 	// Encode cloud provider config into inline content
