@@ -204,12 +204,14 @@ generate:
 	@GO111MODULE=off hack/update-protobuf.sh
 	@GO111MODULE=off hack/update-codegen.sh --parallel
 	@hack/generate-parallel.sh charts cmd extensions pkg plugin landscaper test
+	@hack/generate-monitoring-docs.sh
 
 .PHONY: generate-sequential
 generate-sequential:
 	@GO111MODULE=off hack/update-protobuf.sh
 	@GO111MODULE=off hack/update-codegen.sh
 	@hack/generate.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/... ./test/...
+	@hack/generate-monitoring-docs.sh
 
 .PHONY: generate-extensions-crds
 generate-extensions-crds:
