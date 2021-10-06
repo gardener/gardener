@@ -52,8 +52,8 @@ type Interface interface {
 	component.DeployWaiter
 }
 
-// New creates a new instance of DeployWaiter for the auth-server.
-func New(
+// NewExtAuthServer creates a new instance of DeployWaiter for the auth-server.
+func NewExtAuthServer(
 	client client.Client,
 	namespace string,
 	imageExtAuthzServer string,

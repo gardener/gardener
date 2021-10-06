@@ -43,6 +43,8 @@ const (
 	ImageNameDependencyWatchdog = "dependency-watchdog"
 	// ImageNameEtcdDruid is a constant for an image in the image vector with name 'etcd-druid'.
 	ImageNameEtcdDruid = "etcd-druid"
+	// ImageNameExtAuthzServer is a constant for an image in the image vector with name 'ext-authz-server'.
+	ImageNameExtAuthzServer = "ext-authz-server"
 	// ImageNameFluentBit is a constant for an image in the image vector with name 'fluent-bit'.
 	ImageNameFluentBit = "fluent-bit"
 	// ImageNameFluentBitPluginInstaller is a constant for an image in the image vector with name 'fluent-bit-plugin-installer'.
@@ -121,6 +123,4 @@ const (
 	ImageNameVpnShoot = "vpn-shoot"
 	// ImageNameVpnShootClient is a constant for an image in the image vector with name 'vpn-shoot-client'.
 	ImageNameVpnShootClient = "vpn-shoot-client"
-	// ImageNameExtAuthzServer is a constant for an image in the image vector with name 'ext-authz-server'.
-	ImageNameExtAuthzServer = "ext-authz-server"
 )
