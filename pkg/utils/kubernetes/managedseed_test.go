@@ -22,12 +22,16 @@ import (
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	seedmanagementfake "github.com/gardener/gardener/pkg/client/seedmanagement/clientset/versioned/fake"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -142,6 +146,55 @@ var _ = Describe("managedseed", func() {
 		It("should fail if listing the ManagedSeeds fails", func() {
 			_, err := GetManagedSeedWithReader(ctx, failingListReader{fakeClient}, namespace, name)
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("#GetManagedSeedByName", func() {
+		var (
+			ctrl *gomock.Controller
+			c    *mockclient.MockClient
+
+			seedName = "foo"
+		)
+
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			c = mockclient.NewMockClient(ctrl)
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("should return nil since the ManagedSeed is not found", func() {
+			c.EXPECT().Get(ctx, Key("garden", seedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+			managedSeed, err := GetManagedSeedByName(ctx, c, seedName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(managedSeed).To(BeNil())
+		})
+
+		It("should return an error since reading the ManagedSeed failed", func() {
+			fakeErr := fmt.Errorf("fake")
+
+			c.EXPECT().Get(ctx, Key("garden", seedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).Return(fakeErr)
+
+			managedSeed, err := GetManagedSeedByName(ctx, c, seedName)
+			Expect(err).To(MatchError(fakeErr))
+			Expect(managedSeed).To(BeNil())
+		})
+
+		It("should return the ManagedSeed since reading it succeeded", func() {
+			expected := &seedmanagementv1alpha1.ManagedSeed{ObjectMeta: metav1.ObjectMeta{Name: seedName}}
+
+			c.EXPECT().Get(ctx, Key("garden", seedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+				expected.DeepCopyInto(obj)
+				return nil
+			})
+
+			managedSeed, err := GetManagedSeedByName(ctx, c, seedName)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(managedSeed).To(Equal(expected))
 		})
 	})
 })

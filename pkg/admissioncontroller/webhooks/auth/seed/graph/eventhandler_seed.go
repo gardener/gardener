@@ -19,16 +19,13 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	toolscache "k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (g *graph) setupSeedWatch(ctx context.Context, informer cache.Informer) {
@@ -132,13 +129,8 @@ func (g *graph) handleSeedDelete(seed *gardencorev1beta1.Seed) {
 }
 
 func (g *graph) handleManagedSeedIfSeedBelongsToIt(ctx context.Context, seedName string) {
-	managedSeed := &seedmanagementv1alpha1.ManagedSeed{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      seedName,
-			Namespace: v1beta1constants.GardenNamespace,
-		},
-	}
-	if err := g.client.Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err == nil {
+	// error is ignored here since we cannot do anything meaningful with it
+	if managedSeed, err := kutil.GetManagedSeedByName(ctx, g.client, seedName); err != nil && managedSeed != nil {
 		g.handleManagedSeedCreateOrUpdate(ctx, managedSeed)
 	}
 }
