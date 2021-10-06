@@ -132,17 +132,17 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	// If the gardenlet's client certificate is expired and the seed belongs to a `ManagedSeed` then we reconcile it in
 	// order to re-bootstrap the gardenlet.
 	if seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(time.Now().UTC()) {
-		managedSeed := &seedmanagementv1alpha1.ManagedSeed{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      seed.Name,
-				Namespace: v1beta1constants.GardenNamespace,
-			},
-		}
-		if err := c.gardenClient.Client().Get(ctx, client.ObjectKeyFromObject(managedSeed), managedSeed); err != nil && !apierrors.IsNotFound(err) {
+		managedSeed, err := getManagedSeedByName(ctx, c.gardenClient.Client(), seed.Name)
+		if err != nil {
 			return reconcileResult(err)
-		} else if err == nil {
+		}
+
+		if managedSeed != nil {
+			seedLogger.Infof("Reconciling ManagedSeed %q since the gardenlet's client certificate is expired", seed.Name)
+
+			patch := client.MergeFrom(managedSeed.DeepCopy())
 			metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
-			if err2 := c.gardenClient.Client().Status().Update(ctx, managedSeed); err2 != nil {
+			if err2 := c.gardenClient.Client().Patch(ctx, managedSeed, patch); err2 != nil {
 				return reconcileResult(err2)
 			}
 		}
@@ -177,6 +177,17 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	}
 
 	return reconcileAfter(1 * time.Minute)
+}
+
+func getManagedSeedByName(ctx context.Context, client client.Client, name string) (*seedmanagementv1alpha1.ManagedSeed, error) {
+	managedSeed := &seedmanagementv1alpha1.ManagedSeed{}
+	if err := client.Get(ctx, kutil.Key(v1beta1constants.GardenNamespace, name), managedSeed); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return managedSeed, nil
 }
 
 func setShootStatusToUnknown(ctx context.Context, c client.StatusClient, shoot *gardencorev1beta1.Shoot) error {

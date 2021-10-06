@@ -2031,7 +2031,7 @@ message SeedStatus {
   // +optional
   optional string clusterIdentity = 5;
 
-  // ClientCertificateExpirationTimestamp is the Kubernetes version of the seed cluster.
+  // ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Time clientCertificateExpirationTimestamp = 6;
 }

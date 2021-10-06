@@ -144,9 +144,14 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 			return status, false, fmt.Errorf("could not create or update seed %s: %w", ms.Name, err)
 		}
 	} else if ms.Spec.Gardenlet != nil {
+		seed, err := a.getSeed(ctx, ms)
+		if err != nil {
+			return status, false, fmt.Errorf("could not read seed %s: %w", ms.Name, err)
+		}
+
 		// Deploy gardenlet into the shoot, it will register the seed automatically
 		a.reconcilingInfoEventf(ms, "Deploying gardenlet into shoot %s", kutil.ObjectName(shoot))
-		if err := a.deployGardenlet(ctx, shootClient, ms, gardenletConfig, shoot); err != nil {
+		if err := a.deployGardenlet(ctx, shootClient, ms, gardenletConfig, seed, shoot); err != nil {
 			return status, false, fmt.Errorf("could not deploy gardenlet into shoot %s: %w", kutil.ObjectName(shoot), err)
 		}
 	}
@@ -344,13 +349,9 @@ func (a *actuator) deployGardenlet(
 	shootClient kubernetes.Interface,
 	managedSeed *seedmanagementv1alpha1.ManagedSeed,
 	gardenletConfig *configv1alpha1.GardenletConfiguration,
+	seed *gardencorev1beta1.Seed,
 	shoot *gardencorev1beta1.Shoot,
 ) error {
-	seed, err := a.getSeed(ctx, managedSeed)
-	if err != nil {
-		return err
-	}
-
 	// Prepare gardenlet chart values
 	values, err := a.prepareGardenletChartValues(
 		ctx,
@@ -702,7 +703,7 @@ func (a *actuator) prepareGardenClientConnectionWithBootstrap(
 	if seed != nil && seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(time.Now().UTC()) {
 		// Check if client certificate is expired. If yes then delete the existing kubeconfig secret to make sure that the
 		// seed can be re-bootstrapped.
-		if err := shootClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: gcc.KubeconfigSecret.Name, Namespace: gcc.KubeconfigSecret.Namespace}}); client.IgnoreNotFound(err) != nil {
+		if err := kutil.DeleteSecretByReference(ctx, shootClient.Client(), gcc.KubeconfigSecret); err != nil {
 			return "", err
 		}
 	} else {

@@ -8044,7 +8044,7 @@ Kubernetes meta/v1.Time
 </td>
 <td>
 <em>(Optional)</em>
-<p>ClientCertificateExpirationTimestamp is the Kubernetes version of the seed cluster.</p>
+<p>ClientCertificateExpirationTimestamp is the timestamp at which gardenlet&rsquo;s client certificate expires.</p>
 </td>
 </tr>
 </tbody>

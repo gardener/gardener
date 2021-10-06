@@ -104,7 +104,7 @@ type SeedStatus struct {
 	// Allocatable represents the resources of a seed that are available for scheduling.
 	// Defaults to Capacity.
 	Allocatable corev1.ResourceList
-	// ClientCertificateExpirationTimestamp is the Kubernetes version of the seed cluster.
+	// ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
 	ClientCertificateExpirationTimestamp *metav1.Time
 }
 

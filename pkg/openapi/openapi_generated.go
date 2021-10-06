@@ -6416,7 +6416,7 @@ func schema_pkg_apis_core_v1alpha1_SeedStatus(ref common.ReferenceCallback) comm
 					},
 					"clientCertificateExpirationTimestamp": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ClientCertificateExpirationTimestamp is the Kubernetes version of the seed cluster.",
+							Description: "ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
@@ -13140,7 +13140,7 @@ func schema_pkg_apis_core_v1beta1_SeedStatus(ref common.ReferenceCallback) commo
 					},
 					"clientCertificateExpirationTimestamp": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ClientCertificateExpirationTimestamp is the Kubernetes version of the seed cluster.",
+							Description: "ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
