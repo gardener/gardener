@@ -152,7 +152,6 @@ func (k *kubeAPIServer) reconcileDeployment(
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: k.computePodAnnotations(),
 					Labels: utils.MergeStringMaps(GetLabels(), map[string]string{
-						v1beta1constants.DeprecatedGardenRole:                v1beta1constants.GardenRoleControlPlane,
 						v1beta1constants.LabelNetworkPolicyToDNS:             v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToPublicNetworks:  v1beta1constants.LabelNetworkPolicyAllowed,
 						v1beta1constants.LabelNetworkPolicyToPrivateNetworks: v1beta1constants.LabelNetworkPolicyAllowed,
