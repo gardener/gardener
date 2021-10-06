@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extensions
+package extensions_test
 
 import (
 	"time"
 
+	. "github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	extensionsinstall "github.com/gardener/gardener/pkg/apis/extensions/install"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	. "github.com/onsi/ginkgo"
@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var (
@@ -36,7 +37,7 @@ var (
 
 func init() {
 	scheme = runtime.NewScheme()
-	extensionsinstall.Install(scheme)
+	utilruntime.Must(extensionsv1alpha1.AddToScheme(scheme))
 }
 
 func mkUnstructuredAccessor(obj extensionsv1alpha1.Object) extensionsv1alpha1.Object {
