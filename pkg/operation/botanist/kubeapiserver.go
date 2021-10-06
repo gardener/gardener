@@ -352,13 +352,13 @@ func (b *Botanist) computeKubeAPIServerReplicas(autoscalingConfig kubeapiserver.
 	case autoscalingConfig.Replicas != nil:
 		// If the replicas were already set then don't change them.
 		return autoscalingConfig.Replicas
-	case deployment == nil:
+	case deployment == nil && !b.Shoot.HibernationEnabled:
 		// If the Deployment does not yet exist then set the desired replicas to the minimum replicas.
 		return &autoscalingConfig.MinReplicas
-	case deployment.Spec.Replicas != nil && *deployment.Spec.Replicas > 0:
+	case deployment != nil && deployment.Spec.Replicas != nil && *deployment.Spec.Replicas > 0:
 		// If the Deployment exists then don't interfere with the replicas because they are controlled via HVPA or HPA.
 		return deployment.Spec.Replicas
-	case b.Shoot.HibernationEnabled && (deployment.Spec.Replicas == nil || *deployment.Spec.Replicas == 0):
+	case b.Shoot.HibernationEnabled && (deployment == nil || deployment.Spec.Replicas == nil || *deployment.Spec.Replicas == 0):
 		// If the Shoot is hibernated and the deployment has already been scaled down then we want to keep it scaled
 		// down. If it has not yet been scaled down then above case applies (replicas are kept) - the scale-down will
 		// happen at a later point in the flow.

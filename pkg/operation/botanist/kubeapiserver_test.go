@@ -907,6 +907,13 @@ var _ = Describe("KubeAPIServer", func() {
 				kubeapiserver.AutoscalingConfig{MinReplicas: 2},
 				int32(2),
 			),
+			Entry("use 0 because shoot is hibernated, even  if deployment does not exist",
+				func() {
+					botanist.Shoot.HibernationEnabled = true
+				},
+				kubeapiserver.AutoscalingConfig{MinReplicas: 2},
+				int32(0),
+			),
 			Entry("use deployment replicas because they are greater than 0",
 				func() {
 					Expect(c.Create(ctx, &appsv1.Deployment{
