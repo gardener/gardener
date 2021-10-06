@@ -72,7 +72,6 @@ webhooks:
       - containerruntimes
       - controlplanes
       - dnsrecords
-      - etcds
       - extensions
       - infrastructures
       - networks
