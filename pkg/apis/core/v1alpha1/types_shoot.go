@@ -528,6 +528,7 @@ type KubeAPIServerConfig struct {
 	// +optional
 	EnableAnonymousAuthentication *bool `json:"enableAnonymousAuthentication,omitempty" protobuf:"varint,11,opt,name=enableAnonymousAuthentication"`
 	// EventTTL controls the amount of time to retain events.
+	// Defaults to 1h.
 	// +optional
 	EventTTL *metav1.Duration `json:"eventTTL,omitempty" protobuf:"bytes,12,opt,name=eventTTL"`
 }

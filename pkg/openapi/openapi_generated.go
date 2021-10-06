@@ -3315,7 +3315,7 @@ func schema_pkg_apis_core_v1alpha1_KubeAPIServerConfig(ref common.ReferenceCallb
 					},
 					"eventTTL": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EventTTL controls the amount of time to retain events.",
+							Description: "EventTTL controls the amount of time to retain events. Defaults to 1h.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},
@@ -10061,7 +10061,7 @@ func schema_pkg_apis_core_v1beta1_KubeAPIServerConfig(ref common.ReferenceCallba
 					},
 					"eventTTL": {
 						SchemaProps: spec.SchemaProps{
-							Description: "EventTTL controls the amount of time to retain events.",
+							Description: "EventTTL controls the amount of time to retain events. Defaults to 1h.",
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
 						},
 					},

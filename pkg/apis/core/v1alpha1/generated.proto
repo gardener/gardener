@@ -895,6 +895,7 @@ message KubeAPIServerConfig {
   optional bool enableAnonymousAuthentication = 11;
 
   // EventTTL controls the amount of time to retain events.
+  // Defaults to 1h.
   // +optional
   optional k8s.io.apimachinery.pkg.apis.meta.v1.Duration eventTTL = 12;
 }

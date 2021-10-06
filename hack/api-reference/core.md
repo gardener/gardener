@@ -4222,7 +4222,8 @@ Kubernetes meta/v1.Duration
 </td>
 <td>
 <em>(Optional)</em>
-<p>EventTTL controls the amount of time to retain events.</p>
+<p>EventTTL controls the amount of time to retain events.
+Defaults to 1h.</p>
 </td>
 </tr>
 </tbody>
