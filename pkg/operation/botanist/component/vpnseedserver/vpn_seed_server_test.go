@@ -31,6 +31,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"
+	networkingv1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	networkingv1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -761,6 +762,9 @@ var _ = Describe("VpnSeedServer", func() {
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: namespace + "-vpn"}}),
 				)
 				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
 			})
@@ -816,6 +820,9 @@ var _ = Describe("VpnSeedServer", func() {
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
 					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+					c.EXPECT().Delete(ctx, &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: namespace + "-vpn"}}),
 				)
 
 				Expect(vpnSeedServer.Deploy(ctx)).To(Succeed())
@@ -943,6 +950,9 @@ var _ = Describe("VpnSeedServer", func() {
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-tlsauth"}}),
 				c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName + "-dh"}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1beta1.VirtualService{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: DeploymentName}}),
+				c.EXPECT().Delete(ctx, &networkingv1alpha3.EnvoyFilter{ObjectMeta: metav1.ObjectMeta{Namespace: istioNamespace, Name: namespace + "-vpn"}}),
 			)
 			Expect(vpnSeedServer.Destroy(ctx)).To(Succeed())
 		})
