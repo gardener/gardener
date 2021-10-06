@@ -179,10 +179,25 @@ func (c *Controller) runPrepareShootControlPlaneMigration(ctx context.Context, o
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdsReady).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne),
 		})
+		generateEncryptionConfigurationMetaData = g.Add(flow.Task{
+			Name:         "Generating etcd encryption configuration",
+			Fn:           flow.TaskFn(botanist.GenerateEncryptionConfiguration).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(wakeupRequired),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
+		})
+		persistETCDEncryptionConfiguration = g.Add(flow.Task{
+			Name:         "Persisting etcd encryption configuration in ShootState",
+			Fn:           flow.TaskFn(botanist.PersistEncryptionConfiguration).DoIf(wakeupRequired),
+			Dependencies: flow.NewTaskIDs(generateEncryptionConfigurationMetaData),
+		})
+		applyETCDEncryptionConfiguration = g.Add(flow.Task{
+			Name:         "Applying etcd encryption configuration",
+			Fn:           flow.TaskFn(botanist.ApplyEncryptionConfiguration).DoIf(wakeupRequired),
+			Dependencies: flow.NewTaskIDs(persistETCDEncryptionConfiguration),
+		})
 		wakeUpKubeAPIServer = g.Add(flow.Task{
 			Name:         "Scaling Kubernetes API Server up and waiting until ready",
 			Fn:           flow.TaskFn(botanist.WakeUpKubeAPIServer).DoIf(wakeupRequired),
-			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne),
+			Dependencies: flow.NewTaskIDs(deployETCD, scaleETCDToOne, applyETCDEncryptionConfiguration),
 		})
 		ensureResourceManagerScaledUp = g.Add(flow.Task{
 			Name:         "Ensuring that the gardener resource manager is scaled to 1",
