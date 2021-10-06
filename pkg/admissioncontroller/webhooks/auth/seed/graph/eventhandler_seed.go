@@ -130,7 +130,7 @@ func (g *graph) handleSeedDelete(seed *gardencorev1beta1.Seed) {
 
 func (g *graph) handleManagedSeedIfSeedBelongsToIt(ctx context.Context, seedName string) {
 	// error is ignored here since we cannot do anything meaningful with it
-	if managedSeed, err := kutil.GetManagedSeedByName(ctx, g.client, seedName); err != nil && managedSeed != nil {
+	if managedSeed, err := kutil.GetManagedSeedByName(ctx, g.client, seedName); err == nil && managedSeed != nil {
 		g.handleManagedSeedCreateOrUpdate(ctx, managedSeed)
 	}
 }
