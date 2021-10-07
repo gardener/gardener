@@ -19,8 +19,9 @@ import (
 	"strings"
 	"text/template"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 )
 
 const (
@@ -36,6 +37,7 @@ const (
 	monitoringMetricApiserverAuditErrorTotal                                   = "apiserver_audit_error_total"
 	monitoringMetricApiserverAuditRequestsRejectedTotal                        = "apiserver_audit_requests_rejected_total"
 	monitoringMetricApiserverLatencySeconds                                    = "apiserver_latency_seconds"
+	monitoringMetricApiserverCRDWebhookConversionDurationSecondsBucket         = "apiserver_crd_webhook_conversion_duration_seconds_bucket"
 	monitoringMetricApiserverCurrentInflightRequests                           = "apiserver_current_inflight_requests"
 	monitoringMetricApiserverCurrentInqueueRequests                            = "apiserver_current_inqueue_requests"
 	monitoringMetricApiserverResponseSizesBucket                               = "apiserver_response_sizes_bucket"
@@ -189,6 +191,7 @@ var (
 		monitoringMetricApiserverAuditErrorTotal,
 		monitoringMetricApiserverAuditRequestsRejectedTotal,
 		monitoringMetricApiserverLatencySeconds,
+		monitoringMetricApiserverCRDWebhookConversionDurationSecondsBucket,
 		monitoringMetricApiserverCurrentInflightRequests,
 		monitoringMetricApiserverCurrentInqueueRequests,
 		monitoringMetricApiserverResponseSizesBucket,
