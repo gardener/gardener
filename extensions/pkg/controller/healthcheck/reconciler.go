@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -36,7 +35,6 @@ import (
 	gardenv1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
@@ -268,19 +266,17 @@ type condition struct {
 }
 
 func (r *reconciler) updateExtensionConditions(ctx context.Context, extension extensionsv1alpha1.Object, conditions ...condition) error {
-	return controllerutils.TryPatchStatus(ctx, retry.DefaultBackoff, r.client, extension, func() error {
-		for _, cond := range conditions {
-			now := metav1.Now()
-			if c := gardencorev1beta1helper.GetCondition(extension.GetExtensionStatus().GetConditions(), gardencorev1beta1.ConditionType(cond.healthConditionType)); c != nil {
-				cond.builder.WithOldCondition(*c)
-			}
-			updatedCondition, _ := cond.builder.WithNowFunc(func() metav1.Time { return now }).Build()
-			// always update - the Gardenlet expects a recent health check
-			updatedCondition.LastUpdateTime = now
-			extension.GetExtensionStatus().SetConditions(gardencorev1beta1helper.MergeConditions(extension.GetExtensionStatus().GetConditions(), updatedCondition))
+	for _, cond := range conditions {
+		now := metav1.Now()
+		if c := gardencorev1beta1helper.GetCondition(extension.GetExtensionStatus().GetConditions(), gardencorev1beta1.ConditionType(cond.healthConditionType)); c != nil {
+			cond.builder.WithOldCondition(*c)
 		}
-		return nil
-	})
+		updatedCondition, _ := cond.builder.WithNowFunc(func() metav1.Time { return now }).Build()
+		// always update - the Gardenlet expects a recent health check
+		updatedCondition.LastUpdateTime = now
+		extension.GetExtensionStatus().SetConditions(gardencorev1beta1helper.MergeConditions(extension.GetExtensionStatus().GetConditions(), updatedCondition))
+	}
+	return r.client.Status().Update(ctx, extension)
 }
 
 func (r *reconciler) resultWithRequeue() reconcile.Result {

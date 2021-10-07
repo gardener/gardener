@@ -16,10 +16,8 @@ package controllerutils
 
 import (
 	"context"
-	"reflect"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -132,50 +130,4 @@ func createOrGetAndPatch(ctx context.Context, c client.Client, obj client.Object
 	}
 
 	return controllerutil.OperationResultCreated, nil
-}
-
-// TryPatch tries to apply the given transformation function onto the given object, and to patch it afterwards with optimistic locking.
-// It retries the patch with an exponential backoff.
-// Deprecated: This function is deprecated and will be removed in a future version. Please don't consider using it.
-// See https://github.com/gardener/gardener/blob/master/docs/development/kubernetes-clients.md#dont-retry-on-conflict
-// for more information.
-func TryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, transform func() error) error {
-	return tryPatch(ctx, backoff, c, obj, c.Patch, transform)
-}
-
-// TryPatchStatus tries to apply the given transformation function onto the given object, and to patch its
-// status afterwards with optimistic locking. It retries the status patch with an exponential backoff.
-// Deprecated: This function is deprecated and will be removed in a future version. Please don't consider using it.
-// See https://github.com/gardener/gardener/blob/master/docs/development/kubernetes-clients.md#dont-retry-on-conflict
-// for more information.
-func TryPatchStatus(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, transform func() error) error {
-	return tryPatch(ctx, backoff, c, obj, c.Status().Patch, transform)
-}
-
-func tryPatch(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, patchFunc func(context.Context, client.Object, client.Patch, ...client.PatchOption) error, transform func() error) error {
-	resetCopy := obj.DeepCopyObject()
-	return exponentialBackoff(ctx, backoff, func() (bool, error) {
-		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
-			return false, err
-		}
-		beforeTransform := obj.DeepCopyObject().(client.Object)
-		if err := transform(); err != nil {
-			return false, err
-		}
-
-		if reflect.DeepEqual(obj, beforeTransform) {
-			return true, nil
-		}
-
-		patch := client.MergeFromWithOptions(beforeTransform, client.MergeFromWithOptimisticLock{})
-
-		if err := patchFunc(ctx, obj, patch); err != nil {
-			if apierrors.IsConflict(err) {
-				reflect.ValueOf(obj).Elem().Set(reflect.ValueOf(resetCopy).Elem())
-				return false, nil
-			}
-			return false, err
-		}
-		return true, nil
-	})
 }
