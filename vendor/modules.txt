@@ -43,6 +43,7 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/dsnet/compress v0.0.1
+## explicit
 github.com/dsnet/compress
 github.com/dsnet/compress/bzip2
 github.com/dsnet/compress/bzip2/internal/sais
@@ -84,6 +85,8 @@ github.com/envoyproxy/protoc-gen-validate/validate
 github.com/evanphx/json-patch
 # github.com/fatih/color v1.12.0
 github.com/fatih/color
+# github.com/frankban/quicktest v1.13.1
+## explicit
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
 # github.com/gardener/component-spec/bindings-go v0.0.33
@@ -99,9 +102,10 @@ github.com/gardener/component-spec/bindings-go/utils/selector
 ## explicit
 github.com/gardener/dependency-watchdog/pkg/restarter/api
 github.com/gardener/dependency-watchdog/pkg/scaler/api
-# github.com/gardener/etcd-druid v0.5.0
+# github.com/gardener/etcd-druid/api v0.0.0-00010101000000-000000000000 => github.com/gardener/etcd-druid/api v0.6.1-0.20211004135640-0828abe1338b
 ## explicit
 github.com/gardener/etcd-druid/api/v1alpha1
+github.com/gardener/etcd-druid/api/validation
 # github.com/gardener/external-dns-management v0.7.18
 ## explicit
 github.com/gardener/external-dns-management/pkg/apis/dns
@@ -208,7 +212,8 @@ github.com/golang/protobuf/ptypes/empty
 github.com/golang/protobuf/ptypes/struct
 github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/protobuf/ptypes/wrappers
-# github.com/golang/snappy v0.0.1
+# github.com/golang/snappy v0.0.4
+## explicit
 github.com/golang/snappy
 # github.com/google/go-cmp v0.5.6
 github.com/google/go-cmp/cmp
@@ -284,7 +289,8 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 github.com/munnerz/goautoneg
-# github.com/nwaples/rardecode v1.0.0
+# github.com/nwaples/rardecode v1.1.2
+## explicit
 github.com/nwaples/rardecode
 # github.com/nxadm/tail v1.4.8
 github.com/nxadm/tail
@@ -344,7 +350,8 @@ github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
 # github.com/pelletier/go-toml v1.6.0
 github.com/pelletier/go-toml
-# github.com/pierrec/lz4 v2.3.0+incompatible
+# github.com/pierrec/lz4 v2.6.1+incompatible
+## explicit
 github.com/pierrec/lz4
 github.com/pierrec/lz4/internal/xxh32
 # github.com/pkg/errors v0.9.1
@@ -400,7 +407,8 @@ github.com/subosito/gotenv
 # github.com/texttheater/golang-levenshtein v0.0.0-20191208221605-eb6844b05fc6
 ## explicit
 github.com/texttheater/golang-levenshtein/levenshtein
-# github.com/ulikunitz/xz v0.5.6
+# github.com/ulikunitz/xz v0.5.10
+## explicit
 github.com/ulikunitz/xz
 github.com/ulikunitz/xz/internal/hash
 github.com/ulikunitz/xz/internal/xlog
@@ -412,6 +420,7 @@ github.com/xeipuuv/gojsonreference
 # github.com/xeipuuv/gojsonschema v1.2.0
 github.com/xeipuuv/gojsonschema
 # github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
+## explicit
 github.com/xi2/xz
 # go.etcd.io/etcd v0.5.0-alpha.5.0.20200910180754-dd1b699fc489
 go.etcd.io/etcd/auth/authpb
@@ -1455,6 +1464,8 @@ sigs.k8s.io/structured-merge-diff/v4/value
 sigs.k8s.io/yaml
 # github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible
 # github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
+# github.com/gardener/etcd-druid => github.com/gardener/etcd-druid v0.6.0
+# github.com/gardener/etcd-druid/api => github.com/gardener/etcd-druid/api v0.6.1-0.20211004135640-0828abe1338b
 # github.com/gardener/gardener-resource-manager/api => github.com/gardener/gardener-resource-manager/api v0.25.0
 # github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 # github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.0

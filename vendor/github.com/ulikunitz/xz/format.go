@@ -1,4 +1,4 @@
-// Copyright 2014-2017 Ulrich Kunitz. All rights reserved.
+// Copyright 2014-2021 Ulrich Kunitz. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -46,9 +46,10 @@ const HeaderLen = 12
 
 // Constants for the checksum methods supported by xz.
 const (
+	None   byte = 0x0
 	CRC32  byte = 0x1
-	CRC64       = 0x4
-	SHA256      = 0xa
+	CRC64  byte = 0x4
+	SHA256 byte = 0xa
 )
 
 // errInvalidFlags indicates that flags are invalid.
@@ -58,7 +59,7 @@ var errInvalidFlags = errors.New("xz: invalid flags")
 // invalid.
 func verifyFlags(flags byte) error {
 	switch flags {
-	case CRC32, CRC64, SHA256:
+	case None, CRC32, CRC64, SHA256:
 		return nil
 	default:
 		return errInvalidFlags
@@ -67,6 +68,7 @@ func verifyFlags(flags byte) error {
 
 // flagstrings maps flag values to strings.
 var flagstrings = map[byte]string{
+	None:   "None",
 	CRC32:  "CRC-32",
 	CRC64:  "CRC-64",
 	SHA256: "SHA-256",
@@ -85,6 +87,8 @@ func flagString(flags byte) string {
 // hash method encoded in flags.
 func newHashFunc(flags byte) (newHash func() hash.Hash, err error) {
 	switch flags {
+	case None:
+		newHash = newNoneHash
 	case CRC32:
 		newHash = newCRC32
 	case CRC64:
@@ -565,22 +569,6 @@ func readFilters(r io.Reader, count int) (filters []filter, err error) {
 	return []filter{f}, err
 }
 
-// writeFilters writes the filters.
-func writeFilters(w io.Writer, filters []filter) (n int, err error) {
-	for _, f := range filters {
-		p, err := f.MarshalBinary()
-		if err != nil {
-			return n, err
-		}
-		k, err := w.Write(p)
-		n += k
-		if err != nil {
-			return n, err
-		}
-	}
-	return n, nil
-}
-
 /*** Index ***/
 
 // record describes a block in the xz file index.
@@ -674,7 +662,7 @@ func writeIndex(w io.Writer, index []record) (n int64, err error) {
 
 // readIndexBody reads the index from the reader. It assumes that the
 // index indicator has already been read.
-func readIndexBody(r io.Reader) (records []record, n int64, err error) {
+func readIndexBody(r io.Reader, expectedRecordLen int) (records []record, n int64, err error) {
 	crc := crc32.NewIEEE()
 	// index indicator
 	crc.Write([]byte{0})
@@ -690,6 +678,11 @@ func readIndexBody(r io.Reader) (records []record, n int64, err error) {
 	recLen := int(u)
 	if recLen < 0 || uint64(recLen) != u {
 		return nil, n, errors.New("xz: record number overflow")
+	}
+	if recLen != expectedRecordLen {
+		return nil, n, fmt.Errorf(
+			"xz: index length is %d; want %d",
+			recLen, expectedRecordLen)
 	}
 
 	// list of records

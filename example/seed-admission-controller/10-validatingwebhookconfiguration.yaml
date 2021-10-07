@@ -50,6 +50,15 @@ webhooks:
 - name: validation.extensions.seed.admission.core.gardener.cloud
   rules:
     - apiGroups:
+      - druid.gardener.cloud
+      apiVersions:
+      - v1alpha1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - etcds
+    - apiGroups:
       - extensions.gardener.cloud
       apiVersions:
       - v1alpha1
