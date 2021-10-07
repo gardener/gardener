@@ -266,5 +266,115 @@ var _ = Describe("Builder", func() {
 				}))
 			})
 		})
+
+		Context("LastTransitionTime", func() {
+			It("should update last transition time when status is updated", func() {
+				result, _ = bldr.
+					WithNowFunc(defaultTimeFunc).
+					WithOldCondition(gardencorev1alpha1.Condition{
+						Type:               conditionType,
+						Status:             fooStatus,
+						LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
+						LastUpdateTime:     metav1.NewTime(time.Unix(11, 0)),
+						Reason:             bazReason,
+						Message:            fubarMessage,
+						Codes:              []gardencorev1alpha1.ErrorCode{gardencorev1alpha1.ErrorInfraQuotaExceeded},
+					}).
+					WithStatus("SomeNewStatus").
+					Build()
+
+				Expect(result.LastTransitionTime).To(Equal(defaultTime))
+			})
+
+			It("should not update last transition time when status is not updated", func() {
+				result, _ = bldr.
+					WithNowFunc(defaultTimeFunc).
+					WithOldCondition(gardencorev1alpha1.Condition{
+						Type:               conditionType,
+						Status:             fooStatus,
+						LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
+						LastUpdateTime:     metav1.NewTime(time.Unix(11, 0)),
+						Reason:             bazReason,
+						Message:            fubarMessage,
+						Codes:              []gardencorev1alpha1.ErrorCode{gardencorev1alpha1.ErrorInfraQuotaExceeded},
+					}).
+					Build()
+
+				Expect(result.LastTransitionTime).To(Equal(metav1.NewTime(time.Unix(10, 0))))
+			})
+		})
+
+		Context("LastUpdateTime", func() {
+			It("should update LastUpdateTime when codes are updated", func() {
+				result, _ = bldr.
+					WithNowFunc(defaultTimeFunc).
+					WithOldCondition(gardencorev1alpha1.Condition{
+						Type:               conditionType,
+						Status:             fooStatus,
+						LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
+						LastUpdateTime:     metav1.NewTime(time.Unix(11, 0)),
+						Reason:             bazReason,
+						Message:            fubarMessage,
+						Codes:              []gardencorev1alpha1.ErrorCode{gardencorev1alpha1.ErrorInfraQuotaExceeded},
+					}).
+					WithCodes(codes...).
+					Build()
+
+				Expect(result.LastUpdateTime).To(Equal(defaultTime))
+			})
+
+			It("should update LastUpdateTime when message is updated", func() {
+				result, _ = bldr.
+					WithNowFunc(defaultTimeFunc).
+					WithOldCondition(gardencorev1alpha1.Condition{
+						Type:               conditionType,
+						Status:             fooStatus,
+						LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
+						LastUpdateTime:     metav1.NewTime(time.Unix(11, 0)),
+						Reason:             bazReason,
+						Message:            fubarMessage,
+						Codes:              []gardencorev1alpha1.ErrorCode{gardencorev1alpha1.ErrorInfraQuotaExceeded},
+					}).
+					WithMessage("Some message").
+					Build()
+
+				Expect(result.LastUpdateTime).To(Equal(defaultTime))
+			})
+
+			It("should update LastUpdateTime when reason is updated", func() {
+				result, _ = bldr.
+					WithNowFunc(defaultTimeFunc).
+					WithOldCondition(gardencorev1alpha1.Condition{
+						Type:               conditionType,
+						Status:             fooStatus,
+						LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
+						LastUpdateTime:     metav1.NewTime(time.Unix(11, 0)),
+						Reason:             bazReason,
+						Message:            fubarMessage,
+						Codes:              []gardencorev1alpha1.ErrorCode{gardencorev1alpha1.ErrorInfraQuotaExceeded},
+					}).
+					WithReason("SomeNewReason").
+					Build()
+
+				Expect(result.LastUpdateTime).To(Equal(defaultTime))
+			})
+
+			It("should not update LastUpdateTime when codes, message and reason are not updated", func() {
+				result, _ = bldr.
+					WithNowFunc(defaultTimeFunc).
+					WithOldCondition(gardencorev1alpha1.Condition{
+						Type:               conditionType,
+						Status:             fooStatus,
+						LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
+						LastUpdateTime:     metav1.NewTime(time.Unix(11, 0)),
+						Reason:             bazReason,
+						Message:            fubarMessage,
+						Codes:              []gardencorev1alpha1.ErrorCode{gardencorev1alpha1.ErrorInfraQuotaExceeded},
+					}).
+					Build()
+
+				Expect(result.LastUpdateTime).To(Equal(metav1.NewTime(time.Unix(11, 0))))
+			})
+		})
 	})
 })

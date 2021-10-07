@@ -1020,7 +1020,7 @@ var _ = Describe("health check", func() {
 
 		Entry("health check report is not outdated - threshold not configured in Gardenlet config",
 			nil,
-			gardencorev1beta1.Condition{},
+			gardencorev1beta1.Condition{Type: "type"},
 			[]care.ExtensionCondition{
 				{
 					Condition: gardencorev1beta1.Condition{
@@ -1035,7 +1035,7 @@ var _ = Describe("health check", func() {
 		Entry("health check report is not outdated",
 			// 2 minute threshold for outdated health check reports
 			&metav1.Duration{Duration: time.Minute * 2},
-			gardencorev1beta1.Condition{},
+			gardencorev1beta1.Condition{Type: "type"},
 			[]care.ExtensionCondition{
 				{
 					Condition: gardencorev1beta1.Condition{
@@ -1074,7 +1074,7 @@ var _ = Describe("health check", func() {
 		),
 		Entry("health check reports status progressing",
 			nil,
-			gardencorev1beta1.Condition{},
+			gardencorev1beta1.Condition{Type: "type"},
 			[]care.ExtensionCondition{
 				{
 					ExtensionType: "Foo",
@@ -1095,7 +1095,7 @@ var _ = Describe("health check", func() {
 		),
 		Entry("health check reports status false",
 			nil,
-			gardencorev1beta1.Condition{},
+			gardencorev1beta1.Condition{Type: "type"},
 			[]care.ExtensionCondition{
 				{
 					ExtensionType: "Foo",
@@ -1114,7 +1114,7 @@ var _ = Describe("health check", func() {
 		),
 		Entry("health check reports status unknown",
 			nil,
-			gardencorev1beta1.Condition{},
+			gardencorev1beta1.Condition{Type: "type"},
 			[]care.ExtensionCondition{
 				{
 					ExtensionType: "Foo",

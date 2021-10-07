@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
@@ -76,26 +77,15 @@ func GetOrInitCondition(conditions []gardencorev1beta1.Condition, conditionType 
 
 // UpdatedCondition updates the properties of one specific condition.
 func UpdatedCondition(condition gardencorev1beta1.Condition, status gardencorev1beta1.ConditionStatus, reason, message string, codes ...gardencorev1beta1.ErrorCode) gardencorev1beta1.Condition {
-	var (
-		newCondition = gardencorev1beta1.Condition{
-			Type:               condition.Type,
-			Status:             status,
-			Reason:             reason,
-			Message:            message,
-			LastTransitionTime: condition.LastTransitionTime,
-			LastUpdateTime:     condition.LastUpdateTime,
-			Codes:              codes,
-		}
-		now = Now()
-	)
-
-	if condition.Status != status {
-		newCondition.LastTransitionTime = now
-	}
-
-	if condition.Reason != reason || condition.Message != message || !apiequality.Semantic.DeepEqual(condition.Codes, codes) {
-		newCondition.LastUpdateTime = now
-	}
+	builder, err := NewConditionBuilder(condition.Type)
+	utilruntime.Must(err)
+	newCondition, _ := builder.
+		WithOldCondition(condition).
+		WithStatus(status).
+		WithReason(reason).
+		WithMessage(message).
+		WithCodes(codes...).
+		Build()
 
 	return newCondition
 }
