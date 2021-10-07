@@ -398,26 +398,36 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 			TimeoutSeconds:          pointer.Int32(10),
 		}, {
 			Name: "validation.extensions.seed.admission.core.gardener.cloud",
-			Rules: []admissionregistrationv1.RuleWithOperations{{
-				Rule: admissionregistrationv1.Rule{
-					APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
-					APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
-					Resources: []string{
-						"backupbuckets",
-						"backupentries",
-						"bastions",
-						"containerruntimes",
-						"controlplanes",
-						"dnsrecords",
-						"extensions",
-						"infrastructures",
-						"networks",
-						"operatingsystemconfigs",
-						"workers",
+			Rules: []admissionregistrationv1.RuleWithOperations{
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
+						APIVersions: []string{druidv1alpha1.GroupVersion.Version},
+						Resources:   []string{"etcds"},
 					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 				},
-				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
-			}},
+				{
+					Rule: admissionregistrationv1.Rule{
+						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+						Resources: []string{
+							"backupbuckets",
+							"backupentries",
+							"bastions",
+							"containerruntimes",
+							"controlplanes",
+							"dnsrecords",
+							"extensions",
+							"infrastructures",
+							"networks",
+							"operatingsystemconfigs",
+							"workers",
+						},
+					},
+					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+				},
+			},
 			FailurePolicy:     &failurePolicy,
 			NamespaceSelector: &metav1.LabelSelector{},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{

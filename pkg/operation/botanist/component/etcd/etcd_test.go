@@ -527,7 +527,7 @@ var _ = Describe("Etcd", func() {
 					func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
 						(&druidv1alpha1.Etcd{
 							Status: druidv1alpha1.EtcdStatus{
-								Etcd: druidv1alpha1.CrossVersionObjectReference{
+								Etcd: &druidv1alpha1.CrossVersionObjectReference{
 									Name: statefulSetName,
 								},
 							},
@@ -657,7 +657,7 @@ var _ = Describe("Etcd", func() {
 								Replicas: int(existingReplicas),
 							},
 							Status: druidv1alpha1.EtcdStatus{
-								Etcd: druidv1alpha1.CrossVersionObjectReference{
+								Etcd: &druidv1alpha1.CrossVersionObjectReference{
 									Name: etcdName,
 								},
 							},
@@ -714,7 +714,7 @@ var _ = Describe("Etcd", func() {
 								},
 							},
 							Status: druidv1alpha1.EtcdStatus{
-								Etcd: druidv1alpha1.CrossVersionObjectReference{
+								Etcd: &druidv1alpha1.CrossVersionObjectReference{
 									Name: etcdName,
 								},
 							},
@@ -946,7 +946,7 @@ var _ = Describe("Etcd", func() {
 									},
 								},
 								Status: druidv1alpha1.EtcdStatus{
-									Etcd: druidv1alpha1.CrossVersionObjectReference{
+									Etcd: &druidv1alpha1.CrossVersionObjectReference{
 										Name: "",
 									},
 								},
@@ -961,7 +961,7 @@ var _ = Describe("Etcd", func() {
 						}),
 						c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
-							Expect(obj).To(DeepEqual(etcdObjFor(
+							expobj := etcdObjFor(
 								class,
 								1,
 								backupConfig,
@@ -969,7 +969,10 @@ var _ = Describe("Etcd", func() {
 								existingBackupSchedule,
 								nil,
 								nil,
-							)))
+							)
+							expobj.Status.Etcd = &druidv1alpha1.CrossVersionObjectReference{}
+
+							Expect(obj).To(DeepEqual(expobj))
 						}),
 						c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
