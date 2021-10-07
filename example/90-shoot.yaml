@@ -130,6 +130,7 @@ spec:
     version: 1.15.1
   # allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
+  #   eventTTL: 1h
   #   featureGates:
   #     SomeKubernetesFeature: true
   #   runtimeConfig:

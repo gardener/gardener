@@ -1632,6 +1632,11 @@ func (in *KubeAPIServerConfig) DeepCopyInto(out *KubeAPIServerConfig) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.EventTTL != nil {
+		in, out := &in.EventTTL, &out.EventTTL
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 

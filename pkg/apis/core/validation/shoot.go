@@ -730,6 +730,15 @@ func validateKubernetes(kubernetes core.Kubernetes, dockerConfigured bool, fldPa
 			}
 		}
 
+		if kubeAPIServer.EventTTL != nil {
+			if kubeAPIServer.EventTTL.Duration < 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "eventTTL"), *kubeAPIServer.EventTTL, "can not be negative"))
+			}
+			if kubeAPIServer.EventTTL.Duration > time.Hour*24*7 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("kubeAPIServer", "eventTTL"), *kubeAPIServer.EventTTL, "can not be longer than 7d"))
+			}
+		}
+
 		allErrs = append(allErrs, ValidateFeatureGates(kubeAPIServer.FeatureGates, kubernetes.Version, fldPath.Child("kubeAPIServer", "featureGates"))...)
 	}
 

@@ -539,6 +539,10 @@ type KubeAPIServerConfig struct {
 	// See: https://kubernetes.io/docs/reference/command-line-tools-reference/kube-apiserver/
 	// +optional
 	EnableAnonymousAuthentication *bool `json:"enableAnonymousAuthentication,omitempty" protobuf:"varint,11,opt,name=enableAnonymousAuthentication"`
+	// EventTTL controls the amount of time to retain events.
+	// Defaults to 1h.
+	// +optional
+	EventTTL *metav1.Duration `json:"eventTTL,omitempty" protobuf:"bytes,12,opt,name=eventTTL"`
 }
 
 // KubeAPIServerRequests contains configuration for request-specific settings for the kube-apiserver.

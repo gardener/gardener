@@ -453,6 +453,10 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, fmt.Sprintf("--encryption-provider-config=%s/%s", volumeMountPathEtcdEncryptionConfig, SecretEtcdEncryptionConfigurationDataKey))
 	out = append(out, "--external-hostname="+k.values.ExternalHostname)
 
+	if k.values.EventTTL != nil {
+		out = append(out, fmt.Sprintf("--event-ttl=%s", k.values.EventTTL.Duration))
+	}
+
 	if k.values.FeatureGates != nil {
 		out = append(out, kutil.FeatureGatesToCommandLineParameter(k.values.FeatureGates))
 	}

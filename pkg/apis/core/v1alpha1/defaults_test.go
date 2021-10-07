@@ -456,6 +456,19 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.Requests.MaxMutatingInflight).To(Equal(&maxMutatingRequestsInflight))
 		})
 
+		It("should default the event ttl field", func() {
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.EventTTL).To(Equal(&metav1.Duration{Duration: time.Hour}))
+		})
+
+		It("should not default the event ttl field", func() {
+			eventTTL := &metav1.Duration{Duration: 4 * time.Hour}
+			obj.Spec.Kubernetes.KubeAPIServer = &KubeAPIServerConfig{EventTTL: eventTTL}
+
+			SetDefaults_Shoot(obj)
+			Expect(obj.Spec.Kubernetes.KubeAPIServer.EventTTL).To(Equal(eventTTL))
+		})
+
 		It("should disable anonymous authentication by default", func() {
 			SetDefaults_Shoot(obj)
 			Expect(obj.Spec.Kubernetes.KubeAPIServer.EnableAnonymousAuthentication).To(PointTo(BeFalse()))

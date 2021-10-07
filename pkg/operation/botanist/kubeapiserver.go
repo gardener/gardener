@@ -55,6 +55,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		admissionPlugins = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
 		apiAudiences     = []string{"kubernetes"}
 		auditConfig      *kubeapiserver.AuditConfig
+		eventTTL         *metav1.Duration
 		featureGates     map[string]bool
 		oidcConfig       *gardencorev1beta1.OIDCConfig
 		requests         *gardencorev1beta1.KubeAPIServerRequests
@@ -74,6 +75,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			return nil, err
 		}
 
+		eventTTL = apiServerConfig.EventTTL
 		featureGates = apiServerConfig.FeatureGates
 		oidcConfig = apiServerConfig.OIDCConfig
 		requests = apiServerConfig.Requests
@@ -92,6 +94,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			Audit:                          auditConfig,
 			Autoscaling:                    b.computeKubeAPIServerAutoscalingConfig(),
 			BasicAuthenticationEnabled:     gardencorev1beta1helper.ShootWantsBasicAuthentication(b.Shoot.GetInfo()),
+			EventTTL:                       eventTTL,
 			FeatureGates:                   featureGates,
 			Images:                         images,
 			OIDC:                           oidcConfig,
