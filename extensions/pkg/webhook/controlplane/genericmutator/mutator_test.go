@@ -280,10 +280,20 @@ var _ = Describe("Mutator", func() {
 			),
 		)
 
-		// DescribeTable("should invoke appropriate ensurer methods with OperatingSystemConfig", func() {
-		It("should invoke appropriate ensurer methods with OperatingSystemConfig", func() {
-
+		Context("OperatingSystemConfig mutation", func() {
 			var (
+				newOSC               *extensionsv1alpha1.OperatingSystemConfig
+				oldUnitOptions       []*unit.UnitOption
+				newUnitOptions       []*unit.UnitOption
+				mutatedUnitOptions   []*unit.UnitOption
+				oldKubeletConfig     *kubeletconfigv1beta1.KubeletConfiguration
+				newKubeletConfig     *kubeletconfigv1beta1.KubeletConfiguration
+				mutatedKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration
+				additionalUnit       = extensionsv1alpha1.Unit{Name: "custom-mtu.service"}
+				additionalFile       = extensionsv1alpha1.File{Path: "/test/path"}
+			)
+
+			BeforeEach(func() {
 				newOSC = &extensionsv1alpha1.OperatingSystemConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: "test"},
 					Spec: extensionsv1alpha1.OperatingSystemConfigSpec{
@@ -351,67 +361,128 @@ var _ = Describe("Mutator", func() {
 						"Foo": true,
 					},
 				}
-				additionalUnit = extensionsv1alpha1.Unit{Name: "custom-mtu.service"}
-				additionalFile = extensionsv1alpha1.File{Path: "/test/path"}
+			})
+
+			It("should invoke appropriate ensurer methods with OperatingSystemConfig", func() {
+				oldOSC := newOSC.DeepCopy()
+				oldOSC.Spec.Units[0].Content = pointer.String(oldServiceContent)
+				oldOSC.Spec.Files[0].Content.Inline.Data = oldKubeletConfigData
+				oldOSC.Spec.Files[1].Content.Inline.Data = oldKubernetesGeneralConfigData
+
+				// Create mock ensurer
+				ensurer.EXPECT().EnsureKubeletServiceUnitOptions(context.TODO(), gomock.Any(), newUnitOptions, oldUnitOptions).Return(mutatedUnitOptions, nil)
+				ensurer.EXPECT().EnsureKubeletConfiguration(context.TODO(), gomock.Any(), newKubeletConfig, oldKubeletConfig).DoAndReturn(
+					func(ctx context.Context, gctx gcontext.GardenContext, kubeletConfig, newKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration) error {
+						*kubeletConfig = *mutatedKubeletConfig
+						return nil
+					},
+				)
+				ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.TODO(), gomock.Any(), pointer.String(newKubernetesGeneralConfigData), pointer.String(oldKubernetesGeneralConfigData)).DoAndReturn(
+					func(ctx context.Context, gctx gcontext.GardenContext, newData, data *string) error {
+						*newData = mutatedKubernetesGeneralConfigData
+						return nil
+					},
+				)
+				ensurer.EXPECT().EnsureAdditionalUnits(context.TODO(), gomock.Any(), &newOSC.Spec.Units, &oldOSC.Spec.Units).DoAndReturn(
+					func(ctx context.Context, gctx gcontext.GardenContext, oscUnits, oldOSCUnits *[]extensionsv1alpha1.Unit) error {
+						*oscUnits = append(*oscUnits, additionalUnit)
+						return nil
+					})
+				ensurer.EXPECT().EnsureAdditionalFiles(context.TODO(), gomock.Any(), &newOSC.Spec.Files, &oldOSC.Spec.Files).DoAndReturn(
+					func(ctx context.Context, gctx gcontext.GardenContext, oscFiles, oldOSCFiles *[]extensionsv1alpha1.File) error {
+						*oscFiles = append(*oscFiles, additionalFile)
+						return nil
+					})
+
+				ensurer.EXPECT().ShouldProvisionKubeletCloudProviderConfig(context.TODO(), gomock.Any()).Return(true)
+				ensurer.EXPECT().EnsureKubeletCloudProviderConfig(context.TODO(), gomock.Any(), gomock.Any(), newOSC.Namespace).DoAndReturn(
+					func(ctx context.Context, gctx gcontext.GardenContext, data *string, _ string) error {
+						*data = cloudproviderconf
+						return nil
+					},
+				)
+
+				us.EXPECT().Deserialize(newServiceContent).Return(newUnitOptions, nil)
+				us.EXPECT().Deserialize(oldServiceContent).Return(oldUnitOptions, nil)
+				us.EXPECT().Serialize(mutatedUnitOptions).Return(mutatedServiceContent, nil)
+
+				kcc.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: newKubeletConfigData}).Return(newKubeletConfig, nil)
+				kcc.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: oldKubeletConfigData}).Return(oldKubeletConfig, nil)
+				kcc.EXPECT().Encode(mutatedKubeletConfig, "").Return(&extensionsv1alpha1.FileContentInline{Data: mutatedKubeletConfigData}, nil)
+
+				fcic.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: newKubernetesGeneralConfigData}).Return([]byte(newKubernetesGeneralConfigData), nil)
+				fcic.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: oldKubernetesGeneralConfigData}).Return([]byte(oldKubernetesGeneralConfigData), nil)
+				fcic.EXPECT().Encode([]byte(mutatedKubernetesGeneralConfigData), "").Return(&extensionsv1alpha1.FileContentInline{Data: mutatedKubernetesGeneralConfigData}, nil)
+				fcic.EXPECT().Encode([]byte(cloudproviderconf), encoding).Return(&extensionsv1alpha1.FileContentInline{Data: cloudproviderconfEncoded, Encoding: encoding}, nil)
+
+				// Call Mutate method and check the result
+				err := mutator.Mutate(context.TODO(), newOSC, oldOSC)
+				Expect(err).To(Not(HaveOccurred()))
+				checkOperatingSystemConfig(newOSC)
+			},
 			)
 
-			oldOSC := newOSC.DeepCopy()
-			oldOSC.Spec.Units[0].Content = pointer.String(oldServiceContent)
-			oldOSC.Spec.Files[0].Content.Inline.Data = oldKubeletConfigData
-			oldOSC.Spec.Files[1].Content.Inline.Data = oldKubernetesGeneralConfigData
+			It("should not add invalid file content to OSC", func() {
+				oldOSC := newOSC.DeepCopy()
+				oldOSC.Spec.Units[0].Content = pointer.String(oldServiceContent)
+				oldOSC.Spec.Files[0].Content.Inline.Data = oldKubeletConfigData
+				oldOSC.Spec.Files[1].Content.Inline.Data = oldKubernetesGeneralConfigData
 
-			// Create mock ensurer
-			ensurer.EXPECT().EnsureKubeletServiceUnitOptions(context.TODO(), gomock.Any(), newUnitOptions, oldUnitOptions).Return(mutatedUnitOptions, nil)
-			ensurer.EXPECT().EnsureKubeletConfiguration(context.TODO(), gomock.Any(), newKubeletConfig, oldKubeletConfig).DoAndReturn(
-				func(ctx context.Context, gctx gcontext.GardenContext, kubeletConfig, newKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration) error {
-					*kubeletConfig = *mutatedKubeletConfig
-					return nil
-				},
-			)
-			ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.TODO(), gomock.Any(), pointer.String(newKubernetesGeneralConfigData), pointer.String(oldKubernetesGeneralConfigData)).DoAndReturn(
-				func(ctx context.Context, gctx gcontext.GardenContext, data, newData *string) error {
-					*data = mutatedKubernetesGeneralConfigData
-					return nil
-				},
-			)
-			ensurer.EXPECT().EnsureAdditionalUnits(context.TODO(), gomock.Any(), &newOSC.Spec.Units, &oldOSC.Spec.Units).DoAndReturn(
-				func(ctx context.Context, gctx gcontext.GardenContext, oscUnits, oldOSCUnits *[]extensionsv1alpha1.Unit) error {
-					*oscUnits = append(*oscUnits, additionalUnit)
-					return nil
-				})
-			ensurer.EXPECT().EnsureAdditionalFiles(context.TODO(), gomock.Any(), &newOSC.Spec.Files, &oldOSC.Spec.Files).DoAndReturn(
-				func(ctx context.Context, gctx gcontext.GardenContext, oscFiles, oldOSCFiles *[]extensionsv1alpha1.File) error {
-					*oscFiles = append(*oscFiles, additionalFile)
-					return nil
-				})
+				// Create mock ensurer
+				ensurer.EXPECT().EnsureKubeletServiceUnitOptions(context.TODO(), gomock.Any(), newUnitOptions, oldUnitOptions).Return(mutatedUnitOptions, nil)
+				ensurer.EXPECT().EnsureKubeletConfiguration(context.TODO(), gomock.Any(), newKubeletConfig, oldKubeletConfig).DoAndReturn(
+					func(ctx context.Context, gctx gcontext.GardenContext, kubeletConfig, newKubeletConfig *kubeletconfigv1beta1.KubeletConfiguration) error {
+						*kubeletConfig = *mutatedKubeletConfig
+						return nil
+					},
+				)
+				ensurer.EXPECT().EnsureKubernetesGeneralConfiguration(context.TODO(), gomock.Any(), pointer.String(newKubernetesGeneralConfigData), pointer.String(oldKubernetesGeneralConfigData)).DoAndReturn(
+					func(ctx context.Context, gctx gcontext.GardenContext, newData, data *string) error {
+						*newData = ""
+						return nil
+					},
+				)
+				ensurer.EXPECT().EnsureAdditionalUnits(context.TODO(), gomock.Any(), &newOSC.Spec.Units, &oldOSC.Spec.Units).DoAndReturn(
+					func(ctx context.Context, gctx gcontext.GardenContext, oscUnits, oldOSCUnits *[]extensionsv1alpha1.Unit) error {
+						*oscUnits = append(*oscUnits, additionalUnit)
+						return nil
+					})
+				ensurer.EXPECT().EnsureAdditionalFiles(context.TODO(), gomock.Any(), &newOSC.Spec.Files, &oldOSC.Spec.Files).DoAndReturn(
+					func(ctx context.Context, gctx gcontext.GardenContext, oscFiles, oldOSCFiles *[]extensionsv1alpha1.File) error {
+						*oscFiles = append(*oscFiles, additionalFile)
+						return nil
+					})
 
-			ensurer.EXPECT().ShouldProvisionKubeletCloudProviderConfig(context.TODO(), gomock.Any()).Return(true)
-			ensurer.EXPECT().EnsureKubeletCloudProviderConfig(context.TODO(), gomock.Any(), gomock.Any(), newOSC.Namespace).DoAndReturn(
-				func(ctx context.Context, gctx gcontext.GardenContext, data *string, _ string) error {
-					*data = cloudproviderconf
-					return nil
-				},
-			)
+				ensurer.EXPECT().ShouldProvisionKubeletCloudProviderConfig(context.TODO(), gomock.Any()).Return(true)
+				ensurer.EXPECT().EnsureKubeletCloudProviderConfig(context.TODO(), gomock.Any(), gomock.Any(), newOSC.Namespace).DoAndReturn(
+					func(ctx context.Context, gctx gcontext.GardenContext, data *string, _ string) error {
+						*data = ""
+						return nil
+					},
+				)
 
-			us.EXPECT().Deserialize(newServiceContent).Return(newUnitOptions, nil)
-			us.EXPECT().Deserialize(oldServiceContent).Return(oldUnitOptions, nil)
-			us.EXPECT().Serialize(mutatedUnitOptions).Return(mutatedServiceContent, nil)
+				us.EXPECT().Deserialize(newServiceContent).Return(newUnitOptions, nil)
+				us.EXPECT().Deserialize(oldServiceContent).Return(oldUnitOptions, nil)
+				us.EXPECT().Serialize(mutatedUnitOptions).Return(mutatedServiceContent, nil)
 
-			kcc.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: newKubeletConfigData}).Return(newKubeletConfig, nil)
-			kcc.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: oldKubeletConfigData}).Return(oldKubeletConfig, nil)
-			kcc.EXPECT().Encode(mutatedKubeletConfig, "").Return(&extensionsv1alpha1.FileContentInline{Data: mutatedKubeletConfigData}, nil)
+				kcc.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: newKubeletConfigData}).Return(newKubeletConfig, nil)
+				kcc.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: oldKubeletConfigData}).Return(oldKubeletConfig, nil)
+				kcc.EXPECT().Encode(mutatedKubeletConfig, "").Return(&extensionsv1alpha1.FileContentInline{Data: mutatedKubeletConfigData}, nil)
 
-			fcic.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: newKubernetesGeneralConfigData}).Return([]byte(newKubernetesGeneralConfigData), nil)
-			fcic.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: oldKubernetesGeneralConfigData}).Return([]byte(oldKubernetesGeneralConfigData), nil)
-			fcic.EXPECT().Encode([]byte(mutatedKubernetesGeneralConfigData), "").Return(&extensionsv1alpha1.FileContentInline{Data: mutatedKubernetesGeneralConfigData}, nil)
-			fcic.EXPECT().Encode([]byte(cloudproviderconf), encoding).Return(&extensionsv1alpha1.FileContentInline{Data: cloudproviderconfEncoded, Encoding: encoding}, nil)
+				fcic.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: newKubernetesGeneralConfigData}).Return([]byte(newKubernetesGeneralConfigData), nil)
+				fcic.EXPECT().Decode(&extensionsv1alpha1.FileContentInline{Data: oldKubernetesGeneralConfigData}).Return([]byte(oldKubernetesGeneralConfigData), nil)
 
-			// Call Mutate method and check the result
-			err := mutator.Mutate(context.TODO(), newOSC, oldOSC)
-			Expect(err).To(Not(HaveOccurred()))
-			checkOperatingSystemConfig(newOSC)
-		},
-		)
+				// Call Mutate method and check the result
+				err := mutator.Mutate(context.TODO(), newOSC, oldOSC)
+				Expect(err).To(Not(HaveOccurred()))
+
+				general := extensionswebhook.FileWithPath(newOSC.Spec.Files, v1beta1constants.OperatingSystemConfigFilePathKernelSettings)
+				Expect(general).To(Not(BeNil()))
+				Expect(general.Content.Inline).To(Equal(&extensionsv1alpha1.FileContentInline{Data: newKubernetesGeneralConfigData}))
+				cloudProvider := extensionswebhook.FileWithPath(newOSC.Spec.Files, genericmutator.CloudProviderConfigPath)
+				Expect(cloudProvider).To(BeNil())
+			})
+		})
 	})
 })
 
