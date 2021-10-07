@@ -177,7 +177,6 @@ var _ = Describe("KubeScheduler", func() {
 								"app":                                "kubernetes",
 								"role":                               "scheduler",
 								"gardener.cloud/role":                "controlplane",
-								"garden.sapcloud.io/role":            "controlplane",
 								"maintenance.gardener.cloud/restart": "true",
 								"networking.gardener.cloud/to-dns":   "allowed",
 								"networking.gardener.cloud/to-shoot-apiserver": "allowed",

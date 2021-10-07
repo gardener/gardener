@@ -300,7 +300,6 @@ var _ = Describe("ResourceManager", func() {
 							"networking.gardener.cloud/to-shoot-apiserver": "allowed",
 							v1beta1constants.GardenRole:                    v1beta1constants.GardenRoleControlPlane,
 							v1beta1constants.LabelApp:                      "gardener-resource-manager",
-							v1beta1constants.DeprecatedGardenRole:          v1beta1constants.GardenRoleControlPlane,
 						},
 					},
 					Spec: corev1.PodSpec{
@@ -637,7 +636,6 @@ var _ = Describe("ResourceManager", func() {
 				delete(service.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				delete(deployment.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				delete(deployment.Spec.Template.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(deployment.Spec.Template.ObjectMeta.Labels, v1beta1constants.DeprecatedGardenRole)
 				delete(vpa.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				// Remove networking label from deployment template
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-dns")
