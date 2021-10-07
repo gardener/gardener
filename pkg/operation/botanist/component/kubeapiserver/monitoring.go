@@ -162,15 +162,15 @@ const (
       summary: 'The kubernetes API server has too many failed attempts to log audit events'
   ### API latency ###
   - record: ` + monitoringMetricApiserverLatencySeconds + `:quantile
-    expr: histogram_quantile(0.99, rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `[5m]))
+    expr: histogram_quantile(0.99, sum without (instance, pod) (rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `[5m])))
     labels:
       quantile: "0.99"
   - record: apiserver_latency:quantile
-    expr: histogram_quantile(0.9, rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `[5m]))
+    expr: histogram_quantile(0.9, sum without (instance, pod) (rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `[5m])))
     labels:
       quantile: "0.9"
   - record: ` + monitoringMetricApiserverLatencySeconds + `:quantile
-    expr: histogram_quantile(0.5, rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `[5m]))
+    expr: histogram_quantile(0.5, sum without (instance, pod) (rate(` + monitoringMetricApiserverRequestDurationSecondsBucket + `[5m])))
     labels:
       quantile: "0.5"
 
