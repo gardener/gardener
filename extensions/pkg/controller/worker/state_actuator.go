@@ -20,16 +20,14 @@ import (
 	"fmt"
 	"sort"
 
-	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
-
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
 type genericStateActuator struct {
@@ -68,10 +66,9 @@ func (a *genericStateActuator) updateWorkerState(ctx context.Context, worker *ex
 	if err != nil {
 		return err
 	}
-	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, a.client, worker, func() error {
-		worker.Status.State = &runtime.RawExtension{Raw: rawState}
-		return nil
-	})
+
+	worker.Status.State = &runtime.RawExtension{Raw: rawState}
+	return a.client.Status().Update(ctx, worker)
 }
 
 func (a *genericStateActuator) getWorkerState(ctx context.Context, namespace string) (*State, error) {
@@ -166,7 +163,7 @@ func addMachineSetToMachineDeploymentState(machineSets []machinev1alpha1.Machine
 		return
 	}
 
-	//remove redundant data from the machine set
+	// remove redundant data from the machine set
 	for index := range machineSets {
 		machineSet := &machineSets[index]
 		machineSet.ObjectMeta = metav1.ObjectMeta{
@@ -187,7 +184,7 @@ func addMachineToMachineDeploymentState(machine *machinev1alpha1.Machine, machin
 		return
 	}
 
-	//remove redundant data from the machine
+	// remove redundant data from the machine
 	machine.ObjectMeta = metav1.ObjectMeta{
 		Name:        machine.Name,
 		Namespace:   machine.Namespace,

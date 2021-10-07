@@ -18,15 +18,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
-
-	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // LastOperation creates a new LastOperation from the given parameters.
@@ -96,12 +94,10 @@ func (s *statusUpdater) Processing(ctx context.Context, obj extensionsv1alpha1.O
 
 	s.logger.Info(description, s.logKeysAndValues(obj)...)
 
-	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, s.client, obj, func() error {
-		lastOp := LastOperation(lastOperationType, gardencorev1beta1.LastOperationStateProcessing, 1, description)
-
-		obj.GetExtensionStatus().SetLastOperation(lastOp)
-		return nil
-	})
+	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
+	lastOp := LastOperation(lastOperationType, gardencorev1beta1.LastOperationStateProcessing, 1, description)
+	obj.GetExtensionStatus().SetLastOperation(lastOp)
+	return s.client.Status().Patch(ctx, obj, patch)
 }
 
 func (s *statusUpdater) Error(ctx context.Context, obj extensionsv1alpha1.Object, err error, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
@@ -112,14 +108,13 @@ func (s *statusUpdater) Error(ctx context.Context, obj extensionsv1alpha1.Object
 	errDescription := gardencorev1beta1helper.FormatLastErrDescription(fmt.Errorf("%s: %v", description, err))
 	s.logger.Error(fmt.Errorf(errDescription), "error", s.logKeysAndValues(obj)...)
 
-	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, s.client, obj, func() error {
-		lastOp, lastErr := ReconcileError(lastOperationType, errDescription, 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
+	lastOp, lastErr := ReconcileError(lastOperationType, errDescription, 50, gardencorev1beta1helper.ExtractErrorCodes(gardencorev1beta1helper.DetermineError(err, err.Error()))...)
 
-		obj.GetExtensionStatus().SetObservedGeneration(obj.GetGeneration())
-		obj.GetExtensionStatus().SetLastOperation(lastOp)
-		obj.GetExtensionStatus().SetLastError(lastErr)
-		return nil
-	})
+	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
+	obj.GetExtensionStatus().SetObservedGeneration(obj.GetGeneration())
+	obj.GetExtensionStatus().SetLastOperation(lastOp)
+	obj.GetExtensionStatus().SetLastError(lastErr)
+	return s.client.Status().Patch(ctx, obj, patch)
 }
 
 func (s *statusUpdater) Success(ctx context.Context, obj extensionsv1alpha1.Object, lastOperationType gardencorev1beta1.LastOperationType, description string) error {
@@ -129,14 +124,12 @@ func (s *statusUpdater) Success(ctx context.Context, obj extensionsv1alpha1.Obje
 
 	s.logger.Info(description, s.logKeysAndValues(obj)...)
 
-	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, s.client, obj, func() error {
-		lastOp, lastErr := ReconcileSucceeded(lastOperationType, description)
-
-		obj.GetExtensionStatus().SetObservedGeneration(obj.GetGeneration())
-		obj.GetExtensionStatus().SetLastOperation(lastOp)
-		obj.GetExtensionStatus().SetLastError(lastErr)
-		return nil
-	})
+	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
+	lastOp, lastErr := ReconcileSucceeded(lastOperationType, description)
+	obj.GetExtensionStatus().SetObservedGeneration(obj.GetGeneration())
+	obj.GetExtensionStatus().SetLastOperation(lastOp)
+	obj.GetExtensionStatus().SetLastError(lastErr)
+	return s.client.Status().Patch(ctx, obj, patch)
 }
 
 func (s *statusUpdater) logKeysAndValues(obj metav1.Object) []interface{} {

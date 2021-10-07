@@ -127,8 +127,15 @@ func (a *genericActuator) restoreMachineSetsAndMachines(ctx context.Context, log
 		for _, machine := range wantedMachineDeployment.State.Machines {
 			newMachine := (&machine).DeepCopy()
 			newMachine.Status = machinev1alpha1.MachineStatus{}
-			if err := a.client.Create(ctx, newMachine); kutil.IgnoreAlreadyExists(err) != nil {
-				return err
+			if err := a.client.Create(ctx, newMachine); err != nil {
+				if !apierrors.IsAlreadyExists(err) {
+					return err
+				}
+
+				// machine already exists, get the current object and update the status
+				if err := a.client.Get(ctx, client.ObjectKeyFromObject(newMachine), newMachine); err != nil {
+					return err
+				}
 			}
 
 			newMachine.Status = machine.Status

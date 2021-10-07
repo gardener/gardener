@@ -22,7 +22,6 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/go-logr/logr"
@@ -30,7 +29,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -85,8 +83,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if !mr.DeletionTimestamp.IsZero() {
 		conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, resourcesv1alpha1.ConditionDeletionPending, "The resources are currently being deleted.")
-		if err := tryUpdateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
-			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %+v ", err)
+		if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
+			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 		}
 
 		log.Info("Stopping health checks for ManagedResource, as it has been deleted (deletionTimestamp is set)")
@@ -140,8 +138,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				)
 
 				conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
-				if err := tryUpdateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
-					return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %+v ", err)
+				if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
+					return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 				}
 
 				return ctrl.Result{RequeueAfter: r.syncPeriod}, nil // We do not want to run in the exponential backoff for the condition check.
@@ -157,8 +155,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			)
 
 			conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionFalse, reason, message)
-			if err := tryUpdateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
-				return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %+v ", err)
+			if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
+				return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 			}
 
 			return ctrl.Result{RequeueAfter: r.syncPeriod}, nil // We do not want to run in the exponential backoff for the condition check.
@@ -168,8 +166,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	conditionResourcesHealthy = v1beta1helper.UpdatedCondition(conditionResourcesHealthy, gardencorev1beta1.ConditionTrue, "ResourcesHealthy", "All resources are healthy.")
 
 	if !apiequality.Semantic.DeepEqual(oldConditions, []gardencorev1beta1.Condition{conditionResourcesHealthy}) {
-		if err := tryUpdateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
-			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %+v ", err)
+		if err := updateConditions(ctx, r.client, mr, conditionResourcesHealthy); err != nil {
+			return ctrl.Result{}, fmt.Errorf("could not update the ManagedResource status: %w", err)
 		}
 	}
 
@@ -177,9 +175,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
 }
 
-func tryUpdateConditions(ctx context.Context, c client.Client, mr *resourcesv1alpha1.ManagedResource, condition gardencorev1beta1.Condition) error {
-	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, c, mr, func() error {
-		mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, condition)
-		return nil
-	})
+func updateConditions(ctx context.Context, c client.Client, mr *resourcesv1alpha1.ManagedResource, condition gardencorev1beta1.Condition) error {
+	mr.Status.Conditions = v1beta1helper.MergeConditions(mr.Status.Conditions, condition)
+	return c.Status().Update(ctx, mr)
 }

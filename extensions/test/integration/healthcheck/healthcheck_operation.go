@@ -26,7 +26,6 @@ import (
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/test/framework"
 
@@ -35,7 +34,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -133,8 +131,8 @@ func TestHealthCheckWithManagedResource(ctx context.Context, timeout time.Durati
 		}, healthConditionType, gardencorev1beta1.ConditionTrue, healthcheck.ReasonSuccessful)
 		framework.ExpectNoError(err)
 	}()
-	managedResource := resourcesv1alpha1.ManagedResource{}
-	if err = f.SeedClient.Client().Get(ctx, kutil.Key(f.ShootSeedNamespace(), managedResourceName), &managedResource); err != nil {
+	managedResource := &resourcesv1alpha1.ManagedResource{}
+	if err = f.SeedClient.Client().Get(ctx, kutil.Key(f.ShootSeedNamespace(), managedResourceName), managedResource); err != nil {
 		return err
 	}
 	// overwrite Condition with type ResourcesHealthy on the managed resource to make the health check in the provider fail
@@ -143,11 +141,15 @@ func TestHealthCheckWithManagedResource(ctx context.Context, timeout time.Durati
 		Status: gardencorev1beta1.ConditionFalse,
 		Reason: "dummyFailureReason",
 	}
-	if err = controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, f.SeedClient.Client(), &managedResource, func() error {
-		newConditions := v1beta1helper.MergeConditions(managedResource.Status.Conditions, managedResourceCondition)
-		managedResource.Status.Conditions = newConditions
-		return nil
-	}); err != nil {
+
+	// Generally, merge patching conditions without optimistic locking is unsafe. However, this is a test and we only want
+	// to provoke a failure situation, we don't care if we unintentionally overwrite other condition updates here.
+	// https://media.giphy.com/media/QMHoU66sBXqqLqYvGO/giphy.gif
+	patch := client.MergeFrom(managedResource.DeepCopy())
+	newConditions := v1beta1helper.MergeConditions(managedResource.Status.Conditions, managedResourceCondition)
+	managedResource.Status.Conditions = newConditions
+
+	if err := f.SeedClient.Client().Status().Patch(ctx, managedResource, patch); err != nil {
 		return err
 	}
 
