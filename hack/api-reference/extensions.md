@@ -2712,7 +2712,7 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <code>conditions</code></br>
 <em>
-<a href="../core.md#core.gardener.cloud/v1alpha1.Condition">
+<a href="./core.md#core.gardener.cloud/v1beta1.Condition">
 []github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition
 </a>
 </em>
@@ -2726,7 +2726,7 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <code>lastError</code></br>
 <em>
-<a href="../core.md#core.gardener.cloud/v1alpha1.LastError">
+<a href="./core.md#core.gardener.cloud/v1beta1.LastError">
 github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError
 </a>
 </em>
@@ -2740,7 +2740,7 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.LastError
 <td>
 <code>lastOperation</code></br>
 <em>
-<a href="../core.md#core.gardener.cloud/v1alpha1.LastOperation">
+<a href="./core.md#core.gardener.cloud/v1beta1.LastOperation">
 github.com/gardener/gardener/pkg/apis/core/v1beta1.LastOperation
 </a>
 </em>
@@ -2779,7 +2779,7 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <td>
 <code>resources</code></br>
 <em>
-<a href="../core.md#core.gardener.cloud/v1alpha1.NamedResourceReference">
+<a href="./core.md#core.gardener.cloud/v1beta1.NamedResourceReference">
 []github.com/gardener/gardener/pkg/apis/core/v1beta1.NamedResourceReference
 </a>
 </em>
@@ -3993,7 +3993,7 @@ string
 <td>
 <code>machineControllerManager</code></br>
 <em>
-<a href="../core.md#core.gardener.cloud/v1alpha1.MachineControllerManagerSettings">
+<a href="./core.md#core.gardener.cloud/v1beta1.MachineControllerManagerSettings">
 github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSettings
 </a>
 </em>
