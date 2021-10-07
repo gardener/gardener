@@ -255,8 +255,8 @@ func (a *genericActuator) shallowDeleteMachineClassSecrets(ctx context.Context, 
 	// Delete the finalizers to all secrets which were used for machine classes that do not exist anymore.
 	for _, secret := range secretList.Items {
 		if !wantedMachineDeployments.HasSecret(secret.Name) {
-			if err := extensionscontroller.DeleteAllFinalizers(ctx, a.client, &secret); err != nil {
-				return fmt.Errorf("Error removing finalizer from MachineClassSecret: %s/%s: %w", secret.Namespace, secret.Name, err)
+			if err := controllerutils.RemoveAllFinalizers(ctx, a.client, a.client, &secret); err != nil {
+				return fmt.Errorf("error removing finalizer from MachineClassSecret: %s/%s: %w", secret.Namespace, secret.Name, err)
 			}
 			if err := a.client.Delete(ctx, &secret); err != nil {
 				return err
@@ -322,7 +322,7 @@ func (a *genericActuator) shallowDeleteAllObjects(ctx context.Context, logger lo
 
 	return meta.EachListItem(objectList, func(obj runtime.Object) error {
 		object := obj.(client.Object)
-		if err := extensionscontroller.DeleteAllFinalizers(ctx, a.client, object); err != nil {
+		if err := controllerutils.RemoveAllFinalizers(ctx, a.client, a.client, object); err != nil {
 			return err
 		}
 		if err := a.client.Delete(ctx, object); client.IgnoreNotFound(err) != nil {

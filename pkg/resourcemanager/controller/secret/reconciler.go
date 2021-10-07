@@ -26,9 +26,8 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -86,32 +85,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	controllerFinalizer := r.ClassFilter.FinalizerName()
-	secretFinalizers := sets.NewString(secret.Finalizers...)
-	addFinalizer, removeFinalizer := false, false
-	if secretIsReferenced && !secretFinalizers.Has(controllerFinalizer) {
-		addFinalizer = true
-		log.Info("Adding finalizer to secret because it is referenced by a ManagedResource",
+	hasFinalizer := controllerutil.ContainsFinalizer(secret, controllerFinalizer)
+	if secretIsReferenced && !hasFinalizer {
+		log.Info("Adding finalizer to Secret because it is referenced by a ManagedResource",
 			"finalizer", controllerFinalizer)
-	} else if !secretIsReferenced && secretFinalizers.Has(controllerFinalizer) {
-		removeFinalizer = true
-		log.Info("Removing finalizer from secret because it is not referenced by a ManagedResource of this class",
-			"finalizer", controllerFinalizer)
-	}
 
-	if addFinalizer || removeFinalizer {
-		if err := controllerutils.TryUpdate(ctx, retry.DefaultBackoff, r.client, secret, func() error {
-			secretFinalizers := sets.NewString(secret.Finalizers...)
-			if addFinalizer {
-				secretFinalizers.Insert(controllerFinalizer)
-			} else if removeFinalizer {
-				secretFinalizers.Delete(controllerFinalizer)
-			}
-			secret.Finalizers = secretFinalizers.UnsortedList()
-			return nil
-		}); client.IgnoreNotFound(err) != nil {
-			r.log.Error(err, "Failed to update finalizers of Secret")
-			// dont' run into exponential backoff for adding/removing finalizers
-			return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
+		if err := controllerutils.StrategicMergePatchAddFinalizers(ctx, r.client, secret, controllerFinalizer); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to add finalizer to Secret: %w", err)
+		}
+	} else if !secretIsReferenced && hasFinalizer {
+		log.Info("Removing finalizer from Secret because it is not referenced by a ManagedResource of this class",
+			"finalizer", controllerFinalizer)
+
+		if err := controllerutils.PatchRemoveFinalizers(ctx, r.client, secret, controllerFinalizer); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from Secret: %w", err)
 		}
 	}
 

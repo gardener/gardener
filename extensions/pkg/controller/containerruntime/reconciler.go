@@ -219,7 +219,7 @@ func (r *reconciler) migrate(ctx context.Context, cr *extensionsv1alpha1.Contain
 	}
 
 	r.logger.Info("Removing all finalizers", "containerruntime", kutil.ObjectName(cr))
-	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, cr); err != nil {
+	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, cr); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error removing finalizers from the containerruntime: %+v", err)
 	}
 

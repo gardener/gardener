@@ -83,15 +83,6 @@ func TypedCreateOrUpdate(ctx context.Context, c client.Client, scheme *runtime.S
 	return controllerutil.OperationResultUpdated, c.Update(ctx, obj)
 }
 
-// TryUpdate tries to apply the given transformation function onto the given object, and to update it afterwards.
-// It retries the update with an exponential backoff.
-// Deprecated: This function is deprecated and will be removed in a future version. Please don't consider using it.
-// See https://github.com/gardener/gardener/blob/master/docs/development/kubernetes-clients.md#dont-retry-on-conflict
-// for more information.
-func TryUpdate(ctx context.Context, backoff wait.Backoff, c client.Client, obj client.Object, transform func() error) error {
-	return tryUpdate(ctx, backoff, c, obj, c.Update, transform)
-}
-
 // TryUpdateStatus tries to apply the given transformation function onto the given object, and to update its
 // status afterwards. It retries the status update with an exponential backoff.
 // Deprecated: This function is deprecated and will be removed in a future version. Please don't consider using it.

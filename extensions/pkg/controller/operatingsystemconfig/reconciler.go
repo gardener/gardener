@@ -264,8 +264,8 @@ func (r *reconciler) migrate(ctx context.Context, osc *extensionsv1alpha1.Operat
 	}
 
 	r.logger.Info("Removing finalizer.", "osc", osc.Name)
-	if err := extensionscontroller.DeleteAllFinalizers(ctx, r.client, osc); err != nil {
-		return reconcile.Result{}, fmt.Errorf("Error removing all finalizers from operatingsystemconfig: %+v", err)
+	if err := controllerutils.RemoveAllFinalizers(ctx, r.client, r.client, osc); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error removing all finalizers from operatingsystemconfig: %+v", err)
 	}
 
 	if err := extensionscontroller.RemoveAnnotation(ctx, r.client, osc, v1beta1constants.GardenerOperation); err != nil {
