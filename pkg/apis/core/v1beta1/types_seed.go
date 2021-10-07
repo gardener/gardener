@@ -117,6 +117,9 @@ type SeedStatus struct {
 	// Defaults to Capacity.
 	// +optional
 	Allocatable corev1.ResourceList `json:"allocatable,omitempty" protobuf:"bytes,7,rep,name=allocatable"`
+	// ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
+	// +optional
+	ClientCertificateExpirationTimestamp *metav1.Time `json:"clientCertificateExpirationTimestamp,omitempty" protobuf:"bytes,8,opt,name=clientCertificateExpirationTimestamp"`
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).

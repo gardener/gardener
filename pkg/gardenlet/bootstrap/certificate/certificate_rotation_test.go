@@ -280,7 +280,7 @@ users:
 `
 		)
 
-		Describe("#getCurrentCertificate", func() {
+		Describe("#GetCurrentCertificate", func() {
 			BeforeEach(func() {
 				// generate kubeconfigs
 				validity := 20 * time.Second
@@ -290,13 +290,13 @@ users:
 			})
 
 			It("should not return an error", func() {
-				cert, err := getCurrentCertificate(log, []byte(gardenKubeconfigWithValidClientCert), gardenClientConnection)
+				cert, err := GetCurrentCertificate(log, []byte(gardenKubeconfigWithValidClientCert), gardenClientConnection)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(cert).ToNot(BeNil())
 			})
 
 			It("should return an error - kubeconfig client cert is invalid", func() {
-				_, err := getCurrentCertificate(log, []byte(gardenKubeconfigWithInValidClientCert), gardenClientConnection)
+				_, err := GetCurrentCertificate(log, []byte(gardenKubeconfigWithInValidClientCert), gardenClientConnection)
 				Expect(err).To(HaveOccurred())
 			})
 		})

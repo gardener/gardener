@@ -104,6 +104,9 @@ type SeedStatus struct {
 	// ClusterIdentity is the identity of the Seed cluster
 	// +optional
 	ClusterIdentity *string `json:"clusterIdentity,omitempty" protobuf:"bytes,5,opt,name=clusterIdentity"`
+	// ClientCertificateExpirationTimestamp is the timestamp at which gardenlet's client certificate expires.
+	// +optional
+	ClientCertificateExpirationTimestamp *metav1.Time `json:"clientCertificateExpirationTimestamp,omitempty" protobuf:"bytes,6,opt,name=clientCertificateExpirationTimestamp"`
 }
 
 // SeedBackup contains the object store configuration for backups for shoot (currently only etcd).

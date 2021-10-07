@@ -166,10 +166,13 @@ and the condition will turn `true`.
 The "Lifecycle" reconciler processes `Seed` objects which are enqueued every 10 seconds in order to check if the responsible
 Gardenlet is still responding and operable. Therefore, it checks renewals via `Lease` objects of the seed in the garden cluster
 which are renewed regularly by the Gardenlet.
-In case a `Lease` is not renewed for the configured amount in `config.controllers.seed.monitorPeriod.duration`, the reconciler
-assumes that the Gardenlet stopped operating and updates the `GardenletReady` condition to `Unknown`.
-Additionally, conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well
+
+In case a `Lease` is not renewed for the configured amount in `config.controllers.seed.monitorPeriod.duration`:
+
+1. The reconciler assumes that the Gardenlet stopped operating and updates the `GardenletReady` condition to `Unknown`.
+2. Additionally, conditions and constraints of all `Shoot` resources scheduled on the affected seed are set to `Unknown` as well
 because a striking Gardenlet won't be able to maintain these conditions any more.
+3. If the gardenlet's client certificate has expired (identified based on the `.status.clientCertificateExpirationTimestamp` field in the `Seed` resource) and if it is managed by a `ManagedSeed` then this will be triggered for a reconciliation. This will trigger the bootstrapping process again and allows gardenlets to obtain a fresh client certificate. 
 
 ### "Bastion" Controller
 

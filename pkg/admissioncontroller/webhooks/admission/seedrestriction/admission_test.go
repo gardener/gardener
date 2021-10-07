@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	. "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission/seedrestriction"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -1820,6 +1821,43 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})
+
+					It("should allow if the seed does exist but client cert is expired", func() {
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+							managedSeed.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+							(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
+							return nil
+						})
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should allow if the seed does exist but client cert is expired (ambiguous case)", func() {
+						request.UserInfo = ambiguousUser
+						shoot.Spec.SeedName = pointer.String("some-other-seed")
+
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+							managedSeed.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+							(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
+							return nil
+						})
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
 				})
 
 				Context("managed seed secret", func() {
@@ -2399,6 +2437,43 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 
 							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 						})
+
+						It("should allow if the seed does exist but client cert is expired", func() {
+							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+								managedSeed.DeepCopyInto(obj)
+								return nil
+							})
+							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+								shoot.DeepCopyInto(obj)
+								return nil
+							})
+							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+								(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
+								return nil
+							})
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
+
+						It("should allow if the seed does exist but client cert is expired (ambiguous case)", func() {
+							request.UserInfo = ambiguousUser
+							shoot.Spec.SeedName = pointer.String("some-other-seed")
+
+							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+								managedSeed.DeepCopyInto(obj)
+								return nil
+							})
+							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+								shoot.DeepCopyInto(obj)
+								return nil
+							})
+							mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+								(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
+								return nil
+							})
+
+							Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+						})
 					})
 				})
 			})
@@ -2628,6 +2703,43 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 							return nil
 						})
 						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).Return(apierrors.NewNotFound(schema.GroupResource{}, ""))
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should allow if the seed does exist but client cert is expired", func() {
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+							managedSeed.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+							(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
+							return nil
+						})
+
+						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
+					})
+
+					It("should allow if the seed does exist but client cert is expired (ambiguous case)", func() {
+						request.UserInfo = ambiguousUser
+						shoot.Spec.SeedName = pointer.String("some-other-seed")
+
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, managedSeedName), gomock.AssignableToTypeOf(&seedmanagementv1alpha1.ManagedSeed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *seedmanagementv1alpha1.ManagedSeed) error {
+							managedSeed.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedNamespace, shootName), gomock.AssignableToTypeOf(&gardencorev1beta1.Shoot{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Shoot) error {
+							shoot.DeepCopyInto(obj)
+							return nil
+						})
+						mockCache.EXPECT().Get(ctx, kutil.Key(managedSeedName), gomock.AssignableToTypeOf(&gardencorev1beta1.Seed{})).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj *gardencorev1beta1.Seed) error {
+							(&gardencorev1beta1.Seed{Status: gardencorev1beta1.SeedStatus{ClientCertificateExpirationTimestamp: &metav1.Time{Time: time.Now().Add(-time.Hour)}}}).DeepCopyInto(obj)
+							return nil
+						})
 
 						Expect(handler.Handle(ctx, request)).To(Equal(responseAllowed))
 					})

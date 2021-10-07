@@ -4712,6 +4712,7 @@ func autoConvert_v1alpha1_SeedStatus_To_core_SeedStatus(in *SeedStatus, out *cor
 	out.KubernetesVersion = (*string)(unsafe.Pointer(in.KubernetesVersion))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
+	out.ClientCertificateExpirationTimestamp = (*metav1.Time)(unsafe.Pointer(in.ClientCertificateExpirationTimestamp))
 	return nil
 }
 
@@ -4728,6 +4729,7 @@ func autoConvert_core_SeedStatus_To_v1alpha1_SeedStatus(in *core.SeedStatus, out
 	out.ClusterIdentity = (*string)(unsafe.Pointer(in.ClusterIdentity))
 	// WARNING: in.Capacity requires manual conversion: does not exist in peer-type
 	// WARNING: in.Allocatable requires manual conversion: does not exist in peer-type
+	out.ClientCertificateExpirationTimestamp = (*metav1.Time)(unsafe.Pointer(in.ClientCertificateExpirationTimestamp))
 	return nil
 }
 

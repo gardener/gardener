@@ -66,12 +66,13 @@ const DefaultImageVector = "images.yaml"
 
 // GardenletControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenletControllerFactory struct {
-	clientMap             clientmap.ClientMap
-	cfg                   *config.GardenletConfiguration
-	identity              *gardencorev1beta1.Gardener
-	gardenClusterIdentity string
-	recorder              record.EventRecorder
-	healthManager         healthz.Manager
+	clientMap                            clientmap.ClientMap
+	cfg                                  *config.GardenletConfiguration
+	identity                             *gardencorev1beta1.Gardener
+	gardenClusterIdentity                string
+	recorder                             record.EventRecorder
+	healthManager                        healthz.Manager
+	clientCertificateExpirationTimestamp *metav1.Time
 }
 
 // NewGardenletControllerFactory creates a new factory for controllers for the Garden API group.
@@ -82,14 +83,16 @@ func NewGardenletControllerFactory(
 	gardenClusterIdentity string,
 	recorder record.EventRecorder,
 	healthManager healthz.Manager,
+	clientCertificateExpirationTimestamp *metav1.Time,
 ) *GardenletControllerFactory {
 	return &GardenletControllerFactory{
-		clientMap:             clientMap,
-		cfg:                   cfg,
-		identity:              identity,
-		gardenClusterIdentity: gardenClusterIdentity,
-		recorder:              recorder,
-		healthManager:         healthManager,
+		clientMap:                            clientMap,
+		cfg:                                  cfg,
+		identity:                             identity,
+		gardenClusterIdentity:                gardenClusterIdentity,
+		recorder:                             recorder,
+		healthManager:                        healthManager,
+		clientCertificateExpirationTimestamp: clientCertificateExpirationTimestamp,
 	}
 }
 
@@ -166,7 +169,7 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 		return fmt.Errorf("failed initializing NetworkPolicy controller: %w", err)
 	}
 
-	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.healthManager, imageVector, componentImageVectors, f.identity, f.cfg, f.recorder)
+	seedController, err := seedcontroller.NewSeedController(ctx, f.clientMap, f.healthManager, imageVector, componentImageVectors, f.identity, f.clientCertificateExpirationTimestamp, f.cfg, f.recorder)
 	if err != nil {
 		return fmt.Errorf("failed initializing Seed controller: %w", err)
 	}

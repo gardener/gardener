@@ -64,6 +64,7 @@ func NewSeedController(
 	imageVector imagevector.ImageVector,
 	componentImageVectors imagevector.ComponentImageVectors,
 	identity *gardencorev1beta1.Gardener,
+	clientCertificateExpirationTimestamp *metav1.Time,
 	config *config.GardenletConfiguration,
 	recorder record.EventRecorder,
 ) (*Controller, error) {
@@ -82,7 +83,7 @@ func NewSeedController(
 	}
 
 	seedController := &Controller{
-		reconciler:      newReconciler(clientMap, recorder, logger.Logger, imageVector, componentImageVectors, identity, config),
+		reconciler:      newReconciler(clientMap, recorder, logger.Logger, imageVector, componentImageVectors, identity, clientCertificateExpirationTimestamp, config),
 		leaseReconciler: NewLeaseReconciler(clientMap, logger.Logger, healthManager, metav1.Now),
 
 		// TODO: move this reconciler to controller-manager and let it run once for all Seeds, no Seed specifics required here

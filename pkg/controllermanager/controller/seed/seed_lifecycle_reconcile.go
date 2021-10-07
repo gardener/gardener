@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -124,6 +125,25 @@ func (c *livecycleReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 		seed.Status.Conditions = gardencorev1beta1helper.MergeConditions(seed.Status.Conditions, newCondition)
 		if err := c.gardenClient.Client().Status().Update(ctx, seed); err != nil {
 			return reconcileResult(err)
+		}
+	}
+
+	// If the gardenlet's client certificate is expired and the seed belongs to a `ManagedSeed` then we reconcile it in
+	// order to re-bootstrap the gardenlet.
+	if seed.Status.ClientCertificateExpirationTimestamp != nil && seed.Status.ClientCertificateExpirationTimestamp.UTC().Before(time.Now().UTC()) {
+		managedSeed, err := kutil.GetManagedSeedByName(ctx, c.gardenClient.Client(), seed.Name)
+		if err != nil {
+			return reconcileResult(err)
+		}
+
+		if managedSeed != nil {
+			seedLogger.Infof("Reconciling ManagedSeed %q since the gardenlet's client certificate is expired", seed.Name)
+
+			patch := client.MergeFrom(managedSeed.DeepCopy())
+			metav1.SetMetaDataAnnotation(&managedSeed.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.GardenerOperationReconcile)
+			if err2 := c.gardenClient.Client().Patch(ctx, managedSeed, patch); err2 != nil {
+				return reconcileResult(err2)
+			}
 		}
 	}
 

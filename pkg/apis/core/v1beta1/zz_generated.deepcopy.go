@@ -3444,6 +3444,10 @@ func (in *SeedStatus) DeepCopyInto(out *SeedStatus) {
 			(*out)[key] = val.DeepCopy()
 		}
 	}
+	if in.ClientCertificateExpirationTimestamp != nil {
+		in, out := &in.ClientCertificateExpirationTimestamp, &out.ClientCertificateExpirationTimestamp
+		*out = (*in).DeepCopy()
+	}
 	return
 }
 
