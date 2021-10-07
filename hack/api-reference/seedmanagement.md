@@ -93,7 +93,9 @@ Shoot
 <td>
 <code>seedTemplate</code></br>
 <em>
+<a href="./core.md#core.gardener.cloud/v1beta1.SeedTemplate">
 github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate
+</a>
 </em>
 </td>
 <td>
@@ -242,7 +244,9 @@ Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this templ
 <td>
 <code>shootTemplate</code></br>
 <em>
+<a href="./core.md#core.gardener.cloud/v1beta1.ShootTemplate">
 github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate
+</a>
 </em>
 </td>
 <td>
@@ -343,7 +347,9 @@ the image, etc.</p>
 <td>
 <code>config</code></br>
 <em>
+<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
 k8s.io/apimachinery/pkg/runtime.RawExtension
+</a>
 </em>
 </td>
 <td>
@@ -663,7 +669,9 @@ Each ManagedSeed created / updated by the ManagedSeedSet will fulfill this templ
 <td>
 <code>shootTemplate</code></br>
 <em>
+<a href="./core.md#core.gardener.cloud/v1beta1.ShootTemplate">
 github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootTemplate
+</a>
 </em>
 </td>
 <td>
@@ -830,7 +838,9 @@ newest ControllerRevision.</p>
 <td>
 <code>conditions</code></br>
 <em>
+<a href="./core.md#core.gardener.cloud/v1beta1.Condition">
 []github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition
+</a>
 </em>
 </td>
 <td>
@@ -891,7 +901,9 @@ Shoot
 <td>
 <code>seedTemplate</code></br>
 <em>
+<a href="./core.md#core.gardener.cloud/v1beta1.SeedTemplate">
 github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate
+</a>
 </em>
 </td>
 <td>
@@ -939,7 +951,9 @@ with the given deployment parameters and GardenletConfiguration.</p>
 <td>
 <code>conditions</code></br>
 <em>
+<a href="./core.md#core.gardener.cloud/v1beta1.Condition">
 []github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition
+</a>
 </em>
 </td>
 <td>
@@ -1027,7 +1041,9 @@ Shoot
 <td>
 <code>seedTemplate</code></br>
 <em>
+<a href="./core.md#core.gardener.cloud/v1beta1.SeedTemplate">
 github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedTemplate
+</a>
 </em>
 </td>
 <td>
