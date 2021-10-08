@@ -32,7 +32,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
-	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
@@ -398,36 +397,26 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 			TimeoutSeconds:          pointer.Int32(10),
 		}, {
 			Name: "validation.extensions.seed.admission.core.gardener.cloud",
-			Rules: []admissionregistrationv1.RuleWithOperations{
-				{
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{druidv1alpha1.GroupVersion.Group},
-						APIVersions: []string{druidv1alpha1.GroupVersion.Version},
-						Resources:   []string{"etcds"},
+			Rules: []admissionregistrationv1.RuleWithOperations{{
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
+					APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
+					Resources: []string{
+						"backupbuckets",
+						"backupentries",
+						"bastions",
+						"containerruntimes",
+						"controlplanes",
+						"dnsrecords",
+						"extensions",
+						"infrastructures",
+						"networks",
+						"operatingsystemconfigs",
+						"workers",
 					},
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
 				},
-				{
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{extensionsv1alpha1.SchemeGroupVersion.Group},
-						APIVersions: []string{extensionsv1alpha1.SchemeGroupVersion.Version},
-						Resources: []string{
-							"backupbuckets",
-							"backupentries",
-							"bastions",
-							"containerruntimes",
-							"controlplanes",
-							"dnsrecords",
-							"extensions",
-							"infrastructures",
-							"networks",
-							"operatingsystemconfigs",
-							"workers",
-						},
-					},
-					Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
-				},
-			},
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create, admissionregistrationv1.Update},
+			}},
 			FailurePolicy:     &failurePolicy,
 			NamespaceSelector: &metav1.LabelSelector{},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{

@@ -4,6 +4,7 @@
 package xstrings
 
 import (
+	"bytes"
 	"unicode/utf8"
 )
 
@@ -27,7 +28,7 @@ func ExpandTabs(str string, tabSize int) string {
 
 	var r rune
 	var i, size, column, expand int
-	var output *stringBuilder
+	var output *bytes.Buffer
 
 	orig := str
 
@@ -42,7 +43,7 @@ func ExpandTabs(str string, tabSize int) string {
 			}
 
 			for i = 0; i < expand; i++ {
-				output.WriteRune(' ')
+				output.WriteByte(byte(' '))
 			}
 
 			column += expand
@@ -87,7 +88,7 @@ func LeftJustify(str string, length int, pad string) string {
 	remains := length - l
 	padLen := Len(pad)
 
-	output := &stringBuilder{}
+	output := &bytes.Buffer{}
 	output.Grow(len(str) + (remains/padLen+1)*len(pad))
 	output.WriteString(str)
 	writePadString(output, pad, padLen, remains)
@@ -113,7 +114,7 @@ func RightJustify(str string, length int, pad string) string {
 	remains := length - l
 	padLen := Len(pad)
 
-	output := &stringBuilder{}
+	output := &bytes.Buffer{}
 	output.Grow(len(str) + (remains/padLen+1)*len(pad))
 	writePadString(output, pad, padLen, remains)
 	output.WriteString(str)
@@ -139,7 +140,7 @@ func Center(str string, length int, pad string) string {
 	remains := length - l
 	padLen := Len(pad)
 
-	output := &stringBuilder{}
+	output := &bytes.Buffer{}
 	output.Grow(len(str) + (remains/padLen+1)*len(pad))
 	writePadString(output, pad, padLen, remains/2)
 	output.WriteString(str)
@@ -147,7 +148,7 @@ func Center(str string, length int, pad string) string {
 	return output.String()
 }
 
-func writePadString(output *stringBuilder, pad string, padLen, remains int) {
+func writePadString(output *bytes.Buffer, pad string, padLen, remains int) {
 	var r rune
 	var size int
 
