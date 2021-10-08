@@ -4,6 +4,7 @@
 package xstrings
 
 import (
+	"bytes"
 	"math/rand"
 	"unicode"
 	"unicode/utf8"
@@ -22,7 +23,7 @@ func ToCamelCase(str string) string {
 		return ""
 	}
 
-	buf := &stringBuilder{}
+	buf := &bytes.Buffer{}
 	var r0, r1 rune
 	var size int
 
@@ -111,7 +112,7 @@ func camelCaseToLowerCase(str string, connector rune) string {
 		return ""
 	}
 
-	buf := &stringBuilder{}
+	buf := &bytes.Buffer{}
 	wt, word, remaining := nextWord(str)
 
 	for len(remaining) > 0 {
@@ -373,7 +374,7 @@ func nextValidRune(str string, prev rune) (r rune, size int) {
 	return
 }
 
-func toLower(buf *stringBuilder, wt wordType, str string, connector rune) {
+func toLower(buf *bytes.Buffer, wt wordType, str string, connector rune) {
 	buf.Grow(buf.Len() + len(str))
 
 	if wt != upperCaseWord && wt != connectorWord {
@@ -400,7 +401,7 @@ func SwapCase(str string) string {
 	var r rune
 	var size int
 
-	buf := &stringBuilder{}
+	buf := &bytes.Buffer{}
 
 	for len(str) > 0 {
 		r, size = utf8.DecodeRuneInString(str)
@@ -434,7 +435,7 @@ func FirstRuneToUpper(str string) string {
 		return str
 	}
 
-	buf := &stringBuilder{}
+	buf := &bytes.Buffer{}
 	buf.WriteRune(unicode.ToUpper(r))
 	buf.WriteString(str[size:])
 	return buf.String()
@@ -452,7 +453,7 @@ func FirstRuneToLower(str string) string {
 		return str
 	}
 
-	buf := &stringBuilder{}
+	buf := &bytes.Buffer{}
 	buf.WriteRune(unicode.ToLower(r))
 	buf.WriteString(str[size:])
 	return buf.String()
@@ -565,7 +566,7 @@ func Successor(str string) string {
 
 	// Needs to add one character for carry.
 	if i < 0 && carry != ' ' {
-		buf := &stringBuilder{}
+		buf := &bytes.Buffer{}
 		buf.Grow(l + 4) // Reserve enough space for write.
 
 		if lastAlphanumeric != 0 {
