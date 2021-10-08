@@ -139,7 +139,7 @@ var _ = Describe("KubeControllerManager", func() {
 				kubeControllerManager.EXPECT().Deploy(ctx)
 			})
 
-			Context("last operation is nil or not of type 'create'", func() {
+			Context("last operation is nil or neither of type 'create' nor 'restore'", func() {
 				BeforeEach(func() {
 					botanist.Shoot.GetInfo().Status.LastOperation = nil
 				})
@@ -196,6 +196,53 @@ var _ = Describe("KubeControllerManager", func() {
 			Context("last operation is not nil and of type 'create'", func() {
 				BeforeEach(func() {
 					botanist.Shoot.GetInfo().Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeCreate}
+				})
+
+				It("hibernation enabled", func() {
+					botanist.Shoot.HibernationEnabled = true
+					kubernetesClient.EXPECT().Client().Return(c)
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
+						obj.Spec.Replicas = pointer.Int32(0)
+						return nil
+					})
+					kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
+
+					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
+				})
+
+				It("hibernation enabled and kube-controller-manager deployment does not exist", func() {
+					botanist.Shoot.HibernationEnabled = true
+					kubernetesClient.EXPECT().Client().Return(c)
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).Return(apierrors.NewNotFound(appsv1.Resource("Deployment"), "kube-controller-manager"))
+					kubeControllerManager.EXPECT().SetReplicaCount(int32(0))
+
+					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
+				})
+
+				It("hibernation enabled and kube-controller-manager is already scaled up", func() {
+					botanist.Shoot.HibernationEnabled = true
+					kubernetesClient.EXPECT().Client().Return(c)
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "kube-controller-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})).DoAndReturn(func(_ context.Context, _ types.NamespacedName, obj *appsv1.Deployment) error {
+						obj.Spec.Replicas = pointer.Int32(1)
+						return nil
+					})
+					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
+
+					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
+				})
+
+				It("hibernation disabled", func() {
+					botanist.Shoot.HibernationEnabled = false
+
+					kubeControllerManager.EXPECT().SetReplicaCount(int32(1))
+
+					Expect(botanist.DeployKubeControllerManager(ctx)).To(Succeed())
+				})
+			})
+
+			Context("last operation is not nil and of type 'restore'", func() {
+				BeforeEach(func() {
+					botanist.Shoot.GetInfo().Status.LastOperation = &gardencorev1beta1.LastOperation{Type: gardencorev1beta1.LastOperationTypeRestore}
 				})
 
 				It("hibernation enabled", func() {
