@@ -46,6 +46,12 @@ spec:
         - --max-concurrent-workers={{ .Values.controllers.managedResource.concurrentSyncs }}
         - --health-sync-period={{ .Values.controllers.managedResourceHealth.syncPeriod }}
         - --health-max-concurrent-workers={{ .Values.controllers.managedResourceHealth.concurrentSyncs }}
+        {{- if .Values.controllers.tokenInvalidator.concurrentSyncs }}
+        - --token-invalidator-max-concurrent-workers={{ .Values.controllers.tokenInvalidator.concurrentSyncs }}
+        {{- end }}
+        {{- if .Values.controllers.tokenInvalidator.invalidateAllDefaultServiceAccounts }}
+        - --tokeninvalidator-invalidate-all-default-serviceaccounts={{ .Values.controllers.tokenInvalidator.invalidateAllDefaultServiceAccounts }}
+        {{- end }}
         - --always-update={{ .Values.controllers.managedResource.alwaysUpdate }}
         {{- if .Values.targetKubeconfig }}
         - --target-kubeconfig=/etc/gardener-resource-manager/target-kubeconfig/kubeconfig.yaml
@@ -56,9 +62,17 @@ spec:
         {{- if .Values.healthPort }}
         - --health-bind-address=":{{ .Values.healthPort }}"
         {{- end }}
+        {{- if .Values.serverBindAddress }}
+        - --bind-address={{ .Values.serverBindAddress }}
+        {{- end }}
+        {{- if .Values.serverPort }}
+        - --port={{ .Values.serverPort }}
+        {{- end }}
+        {{- if and .Values.serverCertificate .Values.serverPrivateKey }}
+        - --tls-cert-dir=/etc/gardener-resource-manager/tls
+        {{- end }}
         resources:
 {{ toYaml .Values.resources | nindent 12 }}
-{{- if .Values.targetKubeconfig }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -74,12 +88,27 @@ spec:
           containerPort: {{ .Values.metricsPort }}
         - name: health
           containerPort: {{ .Values.healthPort }}
+        - name: server
+          containerPort: {{ .Values.serverPort }}
         volumeMounts:
+{{- if .Values.targetKubeconfig }}
         - name: target-kubeconfig
           mountPath: /etc/gardener-resource-manager/target-kubeconfig
+{{- end }}
+{{- if and .Values.serverCertificate .Values.serverPrivateKey }}
+        - name: tls
+          mountPath: /etc/gardener-resource-manager/tls
+{{- end }}
       volumes:
+{{- if .Values.targetKubeconfig }}
       - name: target-kubeconfig
         secret:
           secretName: gardener-resource-manager-target-kubeconfig
+          defaultMode: 420
+{{- end }}
+{{- if and .Values.serverCertificate .Values.serverPrivateKey }}
+      - name: tls
+        secret:
+          secretName: gardener-resource-manager-tls
           defaultMode: 420
 {{- end }}
