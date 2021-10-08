@@ -26,8 +26,11 @@ var _ Option = &ManagerOptions{}
 
 // ManagerOptions contains options needed to construct the controller-runtime manager.
 type ManagerOptions struct {
+	certDirectory      string
+	serverBindAddress  string
 	metricsBindAddress string
 	healthBindAddress  string
+	serverPort         int
 
 	leaderElection              bool
 	leaderElectionResourceLock  string
@@ -41,8 +44,12 @@ type ManagerOptions struct {
 
 // ManagerConfig contains the completed general manager configuration which can be applied to manager.Options via Apply.
 type ManagerConfig struct {
-	metricsBindAddress   string
-	healthBindAddress    string
+	certDirectory      string
+	serverBindAddress  string
+	metricsBindAddress string
+	healthBindAddress  string
+	serverPort         int
+
 	livenessEndpointName string
 
 	leaderElection              bool
@@ -63,8 +70,11 @@ func (o *ManagerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.DurationVar(&o.leaderElectionLeaseDuration, "leader-election-lease-duration", 15*time.Second, "lease duration for leader election")
 	fs.DurationVar(&o.leaderElectionRenewDeadline, "leader-election-renew-deadline", 10*time.Second, "renew deadline for leader election")
 	fs.DurationVar(&o.leaderElectionRetryPeriod, "leader-election-retry-period", 2*time.Second, "retry period for leader election")
+	fs.StringVar(&o.certDirectory, "tls-cert-dir", "", "directory with server TLS certificate and key (must contain a tls.crt and tls.key file)")
 	fs.StringVar(&o.metricsBindAddress, "metrics-bind-address", ":8080", "bind address for the metrics server")
 	fs.StringVar(&o.healthBindAddress, "health-bind-address", ":8081", "bind address for the health server")
+	fs.StringVar(&o.serverBindAddress, "bind-address", "0.0.0.0", "address to bind to")
+	fs.IntVar(&o.serverPort, "port", 9449, "webhook server port")
 }
 
 // Complete builds the manager.Options based on the given flag values.
@@ -77,8 +87,11 @@ func (o *ManagerOptions) Complete() error {
 		leaderElectionLeaseDuration: o.leaderElectionLeaseDuration,
 		leaderElectionRenewDeadline: o.leaderElectionRenewDeadline,
 		leaderElectionRetryPeriod:   o.leaderElectionRetryPeriod,
+		certDirectory:               o.certDirectory,
+		serverBindAddress:           o.serverBindAddress,
 		metricsBindAddress:          o.metricsBindAddress,
 		healthBindAddress:           o.healthBindAddress,
+		serverPort:                  o.serverPort,
 		livenessEndpointName:        "/healthz",
 	}
 	return nil
@@ -98,7 +111,10 @@ func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.LeaseDuration = &c.leaderElectionLeaseDuration
 	opts.RenewDeadline = &c.leaderElectionRenewDeadline
 	opts.RetryPeriod = &c.leaderElectionRetryPeriod
+	opts.CertDir = c.certDirectory
+	opts.Host = c.serverBindAddress
 	opts.MetricsBindAddress = c.metricsBindAddress
 	opts.HealthProbeBindAddress = c.healthBindAddress
+	opts.Port = c.serverPort
 	opts.LivenessEndpointName = c.livenessEndpointName
 }

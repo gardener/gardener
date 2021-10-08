@@ -25,6 +25,7 @@ GO111MODULE=on \
 	    -mod=vendor \
 	    -ldflags "$("$(dirname $0)"/../get-build-ld-flags.sh)" \
 	    "$(dirname $0)"/../../cmd/gardener-resource-manager \
+	    --tls-cert-dir=./example/resource-manager \
 	    --garbage-collector-sync-period=1m \
 	    --kubeconfig="${KUBECONFIG:-$kubeconfig}" \
 	    --leader-election=false \
