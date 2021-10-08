@@ -58,6 +58,7 @@ type TargetClientOptions struct {
 // Before the first usage, Start and WaitForCacheSync should be called to ensure that the cache is running
 // and has been populated successfully.
 type TargetClientConfig struct {
+	Config     *rest.Config
 	Client     client.Client
 	RESTMapper meta.RESTMapper
 	Scheme     *runtime.Scheme
@@ -143,6 +144,7 @@ func NewTargetClientConfig(kubeconfigPath string, disableCache bool, cacheResync
 	}
 
 	return &TargetClientConfig{
+		Config:     restConfig,
 		Client:     targetClient,
 		RESTMapper: restMapper,
 		Scheme:     scheme,
@@ -215,6 +217,7 @@ func (c *TargetClientConfig) WaitForCacheSync(ctx context.Context) bool {
 
 // Apply sets the values of this TargetClientConfig on the given config.
 func (c *TargetClientConfig) Apply(conf *TargetClientConfig) {
+	conf.Config = c.Config
 	conf.Client = c.Client
 	conf.RESTMapper = c.RESTMapper
 	conf.Scheme = c.Scheme
