@@ -25,12 +25,15 @@ import (
 	healthcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
 	resourcecontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
+	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/resourcemanager/healthz"
+	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -49,6 +52,7 @@ func NewResourceManagerCommand() *cobra.Command {
 	secretControllerOpts := &secretcontroller.ControllerOptions{}
 	healthControllerOpts := &healthcontroller.ControllerOptions{}
 	gcControllerOpts := &garbagecollectorcontroller.ControllerOptions{}
+	tokenInvalidatorControllerOpts := &tokeninvalidatorcontroller.ControllerOptions{}
 
 	cmd := &cobra.Command{
 		Use: "gardener-resource-manager",
@@ -72,6 +76,7 @@ func NewResourceManagerCommand() *cobra.Command {
 				secretControllerOpts,
 				healthControllerOpts,
 				gcControllerOpts,
+				tokenInvalidatorControllerOpts,
 			); err != nil {
 				return err
 			}
@@ -103,14 +108,30 @@ func NewResourceManagerCommand() *cobra.Command {
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
 
-			// add controllers and health endpoint to manager
-			if err := resourcemanagercmd.AddAllToManager(
-				mgr,
+			// setup target cluster
+			targetCluster, err := cluster.New(targetClientOpts.Completed().Config)
+			if err != nil {
+				return fmt.Errorf("could not instantiate target cluster: %w", err)
+			}
+
+			if err := mgr.Add(targetCluster); err != nil {
+				return fmt.Errorf("could not add target cluster to manager: %w", err)
+			}
+
+			tokenInvalidatorControllerOpts.Completed().TargetCache = targetCluster.GetCache()
+
+			// add controllers, health endpoint and webhooks to manager
+			if err := resourcemanagercmd.AddAllToManager(mgr,
+				// controllers
 				resourcecontroller.AddToManager,
 				secretcontroller.AddToManager,
 				healthcontroller.AddToManager,
 				garbagecollectorcontroller.AddToManager,
+				tokeninvalidatorcontroller.AddToManager,
+				// health endpoint
 				healthz.AddToManager,
+				// webhooks
+				tokeninvalidatorwebhook.AddToManager,
 			); err != nil {
 				return err
 			}
@@ -167,6 +188,7 @@ func NewResourceManagerCommand() *cobra.Command {
 		secretControllerOpts,
 		healthControllerOpts,
 		gcControllerOpts,
+		tokenInvalidatorControllerOpts,
 	)
 	verflag.AddFlags(cmd.Flags())
 
