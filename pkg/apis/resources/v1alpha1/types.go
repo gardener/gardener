@@ -46,6 +46,13 @@ const (
 	// true then the controller will keep the resource requests and limits in Pod templates (e.g. in a
 	// DeploymentSpec) during updates to the resource.
 	PreserveResources = "resources.gardener.cloud/preserve-resources"
+
+	// StaticTokenSkip is a constant for a label on a ServiceAccount which indicates that this ServiceAccount should not
+	// be considered by this controller.
+	StaticTokenSkip = "token-invalidator.resources.gardener.cloud/skip"
+	// StaticTokenConsider is a constant for a label on a Secret which indicates that this Secret should be considered
+	// for the invalidation of the static ServiceAccount token.
+	StaticTokenConsider = "token-invalidator.resources.gardener.cloud/consider"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
