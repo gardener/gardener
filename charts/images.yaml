@@ -284,7 +284,7 @@ images:
   repository: gcr.io/istio-release/pilot
   tag: "1.10.2-distroless"
 
-# External Authz Server
+# External Authorization Server for the Istio Endpoint of Reversed VPN
 - name: ext-authz-server
   sourceRepository: github.com/gardener/ext-authz-server
   repository: eu.gcr.io/gardener-project/gardener/ext-authz-server

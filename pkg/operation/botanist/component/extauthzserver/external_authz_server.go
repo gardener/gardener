@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -42,7 +43,7 @@ const (
 	// AuthServerPort is the port exposed by the external authorization server
 	AuthServerPort = 9001
 	// DeploymentName is the name of the external authorization server deployment.
-	DeploymentName = v1beta1constants.DeploymentNameExternalAuthz
+	DeploymentName = "reversed-vpn-auth-server"
 	// ServiceName is the name of the external authorization server service.
 	ServiceName = DeploymentName
 )
@@ -75,7 +76,6 @@ type authServer struct {
 }
 
 func (a *authServer) Deploy(ctx context.Context) error {
-
 	var (
 		deployment      = a.emptyDeployment()
 		destinationRule = a.emptyDestinationRule()
@@ -152,7 +152,7 @@ func (a *authServer) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, destinationRule, func() error {
 		destinationRule.Spec = istionetworkingv1beta1.DestinationRule{
 			ExportTo: []string{"*"},
-			Host:     fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, a.namespace),
+			Host:     fmt.Sprintf("%s.%s.svc.%s", DeploymentName, a.namespace, v1beta1.DefaultDomain),
 			TrafficPolicy: &istionetworkingv1beta1.TrafficPolicy{
 				ConnectionPool: &istionetworkingv1beta1.ConnectionPoolSettings{
 					Tcp: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
@@ -182,7 +182,7 @@ func (a *authServer) Deploy(ctx context.Context) error {
 			Selector: gatewaySelectors,
 			Servers: []*istionetworkingv1beta1.Server{
 				{
-					Hosts: []string{fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, a.namespace)},
+					Hosts: []string{fmt.Sprintf("%s.%s.svc.%s", DeploymentName, a.namespace, v1beta1.DefaultDomain)},
 					Port: &istionetworkingv1beta1.Port{
 						Name:     "tls-tunnel",
 						Number:   vpnseedserver.GatewayPort,
@@ -220,7 +220,7 @@ func (a *authServer) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, virtualService, func() error {
 		virtualService.Spec = istionetworkingv1beta1.VirtualService{
 			ExportTo: []string{"*"},
-			Hosts:    []string{fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, a.namespace)},
+			Hosts:    []string{fmt.Sprintf("%s.%s.svc.%s", DeploymentName, a.namespace, v1beta1.DefaultDomain)},
 			Http: []*istionetworkingv1beta1.HTTPRoute{{
 				Route: []*istionetworkingv1beta1.HTTPRouteDestination{{
 					Destination: &istionetworkingv1beta1.Destination{

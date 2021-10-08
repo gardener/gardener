@@ -287,7 +287,7 @@ spec:
           transport_api_version: V3
           grpc_service:
             envoy_grpc:
-              cluster_name: outbound|9001||auth-server.garden.svc.cluster.local
+              cluster_name: outbound|9001||reversed-vpn-auth-server.garden.svc.cluster.local
             timeout: 0.250s
   workloadSelector:
     labels:
