@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"sort"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	workerhelper "github.com/gardener/gardener/extensions/pkg/controller/worker/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	"github.com/go-logr/logr"
@@ -68,7 +68,7 @@ func (a *genericStateActuator) updateWorkerState(ctx context.Context, worker *ex
 	if err != nil {
 		return err
 	}
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, a.client, worker, func() error {
+	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, a.client, worker, func() error {
 		worker.Status.State = &runtime.RawExtension{Raw: rawState}
 		return nil
 	})

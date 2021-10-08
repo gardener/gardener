@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
@@ -26,8 +27,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
-	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -467,14 +468,14 @@ status: {}
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
-						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+						Conditions: []gardencorev1beta1.Condition{
 							{
 								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: resourcesv1alpha1.ConditionFalse,
+								Status: gardencorev1beta1.ConditionFalse,
 							},
 							{
 								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: resourcesv1alpha1.ConditionFalse,
+								Status: gardencorev1beta1.ConditionFalse,
 							},
 						},
 					},
@@ -496,14 +497,14 @@ status: {}
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
-						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+						Conditions: []gardencorev1beta1.Condition{
 							{
 								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 							{
 								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
 					},

@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart for the Gardener Resource Manager.
+name: gardener-resource-manager
+version: 0.1.0

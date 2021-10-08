@@ -34,7 +34,7 @@ import (
 
 	"github.com/Masterminds/semver"
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -238,7 +238,7 @@ func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Conditi
 		return &c
 	}
 
-	toProcess := map[resourcesv1alpha1.ConditionType]struct{}{
+	toProcess := map[gardencorev1beta1.ConditionType]struct{}{
 		resourcesv1alpha1.ResourcesApplied: {},
 		resourcesv1alpha1.ResourcesHealthy: {},
 	}
@@ -248,7 +248,7 @@ func (b *HealthChecker) CheckManagedResource(condition gardencorev1beta1.Conditi
 		if !ok {
 			continue
 		}
-		if cond.Status == resourcesv1alpha1.ConditionFalse {
+		if cond.Status == gardencorev1beta1.ConditionFalse {
 			c := b.FailedCondition(condition, cond.Reason, cond.Message)
 			return &c
 		}

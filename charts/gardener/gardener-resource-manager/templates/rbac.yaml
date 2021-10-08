@@ -1,0 +1,80 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gardener-resource-manager
+  labels:
+    app: gardener
+    role: resource-manager
+rules:
+- apiGroups:
+  - resources.gardener.cloud
+  resources:
+  - managedresources
+  - managedresources/status
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - events
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - {{ include "leaderelectionid" . }}
+  verbs:
+  - get
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  resourceNames:
+  - {{ include "leaderelectionid" . }}
+  verbs:
+  - update
+  - get
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gardener-resource-manager
+  labels:
+    app: gardener
+    role: resource-manager
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener-resource-manager
+subjects:
+- kind: ServiceAccount
+  name: gardener-resource-manager
+  namespace: {{ .Release.Namespace }}

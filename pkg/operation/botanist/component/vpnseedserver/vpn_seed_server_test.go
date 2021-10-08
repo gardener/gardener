@@ -25,7 +25,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
-	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	protobuftypes "github.com/gogo/protobuf/types"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"

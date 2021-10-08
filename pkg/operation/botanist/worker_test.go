@@ -31,7 +31,7 @@ import (
 	mockworker "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -350,14 +350,14 @@ var _ = Describe("Worker", func() {
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
-						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+						Conditions: []gardencorev1beta1.Condition{
 							{
 								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 							{
 								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
 					},
@@ -414,14 +414,14 @@ var _ = Describe("Worker", func() {
 					},
 					Status: resourcesv1alpha1.ManagedResourceStatus{
 						ObservedGeneration: 1,
-						Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+						Conditions: []gardencorev1beta1.Condition{
 							{
 								Type:   resourcesv1alpha1.ResourcesApplied,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 							{
 								Type:   resourcesv1alpha1.ResourcesHealthy,
-								Status: resourcesv1alpha1.ConditionTrue,
+								Status: gardencorev1beta1.ConditionTrue,
 							},
 						},
 					},

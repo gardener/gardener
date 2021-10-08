@@ -493,7 +493,7 @@ func (a *genericActuator) updateWorkerStatusMachineDeployments(ctx context.Conte
 		return err
 	}
 
-	return extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, a.client, worker, func() error {
+	return controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, a.client, worker, func() error {
 		if len(statusMachineDeployments) > 0 {
 			worker.Status.MachineDeployments = statusMachineDeployments
 		}

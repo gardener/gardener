@@ -27,7 +27,7 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	protobuftypes "github.com/gogo/protobuf/types"
 	istionetworkingv1alpha3 "istio.io/api/networking/v1alpha3"
 	istionetworkingv1beta1 "istio.io/api/networking/v1beta1"

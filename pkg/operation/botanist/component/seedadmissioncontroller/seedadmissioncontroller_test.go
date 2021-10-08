@@ -20,11 +20,12 @@ import (
 	"strings"
 	"time"
 
-	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
-	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/seedadmissioncontroller"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -528,14 +529,14 @@ status: {}
 						},
 						Status: resourcesv1alpha1.ManagedResourceStatus{
 							ObservedGeneration: 1,
-							Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+							Conditions: []gardencorev1beta1.Condition{
 								{
 									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: resourcesv1alpha1.ConditionFalse,
+									Status: gardencorev1beta1.ConditionFalse,
 								},
 								{
 									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: resourcesv1alpha1.ConditionFalse,
+									Status: gardencorev1beta1.ConditionFalse,
 								},
 							},
 						},
@@ -556,14 +557,14 @@ status: {}
 						},
 						Status: resourcesv1alpha1.ManagedResourceStatus{
 							ObservedGeneration: 1,
-							Conditions: []resourcesv1alpha1.ManagedResourceCondition{
+							Conditions: []gardencorev1beta1.Condition{
 								{
 									Type:   resourcesv1alpha1.ResourcesApplied,
-									Status: resourcesv1alpha1.ConditionTrue,
+									Status: gardencorev1beta1.ConditionTrue,
 								},
 								{
 									Type:   resourcesv1alpha1.ResourcesHealthy,
-									Status: resourcesv1alpha1.ConditionTrue,
+									Status: gardencorev1beta1.ConditionTrue,
 								},
 							},
 						},

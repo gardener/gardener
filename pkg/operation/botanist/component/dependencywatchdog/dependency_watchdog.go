@@ -28,7 +28,7 @@ import (
 
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
-	"github.com/gardener/gardener-resource-manager/pkg/controller/garbagecollector/references"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"

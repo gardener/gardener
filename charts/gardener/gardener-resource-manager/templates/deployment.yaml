@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gardener-resource-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: gardener
+    role: resource-manager
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: gardener
+      role: resource-manager
+  template:
+    metadata:
+      {{- if .Values.targetKubeconfig }}
+      annotations:
+        checksum/secret-gardener-resource-manager-target-kubeconfig: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+      {{- end }}
+      labels:
+        app: gardener
+        role: resource-manager
+    spec:
+      serviceAccountName: gardener-resource-manager
+      containers:
+      - name: gardener-resource-manager
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command:
+        - /gardener-resource-manager
+        - --leader-election={{ .Values.leaderElection.enabled }}
+        - --leader-election-namespace={{ .Release.Namespace }}
+        - --leader-election-resource-lock={{ .Values.leaderElection.resourceLock }}
+        - --leader-election-lease-duration={{ .Values.leaderElection.leaseDuration }}
+        - --leader-election-renew-deadline={{ .Values.leaderElection.renewDeadline }}
+        - --leader-election-retry-period={{ .Values.leaderElection.retryPeriod }}
+        - --leader-election-id={{ include "leaderelectionid" . }}
+        {{- if .Values.controllers.cacheResyncPeriod }}
+        - --cache-resync-period={{ .Values.controllers.cacheResyncPeriod }}
+        {{- end }}
+        {{- if .Values.controllers.garbageCollector.syncPeriod }}
+        - --garbage-collector-sync-period={{ .Values.controllers.garbageCollector.syncPeriod }}
+        {{- end }}
+        - --sync-period={{ .Values.controllers.managedResource.syncPeriod }}
+        - --max-concurrent-workers={{ .Values.controllers.managedResource.concurrentSyncs }}
+        - --health-sync-period={{ .Values.controllers.managedResourceHealth.syncPeriod }}
+        - --health-max-concurrent-workers={{ .Values.controllers.managedResourceHealth.concurrentSyncs }}
+        - --always-update={{ .Values.controllers.managedResource.alwaysUpdate }}
+        {{- if .Values.targetKubeconfig }}
+        - --target-kubeconfig=/etc/gardener-resource-manager/target-kubeconfig/kubeconfig.yaml
+        {{- end }}
+        {{- if .Values.metricsPort }}
+        - --metrics-bind-address=":{{ .Values.metricsPort }}"
+        {{- end }}
+        {{- if .Values.healthPort }}
+        - --health-bind-address=":{{ .Values.healthPort }}"
+        {{- end }}
+        resources:
+{{ toYaml .Values.resources | nindent 12 }}
+{{- if .Values.targetKubeconfig }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.healthPort }}
+            scheme: HTTP
+          initialDelaySeconds: 30
+          failureThreshold: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        ports:
+        - name: metrics
+          containerPort: {{ .Values.metricsPort }}
+        - name: health
+          containerPort: {{ .Values.healthPort }}
+        volumeMounts:
+        - name: target-kubeconfig
+          mountPath: /etc/gardener-resource-manager/target-kubeconfig
+      volumes:
+      - name: target-kubeconfig
+        secret:
+          secretName: gardener-resource-manager-target-kubeconfig
+          defaultMode: 420
+{{- end }}

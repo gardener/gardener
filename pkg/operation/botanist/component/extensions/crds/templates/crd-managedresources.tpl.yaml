@@ -121,9 +121,16 @@ spec:
               properties:
                 conditions:
                   items:
-                    description: ManagedResourceCondition describes the state of a deployment
-                      at a certain period.
+                    description: Condition holds the information about the state of
+                      a resource.
                     properties:
+                      codes:
+                        description: Well-defined error codes in case the condition
+                          reports a problem.
+                        items:
+                          description: ErrorCode is a string alias.
+                          type: string
+                        type: array
                       lastTransitionTime:
                         description: Last time the condition transitioned from one status
                           to another.
@@ -141,10 +148,10 @@ spec:
                         description: The reason for the condition's last transition.
                         type: string
                       status:
-                        description: Status of the ManagedResource condition.
+                        description: Status of the condition, one of True, False, Unknown.
                         type: string
                       type:
-                        description: Type of the ManagedResource condition.
+                        description: Type of the condition.
                         type: string
                     required:
                       - lastTransitionTime
@@ -163,6 +170,7 @@ spec:
                 resources:
                   description: Resources is a list of objects that have been created.
                   items:
+                    description: ObjectReference is a reference to another object.
                     properties:
                       annotations:
                         additionalProperties:

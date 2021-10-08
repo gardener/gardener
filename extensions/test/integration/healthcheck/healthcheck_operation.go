@@ -19,8 +19,17 @@ import (
 	"fmt"
 	"time"
 
-	resourcev1alpha1 "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1"
-	resourcev1alpha1helper "github.com/gardener/gardener-resource-manager/api/resources/v1alpha1/helper"
+	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
+	"github.com/gardener/gardener/extensions/test/integration/operation"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/test/framework"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,15 +38,6 @@ import (
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	"github.com/gardener/gardener/extensions/pkg/controller/healthcheck"
-	"github.com/gardener/gardener/extensions/test/integration/operation"
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/test/framework"
 )
 
 // ControlPlaneHealthCheckWithManagedResource is a convenience function to tests that an unhealthy condition in a given ManagedResource leads to an unhealthy health check condition in the given ControlPlane CRD.
@@ -133,18 +133,18 @@ func TestHealthCheckWithManagedResource(ctx context.Context, timeout time.Durati
 		}, healthConditionType, gardencorev1beta1.ConditionTrue, healthcheck.ReasonSuccessful)
 		framework.ExpectNoError(err)
 	}()
-	managedResource := resourcev1alpha1.ManagedResource{}
+	managedResource := resourcesv1alpha1.ManagedResource{}
 	if err = f.SeedClient.Client().Get(ctx, kutil.Key(f.ShootSeedNamespace(), managedResourceName), &managedResource); err != nil {
 		return err
 	}
 	// overwrite Condition with type ResourcesHealthy on the managed resource to make the health check in the provider fail
-	managedResourceCondition := resourcev1alpha1.ManagedResourceCondition{
-		Type:   resourcev1alpha1.ResourcesHealthy,
-		Status: resourcev1alpha1.ConditionFalse,
+	managedResourceCondition := gardencorev1beta1.Condition{
+		Type:   resourcesv1alpha1.ResourcesHealthy,
+		Status: gardencorev1beta1.ConditionFalse,
 		Reason: "dummyFailureReason",
 	}
-	if err = extensionscontroller.TryUpdateStatus(ctx, retry.DefaultBackoff, f.SeedClient.Client(), &managedResource, func() error {
-		newConditions := resourcev1alpha1helper.MergeConditions(managedResource.Status.Conditions, managedResourceCondition)
+	if err = controllerutils.TryUpdateStatus(ctx, retry.DefaultBackoff, f.SeedClient.Client(), &managedResource, func() error {
+		newConditions := v1beta1helper.MergeConditions(managedResource.Status.Conditions, managedResourceCondition)
 		managedResource.Status.Conditions = newConditions
 		return nil
 	}); err != nil {
