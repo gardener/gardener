@@ -226,7 +226,7 @@ generate-extensions-crds:
 
 .PHONY: format
 format:
-	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test ./landscaper
+	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test ./landscaper ./hack
 
 .PHONY: test
 test:
