@@ -23,6 +23,7 @@ import (
 	garbagecollectorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	healthcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
 	resourcecontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
+	rootcacontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
 	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/resourcemanager/healthz"
@@ -52,6 +53,7 @@ func NewResourceManagerCommand() *cobra.Command {
 	healthControllerOpts := &healthcontroller.ControllerOptions{}
 	gcControllerOpts := &garbagecollectorcontroller.ControllerOptions{}
 	tokenInvalidatorControllerOpts := &tokeninvalidatorcontroller.ControllerOptions{}
+	rootcaControllerOpts := &rootcacontroller.ControllerOptions{}
 
 	cmd := &cobra.Command{
 		Use: "gardener-resource-manager",
@@ -73,6 +75,7 @@ func NewResourceManagerCommand() *cobra.Command {
 				targetClusterOpts,
 				resourceControllerOpts,
 				secretControllerOpts,
+				rootcaControllerOpts,
 				healthControllerOpts,
 				gcControllerOpts,
 				tokenInvalidatorControllerOpts,
@@ -96,6 +99,7 @@ func NewResourceManagerCommand() *cobra.Command {
 			healthControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 			gcControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 			tokenInvalidatorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
+			rootcaControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 
 			// setup manager
 			mgr, err := manager.New(sourceClientOpts.Completed().RESTConfig, managerOptions)
@@ -113,6 +117,7 @@ func NewResourceManagerCommand() *cobra.Command {
 				resourcecontroller.AddToManager,
 				secretcontroller.AddToManager,
 				healthcontroller.AddToManager,
+				rootcacontroller.AddToManager,
 				garbagecollectorcontroller.AddToManager,
 				tokeninvalidatorcontroller.AddToManager,
 				// health/ready endpoints
@@ -158,6 +163,7 @@ func NewResourceManagerCommand() *cobra.Command {
 		sourceClientOpts,
 		resourceControllerOpts,
 		secretControllerOpts,
+		rootcaControllerOpts,
 		healthControllerOpts,
 		gcControllerOpts,
 		tokenInvalidatorControllerOpts,
