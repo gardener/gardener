@@ -4,21 +4,16 @@ import (
 	"fmt"
 	"os"
 
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
-
 	"github.com/spf13/pflag"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -56,7 +51,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 		Reconciler: &reconciler{
 			rootCA:       string(rootCA),
-			targetClient: conf.TargetClientConfig.Client,
+			targetClient: conf.TargetCluster.GetClient(),
 		},
 	})
 	if err != nil {

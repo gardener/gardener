@@ -18,18 +18,16 @@ import (
 	"context"
 	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	. "github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
 
-	mockclient "github.com/gardener/gardener-resource-manager/pkg/mock/controller-runtime/client"
 	"github.com/golang/mock/gomock"
-
-	. "github.com/gardener/gardener-resource-manager/pkg/controller/rootcapublisher"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	kubernetescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
