@@ -95,7 +95,7 @@ func (e *Env) item() store.Item {
 
 // ListVersions prints out all available versions matching this Env's
 // platform & version selector (respecting NoDownload to figure
-// out whether or not to match remote versions)
+// out whether or not to match remote versions).
 func (e *Env) ListVersions(ctx context.Context) {
 	out := tabwriter.NewWriter(e.Out, 4, 4, 2, ' ', 0)
 	defer out.Flush()
@@ -130,7 +130,6 @@ func (e *Env) ListVersions(ctx context.Context) {
 			}
 		}
 	}
-
 }
 
 // LatestVersion returns the latest version matching our version selector and

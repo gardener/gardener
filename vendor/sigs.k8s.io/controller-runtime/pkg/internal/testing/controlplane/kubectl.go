@@ -30,6 +30,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/internal/testing/process"
 )
 
+const (
+	envtestName = "envtest"
+)
+
 // KubeConfigFromREST reverse-engineers a kubeconfig file from a rest.Config.
 // The options are tailored towards the rest.Configs we generate, so they're
 // not broadly applicable.
@@ -48,14 +52,14 @@ func KubeConfigFromREST(cfg *rest.Config) ([]byte, error) {
 		return nil, fmt.Errorf("unable to interpret config's host value as a URL: %w", err)
 	}
 
-	kubeConfig.Clusters["envtest"] = &kcapi.Cluster{
+	kubeConfig.Clusters[envtestName] = &kcapi.Cluster{
 		// TODO(directxman12): if client-go ever decides to expose defaultServerUrlFor(config),
 		// we can just use that.  Note that this is not the same as the public DefaultServerURL,
 		// which requires us to pass a bunch of stuff in manually.
 		Server:                   (&url.URL{Scheme: protocol, Host: baseURL.Host, Path: cfg.APIPath}).String(),
 		CertificateAuthorityData: cfg.CAData,
 	}
-	kubeConfig.AuthInfos["envtest"] = &kcapi.AuthInfo{
+	kubeConfig.AuthInfos[envtestName] = &kcapi.AuthInfo{
 		// try to cover all auth strategies that aren't plugins
 		ClientCertificateData: cfg.CertData,
 		ClientKeyData:         cfg.KeyData,
@@ -64,10 +68,10 @@ func KubeConfigFromREST(cfg *rest.Config) ([]byte, error) {
 		Password:              cfg.Password,
 	}
 	kcCtx := kcapi.NewContext()
-	kcCtx.Cluster = "envtest"
-	kcCtx.AuthInfo = "envtest"
-	kubeConfig.Contexts["envtest"] = kcCtx
-	kubeConfig.CurrentContext = "envtest"
+	kcCtx.Cluster = envtestName
+	kcCtx.AuthInfo = envtestName
+	kubeConfig.Contexts[envtestName] = kcCtx
+	kubeConfig.CurrentContext = envtestName
 
 	contents, err := clientcmd.Write(*kubeConfig)
 	if err != nil {

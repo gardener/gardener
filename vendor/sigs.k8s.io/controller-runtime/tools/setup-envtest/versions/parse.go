@@ -12,12 +12,12 @@ import (
 var (
 	// baseVersionRE is a semver-ish version -- either X.Y.Z, X.Y, or X.Y.{*|x}.
 	baseVersionRE = `(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)(?:\.(?P<patch>0|[1-9]\d*|x|\*))?`
-	// versionExprRe matches valid version input for FromExpr
+	// versionExprRe matches valid version input for FromExpr.
 	versionExprRE = regexp.MustCompile(`^(?P<sel><|~|<=)?` + baseVersionRE + `(?P<latest>!)?$`)
 
 	// ConcreteVersionRE matches a concrete version anywhere in the string.
 	ConcreteVersionRE = regexp.MustCompile(`(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)`)
-	// OnlyConcreteVersionRE matches a string that's just a concrete version
+	// OnlyConcreteVersionRE matches a string that's just a concrete version.
 	OnlyConcreteVersionRE = regexp.MustCompile(`^` + ConcreteVersionRE.String() + `$`)
 )
 
@@ -35,7 +35,7 @@ var (
 // - an '!' at the end means force checking API server for the latest versions
 //   instead of settling for local matches.
 //
-// ^[^~]?SEMVER(!)??$
+// ^[^~]?SEMVER(!)??$ .
 func FromExpr(expr string) (Spec, error) {
 	match := versionExprRE.FindStringSubmatch(expr)
 	if match == nil {

@@ -30,7 +30,7 @@ const (
 	PrintPath
 	// PrintEnv prints the path with the corresponding env variable, so that
 	// you can source the output like
-	// `source $(fetch-envtest switch -p env 1.20.x)`
+	// `source $(fetch-envtest switch -p env 1.20.x)`.
 	PrintEnv
 )
 

@@ -42,7 +42,7 @@ const (
 // 1. TEST_ASSET_{tr/a-z-/A-Z_/} (if set; asset overrides -- EnvAssetOverridePrefix)
 // 1. KUBEBUILDER_ASSETS (if set; global asset path -- EnvAssetsPath)
 // 3. assetDirectory (if set; per-config asset directory)
-// 4. /usr/local/kubebuilder/bin (AssetsDefaultPath)
+// 4. /usr/local/kubebuilder/bin (AssetsDefaultPath).
 func BinPathFinder(symbolicName, assetDirectory string) (binPath string) {
 	punctuationPattern := regexp.MustCompile("[^A-Z0-9]+")
 	sanitizedName := punctuationPattern.ReplaceAllString(strings.ToUpper(symbolicName), "_")

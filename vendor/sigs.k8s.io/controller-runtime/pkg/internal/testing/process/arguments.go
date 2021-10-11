@@ -25,7 +25,7 @@ import (
 
 // RenderTemplates returns an []string to render the templates
 //
-// Deprecated: will be removed in favor of Arguments
+// Deprecated: will be removed in favor of Arguments.
 func RenderTemplates(argTemplates []string, data interface{}) (args []string, err error) {
 	var t *template.Template
 
@@ -52,7 +52,7 @@ func RenderTemplates(argTemplates []string, data interface{}) (args []string, er
 // appending each argument that starts with `--` and contains an `=` to the
 // argument set (ignoring defaults), returning the rest.
 //
-// Deprecated: will be removed when RenderTemplates is removed
+// Deprecated: will be removed when RenderTemplates is removed.
 func SliceToArguments(sliceArgs []string, args *Arguments) []string {
 	var rest []string
 	for i, arg := range sliceArgs {
@@ -79,7 +79,7 @@ func SliceToArguments(sliceArgs []string, args *Arguments) []string {
 
 // TemplateDefaults specifies defaults to be used for joining structured arguments with templates.
 //
-// Deprecated: will be removed when RenderTemplates is removed
+// Deprecated: will be removed when RenderTemplates is removed.
 type TemplateDefaults struct {
 	// Data will be used to render the template.
 	Data interface{}
@@ -103,7 +103,7 @@ type TemplateDefaults struct {
 // It returns the resulting rendered arguments, plus the arguments that were
 // not transferred to `args` during rendering.
 //
-// Deprecated: will be removed when RenderTemplates is removed
+// Deprecated: will be removed when RenderTemplates is removed.
 func TemplateAndArguments(templ []string, args *Arguments, data TemplateDefaults) (allArgs []string, nonFlagishArgs []string, err error) {
 	if len(templ) == 0 { // 3 & 4 (no template case)
 		return args.AsStrings(data.Defaults), nil, nil
@@ -168,7 +168,7 @@ type Arg interface {
 type userArg []string
 
 func (a userArg) Append(vals ...string) Arg {
-	return userArg(append(a, vals...))
+	return userArg(append(a, vals...)) //nolint:unconvert
 }
 func (a userArg) Get(_ []string) []string {
 	return []string(a)
@@ -177,7 +177,7 @@ func (a userArg) Get(_ []string) []string {
 type defaultedArg []string
 
 func (a defaultedArg) Append(vals ...string) Arg {
-	return defaultedArg(append(a, vals...))
+	return defaultedArg(append(a, vals...)) //nolint:unconvert
 }
 func (a defaultedArg) Get(defaults []string) []string {
 	res := append([]string(nil), defaults...)
@@ -253,7 +253,7 @@ func (a *Arguments) AsStrings(defaults map[string][]string) []string {
 // Get returns the value of the given flag.  If nil,
 // it will not be passed in AsString, otherwise:
 //
-// len == 0 --> `--key`, len > 0 --> `--key=val1 --key=val2 ...`
+// len == 0 --> `--key`, len > 0 --> `--key=val1 --key=val2 ...`.
 func (a *Arguments) Get(key string) Arg {
 	if vals, ok := a.values[key]; ok {
 		return vals
