@@ -37,6 +37,7 @@ type CIDR interface {
 	ValidateParse() field.ErrorList
 	// ValidateSubset returns errors if subsets is not a subset.
 	ValidateSubset(subsets ...CIDR) field.ErrorList
+	LastIPInRange() net.IP
 }
 
 type cidrPath struct {
@@ -61,7 +62,8 @@ func (c *cidrPath) ValidateSubset(subsets ...CIDR) field.ErrorList {
 		if subset == nil || c == subset || !subset.Parse() {
 			continue
 		}
-		if !c.net.Contains(subset.GetIPNet().IP) {
+
+		if !c.net.Contains(subset.GetIPNet().IP) || !c.net.Contains(subset.LastIPInRange()) {
 			allErrs = append(allErrs, field.Invalid(subset.GetFieldPath(), subset.GetCIDR(), fmt.Sprintf("must be a subset of %q (%q)", c.fieldPath.String(), c.cidr)))
 		}
 	}
@@ -108,4 +110,18 @@ func (c *cidrPath) GetFieldPath() *field.Path {
 
 func (c *cidrPath) GetCIDR() string {
 	return c.cidr
+}
+
+func (c *cidrPath) LastIPInRange() net.IP {
+	var buf, res net.IP
+
+	for _, b := range c.GetIPNet().Mask {
+		buf = append(buf, ^b)
+	}
+
+	for i := range c.GetIPNet().IP {
+		res = append(res, c.GetIPNet().IP[i]|buf[i])
+	}
+
+	return res
 }

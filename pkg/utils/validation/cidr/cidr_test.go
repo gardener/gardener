@@ -190,6 +190,17 @@ var _ = Describe("cidr", func() {
 				}))
 			})
 
+			It("superset subnet should not be a subset", func() {
+				valid := NewCIDR(string("10.0.0.0/24"), field.NewPath("valid"))
+				other := NewCIDR(validGardenCIDR, path)
+
+				Expect(valid.ValidateSubset(other)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(path.String()),
+					"BadValue": Equal(other.GetIPNet().String()),
+					"Detail":   Equal(`must be a subset of "valid" ("10.0.0.0/24")`),
+				}))
+			})
 		})
 	})
 	Describe("#cidr IPv6", func() {
@@ -351,6 +362,18 @@ var _ = Describe("cidr", func() {
 					"Field":    Equal(path.String()),
 					"BadValue": Equal(validGardenCIDR),
 					"Detail":   Equal(`must be a subset of "bad" ("2001:0db8:85a3::1/128")`),
+				}))
+			})
+
+			It("superset subnet should not be a subset", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				other := NewCIDR(string("2001:0db8:85a3::/128"), field.NewPath("bad"))
+
+				Expect(other.ValidateSubset(cdr)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(path.String()),
+					"BadValue": Equal(validGardenCIDR),
+					"Detail":   Equal(`must be a subset of "bad" ("2001:0db8:85a3::/128")`),
 				}))
 			})
 
