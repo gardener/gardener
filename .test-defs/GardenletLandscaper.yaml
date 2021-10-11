@@ -20,4 +20,4 @@ spec:
     -component-name=$COMPONENT_NAME
     -component-version=$VERSION
 
-  image: eu.gcr.io/gardener-project/3rd/golang:1.16.7
+  image: eu.gcr.io/gardener-project/3rd/golang:1.16.9
