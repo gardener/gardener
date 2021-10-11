@@ -55,22 +55,22 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	istio.io/api v0.0.0-20210520012029-891c0c12abfd
 	istio.io/client-go v1.10.1
-	k8s.io/api v0.21.2
-	k8s.io/apiextensions-apiserver v0.21.2
-	k8s.io/apimachinery v0.21.2
-	k8s.io/apiserver v0.21.2
+	k8s.io/api v0.22.2
+	k8s.io/apiextensions-apiserver v0.22.2
+	k8s.io/apimachinery v0.22.2
+	k8s.io/apiserver v0.22.2
 	k8s.io/autoscaler v0.0.0-20190805135949-100e91ba756e
 	k8s.io/client-go v11.0.1-0.20190409021438-1a26190bd76a+incompatible
-	k8s.io/cluster-bootstrap v0.21.2
-	k8s.io/code-generator v0.21.2
-	k8s.io/component-base v0.21.2
+	k8s.io/cluster-bootstrap v0.22.2
+	k8s.io/code-generator v0.22.2
+	k8s.io/component-base v0.22.2
 	k8s.io/helm v2.16.1+incompatible
 	k8s.io/klog v1.0.0
 	k8s.io/klog/v2 v2.9.0
-	k8s.io/kube-aggregator v0.21.2
-	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7 // keep this value in sync with k8s.io/apiserver
-	k8s.io/kubelet v0.21.2
-	k8s.io/metrics v0.21.2
+	k8s.io/kube-aggregator v0.22.2
+	k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
+	k8s.io/kubelet v0.22.2
+	k8s.io/metrics v0.22.2
 	k8s.io/utils v0.0.0-20210527160623-6fdb442a123b
 	sigs.k8s.io/controller-runtime v0.9.1
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20210609022947-fbf50b04fe17
@@ -83,17 +83,17 @@ replace (
 	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
 	github.com/gardener/etcd-druid => github.com/gardener/etcd-druid v0.6.0
 	github.com/gardener/etcd-druid/api => github.com/gardener/etcd-druid/api v0.6.1-0.20211011084637-5c908089a872
-	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
+	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.5.5 // keep this value in sync with k8s.io/apiserver
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.0 // keep this value in sync with sigs.k8s.io/controller-runtime
-	google.golang.org/grpc => google.golang.org/grpc v1.27.1 // keep this value in sync with k8s.io/apiserver
-	k8s.io/api => k8s.io/api v0.21.2
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.21.2
-	k8s.io/apimachinery => k8s.io/apimachinery v0.21.2
-	k8s.io/apiserver => k8s.io/apiserver v0.21.2
-	k8s.io/client-go => k8s.io/client-go v0.21.2
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.21.2
-	k8s.io/code-generator => k8s.io/code-generator v0.21.2
-	k8s.io/component-base => k8s.io/component-base v0.21.2
+	google.golang.org/grpc => google.golang.org/grpc v1.38.0 // keep this value in sync with k8s.io/apiserver
+	k8s.io/api => k8s.io/api v0.22.2
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.22.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.22.2
+	k8s.io/apiserver => k8s.io/apiserver v0.22.2
+	k8s.io/client-go => k8s.io/client-go v0.22.2
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.22.2
+	k8s.io/code-generator => k8s.io/code-generator v0.22.2
+	k8s.io/component-base => k8s.io/component-base v0.22.2
 	k8s.io/helm => k8s.io/helm v2.13.1+incompatible
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.21.2
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.22.2
 )
