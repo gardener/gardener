@@ -113,13 +113,7 @@ func New(logger logr.Logger, allowInvalidExtensionResources bool) *handler {
 				return druidvalidation.ValidateEtcd(n.(*druidv1alpha1.Etcd))
 			},
 			validateUpdateResource: func(n, o client.Object) field.ErrorList {
-
-				new, old := n.(*druidv1alpha1.Etcd), o.(*druidv1alpha1.Etcd)
-
-				fmt.Printf("\n\n----------------------->new : %+v", new.Spec)
-				fmt.Printf("\n\n----------------------->old : %+v", old.Spec)
-
-				return druidvalidation.ValidateEtcdUpdate(new, old)
+				return druidvalidation.ValidateEtcdUpdate(n.(*druidv1alpha1.Etcd), o.(*druidv1alpha1.Etcd))
 			},
 		},
 
