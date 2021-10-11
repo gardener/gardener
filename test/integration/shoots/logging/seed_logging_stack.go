@@ -19,19 +19,20 @@ import (
 	"fmt"
 	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	versionutils "github.com/gardener/gardener/pkg/utils/version"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/resources/templates"
 
+	"github.com/Masterminds/semver"
 	"github.com/onsi/ginkgo"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -39,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -53,10 +55,10 @@ const (
 	loggerDeploymentCleanupTimeout = 5 * time.Minute
 
 	fluentBitName                 = "fluent-bit"
+	fluentBitConfingDiskName      = "template-config"
 	lokiName                      = "loki"
+	lokiConfigDiskName            = "config"
 	garden                        = "garden"
-	loggerDeploymentName          = "logger"
-	logger                        = "logger-.*"
 	fluentBitClusterRoleName      = "fluent-bit-read"
 	simulatesShootNamespacePrefix = "shoot--logging--test-"
 )
@@ -64,7 +66,6 @@ const (
 var _ = ginkgo.Describe("Seed logging testing", func() {
 	var (
 		f                           = framework.NewShootFramework(nil)
-		gardenNamespace             = &corev1.Namespace{}
 		fluentBit                   = &appsv1.DaemonSet{}
 		fluentBitConfMap            = &corev1.ConfigMap{}
 		fluentBitService            = &corev1.Service{}
@@ -73,11 +74,21 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		fluentBitServiceAccount     = &corev1.ServiceAccount{}
 		fluentBitPriorityClass      = &schedulingv1.PriorityClass{}
 		clusterCRD                  = &apiextensionsv1.CustomResourceDefinition{}
-		lokiSts                     = &appsv1.StatefulSet{}
-		lokiServiceAccount          = &corev1.ServiceAccount{}
-		lokiService                 = &corev1.Service{}
-		lokiConfMap                 = &corev1.ConfigMap{}
-		lokiPriorityClass           = &schedulingv1.PriorityClass{}
+
+		gardenLokiSts            = &appsv1.StatefulSet{}
+		gardenLokiServiceAccount = &corev1.ServiceAccount{}
+		gardenLokiService        = &corev1.Service{}
+		gardenLokiConfMap        = &corev1.ConfigMap{}
+		gardenLokiPriorityClass  = &schedulingv1.PriorityClass{}
+
+		shootLokiService        = &corev1.Service{}
+		shootLokiServiceAccount = &corev1.ServiceAccount{}
+		shootLokiSts            = &appsv1.StatefulSet{}
+		shootLokiPriorityClass  = &schedulingv1.PriorityClass{}
+		shootLokiConfMap        = &corev1.ConfigMap{}
+
+		grafanaOperatorsIngress client.Object = &networkingv1.Ingress{}
+		grafanaUsersIngress     client.Object = &networkingv1.Ingress{}
 		// This shoot is used as seed for this integration test only
 		shootClient     kubernetes.Interface
 		shootLokiLabels = map[string]string{
@@ -88,8 +99,6 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			"app":  "loki",
 			"role": "logging",
 		}
-		lokiShootService *corev1.Service
-		lokiShootSts     *appsv1.StatefulSet
 	)
 
 	framework.CBeforeEach(func(ctx context.Context) {
@@ -100,80 +109,87 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 		}))
 		framework.ExpectNoError(err)
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBit))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getConfigMapName(fluentBit.Spec.Template.Spec.Volumes, "template-config")}, fluentBitConfMap))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getConfigMapName(fluentBit.Spec.Template.Spec.Volumes, fluentBitConfingDiskName)}, fluentBitConfMap))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitService))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitClusterRoleName}, fluentBitClusterRole))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitClusterRoleName}, fluentBitClusterRoleBinding))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitServiceAccount))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: fluentBitName}, fluentBitPriorityClass))
 		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: "", Name: "clusters.extensions.gardener.cloud"}, clusterCRD))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiSts))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiServiceAccount))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, lokiService))
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getConfigMapName(lokiSts.Spec.Template.Spec.Volumes, "config")}, lokiConfMap))
-		lokiPriorityClassName := lokiSts.Spec.Template.Spec.PriorityClassName
-		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiPriorityClassName}, lokiPriorityClass))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, gardenLokiSts))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, gardenLokiServiceAccount))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiName}, gardenLokiService))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: getConfigMapName(gardenLokiSts.Spec.Template.Spec.Volumes, lokiConfigDiskName)}, gardenLokiConfMap))
+		lokiPriorityClassName := gardenLokiSts.Spec.Template.Spec.PriorityClassName
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: v1beta1constants.GardenNamespace, Name: lokiPriorityClassName}, gardenLokiPriorityClass))
+		//Get the shoot logging components from the shoot running the integration test
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: lokiName}, shootLokiService))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: lokiName}, shootLokiServiceAccount))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: lokiName}, shootLokiSts))
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: getConfigMapName(shootLokiSts.Spec.Template.Spec.Volumes, lokiConfigDiskName)}, shootLokiConfMap))
+		shootLokiPriorityClassName := shootLokiSts.Spec.Template.Spec.PriorityClassName
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: shootLokiPriorityClassName}, shootLokiPriorityClass))
+		kubernetesVersion, err := semver.NewVersion(f.Shoot.Spec.Kubernetes.Version)
+		framework.ExpectNoError(err)
+		if versionutils.ConstraintK8sLess119.Check(kubernetesVersion) {
+			grafanaOperatorsIngress = &extensionsv1beta1.Ingress{}
+			grafanaUsersIngress = &extensionsv1beta1.Ingress{}
+		}
+		// Get the grafana-operators Ingress
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaOperators}, grafanaOperatorsIngress))
+		// Get the grafana-users Ingress
+		framework.ExpectNoError(f.SeedClient.Client().Get(ctx, types.NamespacedName{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.DeploymentNameGrafanaUsers}, grafanaUsersIngress))
 	}, initializationTimeout)
 
 	f.Beta().Serial().CIt("should get container logs from loki for all namespaces", func(ctx context.Context) {
-		var (
+		const (
 			emptyDirSize             = "500Mi"
 			lokiPersistentVolumeName = "loki"
+			shootLokiName            = "loki-shoots"
+			userLoggerName           = "kube-apiserver"
+			operatorLoggerName       = "logger"
+			userLoggerRegex          = userLoggerName + "-.*"
+			operatorLoggerRegex      = operatorLoggerName + "-.*"
 		)
-		// Dedicated Loki for all Shoot logs
-		lokiShootService = lokiService.DeepCopy()
-		lokiShootService.Name = "loki-shoots"
-		lokiShootService.Spec.Selector = shootLokiLabels
-		lokiShootService.Spec.ClusterIP = ""
-		lokiShootSts = lokiSts.DeepCopy()
-		lokiShootSts.Name = "loki-shoots"
-		lokiShootSts.Labels = shootLokiLabels
-		lokiShootSts.Spec.Selector.MatchLabels = shootLokiLabels
-		lokiShootSts.Spec.Template.Labels = shootLokiLabels
+		var (
+			operatorLoggerLabels = labels.SelectorFromSet(map[string]string{
+				"app": operatorLoggerName,
+			})
+
+			shootLoggerLabels = labels.SelectorFromSet(map[string]string{
+				"app": userLoggerName,
+			})
+		)
+
+		ginkgo.By("Get Loki tenant IDs")
+		userID := getXScopeOrgID(grafanaUsersIngress.GetAnnotations())
+		operatorID := getXScopeOrgID(grafanaOperatorsIngress.GetAnnotations())
 
 		ginkgo.By("Deploy the garden Namespace")
-		gardenNamespace = &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: v1beta1constants.GardenNamespace,
-			},
-		}
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), gardenNamespace))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), newGardenNamespace(v1beta1constants.GardenNamespace)))
 
-		ginkgo.By("Deploy the Loki StatefulSet")
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiServiceAccount))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiConfMap))
-		// Remove the cluster IP because it could be already in use
-		lokiService.Spec.ClusterIP = ""
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiService))
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiPriorityClass))
-		// Remove the Loki PVC as it is no needed for the test
-		lokiSts.Spec.VolumeClaimTemplates = nil
-		// Instead use an empty dir volume
-		lokiSts.Spec.Template.Spec.Volumes = append(lokiSts.Spec.Template.Spec.Volumes, newEmptyDirVolume(lokiPersistentVolumeName, emptyDirSize))
-		// Spread the loki instances on separate nodes to let deploying of loggers afterwards to be relatively equal through the nodes
-		lokiSts.Spec.Template.Spec.Affinity = &corev1.Affinity{PodAntiAffinity: newPodAntiAffinity(shootLokiLabels)}
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiSts))
+		ginkgo.By("Deploy the Loki StatefulSet for Garden namespace")
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), gardenLokiServiceAccount))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), gardenLokiConfMap))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareGardenLokiService(gardenLokiService)))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), gardenLokiPriorityClass))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareGardenLokiStatefulSet(gardenLokiSts, lokiPersistentVolumeName, emptyDirSize, shootLokiLabels)))
 
 		ginkgo.By("Deploy the Loki StatefulSet for Shoot namespaces")
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiShootService))
-		// The same procedure as above for the Loki used for the simulated shoots
-		lokiShootSts.Spec.VolumeClaimTemplates = nil
-		lokiShootSts.Spec.Template.Spec.Volumes = append(lokiShootSts.Spec.Template.Spec.Volumes, newEmptyDirVolume(lokiPersistentVolumeName, emptyDirSize))
-		lokiShootSts.Spec.Template.Spec.Affinity = &corev1.Affinity{PodAntiAffinity: newPodAntiAffinity(gardenLokiLabels)}
-		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), lokiShootSts))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootLokiService(shootLokiService, shootLokiName, shootLokiLabels)))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootLokiServiceAccount(shootLokiServiceAccount, shootLokiName)))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), shootLokiPriorityClass))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootLokiConfigMap(shootLokiConfMap)))
+		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), prepareShootLokiStatefulSet(shootLokiSts, gardenLokiSts, shootLokiName, shootLokiConfMap.Name, shootLokiServiceAccount.Name, lokiPersistentVolumeName, emptyDirSize, shootLokiLabels, gardenLokiLabels)))
 
 		ginkgo.By("Wait until Loki StatefulSet for Garden namespace is ready")
-		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, lokiSts.Name, v1beta1constants.GardenNamespace, f.ShootClient))
+		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, gardenLokiSts.Name, v1beta1constants.GardenNamespace, f.ShootClient))
 
 		ginkgo.By("Wait until Loki StatefulSet for Shoot namespaces is ready")
-		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, lokiShootSts.Name, v1beta1constants.GardenNamespace, f.ShootClient))
+		framework.ExpectNoError(f.WaitUntilStatefulSetIsRunning(ctx, shootLokiSts.Name, v1beta1constants.GardenNamespace, f.ShootClient))
 
 		ginkgo.By("Deploy the cluster CRD")
-		clusterCRD.Spec.PreserveUnknownFields = false
-		for version := range clusterCRD.Spec.Versions {
-			clusterCRD.Spec.Versions[version].Schema.OpenAPIV3Schema.XPreserveUnknownFields = pointer.Bool(true)
-		}
-		framework.ExpectNoError(create(ctx, shootClient.Client(), clusterCRD))
+		framework.ExpectNoError(create(ctx, shootClient.Client(), prepareClusterCRD(clusterCRD)))
 
 		ginkgo.By("Deploy the fluent-bit RBAC")
 		framework.ExpectNoError(create(ctx, f.ShootClient.Client(), fluentBitServiceAccount))
@@ -208,15 +224,22 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 
 			ginkgo.By(fmt.Sprintf("Deploy the logger application in namespace %s", shootNamespace.Name))
 			loggerParams := map[string]interface{}{
-				"LoggerName":          loggerDeploymentName,
+				"LoggerName":          operatorLoggerName,
 				"HelmDeployNamespace": shootNamespace.Name,
-				"AppLabel":            loggerDeploymentName,
+				"AppLabel":            operatorLoggerName,
 				"DeltaLogsCount":      deltaLogsCount,
 				"DeltaLogsDuration":   deltaLogsDuration,
 				"LogsCount":           logsCount,
 				"LogsDuration":        logsDuration,
 			}
 
+			// Half of the shoots will produce user and operators logs.
+			// The other half will produce only operator logs
+			if i&1 == 1 {
+				loggerParams["LoggerName"] = userLoggerName
+				loggerParams["AppLabel"] = userLoggerName
+			}
+			// Try to distrubute the loggers even between nodes
 			if len(nodeList.Items) > 0 {
 				loggerParams["NodeName"] = nodeList.Items[i%len(nodeList.Items)].Name
 			}
@@ -224,29 +247,46 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			framework.ExpectNoError(f.RenderAndDeployTemplate(ctx, f.ShootClient, templates.LoggerAppName, loggerParams))
 		}
 
-		loggerLabels := labels.SelectorFromSet(map[string]string{
-			"app": "logger",
-		})
 		for i := 0; i < numberOfSimulatedClusters; i++ {
 			shootNamespace := fmt.Sprintf("%s%v", simulatesShootNamespacePrefix, i)
+			var l labels.Selector
+
+			if i&1 == 1 {
+				l = shootLoggerLabels
+			} else {
+				l = operatorLoggerLabels
+			}
 			ginkgo.By(fmt.Sprintf("Wait until logger application is ready in namespace %s", shootNamespace))
-			framework.ExpectNoError(f.WaitUntilDeploymentsWithLabelsIsReady(ctx, loggerLabels, shootNamespace, f.ShootClient))
+			framework.ExpectNoError(f.WaitUntilDeploymentsWithLabelsIsReady(ctx, l, shootNamespace, f.ShootClient))
 		}
 
-		ginkgo.By("Verify loki received logger application logs for all shoot namespaces")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, "", v1beta1constants.GardenNamespace, "pod_name", logger, logsCount*numberOfSimulatedClusters, numberOfSimulatedClusters, f.ShootClient))
+		ginkgo.By("Verify loki received all operator's logs from operator's logger application for all shoot namespaces")
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, operatorID, v1beta1constants.GardenNamespace, "pod_name", operatorLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
+		ginkgo.By("Verify loki received all operator's logs from user's logger application for all shoot namespaces")
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, operatorID, v1beta1constants.GardenNamespace, "pod_name", userLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
+		ginkgo.By("Verify loki received user logger application logs for all shoot namespaces")
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, userID, v1beta1constants.GardenNamespace, "pod_name", userLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
+		ginkgo.By("Verify loki didn't get the logs from the operator's application as user's logs for all shoot namespaces")
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, shootLokiLabels, userID, v1beta1constants.GardenNamespace, "pod_name", operatorLoggerRegex, 0, 0, f.ShootClient))
 
 		ginkgo.By("Verify loki received logger application logs for garden namespace")
-		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, gardenLokiLabels, "", v1beta1constants.GardenNamespace, "pod_name", logger, logsCount*numberOfSimulatedClusters, numberOfSimulatedClusters, f.ShootClient))
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, gardenLokiLabels, "", v1beta1constants.GardenNamespace, "pod_name", operatorLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
+		ginkgo.By("Verify loki received user application logs for garden namespace")
+		framework.ExpectNoError(WaitUntilLokiReceivesLogs(ctx, 30*time.Second, f, gardenLokiLabels, "", v1beta1constants.GardenNamespace, "pod_name", userLoggerRegex, (logsCount*numberOfSimulatedClusters)/2, numberOfSimulatedClusters/2, f.ShootClient))
 
 	}, getLogsFromLokiTimeout, framework.WithCAfterTest(func(ctx context.Context) {
 		ginkgo.By("Cleaning up logger app resources")
 		for i := 0; i < numberOfSimulatedClusters; i++ {
 			shootNamespace := getShootNamesapce(i)
+			loggerName := operatorLoggerName
+			if i&1 == 1 {
+				loggerName = userLoggerName
+
+			}
 			loggerDeploymentToDelete := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: shootNamespace.Name,
-					Name:      "logger",
+					Name:      loggerName,
 				},
 			}
 			framework.ExpectNoError(kutil.DeleteObject(ctx, f.ShootClient.Client(), loggerDeploymentToDelete))
@@ -269,18 +309,110 @@ var _ = ginkgo.Describe("Seed logging testing", func() {
 			fluentBitClusterRoleBinding,
 			fluentBitServiceAccount,
 			fluentBitPriorityClass,
-			lokiSts,
-			lokiServiceAccount,
-			lokiService,
-			lokiConfMap,
-			lokiPriorityClass,
 			clusterCRD,
-			lokiShootService,
-			lokiShootSts,
-			gardenNamespace,
+			gardenLokiSts,
+			gardenLokiServiceAccount,
+			gardenLokiService,
+			gardenLokiConfMap,
+			gardenLokiPriorityClass,
+			shootLokiService,
+			shootLokiServiceAccount,
+			shootLokiSts,
+			shootLokiPriorityClass,
+			shootLokiConfMap,
+			newGardenNamespace(v1beta1constants.GardenNamespace),
 		}
 		for _, object := range objectsToDelete {
 			framework.ExpectNoError(kutil.DeleteObject(ctx, f.ShootClient.Client(), object))
 		}
 	}, loggerDeploymentCleanupTimeout))
 })
+
+func prepareGardenLokiService(service *corev1.Service) *corev1.Service {
+	// Remove the cluster IP because it could be already in use
+	service.Spec.ClusterIP = ""
+	return service
+}
+
+func prepareGardenLokiStatefulSet(gardenLokiSts *appsv1.StatefulSet, lokiPersistentVolumeName, emptyDirSize string, antiAffinityLabels map[string]string) *appsv1.StatefulSet {
+	// Remove the Loki PVC as it is no needed for the test
+	gardenLokiSts.Spec.VolumeClaimTemplates = nil
+	// Instead use an empty dir volume
+	gardenLokiSts.Spec.Template.Spec.Volumes = append(gardenLokiSts.Spec.Template.Spec.Volumes, newEmptyDirVolume(lokiPersistentVolumeName, emptyDirSize))
+	// Spread the loki instances on separate nodes to let deploying of loggers afterwards to be relatively equal through the nodes
+	gardenLokiSts.Spec.Template.Spec.Affinity = &corev1.Affinity{PodAntiAffinity: newPodAntiAffinity(antiAffinityLabels)}
+	return gardenLokiSts
+}
+
+func prepareShootLokiService(shootLokiService *corev1.Service, name string, selector map[string]string) *corev1.Service {
+	shootLokiService.Name = name // "loki-shoots"
+	shootLokiService.Namespace = v1beta1constants.GardenNamespace
+	shootLokiService.Spec.Selector = selector
+	shootLokiService.Spec.ClusterIP = ""
+	return shootLokiService
+}
+
+func prepareShootLokiServiceAccount(serviceAccount *corev1.ServiceAccount, name string) *corev1.ServiceAccount {
+	serviceAccount.Name = name
+	serviceAccount.Namespace = v1beta1constants.GardenNamespace
+	return serviceAccount
+}
+
+func prepareShootLokiConfigMap(confMap *corev1.ConfigMap) *corev1.ConfigMap {
+	confMap.Namespace = v1beta1constants.GardenNamespace
+	return confMap
+}
+
+func prepareShootLokiStatefulSet(shootLokiSts, gardenLokiSts *appsv1.StatefulSet, name, configMapNAme, serviceAccountName, lokiPersistentVolumeName, emptyDirSize string, newLabels, antiAffinityLabels map[string]string) *appsv1.StatefulSet {
+	// Extract the containers related only to the seed logging stack
+	var containers []corev1.Container
+	for _, gardenCon := range gardenLokiSts.Spec.Template.Spec.Containers {
+		for _, shootCon := range shootLokiSts.Spec.Template.Spec.Containers {
+			if shootCon.Name == gardenCon.Name {
+				containers = append(containers, shootCon)
+			}
+		}
+	}
+	shootLokiSts.Spec.Template.Spec.Containers = containers
+	// Extract the volumes related only to the seed logging stack
+	var alreadyHasEmptyDirAsLokiPVC bool
+	var volumes []corev1.Volume
+	for _, gardenVolume := range gardenLokiSts.Spec.Template.Spec.Volumes {
+		for _, shootVolume := range shootLokiSts.Spec.Template.Spec.Volumes {
+			if shootVolume.Name == gardenVolume.Name {
+				volumes = append(volumes, shootVolume)
+				if gardenVolume.Name == lokiPersistentVolumeName && gardenVolume.EmptyDir != nil {
+					alreadyHasEmptyDirAsLokiPVC = true
+				}
+			}
+		}
+	}
+	shootLokiSts.Spec.Template.Spec.Volumes = volumes
+
+	// Remove the Loki PVC as it is no needed for the test
+	shootLokiSts.Spec.VolumeClaimTemplates = nil
+	// Instead use an empty dir volume
+	if !alreadyHasEmptyDirAsLokiPVC {
+		shootLokiSts.Spec.Template.Spec.Volumes = append(shootLokiSts.Spec.Template.Spec.Volumes, newEmptyDirVolume(lokiPersistentVolumeName, emptyDirSize))
+	}
+	// Spread the loki instances on separate nodes to let deploying of loggers afterwards to be relatively equal through the nodes
+	shootLokiSts.Spec.Template.Spec.Affinity = &corev1.Affinity{PodAntiAffinity: newPodAntiAffinity(antiAffinityLabels)}
+	// Rename the shoot Loki because it has the same name as the garden one
+	shootLokiSts.Name = name //"loki-shoots"
+	// Change the labels and the selectors because the shoot Loki has the same ones as garden Loki
+	shootLokiSts.Labels = newLabels
+	shootLokiSts.Spec.Selector.MatchLabels = newLabels
+	shootLokiSts.Spec.Template.Labels = newLabels
+	// Move the shoot Loki in the garden namespace
+	shootLokiSts.Namespace = v1beta1constants.GardenNamespace
+	shootLokiSts.Spec.Template.Spec.ServiceAccountName = serviceAccountName
+	return shootLokiSts
+}
+
+func prepareClusterCRD(crd *apiextensionsv1.CustomResourceDefinition) *apiextensionsv1.CustomResourceDefinition {
+	crd.Spec.PreserveUnknownFields = false
+	for version := range crd.Spec.Versions {
+		crd.Spec.Versions[version].Schema.OpenAPIV3Schema.XPreserveUnknownFields = pointer.Bool(true)
+	}
+	return crd
+}

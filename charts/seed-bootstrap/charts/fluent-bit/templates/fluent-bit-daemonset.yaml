@@ -91,10 +91,10 @@ spec:
           periodSeconds: 10
         livenessProbe:
           httpGet:
-            path: /
-            port: 2020
+            path: /healthz
+            port: 2021
           initialDelaySeconds: 90
-          periodSeconds: 10
+          periodSeconds: 300
         volumeMounts:
         - name: config-dir
           mountPath: /fluent-bit/etc
