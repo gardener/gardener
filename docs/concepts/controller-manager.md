@@ -190,3 +190,19 @@ deletion timestamp has been set already.
 
 Refer to [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md) for more information on the lifecycle of
 `Bastion` resources.
+
+### "Plant" Controller
+
+Using the `Plant` resource, an external Kubernetes cluster (not managed by Gardener) can be registered to Gardener. Gardener Controller Manager is the component that is responsible for the `Plant` resource reconciliation. As part of the reconciliation loop, the Gardener Controller Manager performs health checks on the external Kubernetes cluster and gathers more information about it - all of this information serves for monitoring purposes of the external Kubernetes cluster.
+
+The component configuration of the Gardener Controller Manager offers to configure the following options for the plant controller:
+* `syncPeriod`: The duration of how often the Plant resource is reconciled, i.e., how often health checks are performed. The default value is `30s`.
+* `concurrentSyncs`: The number of goroutines scheduled for reconciling events, i.e., the number of possible parallel reconciliations. The default value is `5`.
+
+The `Plant` resource reports the following information for the external Kubernetes cluster:
+- Cluster information
+  - Cloud provider information - the cloud provider type and region are maintained in the `Plant` status (`.status.clusterInfo.cloud`).
+  - Kubernetes version - the Kubernetes version is maintained in the `Plant` status (`.status.clusterInfo.kubernetes.version`).
+- Cluster status
+  - API Server availability - maintained as condition with type `APIServerAvailable`.
+  - Cluster `Node`s healthiness - maintained as condition with type `EveryNodeReady`.

@@ -29,7 +29,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.4
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/mitchellh/copystructure v1.1.1 // indirect
+	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/nwaples/rardecode v1.1.2 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
@@ -83,7 +83,6 @@ replace (
 	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
 	github.com/gardener/etcd-druid => github.com/gardener/etcd-druid v0.6.0
 	github.com/gardener/etcd-druid/api => github.com/gardener/etcd-druid/api v0.6.1-0.20211011084637-5c908089a872
-	github.com/gardener/gardener-resource-manager/api => github.com/gardener/gardener-resource-manager/api v0.25.0
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.0 // keep this value in sync with sigs.k8s.io/controller-runtime
 	google.golang.org/grpc => google.golang.org/grpc v1.27.1 // keep this value in sync with k8s.io/apiserver

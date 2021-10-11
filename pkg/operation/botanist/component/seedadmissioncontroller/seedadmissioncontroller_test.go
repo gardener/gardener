@@ -328,15 +328,6 @@ webhooks:
   namespaceSelector: {}
   rules:
   - apiGroups:
-    - druid.gardener.cloud
-    apiVersions:
-    - v1alpha1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - etcds
-  - apiGroups:
     - extensions.gardener.cloud
     apiVersions:
     - v1alpha1
