@@ -38,7 +38,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
@@ -64,7 +63,6 @@ var _ = Describe("ExtAuthzServer", func() {
 
 		expectedDeployment      *appsv1.Deployment
 		expectedDestinationRule *istionetworkingv1beta1.DestinationRule
-		expectedGateway         *istionetworkingv1beta1.Gateway
 		expectedService         *corev1.Service
 		expectedVirtualService  *istionetworkingv1beta1.VirtualService
 		expectedVpa             *autoscalingv1beta2.VerticalPodAutoscaler
@@ -183,34 +181,6 @@ var _ = Describe("ExtAuthzServer", func() {
 			},
 		}
 
-		expectedGateway = &istionetworkingv1beta1.Gateway{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: istionetworkingv1beta1.SchemeGroupVersion.String(),
-				Kind:       "Gateway",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            deploymentName,
-				Namespace:       namespace,
-				ResourceVersion: "1",
-			},
-			Spec: istioapinetworkingv1beta1.Gateway{
-				Selector: map[string]string{
-					"app":   "istio-ingressgateway",
-					"istio": "ingressgateway",
-				},
-				Servers: []*istioapinetworkingv1beta1.Server{
-					{
-						Hosts: []string{fmt.Sprintf("%s.%s.svc.cluster.local", DeploymentName, namespace)},
-						Port: &istioapinetworkingv1beta1.Port{
-							Name:     "tls-tunnel",
-							Number:   vpnseedserver.GatewayPort,
-							Protocol: "HTTP",
-						},
-					},
-				},
-			},
-		}
-
 		expectedService = &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
@@ -307,10 +277,6 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(c.Get(ctx, kutil.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), actualDestinationRule)).To(Succeed())
 			Expect(actualDestinationRule).To(DeepEqual(expectedDestinationRule))
 
-			actualGateway := &istionetworkingv1beta1.Gateway{}
-			Expect(c.Get(ctx, kutil.Key(expectedGateway.Namespace, expectedGateway.Name), actualGateway)).To(Succeed())
-			Expect(actualGateway).To(DeepEqual(expectedGateway))
-
 			actualService := &corev1.Service{}
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), actualService)).To(Succeed())
 			Expect(actualService).To(DeepEqual(expectedService))
@@ -330,7 +296,6 @@ var _ = Describe("ExtAuthzServer", func() {
 
 			Expect(c.Get(ctx, kutil.Key(expectedDeployment.Namespace, expectedDeployment.Name), &appsv1.Deployment{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(Succeed())
-			Expect(c.Get(ctx, kutil.Key(expectedGateway.Namespace, expectedGateway.Name), &istionetworkingv1beta1.Gateway{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), &corev1.Service{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), &autoscalingv1beta2.VerticalPodAutoscaler{})).To(Succeed())
@@ -339,7 +304,6 @@ var _ = Describe("ExtAuthzServer", func() {
 
 			Expect(c.Get(ctx, kutil.Key(expectedDeployment.Namespace, expectedDeployment.Name), &appsv1.Deployment{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(BeNotFoundError())
-			Expect(c.Get(ctx, kutil.Key(expectedGateway.Namespace, expectedGateway.Name), &istionetworkingv1beta1.Gateway{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), &corev1.Service{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), &autoscalingv1beta2.VerticalPodAutoscaler{})).To(BeNotFoundError())

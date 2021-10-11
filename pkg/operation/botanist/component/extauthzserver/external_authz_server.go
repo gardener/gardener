@@ -22,7 +22,6 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	protobuftypes "github.com/gogo/protobuf/types"
@@ -79,13 +78,11 @@ func (a *authServer) Deploy(ctx context.Context) error {
 	var (
 		deployment      = a.emptyDeployment()
 		destinationRule = a.emptyDestinationRule()
-		gateway         = a.emptyGateway()
 		service         = a.emptyService()
 		virtualService  = a.emptyVirtualService()
 		vpa             = a.emptyVPA()
 
-		gatewaySelectors = map[string]string{"app": "istio-ingressgateway", "istio": "ingressgateway"}
-		vpaUpdateMode    = autoscalingv1beta2.UpdateModeAuto
+		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 	)
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, deployment, func() error {
@@ -177,25 +174,6 @@ func (a *authServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, gateway, func() error {
-		gateway.Spec = istionetworkingv1beta1.Gateway{
-			Selector: gatewaySelectors,
-			Servers: []*istionetworkingv1beta1.Server{
-				{
-					Hosts: []string{fmt.Sprintf("%s.%s.svc.%s", DeploymentName, a.namespace, v1beta1.DefaultDomain)},
-					Port: &istionetworkingv1beta1.Port{
-						Name:     "tls-tunnel",
-						Number:   vpnseedserver.GatewayPort,
-						Protocol: "HTTP",
-					},
-				},
-			},
-		}
-		return nil
-	}); err != nil {
-		return err
-	}
-
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, service, func() error {
 		service.Annotations = map[string]string{
 			"networking.istio.io/exportTo": "*",
@@ -269,7 +247,6 @@ func (a *authServer) Destroy(ctx context.Context) error {
 		a.client,
 		a.emptyDeployment(),
 		a.emptyDestinationRule(),
-		a.emptyGateway(),
 		a.emptyService(),
 		a.emptyVirtualService(),
 		a.emptyVPA(),
@@ -285,10 +262,6 @@ func (a *authServer) emptyDeployment() *appsv1.Deployment {
 
 func (a *authServer) emptyDestinationRule() *networkingv1beta1.DestinationRule {
 	return &networkingv1beta1.DestinationRule{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: a.namespace}}
-}
-
-func (a *authServer) emptyGateway() *networkingv1beta1.Gateway {
-	return &networkingv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName, Namespace: a.namespace}}
 }
 
 func (a *authServer) emptyService() *corev1.Service {
