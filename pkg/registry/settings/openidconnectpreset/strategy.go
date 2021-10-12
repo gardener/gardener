@@ -67,3 +67,13 @@ func (oidcPresetStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj run
 func (oidcPresetStrategy) AllowUnconditionalUpdate() bool {
 	return false
 }
+
+// WarningsOnCreate returns warnings to the client performing a create.
+func (oidcPresetStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return nil
+}
+
+// WarningsOnUpdate returns warnings to the client performing the update.
+func (oidcPresetStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return nil
+}

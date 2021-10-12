@@ -66,3 +66,13 @@ func (cloudProfileStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj r
 	oldProfile, newProfile := oldObj.(*core.CloudProfile), newObj.(*core.CloudProfile)
 	return validation.ValidateCloudProfileUpdate(newProfile, oldProfile)
 }
+
+// WarningsOnCreate returns warnings to the client performing a create.
+func (cloudProfileStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return nil
+}
+
+// WarningsOnUpdate returns warnings to the client performing the update.
+func (cloudProfileStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return nil
+}

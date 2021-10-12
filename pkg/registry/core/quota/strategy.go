@@ -66,3 +66,13 @@ func (quotaStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.
 func (quotaStrategy) AllowUnconditionalUpdate() bool {
 	return true
 }
+
+// WarningsOnCreate returns warnings to the client performing a create.
+func (quotaStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return nil
+}
+
+// WarningsOnUpdate returns warnings to the client performing the update.
+func (quotaStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return nil
+}

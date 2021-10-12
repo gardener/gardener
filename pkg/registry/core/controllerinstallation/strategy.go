@@ -97,6 +97,16 @@ func (controllerInstallationStrategy) AllowUnconditionalUpdate() bool {
 	return false
 }
 
+// WarningsOnCreate returns warnings to the client performing a create.
+func (controllerInstallationStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return nil
+}
+
+// WarningsOnUpdate returns warnings to the client performing the update.
+func (controllerInstallationStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return nil
+}
+
 type controllerInstallationStatusStrategy struct {
 	controllerInstallationStrategy
 }

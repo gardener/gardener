@@ -89,3 +89,13 @@ func (shootStateStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj run
 func (shootStateStrategy) AllowUnconditionalUpdate() bool {
 	return false
 }
+
+// WarningsOnCreate returns warnings to the client performing a create.
+func (shootStateStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return nil
+}
+
+// WarningsOnUpdate returns warnings to the client performing the update.
+func (shootStateStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return nil
+}

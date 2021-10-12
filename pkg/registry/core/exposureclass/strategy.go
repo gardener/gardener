@@ -82,3 +82,13 @@ func (ExposureClassStrategy) AllowCreateOnUpdate() bool {
 func (ExposureClassStrategy) AllowUnconditionalUpdate() bool {
 	return false
 }
+
+// WarningsOnCreate returns warnings to the client performing a create.
+func (ExposureClassStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return nil
+}
+
+// WarningsOnUpdate returns warnings to the client performing the update.
+func (ExposureClassStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return nil
+}

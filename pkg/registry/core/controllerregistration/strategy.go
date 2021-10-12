@@ -89,3 +89,13 @@ func (controllerRegistrationStrategy) ValidateUpdate(ctx context.Context, newObj
 func (controllerRegistrationStrategy) AllowUnconditionalUpdate() bool {
 	return false
 }
+
+// WarningsOnCreate returns warnings to the client performing a create.
+func (controllerRegistrationStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return nil
+}
+
+// WarningsOnUpdate returns warnings to the client performing the update.
+func (controllerRegistrationStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return nil
+}
