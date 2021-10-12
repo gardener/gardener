@@ -35,7 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -69,8 +68,8 @@ var _ = BeforeSuite(func() {
 	By("starting test environment")
 	testEnv = &envtest.Environment{
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			ValidatingWebhooks: []client.Object{getValidatingWebhookConfig()},
-			MutatingWebhooks:   []client.Object{getMutatingWebhookConfig()},
+			ValidatingWebhooks: []admissionregistrationv1.ValidatingWebhookConfiguration{*getValidatingWebhookConfig()},
+			MutatingWebhooks:   []admissionregistrationv1.MutatingWebhookConfiguration{*getMutatingWebhookConfig()},
 		},
 	}
 	restConfig, err = testEnv.Start()
