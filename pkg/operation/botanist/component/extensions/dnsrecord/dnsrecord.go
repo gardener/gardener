@@ -176,10 +176,8 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			}
 		} else {
 			patch := client.MergeFrom(c.dnsRecord.DeepCopy())
-			if c.dnsRecord.Status.LastOperation != nil &&
-				c.dnsRecord.Status.LastOperation.Type == gardencorev1beta1.LastOperationTypeCreate &&
-				c.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
-				// If the DNSRecord is in Create but not yet Succeeded, reconcile it again.
+			if c.dnsRecord.Status.LastOperation != nil && c.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
+				// If the DNSRecord is not yet Succeeded, reconcile it again.
 				_ = mutateFn()
 			} else {
 				// Otherwise, just update the timestamp annotation.
