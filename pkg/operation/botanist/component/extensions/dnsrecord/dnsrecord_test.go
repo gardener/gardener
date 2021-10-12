@@ -246,7 +246,7 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
-		It("should deploy the DNSRecord resource if ReconcileOnce is true and the DNSRecord is in Create / Error", func() {
+		It("should deploy the DNSRecord resource if ReconcileOnce is true and the DNSRecord is not Succeeded", func() {
 			values.ReconcileOnce = true
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 
@@ -255,7 +255,6 @@ var _ = Describe("DNSRecord", func() {
 			metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
 			existingDNS.Spec.Zone = pointer.String("other-zone")
 			existingDNS.Status.LastOperation = &gardencorev1beta1.LastOperation{
-				Type:  gardencorev1beta1.LastOperationTypeCreate,
 				State: gardencorev1beta1.LastOperationStateError,
 			}
 			Expect(c.Create(ctx, existingDNS)).To(Succeed())
@@ -283,7 +282,6 @@ var _ = Describe("DNSRecord", func() {
 				Status: extensionsv1alpha1.DNSRecordStatus{
 					DefaultStatus: extensionsv1alpha1.DefaultStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{
-							Type:  gardencorev1beta1.LastOperationTypeCreate,
 							State: gardencorev1beta1.LastOperationStateError,
 						},
 					},
