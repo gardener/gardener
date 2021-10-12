@@ -23,7 +23,6 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -31,6 +30,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("DeletionConfirmation", func() {
@@ -109,6 +109,8 @@ var _ = Describe("DeletionConfirmation", func() {
 			mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
 
 			obj.SetAnnotations(map[string]string{"foo": "bar"})
+			Expect(c.Update(ctx, obj)).To(Succeed())
+
 			expectedAnnotations := map[string]string{"foo": "bar", ConfirmationDeletion: "true", v1beta1constants.GardenerTimestamp: now.UTC().String()}
 
 			Expect(ConfirmDeletion(ctx, c, obj)).To(Succeed())

@@ -30,7 +30,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,11 +72,6 @@ var _ = Describe("ClusterIdentity", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		clusterIdentity = mockclusteridentity.NewMockInterface(ctrl)
 
-		s := runtime.NewScheme()
-		Expect(corev1.AddToScheme(s)).To(Succeed())
-		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
-		Expect(gardencorev1beta1.AddToScheme(s))
-
 		shoot = &gardencorev1beta1.Shoot{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName,
@@ -87,6 +81,13 @@ var _ = Describe("ClusterIdentity", func() {
 				UID: shootUID,
 			},
 		}
+	})
+
+	JustBeforeEach(func() {
+		s := runtime.NewScheme()
+		Expect(corev1.AddToScheme(s)).To(Succeed())
+		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
+		Expect(gardencorev1beta1.AddToScheme(s))
 
 		cluster := &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
@@ -125,27 +126,31 @@ var _ = Describe("ClusterIdentity", func() {
 		ctrl.Finish()
 	})
 
-	DescribeTable("#EnsureShootClusterIdentity",
-		func(mutator func()) {
-			mutator()
-
+	Describe("#EnsureShootClusterIdentity", func() {
+		test := func() {
 			Expect(botanist.EnsureShootClusterIdentity(ctx)).NotTo(HaveOccurred())
 
 			Expect(gardenClient.Get(ctx, kutil.Key(shootNamespace, shootName), shoot)).To(Succeed())
 			Expect(shoot.Status.ClusterIdentity).NotTo(BeNil())
 			Expect(*shoot.Status.ClusterIdentity).To(Equal(expectedShootClusterIdentity))
-		},
+		}
 
-		Entry("cluster identity is nil", func() {
-			shoot.Status.ClusterIdentity = nil
-		}),
-		Entry("cluster idenitty already exists", func() {
-			shoot.Status.ClusterIdentity = pointer.String(expectedShootClusterIdentity)
-		}),
-	)
+		Context("cluster identity is nil", func() {
+			BeforeEach(func() {
+				shoot.Status.ClusterIdentity = nil
+			})
+			It("should set shoot.status.clusterIdentity", test)
+		})
+		Context("cluster identity already exists", func() {
+			BeforeEach(func() {
+				shoot.Status.ClusterIdentity = pointer.String(expectedShootClusterIdentity)
+			})
+			It("should not touch shoot.status.clusterIdentity", test)
+		})
+	})
 
 	Describe("#DeployClusterIdentity", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			botanist.Shoot.GetInfo().Status.ClusterIdentity = &expectedShootClusterIdentity
 			clusterIdentity.EXPECT().SetIdentity(expectedShootClusterIdentity)
 		})
