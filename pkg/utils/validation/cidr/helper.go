@@ -38,7 +38,7 @@ func ValidateCIDROverlap(leftPaths, rightPaths []CIDR, overlap bool) (allErrs fi
 			continue
 		}
 		if overlap {
-			allErrs = append(allErrs, left.ValidateSubset(rightPaths...)...)
+			allErrs = append(allErrs, left.ValidateOverlap(rightPaths...)...)
 		} else {
 			allErrs = append(allErrs, left.ValidateNotSubset(rightPaths...)...)
 		}
