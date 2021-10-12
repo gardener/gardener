@@ -429,6 +429,7 @@ kubeReserved:
 logging: {}
 maxOpenFiles: 1000000
 maxPods: 110
+memorySwap: {}
 nodeStatusReportFrequency: 0s
 nodeStatusUpdateFrequency: 10s
 registryBurst: 10
