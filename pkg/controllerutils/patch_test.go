@@ -214,8 +214,6 @@ var _ = Describe("Patch", func() {
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, obj).Return(apierrors.NewAlreadyExists(schema.GroupResource{}, "")),
 					c.EXPECT().Get(ctx, client.ObjectKeyFromObject(obj), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, objToReturn *corev1.ServiceAccount) error {
-						Expect(obj.GetLabels()).To(BeEmpty(), "object should be reset before getting it again")
-
 						obj.DeepCopyInto(objToReturn)
 						return nil
 					}),
