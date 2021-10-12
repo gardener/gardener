@@ -567,7 +567,7 @@ var _ = Describe("Shoot Care Control", func() {
 						{
 							Type:           gardencorev1beta1.ShootEveryNodeReady,
 							Status:         gardencorev1beta1.ConditionTrue,
-							LastUpdateTime: metav1.Now(),
+							LastUpdateTime: metav1.NewTime(metav1.Now().Round(time.Second)),
 						},
 						{
 							Type:    gardencorev1beta1.ShootSystemComponentsHealthy,
