@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/kubelet"
 	"github.com/gardener/gardener/pkg/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/Masterminds/semver"
 	. "github.com/onsi/ginkgo"
@@ -239,7 +240,7 @@ var _ = Describe("Config", func() {
 				mutateExpectConfigFn(expectation)
 			}
 
-			Expect(kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddress, clusterDomain, params)).To(Equal(expectation))
+			Expect(kubelet.Config(semver.MustParse(kubernetesVersion), clusterDNSAddress, clusterDomain, params)).To(DeepEqual(expectation))
 		},
 
 		Entry(

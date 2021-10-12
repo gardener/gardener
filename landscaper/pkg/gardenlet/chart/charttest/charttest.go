@@ -45,6 +45,7 @@ import (
 	gardenletconfigv1alpha1 "github.com/gardener/gardener/pkg/gardenlet/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 )
 
 // ValidateGardenletChartVPA validates the vpa of the Gardenlet chart.
@@ -81,7 +82,7 @@ func ValidateGardenletChartVPA(ctx context.Context, c client.Client) {
 		}},
 	}
 
-	Expect(vpa.Spec).To(Equal(expectedSpec))
+	Expect(vpa.Spec).To(DeepEqual(expectedSpec))
 }
 
 // ValidateGardenletChartPriorityClass validates the priority class of the Gardenlet chart.
@@ -124,7 +125,7 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 		actual := &rbacv1.ClusterRole{}
 		Expect(c.Get(ctx, key, actual)).ToNot(HaveOccurred())
 
-		Expect(actual).To(Equal(expected))
+		Expect(actual).To(DeepEqual(expected))
 	}
 
 	// ClusterRoleBindings
@@ -143,7 +144,7 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 		actual := &rbacv1.ClusterRoleBinding{}
 		Expect(c.Get(ctx, key, actual)).ToNot(HaveOccurred())
 
-		Expect(actual).To(Equal(expected))
+		Expect(actual).To(DeepEqual(expected))
 	}
 
 	// Roles
@@ -155,7 +156,7 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 		actual := &rbacv1.Role{}
 		Expect(c.Get(ctx, key, actual)).ToNot(HaveOccurred())
 
-		Expect(actual).To(Equal(expected))
+		Expect(actual).To(DeepEqual(expected))
 	}
 
 	// RoleBindings
@@ -167,7 +168,7 @@ func ValidateGardenletChartRBAC(ctx context.Context, c client.Client, expectedLa
 		actual := &rbacv1.RoleBinding{}
 		Expect(c.Get(ctx, key, actual)).ToNot(HaveOccurred())
 
-		Expect(actual).To(Equal(expected))
+		Expect(actual).To(DeepEqual(expected))
 	}
 }
 
@@ -589,7 +590,7 @@ func ValidateGardenletChartServiceAccount(ctx context.Context, c client.Client, 
 		kutil.Key(serviceAccount.Namespace, serviceAccount.Name),
 		serviceAccount,
 	)).ToNot(HaveOccurred())
-	Expect(serviceAccount.Labels).To(Equal(expectedServiceAccount.Labels))
+	Expect(serviceAccount.Labels).To(DeepEqual(expectedServiceAccount.Labels))
 }
 
 // ComputeExpectedGardenletConfiguration computes the expected Gardenlet configuration based
@@ -811,7 +812,7 @@ func VerifyGardenletComponentConfigConfigMap(ctx context.Context, c client.Clien
 		componentConfigCm,
 	)).ToNot(HaveOccurred())
 
-	Expect(componentConfigCm.Labels).To(Equal(expectedComponentConfigCm.Labels))
+	Expect(componentConfigCm.Labels).To(DeepEqual(expectedComponentConfigCm.Labels))
 
 	// unmarshal Gardenlet Configuration from deployed Config Map
 	componentConfigYaml := componentConfigCm.Data["config.yaml"]
@@ -819,7 +820,7 @@ func VerifyGardenletComponentConfigConfigMap(ctx context.Context, c client.Clien
 	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
 	_, _, err := universalDecoder.Decode([]byte(componentConfigYaml), nil, gardenletConfig)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(*gardenletConfig).To(Equal(expectedGardenletConfig))
+	Expect(*gardenletConfig).To(DeepEqual(expectedGardenletConfig))
 }
 
 func getEmptyGardenletConfigMap() *corev1.ConfigMap {
@@ -1105,7 +1106,7 @@ func VerifyGardenletDeployment(ctx context.Context,
 		deployment,
 	)).ToNot(HaveOccurred())
 
-	Expect(deployment.ObjectMeta.Labels).To(Equal(expectedDeployment.ObjectMeta.Labels))
+	Expect(deployment.ObjectMeta.Labels).To(DeepEqual(expectedDeployment.ObjectMeta.Labels))
 	Expect(deployment.Spec.Template.Annotations["checksum/configmap-gardenlet-config"]).ToNot(BeEmpty())
 
 	if imageVectorOverwrite != nil {
@@ -1141,7 +1142,7 @@ func VerifyGardenletDeployment(ctx context.Context,
 	// clean annotations with hashes
 	deployment.Spec.Template.Annotations = nil
 	expectedDeploymentSpec.Template.Annotations = nil
-	Expect(deployment.Spec).To(Equal(expectedDeploymentSpec))
+	Expect(deployment.Spec).To(DeepEqual(expectedDeploymentSpec))
 }
 
 func getEmptyGardenletDeployment() *appsv1.Deployment {
