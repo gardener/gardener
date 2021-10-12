@@ -117,11 +117,7 @@ func getValidatingWebhookConfig() *admissionregistrationv1.ValidatingWebhookConf
 		},
 	}
 
-	webhookConfig := seedadmissioncontroller.GetValidatingWebhookConfig(nil, service)
-	// envtest doesn't default the webhook config's GVK, so set it explicitly
-	webhookConfig.SetGroupVersionKind(admissionregistrationv1.SchemeGroupVersion.WithKind("ValidatingWebhookConfiguration"))
-
-	return webhookConfig
+	return seedadmissioncontroller.GetValidatingWebhookConfig(nil, service)
 }
 
 func getMutatingWebhookConfig() *admissionregistrationv1.MutatingWebhookConfiguration {
@@ -131,9 +127,5 @@ func getMutatingWebhookConfig() *admissionregistrationv1.MutatingWebhookConfigur
 		},
 	}
 
-	webhookConfig := gardenerkubescheduler.GetMutatingWebhookConfig(clientConfig)
-	// envtest doesn't default the webhook config's GVK, so set it explicitly
-	webhookConfig.SetGroupVersionKind(admissionregistrationv1.SchemeGroupVersion.WithKind("MutatingWebhookConfiguration"))
-
-	return webhookConfig
+	return gardenerkubescheduler.GetMutatingWebhookConfig(clientConfig)
 }
