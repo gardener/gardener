@@ -205,6 +205,9 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	go seedController.Run(controllerCtx, *f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(controllerCtx, *f.cfg.Controllers.Shoot.ConcurrentSyncs, *f.cfg.Controllers.ShootCare.ConcurrentSyncs)
 
+	// TODO(timebertt): this can be removed once we have refactored gardenlet to native controller-runtime controllers,
+	// with https://github.com/kubernetes-sigs/controller-runtime/pull/1678 source.Kind already retries getting
+	// an informer on NoKindMatch (just make sure, /readyz fails until we have an informer)
 	if err := retry.Until(ctx, 10*time.Second, func(ctx context.Context) (bool, error) {
 		if err := extensionsController.Initialize(ctx, seedClient); err != nil {
 			// A NoMatchError most probably indicates that the necessary CRDs haven't been deployed to the affected seed cluster yet.
