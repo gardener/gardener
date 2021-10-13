@@ -16,10 +16,10 @@ package cidr
 
 import (
 	"fmt"
-	"net"
+
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
@@ -72,7 +72,7 @@ func ValidateNetworkDisjointedness(fldPath *field.Path, shootNodes, shootPods, s
 
 // NetworksIntersect returns true if the given network CIDRs intersect.
 func NetworksIntersect(cidr1, cidr2 string) bool {
-	_, net1, err1 := net.ParseCIDR(cidr1)
-	_, net2, err2 := net.ParseCIDR(cidr2)
-	return err1 != nil || err2 != nil || net2.Contains(net1.IP) || net1.Contains(net2.IP)
+	c1 := NewCIDR(cidr1, field.NewPath(""))
+	c2 := NewCIDR(cidr2, field.NewPath(""))
+	return c1.ValidateOverlap(c2).ToAggregate() == nil
 }
