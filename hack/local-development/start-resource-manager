@@ -32,6 +32,4 @@ GO111MODULE=on \
 	    --sync-period=60s \
 	    --max-concurrent-workers=10 \
 	    --health-sync-period=60s \
-	    --health-max-concurrent-workers=10 \
-      --root-ca-file=/Users/I547893/tmp/foo.txt \
-      --rootcapublisher-max-concurrent-workers=3
+	    --health-max-concurrent-workers=10

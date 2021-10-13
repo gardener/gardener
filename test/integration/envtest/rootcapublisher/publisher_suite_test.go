@@ -24,7 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -57,21 +57,20 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(restConfig).ToNot(BeNil())
 
-	testClient, err = client.New(restConfig, client.Options{Scheme: kubernetesscheme.Scheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: k8sscheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             kubernetesscheme.Scheme,
+		Scheme:             k8sscheme.Scheme,
 		MetricsBindAddress: "0",
 	})
 	Expect(err).ToNot(HaveOccurred())
 
 	err = rootcapublisher.AddToManagerWithOptions(mgr, rootcapublisher.ControllerConfig{
 		MaxConcurrentWorkers: 1,
-		// TODO: what this file should be
-		RootCAPath:         "../../../../VERSION",
-		TargetClientConfig: resourcemanagercmd.TargetClientConfig{Client: testClient},
+		RootCAPath:           "dummy.crt",
+		TargetClientConfig:   resourcemanagercmd.TargetClientConfig{Client: testClient},
 	})
 	Expect(err).ToNot(HaveOccurred())
 

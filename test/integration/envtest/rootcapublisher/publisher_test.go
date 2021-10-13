@@ -1,14 +1,29 @@
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package rootcapublisher_test
 
 import (
-	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	"time"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Root CA Controller tests", func() {
@@ -29,64 +44,50 @@ var _ = Describe("Root CA Controller tests", func() {
 			},
 		}
 
+		Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+		}, time.Millisecond*300, time.Millisecond*10).Should(Succeed())
 	})
 
 	// Open:
 	// Update on namespace -> create secret
 
 	//
-	It("should successfully create a config map on creating a namespace", func() {
-		Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
-
-		// TODO possibly reduce timeout
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-		}).Should(Succeed())
-	})
+	It("should successfully create a config map on creating a namespace", func() {})
 
 	It("should keep the secret in the desired state after Delete/Update of the secret", func() {
-		Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-		}).Should(Succeed())
-
 		By("Deleting the secret")
 		Expect(testClient.Delete(ctx, configMap)).To(Succeed())
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-		}).Should(BeNotFoundError())
+		}, time.Millisecond*300, time.Millisecond*10).Should(BeNotFoundError())
 
-		// TODO possibly reduce timeout
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-		}).Should(Succeed())
+		}, time.Millisecond*300, time.Millisecond*10).Should(Succeed())
 
 		By("Updating the secret")
 		configMap.Data = nil
 		Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
-		// TODO possibly reduce timeout
 		Eventually(func() bool {
 			testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
 			return configMap.Data != nil
-		}).Should(BeTrue())
+		}, time.Millisecond*300, time.Millisecond*10).Should(BeTrue())
 
-		// create a secret with a different name
 		By("Ignoring annotating configmap")
 		configMap.Data = nil
 		configMap.Annotations = map[string]string{"kubernetes.io/description": "test description"}
 		Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
-		// TODO possibly reduce timeout
 		Consistently(func() bool {
 			testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
 			return configMap.Data == nil
-		}).Should(BeTrue())
+		}, time.Millisecond*300, time.Millisecond*10).Should(BeTrue())
 
 		By("Ignoring configmap with different name")
-		// Create cm with different name
-		// update cm
-		// check that data is nil
 		cm := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "secret",
