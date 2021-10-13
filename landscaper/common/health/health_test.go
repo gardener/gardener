@@ -18,7 +18,7 @@ import (
 	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	. "github.com/gardener/gardener/landscaper/utils/health"
+	. "github.com/gardener/gardener/landscaper/common/health"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -13,12 +13,16 @@ components:
       provider: 'internal'
       resources:
       - type: ociImage
-        name: gardenlet-landscaper
+        #  This is the landscaper Gardenlet OCI image itself.
+        #  Required for the blueprint's deployExecutions
+        name: landscaper-gardenlet
         version: 'latest'
         relation: 'local'
         access:
           type: ociRegistry
           imageReference: eu.gcr.io/gardener-project/gardener/landscaper-gardenlet:latest
+
+#  -----   OCI images the component use for deployments -----
       - type: ociImage
         name: gardenlet
         version: 'latest'
