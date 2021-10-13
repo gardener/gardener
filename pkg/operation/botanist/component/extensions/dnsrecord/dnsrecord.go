@@ -18,6 +18,7 @@ import (
 	"context"
 	"time"
 
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -174,11 +175,16 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 				return nil, err
 			}
 		} else {
-			// DNSRecord already exists, just update the timestamp annotation.
-			// If the object is still annotated with the operation annotation (e.g. not reconciled yet) this will send a watch
-			// event to the extension controller triggering a new reconciliation.
 			patch := client.MergeFrom(c.dnsRecord.DeepCopy())
-			metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+			if c.dnsRecord.Status.LastOperation != nil && c.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
+				// If the DNSRecord is not yet Succeeded, reconcile it again.
+				_ = mutateFn()
+			} else {
+				// Otherwise, just update the timestamp annotation.
+				// If the object is still annotated with the operation annotation (e.g. not reconciled yet) this will send a watch
+				// event to the extension controller triggering a new reconciliation.
+				metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerTimestamp, TimeNow().UTC().String())
+			}
 			if err := c.client.Patch(ctx, c.dnsRecord, patch); err != nil {
 				return nil, err
 			}
