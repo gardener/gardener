@@ -38,7 +38,6 @@ type ControllerConfig struct {
 
 func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	if conf.RootCAPath == "" {
-
 		return nil
 	}
 
