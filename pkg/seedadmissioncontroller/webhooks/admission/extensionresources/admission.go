@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"time"
 
+	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
+	druidvalidation "github.com/gardener/etcd-druid/api/validation"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/extensions/validation"
 
@@ -102,6 +104,16 @@ func New(logger logr.Logger, allowInvalidExtensionResources bool) *handler {
 			},
 			validateUpdateResource: func(n, o client.Object) field.ErrorList {
 				return validation.ValidateDNSRecordUpdate(n.(*extensionsv1alpha1.DNSRecord), o.(*extensionsv1alpha1.DNSRecord))
+			},
+		},
+
+		gvrDruid("etcds"): {
+			newObject: func() client.Object { return new(druidv1alpha1.Etcd) },
+			validateCreateResource: func(n, _ client.Object) field.ErrorList {
+				return druidvalidation.ValidateEtcd(n.(*druidv1alpha1.Etcd))
+			},
+			validateUpdateResource: func(n, o client.Object) field.ErrorList {
+				return druidvalidation.ValidateEtcdUpdate(n.(*druidv1alpha1.Etcd), o.(*druidv1alpha1.Etcd))
 			},
 		},
 
@@ -240,8 +252,8 @@ func (h handler) handleValidation(request admission.Request, newObject newObject
 			Kind:  request.Kind.Kind,
 		}, kutil.ObjectName(obj), errors)
 
+		h.logger.Info("Invalid extension resource detected", "operation", request.Operation, "error", err.Error())
 		if h.allowInvalidExtensionResources {
-			h.logger.Info("Invalid extension resource detected", "operation", request.Operation, "error", err.Error())
 			return admission.Allowed(err.Error())
 		}
 		return admission.Denied(err.Error())
@@ -254,6 +266,14 @@ func gvr(resource string) metav1.GroupVersionResource {
 	return metav1.GroupVersionResource{
 		Group:    extensionsv1alpha1.SchemeGroupVersion.Group,
 		Version:  extensionsv1alpha1.SchemeGroupVersion.Version,
+		Resource: resource,
+	}
+}
+
+func gvrDruid(resource string) metav1.GroupVersionResource {
+	return metav1.GroupVersionResource{
+		Group:    druidv1alpha1.GroupVersion.Group,
+		Version:  druidv1alpha1.GroupVersion.Version,
 		Resource: resource,
 	}
 }

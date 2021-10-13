@@ -3,15 +3,17 @@ module github.com/gardener/gardener
 go 1.16
 
 require (
+	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/sprig v2.22.0+incompatible
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
 	github.com/coreos/go-systemd/v22 v22.1.0
+	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/envoyproxy/go-control-plane v0.9.7-0.20200730005029-803dd64f0468
 	github.com/frankban/quicktest v1.13.1 // indirect
 	github.com/gardener/component-spec/bindings-go v0.0.33
 	github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
-	github.com/gardener/etcd-druid v0.5.0
+	github.com/gardener/etcd-druid/api v0.0.0-00010101000000-000000000000
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/hvpa-controller v0.3.1
 	github.com/gardener/landscaper/apis v0.7.0
@@ -27,6 +29,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/kubernetes-csi/external-snapshotter/v2 v2.1.4
 	github.com/mholt/archiver v3.1.1+incompatible
+	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/nwaples/rardecode v1.1.2 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
@@ -39,6 +42,7 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/texttheater/golang-levenshtein v0.0.0-20191208221605-eb6844b05fc6
 	github.com/ulikunitz/xz v0.5.10 // indirect
+	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.uber.org/goleak v1.1.10
 	go.uber.org/zap v1.17.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
@@ -77,6 +81,8 @@ require (
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible // keep this value in sync with k8s.io/apiserver
 	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
+	github.com/gardener/etcd-druid => github.com/gardener/etcd-druid v0.6.0
+	github.com/gardener/etcd-druid/api => github.com/gardener/etcd-druid/api v0.6.1-0.20211011084637-5c908089a872
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.1
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.0 // keep this value in sync with sigs.k8s.io/controller-runtime
 	google.golang.org/grpc => google.golang.org/grpc v1.27.1 // keep this value in sync with k8s.io/apiserver
