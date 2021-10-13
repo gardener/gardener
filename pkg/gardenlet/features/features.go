@@ -30,7 +30,7 @@ var (
 		features.HVPAForShootedSeed:            {Default: false, PreRelease: featuregate.Alpha},
 		features.ManagedIstio:                  {Default: true, PreRelease: featuregate.Beta},
 		features.APIServerSNI:                  {Default: true, PreRelease: featuregate.Beta},
-		features.CachedRuntimeClients:          {Default: false, PreRelease: featuregate.Alpha},
+		features.CachedRuntimeClients:          {Default: true, PreRelease: featuregate.Beta},
 		features.SeedKubeScheduler:             {Default: false, PreRelease: featuregate.Alpha},
 		features.ReversedVPN:                   {Default: false, PreRelease: featuregate.Alpha},
 		features.UseDNSRecords:                 {Default: false, PreRelease: featuregate.Alpha},

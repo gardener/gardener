@@ -61,8 +61,9 @@ const (
 
 	// CachedRuntimeClients enables a cache in the controller-runtime clients, that Gardener uses.
 	// If disabled all controller-runtime clients will directly talk to the API server instead of relying on a cache.
-	// owner @tim-ebert
+	// owner @timebertt
 	// alpha: v1.7.0
+	// beta: v1.34.0
 	CachedRuntimeClients featuregate.Feature = "CachedRuntimeClients"
 
 	// SeedChange enables updating the `spec.seedName` field during shoot validation from a non-empty value
