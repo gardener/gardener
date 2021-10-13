@@ -16,6 +16,8 @@ package botanist
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -68,6 +70,19 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 				if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, vpnseedserver.DeploymentName, vpnseedserver.VpnShootSecretName, vpnseedserver.VpnSeedServerTLSAuth); err != nil {
 					return err
 				}
+			}
+		}
+
+		// Trigger replacement of operator/user facing certificates if required
+		expiredTLSSecrets, err := getExpiredCerts(gardenerResourceDataList, common.CrtRenewalWindow, common.IngressTLSSecretNames...)
+		if err != nil {
+			return err
+		}
+
+		if len(expiredTLSSecrets) > 0 {
+			b.Logger.Infof("Deleting secrets for certificate rotation: %v", expiredTLSSecrets)
+			if err := b.deleteSecrets(ctx, &gardenerResourceDataList, expiredTLSSecrets...); err != nil {
+				return err
 			}
 		}
 
@@ -336,6 +351,32 @@ func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *s
 	}
 
 	return nil
+}
+
+func getExpiredCerts(gardenerResourceDataList gardencorev1alpha1helper.GardenerResourceDataList, renewalWindow time.Duration, secretNames ...string) ([]string, error) {
+	var expiredCerts []string
+
+	for _, secretName := range secretNames {
+		data := gardenerResourceDataList.Get(secretName)
+		if data == nil {
+			continue
+		}
+
+		certObj := &secrets.CertificateJSONData{}
+		if err := json.Unmarshal(data.Data.Raw, certObj); err != nil {
+			return nil, err
+		}
+
+		expired, err := secrets.CertificateIsExpired(certObj.Certificate, renewalWindow)
+		if err != nil {
+			return nil, err
+		}
+
+		if expired {
+			expiredCerts = append(expiredCerts, secretName)
+		}
+	}
+	return expiredCerts, nil
 }
 
 type projectSecret struct {
