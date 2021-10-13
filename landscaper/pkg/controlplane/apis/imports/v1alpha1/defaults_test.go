@@ -15,6 +15,9 @@
 package v1alpha1_test
 
 import (
+	"fmt"
+
+	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
 	"k8s.io/utils/pointer"
 
 	. "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/v1alpha1"
@@ -45,7 +48,92 @@ var _ = Describe("Defaults", func() {
 						Enabled: true,
 					},
 				},
+				GardenerControllerManager: &GardenerControllerManager{ComponentConfiguration: &ControllerManagerComponentConfiguration{}},
 			}))
 		})
+
+		It("should default the mutating webhook kubeconfig for token volume projection", func() {
+			var obj = &Imports{
+				GardenerAPIServer: GardenerAPIServer{
+					ComponentConfiguration: APIServerComponentConfiguration{
+						Admission: &APIServerAdmissionConfiguration{
+							MutatingWebhook: &APIServerAdmissionWebhookCredentials{
+								TokenProjection: &APIServerAdmissionWebhookCredentialsTokenProjection{
+									Enabled: true,
+								},
+							},
+						},
+					},
+				},
+			}
+			SetDefaults_Imports(obj)
+
+			Expect(obj).To(Equal(&Imports{
+				GardenerAPIServer: GardenerAPIServer{
+					ComponentConfiguration: APIServerComponentConfiguration{
+						Admission: &APIServerAdmissionConfiguration{
+							MutatingWebhook: &APIServerAdmissionWebhookCredentials{
+								Kubeconfig: &landscaperv1alpha1.Target{Spec: landscaperv1alpha1.TargetSpec{Configuration: landscaperv1alpha1.AnyJSON{
+									RawMessage: []byte(getVolumeProjectionKubeconfig("mutating")),
+								}}},
+								TokenProjection: &APIServerAdmissionWebhookCredentialsTokenProjection{
+									Enabled: true,
+								},
+							},
+						},
+					},
+				},
+				GardenerAdmissionController: &GardenerAdmissionController{},
+				GardenerControllerManager:   &GardenerControllerManager{ComponentConfiguration: &ControllerManagerComponentConfiguration{}},
+			}))
+		})
+
+		It("should default the validating webhook kubeconfig for token volume projection", func() {
+			var obj = &Imports{
+				GardenerAPIServer: GardenerAPIServer{
+					ComponentConfiguration: APIServerComponentConfiguration{
+						Admission: &APIServerAdmissionConfiguration{
+							ValidatingWebhook: &APIServerAdmissionWebhookCredentials{
+								TokenProjection: &APIServerAdmissionWebhookCredentialsTokenProjection{
+									Enabled: true,
+								},
+							},
+						},
+					},
+				},
+			}
+			SetDefaults_Imports(obj)
+
+			Expect(obj).To(Equal(&Imports{
+				GardenerAPIServer: GardenerAPIServer{
+					ComponentConfiguration: APIServerComponentConfiguration{
+						Admission: &APIServerAdmissionConfiguration{
+							ValidatingWebhook: &APIServerAdmissionWebhookCredentials{
+								Kubeconfig: &landscaperv1alpha1.Target{Spec: landscaperv1alpha1.TargetSpec{Configuration: landscaperv1alpha1.AnyJSON{
+									RawMessage: []byte(getVolumeProjectionKubeconfig("validating")),
+								}}},
+								TokenProjection: &APIServerAdmissionWebhookCredentialsTokenProjection{
+									Enabled: true,
+								},
+							},
+						},
+					},
+				},
+				GardenerAdmissionController: &GardenerAdmissionController{},
+				GardenerControllerManager:   &GardenerControllerManager{ComponentConfiguration: &ControllerManagerComponentConfiguration{}},
+			}))
+		})
+
 	})
 })
+
+func getVolumeProjectionKubeconfig(name string) string {
+	return fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Config
+users:
+- name: '*'
+user:
+  tokenFile: /var/run/secrets/admission-tokens/%s-webhook-token`, name)
+}

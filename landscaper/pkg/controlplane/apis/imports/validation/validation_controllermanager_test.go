@@ -64,8 +64,8 @@ var _ = Describe("ValidateControllerManager", func() {
 			},
 			ComponentConfiguration: &imports.ControllerManagerComponentConfiguration{
 				TLS: &imports.TLSServer{
-					Crt: certString,
-					Key: keyString,
+					Crt: &certString,
+					Key: &keyString,
 				},
 				Configuration: &imports.Configuration{
 					ComponentConfiguration: &componentConfig,
@@ -81,7 +81,7 @@ var _ = Describe("ValidateControllerManager", func() {
 		})
 
 		It("should forbid invalid TLS configuration - cert not specified", func() {
-			controllerManagerConfiguration.ComponentConfiguration.TLS.Crt = ""
+			controllerManagerConfiguration.ComponentConfiguration.TLS.Crt = pointer.String("")
 			errorList := ValidateControllerManager(controllerManagerConfiguration, path)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -91,8 +91,20 @@ var _ = Describe("ValidateControllerManager", func() {
 			))
 		})
 
+		It("should forbid providing both TLS certs as well as a secret reference", func() {
+			controllerManagerConfiguration.ComponentConfiguration.TLS.SecretRef = &corev1.SecretReference{}
+			errorList := ValidateControllerManager(controllerManagerConfiguration, path)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("controllermanager.componentConfiguration.tls.secretRef"),
+					"Detail": Equal("cannot both set the secret reference and the TLS certificate values"),
+				})),
+			))
+		})
+
 		It("should forbid invalid TLS configuration - cert invalid", func() {
-			controllerManagerConfiguration.ComponentConfiguration.TLS.Crt = "invalid"
+			controllerManagerConfiguration.ComponentConfiguration.TLS.Crt = pointer.String("invalid")
 			errorList := ValidateControllerManager(controllerManagerConfiguration, path)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -103,7 +115,7 @@ var _ = Describe("ValidateControllerManager", func() {
 		})
 
 		It("should forbid invalid TLS configuration - key not specified", func() {
-			controllerManagerConfiguration.ComponentConfiguration.TLS.Key = ""
+			controllerManagerConfiguration.ComponentConfiguration.TLS.Key = pointer.String("")
 			errorList := ValidateControllerManager(controllerManagerConfiguration, path)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -114,7 +126,7 @@ var _ = Describe("ValidateControllerManager", func() {
 		})
 
 		It("should forbid invalid TLS configuration - key invalid", func() {
-			controllerManagerConfiguration.ComponentConfiguration.TLS.Key = "invalid"
+			controllerManagerConfiguration.ComponentConfiguration.TLS.Key = pointer.String("invalid")
 			errorList := ValidateControllerManager(controllerManagerConfiguration, path)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{

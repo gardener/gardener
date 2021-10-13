@@ -184,6 +184,26 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*CA)(nil), (*imports.CA)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CA_To_imports_CA(a.(*CA), b.(*imports.CA), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*imports.CA)(nil), (*CA)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_imports_CA_To_v1alpha1_CA(a.(*imports.CA), b.(*CA), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CertificateRotation)(nil), (*imports.CertificateRotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CertificateRotation_To_imports_CertificateRotation(a.(*CertificateRotation), b.(*imports.CertificateRotation), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*imports.CertificateRotation)(nil), (*CertificateRotation)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_imports_CertificateRotation_To_v1alpha1_CertificateRotation(a.(*imports.CertificateRotation), b.(*CertificateRotation), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*CommonDeploymentConfiguration)(nil), (*imports.CommonDeploymentConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_CommonDeploymentConfiguration_To_imports_CommonDeploymentConfiguration(a.(*CommonDeploymentConfiguration), b.(*imports.CommonDeploymentConfiguration), scope)
 	}); err != nil {
@@ -438,7 +458,7 @@ func Convert_imports_APIServerAdmissionWebhookCredentials_To_v1alpha1_APIServerA
 }
 
 func autoConvert_v1alpha1_APIServerAdmissionWebhookCredentialsTokenProjection_To_imports_APIServerAdmissionWebhookCredentialsTokenProjection(in *APIServerAdmissionWebhookCredentialsTokenProjection, out *imports.APIServerAdmissionWebhookCredentialsTokenProjection, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	out.Enabled = in.Enabled
 	out.Audience = (*string)(unsafe.Pointer(in.Audience))
 	out.ExpirationSeconds = (*int32)(unsafe.Pointer(in.ExpirationSeconds))
 	return nil
@@ -450,7 +470,7 @@ func Convert_v1alpha1_APIServerAdmissionWebhookCredentialsTokenProjection_To_imp
 }
 
 func autoConvert_imports_APIServerAdmissionWebhookCredentialsTokenProjection_To_v1alpha1_APIServerAdmissionWebhookCredentialsTokenProjection(in *imports.APIServerAdmissionWebhookCredentialsTokenProjection, out *APIServerAdmissionWebhookCredentialsTokenProjection, s conversion.Scope) error {
-	out.Enabled = (*bool)(unsafe.Pointer(in.Enabled))
+	out.Enabled = in.Enabled
 	out.Audience = (*string)(unsafe.Pointer(in.Audience))
 	out.ExpirationSeconds = (*int32)(unsafe.Pointer(in.ExpirationSeconds))
 	return nil
@@ -595,7 +615,7 @@ func autoConvert_v1alpha1_APIServerComponentConfiguration_To_imports_APIServerCo
 	if err := Convert_v1alpha1_APIServerEtcdConfiguration_To_imports_APIServerEtcdConfiguration(&in.Etcd, &out.Etcd, s); err != nil {
 		return err
 	}
-	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
+	out.CA = (*imports.CA)(unsafe.Pointer(in.CA))
 	out.TLS = (*imports.TLSServer)(unsafe.Pointer(in.TLS))
 	out.FeatureGates = *(*[]string)(unsafe.Pointer(&in.FeatureGates))
 	out.Admission = (*imports.APIServerAdmissionConfiguration)(unsafe.Pointer(in.Admission))
@@ -619,7 +639,7 @@ func autoConvert_imports_APIServerComponentConfiguration_To_v1alpha1_APIServerCo
 	if err := Convert_imports_APIServerEtcdConfiguration_To_v1alpha1_APIServerEtcdConfiguration(&in.Etcd, &out.Etcd, s); err != nil {
 		return err
 	}
-	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
+	out.CA = (*CA)(unsafe.Pointer(in.CA))
 	out.TLS = (*TLSServer)(unsafe.Pointer(in.TLS))
 	out.FeatureGates = *(*[]string)(unsafe.Pointer(&in.FeatureGates))
 	out.Admission = (*APIServerAdmissionConfiguration)(unsafe.Pointer(in.Admission))
@@ -674,6 +694,7 @@ func autoConvert_v1alpha1_APIServerEtcdConfiguration_To_imports_APIServerEtcdCon
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	out.ClientCert = (*string)(unsafe.Pointer(in.ClientCert))
 	out.ClientKey = (*string)(unsafe.Pointer(in.ClientKey))
+	out.SecretRef = (*corev1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	return nil
 }
 
@@ -687,6 +708,7 @@ func autoConvert_imports_APIServerEtcdConfiguration_To_v1alpha1_APIServerEtcdCon
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	out.ClientCert = (*string)(unsafe.Pointer(in.ClientCert))
 	out.ClientKey = (*string)(unsafe.Pointer(in.ClientKey))
+	out.SecretRef = (*corev1.SecretReference)(unsafe.Pointer(in.SecretRef))
 	return nil
 }
 
@@ -744,7 +766,7 @@ func Convert_imports_APIServerWatchCacheConfiguration_To_v1alpha1_APIServerWatch
 }
 
 func autoConvert_v1alpha1_AdmissionControllerComponentConfiguration_To_imports_AdmissionControllerComponentConfiguration(in *AdmissionControllerComponentConfiguration, out *imports.AdmissionControllerComponentConfiguration, s conversion.Scope) error {
-	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
+	out.CA = (*imports.CA)(unsafe.Pointer(in.CA))
 	out.TLS = (*imports.TLSServer)(unsafe.Pointer(in.TLS))
 	if in.Configuration != nil {
 		in, out := &in.Configuration, &out.Configuration
@@ -764,7 +786,7 @@ func Convert_v1alpha1_AdmissionControllerComponentConfiguration_To_imports_Admis
 }
 
 func autoConvert_imports_AdmissionControllerComponentConfiguration_To_v1alpha1_AdmissionControllerComponentConfiguration(in *imports.AdmissionControllerComponentConfiguration, out *AdmissionControllerComponentConfiguration, s conversion.Scope) error {
-	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
+	out.CA = (*CA)(unsafe.Pointer(in.CA))
 	out.TLS = (*TLSServer)(unsafe.Pointer(in.TLS))
 	if in.Configuration != nil {
 		in, out := &in.Configuration, &out.Configuration
@@ -825,6 +847,50 @@ func autoConvert_imports_Alerting_To_v1alpha1_Alerting(in *imports.Alerting, out
 // Convert_imports_Alerting_To_v1alpha1_Alerting is an autogenerated conversion function.
 func Convert_imports_Alerting_To_v1alpha1_Alerting(in *imports.Alerting, out *Alerting, s conversion.Scope) error {
 	return autoConvert_imports_Alerting_To_v1alpha1_Alerting(in, out, s)
+}
+
+func autoConvert_v1alpha1_CA_To_imports_CA(in *CA, out *imports.CA, s conversion.Scope) error {
+	out.SecretRef = (*corev1.SecretReference)(unsafe.Pointer(in.SecretRef))
+	out.Crt = (*string)(unsafe.Pointer(in.Crt))
+	out.Key = (*string)(unsafe.Pointer(in.Key))
+	return nil
+}
+
+// Convert_v1alpha1_CA_To_imports_CA is an autogenerated conversion function.
+func Convert_v1alpha1_CA_To_imports_CA(in *CA, out *imports.CA, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CA_To_imports_CA(in, out, s)
+}
+
+func autoConvert_imports_CA_To_v1alpha1_CA(in *imports.CA, out *CA, s conversion.Scope) error {
+	out.SecretRef = (*corev1.SecretReference)(unsafe.Pointer(in.SecretRef))
+	out.Crt = (*string)(unsafe.Pointer(in.Crt))
+	out.Key = (*string)(unsafe.Pointer(in.Key))
+	return nil
+}
+
+// Convert_imports_CA_To_v1alpha1_CA is an autogenerated conversion function.
+func Convert_imports_CA_To_v1alpha1_CA(in *imports.CA, out *CA, s conversion.Scope) error {
+	return autoConvert_imports_CA_To_v1alpha1_CA(in, out, s)
+}
+
+func autoConvert_v1alpha1_CertificateRotation_To_imports_CertificateRotation(in *CertificateRotation, out *imports.CertificateRotation, s conversion.Scope) error {
+	out.Rotate = in.Rotate
+	return nil
+}
+
+// Convert_v1alpha1_CertificateRotation_To_imports_CertificateRotation is an autogenerated conversion function.
+func Convert_v1alpha1_CertificateRotation_To_imports_CertificateRotation(in *CertificateRotation, out *imports.CertificateRotation, s conversion.Scope) error {
+	return autoConvert_v1alpha1_CertificateRotation_To_imports_CertificateRotation(in, out, s)
+}
+
+func autoConvert_imports_CertificateRotation_To_v1alpha1_CertificateRotation(in *imports.CertificateRotation, out *CertificateRotation, s conversion.Scope) error {
+	out.Rotate = in.Rotate
+	return nil
+}
+
+// Convert_imports_CertificateRotation_To_v1alpha1_CertificateRotation is an autogenerated conversion function.
+func Convert_imports_CertificateRotation_To_v1alpha1_CertificateRotation(in *imports.CertificateRotation, out *CertificateRotation, s conversion.Scope) error {
+	return autoConvert_imports_CertificateRotation_To_v1alpha1_CertificateRotation(in, out, s)
 }
 
 func autoConvert_v1alpha1_CommonDeploymentConfiguration_To_imports_CommonDeploymentConfiguration(in *CommonDeploymentConfiguration, out *imports.CommonDeploymentConfiguration, s conversion.Scope) error {
@@ -1164,6 +1230,7 @@ func Convert_imports_HVPAConfigurationVPA_To_v1alpha1_HVPAConfigurationVPA(in *i
 }
 
 func autoConvert_v1alpha1_Imports_To_imports_Imports(in *Imports, out *imports.Imports, s conversion.Scope) error {
+	out.Identity = (*string)(unsafe.Pointer(in.Identity))
 	out.RuntimeCluster = in.RuntimeCluster
 	out.VirtualGarden = (*imports.VirtualGarden)(unsafe.Pointer(in.VirtualGarden))
 	if err := Convert_v1alpha1_DNS_To_imports_DNS(&in.InternalDomain, &out.InternalDomain, s); err != nil {
@@ -1203,6 +1270,7 @@ func autoConvert_v1alpha1_Imports_To_imports_Imports(in *Imports, out *imports.I
 		out.GardenerAdmissionController = nil
 	}
 	out.Rbac = (*imports.Rbac)(unsafe.Pointer(in.Rbac))
+	out.CertificateRotation = (*imports.CertificateRotation)(unsafe.Pointer(in.CertificateRotation))
 	return nil
 }
 
@@ -1212,6 +1280,7 @@ func Convert_v1alpha1_Imports_To_imports_Imports(in *Imports, out *imports.Impor
 }
 
 func autoConvert_imports_Imports_To_v1alpha1_Imports(in *imports.Imports, out *Imports, s conversion.Scope) error {
+	out.Identity = (*string)(unsafe.Pointer(in.Identity))
 	out.RuntimeCluster = in.RuntimeCluster
 	out.VirtualGarden = (*VirtualGarden)(unsafe.Pointer(in.VirtualGarden))
 	if err := Convert_imports_DNS_To_v1alpha1_DNS(&in.InternalDomain, &out.InternalDomain, s); err != nil {
@@ -1251,6 +1320,7 @@ func autoConvert_imports_Imports_To_v1alpha1_Imports(in *imports.Imports, out *I
 		out.GardenerAdmissionController = nil
 	}
 	out.Rbac = (*Rbac)(unsafe.Pointer(in.Rbac))
+	out.CertificateRotation = (*CertificateRotation)(unsafe.Pointer(in.CertificateRotation))
 	return nil
 }
 
@@ -1356,8 +1426,9 @@ func Convert_imports_SeedRestriction_To_v1alpha1_SeedRestriction(in *imports.See
 }
 
 func autoConvert_v1alpha1_TLSServer_To_imports_TLSServer(in *TLSServer, out *imports.TLSServer, s conversion.Scope) error {
-	out.Crt = in.Crt
-	out.Key = in.Key
+	out.SecretRef = (*corev1.SecretReference)(unsafe.Pointer(in.SecretRef))
+	out.Crt = (*string)(unsafe.Pointer(in.Crt))
+	out.Key = (*string)(unsafe.Pointer(in.Key))
 	return nil
 }
 
@@ -1367,8 +1438,9 @@ func Convert_v1alpha1_TLSServer_To_imports_TLSServer(in *TLSServer, out *imports
 }
 
 func autoConvert_imports_TLSServer_To_v1alpha1_TLSServer(in *imports.TLSServer, out *TLSServer, s conversion.Scope) error {
-	out.Crt = in.Crt
-	out.Key = in.Key
+	out.SecretRef = (*corev1.SecretReference)(unsafe.Pointer(in.SecretRef))
+	out.Crt = (*string)(unsafe.Pointer(in.Crt))
+	out.Key = (*string)(unsafe.Pointer(in.Key))
 	return nil
 }
 

@@ -32,9 +32,10 @@ var _ = Describe("ValidateAdmissionController", func() {
 	var (
 		admissionControllerConfiguration imports.GardenerAdmissionController
 		componentConfig                  admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration
-		path                             = field.NewPath("admissioncontroler")
+		path                             = field.NewPath("admissioncontroller")
 		ca                               = GenerateCACertificate("gardener.cloud:system:admissioncontroller")
-		caString                         = string(ca.CertificatePEM)
+		caCrt                            = string(ca.CertificatePEM)
+		caKey                            = string(ca.PrivateKeyPEM)
 		cert                             = GenerateTLSServingCertificate(&ca)
 		certString                       = string(cert.CertificatePEM)
 		keyString                        = string(cert.PrivateKeyPEM)
@@ -59,10 +60,13 @@ var _ = Describe("ValidateAdmissionController", func() {
 				VPA:            pointer.Bool(true),
 			},
 			ComponentConfiguration: &imports.AdmissionControllerComponentConfiguration{
-				CABundle: &caString,
+				CA: &imports.CA{
+					Crt: &caCrt,
+					Key: &caKey,
+				},
 				TLS: &imports.TLSServer{
-					Crt: certString,
-					Key: keyString,
+					Crt: &certString,
+					Key: &keyString,
 				},
 				Configuration: &imports.Configuration{
 					ComponentConfiguration: &componentConfig,
@@ -77,71 +81,122 @@ var _ = Describe("ValidateAdmissionController", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
+		Context("CA", func() {
+			It("CA public key must be provided in order to validate the TLS serving cert of the Gardener Admission Controller server", func() {
+				admissionControllerConfiguration.ComponentConfiguration.CA = nil
+				errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeForbidden),
+						"Field":  Equal("admissioncontroller.componentConfiguration.ca.crt"),
+						"Detail": Equal("It is forbidden to only providing the TLS serving certificates of the Gardener Admission Controller, but not the CA for verification."),
+					})),
+				))
+			})
+
+			It("CA private key must be provided to generate TLS serving certs", func() {
+				admissionControllerConfiguration.ComponentConfiguration.CA.Key = nil
+				admissionControllerConfiguration.ComponentConfiguration.TLS = nil
+				errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("admissioncontroller.componentConfiguration.ca.key"),
+						"Detail": Equal("When providing a custom CA (public part) and the TLS serving Certificate of the Gardener Admission Controller are not provided, the private key of the CA is required in order to generate the TLS serving certs."),
+					})),
+				))
+			})
+
+			It("Should forbid providing both an CA secret reference as well as the values", func() {
+				admissionControllerConfiguration.ComponentConfiguration.CA.SecretRef = &corev1.SecretReference{}
+				errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
+				Expect(errorList).To(ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("admissioncontroller.componentConfiguration.ca.secretRef"),
+						"Detail": Equal("cannot both set the secret reference and the CA certificate values"),
+					})),
+				))
+			})
+		})
+
+		It("should forbid providing both the TLS certificate values and the secret reference", func() {
+			admissionControllerConfiguration.ComponentConfiguration.TLS.SecretRef = &corev1.SecretReference{}
+			errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("admissioncontroller.componentConfiguration.tls.secretRef"),
+					"Detail": ContainSubstring("cannot both set the secret reference and the TLS certificate values"),
+				})),
+			))
+		})
+
 		It("should forbid invalid TLS configuration - CA is invalid", func() {
-			admissionControllerConfiguration.ComponentConfiguration.CABundle = pointer.String("invalid")
+			admissionControllerConfiguration.ComponentConfiguration.CA.Crt = pointer.String("invalid")
 			admissionControllerConfiguration.ComponentConfiguration.TLS = nil
 			errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("admissioncontroler.componentConfiguration.caBundle"),
+					"Field": Equal("admissioncontroller.componentConfiguration.ca.crt"),
 				})),
 			))
 		})
 
 		It("should forbid invalid TLS configuration - TLS serving certificate is not signed by the provided CA", func() {
 			someUnknownCA := string(GenerateCACertificate("gardener.cloud:system:unknown").CertificatePEM)
-			admissionControllerConfiguration.ComponentConfiguration.CABundle = pointer.String(someUnknownCA)
+			admissionControllerConfiguration.ComponentConfiguration.CA.Crt = &someUnknownCA
 			errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("admissioncontroler.componentConfiguration.tls.crt"),
+					"Field":  Equal("admissioncontroller.componentConfiguration.tls.crt"),
 					"Detail": Equal("failed to verify the TLS serving certificate against the given CA bundle: x509: certificate signed by unknown authority"),
 				})),
 			))
 		})
 
 		It("should forbid invalid TLS configuration - cert not specified", func() {
-			admissionControllerConfiguration.ComponentConfiguration.TLS.Crt = ""
+			admissionControllerConfiguration.ComponentConfiguration.TLS.Crt = pointer.String("")
 			errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("admissioncontroler.componentConfiguration.tls.crt"),
+					"Field": Equal("admissioncontroller.componentConfiguration.tls.crt"),
 				})),
 			))
 		})
 
 		It("should forbid invalid TLS configuration - cert is invalid", func() {
-			admissionControllerConfiguration.ComponentConfiguration.TLS.Crt = ""
+			admissionControllerConfiguration.ComponentConfiguration.TLS.Crt = pointer.String("")
 			errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("admissioncontroler.componentConfiguration.tls.crt"),
+					"Field": Equal("admissioncontroller.componentConfiguration.tls.crt"),
 				})),
 			))
 		})
 
 		It("should forbid invalid TLS configuration - key not specified", func() {
-			admissionControllerConfiguration.ComponentConfiguration.TLS.Key = ""
+			admissionControllerConfiguration.ComponentConfiguration.TLS.Key = pointer.String("")
 			errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("admissioncontroler.componentConfiguration.tls.key"),
+					"Field": Equal("admissioncontroller.componentConfiguration.tls.key"),
 				})),
 			))
 		})
 
 		It("should forbid invalid TLS configuration - key is invalid", func() {
-			admissionControllerConfiguration.ComponentConfiguration.TLS.Key = ""
+			admissionControllerConfiguration.ComponentConfiguration.TLS.Key = pointer.String("")
 			errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("admissioncontroler.componentConfiguration.tls.key"),
+					"Field": Equal("admissioncontroller.componentConfiguration.tls.key"),
 				})),
 			))
 		})
@@ -160,7 +215,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("admissioncontroler.componentConfiguration.config.server.https.tls.serverCertDir"),
+					"Field": Equal("admissioncontroller.componentConfiguration.config.server.https.tls.serverCertDir"),
 				})),
 			))
 		})
@@ -176,7 +231,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("admissioncontroler.componentConfiguration.config.gardenClientConnection.kubeconfig"),
+					"Field": Equal("admissioncontroller.componentConfiguration.config.gardenClientConnection.kubeconfig"),
 				})),
 			))
 		})
@@ -197,7 +252,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("admissioncontroler.componentConfiguration.config.server.resourceAdmissionConfiguration.mode"),
+					"Field": Equal("admissioncontroller.componentConfiguration.config.server.resourceAdmissionConfiguration.mode"),
 				})),
 			))
 		})
@@ -211,7 +266,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("admissioncontroler.deploymentConfiguration.replicaCount"),
+					"Field": Equal("admissioncontroller.deploymentConfiguration.replicaCount"),
 				})),
 			))
 		})
@@ -223,7 +278,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("admissioncontroler.deploymentConfiguration.serviceAccountName"),
+					"Field": Equal("admissioncontroller.deploymentConfiguration.serviceAccountName"),
 				})),
 			))
 		})
@@ -235,7 +290,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("admissioncontroler.deploymentConfiguration.podLabels"),
+					"Field": Equal("admissioncontroller.deploymentConfiguration.podLabels"),
 				})),
 			))
 		})
@@ -247,7 +302,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("admissioncontroler.deploymentConfiguration.podAnnotations"),
+					"Field": Equal("admissioncontroller.deploymentConfiguration.podAnnotations"),
 				})),
 			))
 		})

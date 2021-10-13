@@ -78,7 +78,7 @@ type APIServerComponentConfiguration struct {
 	Encryption *apiserverconfigv1.EncryptionConfiguration
 	// Etcd contains configuration for the etcd of the Gardener API server
 	Etcd APIServerEtcdConfiguration
-	// CABundle is a PEM encoded CA bundle which will be used by the Kubernetes API server
+	// CA is a PEM encoded CA bundle which will be used by the Kubernetes API server
 	// (either the RuntimeCluster or the VirtualGarden cluster)
 	// to validate the Gardener Extension API server's TLS serving certificate.
 	// It is put into the APIService resources for the Gardener resource groups
@@ -86,8 +86,10 @@ type APIServerComponentConfiguration struct {
 	// has to be signed by this CA.
 	// For more information, please see:
 	// https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/#contacting-the-extension-apiserver
-	// If left empty, generates a new CA or reuses the CA of an existing API server deployment.
-	CABundle *string
+	// If the TLS serving certificate of the Gardener Extension API server is not provided, then must contain the private key
+	// of the CA to generate missing TLS serving certificate.
+	// If left empty, generates a new CA or reuses the CA of an existing APIService registration.
+	CA *CA
 	// TLS contains the TLS serving certificate & key of the Gardener Extension API server
 	// If left empty, generates certificates signed by the provided CA bundle.
 	TLS *TLSServer
@@ -216,6 +218,12 @@ type APIServerEtcdConfiguration struct {
 	// Configures the flags --etcd-keyfile on the Gardener API server.
 	// Optional. Etcd does not have to enforce client authentication.
 	ClientKey *string
+	// SecretRef is an optional reference to a secret in the runtime cluster that contains etcd's CABundle, client certificate and client key
+	// Expects the following keys
+	// - ca.crt:  CABundle
+	// - tls.crt: ClientCert
+	// - tls.key: ClientKey
+	SecretRef *corev1.SecretReference
 }
 
 // APIServerAuditConfiguration contains audit logging configuration
@@ -282,14 +290,17 @@ type APIServerAdmissionConfiguration struct {
 	// Mutating and Validating admission plugins must not be added.
 	// For more information, see here: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
 	Plugins []apiserverv1.AdmissionPluginConfiguration
-	// ValidatingWebhook configures client-credentials to authenticate to validating webhooks
+	// ValidatingWebhook configures client-credentials to authenticate against validating webhooks
 	ValidatingWebhook *APIServerAdmissionWebhookCredentials
-	// MutatingWebhook configures client-credentials to authenticate to validating webhooks
+	// MutatingWebhook configures client-credentials to authenticate against mutating webhooks
 	MutatingWebhook *APIServerAdmissionWebhookCredentials
 }
 
 // APIServerAdmissionWebhookCredentials is required if your admission webhooks require authentication.
 // Contains client-credentials that can be used by the Gardener API server to authenticate to registered Webhooks.
+// Enable this if you want to configure non-Gardener Webhooks.
+// Not required for Gardener to work, as the in-cluster communication with the Gardener Admission Controller
+// does not require client authentication.
 // Also see https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
 type APIServerAdmissionWebhookCredentials struct {
 	// Kubeconfig contains the kubeconfig with credentials to authenticate to an admission webhook.
@@ -298,7 +309,6 @@ type APIServerAdmissionWebhookCredentials struct {
 	// configured in the kubeconfig file.
 	// If token projection is enabled, and this kubeconfig is not set, will default to a kubeconfig
 	// with name '*' and path of the projected service account token.
-	// TODO: Add  the defaulting for the token projection kubeconfig in a later step
 	Kubeconfig *landscaperv1alpha1.Target
 	// TokenProjection enables a projected volume with a service account for the admission webhook credentials.
 	// Requires Service Account Volume Projection to be configured in the runtime cluster.
@@ -313,7 +323,7 @@ type APIServerAdmissionWebhookCredentials struct {
 // Service Account Volume Projection to be used for the APIServer Admission Webhook credentials
 type APIServerAdmissionWebhookCredentialsTokenProjection struct {
 	// Enabled configures if Service Account Volume Projection is used
-	Enabled *bool
+	Enabled bool
 	// Audience contains the intended audience of the token.
 	// A recipient of the token must identify itself with an identifier specified in the audience of the token,
 	// and otherwise should reject the token.

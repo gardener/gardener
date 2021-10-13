@@ -15,8 +15,11 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener/pkg/scheduler/apis/config/encoding"
 	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
+	landscaperv1alpha1 "github.com/gardener/landscaper/apis/core/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -35,6 +38,57 @@ func SetDefaults_Imports(obj *Imports) {
 		obj.GardenerAdmissionController.SeedRestriction == nil {
 		obj.GardenerAdmissionController.SeedRestriction = &SeedRestriction{Enabled: true}
 	}
+
+	// initialise empty as we anyways need to generate certificates
+	if obj.GardenerControllerManager == nil {
+		obj.GardenerControllerManager = &GardenerControllerManager{
+			ComponentConfiguration: &ControllerManagerComponentConfiguration{},
+		}
+	}
+
+	// initialise empty as we anyways need to generate certificates
+	if obj.GardenerAdmissionController == nil {
+		obj.GardenerAdmissionController = &GardenerAdmissionController{}
+	}
+
+	if obj.GardenerAPIServer.ComponentConfiguration.Admission != nil &&
+		obj.GardenerAPIServer.ComponentConfiguration.Admission.MutatingWebhook != nil &&
+		obj.GardenerAPIServer.ComponentConfiguration.Admission.MutatingWebhook.TokenProjection != nil &&
+		obj.GardenerAPIServer.ComponentConfiguration.Admission.MutatingWebhook.TokenProjection.Enabled &&
+		obj.GardenerAPIServer.ComponentConfiguration.Admission.MutatingWebhook.Kubeconfig == nil {
+		obj.GardenerAPIServer.ComponentConfiguration.Admission.MutatingWebhook.Kubeconfig = &landscaperv1alpha1.Target{
+			Spec: landscaperv1alpha1.TargetSpec{
+				Configuration: landscaperv1alpha1.AnyJSON{
+					RawMessage: []byte(getVolumeProjectionKubeconfig("mutating")),
+				},
+			},
+		}
+	}
+
+	if obj.GardenerAPIServer.ComponentConfiguration.Admission != nil &&
+		obj.GardenerAPIServer.ComponentConfiguration.Admission.ValidatingWebhook != nil &&
+		obj.GardenerAPIServer.ComponentConfiguration.Admission.ValidatingWebhook.TokenProjection != nil &&
+		obj.GardenerAPIServer.ComponentConfiguration.Admission.ValidatingWebhook.TokenProjection.Enabled &&
+		obj.GardenerAPIServer.ComponentConfiguration.Admission.ValidatingWebhook.Kubeconfig == nil {
+		obj.GardenerAPIServer.ComponentConfiguration.Admission.ValidatingWebhook.Kubeconfig = &landscaperv1alpha1.Target{
+			Spec: landscaperv1alpha1.TargetSpec{
+				Configuration: landscaperv1alpha1.AnyJSON{
+					RawMessage: []byte(getVolumeProjectionKubeconfig("validating")),
+				},
+			},
+		}
+	}
+}
+
+func getVolumeProjectionKubeconfig(name string) string {
+	return fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Config
+users:
+- name: '*'
+user:
+  tokenFile: /var/run/secrets/admission-tokens/%s-webhook-token`, name)
 }
 
 // SetDefaults_GardenerScheduler sets the default values for the Gardener scheduler configuration
