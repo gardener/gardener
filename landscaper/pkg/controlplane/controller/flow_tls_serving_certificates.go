@@ -88,7 +88,6 @@ func (o *operation) generateTLSServingCertificate(serviceName string, ca imports
 	date := time.Now().UTC().AddDate(10, 0, 0)
 	validity := date.Sub(time.Now().UTC())
 	certConfig := &secretsutil.CertificateSecretConfig{
-		// Name:       fmt.Sprintf("%s-tls", serviceName), // not used
 		CertType:   secretsutil.ServerCert,
 		SigningCA:  caCert,
 		Validity:   &validity,

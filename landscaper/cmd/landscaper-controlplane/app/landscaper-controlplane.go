@@ -52,14 +52,13 @@ import (
 	"k8s.io/component-base/version/verflag"
 )
 
-// NewCommandStartLandscaperGardenelet creates a *cobra.Command object with default parameters
-func NewCommandStartLandscaperGardenelet(ctx context.Context) *cobra.Command {
+// NewCommandStartLandscaperControlplane creates a *cobra.Command object with default parameters
+func NewCommandStartLandscaperControlplane(ctx context.Context) *cobra.Command {
 	opts := NewOptions()
 
 	cmd := &cobra.Command{
 		Use:   "landscaper-controlplane",
 		Short: "Launch the landscaper component for the controlplane.",
-		Long:  "Gardener landscaper component for the controlplane. Sets up the Garden cluster and deploys the Controlplane with TLS bootstrapping to automatically register the configured Seed cluster.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			verflag.PrintAndExitIfRequested()
 

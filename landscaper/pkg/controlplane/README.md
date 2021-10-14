@@ -1,7 +1,7 @@
 # Goal
 
 Deployment of a Gardener control plane consisting of the Gardener API Server, the Gardener Admission Controller, the Gardener Scheduler and the Gardener Controller Manager.
-Designed to run with minimal configuration to bootstrap new or upgrade existing installation.
+Designed to run with minimal configuration to bootstrap a new or upgrade an existing installation.
 
 **NOTE**:  if the Control Plane deployment is run against an existing Gardener Installation, already deployed certificates should be picked up automatically if they are missing in the configuration.
 

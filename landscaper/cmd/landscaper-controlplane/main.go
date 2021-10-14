@@ -25,7 +25,7 @@ import (
 
 func main() {
 	ctx := signals.SetupSignalHandler()
-	command := app.NewCommandStartLandscaperGardenelet(ctx)
+	command := app.NewCommandStartLandscaperControlplane(ctx)
 
 	if err := command.Execute(); err != nil {
 		fmt.Println(err)
