@@ -89,3 +89,7 @@ All newly created projects will only bind the owner to the `uam` role.
 The owner can still grant the `uam` role to other members if desired.
 For projects created before Gardener v1.8 the Gardener Controller Manager will migrate all projects to also assign the `uam` role to all `admin` members (to not break existing use-cases). The corresponding migration logic is present in Gardener Controller Manager from v1.8 to v1.13.
 The project owner can gradually remove these roles if desired. 
+
+## Stale Projects
+
+When a project is not actively used for some period of time the project is marked as "stale". This is done by controller called "Stale Projects Reconciler". Once the project is marked as stale there is a time frame in which if not used it will be deleted by that controller. More detailed information can be found [here](../concepts/controller-manager.md#stale-projects-reconciler).
