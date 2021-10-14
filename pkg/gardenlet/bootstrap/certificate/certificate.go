@@ -96,7 +96,7 @@ func requestCertificate(ctx context.Context, logger logrus.FieldLogger, client k
 
 	logger.Info("Creating certificate signing request...")
 
-	reqName, reqUID, err := csr.RequestCertificate(client, csrData, name, certificatesv1.KubeAPIServerClientSignerName, usages, privateKey)
+	reqName, reqUID, err := csr.RequestCertificate(client, csrData, name, certificatesv1.KubeAPIServerClientSignerName, nil, usages, privateKey)
 	if err != nil {
 		return nil, "", err
 	}

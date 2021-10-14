@@ -146,14 +146,14 @@ var _ = Describe("#Service", func() {
 		It("waits for service", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
+			key := client.ObjectKeyFromObject(expected)
+			Expect(c.Get(ctx, key, expected)).To(Succeed())
+
 			expected.Status = corev1.ServiceStatus{
 				LoadBalancer: corev1.LoadBalancerStatus{
 					Ingress: []corev1.LoadBalancerIngress{{IP: "3.3.3.3"}},
 				},
 			}
-
-			key := client.ObjectKeyFromObject(expected)
-			Expect(c.Get(ctx, key, expected)).To(Succeed())
 			Expect(c.Status().Update(ctx, expected)).To(Succeed())
 			Expect(defaultDepWaiter.Wait(ctx)).To(Succeed())
 			Expect(ingressIP).To(Equal("3.3.3.3"))

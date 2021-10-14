@@ -191,7 +191,7 @@ func (s Spec) String() string {
 }
 
 // PointVersion represents a wildcard (patch) version
-// or concrete numbre
+// or concrete number.
 type PointVersion int
 
 const (
@@ -223,12 +223,12 @@ func (p PointVersion) String() string {
 
 var (
 	// LatestVersion matches the most recent version on the remote server.
-	LatestVersion Spec = Spec{
+	LatestVersion = Spec{
 		Selector:    AnySelector{},
 		CheckLatest: true,
 	}
 	// AnyVersion matches any local or remote version.
-	AnyVersion Spec = Spec{
+	AnyVersion = Spec{
 		Selector: AnySelector{},
 	}
 )

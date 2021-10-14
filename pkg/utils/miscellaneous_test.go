@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/types"
+	gomegatypes "github.com/onsi/gomega/types"
 	"k8s.io/utils/pointer"
 )
 
@@ -63,7 +63,7 @@ var _ = Describe("utils", func() {
 	})
 
 	DescribeTable("#IsTrue",
-		func(value *bool, matcher GomegaMatcher) {
+		func(value *bool, matcher gomegatypes.GomegaMatcher) {
 			Expect(IsTrue(value)).To(matcher)
 		},
 		Entry("nil", nil, BeFalse()),

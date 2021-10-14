@@ -68,8 +68,7 @@ func asExit(val interface{}, exit **exitCode) bool {
 //
 // This should be the first defer in your main function.
 func HandleExitWithCode() {
-	cause := recover()
-	if CheckRecover(cause, func(code int, err error) {
+	if cause := recover(); CheckRecover(cause, func(code int, err error) {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(code)
 	}) {
@@ -81,7 +80,7 @@ func HandleExitWithCode() {
 // if it's an exitCode error.  It returns true if we should re-panic
 // the cause.
 //
-// It's mainly useful for testing, normally you'd use HandleExitWithCode
+// It's mainly useful for testing, normally you'd use HandleExitWithCode.
 func CheckRecover(cause interface{}, cb func(int, error)) bool {
 	if cause == nil {
 		return false

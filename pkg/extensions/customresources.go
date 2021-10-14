@@ -93,17 +93,9 @@ func WaitUntilObjectReadyWithHealthFunction(
 		healthFunc = health.And(health.ObjectHasAnnotationWithValue(v1beta1constants.GardenerTimestamp, expectedTimestamp), healthFunc)
 	}
 
-	resetObj, err := kutil.CreateResetObjectFunc(obj, c.Scheme())
-	if err != nil {
-		return err
-	}
-
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
 		retryCountUntilSevere++
 
-		resetObj()
-		obj.SetName(name)
-		obj.SetNamespace(namespace)
 		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.MinorError(err)
@@ -221,15 +213,7 @@ func WaitUntilExtensionObjectDeleted(
 		namespace = obj.GetNamespace()
 	)
 
-	resetObj, err := kutil.CreateResetObjectFunc(obj, c.Scheme())
-	if err != nil {
-		return err
-	}
-
 	if err := retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (bool, error) {
-		resetObj()
-		obj.SetName(name)
-		obj.SetNamespace(namespace)
 		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
@@ -363,20 +347,7 @@ func WaitUntilExtensionObjectMigrated(
 	interval time.Duration,
 	timeout time.Duration,
 ) error {
-	var (
-		name      = obj.GetName()
-		namespace = obj.GetNamespace()
-	)
-
-	resetObj, err := kutil.CreateResetObjectFunc(obj, c.Scheme())
-	if err != nil {
-		return err
-	}
-
 	return retry.UntilTimeout(ctx, interval, timeout, func(ctx context.Context) (done bool, err error) {
-		resetObj()
-		obj.SetName(name)
-		obj.SetNamespace(namespace)
 		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj); err != nil {
 			if client.IgnoreNotFound(err) == nil {
 				return retry.Ok()
@@ -396,7 +367,7 @@ func WaitUntilExtensionObjectMigrated(
 		if extensionSpec := obj.GetExtensionSpec(); extensionSpec != nil {
 			extensionType = extensionSpec.GetExtensionType()
 		}
-		return retry.MinorError(fmt.Errorf("lastOperation for %s with name %s and type %s is not Migrate=Succeeded", obj.GetObjectKind().GroupVersionKind().Kind, name, extensionType))
+		return retry.MinorError(fmt.Errorf("lastOperation for %s with name %s and type %s is not Migrate=Succeeded", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), extensionType))
 	})
 }
 

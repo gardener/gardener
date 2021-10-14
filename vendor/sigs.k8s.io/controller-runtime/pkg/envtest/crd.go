@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,10 +28,8 @@ import (
 	"time"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -42,12 +39,13 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/yaml"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/conversion"
-	"sigs.k8s.io/yaml"
 )
 
-// CRDInstallOptions are the options for installing CRDs
+// CRDInstallOptions are the options for installing CRDs.
 type CRDInstallOptions struct {
 	// Scheme is used to determine if conversion webhooks should be enabled
 	// for a particular CRD / object.
@@ -62,7 +60,7 @@ type CRDInstallOptions struct {
 	Paths []string
 
 	// CRDs is a list of CRDs to install
-	CRDs []client.Object
+	CRDs []apiextensionsv1.CustomResourceDefinition
 
 	// ErrorIfPathMissing will cause an error if a Path does not exist
 	ErrorIfPathMissing bool
@@ -89,8 +87,8 @@ type CRDInstallOptions struct {
 const defaultPollInterval = 100 * time.Millisecond
 const defaultMaxWait = 10 * time.Second
 
-// InstallCRDs installs a collection of CRDs into a cluster by reading the crd yaml files from a directory
-func InstallCRDs(config *rest.Config, options CRDInstallOptions) ([]client.Object, error) {
+// InstallCRDs installs a collection of CRDs into a cluster by reading the crd yaml files from a directory.
+func InstallCRDs(config *rest.Config, options CRDInstallOptions) ([]apiextensionsv1.CustomResourceDefinition, error) {
 	defaultCRDOptions(&options)
 
 	// Read the CRD yamls into options.CRDs
@@ -115,7 +113,7 @@ func InstallCRDs(config *rest.Config, options CRDInstallOptions) ([]client.Objec
 	return options.CRDs, nil
 }
 
-// readCRDFiles reads the directories of CRDs in options.Paths and adds the CRD structs to options.CRDs
+// readCRDFiles reads the directories of CRDs in options.Paths and adds the CRD structs to options.CRDs.
 func readCRDFiles(options *CRDInstallOptions) error {
 	if len(options.Paths) > 0 {
 		crdList, err := renderCRDs(options)
@@ -128,7 +126,7 @@ func readCRDFiles(options *CRDInstallOptions) error {
 	return nil
 }
 
-// defaultCRDOptions sets the default values for CRDs
+// defaultCRDOptions sets the default values for CRDs.
 func defaultCRDOptions(o *CRDInstallOptions) {
 	if o.Scheme == nil {
 		o.Scheme = scheme.Scheme
@@ -141,50 +139,15 @@ func defaultCRDOptions(o *CRDInstallOptions) {
 	}
 }
 
-// WaitForCRDs waits for the CRDs to appear in discovery
-func WaitForCRDs(config *rest.Config, crds []client.Object, options CRDInstallOptions) error {
+// WaitForCRDs waits for the CRDs to appear in discovery.
+func WaitForCRDs(config *rest.Config, crds []apiextensionsv1.CustomResourceDefinition, options CRDInstallOptions) error {
 	// Add each CRD to a map of GroupVersion to Resource
 	waitingFor := map[schema.GroupVersion]*sets.String{}
-	for _, crd := range runtimeCRDListToUnstructured(crds) {
+	for _, crd := range crds {
 		gvs := []schema.GroupVersion{}
-		crdGroup, _, err := unstructured.NestedString(crd.Object, "spec", "group")
-		if err != nil {
-			return err
-		}
-		crdPlural, _, err := unstructured.NestedString(crd.Object, "spec", "names", "plural")
-		if err != nil {
-			return err
-		}
-		crdVersion, _, err := unstructured.NestedString(crd.Object, "spec", "version")
-		if err != nil {
-			return err
-		}
-		versions, found, err := unstructured.NestedSlice(crd.Object, "spec", "versions")
-		if err != nil {
-			return err
-		}
-
-		// gvs should be added here only if single version is found. If multiple version is found we will add those version
-		// based on the version is served or not.
-		if crdVersion != "" && !found {
-			gvs = append(gvs, schema.GroupVersion{Group: crdGroup, Version: crdVersion})
-		}
-
-		for _, version := range versions {
-			versionMap, ok := version.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			served, _, err := unstructured.NestedBool(versionMap, "served")
-			if err != nil {
-				return err
-			}
-			if served {
-				versionName, _, err := unstructured.NestedString(versionMap, "name")
-				if err != nil {
-					return err
-				}
-				gvs = append(gvs, schema.GroupVersion{Group: crdGroup, Version: versionName})
+		for _, version := range crd.Spec.Versions {
+			if version.Served {
+				gvs = append(gvs, schema.GroupVersion{Group: crd.Spec.Group, Version: version.Name})
 			}
 		}
 
@@ -195,7 +158,7 @@ func WaitForCRDs(config *rest.Config, crds []client.Object, options CRDInstallOp
 				waitingFor[gv] = &sets.String{}
 			}
 			// Add the Resource
-			waitingFor[gv].Insert(crdPlural)
+			waitingFor[gv].Insert(crd.Spec.Names.Plural)
 		}
 	}
 
@@ -204,7 +167,7 @@ func WaitForCRDs(config *rest.Config, crds []client.Object, options CRDInstallOp
 	return wait.PollImmediate(options.PollInterval, options.MaxTime, p.poll)
 }
 
-// poller checks if all the resources have been found in discovery, and returns false if not
+// poller checks if all the resources have been found in discovery, and returns false if not.
 type poller struct {
 	// config is used to get discovery
 	config *rest.Config
@@ -213,7 +176,7 @@ type poller struct {
 	waitingFor map[schema.GroupVersion]*sets.String
 }
 
-// poll checks if all the resources have been found in discovery, and returns false if not
+// poll checks if all the resources have been found in discovery, and returns false if not.
 func (p *poller) poll() (done bool, err error) {
 	// Create a new clientset to avoid any client caching of discovery
 	cs, err := clientset.NewForConfig(p.config)
@@ -233,7 +196,7 @@ func (p *poller) poll() (done bool, err error) {
 		// TODO: Maybe the controller-runtime client should be able to do this...
 		resourceList, err := cs.Discovery().ServerResourcesForGroupVersion(gv.Group + "/" + gv.Version)
 		if err != nil {
-			return false, nil
+			return false, nil //nolint:nilerr
 		}
 
 		// Remove each found resource from the resources set that we are waiting for
@@ -249,9 +212,8 @@ func (p *poller) poll() (done bool, err error) {
 	return allFound, nil
 }
 
-// UninstallCRDs uninstalls a collection of CRDs by reading the crd yaml files from a directory
+// UninstallCRDs uninstalls a collection of CRDs by reading the crd yaml files from a directory.
 func UninstallCRDs(config *rest.Config, options CRDInstallOptions) error {
-
 	// Read the CRD yamls into options.CRDs
 	if err := readCRDFiles(&options); err != nil {
 		return err
@@ -264,9 +226,10 @@ func UninstallCRDs(config *rest.Config, options CRDInstallOptions) error {
 	}
 
 	// Uninstall each CRD
-	for _, crd := range runtimeCRDListToUnstructured(options.CRDs) {
+	for _, crd := range options.CRDs {
+		crd := crd
 		log.V(1).Info("uninstalling CRD", "crd", crd.GetName())
-		if err := cs.Delete(context.TODO(), crd); err != nil {
+		if err := cs.Delete(context.TODO(), &crd); err != nil {
 			// If CRD is not found, we can consider success
 			if !apierrors.IsNotFound(err) {
 				return err
@@ -277,21 +240,22 @@ func UninstallCRDs(config *rest.Config, options CRDInstallOptions) error {
 	return nil
 }
 
-// CreateCRDs creates the CRDs
-func CreateCRDs(config *rest.Config, crds []client.Object) error {
+// CreateCRDs creates the CRDs.
+func CreateCRDs(config *rest.Config, crds []apiextensionsv1.CustomResourceDefinition) error {
 	cs, err := client.New(config, client.Options{})
 	if err != nil {
 		return fmt.Errorf("unable to create client: %w", err)
 	}
 
 	// Create each CRD
-	for _, crd := range runtimeCRDListToUnstructured(crds) {
+	for _, crd := range crds {
+		crd := crd
 		log.V(1).Info("installing CRD", "crd", crd.GetName())
 		existingCrd := crd.DeepCopy()
 		err := cs.Get(context.TODO(), client.ObjectKey{Name: crd.GetName()}, existingCrd)
 		switch {
 		case apierrors.IsNotFound(err):
-			if err := cs.Create(context.TODO(), crd); err != nil {
+			if err := cs.Create(context.TODO(), &crd); err != nil {
 				return fmt.Errorf("unable to create CRD %q: %w", crd.GetName(), err)
 			}
 		case err != nil:
@@ -303,7 +267,7 @@ func CreateCRDs(config *rest.Config, crds []client.Object) error {
 					return err
 				}
 				crd.SetResourceVersion(existingCrd.GetResourceVersion())
-				return cs.Update(context.TODO(), crd)
+				return cs.Update(context.TODO(), &crd)
 			}); err != nil {
 				return err
 			}
@@ -313,7 +277,7 @@ func CreateCRDs(config *rest.Config, crds []client.Object) error {
 }
 
 // renderCRDs iterate through options.Paths and extract all CRD files.
-func renderCRDs(options *CRDInstallOptions) ([]client.Object, error) {
+func renderCRDs(options *CRDInstallOptions) ([]apiextensionsv1.CustomResourceDefinition, error) {
 	var (
 		err   error
 		info  os.FileInfo
@@ -325,7 +289,7 @@ func renderCRDs(options *CRDInstallOptions) ([]client.Object, error) {
 		Name string
 	}
 
-	crds := map[GVKN]*unstructured.Unstructured{}
+	crds := map[GVKN]apiextensionsv1.CustomResourceDefinition{}
 
 	for _, path := range options.Paths {
 		var filePath = path
@@ -340,10 +304,8 @@ func renderCRDs(options *CRDInstallOptions) ([]client.Object, error) {
 
 		if !info.IsDir() {
 			filePath, files = filepath.Dir(path), []os.FileInfo{info}
-		} else {
-			if files, err = ioutil.ReadDir(path); err != nil {
-				return nil, err
-			}
+		} else if files, err = ioutil.ReadDir(path); err != nil {
+			return nil, err
 		}
 
 		log.V(1).Info("reading CRDs from path", "path", path)
@@ -364,7 +326,7 @@ func renderCRDs(options *CRDInstallOptions) ([]client.Object, error) {
 	}
 
 	// Converting map to a list to return
-	var res []client.Object
+	res := []apiextensionsv1.CustomResourceDefinition{}
 	for _, obj := range crds {
 		res = append(res, obj)
 	}
@@ -373,12 +335,7 @@ func renderCRDs(options *CRDInstallOptions) ([]client.Object, error) {
 
 // modifyConversionWebhooks takes all the registered CustomResourceDefinitions and applies modifications
 // to conditionally enable webhooks if the type is registered within the scheme.
-//
-// The complexity of this function is high mostly due to all the edge cases that we need to handle:
-// CRDv1beta1, CRDv1, and their unstructured counterpart.
-//
-// We should be able to simplify this code once we drop support for v1beta1 and standardize around the typed CRDv1 object.
-func modifyConversionWebhooks(crds []client.Object, scheme *runtime.Scheme, webhookOptions WebhookInstallOptions) error { //nolint:gocyclo
+func modifyConversionWebhooks(crds []apiextensionsv1.CustomResourceDefinition, scheme *runtime.Scheme, webhookOptions WebhookInstallOptions) error {
 	if len(webhookOptions.LocalServingCAData) == 0 {
 		return nil
 	}
@@ -402,164 +359,38 @@ func modifyConversionWebhooks(crds []client.Object, scheme *runtime.Scheme, webh
 	}
 	url := pointer.StringPtr(fmt.Sprintf("https://%s/convert", hostPort))
 
-	for _, crd := range crds {
-		switch c := crd.(type) {
-		case *apiextensionsv1beta1.CustomResourceDefinition:
-			// Continue if we're preserving unknown fields.
-			//
-			// preserveUnknownFields defaults to true if `nil` in v1beta1.
-			if c.Spec.PreserveUnknownFields == nil || *c.Spec.PreserveUnknownFields {
-				continue
+	for i := range crds {
+		// Continue if we're preserving unknown fields.
+		if crds[i].Spec.PreserveUnknownFields {
+			continue
+		}
+		// Continue if the GroupKind isn't registered as being convertible.
+		if _, ok := convertibles[schema.GroupKind{
+			Group: crds[i].Spec.Group,
+			Kind:  crds[i].Spec.Names.Kind,
+		}]; !ok {
+			continue
+		}
+		if crds[i].Spec.Conversion == nil {
+			crds[i].Spec.Conversion = &apiextensionsv1.CustomResourceConversion{
+				Webhook: &apiextensionsv1.WebhookConversion{},
 			}
-			// Continue if the GroupKind isn't registered as being convertible.
-			if _, ok := convertibles[schema.GroupKind{
-				Group: c.Spec.Group,
-				Kind:  c.Spec.Names.Kind,
-			}]; !ok {
-				continue
-			}
-			c.Spec.Conversion.Strategy = apiextensionsv1beta1.WebhookConverter
-			c.Spec.Conversion.WebhookClientConfig.Service = nil
-			c.Spec.Conversion.WebhookClientConfig = &apiextensionsv1beta1.WebhookClientConfig{
-				Service:  nil,
-				URL:      url,
-				CABundle: webhookOptions.LocalServingCAData,
-			}
-		case *apiextensionsv1.CustomResourceDefinition:
-			// Continue if we're preserving unknown fields.
-			if c.Spec.PreserveUnknownFields {
-				continue
-			}
-			// Continue if the GroupKind isn't registered as being convertible.
-			if _, ok := convertibles[schema.GroupKind{
-				Group: c.Spec.Group,
-				Kind:  c.Spec.Names.Kind,
-			}]; !ok {
-				continue
-			}
-			c.Spec.Conversion.Strategy = apiextensionsv1.WebhookConverter
-			c.Spec.Conversion.Webhook.ClientConfig.Service = nil
-			c.Spec.Conversion.Webhook.ClientConfig = &apiextensionsv1.WebhookClientConfig{
-				Service:  nil,
-				URL:      url,
-				CABundle: webhookOptions.LocalServingCAData,
-			}
-		case *unstructured.Unstructured:
-			webhookClientConfig := map[string]interface{}{
-				"url":      *url,
-				"caBundle": base64.StdEncoding.EncodeToString(webhookOptions.LocalServingCAData),
-			}
-
-			switch c.GroupVersionKind().Version {
-			case "v1beta1":
-				// Continue if we're preserving unknown fields.
-				//
-				// preserveUnknownFields defaults to true if `nil` in v1beta1.
-				if preserve, found, err := unstructured.NestedBool(c.Object, "spec", "preserveUnknownFields"); preserve || !found {
-					continue
-				} else if err != nil {
-					return err
-				}
-
-				// Continue if the GroupKind isn't registered as being convertible.
-				group, found, err := unstructured.NestedString(c.Object, "spec", "group")
-				if !found {
-					continue
-				} else if err != nil {
-					return err
-				}
-				kind, found, err := unstructured.NestedString(c.Object, "spec", "names", "kind")
-				if !found {
-					continue
-				} else if err != nil {
-					return err
-				}
-				if _, ok := convertibles[schema.GroupKind{
-					Group: group,
-					Kind:  kind,
-				}]; !ok {
-					continue
-				}
-
-				// Set the strategy.
-				if err := unstructured.SetNestedField(
-					c.Object,
-					string(apiextensionsv1beta1.WebhookConverter),
-					"spec", "conversion", "strategy"); err != nil {
-					return err
-				}
-				// Set the conversion review versions.
-				if err := unstructured.SetNestedStringSlice(
-					c.Object,
-					[]string{"v1beta1"},
-					"spec", "conversion", "webhook", "clientConfig"); err != nil {
-					return err
-				}
-				// Set the client configuration.
-				if err := unstructured.SetNestedMap(
-					c.Object,
-					webhookClientConfig,
-					"spec", "conversion", "webhookClientConfig"); err != nil {
-					return err
-				}
-			case "v1":
-				if preserve, _, err := unstructured.NestedBool(c.Object, "spec", "preserveUnknownFields"); preserve {
-					continue
-				} else if err != nil {
-					return err
-				}
-
-				// Continue if the GroupKind isn't registered as being convertible.
-				group, found, err := unstructured.NestedString(c.Object, "spec", "group")
-				if !found {
-					continue
-				} else if err != nil {
-					return err
-				}
-				kind, found, err := unstructured.NestedString(c.Object, "spec", "names", "kind")
-				if !found {
-					continue
-				} else if err != nil {
-					return err
-				}
-				if _, ok := convertibles[schema.GroupKind{
-					Group: group,
-					Kind:  kind,
-				}]; !ok {
-					continue
-				}
-
-				// Set the strategy.
-				if err := unstructured.SetNestedField(
-					c.Object,
-					string(apiextensionsv1.WebhookConverter),
-					"spec", "conversion", "strategy"); err != nil {
-					return err
-				}
-				// Set the conversion review versions.
-				if err := unstructured.SetNestedStringSlice(
-					c.Object,
-					[]string{"v1", "v1beta1"},
-					"spec", "conversion", "webhook", "conversionReviewVersions"); err != nil {
-					return err
-				}
-				// Set the client configuration.
-				if err := unstructured.SetNestedMap(
-					c.Object,
-					webhookClientConfig,
-					"spec", "conversion", "webhook", "clientConfig"); err != nil {
-					return err
-				}
-			}
+		}
+		crds[i].Spec.Conversion.Strategy = apiextensionsv1.WebhookConverter
+		crds[i].Spec.Conversion.Webhook.ConversionReviewVersions = []string{"v1", "v1beta1"}
+		crds[i].Spec.Conversion.Webhook.ClientConfig = &apiextensionsv1.WebhookClientConfig{
+			Service:  nil,
+			URL:      url,
+			CABundle: webhookOptions.LocalServingCAData,
 		}
 	}
 
 	return nil
 }
 
-// readCRDs reads the CRDs from files and Unmarshals them into structs
-func readCRDs(basePath string, files []os.FileInfo) ([]*unstructured.Unstructured, error) {
-	var crds []*unstructured.Unstructured
+// readCRDs reads the CRDs from files and Unmarshals them into structs.
+func readCRDs(basePath string, files []os.FileInfo) ([]apiextensionsv1.CustomResourceDefinition, error) {
+	var crds []apiextensionsv1.CustomResourceDefinition
 
 	// White list the file extensions that may contain CRDs
 	crdExts := sets.NewString(".json", ".yaml", ".yml")
@@ -577,25 +408,15 @@ func readCRDs(basePath string, files []os.FileInfo) ([]*unstructured.Unstructure
 		}
 
 		for _, doc := range docs {
-			crd := &unstructured.Unstructured{}
+			crd := &apiextensionsv1.CustomResourceDefinition{}
 			if err = yaml.Unmarshal(doc, crd); err != nil {
 				return nil, err
 			}
 
-			// Check that it is actually a CRD
-			crdKind, _, err := unstructured.NestedString(crd.Object, "spec", "names", "kind")
-			if err != nil {
-				return nil, err
-			}
-			crdGroup, _, err := unstructured.NestedString(crd.Object, "spec", "group")
-			if err != nil {
-				return nil, err
-			}
-
-			if crd.GetKind() != "CustomResourceDefinition" || crdKind == "" || crdGroup == "" {
+			if crd.Kind != "CustomResourceDefinition" || crd.Spec.Names.Kind == "" || crd.Spec.Group == "" {
 				continue
 			}
-			crds = append(crds, crd)
+			crds = append(crds, *crd)
 		}
 
 		log.V(1).Info("read CRDs from file", "file", file.Name())
@@ -603,9 +424,9 @@ func readCRDs(basePath string, files []os.FileInfo) ([]*unstructured.Unstructure
 	return crds, nil
 }
 
-// readDocuments reads documents from file
+// readDocuments reads documents from file.
 func readDocuments(fp string) ([][]byte, error) {
-	b, err := ioutil.ReadFile(fp)
+	b, err := ioutil.ReadFile(fp) //nolint:gosec
 	if err != nil {
 		return nil, err
 	}

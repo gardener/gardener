@@ -33,13 +33,13 @@ import (
 	"time"
 )
 
-// ListenAddr represents some listening address and port
+// ListenAddr represents some listening address and port.
 type ListenAddr struct {
 	Address string
 	Port    string
 }
 
-// URL returns a URL for this address with the given scheme and subpath
+// URL returns a URL for this address with the given scheme and subpath.
 func (l *ListenAddr) URL(scheme string, path string) *url.URL {
 	return &url.URL{
 		Scheme: scheme,
@@ -48,7 +48,7 @@ func (l *ListenAddr) URL(scheme string, path string) *url.URL {
 	}
 }
 
-// HostPort returns the joined host-port pair for this address
+// HostPort returns the joined host-port pair for this address.
 func (l *ListenAddr) HostPort() string {
 	return net.JoinHostPort(l.Address, l.Port)
 }
@@ -159,8 +159,7 @@ func (ps *State) Start(stdout, stderr io.Writer) (err error) {
 
 	ready := make(chan bool)
 	timedOut := time.After(ps.StartTimeout)
-	var pollerStopCh stopChannel
-	pollerStopCh = make(stopChannel)
+	pollerStopCh := make(stopChannel)
 	go pollURLUntilOK(ps.HealthCheck.URL, ps.HealthCheck.PollInterval, ready, pollerStopCh)
 
 	ps.waitDone = make(chan struct{})
@@ -198,7 +197,7 @@ func (ps *State) Start(stdout, stderr io.Writer) (err error) {
 		}
 		if ps.Cmd != nil {
 			// intentionally ignore this -- we might've crashed, failed to start, etc
-			ps.Cmd.Process.Signal(syscall.SIGTERM) //nolint errcheck
+			ps.Cmd.Process.Signal(syscall.SIGTERM) //nolint:errcheck
 		}
 		return fmt.Errorf("timeout waiting for process %s to start", path.Base(ps.Path))
 	}
@@ -220,7 +219,7 @@ func pollURLUntilOK(url url.URL, interval time.Duration, ready chan bool, stopCh
 				// there's probably certs *somewhere*,
 				// but it's fine to just skip validating
 				// them for health checks during testing
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: true, //nolint:gosec
 			},
 		},
 	}
@@ -249,6 +248,12 @@ func pollURLUntilOK(url url.URL, interval time.Duration, ready chan bool, stopCh
 // Stop stops this process gracefully, waits for its termination, and cleans up
 // the CertDir if necessary.
 func (ps *State) Stop() error {
+	// Always clear the directory if we need to.
+	defer func() {
+		if ps.DirNeedsCleaning {
+			_ = os.RemoveAll(ps.Dir)
+		}
+	}()
 	if ps.Cmd == nil {
 		return nil
 	}
@@ -268,9 +273,5 @@ func (ps *State) Stop() error {
 		return fmt.Errorf("timeout waiting for process %s to stop", path.Base(ps.Path))
 	}
 	ps.ready = false
-	if ps.DirNeedsCleaning {
-		return os.RemoveAll(ps.Dir)
-	}
-
 	return nil
 }

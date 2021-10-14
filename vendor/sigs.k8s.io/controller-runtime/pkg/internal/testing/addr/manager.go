@@ -17,79 +17,110 @@ limitations under the License.
 package addr
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"net"
-	"sync"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/internal/flock"
 )
 
 // TODO(directxman12): interface / release functionality for external port managers
 
 const (
-	portReserveTime   = 1 * time.Minute
+	portReserveTime   = 2 * time.Minute
 	portConflictRetry = 100
+	portFilePrefix    = "port-"
 )
 
-type portCache struct {
-	lock  sync.Mutex
-	ports map[int]time.Time
+var (
+	cacheDir string
+)
+
+func init() {
+	baseDir, err := os.UserCacheDir()
+	if err != nil {
+		baseDir = os.TempDir()
+	}
+	cacheDir = filepath.Join(baseDir, "kubebuilder-envtest")
+	if err := os.MkdirAll(cacheDir, 0750); err != nil {
+		panic(err)
+	}
 }
 
-func (c *portCache) add(port int) bool {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	// remove outdated port
-	for p, t := range c.ports {
-		if time.Since(t) > portReserveTime {
-			delete(c.ports, p)
+type portCache struct{}
+
+func (c *portCache) add(port int) (bool, error) {
+	// Remove outdated ports.
+	if err := fs.WalkDir(os.DirFS(cacheDir), ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
+		if d.IsDir() || !d.Type().IsRegular() || !strings.HasPrefix(path, portFilePrefix) {
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		if time.Since(info.ModTime()) > portReserveTime {
+			if err := os.Remove(filepath.Join(cacheDir, path)); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return false, err
 	}
-	// try allocating new port
-	if _, ok := c.ports[port]; ok {
-		return false
+	// Try allocating new port, by acquiring a file.
+	path := fmt.Sprintf("%s/%s%d", cacheDir, portFilePrefix, port)
+	if err := flock.Acquire(path); errors.Is(err, flock.ErrAlreadyLocked) {
+		return false, nil
+	} else if err != nil {
+		return false, err
 	}
-	c.ports[port] = time.Now()
-	return true
+	return true, nil
 }
 
-var cache = &portCache{
-	ports: make(map[int]time.Time),
-}
+var cache = &portCache{}
 
-func suggest(listenHost string) (port int, resolvedHost string, err error) {
+func suggest(listenHost string) (*net.TCPListener, int, string, error) {
 	if listenHost == "" {
 		listenHost = "localhost"
 	}
 	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(listenHost, "0"))
 	if err != nil {
-		return
+		return nil, -1, "", err
 	}
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		return
+		return nil, -1, "", err
 	}
-	port = l.Addr().(*net.TCPAddr).Port
-	defer func() {
-		err = l.Close()
-	}()
-	resolvedHost = addr.IP.String()
-	return
+	return l, l.Addr().(*net.TCPAddr).Port,
+		addr.IP.String(),
+		nil
 }
 
 // Suggest suggests an address a process can listen on. It returns
 // a tuple consisting of a free port and the hostname resolved to its IP.
 // It makes sure that new port allocated does not conflict with old ports
 // allocated within 1 minute.
-func Suggest(listenHost string) (port int, resolvedHost string, err error) {
+func Suggest(listenHost string) (int, string, error) {
 	for i := 0; i < portConflictRetry; i++ {
-		port, resolvedHost, err = suggest(listenHost)
+		listener, port, resolvedHost, err := suggest(listenHost)
 		if err != nil {
-			return
+			return -1, "", err
 		}
-		if cache.add(port) {
-			return
+		defer listener.Close()
+		if ok, err := cache.add(port); ok {
+			return port, resolvedHost, nil
+		} else if err != nil {
+			return -1, "", err
 		}
 	}
-	err = fmt.Errorf("no free ports found after %d retries", portConflictRetry)
-	return
+	return -1, "", fmt.Errorf("no free ports found after %d retries", portConflictRetry)
 }

@@ -179,36 +179,6 @@ var _ = Describe("Object", func() {
 		})
 	})
 
-	Describe("#CreateResetObjectFunc", func() {
-		var (
-			obj = &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "non-empty-sa",
-				},
-			}
-			objCopy = obj.DeepCopy()
-		)
-
-		It("should fail because the GVK for the object cannot be determined", func() {
-			f, err := CreateResetObjectFunc(obj, runtime.NewScheme())
-			Expect(f).To(BeNil())
-			Expect(runtime.IsNotRegisteredError(err)).To(BeTrue())
-			Expect(obj).To(Equal(objCopy))
-		})
-
-		It("should return a function that allows resets an object", func() {
-			scheme := runtime.NewScheme()
-			Expect(corev1.AddToScheme(scheme)).To(Succeed())
-
-			f, err := CreateResetObjectFunc(obj, scheme)
-			Expect(f).NotTo(BeNil())
-			Expect(err).NotTo(HaveOccurred())
-
-			f()
-			Expect(obj).To(Equal(&corev1.ServiceAccount{}))
-		})
-	})
-
 	Describe("#MakeUnique", func() {
 		var (
 			name                 = "some-name"

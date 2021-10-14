@@ -43,7 +43,7 @@ type User struct {
 // 1. Configure
 // 2. Start
 // 3. AddUsers (0+ calls)
-// 4. Stop
+// 4. Stop.
 type Authn interface {
 	// Configure provides the working directory to this authenticator,
 	// and configures the given API server arguments to make use of this authenticator.
@@ -128,7 +128,7 @@ func (c *CertAuthn) Start() error {
 		return fmt.Errorf("start called before configure")
 	}
 	caCrt := c.ca.CA.CertBytes()
-	if err := ioutil.WriteFile(c.caCrtPath(), caCrt, 0640); err != nil {
+	if err := ioutil.WriteFile(c.caCrtPath(), caCrt, 0640); err != nil { //nolint:gosec
 		return fmt.Errorf("unable to save the client certificate CA to %s: %w", c.caCrtPath(), err)
 	}
 

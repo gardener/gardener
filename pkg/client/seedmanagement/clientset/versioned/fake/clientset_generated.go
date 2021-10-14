@@ -74,7 +74,10 @@ func (c *Clientset) Tracker() testing.ObjectTracker {
 	return c.tracker
 }
 
-var _ clientset.Interface = &Clientset{}
+var (
+	_ clientset.Interface = &Clientset{}
+	_ testing.FakeClient  = &Clientset{}
+)
 
 // SeedmanagementV1alpha1 retrieves the SeedmanagementV1alpha1Client
 func (c *Clientset) SeedmanagementV1alpha1() seedmanagementv1alpha1.SeedmanagementV1alpha1Interface {

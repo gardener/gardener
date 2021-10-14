@@ -165,7 +165,7 @@ func (s *Store) Add(ctx context.Context, item Item, contents io.Reader) (resErr 
 		}
 		if err := func() error { // IIFE to get the defer properly in a loop
 			defer binOut.Close()
-			if _, err := io.Copy(binOut, tarReader); err != nil {
+			if _, err := io.Copy(binOut, tarReader); err != nil { //nolint:gosec
 				return fmt.Errorf("unable to write file %s from archive to disk for version-platform pair %s", targetPath, itemName)
 			}
 			return nil
@@ -235,7 +235,7 @@ func (s *Store) unpackedPath(name string) afero.Fs {
 }
 
 // eachItem iterates through the on-disk versions that match our version & platform selector,
-// calling the callback for each
+// calling the callback for each.
 func (s *Store) eachItem(ctx context.Context, filter Filter, cb func(name string, item Item)) error {
 	log := logr.FromContext(ctx)
 	entries, err := afero.ReadDir(s.unpackedBase(), "")

@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/types"
+	gomegatypes "github.com/onsi/gomega/types"
 )
 
 var _ = Describe("errors", func() {
@@ -67,7 +67,7 @@ var _ = Describe("errors", func() {
 	)
 
 	DescribeTable("#ExtractErrorCodes",
-		func(err error, matcher GomegaMatcher) {
+		func(err error, matcher gomegatypes.GomegaMatcher) {
 			Expect(ExtractErrorCodes(err)).To(matcher)
 		},
 
@@ -91,7 +91,7 @@ var _ = Describe("errors", func() {
 	)
 
 	DescribeTable("#HasNonRetryableErrorCode",
-		func(lastErrors []gardencorev1beta1.LastError, matcher GomegaMatcher) {
+		func(lastErrors []gardencorev1beta1.LastError, matcher gomegatypes.GomegaMatcher) {
 			Expect(HasNonRetryableErrorCode(lastErrors...)).To(matcher)
 		},
 
@@ -103,7 +103,7 @@ var _ = Describe("errors", func() {
 	)
 
 	DescribeTable("#HasErrorCode",
-		func(lastErrors []gardencorev1beta1.LastError, code gardencorev1beta1.ErrorCode, matcher GomegaMatcher) {
+		func(lastErrors []gardencorev1beta1.LastError, code gardencorev1beta1.ErrorCode, matcher gomegatypes.GomegaMatcher) {
 			Expect(HasErrorCode(lastErrors, code)).To(matcher)
 		},
 

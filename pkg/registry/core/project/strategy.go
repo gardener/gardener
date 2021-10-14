@@ -140,6 +140,16 @@ func (projectStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtim
 	return validation.ValidateProjectUpdate(newProject, oldProject)
 }
 
+// WarningsOnCreate returns warnings to the client performing a create.
+func (projectStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return nil
+}
+
+// WarningsOnUpdate returns warnings to the client performing the update.
+func (projectStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return nil
+}
+
 type projectStatusStrategy struct {
 	projectStrategy
 }

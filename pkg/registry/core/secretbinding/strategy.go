@@ -66,3 +66,13 @@ func (secretBindingStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj 
 	oldBinding, newBinding := oldObj.(*core.SecretBinding), newObj.(*core.SecretBinding)
 	return validation.ValidateSecretBindingUpdate(newBinding, oldBinding)
 }
+
+// WarningsOnCreate returns warnings to the client performing a create.
+func (secretBindingStrategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return nil
+}
+
+// WarningsOnUpdate returns warnings to the client performing the update.
+func (secretBindingStrategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return nil
+}

@@ -19,6 +19,7 @@ import (
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	oscutils "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/utils"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -184,6 +185,7 @@ kubeReserved:
 logging: {}
 maxOpenFiles: 1000000
 maxPods: 110
+memorySwap: {}
 nodeStatusReportFrequency: 0s
 nodeStatusUpdateFrequency: 10s
 registryBurst: 10
@@ -212,7 +214,7 @@ volumeStatsAggPeriod: 1m0s
 			// Call Encode and check result
 			fci, err := c.Encode(kubeletConfig, "")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(fci).To(Equal(fileContent))
+			Expect(fci).To(DeepEqual(fileContent))
 		})
 	})
 
@@ -224,7 +226,7 @@ volumeStatsAggPeriod: 1m0s
 			// Call Decode and check result
 			kc, err := c.Decode(fileContent)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(kc).To(Equal(kubeletConfig))
+			Expect(kc).To(DeepEqual(kubeletConfig))
 		})
 	})
 })

@@ -37,7 +37,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/types"
+	gomegatypes "github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -719,7 +719,7 @@ var _ = Describe("extensions", func() {
 		})
 
 		DescribeTable("should return error if migration times out",
-			func(lastOperation *gardencorev1beta1.LastOperation, match func() GomegaMatcher) {
+			func(lastOperation *gardencorev1beta1.LastOperation, match func() gomegatypes.GomegaMatcher) {
 				expected.Status.LastOperation = lastOperation
 				Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "adding pre-existing worker succeeds")
 				err := WaitUntilExtensionObjectMigrated(
@@ -758,7 +758,7 @@ var _ = Describe("extensions", func() {
 		})
 
 		DescribeTable("should return error if migration times out",
-			func(lastOperations []*gardencorev1beta1.LastOperation, match func() GomegaMatcher) {
+			func(lastOperations []*gardencorev1beta1.LastOperation, match func() gomegatypes.GomegaMatcher) {
 				for i, lastOp := range lastOperations {
 					existing := expected.DeepCopy()
 					existing.Status.LastOperation = lastOp

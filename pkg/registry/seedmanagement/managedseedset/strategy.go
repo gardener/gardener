@@ -124,6 +124,16 @@ func (Strategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Objec
 	return validation.ValidateManagedSeedSetUpdate(newManagedSeedSet, oldManagedSeedSet)
 }
 
+// WarningsOnCreate returns warnings to the client performing a create.
+func (Strategy) WarningsOnCreate(ctx context.Context, obj runtime.Object) []string {
+	return nil
+}
+
+// WarningsOnUpdate returns warnings to the client performing the update.
+func (Strategy) WarningsOnUpdate(ctx context.Context, obj, old runtime.Object) []string {
+	return nil
+}
+
 // StatusStrategy defines the strategy for storing seeds statuses.
 type StatusStrategy struct {
 	Strategy
