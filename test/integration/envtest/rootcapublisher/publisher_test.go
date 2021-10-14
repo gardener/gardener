@@ -48,13 +48,9 @@ var _ = Describe("Root CA Controller tests", func() {
 
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-		}, time.Millisecond*300, time.Millisecond*10).Should(Succeed())
+		}, time.Millisecond*500, time.Millisecond*10).Should(Succeed())
 	})
 
-	// Open:
-	// Update on namespace -> create secret
-
-	//
 	It("should successfully create a config map on creating a namespace", func() {})
 
 	It("should keep the secret in the desired state after Delete/Update of the secret", func() {
@@ -73,7 +69,10 @@ var _ = Describe("Root CA Controller tests", func() {
 		Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
 		Eventually(func() bool {
-			testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+			if err := testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+				return false
+			}
+
 			return configMap.Data != nil
 		}, time.Millisecond*300, time.Millisecond*10).Should(BeTrue())
 
@@ -83,7 +82,9 @@ var _ = Describe("Root CA Controller tests", func() {
 		Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
 		Consistently(func() bool {
-			testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+			if err := testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+				return false
+			}
 			return configMap.Data == nil
 		}, time.Millisecond*300, time.Millisecond*10).Should(BeTrue())
 

@@ -69,7 +69,7 @@ var _ = BeforeSuite(func() {
 
 	err = rootcapublisher.AddToManagerWithOptions(mgr, rootcapublisher.ControllerConfig{
 		MaxConcurrentWorkers: 1,
-		RootCAPath:           "dummy.crt",
+		RootCAPath:           "testdata/dummy.crt",
 		TargetClientConfig:   resourcemanagercmd.TargetClientConfig{Client: testClient},
 	})
 	Expect(err).ToNot(HaveOccurred())

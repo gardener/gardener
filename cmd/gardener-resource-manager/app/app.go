@@ -53,7 +53,7 @@ func NewResourceManagerCommand() *cobra.Command {
 	healthControllerOpts := &healthcontroller.ControllerOptions{}
 	gcControllerOpts := &garbagecollectorcontroller.ControllerOptions{}
 	tokenInvalidatorControllerOpts := &tokeninvalidatorcontroller.ControllerOptions{}
-	rootcaControllerOpts := &rootcacontroller.ControllerOptions{}
+	rootCAControllerOpts := &rootcacontroller.ControllerOptions{}
 
 	cmd := &cobra.Command{
 		Use: "gardener-resource-manager",
@@ -75,7 +75,7 @@ func NewResourceManagerCommand() *cobra.Command {
 				targetClusterOpts,
 				resourceControllerOpts,
 				secretControllerOpts,
-				rootcaControllerOpts,
+				rootCAControllerOpts,
 				healthControllerOpts,
 				gcControllerOpts,
 				tokenInvalidatorControllerOpts,
@@ -99,7 +99,7 @@ func NewResourceManagerCommand() *cobra.Command {
 			healthControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 			gcControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 			tokenInvalidatorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
-			rootcaControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
+			rootCAControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 
 			// setup manager
 			mgr, err := manager.New(sourceClientOpts.Completed().RESTConfig, managerOptions)
@@ -163,7 +163,7 @@ func NewResourceManagerCommand() *cobra.Command {
 		sourceClientOpts,
 		resourceControllerOpts,
 		secretControllerOpts,
-		rootcaControllerOpts,
+		rootCAControllerOpts,
 		healthControllerOpts,
 		gcControllerOpts,
 		tokenInvalidatorControllerOpts,

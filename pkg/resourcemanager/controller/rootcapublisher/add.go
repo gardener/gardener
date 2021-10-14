@@ -32,12 +32,12 @@ import (
 )
 
 // ControllerName is the name of the root ca controller.
-const ControllerName = "root-ca-controller"
+const ControllerName = "root-ca-publisher"
 
 // defaultControllerConfig is the default config for the controller.
 var defaultControllerConfig ControllerConfig
 
-// ControllerConfig is the completed configuration for the controller.
+// ControllerOptions is the completed configuration for the controller.
 type ControllerOptions struct {
 	maxConcurrentWorkers int
 	rootCAPath           string
@@ -50,8 +50,9 @@ type ControllerConfig struct {
 	TargetCluster        cluster.Cluster
 }
 
+// AddToManagerWithOptions adds the controller to a Manager with the given config.
 func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
-	if conf.RootCAPath == "" {
+	if conf.RootCAPath == "" || conf.MaxConcurrentWorkers == 0 {
 		return nil
 	}
 
@@ -76,7 +77,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		&handler.EnqueueRequestForObject{},
 		predicate.Funcs{
 			CreateFunc:  func(e event.CreateEvent) bool { return true },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isActive(e.ObjectNew) },
+			UpdateFunc:  func(e event.UpdateEvent) bool { return isNamespaceActive(e.ObjectNew) },
 			DeleteFunc:  func(e event.DeleteEvent) bool { return false },
 			GenericFunc: func(e event.GenericEvent) bool { return false },
 		},
@@ -107,11 +108,12 @@ func isRelevantConfigMap(obj client.Object) bool {
 	return obj.GetName() == RootCACertConfigMapName && obj.GetAnnotations()[DescriptionAnnotation] == ""
 }
 
+// AddToManager adds the controller to a Manager using the default config.
 func AddToManager(mgr manager.Manager) error {
 	return AddToManagerWithOptions(mgr, defaultControllerConfig)
 }
 
-func isActive(obj client.Object) bool {
+func isNamespaceActive(obj client.Object) bool {
 	namespace, ok := obj.(*corev1.Namespace)
 	if !ok {
 		return false
@@ -123,7 +125,7 @@ func isActive(obj client.Object) bool {
 // AddFlags adds the needed command line flags to the given FlagSet.
 func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.rootCAPath, "root-ca-file", "", "path to a file containing the root ca bundle")
-	fs.IntVar(&o.maxConcurrentWorkers, "rootcapublisher-max-concurrent-workers", 0, "number of worker threads for concurrent rootcapublisher reconciliation of resources")
+	fs.IntVar(&o.maxConcurrentWorkers, "root-ca-publisher-max-concurrent-workers", 0, "number of worker threads for concurrent rootcapublisher reconciliation of resources")
 }
 
 // Complete completes the given command line flags and set the defaultControllerConfig accordingly.
