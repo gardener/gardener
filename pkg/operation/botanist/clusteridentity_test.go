@@ -86,8 +86,8 @@ var _ = Describe("ClusterIdentity", func() {
 	JustBeforeEach(func() {
 		s := runtime.NewScheme()
 		Expect(corev1.AddToScheme(s)).To(Succeed())
-		Expect(extensionsv1alpha1.AddToScheme(s)).NotTo(HaveOccurred())
-		Expect(gardencorev1beta1.AddToScheme(s))
+		Expect(extensionsv1alpha1.AddToScheme(s)).To(Succeed())
+		Expect(gardencorev1beta1.AddToScheme(s)).To(Succeed())
 
 		cluster := &extensionsv1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{
