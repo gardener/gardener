@@ -308,7 +308,9 @@ resource, should also be deleted when the corresponding StatefulSet is deleted (
 <td>
 <code>conditions</code></br>
 <em>
+<a href="./core.md#core.gardener.cloud/v1beta1.Condition">
 []github.com/gardener/gardener/pkg/apis/core/v1beta1.Condition
+</a>
 </em>
 </td>
 <td>
