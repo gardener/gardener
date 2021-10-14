@@ -27,7 +27,8 @@ The following tables are a summary of the feature gates that you can set on diff
 | ManagedIstio | `true` | `Beta` | `1.19` | |
 | APIServerSNI | `false` | `Alpha` | `1.7` | `1.18` |
 | APIServerSNI | `true` | `Beta` | `1.19` | |
-| CachedRuntimeClients | `false` | `Alpha` | `1.7` | |
+| CachedRuntimeClients | `false` | `Alpha` | `1.7` | `1.33` |
+| CachedRuntimeClients | `true` | `Beta` | `1.34` | |
 | SeedChange | `false` | `Alpha` | `1.12` | |
 | SeedKubeScheduler | `false` | `Alpha` | `1.15` | |
 | ReversedVPN | `false` | `Alpha` | `1.22` | |

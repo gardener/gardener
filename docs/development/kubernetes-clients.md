@@ -185,10 +185,11 @@ This means, that if you read the same object from different cache implementation
 
 By default, the `client.Client` created by a controller-runtime `Manager` is a `DelegatingClient`. It delegates `Get` and `List` calls to a `Cache` and all other calls to a client, that talks directly to the API server. Exceptions are requests with `*unstructured.Unstructured` objects and object kinds that were configured to be excluded from the cache in the `DelegatingClient`.
 
-> ℹ️ Currently, the controller-runtime client contained in Gardener's client collection (`kubernetes.Interface.Client()`) is not cached and does not use the cache contained in the client set (`kubernetes.Interface.Cache()`). This means, the client always reads directly from the API server, but you can intentionally read from the cache if desired.
->
-> If the `CachedRuntimeClients` feature gate is enabled, `Client()` returns a `DelegatingClient` that uses the cache returned from `Cache()` under the hood. This means, all `Client()` usages should be ready for cached clients and should be able to cater with stale cache reads.
-> See [gardener/gardener#2822](https://github.com/gardener/gardener/issues/2822) for details on the graduation progress.
+> ℹ️
+> If the `CachedRuntimeClients` feature gate is enabled (enabled by default starting from `v1.34`), `kubernetes.Interface.Client()` returns a `DelegatingClient` that uses the cache returned from `kubernetes.Interface.Cache()` under the hood. This means, all `Client()` usages need to be ready for cached clients and should be able to cater with stale cache reads.
+> See [gardener/gardener#2822](https://github.com/gardener/gardener/issues/2822) for details on the graduation progress to beta.
+> 
+> If the feature gate is explicitly disabled, the controller-runtime client (`kubernetes.Interface.Client()`) is not cached and does not use the cache contained in the client set (`kubernetes.Interface.Cache()`). This means, the client always reads directly from the API server, but you can intentionally read from the cache if desired.
 
 _Important characteristics of cached controller-runtime clients:_
 

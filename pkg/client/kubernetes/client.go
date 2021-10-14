@@ -40,9 +40,10 @@ import (
 )
 
 var (
-	// UseCachedRuntimeClients is a flag for enabling cached controller-runtime clients (defaults to false).
-	// If enabled, the client returned by Interface.Client() will be backed by a cache, otherwise it will talk directly
-	// to the API server.
+	// UseCachedRuntimeClients is a flag for enabling cached controller-runtime clients. The CachedRuntimeClients feature
+	// gate (enabled by default sinde v1.34) causes this flag to be set to true.
+	// If enabled, the client returned by Interface.Client() will be backed by Interface.Cache(), otherwise it will talk
+	// directly to the API server.
 	UseCachedRuntimeClients = false
 )
 
