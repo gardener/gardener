@@ -11,6 +11,9 @@ images:
 - name: gardener-seed-admission-controller
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/seed-admission-controller
+- name: gardener-resource-manager
+  sourceRepository: github.com/gardener/gardener
+  repository: eu.gcr.io/gardener-project/gardener/resource-manager
 
 # Seed bootstrap
 - name: pause-container
@@ -28,10 +31,6 @@ images:
   sourceRepository: github.com/gardener/etcd-druid
   repository: eu.gcr.io/gardener-project/gardener/etcd-druid
   tag: "v0.5.2"
-- name: gardener-resource-manager
-  sourceRepository: github.com/gardener/gardener-resource-manager
-  repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
-  tag: "v0.25.1"
 - name: dependency-watchdog
   sourceRepository: github.com/gardener/dependency-watchdog
   repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog

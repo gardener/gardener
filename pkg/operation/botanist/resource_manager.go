@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 )
 
@@ -36,6 +37,12 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	repository, tag := image.String(), version.Get().GitVersion
+	if image.Tag != nil {
+		repository, tag = image.Repository, *image.Tag
+	}
+	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
 	cfg := resourcemanager.Values{
 		AlwaysUpdate:               pointer.Bool(true),

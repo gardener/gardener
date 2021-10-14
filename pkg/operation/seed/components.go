@@ -96,6 +96,12 @@ func defaultGardenerResourceManager(c client.Client, seedVersion string, imageVe
 		return nil, err
 	}
 
+	repository, tag := image.String(), version.Get().GitVersion
+	if image.Tag != nil {
+		repository, tag = image.Repository, *image.Tag
+	}
+	image = &imagevector.Image{Repository: repository, Tag: &tag}
+
 	return resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), 1, resourcemanager.Values{
 		ConcurrentSyncs:  pointer.Int32(20),
 		HealthSyncPeriod: utils.DurationPtr(time.Minute),
