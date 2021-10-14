@@ -146,7 +146,9 @@ data:
       log . {
           class error
       }
-      health
+      health {
+          lameduck 15s
+      }
       ready
       kubernetes ` + clusterDomain + ` in-addr.arpa ip6.arpa {
           pods insecure

@@ -216,7 +216,9 @@ func (c *coreDNS) computeResourcesData() (map[string][]byte, error) {
   log . {
       class error
   }
-  health
+  health {
+      lameduck 15s
+  }
   ready
   kubernetes ` + c.values.ClusterDomain + ` in-addr.arpa ip6.arpa {
       pods insecure
