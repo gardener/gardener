@@ -36,7 +36,7 @@ kubectl -n garden-<project-name> annotate shoot <shoot-name> gardener.cloud/oper
 ## Rotate kubeconfig credentials
 
 Annotate the shoot with `gardener.cloud/operation=rotate-kubeconfig-credentials` to make the `gardenlet` exchange the credentials in your shoot cluster's kubeconfig.
-This operation is now allowed for shoot clusters that are already in deletion.
+This operation is not allowed for shoot clusters that are already in deletion if the feature gate `DisallowKubeconfigRotationForShootInDeletion` is enabled.
 Please note that only the token (and basic auth password, if enabled) are exchanged. The cluster CAs remain the same.
 
 ```bash
