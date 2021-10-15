@@ -420,7 +420,6 @@ func RunReconcileSeedFlow(
 			charts.ImageNameLokiCurator,
 			charts.ImageNameFluentBit,
 			charts.ImageNameFluentBitPluginInstaller,
-			charts.ImageNameGardenerResourceManager,
 			charts.ImageNameGrafana,
 			charts.ImageNamePauseContainer,
 			charts.ImageNamePrometheus,
