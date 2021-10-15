@@ -3041,36 +3041,6 @@ k8s.io/apimachinery/pkg/runtime.RawExtension
 <tbody>
 <tr>
 <td>
-<code>type</code></br>
-<em>
-string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>Type is the deployment type.
-Deprecated: Declare type via <code>ControllerDeployment</code> instead.
-ATTENTION: This field will be deleted with Gardener v1.32.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>providerConfig</code></br>
-<em>
-<a href="https://godoc.org/k8s.io/apimachinery/pkg/runtime#RawExtension">
-k8s.io/apimachinery/pkg/runtime.RawExtension
-</a>
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ProviderConfig contains type-specific configuration.
-Deprecated: Use <code>DeploymentRefs</code> instead.
-ATTENTION: This field will be deleted with Gardener v1.32.</p>
-</td>
-</tr>
-<tr>
-<td>
 <code>policy</code></br>
 <em>
 <a href="#core.gardener.cloud/v1beta1.ControllerDeploymentPolicy">

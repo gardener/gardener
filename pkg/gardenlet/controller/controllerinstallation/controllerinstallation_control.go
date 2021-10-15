@@ -185,8 +185,6 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 			return reconcile.Result{}, err
 		}
 		providerConfig = &controllerDeployment.ProviderConfig
-	} else {
-		providerConfig = controllerRegistration.Spec.Deployment.ProviderConfig
 	}
 
 	var helmDeployment HelmDeployment
@@ -364,17 +362,6 @@ func (r *reconciler) isResponsible(ctx context.Context, c client.Client, control
 		return controllerDeployment.Type == installationTypeHelm, nil
 	}
 
-	// Continue with the ControllerRegistration which can directly contain a deployment specification.
-	controllerRegistration := &gardencorev1beta1.ControllerRegistration{}
-	if err := c.Get(ctx, client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
-		return false, err
-	}
-
-	if deployment := controllerRegistration.Spec.Deployment; deployment != nil {
-		if deployment.Type != nil {
-			return *deployment.Type == installationTypeHelm, nil
-		}
-	}
 	return false, nil
 }
 

@@ -2196,19 +2196,6 @@ func schema_pkg_apis_core_v1alpha1_ControllerRegistrationDeployment(ref common.R
 				Description: "ControllerRegistrationDeployment contains information for how this controller is deployed.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Type is the deployment type. Deprecated: Declare type via `ControllerDeployment` instead.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"providerConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ProviderConfig contains type-specific configuration. Deprecated: Use `DeploymentRefs` instead.",
-							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
-						},
-					},
 					"policy": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Policy controls how the controller is deployed. It defaults to 'OnDemand'.",
@@ -2240,7 +2227,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerRegistrationDeployment(ref common.R
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DeploymentRef", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.DeploymentRef", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
 	}
 }
 
@@ -9228,19 +9215,6 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationDeployment(ref common.Re
 				Description: "ControllerRegistrationDeployment contains information for how this controller is deployed.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Type is the deployment type. Deprecated: Declare type via `ControllerDeployment` instead. ATTENTION: This field will be deleted with Gardener v1.32.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"providerConfig": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ProviderConfig contains type-specific configuration. Deprecated: Use `DeploymentRefs` instead. ATTENTION: This field will be deleted with Gardener v1.32.",
-							Ref:         ref("k8s.io/apimachinery/pkg/runtime.RawExtension"),
-						},
-					},
 					"policy": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Policy controls how the controller is deployed. It defaults to 'OnDemand'.",
@@ -9272,7 +9246,7 @@ func schema_pkg_apis_core_v1beta1_ControllerRegistrationDeployment(ref common.Re
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector", "k8s.io/apimachinery/pkg/runtime.RawExtension"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.DeploymentRef", "k8s.io/apimachinery/pkg/apis/meta/v1.LabelSelector"},
 	}
 }
 

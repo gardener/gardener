@@ -475,18 +475,6 @@ message ControllerRegistration {
 
 // ControllerRegistrationDeployment contains information for how this controller is deployed.
 message ControllerRegistrationDeployment {
-  // Type is the deployment type.
-  // Deprecated: Declare type via `ControllerDeployment` instead.
-  // ATTENTION: This field will be deleted with Gardener v1.32.
-  // +optional
-  optional string type = 1;
-
-  // ProviderConfig contains type-specific configuration.
-  // Deprecated: Use `DeploymentRefs` instead.
-  // ATTENTION: This field will be deleted with Gardener v1.32.
-  // +optional
-  optional k8s.io.apimachinery.pkg.runtime.RawExtension providerConfig = 2;
-
   // Policy controls how the controller is deployed. It defaults to 'OnDemand'.
   // +optional
   optional string policy = 3;
