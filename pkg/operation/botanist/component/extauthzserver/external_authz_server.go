@@ -47,18 +47,13 @@ const (
 	ServiceName = DeploymentName
 )
 
-// Interface contains functions for a auth-server deployer.
-type Interface interface {
-	component.DeployWaiter
-}
-
 // NewExtAuthServer creates a new instance of DeployWaiter for the auth-server.
 func NewExtAuthServer(
 	client client.Client,
 	namespace string,
 	imageExtAuthzServer string,
 	replicas int32,
-) Interface {
+) component.DeployWaiter {
 	return &authServer{
 		client:              client,
 		namespace:           namespace,
