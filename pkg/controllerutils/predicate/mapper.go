@@ -64,12 +64,10 @@ func FromMapper(mapper Mapper, triggers ...MapperTrigger) predicate.Predicate {
 	return &mapperWithTriggers{t, mapper}
 }
 
-// InjectFunc implements Injector.
 func (m *mapperWithTriggers) InjectFunc(f inject.Func) error {
 	return f(m.mapper)
 }
 
-// Create implements Predicate.
 func (m *mapperWithTriggers) Create(e event.CreateEvent) bool {
 	if _, ok := m.triggers[CreateTrigger]; ok {
 		return m.mapper.Map(event.GenericEvent(e))
@@ -77,7 +75,6 @@ func (m *mapperWithTriggers) Create(e event.CreateEvent) bool {
 	return true
 }
 
-// Delete implements Predicate.
 func (m *mapperWithTriggers) Delete(e event.DeleteEvent) bool {
 	if _, ok := m.triggers[DeleteTrigger]; ok {
 		return m.mapper.Map(event.GenericEvent{Object: e.Object})
@@ -85,7 +82,6 @@ func (m *mapperWithTriggers) Delete(e event.DeleteEvent) bool {
 	return true
 }
 
-// Update implements Predicate.
 func (m *mapperWithTriggers) Update(e event.UpdateEvent) bool {
 	if _, ok := m.triggers[UpdateOldTrigger]; ok {
 		return m.mapper.Map(event.GenericEvent{Object: e.ObjectOld})
@@ -96,7 +92,6 @@ func (m *mapperWithTriggers) Update(e event.UpdateEvent) bool {
 	return true
 }
 
-// Generic implements Predicate.
 func (m *mapperWithTriggers) Generic(e event.GenericEvent) bool {
 	if _, ok := m.triggers[GenericTrigger]; ok {
 		return m.mapper.Map(event.GenericEvent{Object: e.Object})

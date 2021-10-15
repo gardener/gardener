@@ -24,7 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	gardenpredicate "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/go-logr/logr"
@@ -73,37 +73,21 @@ func (s *shootNotFailedMapper) Map(e event.GenericEvent) bool {
 
 // ShootNotFailed is a predicate for failed shoots.
 func ShootNotFailed() predicate.Predicate {
-	return FromMapper(&shootNotFailedMapper{log: Log.WithName("shoot-not-failed")},
-		CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
+	return predicateutils.FromMapper(&shootNotFailedMapper{log: Log.WithName("shoot-not-failed")},
+		predicateutils.CreateTrigger, predicateutils.UpdateNewTrigger, predicateutils.DeleteTrigger, predicateutils.GenericTrigger)
 }
 
 // HasType filters the incoming OperatingSystemConfigs for ones that have the same type
 // as the given type.
 func HasType(typeName string) predicate.Predicate {
-	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
+	return predicateutils.FromMapper(predicateutils.MapperFunc(func(e event.GenericEvent) bool {
 		acc, err := extensions.Accessor(e.Object)
 		if err != nil {
 			return false
 		}
 
 		return acc.GetExtensionSpec().GetExtensionType() == typeName
-	}), CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
-}
-
-// HasName returns a predicate that matches the given name of a resource.
-func HasName(name string) predicate.Predicate {
-	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
-		return e.Object.GetName() == name
-	}), CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
-}
-
-// HasOperationAnnotation is a predicate for the operation annotation.
-func HasOperationAnnotation() predicate.Predicate {
-	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
-		return e.Object.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationReconcile ||
-			e.Object.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationRestore ||
-			e.Object.GetAnnotations()[v1beta1constants.GardenerOperation] == v1beta1constants.GardenerOperationMigrate
-	}), CreateTrigger, UpdateNewTrigger, GenericTrigger)
+	}), predicateutils.CreateTrigger, predicateutils.UpdateNewTrigger, predicateutils.DeleteTrigger, predicateutils.GenericTrigger)
 }
 
 // LastOperationNotSuccessful is a predicate for unsuccessful last operations **only** for creation events.
@@ -136,7 +120,7 @@ func LastOperationNotSuccessful() predicate.Predicate {
 }
 
 // IsDeleting is an alias for a predicate which checks if the passed object has a deletion timestamp.
-var IsDeleting = gardenpredicate.IsDeleting
+var IsDeleting = predicateutils.IsDeleting
 
 // AddTypePredicate returns a new slice which contains a type predicate and the given `predicates`.
 // if more than one extensionTypes is given all given types are or combined
@@ -159,7 +143,7 @@ func AddTypePredicate(predicates []predicate.Predicate, extensionTypes ...string
 
 // HasPurpose filters the incoming Controlplanes  for the given spec.purpose
 func HasPurpose(purpose extensionsv1alpha1.Purpose) predicate.Predicate {
-	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
+	return predicateutils.FromMapper(predicateutils.MapperFunc(func(e event.GenericEvent) bool {
 		controlPlane, ok := e.Object.(*extensionsv1alpha1.ControlPlane)
 		if !ok {
 			return false
@@ -175,7 +159,7 @@ func HasPurpose(purpose extensionsv1alpha1.Purpose) predicate.Predicate {
 		}
 
 		return *controlPlane.Spec.Purpose == purpose
-	}), CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
+	}), predicateutils.CreateTrigger, predicateutils.UpdateNewTrigger, predicateutils.DeleteTrigger, predicateutils.GenericTrigger)
 }
 
 // ClusterShootProviderType is a predicate for the provider type of the shoot in the cluster resource.

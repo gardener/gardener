@@ -20,10 +20,10 @@ import (
 	"time"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardenerconstantsv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
@@ -96,7 +96,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		&handler.EnqueueRequestForObject{},
 		conf.ClassFilter, predicate.Or(
 			predicate.GenerationChangedPredicate{},
-			extensionspredicate.HasOperationAnnotation(),
+			predicateutils.HasOperationAnnotation(),
 			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesHealthy, managerpredicate.ConditionChangedToUnhealthy),
 		),
 	); err != nil {
