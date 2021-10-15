@@ -824,7 +824,7 @@ func eventsForObject(ctx context.Context, scheme *runtime.Scheme, c client.Clien
 		relevantGKs = []schema.GroupKind{
 			corev1.SchemeGroupVersion.WithKind("Service").GroupKind(),
 		}
-		eventLimit = 2
+		eventLimit = 5
 	)
 
 	for _, gk := range relevantGKs {
