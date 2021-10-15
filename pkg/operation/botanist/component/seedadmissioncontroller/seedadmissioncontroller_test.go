@@ -295,6 +295,14 @@ webhooks:
   namespaceSelector: {}
   rules:
   - apiGroups:
+    - druid.gardener.cloud
+    apiVersions:
+    - v1alpha1
+    operations:
+    - DELETE
+    resources:
+    - etcds
+  - apiGroups:
     - extensions.gardener.cloud
     apiVersions:
     - v1alpha1
