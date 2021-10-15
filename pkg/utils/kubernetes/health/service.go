@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const eventLimit = 2
+const eventLimit = 5
 
 // CheckService checks whether the given service is healthy.
 // A Service is considered unhealthy if it is of type `LoadBalancer` but doesn't have an ingress element in its status.
