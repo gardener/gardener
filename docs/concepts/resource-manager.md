@@ -365,6 +365,4 @@ Any attempt to regenerate the token or creating a new such secret will again mak
 
 > You can opt-out of this behaviour for `ServiceAccount`s setting `.automountServiceAccountToken=false` by labeling them with `token-invalidator.resources.gardener.cloud/skip=true`.
 
-> By default, the _TokenInvalidator_ also invalidates the static token of the `kube-system/default` `ServiceAccount`. This behaviour cannot be disabled. If you want it to consider the `default` `ServiceAccount`s in all namespaces then `--token-invalidator-invalidate-all-default-serviceaccounts` should be set to `true`.
-
 In order to enable the _TokenInvalidator_ you have to set `--token-invalidator-max-concurrent-workers` to a value larger than `0`.

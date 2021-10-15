@@ -49,9 +49,6 @@ spec:
         {{- if .Values.controllers.tokenInvalidator.concurrentSyncs }}
         - --token-invalidator-max-concurrent-workers={{ .Values.controllers.tokenInvalidator.concurrentSyncs }}
         {{- end }}
-        {{- if .Values.controllers.tokenInvalidator.invalidateAllDefaultServiceAccounts }}
-        - --tokeninvalidator-invalidate-all-default-serviceaccounts={{ .Values.controllers.tokenInvalidator.invalidateAllDefaultServiceAccounts }}
-        {{- end }}
         - --always-update={{ .Values.controllers.managedResource.alwaysUpdate }}
         {{- if .Values.targetKubeconfig }}
         - --target-kubeconfig=/etc/gardener-resource-manager/target-kubeconfig/kubeconfig.yaml

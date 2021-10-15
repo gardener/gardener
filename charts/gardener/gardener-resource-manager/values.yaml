@@ -28,7 +28,6 @@ controllers:
     syncPeriod: ""
   tokenInvalidator:
     concurrentSyncs: 0
-    invalidateAllDefaultServiceAccounts: false
 
 leaderElection:
   enabled: true

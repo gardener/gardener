@@ -29,17 +29,15 @@ import (
 )
 
 type reconciler struct {
-	targetClient                        client.Client
-	invalidateAllDefaultServiceAccounts bool
+	targetClient client.Client
 }
 
 var _ reconcile.Reconciler = &reconciler{}
 
 // NewReconciler returns a new reconciler.
-func NewReconciler(targetClient client.Client, invalidateAllDefaultServiceAccounts bool) reconcile.Reconciler {
+func NewReconciler(targetClient client.Client) reconcile.Reconciler {
 	return &reconciler{
-		targetClient:                        targetClient,
-		invalidateAllDefaultServiceAccounts: invalidateAllDefaultServiceAccounts,
+		targetClient: targetClient,
 	}
 }
 
@@ -59,13 +57,6 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	serviceAccount := &corev1.ServiceAccount{}
 	if err := r.targetClient.Get(ctx, client.ObjectKey{Namespace: secret.Namespace, Name: secret.Annotations[corev1.ServiceAccountNameKey]}, serviceAccount); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not fetch ServiceAccount: %w", err)
-	}
-
-	if serviceAccount.Name == "default" {
-		if r.invalidateAllDefaultServiceAccounts || serviceAccount.Namespace == metav1.NamespaceSystem {
-			return reconcile.Result{}, r.addConsiderLabel(ctx, secret)
-		}
-		return reconcile.Result{}, r.removeConsiderLabel(ctx, secret)
 	}
 
 	if metav1.HasLabel(serviceAccount.ObjectMeta, resourcesv1alpha1.StaticTokenSkip) ||

@@ -21,7 +21,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	gomegatypes "github.com/onsi/gomega/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -49,7 +48,7 @@ var _ = Describe("TokenInvalidator", func() {
 
 	BeforeEach(func() {
 		fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
-		ctrl = NewReconciler(fakeClient, false)
+		ctrl = NewReconciler(fakeClient)
 
 		secretPartialObjectMeta = &metav1.PartialObjectMetadata{
 			TypeMeta: metav1.TypeMeta{
@@ -137,58 +136,6 @@ var _ = Describe("TokenInvalidator", func() {
 			It("AutomountServiceAccountToken=false", func() {
 				serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
-			})
-		})
-
-		Context("default service account", func() {
-			testSuite := func(namespace string, matcher gomegatypes.GomegaMatcher) {
-				serviceAccount.Namespace = namespace
-				secretPartialObjectMeta.Namespace = serviceAccount.Namespace
-				secret.Namespace = serviceAccount.Namespace
-				request.Namespace = secretPartialObjectMeta.Namespace
-
-				Expect(fakeClient.Create(ctx, secretPartialObjectMeta)).To(Succeed())
-				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
-
-				result, err := ctrl.Reconcile(ctx, request)
-				Expect(result).To(Equal(reconcile.Result{}))
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				Expect(secret.Labels).To(matcher)
-			}
-
-			BeforeEach(func() {
-				serviceAccount.Name = "default"
-				secretPartialObjectMeta.Annotations["kubernetes.io/service-account.name"] = serviceAccount.Name
-			})
-
-			Context("invalidateAllDefaultServiceAccounts=false", func() {
-				BeforeEach(func() {
-					ctrl = NewReconciler(fakeClient, false)
-				})
-
-				It("should add the label because it's kube-system namespace", func() {
-					testSuite("kube-system", HaveKeyWithValue("token-invalidator.resources.gardener.cloud/consider", "true"))
-				})
-
-				It("should not add the label because it's another namespace", func() {
-					testSuite("foo", BeNil())
-				})
-			})
-
-			Context("invalidateAllDefaultServiceAccounts=true", func() {
-				BeforeEach(func() {
-					ctrl = NewReconciler(fakeClient, true)
-				})
-
-				It("should add the label because it's kube-system namespace", func() {
-					testSuite("kube-system", HaveKeyWithValue("token-invalidator.resources.gardener.cloud/consider", "true"))
-				})
-
-				It("should add the label because it's another namespace", func() {
-					testSuite("foo", HaveKeyWithValue("token-invalidator.resources.gardener.cloud/consider", "true"))
-				})
 			})
 		})
 	})

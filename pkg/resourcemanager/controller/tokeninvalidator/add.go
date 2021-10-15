@@ -42,16 +42,14 @@ var defaultControllerConfig ControllerConfig
 
 // ControllerOptions are options for adding the controller to a Manager.
 type ControllerOptions struct {
-	maxConcurrentWorkers                int
-	invalidateAllDefaultServiceAccounts bool
+	maxConcurrentWorkers int
 }
 
 // ControllerConfig is the completed configuration for the controller.
 type ControllerConfig struct {
-	MaxConcurrentWorkers                int
-	InvalidateAllDefaultServiceAccounts bool
-	TargetCache                         cache.Cache
-	TargetClusterConfig                 resourcemanagercmd.TargetClusterConfig
+	MaxConcurrentWorkers int
+	TargetCache          cache.Cache
+	TargetClusterConfig  resourcemanagercmd.TargetClusterConfig
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -63,7 +61,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	c, err := crcontroller.New(ControllerName, mgr,
 		crcontroller.Options{
 			MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-			Reconciler:              NewReconciler(mgr.GetClient(), conf.InvalidateAllDefaultServiceAccounts),
+			Reconciler:              NewReconciler(mgr.GetClient()),
 		},
 	)
 	if err != nil {
@@ -106,14 +104,12 @@ func AddToManager(mgr manager.Manager) error {
 // AddFlags adds the needed command line flags to the given FlagSet.
 func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.IntVar(&o.maxConcurrentWorkers, "token-invalidator-max-concurrent-workers", 0, "number of worker threads for concurrent token invalidation reconciliations")
-	fs.BoolVar(&o.invalidateAllDefaultServiceAccounts, "token-invalidator-invalidate-all-default-serviceaccounts", false, "if set to false then only the `kube-system` default service account will be invalidated, otherwise those in all namespaces")
 }
 
 // Complete completes the given command line flags and set the defaultControllerConfig accordingly.
 func (o *ControllerOptions) Complete() error {
 	defaultControllerConfig = ControllerConfig{
-		MaxConcurrentWorkers:                o.maxConcurrentWorkers,
-		InvalidateAllDefaultServiceAccounts: o.invalidateAllDefaultServiceAccounts,
+		MaxConcurrentWorkers: o.maxConcurrentWorkers,
 	}
 	return nil
 }
