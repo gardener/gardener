@@ -212,19 +212,17 @@ check:
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-charts.sh ./charts
 
-# We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
-# see https://github.com/kubernetes/code-generator/issues/100.
 .PHONY: generate
 generate: $(CONTROLLER_GEN)
-	@GO111MODULE=off hack/update-protobuf.sh
-	@GO111MODULE=off hack/update-codegen.sh --parallel
+	@hack/update-protobuf.sh
+	@hack/update-codegen.sh --parallel
 	@hack/generate-parallel.sh charts cmd example extensions pkg plugin landscaper test
 	@hack/generate-monitoring-docs.sh
 
 .PHONY: generate-sequential
 generate-sequential: $(CONTROLLER_GEN)
-	@GO111MODULE=off hack/update-protobuf.sh
-	@GO111MODULE=off hack/update-codegen.sh
+	@hack/update-protobuf.sh
+	@hack/update-codegen.sh
 	@hack/generate.sh ./charts/... ./cmd/... ./example/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/... ./test/...
 	@hack/generate-monitoring-docs.sh
 

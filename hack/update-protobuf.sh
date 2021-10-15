@@ -18,6 +18,10 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+# We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
+# see https://github.com/kubernetes/code-generator/issues/100.
+export GO111MODULE=off
+
 CURRENT_DIR="$(dirname $0)"
 PROJECT_ROOT="${CURRENT_DIR}"/..
 if [ "${PROJECT_ROOT#/}" == "${PROJECT_ROOT}" ]; then
