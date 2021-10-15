@@ -18,10 +18,10 @@ import (
 	"fmt"
 
 	healthcheckconfig "github.com/gardener/gardener/extensions/pkg/controller/healthcheck/config"
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	"github.com/gardener/gardener/pkg/utils"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -179,7 +179,7 @@ func add(mgr manager.Manager, args AddArgs) error {
 	// this is to be notified when the Shoot is being hibernated (stop health checks) and wakes up (start health checks again)
 	return ctrl.Watch(
 		&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-		extensionshandler.EnqueueRequestsFromMapper(extensionshandler.ClusterToObjectMapper(args.GetExtensionObjListFunc, predicates), extensionshandler.UpdateWithNew),
+		mapper.EnqueueRequestsFrom(mapper.ClusterToObjectMapper(args.GetExtensionObjListFunc, predicates), mapper.UpdateWithNew),
 	)
 }
 

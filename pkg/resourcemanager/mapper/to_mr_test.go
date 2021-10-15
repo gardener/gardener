@@ -18,8 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
 	filter2 "github.com/gardener/gardener/pkg/resourcemanager/predicate"
@@ -41,7 +41,7 @@ var _ = Describe("#SecretToManagedResourceMapper", func() {
 	var (
 		c      *mockclient.MockClient
 		ctrl   *gomock.Controller
-		m      extensionshandler.Mapper
+		m      mapper.Mapper
 		secret *corev1.Secret
 		filter *filter2.ClassFilter
 	)

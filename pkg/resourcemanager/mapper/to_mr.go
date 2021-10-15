@@ -17,8 +17,8 @@ package mapper
 import (
 	"context"
 
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	grmpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	contextutils "github.com/gardener/gardener/pkg/utils/context"
 
@@ -82,6 +82,6 @@ func (m *secretToManagedResourceMapper) Map(obj client.Object) []reconcile.Reque
 
 // SecretToManagedResourceMapper returns a mapper that returns requests for ManagedResources whose
 // referenced secrets have been modified.
-func SecretToManagedResourceMapper(predicates ...predicate.Predicate) extensionshandler.Mapper {
+func SecretToManagedResourceMapper(predicates ...predicate.Predicate) mapper.Mapper {
 	return &secretToManagedResourceMapper{predicates: predicates}
 }

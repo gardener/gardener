@@ -24,9 +24,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 const (
@@ -97,7 +97,7 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-			extensionshandler.EnqueueRequestsFromMapper(ClusterToWorkerMapper(predicates), extensionshandler.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(ClusterToWorkerMapper(predicates), mapper.UpdateWithNew),
 		); err != nil {
 			return err
 		}
@@ -134,7 +134,7 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options,
 
 	if err := ctrl.Watch(
 		&source.Kind{Type: &machinev1alpha1.MachineSet{}},
-		extensionshandler.EnqueueRequestsFromMapper(MachineSetToWorkerMapper(workerPredicates), extensionshandler.UpdateWithNew),
+		mapper.EnqueueRequestsFrom(MachineSetToWorkerMapper(workerPredicates), mapper.UpdateWithNew),
 		machinePredicates...,
 	); err != nil {
 		return err
@@ -142,7 +142,7 @@ func addStateUpdatingController(mgr manager.Manager, options controller.Options,
 
 	return ctrl.Watch(
 		&source.Kind{Type: &machinev1alpha1.Machine{}},
-		extensionshandler.EnqueueRequestsFromMapper(MachineToWorkerMapper(workerPredicates), extensionshandler.UpdateWithNew),
+		mapper.EnqueueRequestsFrom(MachineToWorkerMapper(workerPredicates), mapper.UpdateWithNew),
 		machinePredicates...,
 	)
 }

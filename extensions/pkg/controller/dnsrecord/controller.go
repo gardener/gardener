@@ -21,9 +21,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 const (
@@ -83,7 +83,7 @@ func Add(mgr manager.Manager, args AddArgs) error {
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-			extensionshandler.EnqueueRequestsFromMapper(ClusterToDNSRecordMapper(predicates), extensionshandler.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(ClusterToDNSRecordMapper(predicates), mapper.UpdateWithNew),
 		); err != nil {
 			return err
 		}

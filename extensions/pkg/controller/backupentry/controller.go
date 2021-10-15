@@ -22,9 +22,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 )
 
 const (
@@ -88,14 +88,14 @@ func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) er
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Namespace{}},
-			extensionshandler.EnqueueRequestsFromMapper(NamespaceToBackupEntryMapper(predicates), extensionshandler.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(NamespaceToBackupEntryMapper(predicates), mapper.UpdateWithNew),
 		); err != nil {
 			return err
 		}
 
 		if err := ctrl.Watch(
 			&source.Kind{Type: &corev1.Secret{}},
-			extensionshandler.EnqueueRequestsFromMapper(SecretToBackupEntryMapper(predicates), extensionshandler.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(SecretToBackupEntryMapper(predicates), mapper.UpdateWithNew),
 		); err != nil {
 			return err
 		}

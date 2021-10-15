@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package handler
+package mapper
 
 import (
 	"k8s.io/client-go/util/workqueue"
@@ -32,7 +32,7 @@ type Mapper interface {
 var _ Mapper = MapFunc(nil)
 
 // MapFunc is the signature required for enqueueing requests from a generic function.
-// This type is usually used with EnqueueRequestsFromMapFunc when registering an event handler.
+// This type is usually used with EnqueueRequestsFromMapFunc when registering an event mapper.
 type MapFunc func(client.Object) []reconcile.Request
 
 // Map implements Mapper.
@@ -40,12 +40,12 @@ func (f MapFunc) Map(obj client.Object) []reconcile.Request {
 	return f(obj)
 }
 
-// EnqueueRequestsFromMapper is similar to controller-runtime's handler.EnqueueRequestsFromMapFunc.
+// EnqueueRequestsFrom is similar to controller-runtime's mapper.EnqueueRequestsFromMapFunc.
 // Instead of taking only a MapFunc it also allows passing a Mapper interface. Also, it allows customizing the
 // behaviour on UpdateEvents.
 // For UpdateEvents, the given UpdateBehaviour decides if only the old, only the new or both objects should be mapped
 // and enqueued.
-func EnqueueRequestsFromMapper(m Mapper, updateBehavior UpdateBehavior) handler.EventHandler {
+func EnqueueRequestsFrom(m Mapper, updateBehavior UpdateBehavior) handler.EventHandler {
 	return &enqueueRequestsFromMapFunc{
 		mapper:         m,
 		updateBehavior: updateBehavior,
@@ -59,12 +59,10 @@ type enqueueRequestsFromMapFunc struct {
 	updateBehavior UpdateBehavior
 }
 
-// Create implements EventHandler
 func (e *enqueueRequestsFromMapFunc) Create(evt event.CreateEvent, q workqueue.RateLimitingInterface) {
 	e.mapAndEnqueue(q, evt.Object)
 }
 
-// Update implements EventHandler
 func (e *enqueueRequestsFromMapFunc) Update(evt event.UpdateEvent, q workqueue.RateLimitingInterface) {
 	switch e.updateBehavior {
 	case UpdateWithOldAndNew:
@@ -77,12 +75,10 @@ func (e *enqueueRequestsFromMapFunc) Update(evt event.UpdateEvent, q workqueue.R
 	}
 }
 
-// Delete implements EventHandler
 func (e *enqueueRequestsFromMapFunc) Delete(evt event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	e.mapAndEnqueue(q, evt.Object)
 }
 
-// Generic implements EventHandler
 func (e *enqueueRequestsFromMapFunc) Generic(evt event.GenericEvent, q workqueue.RateLimitingInterface) {
 	e.mapAndEnqueue(q, evt.Object)
 }
@@ -93,9 +89,6 @@ func (e *enqueueRequestsFromMapFunc) mapAndEnqueue(q workqueue.RateLimitingInter
 	}
 }
 
-// EnqueueRequestsFromMapper can inject fields into the mapper.
-
-// InjectFunc implements inject.Injector.
 func (e *enqueueRequestsFromMapFunc) InjectFunc(f inject.Func) error {
 	if f == nil {
 		return nil
