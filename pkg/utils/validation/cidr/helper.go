@@ -32,15 +32,17 @@ func ValidateCIDRParse(cidrPaths ...CIDR) (allErrs field.ErrorList) {
 }
 
 // ValidateCIDROverlap validates that the provided CIDRs do not overlap.
-func ValidateCIDROverlap(leftPaths, rightPaths []CIDR, overlap bool) (allErrs field.ErrorList) {
-	for _, left := range leftPaths {
-		if left == nil {
+func ValidateCIDROverlap(paths []CIDR, overlap bool) field.ErrorList {
+	allErrs := field.ErrorList{}
+	for i := 0; i < len(paths)-1; i++ {
+		if paths[i] == nil {
 			continue
 		}
+
 		if overlap {
-			allErrs = append(allErrs, left.ValidateSubset(rightPaths...)...)
+			allErrs = append(allErrs, paths[i].ValidateOverlap(paths[i+1:]...)...)
 		} else {
-			allErrs = append(allErrs, left.ValidateNotSubset(rightPaths...)...)
+			allErrs = append(allErrs, paths[i].ValidateNotOverlap(paths[i+1:]...)...)
 		}
 	}
 	return allErrs

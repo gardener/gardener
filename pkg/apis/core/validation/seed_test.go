@@ -286,33 +286,35 @@ var _ = Describe("Seed Validation Tests", func() {
 			errorList := ValidateSeed(seed)
 
 			Expect(errorList).To(ConsistOfFields(Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("spec.networks.pods"),
-				"Detail": Equal(`must not be a subset of "spec.networks.nodes" ("10.0.0.0/8")`),
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("spec.networks.nodes"),
+				"BadValue": Equal("10.0.0.0/8"),
+				"Detail":   Equal("must not overlap with \"spec.networks.pods\" (\"10.0.1.0/24\")"),
 			}, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("spec.networks.services"),
-				"Detail": Equal(`must not be a subset of "spec.networks.nodes" ("10.0.0.0/8")`),
-			}, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("spec.networks.shootDefaults.pods"),
-				"Detail": Equal(`must not be a subset of "spec.networks.nodes" ("10.0.0.0/8")`),
-			}, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("spec.networks.shootDefaults.services"),
-				"Detail": Equal(`must not be a subset of "spec.networks.nodes" ("10.0.0.0/8")`),
-			}, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("spec.networks.services"),
-				"Detail": Equal(`must not be a subset of "spec.networks.pods" ("10.0.1.0/24")`),
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal("spec.networks.nodes"),
+				"BadValue": Equal("10.0.0.0/8"),
+				"Detail":   Equal("must not overlap with \"spec.networks.services\" (\"10.0.1.64/26\")"),
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.shootDefaults.pods"),
-				"Detail": Equal(`must not be a subset of "spec.networks.pods" ("10.0.1.0/24")`),
+				"Detail": Equal(`must not overlap with "spec.networks.nodes" ("10.0.0.0/8")`),
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.shootDefaults.services"),
-				"Detail": Equal(`must not be a subset of "spec.networks.pods" ("10.0.1.0/24")`),
+				"Detail": Equal(`must not overlap with "spec.networks.nodes" ("10.0.0.0/8")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.services"),
+				"Detail": Equal(`must not overlap with "spec.networks.pods" ("10.0.1.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.shootDefaults.pods"),
+				"Detail": Equal(`must not overlap with "spec.networks.pods" ("10.0.1.0/24")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.shootDefaults.services"),
+				"Detail": Equal(`must not overlap with "spec.networks.pods" ("10.0.1.0/24")`),
 			}))
 		})
 
@@ -341,27 +343,23 @@ var _ = Describe("Seed Validation Tests", func() {
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.pods"),
-				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.services"),
-				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.nodes"),
-				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.shootDefaults.pods"),
-				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
 			}, Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.shootDefaults.services"),
-				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
-			}, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("[]"),
-				"Detail": Equal(`must not be a subset of "spec.networks.nodes" ("192.168.123.0/27")`),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
 			}))
 		})
 
@@ -374,11 +372,7 @@ var _ = Describe("Seed Validation Tests", func() {
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
 				"Field":  Equal("spec.networks.services"),
-				"Detail": Equal(`must not be a subset of "[]" ("192.168.123.0/24")`),
-			}, Fields{
-				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("[]"),
-				"Detail": Equal(`must not be a subset of "spec.networks.services" ("192.168.123.0/24")`),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
 			}))
 		})
 
@@ -390,8 +384,8 @@ var _ = Describe("Seed Validation Tests", func() {
 
 			Expect(errorList).To(ConsistOfFields(Fields{
 				"Type":   Equal(field.ErrorTypeInvalid),
-				"Field":  Equal("[]"),
-				"Detail": Equal(`must not be a subset of "spec.networks.pods" ("192.168.0.0/16")`),
+				"Field":  Equal("spec.networks.pods"),
+				"Detail": Equal(`must not overlap with "[]" ("192.168.123.0/24")`),
 			}))
 		})
 

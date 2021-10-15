@@ -92,9 +92,6 @@ var _ = Describe("Network validation tests", func() {
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.podCIDR"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.serviceCIDR"),
 			}))))
 		})

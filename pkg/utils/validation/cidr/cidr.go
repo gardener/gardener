@@ -31,13 +31,16 @@ type CIDR interface {
 	GetIPNet() *net.IPNet
 	// Parse checks if CIDR parses
 	Parse() bool
-	// ValidateNotSubset returns errors if subsets is a subset.
-	ValidateNotSubset(subsets ...CIDR) field.ErrorList
+	// ValidateNotOverlap returns errors if subsets overlap with CIDR. This is the inverse operation of ValidateOverlap.
+	ValidateNotOverlap(subsets ...CIDR) field.ErrorList
 	// ValidateParse returns errors CIDR can't be parsed.
 	ValidateParse() field.ErrorList
 	// ValidateSubset returns errors if subsets is not a subset.
 	ValidateSubset(subsets ...CIDR) field.ErrorList
+	// LastIPInRange returns the last IP in the CIDR range.
 	LastIPInRange() net.IP
+	// ValidateOverlap returns errors if the subnets do not overlap with CIDR.
+	ValidateOverlap(subsets ...CIDR) field.ErrorList
 }
 
 type cidrPath struct {
@@ -70,7 +73,7 @@ func (c *cidrPath) ValidateSubset(subsets ...CIDR) field.ErrorList {
 	return allErrs
 }
 
-func (c *cidrPath) ValidateNotSubset(subsets ...CIDR) field.ErrorList {
+func (c *cidrPath) ValidateOverlap(subsets ...CIDR) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if c.ParseError != nil {
 		return allErrs
@@ -79,9 +82,33 @@ func (c *cidrPath) ValidateNotSubset(subsets ...CIDR) field.ErrorList {
 		if subset == nil || c == subset || !subset.Parse() {
 			continue
 		}
-		if c.net.Contains(subset.GetIPNet().IP) {
-			allErrs = append(allErrs, field.Invalid(subset.GetFieldPath(), subset.GetCIDR(), fmt.Sprintf("must not be a subset of %q (%q)", c.fieldPath.String(), c.cidr)))
+
+		// continue if CIDRs overlap.
+		if c.net.Contains(subset.GetIPNet().IP) || subset.GetIPNet().Contains(c.net.IP) {
+			continue
 		}
+
+		allErrs = append(allErrs, field.Invalid(subset.GetFieldPath(), subset.GetCIDR(), fmt.Sprintf("must overlap with %q (%q)", c.fieldPath.String(), c.cidr)))
+	}
+	return allErrs
+}
+
+func (c *cidrPath) ValidateNotOverlap(subsets ...CIDR) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if c.ParseError != nil {
+		return allErrs
+	}
+	for _, subset := range subsets {
+		if subset == nil || c == subset || !subset.Parse() {
+			continue
+		}
+
+		// continue if CIDRs do not overlap.
+		if !c.net.Contains(subset.GetIPNet().IP) && !subset.GetIPNet().Contains(c.net.IP) {
+			continue
+		}
+
+		allErrs = append(allErrs, field.Invalid(subset.GetFieldPath(), subset.GetCIDR(), fmt.Sprintf("must not overlap with %q (%q)", c.fieldPath.String(), c.cidr)))
 	}
 	return allErrs
 }

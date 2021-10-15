@@ -112,11 +112,10 @@ func ValidateSeedSpec(seedSpec *core.SeedSpec, fldPath *field.Path, inTemplate b
 	}
 
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(networks...)...)
-	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(networks, networks, false)...)
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(networks, false)...)
 
-	vpnDefaultRanges := []cidrvalidation.CIDR{cidrvalidation.NewCIDR(v1beta1constants.DefaultVpnRange, field.NewPath(""))}
-	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(vpnDefaultRanges, networks, false)...)
-	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(networks, vpnDefaultRanges, false)...)
+	vpnDefaultRanges := cidrvalidation.NewCIDR(v1beta1constants.DefaultVpnRange, field.NewPath(""))
+	allErrs = append(allErrs, vpnDefaultRanges.ValidateNotOverlap(networks...)...)
 
 	if seedSpec.Backup != nil {
 		if len(seedSpec.Backup.Provider) == 0 {

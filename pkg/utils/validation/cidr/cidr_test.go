@@ -102,25 +102,25 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("ValidateNotSubset", func() {
+		Context("ValidateNotOverlap", func() {
 			It("should not be a subset", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 				other := NewCIDR(string("2.2.2.2/32"), path)
 
-				Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
+				Expect(cdr.ValidateNotOverlap(other)).To(BeEmpty())
 			})
 
 			It("should ignore nil values", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
-				Expect(cdr.ValidateNotSubset(nil)).To(BeEmpty())
+				Expect(cdr.ValidateNotOverlap(nil)).To(BeEmpty())
 			})
 
 			It("should ignore when parse error", func() {
 				cdr := NewCIDR(invalidGardenCIDR, path)
 				other := NewCIDR(string("2.2.2.2/32"), path)
 
-				Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
+				Expect(cdr.ValidateNotOverlap(other)).To(BeEmpty())
 			})
 
 			It("should return a nil FieldPath", func() {
@@ -129,11 +129,38 @@ var _ = Describe("cidr", func() {
 				badPath := field.NewPath("bad")
 				other := NewCIDR(badCIDR, badPath)
 
-				Expect(cdr.ValidateNotSubset(other)).To(ConsistOfFields(Fields{
+				Expect(cdr.ValidateNotOverlap(other)).To(ConsistOfFields(Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal(badPath.String()),
 					"BadValue": Equal(badCIDR),
-					"Detail":   Equal(`must not be a subset of "foo" ("10.0.0.0/8")`),
+					"Detail":   Equal(`must not overlap with "foo" ("10.0.0.0/8")`),
+				}))
+			})
+
+			It("should return an error if CIDRs are the same", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				badPath := field.NewPath("bad")
+				bad := NewCIDR(validGardenCIDR, badPath)
+
+				Expect(cdr.ValidateNotOverlap(bad)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(badPath.String()),
+					"BadValue": Equal(validGardenCIDR),
+					"Detail":   Equal(`must not overlap with "foo" ("10.0.0.0/8")`),
+				}))
+			})
+
+			It("should return an error if CIDRs overlap", func() {
+				cdr := NewCIDR("10.1.0.0/16", path)
+				badCIDR := "10.0.0.0/8"
+				badPath := field.NewPath("bad")
+				bad := NewCIDR(badCIDR, badPath)
+
+				Expect(cdr.ValidateNotOverlap(bad)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(badPath.String()),
+					"BadValue": Equal(badCIDR),
+					"Detail":   Equal(`must not overlap with "foo" ("10.1.0.0/16")`),
 				}))
 			})
 		})
@@ -202,7 +229,35 @@ var _ = Describe("cidr", func() {
 				}))
 			})
 		})
+
+		Context("ValidateOverlap", func() {
+			It("should return an error on disjoint subnets", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				badPath := field.NewPath("bad")
+				badCIDR := "11.0.0.0/8"
+				bad := NewCIDR(badCIDR, badPath)
+				Expect(cdr.ValidateOverlap(bad)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(badPath.String()),
+					"BadValue": Equal(badCIDR),
+					"Detail":   Equal(`must overlap with "foo" ("10.0.0.0/8")`),
+				}))
+			})
+
+			It("should return no errors if cidr is subset", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				other := NewCIDR(string("10.5.0.0/16"), field.NewPath("other"))
+				Expect(cdr.ValidateOverlap(other)).To(BeEmpty())
+			})
+
+			It("should return no errors if cidr is superset", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				other := NewCIDR(string("10.5.0.0/16"), field.NewPath("other"))
+				Expect(other.ValidateOverlap(cdr)).To(BeEmpty())
+			})
+		})
 	})
+
 	Describe("#cidr IPv6", func() {
 		var (
 			invalidGardenCIDR = "invalid_cidr"
@@ -277,25 +332,25 @@ var _ = Describe("cidr", func() {
 			})
 		})
 
-		Context("ValidateNotSubset", func() {
+		Context("ValidateNotOverlap", func() {
 			It("should not be a subset", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 				other := NewCIDR(string("3001:0db8:85a3::1/128"), path)
 
-				Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
+				Expect(cdr.ValidateNotOverlap(other)).To(BeEmpty())
 			})
 
 			It("should ignore nil values", func() {
 				cdr := NewCIDR(validGardenCIDR, path)
 
-				Expect(cdr.ValidateNotSubset(nil)).To(BeEmpty())
+				Expect(cdr.ValidateNotOverlap(nil)).To(BeEmpty())
 			})
 
 			It("should ignore when parse error", func() {
 				cdr := NewCIDR(invalidGardenCIDR, path)
 				other := NewCIDR(string("3001:0db8:85a3::1/128"), path)
 
-				Expect(cdr.ValidateNotSubset(other)).To(BeEmpty())
+				Expect(cdr.ValidateNotOverlap(other)).To(BeEmpty())
 			})
 
 			It("should return a nil FieldPath", func() {
@@ -304,11 +359,25 @@ var _ = Describe("cidr", func() {
 				badPath := field.NewPath("bad")
 				other := NewCIDR(badCIDR, badPath)
 
-				Expect(cdr.ValidateNotSubset(other)).To(ConsistOfFields(Fields{
+				Expect(cdr.ValidateNotOverlap(other)).To(ConsistOfFields(Fields{
 					"Type":     Equal(field.ErrorTypeInvalid),
 					"Field":    Equal(badPath.String()),
 					"BadValue": Equal(badCIDR),
-					"Detail":   Equal(`must not be a subset of "foo" ("2001:0db8:85a3::/104")`),
+					"Detail":   Equal(`must not overlap with "foo" ("2001:0db8:85a3::/104")`),
+				}))
+			})
+
+			It("should return an error if CIDRs overlap", func() {
+				cdr := NewCIDR("2001:0db8::/16", path)
+				badCIDR := string(validGardenCIDR)
+				badPath := field.NewPath("bad")
+				other := NewCIDR(badCIDR, badPath)
+
+				Expect(cdr.ValidateNotOverlap(other)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(badPath.String()),
+					"BadValue": Equal(badCIDR),
+					"Detail":   Equal(`must not overlap with "foo" ("2001:0db8::/16")`),
 				}))
 			})
 		})
@@ -376,7 +445,33 @@ var _ = Describe("cidr", func() {
 					"Detail":   Equal(`must be a subset of "bad" ("2001:0db8:85a3::/128")`),
 				}))
 			})
+		})
 
+		Context("ValidateOverlap", func() {
+			It("should return an error on disjoint subnets", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				badPath := field.NewPath("bad")
+				badCIDR := "2002::/32"
+				bad := NewCIDR(badCIDR, badPath)
+				Expect(cdr.ValidateOverlap(bad)).To(ConsistOfFields(Fields{
+					"Type":     Equal(field.ErrorTypeInvalid),
+					"Field":    Equal(badPath.String()),
+					"BadValue": Equal(badCIDR),
+					"Detail":   Equal(`must overlap with "foo" ("2001:0db8:85a3::/104")`),
+				}))
+			})
+
+			It("should return no errors if cidr is subset", func() {
+				cdr := NewCIDR("2001:0db8::/32", path)
+				other := NewCIDR(string(validGardenCIDR), field.NewPath("other"))
+				Expect(cdr.ValidateOverlap(other)).To(BeEmpty())
+			})
+
+			It("should return no errors if cidr is superset", func() {
+				cdr := NewCIDR(validGardenCIDR, path)
+				other := NewCIDR(string("2001:0db8::/32"), field.NewPath("other"))
+				Expect(cdr.ValidateOverlap(other)).To(BeEmpty())
+			})
 		})
 	})
 })

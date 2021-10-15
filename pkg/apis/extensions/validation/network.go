@@ -66,7 +66,7 @@ func ValidateNetworkSpec(spec *extensionsv1alpha1.NetworkSpec, fldPath *field.Pa
 	}
 
 	allErrs = append(allErrs, cidrvalidation.ValidateCIDRParse(cidrs...)...)
-	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(cidrs, cidrs, false)...)
+	allErrs = append(allErrs, cidrvalidation.ValidateCIDROverlap(cidrs, false)...)
 
 	return allErrs
 }
