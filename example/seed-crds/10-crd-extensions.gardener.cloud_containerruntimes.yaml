@@ -1,0 +1,290 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.7.0
+  creationTimestamp: null
+  name: containerruntimes.extensions.gardener.cloud
+spec:
+  group: extensions.gardener.cloud
+  names:
+    kind: ContainerRuntime
+    listKind: ContainerRuntimeList
+    plural: containerruntimes
+    shortNames:
+    - cr
+    singular: containerruntime
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The type of the Container Runtime resource.
+      jsonPath: .spec.type
+      name: Type
+      type: string
+    - description: status of the last operation, one of Aborted, Processing, Succeeded,
+        Error, Failed
+      jsonPath: .status.lastOperation.state
+      name: Status
+      type: string
+    - description: creation timestamp
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ContainerRuntime is a specification for a container runtime resource.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ContainerRuntimeSpec is the spec for a ContainerRuntime resource.
+            properties:
+              binaryPath:
+                description: BinaryPath is the Worker's machine path where container
+                  runtime extensions should copy the binaries to.
+                type: string
+              providerConfig:
+                description: ProviderConfig is the provider specific configuration.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              type:
+                description: Type contains the instance of the resource's kind.
+                type: string
+              workerPool:
+                description: WorkerPool identifies the worker pool of the Shoot. For
+                  each worker pool and type, Gardener deploys a ContainerRuntime CRD.
+                properties:
+                  name:
+                    description: Name specifies the name of the worker pool the container
+                      runtime should be available for.
+                    type: string
+                  selector:
+                    description: Selector is the label selector used by the extension
+                      to match the nodes belonging to the worker pool.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: A label selector requirement is a selector
+                            that contains values, a key, and an operator that relates
+                            the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: operator represents a key's relationship
+                                to a set of values. Valid operators are In, NotIn,
+                                Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: values is an array of string values. If
+                                the operator is In or NotIn, the values array must
+                                be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced
+                                during a strategic merge patch.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: matchLabels is a map of {key,value} pairs. A
+                          single {key,value} in the matchLabels map is equivalent
+                          to an element of matchExpressions, whose key field is "key",
+                          the operator is "In", and the values array contains only
+                          "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                required:
+                - name
+                - selector
+                type: object
+            required:
+            - binaryPath
+            - type
+            - workerPool
+            type: object
+          status:
+            description: ContainerRuntimeStatus is the status for a ContainerRuntime
+              resource.
+            properties:
+              conditions:
+                description: Conditions represents the latest available observations
+                  of a Seed's current state.
+                items:
+                  description: Condition holds the information about the state of
+                    a resource.
+                  properties:
+                    codes:
+                      description: Well-defined error codes in case the condition
+                        reports a problem.
+                      items:
+                        description: ErrorCode is a string alias.
+                        type: string
+                      type: array
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      description: Last time the condition was updated.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of the condition.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - lastUpdateTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              lastError:
+                description: LastError holds information about the last occurred error
+                  during an operation.
+                properties:
+                  codes:
+                    description: Well-defined error codes of the last error(s).
+                    items:
+                      description: ErrorCode is a string alias.
+                      type: string
+                    type: array
+                  description:
+                    description: A human readable message indicating details about
+                      the last error.
+                    type: string
+                  lastUpdateTime:
+                    description: Last time the error was reported
+                    format: date-time
+                    type: string
+                  taskID:
+                    description: ID of the task which caused this last error
+                    type: string
+                required:
+                - description
+                type: object
+              lastOperation:
+                description: LastOperation holds information about the last operation
+                  on the resource.
+                properties:
+                  description:
+                    description: A human readable message indicating details about
+                      the last operation.
+                    type: string
+                  lastUpdateTime:
+                    description: Last time the operation state transitioned from one
+                      to another.
+                    format: date-time
+                    type: string
+                  progress:
+                    description: The progress in percentage (0-100) of the last operation.
+                    format: int32
+                    type: integer
+                  state:
+                    description: Status of the last operation, one of Aborted, Processing,
+                      Succeeded, Error, Failed.
+                    type: string
+                  type:
+                    description: Type of the last operation, one of Create, Reconcile,
+                      Delete.
+                    type: string
+                required:
+                - description
+                - lastUpdateTime
+                - progress
+                - state
+                - type
+                type: object
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                  for this resource.
+                format: int64
+                type: integer
+              providerStatus:
+                description: ProviderStatus contains provider-specific status.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              resources:
+                description: Resources holds a list of named resource references that
+                  can be referred to in the state by their names.
+                items:
+                  description: NamedResourceReference is a named reference to a resource.
+                  properties:
+                    name:
+                      description: Name of the resource reference.
+                      type: string
+                    resourceRef:
+                      description: ResourceRef is a reference to a resource.
+                      properties:
+                        apiVersion:
+                          description: API version of the referent
+                          type: string
+                        kind:
+                          description: 'Kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"'
+                          type: string
+                        name:
+                          description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                          type: string
+                      required:
+                      - kind
+                      - name
+                      type: object
+                  required:
+                  - name
+                  - resourceRef
+                  type: object
+                type: array
+              state:
+                description: State can be filled by the operating controller with
+                  what ever data it needs.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

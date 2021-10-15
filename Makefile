@@ -209,20 +209,15 @@ check:
 generate:
 	@GO111MODULE=off hack/update-protobuf.sh
 	@GO111MODULE=off hack/update-codegen.sh --parallel
-	@hack/generate-parallel.sh charts cmd extensions pkg plugin landscaper test
+	@hack/generate-parallel.sh charts cmd example extensions pkg plugin landscaper test
 	@hack/generate-monitoring-docs.sh
 
 .PHONY: generate-sequential
 generate-sequential:
 	@GO111MODULE=off hack/update-protobuf.sh
 	@GO111MODULE=off hack/update-codegen.sh
-	@hack/generate.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/... ./test/...
+	@hack/generate.sh ./charts/... ./cmd/... ./example/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/... ./test/...
 	@hack/generate-monitoring-docs.sh
-
-.PHONY: generate-extensions-crds
-generate-extensions-crds:
-	@controller-gen crd paths=./pkg/apis/extensions/... output:crd:dir=./dev/extensions-crds output:stdout
-	@controller-gen crd paths=./pkg/apis/resources/... output:crd:dir=./example/resource-manager output:stdout && mv ./example/resource-manager/resources.gardener.cloud_managedresources.yaml ./example/resource-manager/10-crd-managedresource.yaml
 
 .PHONY: format
 format:
