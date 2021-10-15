@@ -51,7 +51,7 @@ type ControllerConfig struct {
 	MaxConcurrentWorkers                int
 	InvalidateAllDefaultServiceAccounts bool
 	TargetCache                         cache.Cache
-	TargetClientConfig                  resourcemanagercmd.TargetClientConfig
+	TargetClusterConfig                 resourcemanagercmd.TargetClusterConfig
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.

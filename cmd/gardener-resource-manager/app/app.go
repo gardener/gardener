@@ -46,7 +46,7 @@ func NewResourceManagerCommand() *cobra.Command {
 
 	managerOpts := &resourcemanagercmd.ManagerOptions{}
 	sourceClientOpts := &resourcemanagercmd.SourceClientOptions{}
-	targetClientOpts := &resourcemanagercmd.TargetClientOptions{}
+	targetClusterOpts := &resourcemanagercmd.TargetClusterOptions{}
 
 	resourceControllerOpts := &resourcecontroller.ControllerOptions{}
 	secretControllerOpts := &secretcontroller.ControllerOptions{}
@@ -71,7 +71,7 @@ func NewResourceManagerCommand() *cobra.Command {
 			if err := resourcemanagercmd.CompleteAll(
 				managerOpts,
 				sourceClientOpts,
-				targetClientOpts,
+				targetClusterOpts,
 				resourceControllerOpts,
 				secretControllerOpts,
 				healthControllerOpts,
@@ -87,8 +87,8 @@ func NewResourceManagerCommand() *cobra.Command {
 			managerOpts.Completed().Apply(&managerOptions)
 			sourceClientOpts.Completed().ApplyManagerOptions(&managerOptions)
 			sourceClientOpts.Completed().ApplyClientSet(&healthz.DefaultAddOptions.ClientSet)
-			targetClientOpts.Completed().Apply(&resourceControllerOpts.Completed().TargetClientConfig)
-			targetClientOpts.Completed().Apply(&healthControllerOpts.Completed().TargetClientConfig)
+			targetClusterOpts.Completed().Apply(&resourceControllerOpts.Completed().TargetClusterConfig)
+			targetClusterOpts.Completed().Apply(&healthControllerOpts.Completed().TargetClusterConfig)
 			resourceControllerOpts.Completed().ApplyClassFilter(&secretControllerOpts.Completed().ClassFilter)
 			resourceControllerOpts.Completed().ApplyClassFilter(&healthControllerOpts.Completed().ClassFilter)
 			if err := resourceControllerOpts.Completed().ApplyDefaultClusterId(ctx, entryLog, sourceClientOpts.Completed().RESTConfig); err != nil {
@@ -96,11 +96,11 @@ func NewResourceManagerCommand() *cobra.Command {
 			}
 			resourceControllerOpts.Completed().GarbageCollectorActivated = gcControllerOpts.Completed().SyncPeriod > 0
 
-			uncachedTargetClientConfig, err := resourcemanagercmd.NewTargetClientConfig(targetClientOpts.KubeconfigPath, true, 0)
+			uncachedTargetClientConfig, err := resourcemanagercmd.NewTargetClusterConfig(targetClusterOpts.Completed().KubeconfigPath, "", true, 0)
 			if err != nil {
 				return err
 			}
-			uncachedTargetClientConfig.Apply(&gcControllerOpts.Completed().TargetClientConfig)
+			uncachedTargetClientConfig.Apply(&gcControllerOpts.Completed().TargetClusterConfig)
 
 			// setup manager
 			mgr, err := manager.New(sourceClientOpts.Completed().RESTConfig, managerOptions)
@@ -109,7 +109,7 @@ func NewResourceManagerCommand() *cobra.Command {
 			}
 
 			// setup target cluster
-			targetCluster, err := cluster.New(targetClientOpts.Completed().Config)
+			targetCluster, err := cluster.New(targetClusterOpts.Completed().Config, func(o *cluster.Options) { o.Namespace = targetClusterOpts.Completed().Namespace })
 			if err != nil {
 				return fmt.Errorf("could not instantiate target cluster: %w", err)
 			}
@@ -144,7 +144,7 @@ func NewResourceManagerCommand() *cobra.Command {
 				defer wg.Done()
 
 				wg.Add(1)
-				if err := targetClientOpts.Completed().Start(ctx); err != nil {
+				if err := targetClusterOpts.Completed().Start(ctx); err != nil {
 					errChan <- fmt.Errorf("error syncing target cache: %w", err)
 				}
 			}()
@@ -152,7 +152,7 @@ func NewResourceManagerCommand() *cobra.Command {
 			ctxWaitForCache, cancelWaitForCache := context.WithTimeout(ctx, 5*time.Minute)
 			defer cancelWaitForCache()
 
-			if !targetClientOpts.Completed().WaitForCacheSync(ctxWaitForCache) {
+			if !targetClusterOpts.Completed().WaitForCacheSync(ctxWaitForCache) {
 				return fmt.Errorf("timed out waiting for target cache to sync")
 			}
 
@@ -182,7 +182,7 @@ func NewResourceManagerCommand() *cobra.Command {
 	resourcemanagercmd.AddAllFlags(
 		cmd.Flags(),
 		managerOpts,
-		targetClientOpts,
+		targetClusterOpts,
 		sourceClientOpts,
 		resourceControllerOpts,
 		secretControllerOpts,

@@ -56,6 +56,9 @@ spec:
         {{- if .Values.targetKubeconfig }}
         - --target-kubeconfig=/etc/gardener-resource-manager/target-kubeconfig/kubeconfig.yaml
         {{- end }}
+        {{- if .Values.targetNamespace }}
+        - --target-namespace={{ .Values.targetNamespace }}
+        {{- end }}
         {{- if .Values.metricsPort }}
         - --metrics-bind-address=":{{ .Values.metricsPort }}"
         {{- end }}

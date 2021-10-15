@@ -51,8 +51,8 @@ type ControllerConfig struct {
 	MaxConcurrentWorkers int
 	SyncPeriod           time.Duration
 
-	ClassFilter        managerpredicate.ClassFilter
-	TargetClientConfig resourcemanagercmd.TargetClientConfig
+	ClassFilter         managerpredicate.ClassFilter
+	TargetClusterConfig resourcemanagercmd.TargetClusterConfig
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -62,8 +62,8 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		Reconciler: &reconciler{
 			syncPeriod:   conf.SyncPeriod,
 			classFilter:  &conf.ClassFilter,
-			targetClient: conf.TargetClientConfig.Client,
-			targetScheme: conf.TargetClientConfig.Scheme,
+			targetClient: conf.TargetClusterConfig.Client,
+			targetScheme: conf.TargetClusterConfig.Scheme,
 		},
 	})
 	if err != nil {

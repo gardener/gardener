@@ -65,7 +65,7 @@ type ControllerConfig struct {
 	ClusterID                 string
 	GarbageCollectorActivated bool
 
-	TargetClientConfig resourcemanagercmd.TargetClientConfig
+	TargetClusterConfig resourcemanagercmd.TargetClusterConfig
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -76,9 +76,9 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		Reconciler: reconcilerutils.OperationAnnotationWrapper(
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
 			&Reconciler{
-				targetClient:              conf.TargetClientConfig.Client,
-				targetRESTMapper:          conf.TargetClientConfig.RESTMapper,
-				targetScheme:              conf.TargetClientConfig.Scheme,
+				targetClient:              conf.TargetClusterConfig.Client,
+				targetRESTMapper:          conf.TargetClusterConfig.RESTMapper,
+				targetScheme:              conf.TargetClusterConfig.Scheme,
 				class:                     conf.ClassFilter,
 				alwaysUpdate:              conf.AlwaysUpdate,
 				syncPeriod:                conf.SyncPeriod,

@@ -43,56 +43,60 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 )
 
-var _ Option = &TargetClientOptions{}
+var _ Option = &TargetClusterOptions{}
 
-// TargetClientOptions contains options needed to construct the target client.
-type TargetClientOptions struct {
-	KubeconfigPath    string
-	DisableCache      bool
-	CacheResyncPeriod time.Duration
+// TargetClusterOptions contains options needed to construct the target config.
+type TargetClusterOptions struct {
+	kubeconfigPath    string
+	namespace         string
+	disableCache      bool
+	cacheResyncPeriod time.Duration
 
-	targetClient *TargetClientConfig
+	config *TargetClusterConfig
 }
 
-// TargetClientConfig contains the constructed target clients including a RESTMapper and Scheme.
+// TargetClusterConfig contains the constructed target clients including a RESTMapper and Scheme.
 // Before the first usage, Start and WaitForCacheSync should be called to ensure that the cache is running
 // and has been populated successfully.
-type TargetClientConfig struct {
-	Config     *rest.Config
-	Client     client.Client
-	RESTMapper meta.RESTMapper
-	Scheme     *runtime.Scheme
+type TargetClusterConfig struct {
+	KubeconfigPath string
+	Namespace      string
+	Config         *rest.Config
+	Client         client.Client
+	RESTMapper     meta.RESTMapper
+	Scheme         *runtime.Scheme
 
 	cache cache.Cache
 }
 
 // AddFlags adds the needed command line flags to the given FlagSet.
-func (o *TargetClientOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.StringVar(&o.KubeconfigPath, "target-kubeconfig", "", "path to the kubeconfig for the target cluster")
-	fs.BoolVar(&o.DisableCache, "target-disable-cache", false, "disable the cache for target cluster and always talk directly to the API server (defaults to false)")
-	fs.DurationVar(&o.CacheResyncPeriod, "target-cache-resync-period", 24*time.Hour, "duration how often the controller's cache for the target cluster is resynced")
+func (o *TargetClusterOptions) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&o.kubeconfigPath, "target-kubeconfig", "", "path to the kubeconfig for the target cluster")
+	fs.StringVar(&o.namespace, "target-namespace", "", "namespace in which objects should be cached (defaults to all namespaces)")
+	fs.BoolVar(&o.disableCache, "target-disable-cache", false, "disable the cache for target cluster and always talk directly to the API server (defaults to false)")
+	fs.DurationVar(&o.cacheResyncPeriod, "target-cache-resync-period", 24*time.Hour, "duration how often the controller's cache for the target cluster is resynced")
 }
 
-// Complete builds the target client based on the given flag values and saves it for retrieval via Completed.
-func (o *TargetClientOptions) Complete() error {
-	tcc, err := NewTargetClientConfig(o.KubeconfigPath, o.DisableCache, o.CacheResyncPeriod)
+// Complete builds the target config based on the given flag values and saves it for retrieval via Completed.
+func (o *TargetClusterOptions) Complete() error {
+	tcc, err := NewTargetClusterConfig(o.kubeconfigPath, o.namespace, o.disableCache, o.cacheResyncPeriod)
 	if err != nil {
 		return err
 	}
 
-	o.targetClient = tcc
+	o.config = tcc
 	return nil
 }
 
 // Completed returns the constructed target clients including a RESTMapper and Scheme.
 // Before the first usage, Start and WaitForCacheSync should be called to ensure that the cache is running
 // and has been populated successfully.
-func (o *TargetClientOptions) Completed() *TargetClientConfig {
-	return o.targetClient
+func (o *TargetClusterOptions) Completed() *TargetClusterConfig {
+	return o.config
 }
 
-// NewTargetClientConfig creates a new target client config.
-func NewTargetClientConfig(kubeconfigPath string, disableCache bool, cacheResyncPeriod time.Duration) (*TargetClientConfig, error) {
+// NewTargetClusterConfig creates a new target config config.
+func NewTargetClusterConfig(kubeconfigPath, namespace string, disableCache bool, cacheResyncPeriod time.Duration) (*TargetClusterConfig, error) {
 	restConfig, err := getTargetRESTConfig(kubeconfigPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create REST config for target cluster: %w", err)
@@ -115,23 +119,23 @@ func NewTargetClientConfig(kubeconfigPath string, disableCache bool, cacheResync
 	)
 
 	if disableCache {
-		// create direct client for target cluster
+		// create direct config for target cluster
 		targetClient, err = client.New(restConfig, client.Options{
 			Mapper: restMapper,
 			Scheme: scheme,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("unable to create client for target cluster: %w", err)
+			return nil, fmt.Errorf("unable to create config for target cluster: %w", err)
 		}
 	} else {
-		// create cached client for target cluster
+		// create cached config for target cluster
 		targetCache, err = cache.New(restConfig, cache.Options{
 			Mapper: restMapper,
 			Resync: &cacheResyncPeriod,
 			Scheme: scheme,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("unable to create client cache for target cluster: %w", err)
+			return nil, fmt.Errorf("unable to create config cache for target cluster: %w", err)
 		}
 
 		targetClient, err = newCachedClient(targetCache, *restConfig, client.Options{
@@ -139,16 +143,18 @@ func NewTargetClientConfig(kubeconfigPath string, disableCache bool, cacheResync
 			Scheme: scheme,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("unable to create client for target cluster: %w", err)
+			return nil, fmt.Errorf("unable to create config for target cluster: %w", err)
 		}
 	}
 
-	return &TargetClientConfig{
-		Config:     restConfig,
-		Client:     targetClient,
-		RESTMapper: restMapper,
-		Scheme:     scheme,
-		cache:      targetCache,
+	return &TargetClusterConfig{
+		KubeconfigPath: kubeconfigPath,
+		Namespace:      namespace,
+		Config:         restConfig,
+		Client:         targetClient,
+		RESTMapper:     restMapper,
+		Scheme:         scheme,
+		cache:          targetCache,
 	}, nil
 }
 
@@ -199,8 +205,8 @@ func newCachedClient(cache cache.Cache, config rest.Config, options client.Optio
 	)
 }
 
-// Start starts the target cache if the client is cached.
-func (c *TargetClientConfig) Start(ctx context.Context) error {
+// Start starts the target cache if the config is cached.
+func (c *TargetClusterConfig) Start(ctx context.Context) error {
 	if c.cache == nil {
 		return nil
 	}
@@ -208,15 +214,17 @@ func (c *TargetClientConfig) Start(ctx context.Context) error {
 }
 
 // WaitForCacheSync waits for the caches of the target cache to be synced initially.
-func (c *TargetClientConfig) WaitForCacheSync(ctx context.Context) bool {
+func (c *TargetClusterConfig) WaitForCacheSync(ctx context.Context) bool {
 	if c.cache == nil {
 		return true
 	}
 	return c.cache.WaitForCacheSync(ctx)
 }
 
-// Apply sets the values of this TargetClientConfig on the given config.
-func (c *TargetClientConfig) Apply(conf *TargetClientConfig) {
+// Apply sets the values of this TargetClusterConfig on the given config.
+func (c *TargetClusterConfig) Apply(conf *TargetClusterConfig) {
+	conf.KubeconfigPath = c.KubeconfigPath
+	conf.Namespace = c.Namespace
 	conf.Config = c.Config
 	conf.Client = c.Client
 	conf.RESTMapper = c.RESTMapper

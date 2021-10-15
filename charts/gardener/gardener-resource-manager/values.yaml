@@ -37,6 +37,7 @@ leaderElection:
   renewDeadline: 10s
   retryPeriod: 2s
 
+# targetNamespace: ""
 # targetKubeconfig: |
 #   apiVersion: v1
 #   clusters:

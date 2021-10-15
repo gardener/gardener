@@ -43,8 +43,8 @@ type ControllerOptions struct {
 
 // ControllerConfig is the completed configuration for the controller.
 type ControllerConfig struct {
-	SyncPeriod         time.Duration
-	TargetClientConfig resourcemanagercmd.TargetClientConfig
+	SyncPeriod          time.Duration
+	TargetClusterConfig resourcemanagercmd.TargetClusterConfig
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -57,7 +57,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		MaxConcurrentReconciles: 1,
 		Reconciler: &reconciler{
 			syncPeriod:   conf.SyncPeriod,
-			targetClient: conf.TargetClientConfig.Client,
+			targetClient: conf.TargetClusterConfig.Client,
 		},
 	})
 	if err != nil {
