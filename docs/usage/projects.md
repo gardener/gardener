@@ -1,7 +1,6 @@
 # Projects
 
-The Gardener API server supports a cluster-scoped `Project` resource which is used to group usage of Gardener.
-For example, each development team has its own project to manage its own shoot clusters.
+The Gardener API server supports a cluster-scoped `Project` resource which is used for data isolation between individual Gardener consumers. For example, each development team has its own project to manage its own shoot clusters. 
 
 Each `Project` is backed by a Kubernetes `Namespace` that contains the actual related Kubernetes resources like `Secret`s or `Shoot`s.
 
