@@ -82,14 +82,7 @@ func shootKubeAPIServerAuditConfigFieldChanged(oldShoot, newShoot *gardencorev1b
 // FinalizerName is the name of the finalizer used for the reference protection.
 const FinalizerName = "gardener.cloud/reference-protection"
 
-// SecretLister fetches secret objects with the given options.
-type SecretLister func(ctx context.Context, secretList *corev1.SecretList, options ...client.ListOption) error
-
-// ConfigMapLister fetches configmap objects with the given options.
-type ConfigMapLister func(ctx context.Context, configMapList *corev1.ConfigMapList, options ...client.ListOption) error
-
 // NewShootReferenceReconciler creates a new instance of a reconciler which checks object references from shoot objects.
-// A special `userSecretLister` serves as an option to retrieve secret objects which are not gardener managed.
 func NewShootReferenceReconciler(l logrus.FieldLogger, gardenClient kubernetes.Interface, config *config.ShootReferenceControllerConfiguration) reconcile.Reconciler {
 	return &shootReferenceReconciler{
 		gardenClient: gardenClient,
