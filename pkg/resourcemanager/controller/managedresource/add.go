@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"time"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardenerconstantsv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
@@ -73,7 +73,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	mgr.GetLogger().Info("Used cluster id: " + conf.ClusterID)
 	c, err := controller.New(ControllerName, mgr, controller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-		Reconciler: extensionscontroller.OperationAnnotationWrapper(
+		Reconciler: reconcilerutils.OperationAnnotationWrapper(
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
 			&Reconciler{
 				targetClient:              conf.TargetClientConfig.Client,
