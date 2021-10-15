@@ -15,7 +15,7 @@
 package predicate_test
 
 import (
-	. "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -33,8 +33,8 @@ var _ = Describe("#HasFinalizer", func() {
 	)
 
 	BeforeEach(func() {
-		finalizer = NewClassFilter("foo").FinalizerName()
-		predicate = HasFinalizer(finalizer)
+		finalizer = "foo"
+		predicate = predicateutils.HasFinalizer(finalizer)
 
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
