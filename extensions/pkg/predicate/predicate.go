@@ -18,12 +18,12 @@ import (
 	"errors"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	extensionsinject "github.com/gardener/gardener/extensions/pkg/inject"
 	gardencore "github.com/gardener/gardener/pkg/api/core"
 	"github.com/gardener/gardener/pkg/api/extensions"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	injectutils "github.com/gardener/gardener/pkg/controllerutils/inject"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	"github.com/gardener/gardener/pkg/utils/version"
 
@@ -40,9 +40,9 @@ var Log logr.Logger = log.Log
 
 type shootNotFailedMapper struct {
 	log logr.Logger
-	extensionsinject.WithClient
-	extensionsinject.WithContext
-	extensionsinject.WithCache
+	injectutils.WithClient
+	injectutils.WithContext
+	injectutils.WithCache
 }
 
 func (s *shootNotFailedMapper) Map(e event.GenericEvent) bool {
