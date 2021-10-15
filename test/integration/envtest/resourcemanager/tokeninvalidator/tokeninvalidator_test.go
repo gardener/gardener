@@ -142,4 +142,38 @@ var _ = Describe("TokenInvalidator tests", func() {
 
 		Eventually(verifyNotInvalidated).Should(BeTrue())
 	})
+
+	It("should wait with invalidation until the pods using the static token are deleted", func() {
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "foo",
+				Namespace: secret.Namespace,
+			},
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{{
+					Name:  "some-container",
+					Image: "some-image",
+				}},
+				Volumes: []corev1.Volume{{
+					Name: "token",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: secret.Name,
+						},
+					},
+				}},
+			},
+		}
+		Expect(testClient.Create(ctx, pod)).To(Succeed())
+
+		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+		Expect(testClient.Create(ctx, serviceAccount)).To(Succeed())
+		Expect(testClient.Create(ctx, secret)).To(Succeed())
+
+		Consistently(verifyNotInvalidated()).Should(BeTrue())
+
+		Expect(testClient.Delete(ctx, pod)).To(Succeed())
+
+		Eventually(verifyInvalidated).Should(BeTrue())
+	})
 })

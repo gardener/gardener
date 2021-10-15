@@ -66,6 +66,19 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, r.removeConsiderLabel(ctx, secret)
 	}
 
+	podList := &corev1.PodList{}
+	if err := r.targetClient.List(ctx, podList, client.InNamespace(secret.Namespace)); err != nil {
+		return reconcile.Result{}, fmt.Errorf("could not list Pods: %w", err)
+	}
+
+	for _, pod := range podList.Items {
+		for _, volume := range pod.Spec.Volumes {
+			if volume.Secret != nil && volume.Secret.SecretName == secret.Name {
+				return reconcile.Result{Requeue: true}, nil
+			}
+		}
+	}
+
 	return reconcile.Result{}, r.addConsiderLabel(ctx, secret)
 }
 

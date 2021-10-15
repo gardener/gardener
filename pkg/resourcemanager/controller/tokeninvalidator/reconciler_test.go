@@ -124,18 +124,49 @@ var _ = Describe("TokenInvalidator", func() {
 				Expect(fakeClient.Create(ctx, secretPartialObjectMeta)).To(Succeed())
 			})
 
-			AfterEach(func() {
-				result, err := ctrl.Reconcile(ctx, request)
-				Expect(result).To(Equal(reconcile.Result{}))
-				Expect(err).NotTo(HaveOccurred())
+			Context("no requeue", func() {
+				It("AutomountServiceAccountToken=false", func() {
+					serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+					Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 
-				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				Expect(secret.Labels).To(HaveKeyWithValue("token-invalidator.resources.gardener.cloud/consider", "true"))
+					result, err := ctrl.Reconcile(ctx, request)
+					Expect(result).To(Equal(reconcile.Result{}))
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+					Expect(secret.Labels).To(HaveKeyWithValue("token-invalidator.resources.gardener.cloud/consider", "true"))
+				})
 			})
 
-			It("AutomountServiceAccountToken=false", func() {
-				serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
-				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
+			Context("requeue", func() {
+				It("pod with mounted service account secret still exists", func() {
+					pod := &corev1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "foo",
+							Namespace: secretPartialObjectMeta.Namespace,
+						},
+						Spec: corev1.PodSpec{
+							Volumes: []corev1.Volume{{
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName: secretPartialObjectMeta.Name,
+									},
+								},
+							}},
+						},
+					}
+					Expect(fakeClient.Create(ctx, pod)).To(Succeed())
+
+					serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+					Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
+
+					result, err := ctrl.Reconcile(ctx, request)
+					Expect(result).To(Equal(reconcile.Result{Requeue: true}))
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+					Expect(secret.Labels).NotTo(HaveKeyWithValue("token-invalidator.resources.gardener.cloud/consider", "true"))
+				})
 			})
 		})
 	})
