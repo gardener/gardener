@@ -34,6 +34,4 @@ popd > /dev/null
 
 read -ra PACKAGES <<< $(echo ${ROOTS})
 
-# We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
-# see https://github.com/kubernetes/code-generator/issues/100.
-GO111MODULE=off parallel --will-cite echo Generate {}';' go generate -mod=vendor {} ::: ${PACKAGES[@]}
+parallel --will-cite echo Generate {}';' go generate {} ::: ${PACKAGES[@]}

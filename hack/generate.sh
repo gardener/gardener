@@ -18,6 +18,4 @@ set -e
 
 echo "> Generate"
 
-# We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
-# see https://github.com/kubernetes/code-generator/issues/100.
-GO111MODULE=off go generate -mod=vendor $@
+go generate $@
