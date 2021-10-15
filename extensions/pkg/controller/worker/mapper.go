@@ -28,9 +28,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	contextutil "github.com/gardener/gardener/pkg/utils/context"
 )
 
@@ -152,7 +152,7 @@ func getReconcileRequestsFromObjectList(objList client.ObjectList, predicates []
 
 	utilruntime.HandleError(meta.EachListItem(objList, func(obj runtime.Object) error {
 		o := obj.(client.Object)
-		if !extensionspredicate.EvalGeneric(o, predicates...) {
+		if !predicateutils.EvalGeneric(o, predicates...) {
 			return nil
 		}
 

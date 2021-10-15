@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"net/http"
 
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,8 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 )
 
 // HandlerBuilder contains information which are required to create an admission handler.
@@ -176,7 +176,7 @@ func handle(ctx context.Context, req admission.Request, m Mutator, t client.Obje
 	}
 
 	// Run object through predicates
-	if !extensionspredicate.EvalGeneric(obj, predicates...) {
+	if !predicateutils.EvalGeneric(obj, predicates...) {
 		return admission.ValidationResponse(true, "")
 	}
 

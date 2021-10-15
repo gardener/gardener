@@ -19,7 +19,7 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	contextutils "github.com/gardener/gardener/pkg/utils/context"
 
 	corev1 "k8s.io/api/core/v1"
@@ -62,7 +62,7 @@ func (m *secretToManagedResourceMapper) Map(obj client.Object) []reconcile.Reque
 
 	var requests []reconcile.Request
 	for _, mr := range managedResourceList.Items {
-		if !managerpredicate.EvalGenericPredicate(&mr, m.predicates...) {
+		if !predicateutils.EvalGeneric(&mr, m.predicates...) {
 			continue
 		}
 

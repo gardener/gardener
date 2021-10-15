@@ -38,18 +38,6 @@ import (
 // Log is the logger for predicates.
 var Log logr.Logger = log.Log
 
-// EvalGeneric returns true if all predicates match for the given object.
-func EvalGeneric(obj client.Object, predicates ...predicate.Predicate) bool {
-	e := event.GenericEvent{Object: obj}
-	for _, p := range predicates {
-		if !p.Generic(e) {
-			return false
-		}
-	}
-
-	return true
-}
-
 type shootNotFailedMapper struct {
 	log logr.Logger
 	extensionsinject.WithClient
