@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
@@ -53,18 +53,22 @@ get_group_package () {
 
 generate_group () {
   local group="$1"
+  echo "Generating CRDs for $group group"
+
   local package="$(get_group_package "$group")"
   if [ -z "$package" ] ; then
     exit 1
   fi
   local package_path="$(go list -f '{{ .Dir }}' "$package")"
+  if [ -z "$package_path" ] ; then
+    exit 1
+  fi
 
   # clean all generated files for this group to account for changed prefix or removed resources
   if ls "$output_dir"/*${group}_*.yaml >/dev/null 2>&1; then
     rm "$output_dir"/*${group}_*.yaml
   fi
 
-  echo "Generating CRDs for $group group"
   controller-gen crd paths="$package_path" output:crd:dir="$output_dir" output:stdout
 
   while IFS= read -r crd; do
