@@ -53,7 +53,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 			log.Error(err, "Could not find Secret")
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, fmt.Errorf("could not fetch Secret: %+v", err)
+		return reconcile.Result{}, fmt.Errorf("could not fetch Secret: %w", err)
 	}
 
 	serviceAccount := &corev1.ServiceAccount{}

@@ -352,7 +352,7 @@ kind: Secret
 metadata:
   annotations:
     kubernetes.io/service-account.name: my-serviceaccount
-    kubernetes.io/service-account.uid: 86e98645-2e05-11e9-863a-b2d4d086dd5a)
+    kubernetes.io/service-account.uid: 86e98645-2e05-11e9-863a-b2d4d086dd5a
   name: my-serviceaccount-token-ntxs9
 type: kubernetes.io/service-account-token
 data:

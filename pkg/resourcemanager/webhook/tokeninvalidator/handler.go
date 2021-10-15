@@ -44,7 +44,7 @@ func (w *tokenInvalidator) InjectDecoder(d *admission.Decoder) error {
 func (w *tokenInvalidator) Handle(_ context.Context, req admission.Request) admission.Response {
 	secret := &corev1.Secret{}
 	if err := w.decoder.Decode(req, secret); err != nil {
-		return admission.Errored(http.StatusBadRequest, err)
+		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
 	if secret.Data == nil {

@@ -73,7 +73,7 @@ var _ = Describe("Handler", func() {
 				AdmissionResponse: admissionv1.AdmissionResponse{
 					Allowed: false,
 					Result: &metav1.Status{
-						Code:    int32(http.StatusBadRequest),
+						Code:    int32(http.StatusUnprocessableEntity),
 						Message: "couldn't get version/kind; json parse error: invalid character ']' looking for beginning of object key string",
 					},
 				},
