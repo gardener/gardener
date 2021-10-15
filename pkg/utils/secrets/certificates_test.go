@@ -15,7 +15,10 @@
 package secrets_test
 
 import (
+	"time"
+
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/gardener/gardener/pkg/utils/secrets"
 	. "github.com/onsi/ginkgo"
@@ -160,6 +163,78 @@ var _ = Describe("Certificate Secrets", func() {
 					DataKeyCertificateCA: []byte("ca"),
 				}
 				Expect(certificate.SecretData()).To(Equal(secretData))
+			})
+		})
+	})
+
+	Describe("#CertificateIsExpired", func() {
+		// Validity
+		// Not Before: Sep 18 06:15:51 2017 GMT
+		// Not After : Sep 16 06:15:51 2027 GMT
+		var (
+			cert = []byte(`-----BEGIN CERTIFICATE-----
+MIIDBzCCAe+gAwIBAgIJAJL7bJOMij7vMA0GCSqGSIb3DQEBBQUAMBoxGDAWBgNV
+BAMMD3d3dy5leGFtcGxlLmNvbTAeFw0xNzA5MTgwNjE1NTFaFw0yNzA5MTYwNjE1
+NTFaMBoxGDAWBgNVBAMMD3d3dy5leGFtcGxlLmNvbTCCASIwDQYJKoZIhvcNAQEB
+BQADggEPADCCAQoCggEBAK48vFUoR3+IKiTa63tE+pOyYob4wczIC5co2PWRVhPu
+2FKNhQuD76MDNf8yXIQ8xO6QNT1BPJCdg3qjAjdSD0qIdyG6/vh1VZyeBXrXtTzm
+JGmKIX8+R3W5UKtWIKWrRc31DEUFoU+jJySd2jIeAcNuc4dFgdhanV/FLChrIm3Q
+PWxteKT0eNvnBEdH6kwj5OnXOWRX+hjL4GHq373y4KdWrSF4lZkdFAWEdWwpQC5q
+8PrU7OPw01mVeCyvmgdaxLxlW3SgD9E/SSWF9MtAf03k5FGXOLHdY4dL3u5oWWdz
+UUKB/NZPnohf4/eOsOKU8rSO0iY+798J/r6NX1oJ50cCAwEAAaNQME4wHQYDVR0O
+BBYEFIDD01YMrL/eV2fQfQvid9SfZrw2MB8GA1UdIwQYMBaAFIDD01YMrL/eV2fQ
+fQvid9SfZrw2MAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEFBQADggEBAGF63ihH
+v1t2/0RjyVmBelGIifWm9NlgcV/WKT/ZAuz33+Otr4H2KzcAHaSZuaNaQq/DKQ92
+oGxA9X9xpnCc9aMfbggCsmCvzDIkbEJ/U2SyGbYu4VozgwvXgwH+JShFBfDyepOq
+IHwwHZmSRUqCFTYxCUSWJrJ4AK+8bI47RRcqHa4P0A7h+P63sS5IyyK371Q2ANga
+gmnUK+HpzDfHnVuv5FVr3fl7vs4gP4KyQ74+WG3UX7t9Goqj1DRfRRccRzNh/cC8
+YjxuTtX5W7FiUTXLdvib2Rve46PMlprOKABr0D0ajo05SvkDBTZpIle1CTcp0fmk
+knrjCu4WX+cJxJk=
+-----END CERTIFICATE-----`)
+			noRenewalWindow = 0 * time.Second
+		)
+
+		Context("when certificate is expired", func() {
+			var revert func()
+
+			BeforeEach(func() {
+				revert = test.WithVar(&NowFunc, func() time.Time {
+					time, err := time.Parse(time.RFC3339, "2027-09-16T06:16:00+00:00")
+					Expect(err).NotTo(HaveOccurred())
+					return time
+				})
+			})
+
+			AfterEach(func() {
+				revert()
+			})
+
+			It("should detect expired certificate", func() {
+				Expect(CertificateIsExpired(cert, noRenewalWindow)).To(BeTrue())
+			})
+		})
+
+		Context("when certificate is valid", func() {
+			var revert func()
+
+			BeforeEach(func() {
+				revert = test.WithVar(&NowFunc, func() time.Time {
+					time, err := time.Parse(time.RFC3339, "2027-08-17T06:16:00+00:00")
+					Expect(err).NotTo(HaveOccurred())
+					return time
+				})
+			})
+
+			AfterEach(func() {
+				revert()
+			})
+
+			It("should return valid certificate", func() {
+				Expect(CertificateIsExpired(cert, noRenewalWindow)).To(BeFalse())
+			})
+
+			It("should return expired certificate because of 30 days renewal window", func() {
+				Expect(CertificateIsExpired(cert, 30*24*time.Hour)).To(BeTrue())
 			})
 		})
 	})

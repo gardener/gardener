@@ -484,3 +484,16 @@ func SelfGenerateTLSServerCertificate(name string, dnsNames []string, ips []net.
 
 	return certificate, caCertificate, tempDir, nil
 }
+
+// CertificateIsExpired returns `true` if the given certificate is expired.
+// The given `renewalWindow` lets the certificate expire earlier.
+func CertificateIsExpired(cert []byte, renewalWindow time.Duration) (bool, error) {
+	now := NowFunc()
+
+	x509, err := utils.DecodeCertificate(cert)
+	if err != nil {
+		return false, err
+	}
+
+	return now.After(x509.NotAfter.Add(-renewalWindow)), nil
+}

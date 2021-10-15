@@ -16,6 +16,8 @@ package botanist
 
 import (
 	"context"
+	"encoding/json"
+	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -68,6 +70,19 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 				if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, vpnseedserver.DeploymentName, vpnseedserver.VpnShootSecretName, vpnseedserver.VpnSeedServerTLSAuth); err != nil {
 					return err
 				}
+			}
+		}
+
+		// Trigger replacement of operator/user facing certificates if required
+		expiredTLSSecrets, err := getExpiredCerts(gardenerResourceDataList, common.CrtRenewalWindow, common.IngressTLSSecretNames...)
+		if err != nil {
+			return err
+		}
+
+		if len(expiredTLSSecrets) > 0 {
+			b.Logger.Infof("Deleting secrets for certificate rotation: %v", expiredTLSSecrets)
+			if err := b.deleteSecrets(ctx, &gardenerResourceDataList, expiredTLSSecrets...); err != nil {
+				return err
 			}
 		}
 
@@ -218,6 +233,18 @@ func (b *Botanist) fetchExistingSecrets(ctx context.Context) (map[string]*corev1
 	return existingSecretsMap, nil
 }
 
+// deleteSecrets removes the given secrets from the shoot namespace in the seed
+// as well as removes it from the given `gardenerResourceDataList`.
+func (b *Botanist) deleteSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList, secretNames ...string) error {
+	for _, secretName := range secretNames {
+		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		gardenerResourceDataList.Delete(secretName)
+	}
+	return nil
+}
+
 func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
 	secrets := []string{
 		kubeapiserver.SecretNameStaticToken,
@@ -229,11 +256,8 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 		secrets = append(secrets, logging.SecretNameLokiKubeRBACProxyKubeconfig)
 	}
 
-	for _, secretName := range secrets {
-		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		gardenerResourceDataList.Delete(secretName)
+	if err := b.deleteSecrets(ctx, gardenerResourceDataList, secrets...); err != nil {
+		return err
 	}
 
 	// remove operation annotation
@@ -275,13 +299,7 @@ func (b *Botanist) rotateSSHKeypairSecrets(ctx context.Context, gardenerResource
 }
 
 func (b *Botanist) deleteBasicAuthDependantSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList) error {
-	for _, secretName := range []string{kubeapiserver.SecretNameBasicAuth, common.KubecfgSecretName} {
-		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
-			return err
-		}
-		gardenerResourceDataList.Delete(secretName)
-	}
-	return nil
+	return b.deleteSecrets(ctx, gardenerResourceDataList, kubeapiserver.SecretNameBasicAuth, common.KubecfgSecretName)
 }
 
 func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secrets.StaticToken) error {
@@ -333,6 +351,32 @@ func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *s
 	}
 
 	return nil
+}
+
+func getExpiredCerts(gardenerResourceDataList gardencorev1alpha1helper.GardenerResourceDataList, renewalWindow time.Duration, secretNames ...string) ([]string, error) {
+	var expiredCerts []string
+
+	for _, secretName := range secretNames {
+		data := gardenerResourceDataList.Get(secretName)
+		if data == nil {
+			continue
+		}
+
+		certObj := &secrets.CertificateJSONData{}
+		if err := json.Unmarshal(data.Data.Raw, certObj); err != nil {
+			return nil, err
+		}
+
+		expired, err := secrets.CertificateIsExpired(certObj.Certificate, renewalWindow)
+		if err != nil {
+			return nil, err
+		}
+
+		if expired {
+			expiredCerts = append(expiredCerts, secretName)
+		}
+	}
+	return expiredCerts, nil
 }
 
 type projectSecret struct {
