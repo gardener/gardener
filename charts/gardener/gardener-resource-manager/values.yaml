@@ -28,6 +28,9 @@ controllers:
     syncPeriod: ""
   tokenInvalidator:
     concurrentSyncs: 0
+  rootCAController:
+    maxConcurrentWorkers: 1
+    rootCAPath: "path/to/file"
 
 leaderElection:
   enabled: true

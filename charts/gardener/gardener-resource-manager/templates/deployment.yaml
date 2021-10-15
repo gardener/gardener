@@ -71,6 +71,8 @@ spec:
         {{- if and .Values.serverCertificate .Values.serverPrivateKey }}
         - --tls-cert-dir=/etc/gardener-resource-manager/tls
         {{- end }}
+        - --root-ca-publisher-max-concurrent-workers={{ .Values.controllers.rootCAController.maxConcurrentWorkers }}
+        - --root-ca-file="{{ .Values.controllers.rootCAController.rootCAPath }}"
         resources:
 {{ toYaml .Values.resources | nindent 12 }}
         livenessProbe:
