@@ -196,7 +196,7 @@ func (c *Controller) Run(ctx context.Context, shootMaintenanceWorkers, shootQuot
 			shootHibernationQueueLength = c.shootHibernationQueue.Len()
 			configMapQueueLength        = c.configMapQueue.Len()
 			referenceQueueLength        = c.shootReferenceQueue.Len()
-			shootRetryQueueLength       = c.shootReferenceQueue.Len()
+			shootRetryQueueLength       = c.shootRetryQueue.Len()
 			queueLengths                = shootMaintenanceQueueLength + shootQuotaQueueLength + shootHibernationQueueLength + configMapQueueLength + referenceQueueLength + shootRetryQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
