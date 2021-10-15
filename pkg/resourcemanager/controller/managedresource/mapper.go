@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mapper
+package managedresource
 
 import (
 	"context"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	grmpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 	contextutils "github.com/gardener/gardener/pkg/utils/context"
 
 	corev1 "k8s.io/api/core/v1"
@@ -62,7 +62,7 @@ func (m *secretToManagedResourceMapper) Map(obj client.Object) []reconcile.Reque
 
 	var requests []reconcile.Request
 	for _, mr := range managedResourceList.Items {
-		if !grmpredicate.EvalGenericPredicate(&mr, m.predicates...) {
+		if !managerpredicate.EvalGenericPredicate(&mr, m.predicates...) {
 			continue
 		}
 

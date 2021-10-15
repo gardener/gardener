@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mapper_test
+package managedresource_test
 
 import (
 	"context"
@@ -21,8 +21,8 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
-	filter2 "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	. "github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
+	"github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -43,7 +43,7 @@ var _ = Describe("#SecretToManagedResourceMapper", func() {
 		ctrl   *gomock.Controller
 		m      mapper.Mapper
 		secret *corev1.Secret
-		filter *filter2.ClassFilter
+		filter *predicate.ClassFilter
 	)
 
 	BeforeEach(func() {
@@ -57,9 +57,9 @@ var _ = Describe("#SecretToManagedResourceMapper", func() {
 			},
 		}
 
-		filter = filter2.NewClassFilter("seed")
+		filter = predicate.NewClassFilter("seed")
 
-		m = mapper.SecretToManagedResourceMapper(filter)
+		m = SecretToManagedResourceMapper(filter)
 
 		Expect(inject.ClientInto(c, m)).To(BeTrue())
 	})

@@ -19,7 +19,6 @@ import (
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
-	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/spf13/pflag"
@@ -63,7 +62,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 
 	if err := secretController.Watch(
 		&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
-		mapper.EnqueueRequestsFrom(mapper.ManagedResourceToSecretsMapper(), mapper.UpdateWithOldAndNew),
+		mapper.EnqueueRequestsFrom(ManagedResourceToSecretsMapper(), mapper.UpdateWithOldAndNew),
 		predicate.GenerationChangedPredicate{},
 	); err != nil {
 		return fmt.Errorf("unable to watch ManagedResources: %w", err)

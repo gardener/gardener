@@ -25,7 +25,6 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
-	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/go-logr/logr"
@@ -106,7 +105,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 
 	if err := c.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
-		mapper.EnqueueRequestsFrom(mapper.SecretToManagedResourceMapper(conf.ClassFilter), mapper.UpdateWithOldAndNew),
+		mapper.EnqueueRequestsFrom(SecretToManagedResourceMapper(conf.ClassFilter), mapper.UpdateWithOldAndNew),
 	); err != nil {
 		return fmt.Errorf("unable to watch Secrets mapping to ManagedResources: %w", err)
 	}
