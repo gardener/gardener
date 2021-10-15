@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package manager
+package builder
 
 import (
 	"context"
@@ -31,7 +31,7 @@ type ManagedResource struct {
 	resource *resourcesv1alpha1.ManagedResource
 }
 
-// NewManagedResource creates a new manager for a ManagedResource.
+// NewManagedResource creates a new builder for a ManagedResource.
 func NewManagedResource(client client.Client) *ManagedResource {
 	return &ManagedResource{
 		client:   client,
