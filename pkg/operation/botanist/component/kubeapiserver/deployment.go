@@ -65,6 +65,9 @@ const (
 	containerNameVPNSeed                  = "vpn-seed"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
 
+	// GardenerAudience is the identifier for Gardener controllers when interacting with the API Server
+	GardenerAudience = "gardener"
+
 	volumeNameAdmissionConfiguration   = "kube-apiserver-admission-config"
 	volumeNameAuditPolicy              = "audit-policy-config"
 	volumeNameBasicAuthentication      = "kube-apiserver-basic-auth"
@@ -437,9 +440,8 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--audit-log-maxbackup=5")
 	out = append(out, "--authorization-mode=Node,RBAC")
 
-	if len(k.values.APIAudiences) > 0 {
-		out = append(out, "--api-audiences="+strings.Join(k.values.APIAudiences, ","))
-	}
+	audiences := append(k.values.APIAudiences, GardenerAudience)
+	out = append(out, "--api-audiences="+strings.Join(audiences, ","))
 
 	out = append(out, fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA))
 	out = append(out, "--enable-aggregator-routing=true")

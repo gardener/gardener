@@ -1731,6 +1731,7 @@ rules:
 							"--audit-log-maxsize=100",
 							"--audit-log-maxbackup=5",
 							"--authorization-mode=Node,RBAC",
+							"--api-audiences=gardener",
 							"--client-ca-file=/srv/kubernetes/ca/ca.crt",
 							"--enable-aggregator-routing=true",
 							"--enable-bootstrap-token-auth=true",
@@ -1971,7 +1972,7 @@ rules:
 						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--advertise-address=")))
 					})
 
-					It("should configure the api audiences if provided", func() {
+					It("should configure additional api audiences if provided", func() {
 						var (
 							apiAudience1 = "foo"
 							apiAudience2 = "bar"
@@ -1983,14 +1984,14 @@ rules:
 						deployAndRead()
 
 						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
-							"--api-audiences=" + apiAudience1 + "," + apiAudience2,
+							"--api-audiences=" + apiAudience1 + "," + apiAudience2 + ",gardener",
 						))
 					})
 
-					It("should not configure the api audiences if not provided", func() {
+					It("should only contain 'gardener' as api audiences if no api-audiences provided", func() {
 						deployAndRead()
 
-						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--api-audiences=")))
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement("--api-audiences=gardener"))
 					})
 
 					It("should configure the feature gates if provided", func() {
