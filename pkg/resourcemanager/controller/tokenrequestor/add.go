@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	gardenerconstantsv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +47,7 @@ type ControllerOptions struct {
 // ControllerConfig is the completed configuration for the controller.
 type ControllerConfig struct {
 	MaxConcurrentWorkers int
-	TargetClientConfig   resourcemanagercmd.TargetClientConfig
+	TargetCluster        cluster.Cluster
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -56,7 +56,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		return nil
 	}
 
-	coreV1Client, err := corev1clientset.NewForConfig(conf.TargetClientConfig.Config)
+	coreV1Client, err := corev1clientset.NewForConfig(conf.TargetCluster.GetConfig())
 	if err != nil {
 		return fmt.Errorf("could not create coreV1Client: %w", err)
 	}
@@ -65,7 +65,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 		Reconciler: &reconciler{
 			clock:              clock.RealClock{},
-			targetClient:       conf.TargetClientConfig.Client,
+			targetClient:       conf.TargetCluster.GetClient(),
 			targetCoreV1Client: coreV1Client,
 		},
 	})

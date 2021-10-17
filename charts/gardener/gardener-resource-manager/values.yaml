@@ -28,6 +28,8 @@ controllers:
     syncPeriod: ""
   tokenInvalidator:
     concurrentSyncs: 0
+  tokenRequestor:
+    concurrentSyncs: 0
   rootCAController:
     maxConcurrentWorkers: 0
     rootCAPath: "" # path to a file containing the root CA bundle
