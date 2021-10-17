@@ -367,3 +367,30 @@ Any attempt to regenerate the token or creating a new such secret will again mak
 > You can opt-out of this behaviour for `ServiceAccount`s setting `.automountServiceAccountToken=false` by labeling them with `token-invalidator.resources.gardener.cloud/skip=true`.
 
 In order to enable the _TokenInvalidator_ you have to set `--token-invalidator-max-concurrent-workers` to a value larger than `0`.
+
+### TokenRequestor
+
+This controller provides the service to create and renews tokens via the [TokenRequestAPI](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/).
+
+It provides a functionality similar to the Kubelets [Service Account Token Volume Projection](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection).
+It was created to handle the special case of issuing tokens to pods that run in a different cluster than the APIServer they want to talk to.
+
+#### Reconcile Loop
+
+This controller reconciles secrets in all namespaces in the targetCluster with the label: `gardener.cloud/purpose: shoot-token`.
+See [here](https://github.com/gardener/gardener-extension-provider-alicloud/blob/master/example/30-infrastructure.yaml#L54-L64) for an example of the secret.
+
+The controller ensures a ServiceAccount exists as specified in the annotations of the secret:
+
+```yaml
+serviceaccount.shoot.gardener.cloud/name: <sa-name>
+serviceaccount.shoot.gardener.cloud/namespace: <sa-namespace>
+```
+
+The tokens requested will act with the privileges which are assigned to this ServiceAccount.
+
+The controller will then request a token via the [TokenRequestAPI](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) and populate the data field in the secret with the token.
+
+It also adds an annotation to the secret to keep track when to renew it before expiration.
+The tokens are issued to expire after 12 hours.
+It automatically renews once 80% of the lifetime is reached.
