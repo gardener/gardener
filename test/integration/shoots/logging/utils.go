@@ -244,3 +244,11 @@ func newPodAntiAffinity(matchLabels map[string]string) *corev1.PodAntiAffinity {
 		},
 	}
 }
+
+func newGardenNamespace(namespace string) *corev1.Namespace {
+	return &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+}
