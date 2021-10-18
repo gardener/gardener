@@ -44,6 +44,8 @@ var (
 	dnsProviderCRD string
 	//go:embed templates/crd-dnsrecord.tpl.yaml
 	dnsRecordCRD string
+	//go:embed templates/crd-etcd.tpl.yaml
+	etcdCRD string
 	//go:embed templates/crd-extension.tpl.yaml
 	extensionCRD string
 	//go:embed templates/crd-infrastructure.tpl.yaml
@@ -72,6 +74,7 @@ func init() {
 		dnsOwnerCRD,
 		dnsProviderCRD,
 		dnsRecordCRD,
+		etcdCRD,
 		extensionCRD,
 		infrastructureCRD,
 		managedResourcesCRD,
