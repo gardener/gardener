@@ -24,25 +24,27 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 type reconciler struct {
 	targetClient client.Client
+	targetReader client.Reader
 }
 
 var _ reconcile.Reconciler = &reconciler{}
 
 // NewReconciler returns a new reconciler.
-func NewReconciler(targetClient client.Client) reconcile.Reconciler {
+func NewReconciler(targetClient client.Client, targetReader client.Reader) reconcile.Reconciler {
 	return &reconciler{
 		targetClient: targetClient,
+		targetReader: targetReader,
 	}
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	log := log.FromContext(ctx)
+	log := logf.FromContext(ctx)
 
 	secret := &metav1.PartialObjectMetadata{}
 	secret.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
@@ -67,7 +69,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	}
 
 	podList := &corev1.PodList{}
-	if err := r.targetClient.List(ctx, podList, client.InNamespace(secret.Namespace)); err != nil {
+	if err := r.targetReader.List(ctx, podList, client.InNamespace(secret.Namespace)); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not list Pods: %w", err)
 	}
 
@@ -91,7 +93,7 @@ func (r *reconciler) removeConsiderLabel(ctx context.Context, secret *metav1.Par
 }
 
 func (r *reconciler) patchSecret(ctx context.Context, secret *metav1.PartialObjectMetadata, transform func()) error {
-	patch := client.MergeFrom(secret.DeepCopy())
+	patch := client.MergeFromWithOptions(secret.DeepCopy(), client.MergeFromWithOptimisticLock{})
 	transform()
 	return r.targetClient.Patch(ctx, secret, patch)
 }

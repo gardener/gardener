@@ -50,7 +50,8 @@ type ManagerConfig struct {
 	healthBindAddress  string
 	serverPort         int
 
-	livenessEndpointName string
+	livenessEndpointName  string
+	readinessEndpointName string
 
 	leaderElection              bool
 	leaderElectionResourceLock  string
@@ -93,6 +94,7 @@ func (o *ManagerOptions) Complete() error {
 		healthBindAddress:           o.healthBindAddress,
 		serverPort:                  o.serverPort,
 		livenessEndpointName:        "/healthz",
+		readinessEndpointName:       "/readyz",
 	}
 	return nil
 }
@@ -117,4 +119,5 @@ func (c *ManagerConfig) Apply(opts *manager.Options) {
 	opts.HealthProbeBindAddress = c.healthBindAddress
 	opts.Port = c.serverPort
 	opts.LivenessEndpointName = c.livenessEndpointName
+	opts.ReadinessEndpointName = c.readinessEndpointName
 }

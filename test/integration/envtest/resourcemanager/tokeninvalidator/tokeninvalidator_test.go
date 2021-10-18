@@ -16,7 +16,6 @@ package tokeninvalidator_test
 
 import (
 	"bytes"
-	"context"
 
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
@@ -31,8 +30,6 @@ import (
 
 var _ = Describe("TokenInvalidator tests", func() {
 	var (
-		ctx = context.Background()
-
 		serviceAccountName = "serviceaccount"
 		secretName         = "secret"
 		validToken         = []byte("some-valid-token")
@@ -86,12 +83,12 @@ var _ = Describe("TokenInvalidator tests", func() {
 
 	Context("no action", func() {
 		AfterEach(func() {
-			copy := secret.DeepCopy()
+			secretCopy := secret.DeepCopy()
 			Expect(testClient.Create(ctx, secret)).To(Succeed())
 
 			Consistently(func() bool {
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(copy), copy)).To(Succeed())
-				return apiequality.Semantic.DeepEqual(secret, copy)
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secretCopy), secretCopy)).To(Succeed())
+				return apiequality.Semantic.DeepEqual(secret, secretCopy)
 			}).Should(BeTrue())
 		})
 

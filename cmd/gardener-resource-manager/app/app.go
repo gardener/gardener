@@ -27,6 +27,7 @@ import (
 	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/resourcemanager/healthz"
+	"github.com/gardener/gardener/pkg/resourcemanager/readyz"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 
 	"github.com/spf13/cobra"
@@ -128,8 +129,9 @@ func NewResourceManagerCommand() *cobra.Command {
 				healthcontroller.AddToManager,
 				garbagecollectorcontroller.AddToManager,
 				tokeninvalidatorcontroller.AddToManager,
-				// health endpoint
+				// health/ready endpoints
 				healthz.AddToManager,
+				readyz.AddToManager,
 				// webhooks
 				tokeninvalidatorwebhook.AddToManager,
 			); err != nil {

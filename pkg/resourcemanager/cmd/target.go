@@ -63,6 +63,7 @@ type TargetClusterConfig struct {
 	Namespace      string
 	Config         *rest.Config
 	Client         client.Client
+	APIReader      client.Reader
 	RESTMapper     meta.RESTMapper
 	Scheme         *runtime.Scheme
 
@@ -111,23 +112,21 @@ func NewTargetClusterConfig(kubeconfigPath, namespace string, disableCache bool,
 		return nil, fmt.Errorf("unable to create REST mapper for target cluster: %w", err)
 	}
 
-	scheme := getTargetScheme()
-
 	var (
-		targetCache  cache.Cache
-		targetClient client.Client
+		scheme      = getTargetScheme()
+		targetCache cache.Cache
 	)
 
-	if disableCache {
-		// create direct config for target cluster
-		targetClient, err = client.New(restConfig, client.Options{
-			Mapper: restMapper,
-			Scheme: scheme,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("unable to create config for target cluster: %w", err)
-		}
-	} else {
+	targetClient, err := client.New(restConfig, client.Options{
+		Mapper: restMapper,
+		Scheme: scheme,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to create config for target cluster: %w", err)
+	}
+	targetReader := targetClient
+
+	if !disableCache {
 		// create cached config for target cluster
 		targetCache, err = cache.New(restConfig, cache.Options{
 			Mapper: restMapper,
@@ -152,6 +151,7 @@ func NewTargetClusterConfig(kubeconfigPath, namespace string, disableCache bool,
 		Namespace:      namespace,
 		Config:         restConfig,
 		Client:         targetClient,
+		APIReader:      targetReader,
 		RESTMapper:     restMapper,
 		Scheme:         scheme,
 		cache:          targetCache,
@@ -227,6 +227,7 @@ func (c *TargetClusterConfig) Apply(conf *TargetClusterConfig) {
 	conf.Namespace = c.Namespace
 	conf.Config = c.Config
 	conf.Client = c.Client
+	conf.APIReader = c.APIReader
 	conf.RESTMapper = c.RESTMapper
 	conf.Scheme = c.Scheme
 }

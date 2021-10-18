@@ -35,7 +35,7 @@ import (
 )
 
 // ControllerName is the name of the controller.
-const ControllerName = "token-invalidator-controller"
+const ControllerName = "token-invalidator"
 
 // defaultControllerConfig is the default config for the controller.
 var defaultControllerConfig ControllerConfig
@@ -61,7 +61,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	c, err := crcontroller.New(ControllerName, mgr,
 		crcontroller.Options{
 			MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-			Reconciler:              NewReconciler(mgr.GetClient()),
+			Reconciler:              NewReconciler(conf.TargetClusterConfig.Client, conf.TargetClusterConfig.APIReader),
 		},
 	)
 	if err != nil {
