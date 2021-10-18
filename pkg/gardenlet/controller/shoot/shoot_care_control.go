@@ -41,6 +41,7 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -356,7 +357,7 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 
 	updatedConditions = append(updatedConditions, seedConditions...)
 
-	// Update Shoot status if necessary
+	// Update Shoot status (conditions, constraints) if necessary
 	if gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) ||
 		gardencorev1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
 		if err := patchShootStatus(ctx, gardenClient, shoot, updatedConditions, updatedConstraints); err != nil {
@@ -365,16 +366,22 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 		}
 	}
 
-	// Mark Shoot as healthy/unhealthy
-	metaPatch := client.MergeFrom(shoot.DeepCopy())
-	kutil.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(shootpkg.ComputeStatus(
-		shoot.Status.LastOperation,
-		shoot.Status.LastErrors,
-		updatedConditions...,
-	)))
-	if err := gardenClient.Patch(ctx, shoot, metaPatch); err != nil {
-		operation.Logger.Errorf("Could not update Shoot health label: %+v", err)
+	// Update Shoot status label according to status if necessary
+	actualStatus := string(shootpkg.ComputeStatus(shoot.Status.LastOperation, shoot.Status.LastErrors, updatedConditions...))
+	if err := PatchShootStatusLabel(ctx, gardenClient, shoot, actualStatus); err != nil {
+		operation.Logger.Errorf("Could not update Shoot status label: %+v", err)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
+	}
+
+	return nil
+}
+
+// PatchShootStatusLabel patches the shoot status label if the shoot status changed
+func PatchShootStatusLabel(ctx context.Context, c client.Writer, shoot *gardencorev1beta1.Shoot, actualStatus string) error {
+	if currentStatus, statusPresent := shoot.Labels[v1beta1constants.ShootStatus]; !statusPresent || currentStatus != actualStatus {
+		metaPatch := client.MergeFrom(shoot.DeepCopy())
+		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, actualStatus)
+		return c.Patch(ctx, shoot, metaPatch)
 	}
 
 	return nil

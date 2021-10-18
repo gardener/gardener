@@ -17,6 +17,7 @@ package shoot_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -53,13 +54,36 @@ import (
 
 var _ = Describe("Shoot Care Control", func() {
 	var (
+		ctx           context.Context
+		gardenClient  client.Client
 		log           logrus.FieldLogger
 		careControl   reconcile.Reconciler
 		gardenletConf *config.GardenletConfiguration
+
+		shootName, shootNamespace, seedName string
+
+		shoot *gardencorev1beta1.Shoot
 	)
 
-	BeforeSuite(func() {
+	BeforeEach(func() {
+		ctx = context.Background()
+
+		gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 		log = logger.NewNopLogger()
+
+		shootName = "shoot"
+		shootNamespace = "project"
+		seedName = "seed"
+
+		shoot = &gardencorev1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      shootName,
+				Namespace: shootNamespace,
+			},
+			Spec: gardencorev1beta1.ShootSpec{
+				SeedName: &seedName,
+			},
+		}
 	})
 
 	AfterEach(func() {
@@ -68,25 +92,16 @@ var _ = Describe("Shoot Care Control", func() {
 
 	Describe("#Care", func() {
 		var (
-			ctx context.Context
-
-			gardenClient   client.Client
 			careSyncPeriod time.Duration
 
-			gardenSecrets                       []corev1.Secret
-			seed                                *gardencorev1beta1.Seed
-			seedName, shootName, shootNamespace string
-			req                                 reconcile.Request
-			shoot                               *gardencorev1beta1.Shoot
+			gardenSecrets []corev1.Secret
+			seed          *gardencorev1beta1.Seed
+			req           reconcile.Request
 		)
 
 		BeforeEach(func() {
-			ctx = context.Background()
-
-			gardenClient = fakeclient.NewClientBuilder().WithScheme(kubernetes.GardenScheme).Build()
 			careSyncPeriod = 1 * time.Minute
 
-			seedName = "seed"
 			seed = &gardencorev1beta1.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seedName,
@@ -109,19 +124,7 @@ var _ = Describe("Shoot Care Control", func() {
 				},
 			}}
 
-			shootName = "shoot"
-			shootNamespace = "project"
 			req = reconcile.Request{NamespacedName: kutil.Key(shootNamespace, shootName)}
-
-			shoot = &gardencorev1beta1.Shoot{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      shootName,
-					Namespace: shootNamespace,
-				},
-				Spec: gardencorev1beta1.ShootSpec{
-					SeedName: &seedName,
-				},
-			}
 
 			gardenletConf = &config.GardenletConfiguration{
 				SeedConfig: &config.SeedConfig{
@@ -197,18 +200,6 @@ var _ = Describe("Shoot Care Control", func() {
 			})
 
 			Context("when seed client is not available", func() {
-				BeforeEach(func() {
-					shoot = &gardencorev1beta1.Shoot{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      shootName,
-							Namespace: shootNamespace,
-						},
-						Spec: gardencorev1beta1.ShootSpec{
-							SeedName: &seedName,
-						},
-					}
-				})
-
 				It("should report a setup failure", func() {
 					careControl = NewCareReconciler(clientMapBuilder.Build(), log, nil, nil, "", gardenletConf)
 					Expect(careControl.Reconcile(ctx, req)).To(Equal(reconcile.Result{RequeueAfter: careSyncPeriod}))
@@ -631,6 +622,48 @@ var _ = Describe("Shoot Care Control", func() {
 			})
 		})
 	})
+
+	Describe("#PatchShootStatusLabel", func() {
+		It("should set label if not present", func() {
+			Expect(gardenClient.Create(ctx, shoot)).To(Succeed(), "preparing shoot for test should succeed")
+
+			Expect(PatchShootStatusLabel(ctx, gardenClient, shoot, string(operationshoot.StatusHealthy))).To(Succeed())
+
+			updatedShoot := &gardencorev1beta1.Shoot{}
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
+			Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
+		})
+		It("should set label if status changed", func() {
+			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy))
+			Expect(gardenClient.Create(ctx, shoot)).To(Succeed(), "preparing shoot for test should succeed")
+
+			Expect(PatchShootStatusLabel(ctx, gardenClient, shoot, string(operationshoot.StatusProgressing))).To(Succeed())
+
+			updatedShoot := &gardencorev1beta1.Shoot{}
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
+			Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusProgressing)))
+		})
+		It("should return error if Patch fails", func() {
+			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy))
+			Expect(gardenClient.Create(ctx, shoot)).To(Succeed(), "preparing shoot for test should succeed")
+
+			gardenClient = failingPatchClient{fmt.Errorf("fake"), gardenClient}
+
+			Expect(PatchShootStatusLabel(ctx, gardenClient, shoot, string(operationshoot.StatusProgressing))).To(MatchError("fake"))
+		})
+		It("should not touch label if status is unchanged", func() {
+			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy))
+			Expect(gardenClient.Create(ctx, shoot)).To(Succeed(), "preparing shoot for test should succeed")
+
+			gardenClient = failingPatchClient{fmt.Errorf("should call Patch"), gardenClient}
+
+			Expect(PatchShootStatusLabel(ctx, gardenClient, shoot, string(operationshoot.StatusHealthy))).To(Succeed())
+
+			updatedShoot := &gardencorev1beta1.Shoot{}
+			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
+			Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
+		})
+	})
 })
 
 type resultingConditionFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
@@ -724,4 +757,14 @@ func consistOfConstraintsInUnknownStatus(message string) types.GomegaMatcher {
 			"Message": Equal(message),
 		}),
 	)
+}
+
+// failingPatchClient returns fake errors for patch operations for testing purposes
+type failingPatchClient struct {
+	err error
+	client.Client
+}
+
+func (c failingPatchClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	return c.err
 }
