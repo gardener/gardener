@@ -72,6 +72,10 @@ const (
 	DataKeyToken = "token"
 	// DataKeyKubeconfig is the data key whose value contains a kubeconfig with a service account token.
 	DataKeyKubeconfig = "kubeconfig"
+
+	// ProjectedTokenSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
+	// an automatic mount of a projected ServiceAccount token.
+	ProjectedTokenSkip = "projected-token-mount.resources.gardener.cloud/skip"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -1,0 +1,152 @@
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package projectedtokenmount
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+)
+
+type handler struct {
+	targetClient      client.Client
+	decoder           *admission.Decoder
+	expirationSeconds int64
+}
+
+// NewHandler returns a new handler.
+func NewHandler(targetClient client.Client, expirationSeconds int64) admission.Handler {
+	return &handler{
+		targetClient:      targetClient,
+		expirationSeconds: expirationSeconds,
+	}
+}
+
+func (h *handler) InjectDecoder(d *admission.Decoder) error {
+	h.decoder = d
+	return nil
+}
+
+func (h *handler) Handle(ctx context.Context, req admission.Request) admission.Response {
+	pod := &corev1.Pod{}
+	if err := h.decoder.Decode(req, pod); err != nil {
+		return admission.Errored(http.StatusUnprocessableEntity, err)
+	}
+
+	if metav1.HasAnnotation(pod.ObjectMeta, resourcesv1alpha1.ProjectedTokenSkip) {
+		return admission.Allowed("pod explicitly opts out of projected service account token mount")
+	}
+
+	if len(pod.Spec.ServiceAccountName) == 0 || pod.Spec.ServiceAccountName == "default" {
+		return admission.Allowed("service account not specified or defaulted")
+	}
+
+	serviceAccount := &corev1.ServiceAccount{}
+	if err := h.targetClient.Get(ctx, kutil.Key(pod.Namespace, pod.Spec.ServiceAccountName), serviceAccount); err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	if serviceAccount.AutomountServiceAccountToken == nil || *serviceAccount.AutomountServiceAccountToken {
+		return admission.Allowed("auto-mounting service account token is not disabled")
+	}
+
+	for _, volume := range pod.Spec.Volumes {
+		if strings.HasPrefix(volume.Name, serviceAccountVolumeNamePrefix) {
+			return admission.Allowed("pod already has service account defaultVolume mount")
+		}
+	}
+
+	pod.Spec.Volumes = append(pod.Spec.Volumes, getVolume(h.expirationSeconds))
+	for i := range pod.Spec.Containers {
+		pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, getVolumeMount())
+	}
+
+	marshaledPod, err := json.Marshal(pod)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+
+	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledPod)
+}
+
+const (
+	serviceAccountVolumeNamePrefix = "kube-api-access-"
+	serviceAccountVolumeNameSuffix = "gardener"
+)
+
+func volumeName() string {
+	return serviceAccountVolumeNamePrefix + serviceAccountVolumeNameSuffix
+}
+
+func getVolume(expirationSeconds int64) corev1.Volume {
+	return corev1.Volume{
+		Name: volumeName(),
+		VolumeSource: corev1.VolumeSource{
+			Projected: &corev1.ProjectedVolumeSource{
+				DefaultMode: pointer.Int32(420),
+				Sources: []corev1.VolumeProjection{
+					{
+						ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+							ExpirationSeconds: &expirationSeconds,
+							Path:              "token",
+						},
+					},
+					{
+						ConfigMap: &corev1.ConfigMapProjection{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "kube-root-ca.crt",
+								// TODO: Use constant after https://github.com/gardener/gardener/pull/4832 is merged.
+							},
+							Items: []corev1.KeyToPath{{
+								// TODO: Use constant after https://github.com/gardener/gardener/pull/4832 is merged.
+								Key:  "ca.crt",
+								Path: "ca.crt",
+							}},
+						},
+					},
+					{
+						DownwardAPI: &corev1.DownwardAPIProjection{
+							Items: []corev1.DownwardAPIVolumeFile{{
+								FieldRef: &corev1.ObjectFieldSelector{
+									APIVersion: "v1",
+									FieldPath:  "metadata.namespace",
+								},
+								Path: "namespace",
+							}},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func getVolumeMount() corev1.VolumeMount {
+	return corev1.VolumeMount{
+		Name:      volumeName(),
+		MountPath: "/var/run/secrets/kubernetes.io/serviceaccount",
+		ReadOnly:  true,
+	}
+}
