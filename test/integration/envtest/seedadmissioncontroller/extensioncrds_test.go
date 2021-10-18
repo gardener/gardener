@@ -43,6 +43,24 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		namespace                    = "shoot--foo--bar"
 		deletionConfirmedAnnotations = map[string]string{gutil.ConfirmationDeletion: "true"}
 
+		crdObjects = []client.Object{
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "backupbuckets.extensions.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "backupentries.extensions.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "bastions.extensions.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "containerruntimes.extensions.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "controlplanes.extensions.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "dnsentries.dns.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "dnsowners.dns.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "dnsproviders.dns.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "dnsrecords.extensions.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "extensions.extensions.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "infrastructures.extensions.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "managedresources.resources.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "networks.extensions.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "operatingsystemconfigs.extensions.gardener.cloud"}},
+			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "workers.extensions.gardener.cloud"}},
+		}
+
 		objects = []client.Object{
 			&extensionsv1alpha1.BackupBucket{ObjectMeta: metav1.ObjectMeta{Name: "foo"}},
 			&extensionsv1alpha1.BackupEntry{ObjectMeta: metav1.ObjectMeta{Name: namespace}},
@@ -54,17 +72,6 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 			&extensionsv1alpha1.Network{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
 			&extensionsv1alpha1.OperatingSystemConfig{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
 			&extensionsv1alpha1.Worker{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "foo"}},
-
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "backupbuckets.extensions.gardener.cloud"}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "backupentries.extensions.gardener.cloud"}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "containerruntimes.extensions.gardener.cloud"}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "controlplanes.extensions.gardener.cloud"}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "dnsrecords.extensions.gardener.cloud"}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "extensions.extensions.gardener.cloud"}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "infrastructures.extensions.gardener.cloud"}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "networks.extensions.gardener.cloud"}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "operatingsystemconfigs.extensions.gardener.cloud"}},
-			&apiextensionsv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "workers.extensions.gardener.cloud"}},
 		}
 
 		podObject = &corev1.Pod{
@@ -77,6 +84,8 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 			},
 		}
 	)
+
+	objects = append(objects, crdObjects...)
 
 	BeforeEach(func() {
 		var err error
@@ -113,9 +122,26 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("annotation to delete"), objectID(obj))
 	}
 
+	testDeleteCollectionUnconfirmed := func(ctx context.Context, obj client.Object) {
+		Eventually(func() string {
+			err := c.DeleteAllOf(ctx, obj, client.InNamespace(obj.GetNamespace()))
+			return string(apierrors.ReasonForError(err))
+		}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("annotation to delete"), objectID(obj))
+	}
+
 	testDeletionConfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() error {
 			return c.Delete(ctx, obj)
+		}, 5*time.Second, 200*time.Millisecond).ShouldNot(HaveOccurred(), objectID(obj))
+		Eventually(func() bool {
+			err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+			return apierrors.IsNotFound(err) || meta.IsNoMatchError(err)
+		}, 5*time.Second, 200*time.Millisecond).Should(BeTrue(), objectID(obj))
+	}
+
+	testDeleteCollectionConfirmed := func(ctx context.Context, obj client.Object) {
+		Eventually(func() error {
+			return c.DeleteAllOf(ctx, obj, client.InNamespace(obj.GetNamespace()))
 		}, 5*time.Second, 200*time.Millisecond).ShouldNot(HaveOccurred(), objectID(obj))
 		Eventually(func() bool {
 			err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
@@ -130,13 +156,25 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should prevent the deletion because deletion is not confirmed", func() {
+		It("should prevent the deletion because deletion is not confirmed (DELETE)", func() {
 			for _, obj := range objects {
 				testDeletionUnconfirmed(ctx, obj)
 			}
 		})
 
-		It("should admit the deletion because deletion is confirmed", func() {
+		It("should prevent the deletion because deletion is not confirmed for all objects (DELETECOLLECTION)", func() {
+			for i := 0; i < len(crdObjects)-1; i++ {
+				obj := crdObjects[i]
+				_, err := controllerutil.CreateOrPatch(ctx, c, obj, func() error {
+					obj.SetAnnotations(deletionConfirmedAnnotations)
+					return nil
+				})
+				Expect(err).NotTo(HaveOccurred(), objectID(obj))
+			}
+			testDeleteCollectionUnconfirmed(ctx, crdObjects[0])
+		})
+
+		It("should admit the deletion because deletion is confirmed (DELETE)", func() {
 			for _, obj := range objects {
 				_, err := controllerutil.CreateOrPatch(ctx, c, obj, func() error {
 					obj.SetAnnotations(deletionConfirmedAnnotations)
@@ -145,6 +183,20 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 				Expect(err).NotTo(HaveOccurred(), objectID(obj))
 				testDeletionConfirmed(ctx, obj)
 			}
+		})
+
+		It("should admit the deletion because deletion is confirmed (DELETECOLLECTION)", func() {
+			for _, obj := range crdObjects {
+				_, err := controllerutil.CreateOrPatch(ctx, c, obj, func() error {
+					obj.SetAnnotations(deletionConfirmedAnnotations)
+					return nil
+				})
+				Expect(err).NotTo(HaveOccurred(), objectID(obj))
+				crd := &apiextensionsv1.CustomResourceDefinition{}
+				Expect(c.Get(context.TODO(), kutil.Key(obj.GetName()), crd)).To(Succeed())
+			}
+
+			testDeleteCollectionConfirmed(ctx, crdObjects[0])
 		})
 	})
 

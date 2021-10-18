@@ -77,7 +77,7 @@ var _ = Describe("admission", func() {
 			It("should return an error because the old object cannot be decoded", func() {
 				request.OldObject = runtime.RawExtension{Raw: []byte("foo")}
 
-				_, err := ExtractRequestObject(ctx, c, decoder, request)
+				_, err := ExtractRequestObject(ctx, c, decoder, request, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid character"))
 			})
@@ -88,7 +88,7 @@ var _ = Describe("admission", func() {
 
 				request.OldObject = runtime.RawExtension{Raw: objJSON}
 
-				result, err := ExtractRequestObject(ctx, c, decoder, request)
+				result, err := ExtractRequestObject(ctx, c, decoder, request, nil)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal(resource.Resource))
 			})
@@ -108,7 +108,7 @@ var _ = Describe("admission", func() {
 			It("should return an error because the new object cannot be decoded", func() {
 				request.Object = runtime.RawExtension{Raw: []byte("foo")}
 
-				_, err := ExtractRequestObject(ctx, c, decoder, request)
+				_, err := ExtractRequestObject(ctx, c, decoder, request, nil)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid character"))
 			})
@@ -119,7 +119,7 @@ var _ = Describe("admission", func() {
 
 				request.Object = runtime.RawExtension{Raw: objJSON}
 
-				result, err := ExtractRequestObject(ctx, c, decoder, request)
+				result, err := ExtractRequestObject(ctx, c, decoder, request, nil)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal(resource.Resource))
 			})
@@ -140,7 +140,7 @@ var _ = Describe("admission", func() {
 			})
 
 			It("should return an error because the GET call failed", func() {
-				_, err := ExtractRequestObject(ctx, c, decoder, request)
+				_, err := ExtractRequestObject(ctx, c, decoder, request, nil)
 				Expect(err).Should(MatchError("no object found in admission request"))
 			})
 		})
@@ -170,7 +170,7 @@ var _ = Describe("admission", func() {
 
 				c.EXPECT().List(ctx, obj, listOp).Return(fakeErr)
 
-				_, err := ExtractRequestObject(ctx, c, decoder, request)
+				_, err := ExtractRequestObject(ctx, c, decoder, request, listOp)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(Equal(err))
 			})
@@ -188,7 +188,7 @@ var _ = Describe("admission", func() {
 					return nil
 				})
 
-				result, err := ExtractRequestObject(ctx, c, decoder, request)
+				result, err := ExtractRequestObject(ctx, c, decoder, request, listOp)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal("List"))
 			})

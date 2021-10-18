@@ -25,7 +25,8 @@ import (
 )
 
 // ExtractRequestObject extracts the object in the admission request and returns it.
-func ExtractRequestObject(ctx context.Context, reader client.Reader, decoder *admission.Decoder, request admission.Request) (runtime.Object, error) {
+// The given `ListOption` is used to list affected objects in case of a `DELETECOLLECTION` request.
+func ExtractRequestObject(ctx context.Context, reader client.Reader, decoder *admission.Decoder, request admission.Request, listOp client.ListOption) (runtime.Object, error) {
 	var (
 		obj runtime.Object
 		err error
@@ -38,7 +39,7 @@ func ExtractRequestObject(ctx context.Context, reader client.Reader, decoder *ad
 		o := &unstructured.UnstructuredList{}
 		o.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
 		o.SetKind(request.Kind.Kind + "List")
-		err = reader.List(ctx, o, client.InNamespace(request.Namespace))
+		err = reader.List(ctx, o, listOp)
 		obj = o
 
 	case request.OldObject.Raw != nil:

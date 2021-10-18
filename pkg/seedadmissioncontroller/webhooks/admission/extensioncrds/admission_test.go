@@ -44,7 +44,6 @@ import (
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("handler", func() {
@@ -181,6 +180,7 @@ var _ = Describe("handler", func() {
 
 			It("should return an error because the old object cannot be decoded", func() {
 				for _, resource := range resources {
+					request.Name = "foo"
 					request.Resource = resource
 					request.OldObject = runtime.RawExtension{Raw: []byte("foo")}
 					expectErrored(handler.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), ContainSubstring("invalid character"), resourceToId(resource))
@@ -190,6 +190,7 @@ var _ = Describe("handler", func() {
 			It("should prevent the deletion because deletion is not confirmed", func() {
 				for _, resource := range resources {
 					objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, nil)
+					request.Name = "foo"
 					request.OldObject = runtime.RawExtension{Raw: objJSON}
 					testDeletionUnconfirmed(ctx, request, resource)
 				}
@@ -198,6 +199,7 @@ var _ = Describe("handler", func() {
 			It("should admit the deletion because deletion is confirmed", func() {
 				for _, resource := range resources {
 					objJSON := getObjectJSONWithLabelsAnnotations(obj, resource, nil, deletionConfirmedAnnotations)
+					request.Name = "foo"
 					request.OldObject = runtime.RawExtension{Raw: objJSON}
 					testDeletionConfirmed(ctx, request, resource)
 				}
@@ -209,6 +211,7 @@ var _ = Describe("handler", func() {
 
 			BeforeEach(func() {
 				obj = &unstructured.Unstructured{}
+				request.Name = "foo"
 			})
 
 			It("should return an error because the new object cannot be decoded", func() {
@@ -248,52 +251,9 @@ var _ = Describe("handler", func() {
 
 			It("should return an error because the GET call failed", func() {
 				for _, resource := range resources {
-					fakeErr := errors.New("fake")
 					prepareRequestAndObjectWithResource(&request, obj, resource)
 					request.Resource = resource
-					request.Name = "foo"
-
-					c.EXPECT().Get(gomock.Any(), gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(fakeErr)
-
-					expectErrored(handler.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), Equal(fakeErr.Error()), resourceToId(resource))
-				}
-			})
-
-			It("should return no error because the GET call returned 'not found'", func() {
-				for _, resource := range resources {
-					prepareRequestAndObjectWithResource(&request, obj, resource)
-					request.Resource = resource
-					request.Name = "foo"
-
-					c.EXPECT().Get(gomock.Any(), gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(apierrors.NewNotFound(core.Resource(resource.Resource), "name"))
-
-					expectAllowed(handler.Handle(ctx, request), ContainSubstring("object was not found"), resourceToId(resource))
-				}
-			})
-
-			It("should prevent the deletion because deletion is not confirmed", func() {
-				for _, resource := range resources {
-					prepareRequestAndObjectWithResource(&request, obj, resource)
-
-					c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
-						prepareObjectWithLabelsAnnotations(obj, resource, nil, nil)
-						return nil
-					})
-
-					testDeletionUnconfirmed(ctx, request, resource)
-				}
-			})
-
-			It("should admit the deletion because deletion is confirmed", func() {
-				for _, resource := range resources {
-					prepareRequestAndObjectWithResource(&request, obj, resource)
-
-					c.EXPECT().Get(gomock.Any(), kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
-						prepareObjectWithLabelsAnnotations(obj, resource, nil, deletionConfirmedAnnotations)
-						return nil
-					})
-
-					testDeletionConfirmed(ctx, request, resource)
+					expectErrored(handler.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), Equal("no object found in admission request"), resourceToId(resource))
 				}
 			})
 		})
@@ -314,7 +274,9 @@ var _ = Describe("handler", func() {
 					request.Resource = resource
 					obj.SetKind("List")
 
-					c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).Return(fakeErr)
+					listOp := getListOptions(resource.Resource, request.Namespace)
+
+					c.EXPECT().List(gomock.Any(), obj, listOp).Return(fakeErr)
 
 					expectErrored(handler.Handle(ctx, request), BeEquivalentTo(http.StatusInternalServerError), Equal(fakeErr.Error()), resourceToId(resource))
 				}
@@ -326,7 +288,9 @@ var _ = Describe("handler", func() {
 					request.Resource = resource
 					obj.SetKind("List")
 
-					c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).Return(apierrors.NewNotFound(core.Resource(resource.Resource), "name"))
+					listOp := getListOptions(resource.Resource, request.Namespace)
+
+					c.EXPECT().List(gomock.Any(), obj, listOp).Return(apierrors.NewNotFound(core.Resource(resource.Resource), "name"))
 
 					expectAllowed(handler.Handle(ctx, request), ContainSubstring("object was not found"), resourceToId(resource))
 				}
@@ -337,7 +301,9 @@ var _ = Describe("handler", func() {
 					prepareRequestAndObjectWithResource(&request, obj, resource)
 					obj.SetKind(obj.GetKind() + "List")
 
-					c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+					listOp := getListOptions(resource.Resource, request.Namespace)
+
+					c.EXPECT().List(gomock.Any(), obj, listOp).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 						prepareObjectWithLabelsAnnotations(list, resource, nil, nil)
 						return nil
 					})
@@ -351,7 +317,9 @@ var _ = Describe("handler", func() {
 					prepareRequestAndObjectWithResource(&request, obj, resource)
 					obj.SetKind(obj.GetKind() + "List")
 
-					c.EXPECT().List(gomock.Any(), obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+					listOp := getListOptions(resource.Resource, request.Namespace)
+
+					c.EXPECT().List(gomock.Any(), obj, listOp).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 						prepareObjectWithLabelsAnnotations(list, resource, nil, deletionConfirmedAnnotations)
 						return nil
 					})
@@ -378,4 +346,11 @@ func expectErrored(response admission.Response, code, err gomegatypes.GomegaMatc
 	Expect(response.Allowed).To(BeFalse(), optionalDescription...)
 	Expect(response.Result.Code).To(code, optionalDescription...)
 	Expect(response.Result.Message).To(err, optionalDescription...)
+}
+
+func getListOptions(resource, namespace string) client.ListOption {
+	if resource == "customresourcedefinitions" {
+		return client.MatchingLabels{gutil.DeletionProtected: "true"}
+	}
+	return client.InNamespace(namespace)
 }
