@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensioncrds"
 	"github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission/extensionresources"
-	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 
@@ -134,6 +133,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						"bastions",
 						"containerruntimes",
 						"controlplanes",
+						"dnsrecords",
 						"extensions",
 						"infrastructures",
 						"networks",
@@ -346,7 +346,7 @@ func GetValidatingWebhookConfig(caBundle []byte, webhookClientService *corev1.Se
 			FailurePolicy:     &failurePolicy,
 			NamespaceSelector: &metav1.LabelSelector{},
 			ObjectSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{gutil.DeletionProtected: "true"},
+				MatchLabels: extensioncrds.ObjectSelector,
 			},
 			ClientConfig: admissionregistrationv1.WebhookClientConfig{
 				CABundle: caBundle,

@@ -44,6 +44,11 @@ const (
 	WebhookPath = "/webhooks/validate-extension-crd-deletion"
 )
 
+// ObjectSelector is the object selector for CustomResourceDefinitions used by this admission controller.
+var ObjectSelector = map[string]string{
+	gutil.DeletionProtected: "true",
+}
+
 // New creates a new webhook handler validating DELETE requests for extension CRDs and extension resources, that are
 // marked for deletion protection (`gardener.cloud/deletion-protected`).
 func New(logger logr.Logger) *handler {
@@ -77,12 +82,15 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		return admission.Allowed("operation is not DELETE")
 	}
 
+	var listOp client.ListOption
+
 	// Ignore all resources other than our expected ones
 	switch request.Resource {
 	case
 		metav1.GroupVersionResource{Group: apiextensionsv1beta1.SchemeGroupVersion.Group, Version: apiextensionsv1beta1.SchemeGroupVersion.Version, Resource: "customresourcedefinitions"},
-		metav1.GroupVersionResource{Group: apiextensionsv1.SchemeGroupVersion.Group, Version: apiextensionsv1.SchemeGroupVersion.Version, Resource: "customresourcedefinitions"},
-
+		metav1.GroupVersionResource{Group: apiextensionsv1.SchemeGroupVersion.Group, Version: apiextensionsv1.SchemeGroupVersion.Version, Resource: "customresourcedefinitions"}:
+		listOp = client.MatchingLabels(ObjectSelector)
+	case
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "backupbuckets"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "backupentries"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "containerruntimes"},
@@ -93,11 +101,12 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "networks"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "operatingsystemconfigs"},
 		metav1.GroupVersionResource{Group: extensionsv1alpha1.SchemeGroupVersion.Group, Version: extensionsv1alpha1.SchemeGroupVersion.Version, Resource: "workers"}:
+		listOp = client.InNamespace(request.Namespace)
 	default:
 		return admission.Allowed("resource is not deletion-protected")
 	}
 
-	obj, err := sacadmission.ExtractRequestObject(ctx, h.reader, h.decoder, request)
+	obj, err := sacadmission.ExtractRequestObject(ctx, h.reader, h.decoder, request, listOp)
 	if apierrors.IsNotFound(err) {
 		return admission.Allowed("object was not found")
 	}
