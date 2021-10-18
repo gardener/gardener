@@ -59,11 +59,11 @@ The cloud-config-script will then refer to the file path of the added bootstrap 
 
 ### Compatibility matrix for node bootstrap-token
 
-With gardener v1.23 we replaced the long-valid bootstrap-token shared between nodes with a short-lived token unique for each node, ref:  [#3898](https://github.com/gardener/gardener/issues/3898).
+With Gardener v1.23, we replaced the long-valid bootstrap-token shared between nodes with a short-lived token unique for each node, ref: [#3898](https://github.com/gardener/gardener/issues/3898).
 
-❗ When updating to gardener version >=1.34 the old bootstrap-token will be removed. You are required to update your extensions to the following versions when updating gardener:
+❗ When updating to Gardener version >=1.34 the old bootstrap-token will be removed. You are required to update your extensions to the following versions when updating Gardener:
 
-| Extension   | version   | releaseDate   | PR |
+| Extension   | Version   | Release Date   | Pull Request |
 |---|---|---|---|
 | os-gardenlinux   |  v0.9.0  |   2 Jul  |  https://github.com/gardener/gardener-extension-os-gardenlinux/pull/29  |
 | os-suse-chost   | v1.11.0 |  2 Jul  |  https://github.com/gardener/gardener-extension-os-suse-chost/pull/41 |
@@ -71,8 +71,8 @@ With gardener v1.23 we replaced the long-valid bootstrap-token shared between no
 | os-flatcar   |  v1.7.0  |  2 Jul   |   https://github.com/gardener/gardener-extension-os-coreos/pull/24 |
 | infrastructure-provider using Machine Controller Manager |  varies | ~ end of 2019   | https://github.com/gardener/machine-controller-manager/pull/351  |
 
-⚠️ If you use an infrastructure provider extension that does not use Machine Controller Manager (MCM) you need to implement the functionality of creating a temporary bootstrap-token before updating to this g/g version.
-All extension-providers in https://github.com/gardener/ use MCM.
+⚠️ If you run a provider extension that does not use Machine Controller Manager (MCM) you need to implement the functionality of creating a temporary bootstrap-token before updating your Gardener version to v1.34 or higher.
+All provider extensions maintained in https://github.com/gardener/ use MCM.
 
 ## How does Gardener update the user-data on already existing machines?
 
