@@ -434,3 +434,43 @@ serviceaccount.resources.gardener.cloud/skip-deletion: "true"
 ```
 
 then the respective `ServiceAccount` will not be deleted when the `Secret` is deleted.
+
+## Webhooks
+
+### Auto-Mounting Projected `ServiceAccount` Tokens
+
+When this webhook is activated then it automatically injects projected `ServiceAccount` token volumes into `Pod`s and all its containers if all of the following preconditions are fulfilled:
+
+1. The `Pod` is NOT annotated with `projected-token-mount.resources.gardener.cloud/skip=true`.
+2. The `Pod`'s `.spec.serviceAccountName` field is NOT empty and NOT set to `default`.
+3. The `ServiceAccount` specified in the `Pod`'s `.spec.serviceAccountName` sets `.automountServiceAccountToken=false`.
+4. The `Pod`'s `.spec.volumes[]` DO NOT already contain a volume with a name prefixed with `kube-api-access-`.
+
+The projected volume will look as follows:
+
+```yaml
+spec:
+  volumes:
+  - name: kube-api-access-gardener
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 43200
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+```
+
+> The `expirationSeconds` are defaulted to `12h` and can be overwritten with the `--projected-token-mount-expiration-seconds` flag.
+
+The volume will be mounted into all containers specified in the `Pod` to the path `/var/run/secrets/kubernetes.io/serviceaccount`.
