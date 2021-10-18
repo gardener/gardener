@@ -134,6 +134,7 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 						"bastions",
 						"containerruntimes",
 						"controlplanes",
+						"dnsrecords",
 						"extensions",
 						"infrastructures",
 						"networks",
