@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	. "github.com/gardener/gardener/pkg/seedadmissioncontroller/webhooks/admission"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("admission", func() {
@@ -64,10 +63,12 @@ var _ = Describe("admission", func() {
 	Describe("#getRequestObject", func() {
 		resource := metav1.GroupVersionResource{Group: corev1.SchemeGroupVersion.Group, Version: corev1.SchemeGroupVersion.Version, Resource: "pods"}
 
-		Context("Old object is set", func() {
+		Context("when old object is set", func() {
 			var obj *unstructured.Unstructured
 
 			BeforeEach(func() {
+				request.Name = resource.Resource
+
 				obj = &unstructured.Unstructured{}
 				obj.SetAPIVersion(fmt.Sprintf("%s/%s", resource.Group, resource.Version))
 				obj.SetKind(resource.Resource)
@@ -93,10 +94,12 @@ var _ = Describe("admission", func() {
 			})
 		})
 
-		Context("New object is set", func() {
+		Context("when new object is set", func() {
 			var obj *unstructured.Unstructured
 
 			BeforeEach(func() {
+				request.Name = resource.Resource
+
 				obj = &unstructured.Unstructured{}
 				obj.SetAPIVersion(fmt.Sprintf("%s/%s", resource.Group, resource.Version))
 				obj.SetKind(resource.Resource)
@@ -122,7 +125,7 @@ var _ = Describe("admission", func() {
 			})
 		})
 
-		Context("object must be looked up", func() {
+		Context("when object is not send by API server", func() {
 			var obj *unstructured.Unstructured
 
 			BeforeEach(func() {
@@ -137,34 +140,16 @@ var _ = Describe("admission", func() {
 			})
 
 			It("should return an error because the GET call failed", func() {
-				fakeErr := errors.New("fake")
-
-				c.EXPECT().Get(ctx, gomock.AssignableToTypeOf(client.ObjectKey{}), gomock.AssignableToTypeOf(&unstructured.Unstructured{})).Return(fakeErr)
-
 				_, err := ExtractRequestObject(ctx, c, decoder, request)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(Equal(err))
-			})
-
-			It("Shoul return the looked up resource", func() {
-				c.EXPECT().Get(ctx, kutil.Key(request.Namespace, request.Name), obj).DoAndReturn(func(_ context.Context, _ client.ObjectKey, obj client.Object) error {
-					ob, ok := obj.(*unstructured.Unstructured)
-					if !ok {
-						return fmt.Errorf("Error casting %v to Unstructured object", obj)
-					}
-					ob.SetAPIVersion(fmt.Sprintf("%s/%s", resource.Group, resource.Version))
-					ob.SetKind(resource.Resource)
-					return nil
-				})
-
-				result, err := ExtractRequestObject(ctx, c, decoder, request)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(result.GetObjectKind().GroupVersionKind().Kind).To(Equal(resource.Resource))
+				Expect(err).Should(MatchError("no object found in admission request"))
 			})
 		})
 
-		Context("object list must be looked up", func() {
-			var obj *unstructured.UnstructuredList
+		Context("when object list must be looked up", func() {
+			var (
+				obj     *unstructured.UnstructuredList
+				objJSON = []byte("{}")
+			)
 
 			BeforeEach(func() {
 				obj = &unstructured.UnstructuredList{}
@@ -172,14 +157,18 @@ var _ = Describe("admission", func() {
 				request.Namespace = "shoot--dev--test"
 				request.Kind.Group = resource.Group
 				request.Kind.Version = resource.Version
+				// Old object is set when deletion happens https://github.com/kubernetes/kubernetes/pull/76346.
+				request.OldObject = runtime.RawExtension{Raw: objJSON}
 				obj.SetAPIVersion(request.Kind.Group + "/" + request.Kind.Version)
 				obj.SetKind(request.Kind.Kind + "List")
 			})
 
-			It("should return an error because the GET call failed", func() {
+			It("should return an error because the LIST call failed", func() {
 				fakeErr := errors.New("fake")
 
-				c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).Return(fakeErr)
+				listOp := client.InNamespace(request.Namespace)
+
+				c.EXPECT().List(ctx, obj, listOp).Return(fakeErr)
 
 				_, err := ExtractRequestObject(ctx, c, decoder, request)
 				Expect(err).To(HaveOccurred())
@@ -187,7 +176,9 @@ var _ = Describe("admission", func() {
 			})
 
 			It("should return the looked up resource", func() {
-				c.EXPECT().List(ctx, obj, client.InNamespace(request.Namespace)).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
+				listOp := client.InNamespace(request.Namespace)
+
+				c.EXPECT().List(ctx, obj, listOp).DoAndReturn(func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 					ob, ok := list.(*unstructured.UnstructuredList)
 					if !ok {
 						return fmt.Errorf("Error casting %v to UnstructuredList object", list)
