@@ -29,6 +29,7 @@ import (
 	tokenrequestorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
 	"github.com/gardener/gardener/pkg/resourcemanager/healthz"
 	"github.com/gardener/gardener/pkg/resourcemanager/readyz"
+	projectedtokenmountwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 
 	"github.com/spf13/cobra"
@@ -54,6 +55,7 @@ func NewResourceManagerCommand() *cobra.Command {
 	tokenInvalidatorControllerOpts := &tokeninvalidatorcontroller.ControllerOptions{}
 	tokenRequestorControllerOpts := &tokenrequestorcontroller.ControllerOptions{}
 	rootCAControllerOpts := &rootcacontroller.ControllerOptions{}
+	projectedTokenMountOpts := &projectedtokenmountwebhook.WebhookOptions{}
 
 	cmd := &cobra.Command{
 		Use: "gardener-resource-manager",
@@ -75,11 +77,12 @@ func NewResourceManagerCommand() *cobra.Command {
 				targetClusterOpts,
 				resourceControllerOpts,
 				secretControllerOpts,
-				rootCAControllerOpts,
 				healthControllerOpts,
-				tokenRequestorControllerOpts,
 				gcControllerOpts,
 				tokenInvalidatorControllerOpts,
+				tokenRequestorControllerOpts,
+				rootCAControllerOpts,
+				projectedTokenMountOpts,
 			); err != nil {
 				return err
 			}
@@ -102,6 +105,7 @@ func NewResourceManagerCommand() *cobra.Command {
 			tokenInvalidatorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 			tokenRequestorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 			rootCAControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
+			projectedTokenMountOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 
 			// setup manager
 			mgr, err := manager.New(sourceClientOpts.Completed().RESTConfig, managerOptions)
@@ -119,15 +123,16 @@ func NewResourceManagerCommand() *cobra.Command {
 				resourcecontroller.AddToManager,
 				secretcontroller.AddToManager,
 				healthcontroller.AddToManager,
-				rootcacontroller.AddToManager,
 				garbagecollectorcontroller.AddToManager,
 				tokeninvalidatorcontroller.AddToManager,
 				tokenrequestorcontroller.AddToManager,
+				rootcacontroller.AddToManager,
 				// health/ready endpoints
 				healthz.AddToManager,
 				readyz.AddToManager,
 				// webhooks
 				tokeninvalidatorwebhook.AddToManager,
+				projectedtokenmountwebhook.AddToManager,
 			); err != nil {
 				return err
 			}
@@ -166,11 +171,12 @@ func NewResourceManagerCommand() *cobra.Command {
 		targetClusterOpts,
 		resourceControllerOpts,
 		secretControllerOpts,
-		rootCAControllerOpts,
 		healthControllerOpts,
 		gcControllerOpts,
 		tokenInvalidatorControllerOpts,
 		tokenRequestorControllerOpts,
+		rootCAControllerOpts,
+		projectedTokenMountOpts,
 	)
 	verflag.AddFlags(cmd.Flags())
 

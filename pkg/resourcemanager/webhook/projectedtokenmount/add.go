@@ -16,7 +16,7 @@ package projectedtokenmount
 
 import (
 	"github.com/spf13/pflag"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -37,14 +37,14 @@ type WebhookOptions struct {
 
 // WebhookConfig is the completed configuration for the webhook.
 type WebhookConfig struct {
-	TargetClient      client.Client
+	TargetCluster     cluster.Cluster
 	ExpirationSeconds int64
 }
 
 // AddToManagerWithOptions adds the webhook to a Manager with the given config.
 func AddToManagerWithOptions(mgr manager.Manager, conf WebhookConfig) error {
 	server := mgr.GetWebhookServer()
-	server.Register(WebhookPath, &webhook.Admission{Handler: NewHandler(conf.TargetClient, conf.ExpirationSeconds)})
+	server.Register(WebhookPath, &webhook.Admission{Handler: NewHandler(conf.TargetCluster.GetClient(), conf.ExpirationSeconds)})
 	return nil
 }
 
