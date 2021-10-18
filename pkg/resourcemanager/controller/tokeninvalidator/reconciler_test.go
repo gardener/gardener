@@ -106,8 +106,20 @@ var _ = Describe("TokenInvalidator", func() {
 				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 			})
 
+			It("AutomountServiceAccountToken=nil and skip label", func() {
+				serviceAccount.AutomountServiceAccountToken = nil
+				serviceAccount.Labels = map[string]string{"token-invalidator.resources.gardener.cloud/skip": "true"}
+				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
+			})
+
 			It("AutomountServiceAccountToken=true", func() {
 				serviceAccount.AutomountServiceAccountToken = pointer.Bool(true)
+				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
+			})
+
+			It("AutomountServiceAccountToken=true and skip label", func() {
+				serviceAccount.AutomountServiceAccountToken = pointer.Bool(true)
+				serviceAccount.Labels = map[string]string{"token-invalidator.resources.gardener.cloud/skip": "true"}
 				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 			})
 
@@ -116,6 +128,7 @@ var _ = Describe("TokenInvalidator", func() {
 				serviceAccount.Labels = map[string]string{"token-invalidator.resources.gardener.cloud/skip": "true"}
 				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 			})
+
 		})
 
 		Context("add consider label", func() {

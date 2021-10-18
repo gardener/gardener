@@ -333,8 +333,9 @@ Disabling the `serviceaccount-token` controller is an option, however, especiall
 Also, even if a future Kubernetes version supports native configuration of above behaviour, Gardener still supports older versions which won't get such features but need a solution as well.
 
 This is where the _TokenInvalidator_ comes into play:
-Since it is not possible to prevent `kube-controller-manager` from generating static `ServiceAccount` `Secret`s, the _TokenInvalidator_ is - as its name suggests - just invalidates these tokens.
-It considers all such `Secret`s belonging to `ServiceAccount`s with `.automountServiceAccountToken=false`:
+Since it is not possible to prevent `kube-controller-manager` from generating static `ServiceAccount` `Secret`s, the _TokenInvalidator_ is - as its name suggests - just invalidating these tokens.
+It considers all such `Secret`s belonging to `ServiceAccount`s with `.automountServiceAccountToken=false`.
+By default, all namespaces in the target cluster are watched, however, this can be configured by specifying the `--target-namespace` flag.
 
 ```yaml
 apiVersion: v1
