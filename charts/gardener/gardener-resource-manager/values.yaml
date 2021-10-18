@@ -34,6 +34,10 @@ controllers:
     maxConcurrentWorkers: 0
     rootCAPath: "" # path to a file containing the root CA bundle
 
+webhooks:
+  projectedTokenMount:
+    expirationSeconds: 43200 # 12h
+
 leaderElection:
   enabled: true
   resourceLock: leases

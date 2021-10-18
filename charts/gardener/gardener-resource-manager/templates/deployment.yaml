@@ -48,6 +48,7 @@ spec:
         - --health-max-concurrent-workers={{ .Values.controllers.managedResourceHealth.concurrentSyncs }}
         - --token-invalidator-max-concurrent-workers={{ .Values.controllers.tokenInvalidator.concurrentSyncs }}
         - --token-requestor-max-concurrent-workers={{ .Values.controllers.tokenRequestor.concurrentSyncs }}
+        - --projected-token-mount-expiration-seconds={{ .Values.webhooks.projectedTokenMount.expirationSeconds }}
         - --always-update={{ .Values.controllers.managedResource.alwaysUpdate }}
         {{- if .Values.targetKubeconfig }}
         - --target-kubeconfig=/etc/gardener-resource-manager/target-kubeconfig/kubeconfig.yaml
