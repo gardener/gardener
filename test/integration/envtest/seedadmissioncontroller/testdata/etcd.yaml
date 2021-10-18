@@ -1,0 +1,9 @@
+apiVersion: druid.gardener.cloud/v1alpha1
+kind: Etcd
+metadata:
+  name: foo
+  namespace: shoot--foo--bar
+spec:
+  backup:
+    store:
+      prefix: "shoot--foo--bar--F1A38EDD-E506-412A-82E6-E0FA839D0707/foo"
