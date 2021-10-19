@@ -118,7 +118,7 @@ func Create(ctx context.Context, client client.Client, namespace, name string, s
 	return deployManagedResource(ctx, secret, managedResource)
 }
 
-// CreateForSeed deploys a ManagedResource CR for the seed's gardener-resource-builder.
+// CreateForSeed deploys a ManagedResource CR for the seed's gardener-resource-manager.
 func CreateForSeed(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, true)
@@ -128,7 +128,7 @@ func CreateForSeed(ctx context.Context, client client.Client, namespace, name st
 	return deployManagedResource(ctx, secret, managedResource)
 }
 
-// CreateForShoot deploys a ManagedResource CR for the shoot's gardener-resource-builder.
+// CreateForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
 func CreateForShoot(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, true)
@@ -234,7 +234,7 @@ func SetKeepObjects(ctx context.Context, c client.Writer, namespace, name string
 	return nil
 }
 
-// RenderChartAndCreate renders a chart and creates a ManagedResource for the gardener-resource-builder
+// RenderChartAndCreate renders a chart and creates a ManagedResource for the gardener-resource-manager
 // out of the results.
 func RenderChartAndCreate(ctx context.Context, namespace string, name string, secretNameWithPrefix bool, client client.Client, chartRenderer chartrenderer.Interface, chart chart.Interface, values map[string]interface{}, imageVector imagevector.ImageVector, chartNamespace string, version string, withNoCleanupLabel bool, forceOverwriteAnnotations bool) error {
 	chartName, data, err := chart.Render(chartRenderer, chartNamespace, imageVector, version, version, values)
