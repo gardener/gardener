@@ -104,13 +104,13 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	return nil
 }
 
-func isRelevantConfigMap(obj client.Object) bool {
-	return obj.GetName() == RootCACertConfigMapName && obj.GetAnnotations()[DescriptionAnnotation] == ""
-}
-
 // AddToManager adds the controller to a Manager using the default config.
 func AddToManager(mgr manager.Manager) error {
 	return AddToManagerWithOptions(mgr, defaultControllerConfig)
+}
+
+func isRelevantConfigMap(obj client.Object) bool {
+	return obj.GetName() == RootCACertConfigMapName && obj.GetAnnotations()[DescriptionAnnotation] == ""
 }
 
 func isNamespaceActive(obj client.Object) bool {

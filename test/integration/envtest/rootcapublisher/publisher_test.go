@@ -53,8 +53,8 @@ var _ = Describe("Root CA Controller tests", func() {
 
 	It("should successfully create a config map on creating a namespace", func() {})
 
-	It("should keep the secret in the desired state after Delete/Update of the secret", func() {
-		By("Deleting the secret")
+	It("should keep the config map in the desired state after Delete/Update of the config map", func() {
+		By("Deleting the config map")
 		Expect(testClient.Delete(ctx, configMap)).To(Succeed())
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
@@ -64,45 +64,45 @@ var _ = Describe("Root CA Controller tests", func() {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
 		}, time.Millisecond*300, time.Millisecond*10).Should(Succeed())
 
-		By("Updating the secret")
+		By("Updating the config map")
 		configMap.Data = nil
 		Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
-		Eventually(func() bool {
+		Eventually(func() map[string]string {
 			if err := testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
-				return false
+				return nil
 			}
 
-			return configMap.Data != nil
-		}, time.Millisecond*300, time.Millisecond*10).Should(BeTrue())
+			return configMap.Data
+		}, time.Millisecond*300, time.Millisecond*10).Should(Not(BeNil()))
 
-		By("Ignoring annotating configmap")
+		By("Ignoring config maps that are updated by the k8s publisher")
 		configMap.Data = nil
 		configMap.Annotations = map[string]string{"kubernetes.io/description": "test description"}
 		Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
-		Consistently(func() bool {
+		Consistently(func() map[string]string {
 			if err := testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
-				return false
+				return nil
 			}
-			return configMap.Data == nil
-		}, time.Millisecond*300, time.Millisecond*10).Should(BeTrue())
+			return configMap.Data
+		}, time.Millisecond*300, time.Millisecond*10).Should(BeNil())
 
 		By("Ignoring configmap with different name")
 		cm := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        "secret",
-				Namespace:   namespace.Name,
-				Annotations: map[string]string{"foo": "bar"},
+				Name:      "secret",
+				Namespace: namespace.Name,
 			},
+			Data: map[string]string{"foo": "bar"},
 		}
 		Expect(testClient.Create(ctx, cm)).To(Succeed())
 
-		baseCM := cm.DeepCopyObject().(client.Object)
-		cm.Annotations["foo"] = "newbar"
+		baseCM := cm.DeepCopy()
+		cm.Data["foo"] = "newbar"
 		Expect(testClient.Patch(ctx, cm, client.MergeFrom(baseCM))).To(Succeed())
 
-		Expect(cm.Annotations).To(HaveLen(1))
-		Expect(cm.Annotations).To(HaveKeyWithValue("foo", "newbar"))
+		Expect(cm.Data).To(HaveLen(1))
+		Expect(cm.Data).To(HaveKeyWithValue("foo", "newbar"))
 	})
 })
