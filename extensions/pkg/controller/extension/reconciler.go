@@ -189,7 +189,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(ex.ObjectMeta, ex.Status.LastOperation)
 
-	if operationType != gardencorev1beta1.LastOperationTypeMigrate {
+	if cluster.Shoot != nil && operationType != gardencorev1beta1.LastOperationTypeMigrate {
 		key := "extension:" + kutil.ObjectName(ex)
 		ok, watchdogCtx, cleanup, err := common.GetOwnerCheckResultAndContext(ctx, r.client, ex.Namespace, cluster.Shoot.Name, key)
 		if err != nil {
