@@ -15,6 +15,7 @@
 package predicate
 
 import (
+	"context"
 	"errors"
 
 	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
@@ -23,12 +24,13 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	injectutils "github.com/gardener/gardener/pkg/controllerutils/inject"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	contextutil "github.com/gardener/gardener/pkg/utils/context"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,10 +41,25 @@ import (
 var Log logr.Logger = log.Log
 
 type shootNotFailedMapper struct {
-	log logr.Logger
-	injectutils.WithClient
-	injectutils.WithContext
-	injectutils.WithCache
+	ctx    context.Context
+	log    logr.Logger
+	client client.Client
+	cache  cache.Cache
+}
+
+func (s *shootNotFailedMapper) InjectClient(c client.Client) error {
+	s.client = c
+	return nil
+}
+
+func (s *shootNotFailedMapper) InjectStopChannel(stopChan <-chan struct{}) error {
+	s.ctx = contextutil.FromStopChannel(stopChan)
+	return nil
+}
+
+func (s *shootNotFailedMapper) InjectCache(cache cache.Cache) error {
+	s.cache = cache
+	return nil
 }
 
 func (s *shootNotFailedMapper) Map(e event.GenericEvent) bool {
@@ -52,13 +69,13 @@ func (s *shootNotFailedMapper) Map(e event.GenericEvent) bool {
 	}
 
 	// Wait for cache sync because of backing client cache.
-	if !s.Cache.WaitForCacheSync(s.Context) {
+	if !s.cache.WaitForCacheSync(s.ctx) {
 		err := errors.New("failed to wait for caches to sync")
 		s.log.Error(err, "Could not wait for Cache to sync", "predicate", "ShootNotFailed")
 		return false
 	}
 
-	cluster, err := extensionscontroller.GetCluster(s.Context, s.Client, e.Object.GetNamespace())
+	cluster, err := extensionscontroller.GetCluster(s.ctx, s.client, e.Object.GetNamespace())
 	if err != nil {
 		s.log.Error(err, "Could not retrieve corresponding cluster")
 		return false
