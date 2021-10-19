@@ -99,7 +99,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(worker.ObjectMeta, worker.Status.LastOperation)
 
-	if operationType != gardencorev1beta1.LastOperationTypeMigrate {
+	if cluster.Shoot != nil && operationType != gardencorev1beta1.LastOperationTypeMigrate {
 		key := "worker:" + kutil.ObjectName(worker)
 		ok, watchdogCtx, cleanup, err := r.watchdogManager.GetResultAndContext(ctx, r.client, worker.Namespace, cluster.Shoot.Name, key)
 		if err != nil {
