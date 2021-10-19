@@ -20,6 +20,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -27,7 +28,7 @@ import (
 // If the owner DNSRecord resource is not found, it returns empty strings.
 func GetOwnerNameAndID(ctx context.Context, c client.Client, namespace, shootName string) (string, string, error) {
 	dns := &extensionsv1alpha1.DNSRecord{}
-	if err := c.Get(ctx, kutil.Key(namespace, shootName+"-owner"), dns); client.IgnoreNotFound(err) != nil {
+	if err := c.Get(ctx, kutil.Key(namespace, shootName+"-owner"), dns); client.IgnoreNotFound(err) != nil && !meta.IsNoMatchError(err) {
 		return "", "", err
 	}
 
