@@ -100,7 +100,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 
 	operationType := gardencorev1beta1helper.ComputeOperationType(be.ObjectMeta, be.Status.LastOperation)
 
-	if cluster != nil && operationType != gardencorev1beta1.LastOperationTypeMigrate {
+	if cluster != nil && cluster.Shoot != nil && operationType != gardencorev1beta1.LastOperationTypeMigrate {
 		key := "backupentry:" + be.Name
 		ok, watchdogCtx, cleanup, err := common.GetOwnerCheckResultAndContext(ctx, r.client, shootTechnicalID, cluster.Shoot.Name, key)
 		if err != nil {

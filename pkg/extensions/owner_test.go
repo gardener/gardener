@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -95,6 +96,15 @@ var _ = Describe("owner", func() {
 
 		It("should return empty owner name and ID if the owner DNSRecord is not found", func() {
 			expectGetDNSRecord(apierrors.NewNotFound(schema.GroupResource{}, dnsName))
+
+			name, id, err := GetOwnerNameAndID(ctx, c, namespace, shootName)
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(name).To(BeEmpty())
+			Expect(id).To(BeEmpty())
+		})
+
+		It("should return empty owner name and ID if the DNSRecord kind could not be matched", func() {
+			expectGetDNSRecord(&meta.NoKindMatchError{})
 
 			name, id, err := GetOwnerNameAndID(ctx, c, namespace, shootName)
 			Expect(err).To(Not(HaveOccurred()))
