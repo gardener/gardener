@@ -48,7 +48,7 @@ var _ = Describe("Collector", func() {
 	BeforeEach(func() {
 		logger = log.Log.WithName("test")
 		c = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
-		gc = &reconciler{logger, 0, c}
+		gc = &reconciler{logger, 0, c, c}
 	})
 
 	Describe("#collectGarbage", func() {

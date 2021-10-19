@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	garbagecollectorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
@@ -34,7 +33,6 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -88,20 +86,16 @@ func NewResourceManagerCommand() *cobra.Command {
 			managerOpts.Completed().Apply(&managerOptions)
 			sourceClientOpts.Completed().ApplyManagerOptions(&managerOptions)
 			sourceClientOpts.Completed().ApplyClientSet(&healthz.DefaultAddOptions.ClientSet)
-			targetClusterOpts.Completed().Apply(&resourceControllerOpts.Completed().TargetClusterConfig)
-			targetClusterOpts.Completed().Apply(&healthControllerOpts.Completed().TargetClusterConfig)
+			resourceControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 			resourceControllerOpts.Completed().ApplyClassFilter(&secretControllerOpts.Completed().ClassFilter)
 			resourceControllerOpts.Completed().ApplyClassFilter(&healthControllerOpts.Completed().ClassFilter)
+			resourceControllerOpts.Completed().GarbageCollectorActivated = gcControllerOpts.Completed().SyncPeriod > 0
 			if err := resourceControllerOpts.Completed().ApplyDefaultClusterId(ctx, entryLog, sourceClientOpts.Completed().RESTConfig); err != nil {
 				return err
 			}
-			resourceControllerOpts.Completed().GarbageCollectorActivated = gcControllerOpts.Completed().SyncPeriod > 0
-
-			uncachedTargetClientConfig, err := resourcemanagercmd.NewTargetClusterConfig(targetClusterOpts.Completed().KubeconfigPath, "", true, 0)
-			if err != nil {
-				return err
-			}
-			uncachedTargetClientConfig.Apply(&gcControllerOpts.Completed().TargetClusterConfig)
+			healthControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
+			gcControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
+			tokenInvalidatorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 
 			// setup manager
 			mgr, err := manager.New(sourceClientOpts.Completed().RESTConfig, managerOptions)
@@ -109,17 +103,9 @@ func NewResourceManagerCommand() *cobra.Command {
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
 
-			// setup target cluster
-			targetCluster, err := cluster.New(targetClusterOpts.Completed().Config, func(o *cluster.Options) { o.Namespace = targetClusterOpts.Completed().Namespace })
-			if err != nil {
-				return fmt.Errorf("could not instantiate target cluster: %w", err)
-			}
-
-			if err := mgr.Add(targetCluster); err != nil {
+			if err := mgr.Add(targetClusterOpts.Completed().Cluster); err != nil {
 				return fmt.Errorf("could not add target cluster to manager: %w", err)
 			}
-
-			tokenInvalidatorControllerOpts.Completed().TargetCache = targetCluster.GetCache()
 
 			// add controllers, health endpoint and webhooks to manager
 			if err := resourcemanagercmd.AddAllToManager(mgr,
@@ -138,30 +124,14 @@ func NewResourceManagerCommand() *cobra.Command {
 				return err
 			}
 
-			// start the target cache and exit if there was an error
+			// start manager and exit if there was an error
 			var wg sync.WaitGroup
 			errChan := make(chan error)
 
 			go func() {
 				defer wg.Done()
-
 				wg.Add(1)
-				if err := targetClusterOpts.Completed().Start(ctx); err != nil {
-					errChan <- fmt.Errorf("error syncing target cache: %w", err)
-				}
-			}()
 
-			ctxWaitForCache, cancelWaitForCache := context.WithTimeout(ctx, 5*time.Minute)
-			defer cancelWaitForCache()
-
-			if !targetClusterOpts.Completed().WaitForCacheSync(ctxWaitForCache) {
-				return fmt.Errorf("timed out waiting for target cache to sync")
-			}
-
-			go func() {
-				defer wg.Done()
-
-				wg.Add(1)
 				if err := mgr.Start(ctx); err != nil {
 					errChan <- fmt.Errorf("error running manager: %w", err)
 				}

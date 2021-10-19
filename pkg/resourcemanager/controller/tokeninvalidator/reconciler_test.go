@@ -128,7 +128,18 @@ var _ = Describe("TokenInvalidator", func() {
 				serviceAccount.Labels = map[string]string{"token-invalidator.resources.gardener.cloud/skip": "true"}
 				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 			})
+		})
 
+		It("should do nothing because secret already has the 'consider' label", func() {
+			secretPartialObjectMeta.Labels = map[string]string{"token-invalidator.resources.gardener.cloud/consider": "true"}
+			Expect(fakeClient.Create(ctx, secretPartialObjectMeta)).To(Succeed())
+
+			serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
+			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
+
+			result, err := ctrl.Reconcile(ctx, request)
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		Context("add consider label", func() {

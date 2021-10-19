@@ -16,15 +16,14 @@ package tokeninvalidator
 
 import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -48,8 +47,7 @@ type ControllerOptions struct {
 // ControllerConfig is the completed configuration for the controller.
 type ControllerConfig struct {
 	MaxConcurrentWorkers int
-	TargetCache          cache.Cache
-	TargetClusterConfig  resourcemanagercmd.TargetClusterConfig
+	TargetCluster        cluster.Cluster
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -61,7 +59,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	c, err := crcontroller.New(ControllerName, mgr,
 		crcontroller.Options{
 			MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-			Reconciler:              NewReconciler(conf.TargetClusterConfig.Client, conf.TargetClusterConfig.APIReader),
+			Reconciler:              NewReconciler(conf.TargetCluster.GetClient(), conf.TargetCluster.GetAPIReader()),
 		},
 	)
 	if err != nil {
@@ -72,7 +70,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	secret.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
 
 	if err := c.Watch(
-		source.NewKindWithCache(secret, conf.TargetCache),
+		source.NewKindWithCache(secret, conf.TargetCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
 		predicate.Funcs{
 			CreateFunc:  func(e event.CreateEvent) bool { return isRelevantSecret(e.Object) },
@@ -85,7 +83,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	}
 
 	return c.Watch(
-		source.NewKindWithCache(&corev1.ServiceAccount{}, conf.TargetCache),
+		source.NewKindWithCache(&corev1.ServiceAccount{}, conf.TargetCluster.GetCache()),
 		handler.EnqueueRequestsFromMapFunc(mapServiceAccountToSecrets),
 		predicate.Funcs{
 			CreateFunc:  func(e event.CreateEvent) bool { return false },

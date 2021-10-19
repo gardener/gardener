@@ -18,7 +18,6 @@ import (
 	"context"
 	"testing"
 
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/test/framework"
@@ -86,11 +85,7 @@ var _ = BeforeSuite(func() {
 	tokenInvalidatorControllerOpts := &tokeninvalidatorcontroller.ControllerOptions{}
 	Expect(tokenInvalidatorControllerOpts.Complete()).To(Succeed())
 	tokenInvalidatorControllerOpts.Completed().MaxConcurrentWorkers = 1
-	tokenInvalidatorControllerOpts.Completed().TargetCache = mgr.GetCache()
-	tokenInvalidatorControllerOpts.Completed().TargetClusterConfig = resourcemanagercmd.TargetClusterConfig{
-		Client:    mgr.GetClient(),
-		APIReader: mgr.GetAPIReader(),
-	}
+	tokenInvalidatorControllerOpts.Completed().TargetCluster = mgr
 
 	Expect(tokeninvalidatorcontroller.AddToManager(mgr)).To(Succeed())
 	Expect(tokeninvalidatorwebhook.AddToManager(mgr)).To(Succeed())

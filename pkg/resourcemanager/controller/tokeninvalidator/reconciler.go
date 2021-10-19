@@ -68,6 +68,10 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, r.removeConsiderLabel(ctx, secret)
 	}
 
+	if metav1.HasLabel(secret.ObjectMeta, resourcesv1alpha1.StaticTokenConsider) {
+		return reconcile.Result{}, nil
+	}
+
 	podList := &corev1.PodList{}
 	if err := r.targetReader.List(ctx, podList, client.InNamespace(secret.Namespace)); err != nil {
 		return reconcile.Result{}, fmt.Errorf("could not list Pods: %w", err)
