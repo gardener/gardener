@@ -20,17 +20,16 @@ set -o pipefail
 
 echo "> Test Cover"
 
-GO111MODULE=on ginkgo -cover -timeout=2m -race -mod=vendor $@
-
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 COVERPROFILE="$REPO_ROOT/test.coverprofile"
 COVERPROFILE_TMP="$REPO_ROOT/test.coverprofile.tmp"
 COVERPROFILE_HTML="$REPO_ROOT/test.coverage.html"
 
-echo "mode: set" > "$COVERPROFILE_TMP"
-find . -name "*.coverprofile" -type f | xargs cat | grep -v mode: | sort -r | awk '{if($1 != last) {print $0;last=$1}}' >> "$COVERPROFILE_TMP"
+trap "rm -rf \"$COVERPROFILE_TMP\"" EXIT ERR INT TERM
+
+GO111MODULE=on go test -cover -coverprofile "$COVERPROFILE_TMP" -race -timeout=2m -mod=vendor $@ | grep -v 'no test files'
+
 cat "$COVERPROFILE_TMP" | grep -vE "\.pb\.go|zz_generated" > "$COVERPROFILE"
-rm -rf "$COVERPROFILE_TMP"
 go tool cover -html="$COVERPROFILE" -o="$COVERPROFILE_HTML"
 
 go tool cover -func="$COVERPROFILE"
