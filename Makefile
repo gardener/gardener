@@ -29,15 +29,6 @@ LOCAL_GARDEN_LABEL                     := local-garden
 REMOTE_GARDEN_LABEL                    := remote-garden
 ACTIVATE_SEEDAUTHORIZER                := false
 SEED_NAME                              := ""
-TOOLS_DIR                              := hack/tools
-TOOLS_BIN_DIR                          := $(TOOLS_DIR)/bin
-YQ                                     := $(TOOLS_BIN_DIR)/yq
-OS                                     := $(shell uname -s | tr '[:upper:]' '[:lower:]')
-ARCH                                   := $(shell uname -m)
-
-ifeq ($(ARCH),x86_64)
-	ARCH := amd64
-endif
 
 ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 	EFFECTIVE_VERSION := $(EFFECTIVE_VERSION)-dirty
@@ -47,10 +38,29 @@ endif
 # Binaries                              #
 #########################################
 
+TOOLS_DIR      := hack/tools
+TOOLS_BIN_DIR  := $(TOOLS_DIR)/bin
+YQ             := $(TOOLS_BIN_DIR)/yq
+CONTROLLER_GEN := $(TOOLS_BIN_DIR)/controller-gen
+OS             := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+ARCH           := $(shell uname -m)
+
+export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
+
+ifeq ($(ARCH),x86_64)
+	ARCH := amd64
+endif
+
 $(YQ):
-	mkdir -p "$(TOOLS_BIN_DIR)"
 	curl -L -o "$(YQ)" https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_$(OS)_$(ARCH)
 	chmod +x "$(YQ)"
+
+$(CONTROLLER_GEN): go.mod
+	go build -o $(TOOLS_BIN_DIR)/controller-gen sigs.k8s.io/controller-tools/cmd/controller-gen
+
+.PHONY: clean-bin
+clean-bin:
+	rm -rf $(TOOLS_BIN_DIR)/*
 
 #########################################
 # Rules for local development scenarios #
@@ -181,7 +191,6 @@ install-requirements:
 	@go install -mod=vendor github.com/ahmetb/gen-crd-api-reference-docs
 	@go install -mod=vendor github.com/golang/mock/mockgen
 	@go install -mod=vendor sigs.k8s.io/controller-runtime/tools/setup-envtest
-	@go install -mod=vendor sigs.k8s.io/controller-tools/cmd/controller-gen
 	@./hack/install-promtool.sh
 	@./hack/install-requirements.sh
 
@@ -203,26 +212,19 @@ check:
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-charts.sh ./charts
 
-# We need to explicitly pass GO111MODULE=off to k8s.io/code-generator as it is significantly slower otherwise,
-# see https://github.com/kubernetes/code-generator/issues/100.
 .PHONY: generate
-generate:
-	@GO111MODULE=off hack/update-protobuf.sh
-	@GO111MODULE=off hack/update-codegen.sh --parallel
-	@hack/generate-parallel.sh charts cmd extensions pkg plugin landscaper test
+generate: $(CONTROLLER_GEN)
+	@hack/update-protobuf.sh
+	@hack/update-codegen.sh --parallel
+	@hack/generate-parallel.sh charts cmd example extensions pkg plugin landscaper test
 	@hack/generate-monitoring-docs.sh
 
 .PHONY: generate-sequential
-generate-sequential:
-	@GO111MODULE=off hack/update-protobuf.sh
-	@GO111MODULE=off hack/update-codegen.sh
-	@hack/generate.sh ./charts/... ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/... ./test/...
+generate-sequential: $(CONTROLLER_GEN)
+	@hack/update-protobuf.sh
+	@hack/update-codegen.sh
+	@hack/generate.sh ./charts/... ./cmd/... ./example/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/... ./test/...
 	@hack/generate-monitoring-docs.sh
-
-.PHONY: generate-extensions-crds
-generate-extensions-crds:
-	@controller-gen crd paths=./pkg/apis/extensions/... output:crd:dir=./dev/extensions-crds output:stdout
-	@controller-gen crd paths=./pkg/apis/resources/... output:crd:dir=./example/resource-manager output:stdout && mv ./example/resource-manager/resources.gardener.cloud_managedresources.yaml ./example/resource-manager/10-crd-managedresource.yaml
 
 .PHONY: format
 format:

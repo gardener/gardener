@@ -1,0 +1,395 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.7.0
+  creationTimestamp: null
+  name: operatingsystemconfigs.extensions.gardener.cloud
+spec:
+  group: extensions.gardener.cloud
+  names:
+    kind: OperatingSystemConfig
+    listKind: OperatingSystemConfigList
+    plural: operatingsystemconfigs
+    shortNames:
+    - osc
+    singular: operatingsystemconfig
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The type of the operating system configuration.
+      jsonPath: .spec.type
+      name: Type
+      type: string
+    - description: The purpose of the operating system configuration.
+      jsonPath: .spec.purpose
+      name: Purpose
+      type: string
+    - description: Status of operating system configuration.
+      jsonPath: .status.lastOperation.state
+      name: Status
+      type: string
+    - description: creation timestamp
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: OperatingSystemConfig is a specification for a OperatingSystemConfig
+          resource
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: OperatingSystemConfigSpec is the spec for a OperatingSystemConfig
+              resource.
+            properties:
+              criConfig:
+                description: CRI config is a structure contains configurations of
+                  the CRI library
+                properties:
+                  name:
+                    description: Name is a mandatory string containing the name of
+                      the CRI library. Supported values are `docker` and `containerd`.
+                    type: string
+                required:
+                - name
+                type: object
+              files:
+                description: Files is a list of files that should get written to the
+                  host's file system.
+                items:
+                  description: File is a file that should get written to the host's
+                    file system. The content can either be inlined or referenced from
+                    a secret in the same namespace.
+                  properties:
+                    content:
+                      description: Content describe the file's content.
+                      properties:
+                        inline:
+                          description: Inline is a struct that contains information
+                            about the inlined data.
+                          properties:
+                            data:
+                              description: Data is the file's data.
+                              type: string
+                            encoding:
+                              description: Encoding is the file's encoding (e.g. base64).
+                              type: string
+                          required:
+                          - data
+                          - encoding
+                          type: object
+                        secretRef:
+                          description: SecretRef is a struct that contains information
+                            about the referenced secret.
+                          properties:
+                            dataKey:
+                              description: DataKey is the key in the secret's `.data`
+                                field that should be read.
+                              type: string
+                            name:
+                              description: Name is the name of the secret.
+                              type: string
+                          required:
+                          - dataKey
+                          - name
+                          type: object
+                        transmitUnencoded:
+                          description: TransmitUnencoded set to true will ensure that
+                            the os-extension does not encode the file content when
+                            sent to the node. This for example can be used to manipulate
+                            the clear-text content before it reaches the node.
+                          type: boolean
+                      type: object
+                    path:
+                      description: Path is the path of the file system where the file
+                        should get written to.
+                      type: string
+                    permissions:
+                      description: Permissions describes with which permissions the
+                        file should get written to the file system. Should be defaulted
+                        to octal 0644.
+                      format: int32
+                      type: integer
+                  required:
+                  - content
+                  - path
+                  type: object
+                type: array
+              providerConfig:
+                description: ProviderConfig is the provider specific configuration.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              purpose:
+                description: Purpose describes how the result of this OperatingSystemConfig
+                  is used by Gardener. Either it gets sent to the `Worker` extension
+                  controller to bootstrap a VM, or it is downloaded by the cloud-config-downloader
+                  script already running on a bootstrapped VM.
+                type: string
+              reloadConfigFilePath:
+                description: ReloadConfigFilePath is the path to the generated operating
+                  system configuration. If set, controllers are asked to use it when
+                  determining the .status.command of this resource. For example, if
+                  for CoreOS the reload-path might be "/var/lib/config"; then the
+                  controller shall set .status.command to "/usr/bin/coreos-cloudinit
+                  --from-file=/var/lib/config".
+                type: string
+              type:
+                description: Type contains the instance of the resource's kind.
+                type: string
+              units:
+                description: Units is a list of unit for the operating system configuration
+                  (usually, a systemd unit).
+                items:
+                  description: Unit is a unit for the operating system configuration
+                    (usually, a systemd unit).
+                  properties:
+                    command:
+                      description: Command is the unit's command.
+                      type: string
+                    content:
+                      description: Content is the unit's content.
+                      type: string
+                    dropIns:
+                      description: DropIns is a list of drop-ins for this unit.
+                      items:
+                        description: DropIn is a drop-in configuration for a systemd
+                          unit.
+                        properties:
+                          content:
+                            description: Content is the content of the drop-in.
+                            type: string
+                          name:
+                            description: Name is the name of the drop-in.
+                            type: string
+                        required:
+                        - content
+                        - name
+                        type: object
+                      type: array
+                    enable:
+                      description: Enable describes whether the unit is enabled or
+                        not.
+                      type: boolean
+                    name:
+                      description: Name is the name of a unit.
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+            required:
+            - purpose
+            - type
+            type: object
+          status:
+            description: OperatingSystemConfigStatus is the status for a OperatingSystemConfig
+              resource.
+            properties:
+              cloudConfig:
+                description: CloudConfig is a structure for containing the generated
+                  output for the given operating system config spec. It contains a
+                  reference to a secret as the result may contain confidential data.
+                properties:
+                  secretRef:
+                    description: SecretRef is a reference to a secret that contains
+                      the actual result of the generated cloud config.
+                    properties:
+                      name:
+                        description: Name is unique within a namespace to reference
+                          a secret resource.
+                        type: string
+                      namespace:
+                        description: Namespace defines the space within which the
+                          secret name must be unique.
+                        type: string
+                    type: object
+                required:
+                - secretRef
+                type: object
+              command:
+                description: Command is the command whose execution renews/reloads
+                  the cloud config on an existing VM, e.g. "/usr/bin/reload-cloud-config
+                  -from-file=<path>". The <path> is optionally provided by Gardener
+                  in the .spec.reloadConfigFilePath field.
+                type: string
+              conditions:
+                description: Conditions represents the latest available observations
+                  of a Seed's current state.
+                items:
+                  description: Condition holds the information about the state of
+                    a resource.
+                  properties:
+                    codes:
+                      description: Well-defined error codes in case the condition
+                        reports a problem.
+                      items:
+                        description: ErrorCode is a string alias.
+                        type: string
+                      type: array
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      description: Last time the condition was updated.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of the condition.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - lastUpdateTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              lastError:
+                description: LastError holds information about the last occurred error
+                  during an operation.
+                properties:
+                  codes:
+                    description: Well-defined error codes of the last error(s).
+                    items:
+                      description: ErrorCode is a string alias.
+                      type: string
+                    type: array
+                  description:
+                    description: A human readable message indicating details about
+                      the last error.
+                    type: string
+                  lastUpdateTime:
+                    description: Last time the error was reported
+                    format: date-time
+                    type: string
+                  taskID:
+                    description: ID of the task which caused this last error
+                    type: string
+                required:
+                - description
+                type: object
+              lastOperation:
+                description: LastOperation holds information about the last operation
+                  on the resource.
+                properties:
+                  description:
+                    description: A human readable message indicating details about
+                      the last operation.
+                    type: string
+                  lastUpdateTime:
+                    description: Last time the operation state transitioned from one
+                      to another.
+                    format: date-time
+                    type: string
+                  progress:
+                    description: The progress in percentage (0-100) of the last operation.
+                    format: int32
+                    type: integer
+                  state:
+                    description: Status of the last operation, one of Aborted, Processing,
+                      Succeeded, Error, Failed.
+                    type: string
+                  type:
+                    description: Type of the last operation, one of Create, Reconcile,
+                      Delete.
+                    type: string
+                required:
+                - description
+                - lastUpdateTime
+                - progress
+                - state
+                - type
+                type: object
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                  for this resource.
+                format: int64
+                type: integer
+              providerStatus:
+                description: ProviderStatus contains provider-specific status.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              resources:
+                description: Resources holds a list of named resource references that
+                  can be referred to in the state by their names.
+                items:
+                  description: NamedResourceReference is a named reference to a resource.
+                  properties:
+                    name:
+                      description: Name of the resource reference.
+                      type: string
+                    resourceRef:
+                      description: ResourceRef is a reference to a resource.
+                      properties:
+                        apiVersion:
+                          description: API version of the referent
+                          type: string
+                        kind:
+                          description: 'Kind of the referent; More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"'
+                          type: string
+                        name:
+                          description: 'Name of the referent; More info: http://kubernetes.io/docs/user-guide/identifiers#names'
+                          type: string
+                      required:
+                      - kind
+                      - name
+                      type: object
+                  required:
+                  - name
+                  - resourceRef
+                  type: object
+                type: array
+              state:
+                description: State can be filled by the operating controller with
+                  what ever data it needs.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              units:
+                description: Units is a list of systemd unit names that are part of
+                  the generated Cloud Config and shall be restarted when a new version
+                  has been downloaded.
+                items:
+                  type: string
+                type: array
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
