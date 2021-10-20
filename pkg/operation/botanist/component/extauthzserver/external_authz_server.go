@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -144,7 +144,7 @@ func (a *authServer) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, destinationRule, func() error {
 		destinationRule.Spec = istionetworkingv1beta1.DestinationRule{
 			ExportTo: []string{"*"},
-			Host:     fmt.Sprintf("%s.%s.svc.%s", DeploymentName, a.namespace, v1beta1.DefaultDomain),
+			Host:     fmt.Sprintf("%s.%s.svc.%s", DeploymentName, a.namespace, gardencorev1beta1.DefaultDomain),
 			TrafficPolicy: &istionetworkingv1beta1.TrafficPolicy{
 				ConnectionPool: &istionetworkingv1beta1.ConnectionPoolSettings{
 					Tcp: &istionetworkingv1beta1.ConnectionPoolSettings_TCPSettings{
@@ -193,7 +193,7 @@ func (a *authServer) Deploy(ctx context.Context) error {
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, virtualService, func() error {
 		virtualService.Spec = istionetworkingv1beta1.VirtualService{
 			ExportTo: []string{"*"},
-			Hosts:    []string{fmt.Sprintf("%s.%s.svc.%s", DeploymentName, a.namespace, v1beta1.DefaultDomain)},
+			Hosts:    []string{fmt.Sprintf("%s.%s.svc.%s", DeploymentName, a.namespace, gardencorev1beta1.DefaultDomain)},
 			Http: []*istionetworkingv1beta1.HTTPRoute{{
 				Route: []*istionetworkingv1beta1.HTTPRouteDestination{{
 					Destination: &istionetworkingv1beta1.Destination{
