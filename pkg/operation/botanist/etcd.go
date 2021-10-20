@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"hash/crc32"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
@@ -93,7 +92,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 
 	if b.Seed.GetInfo().Spec.Backup != nil {
 		secret := &corev1.Secret{}
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, genericactuator.BackupSecretName), secret); err != nil {
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.BackupSecretName), secret); err != nil {
 			return err
 		}
 
@@ -104,9 +103,9 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 
 		b.Shoot.Components.ControlPlane.EtcdMain.SetBackupConfig(&etcd.BackupConfig{
 			Provider:             b.Seed.GetInfo().Spec.Backup.Provider,
-			SecretRefName:        genericactuator.BackupSecretName,
+			SecretRefName:        v1beta1constants.BackupSecretName,
 			Prefix:               b.Shoot.BackupEntryName,
-			Container:            string(secret.Data[genericactuator.DataKeyBackupBucketName]),
+			Container:            string(secret.Data[v1beta1constants.DataKeyBackupBucketName]),
 			FullSnapshotSchedule: snapshotSchedule,
 		})
 	}

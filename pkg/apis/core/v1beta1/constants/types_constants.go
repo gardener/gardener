@@ -479,6 +479,11 @@ const (
 
 	// DefaultVpnRange is the default network range for the vpn between seed and shoot cluster.
 	DefaultVpnRange = "192.168.123.0/24"
+
+	// BackupSecretName is the name of secret having credentials for etcd backups.
+	BackupSecretName string = "etcd-backup"
+	// DataKeyBackupBucketName is the name of a data key whose value contains the backup bucket name.
+	DataKeyBackupBucketName string = "bucketName"
 )
 
 // ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.
