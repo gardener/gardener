@@ -34,9 +34,9 @@ import (
 
 const (
 	// DefaultInterval is the default interval for retry operations.
-	DefaultInterval = 5 * time.Second
+	DefaultInterval = 10 * time.Second
 	// DefaultSevereThreshold is the default threshold until an error reported by another component is treated as 'severe'.
-	DefaultSevereThreshold = 30 * time.Second
+	DefaultSevereThreshold = 3 * time.Minute
 	// DefaultTimeout is the default timeout and defines how long Gardener should wait
 	// for a successful reconciliation of an infrastructure resource.
 	DefaultTimeout = 10 * time.Minute
