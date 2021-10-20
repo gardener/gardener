@@ -34,7 +34,7 @@ import (
 )
 
 // ControllerName is the name of the controller.
-const ControllerName = "tokenrequestor_controller"
+const ControllerName = "tokenrequestor-controller"
 
 // defaultControllerConfig is the default config for the controller.
 var defaultControllerConfig ControllerConfig

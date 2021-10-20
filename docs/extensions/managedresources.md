@@ -1,6 +1,6 @@
 # Deploy resources to the Shoot cluster
 
-We have introduced a component called [`gardener-resource-manager`](https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md) that is deployed as part of every shoot control plane in the seed.
+We have introduced a component called [`gardener-resource-manager`](../concepts/resource-manager.md) that is deployed as part of every shoot control plane in the seed.
 One of its tasks is to manages CRDs, so called `ManagedResource`s.
 Managed resources contain Kubernetes resources that shall be created, reconciled, updated, and deleted by the gardener-resource-manager.
 
@@ -8,4 +8,4 @@ Extension controllers may create these `ManagedResource`s in the shoot namespace
 
 ## Where can I find more examples and more information how to use `ManagedResource`s?
 
-Please take a look at the [README.md](https://github.com/gardener/gardener/blob/master/docs/concepts/resource-manager.md).
+Please take a look at the [respective documentation](../docs/concepts/resource-manager.md).
