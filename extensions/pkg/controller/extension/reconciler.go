@@ -153,8 +153,8 @@ func (r *reconciler) reconcile(ctx context.Context, ex *extensionsv1alpha1.Exten
 
 	r.logger.Info("Starting the reconciliation of extension", "extension", kutil.ObjectName(ex))
 	if err := r.actuator.Reconcile(ctx, ex); err != nil {
-		_ = r.statusUpdater.Error(ctx, ex, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling extension")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, ex, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling extension")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, ex, operationType, "Successfully reconciled extension"); err != nil {
@@ -176,8 +176,8 @@ func (r *reconciler) delete(ctx context.Context, ex *extensionsv1alpha1.Extensio
 
 	r.logger.Info("Starting the deletion of extension", "extension", kutil.ObjectName(ex))
 	if err := r.actuator.Delete(ctx, ex); err != nil {
-		_ = r.statusUpdater.Error(ctx, ex, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting the extension")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, ex, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting the extension")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, ex, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted the extension"); err != nil {
@@ -202,8 +202,8 @@ func (r *reconciler) restore(ctx context.Context, ex *extensionsv1alpha1.Extensi
 
 	r.logger.Info("Starting the restoration of extension", "extension", kutil.ObjectName(ex))
 	if err := r.actuator.Restore(ctx, ex); err != nil {
-		_ = r.statusUpdater.Error(ctx, ex, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Unable to restore Extension resource")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, ex, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Unable to restore Extension resource")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, ex, operationType, "Successfully restored Extension resource"); err != nil {
@@ -224,8 +224,8 @@ func (r *reconciler) migrate(ctx context.Context, ex *extensionsv1alpha1.Extensi
 
 	r.logger.Info("Starting the migration of extension", "extension", kutil.ObjectName(ex))
 	if err := r.actuator.Migrate(ctx, ex); err != nil {
-		_ = r.statusUpdater.Error(ctx, ex, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating Extension resource")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, ex, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating Extension resource")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, ex, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated Extension resource"); err != nil {

@@ -20,8 +20,6 @@ import (
 	"fmt"
 	"time"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	ctrlerror "github.com/gardener/gardener/extensions/pkg/controller/error"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -31,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	reconciler2 "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	"github.com/gardener/gardener/pkg/extensions"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -112,11 +111,11 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		err = r.reconcileBastion(ctx, logger, gardenClient.Client(), seedClient.Client(), bastion, &shoot)
 	}
 
-	if cause := extensionscontroller.ReconcileErrCause(err); cause != nil {
+	if cause := reconciler2.ReconcileErrCause(err); cause != nil {
 		logger.Errorf("Reconciling failed: %v", cause)
 	}
 
-	return extensionscontroller.ReconcileErr(err)
+	return reconciler2.ReconcileErr(err)
 }
 
 func (r *reconciler) reconcileBastion(
@@ -232,7 +231,7 @@ func (r *reconciler) cleanupBastion(
 	}
 
 	// cleanup is now triggered on the seed, requeue to wait for it to happen
-	return &ctrlerror.RequeueAfterError{
+	return &reconciler2.RequeueAfterError{
 		RequeueAfter: 5 * time.Second,
 		Cause:        errors.New("bastion extension cleanup has not completed yet"),
 	}

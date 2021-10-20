@@ -109,8 +109,8 @@ func (r *reconciler) reconcile(ctx context.Context, bb *extensionsv1alpha1.Backu
 
 	r.logger.Info("Starting the reconciliation of backupbucket", "backupbucket", kutil.ObjectName(bb))
 	if err := r.actuator.Reconcile(ctx, bb); err != nil {
-		_ = r.statusUpdater.Error(ctx, bb, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling backupbucket")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, bb, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling backupbucket")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully reconciled backupbucket"); err != nil {
@@ -133,8 +133,8 @@ func (r *reconciler) delete(ctx context.Context, bb *extensionsv1alpha1.BackupBu
 
 	r.logger.Info("Starting the deletion of backupbucket", "backupbucket", kutil.ObjectName(bb))
 	if err := r.actuator.Delete(ctx, bb); err != nil {
-		_ = r.statusUpdater.Error(ctx, bb, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error deleting backupbucket")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, bb, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting backupbucket")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, bb, operationType, "Successfully deleted backupbucket"); err != nil {

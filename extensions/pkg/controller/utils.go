@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"reflect"
 
-	controllererror "github.com/gardener/gardener/extensions/pkg/controller/error"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -37,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var (
@@ -57,32 +55,6 @@ var (
 
 func init() {
 	utilruntime.Must(AddToScheme(ExtensionsScheme))
-}
-
-// ReconcileErr returns a reconcile.Result or an error, depending on whether the error is a
-// RequeueAfterError or not.
-func ReconcileErr(err error) (reconcile.Result, error) {
-	if requeueAfter, ok := err.(*controllererror.RequeueAfterError); ok {
-		return reconcile.Result{Requeue: true, RequeueAfter: requeueAfter.RequeueAfter}, nil
-	}
-	return reconcile.Result{}, err
-}
-
-// ReconcileErrCause returns the cause in case the error is an RequeueAfterError. Otherwise,
-// it returns the input error.
-func ReconcileErrCause(err error) error {
-	if requeueAfter, ok := err.(*controllererror.RequeueAfterError); ok {
-		return requeueAfter.Cause
-	}
-	return err
-}
-
-// ReconcileErrCauseOrErr returns the cause of the error or the error if the cause is nil.
-func ReconcileErrCauseOrErr(err error) error {
-	if cause := ReconcileErrCause(err); cause != nil {
-		return cause
-	}
-	return err
 }
 
 // AddToManagerBuilder aggregates various AddToManager functions.
