@@ -234,3 +234,15 @@ const (
 
 // ContainerDRuntimeContainersBinFolder is the folder where Container Runtime binaries should be saved for ContainerD usage
 const ContainerDRuntimeContainersBinFolder = "/var/bin/containerruntimes"
+
+// FileCodecID is the id of a FileCodec for cloud-init scripts.
+type FileCodecID string
+
+const (
+	// B64FileCodecID is the base64 file codec id.
+	B64FileCodecID FileCodecID = "b64"
+	// GZIPFileCodecID is the gzip file codec id.
+	GZIPFileCodecID FileCodecID = "gzip"
+	// GZIPB64FileCodecID is the gzip combined with base64 codec id.
+	GZIPB64FileCodecID FileCodecID = "gzip+b64"
+)

@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cloudinit"
 	extensionswebhook "github.com/gardener/gardener/extensions/pkg/webhook"
 	gcontext "github.com/gardener/gardener/extensions/pkg/webhook/context"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -396,7 +395,7 @@ func (m *mutator) ensureKubeletCloudProviderConfig(ctx context.Context, gctx gco
 
 	// Encode cloud provider config into inline content
 	var fci *extensionsv1alpha1.FileContentInline
-	if fci, err = m.fciCodec.Encode([]byte(s), string(cloudinit.B64FileCodecID)); err != nil {
+	if fci, err = m.fciCodec.Encode([]byte(s), string(extensionsv1alpha1.B64FileCodecID)); err != nil {
 		return fmt.Errorf("could not encode kubelet cloud provider config: %w", err)
 	}
 
