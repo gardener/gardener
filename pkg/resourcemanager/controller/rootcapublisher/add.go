@@ -61,7 +61,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		return fmt.Errorf("file for root ca could not be read: %w", err)
 	}
 
-	rootcaController, err := controller.New(ControllerName, mgr, controller.Options{
+	rootCAController, err := controller.New(ControllerName, mgr, controller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
 		Reconciler: &reconciler{
 			rootCA:       string(rootCA),
@@ -72,8 +72,9 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		return fmt.Errorf("unable to set up root ca controller: %w", err)
 	}
 
-	if err := rootcaController.Watch(
-		&source.Kind{Type: &corev1.Namespace{}},
+	if err := rootCAController.Watch(
+		// &source.Kind{Type: &corev1.Namespace{}},
+		source.NewKindWithCache(&corev1.Namespace{}, conf.TargetCache),
 		&handler.EnqueueRequestForObject{},
 		predicate.Funcs{
 			CreateFunc:  func(e event.CreateEvent) bool { return true },
@@ -88,7 +89,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	configMap := &metav1.PartialObjectMetadata{}
 	configMap.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ConfigMap"))
 
-	if err := rootcaController.Watch(
+	if err := rootCAController.Watch(
 		&source.Kind{Type: configMap},
 		&handler.EnqueueRequestForOwner{OwnerType: &corev1.Namespace{}},
 		predicate.Funcs{

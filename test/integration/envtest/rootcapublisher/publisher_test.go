@@ -15,8 +15,6 @@
 package rootcapublisher_test
 
 import (
-	"time"
-
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo"
@@ -48,23 +46,12 @@ var _ = Describe("Root CA Controller tests", func() {
 
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-		}, time.Millisecond*500, time.Millisecond*10).Should(Succeed())
+		}).Should(Succeed())
 	})
 
 	It("should successfully create a config map on creating a namespace", func() {})
 
-	It("should keep the config map in the desired state after Delete/Update of the config map", func() {
-		By("Deleting the config map")
-		Expect(testClient.Delete(ctx, configMap)).To(Succeed())
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-		}, time.Millisecond*300, time.Millisecond*10).Should(BeNotFoundError())
-
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-		}, time.Millisecond*300, time.Millisecond*10).Should(Succeed())
-
-		By("Updating the config map")
+	It("should successfully update the config map if manual update occur", func() {
 		configMap.Data = nil
 		Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
@@ -74,21 +61,22 @@ var _ = Describe("Root CA Controller tests", func() {
 			}
 
 			return configMap.Data
-		}, time.Millisecond*300, time.Millisecond*10).Should(Not(BeNil()))
+		}).Should(Not(BeNil()))
+	})
 
-		By("Ignoring config maps that are updated by the k8s publisher")
-		configMap.Data = nil
-		configMap.Annotations = map[string]string{"kubernetes.io/description": "test description"}
-		Expect(testClient.Update(ctx, configMap)).To(Succeed())
+	It("should keep the config map in the desired state after delete of the config map", func() {
+		Expect(testClient.Delete(ctx, configMap)).To(Succeed())
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+		}).Should(BeNotFoundError())
 
-		Consistently(func() map[string]string {
-			if err := testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
-				return nil
-			}
-			return configMap.Data
-		}, time.Millisecond*300, time.Millisecond*10).Should(BeNil())
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+		}).Should(Succeed())
 
-		By("Ignoring configmap with different name")
+	})
+
+	It("should ignore config maps with different name", func() {
 		cm := &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret",
@@ -100,9 +88,25 @@ var _ = Describe("Root CA Controller tests", func() {
 
 		baseCM := cm.DeepCopy()
 		cm.Data["foo"] = "newbar"
-		Expect(testClient.Patch(ctx, cm, client.MergeFrom(baseCM))).To(Succeed())
 
-		Expect(cm.Data).To(HaveLen(1))
-		Expect(cm.Data).To(HaveKeyWithValue("foo", "newbar"))
+		Consistently(func() map[string]string {
+			if err := testClient.Patch(ctx, cm, client.MergeFrom(baseCM)); err != nil {
+				return nil
+			}
+			return cm.Data
+		}).Should(SatisfyAll(HaveLen(1), HaveKeyWithValue("foo", "newbar")))
+	})
+
+	It("should ignore config maps that are updated by the k8s publisher", func() {
+		configMap.Data = nil
+		configMap.Annotations = map[string]string{"kubernetes.io/description": "test description"}
+		Expect(testClient.Update(ctx, configMap)).To(Succeed())
+
+		Consistently(func() map[string]string {
+			if err := testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
+				return nil
+			}
+			return configMap.Data
+		}).Should(BeNil())
 	})
 })
