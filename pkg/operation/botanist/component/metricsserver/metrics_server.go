@@ -315,7 +315,7 @@ func (m *metricsServer) computeResourcesData() (map[string][]byte, error) {
 								// The kube-apiserver and the kubelet use different CAs, however, the metrics-server assumes the CAs are the same.
 								// We should remove this flag once it is possible to specify the CA of the kubelet.
 								"--kubelet-insecure-tls",
-								"--kubelet-preferred-address-types=Hostname,InternalDNS,InternalIP,ExternalDNS,ExternalIP",
+								"--kubelet-preferred-address-types=InternalIP,InternalDNS,ExternalDNS,ExternalIP,Hostname",
 								fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificate),
 								fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.DataKeyPrivateKey),
 							},
