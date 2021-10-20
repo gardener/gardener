@@ -22,6 +22,7 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1alpha1constants "github.com/gardener/gardener/pkg/apis/core/v1alpha1/constants"
+	"github.com/gardener/gardener/pkg/utils"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
@@ -765,4 +766,39 @@ func IsAPIServerExposureManaged(obj metav1.Object) bool {
 	}
 
 	return false
+}
+
+// SecretBindingHasType checks if the given SecretBinding has the given provider type.
+func SecretBindingHasType(secretBinding *gardencorev1alpha1.SecretBinding, toFind string) bool {
+	if secretBinding == nil {
+		return false
+	}
+	if secretBinding.Provider == nil {
+		return false
+	}
+
+	types := strings.Split(secretBinding.Provider.Type, ",")
+	if len(types) == 0 {
+		return false
+	}
+
+	return utils.ValueExists(toFind, types)
+}
+
+// AddTypeToSecretBinding adds the given provider type to the SecretBinding.
+func AddTypeToSecretBinding(secretBinding *gardencorev1alpha1.SecretBinding, toAdd string) {
+	if secretBinding.Provider == nil {
+		secretBinding.Provider = &gardencorev1alpha1.SecretBindingProvider{
+			Type: toAdd,
+		}
+		return
+	}
+
+	types := strings.Split(secretBinding.Provider.Type, ",")
+	if !utils.ValueExists(toAdd, types) {
+		types = append(types, toAdd)
+	}
+
+	newType := strings.Join(types, ",")
+	secretBinding.Provider.Type = newType
 }

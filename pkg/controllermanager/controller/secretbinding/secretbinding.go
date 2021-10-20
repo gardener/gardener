@@ -23,7 +23,9 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/client-go/tools/cache"
@@ -34,10 +36,14 @@ import (
 
 // Controller controls SecretBindings.
 type Controller struct {
-	reconciler     reconcile.Reconciler
+	reconciler                               reconcile.Reconciler
+	secretBindingProviderPopulatorReconciler reconcile.Reconciler
+
 	hasSyncedFuncs []cache.InformerSynced
 
-	secretBindingQueue     workqueue.RateLimitingInterface
+	secretBindingQueue workqueue.RateLimitingInterface
+	shootQueue         workqueue.RateLimitingInterface
+
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
@@ -63,11 +69,20 @@ func NewSecretBindingController(
 		return nil, fmt.Errorf("failed to get SecretBinding Informer: %w", err)
 	}
 
-	secretBindingController := &Controller{
-		reconciler:         NewSecretBindingReconciler(logger.Logger, gardenClient.Client(), recorder),
-		secretBindingQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
-		workerCh:           make(chan int),
+	shootInformer, err := gardenClient.Cache().GetInformer(ctx, &gardencorev1beta1.Shoot{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Shoot Informer: %w", err)
 	}
+
+	secretBindingController := &Controller{
+		reconciler:                               NewSecretBindingReconciler(logger.Logger, gardenClient.Client(), recorder),
+		secretBindingProviderPopulatorReconciler: NewSecretBindingProviderPopulatorReconciler(logger.Logger, gardenClient.Client()),
+		secretBindingQueue:                       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
+		shootQueue:                               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Shoot"),
+		workerCh:                                 make(chan int),
+	}
+
+	secretBindingProviderPopulatorEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.SecretBindingProviderPopulator)
 
 	secretBindingInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    secretBindingController.secretBindingAdd,
@@ -75,14 +90,26 @@ func NewSecretBindingController(
 		DeleteFunc: secretBindingController.secretBindingDelete,
 	})
 
+	if secretBindingProviderPopulatorEnabled {
+		shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+			AddFunc: secretBindingController.shootAdd,
+		})
+	}
+
 	secretBindingController.hasSyncedFuncs = append(secretBindingController.hasSyncedFuncs, secretBindingInformer.HasSynced)
+	if secretBindingProviderPopulatorEnabled {
+		secretBindingController.hasSyncedFuncs = append(secretBindingController.hasSyncedFuncs, shootInformer.HasSynced)
+	}
 
 	return secretBindingController, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, workers int) {
-	var waitGroup sync.WaitGroup
+func (c *Controller) Run(ctx context.Context, secretBindingWorkers, secretBindingProviderPopulatorWorkers int) {
+	var (
+		waitGroup                             sync.WaitGroup
+		secretBindingProviderPopulatorEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.SecretBindingProviderPopulator)
+	)
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
@@ -99,20 +126,38 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	logger.Logger.Info("SecretBinding controller initialized.")
 
-	for i := 0; i < workers; i++ {
+	for i := 0; i < secretBindingWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.secretBindingQueue, "SecretBinding", c.reconciler, &waitGroup, c.workerCh)
+	}
+	if secretBindingProviderPopulatorEnabled {
+		for i := 0; i < secretBindingProviderPopulatorWorkers; i++ {
+			controllerutils.CreateWorker(ctx, c.shootQueue, "SecretBinding Provider Populator", c.secretBindingProviderPopulatorReconciler, &waitGroup, c.workerCh)
+		}
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.secretBindingQueue.ShutDown()
+	if secretBindingProviderPopulatorEnabled {
+		c.shootQueue.ShutDown()
+	}
+
+	var (
+		secretBindingQueueLength = c.secretBindingQueue.Len()
+		queueLengths             = secretBindingQueueLength
+	)
+
+	if secretBindingProviderPopulatorEnabled {
+		var shootQueueLength = c.shootQueue.Len()
+		queueLengths += shootQueueLength
+	}
 
 	for {
-		if c.secretBindingQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
+		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			logger.Logger.Debug("No running SecretBinding worker and no items left in the queues. Terminated SecretBinding controller...")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d SecretBinding worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.secretBindingQueue.Len())
+		logger.Logger.Debugf("Waiting for %d SecretBinding worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, queueLengths)
 		time.Sleep(5 * time.Second)
 	}
 

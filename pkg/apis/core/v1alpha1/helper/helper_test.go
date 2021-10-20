@@ -1049,4 +1049,31 @@ var _ = Describe("helper", func() {
 			true,
 		),
 	)
+
+	DescribeTable("#SecretBindingHasType",
+		func(secretBinding *gardencorev1alpha1.SecretBinding, toFind string, expected bool) {
+			actual := SecretBindingHasType(secretBinding, toFind)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with nil SecretBinding", nil, "foo", false),
+		Entry("with empty provider field", &gardencorev1alpha1.SecretBinding{}, "foo", false),
+		Entry("when single-value provider type equals to the given type", &gardencorev1alpha1.SecretBinding{Provider: &gardencorev1alpha1.SecretBindingProvider{Type: "foo"}}, "foo", true),
+		Entry("when single-value provider type does not match the given type", &gardencorev1alpha1.SecretBinding{Provider: &gardencorev1alpha1.SecretBindingProvider{Type: "foo"}}, "bar", false),
+		Entry("when multi-value provider type contains the given type", &gardencorev1alpha1.SecretBinding{Provider: &gardencorev1alpha1.SecretBindingProvider{Type: "foo,bar"}}, "bar", true),
+		Entry("when multi-value provider type does not contain the given type", &gardencorev1alpha1.SecretBinding{Provider: &gardencorev1alpha1.SecretBindingProvider{Type: "foo,bar"}}, "baz", false),
+	)
+
+	DescribeTable("#AddTypeToSecretBinding",
+		func(secretBinding *gardencorev1alpha1.SecretBinding, toAdd, expected string) {
+			AddTypeToSecretBinding(secretBinding, toAdd)
+			Expect(secretBinding.Provider.Type).To(Equal(expected))
+		},
+
+		Entry("with empty provider field", &gardencorev1alpha1.SecretBinding{}, "foo", "foo"),
+		Entry("when single-value provider type already exists", &gardencorev1alpha1.SecretBinding{Provider: &gardencorev1alpha1.SecretBindingProvider{Type: "foo"}}, "foo", "foo"),
+		Entry("when single-value provider type does not exist", &gardencorev1alpha1.SecretBinding{Provider: &gardencorev1alpha1.SecretBindingProvider{Type: "foo"}}, "bar", "foo,bar"),
+		Entry("when multi-value provider type already exists", &gardencorev1alpha1.SecretBinding{Provider: &gardencorev1alpha1.SecretBindingProvider{Type: "foo,bar"}}, "foo", "foo,bar"),
+		Entry("when multi-value provider type does not exist", &gardencorev1alpha1.SecretBinding{Provider: &gardencorev1alpha1.SecretBindingProvider{Type: "foo,bar"}}, "baz", "foo,bar,baz"),
+	)
 })

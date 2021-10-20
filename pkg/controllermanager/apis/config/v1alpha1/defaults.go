@@ -127,6 +127,12 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 
+	if obj.Controllers.SecretBindingProviderPopulator == nil {
+		obj.Controllers.SecretBindingProviderPopulator = &SecretBindingProviderPopulatorControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+
 	if obj.Controllers.ShootReference == nil {
 		obj.Controllers.ShootReference = &ShootReferenceControllerConfiguration{
 			ConcurrentSyncs: 5,

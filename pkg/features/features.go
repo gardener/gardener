@@ -112,4 +112,10 @@ const (
 	// owner: @plkokanov
 	// alpha: v1.37.0
 	CopyEtcdBackupsDuringControlPlaneMigration featuregate.Feature = "CopyEtcdBackupsDuringControlPlaneMigration"
+
+	// SecretBindingProviderPopulator enables the SecretBinding provider populator controller in the gardener-controller-manager.
+	// The controller is responsible to populate the provider.type of the SecretBinding resource based on its current usage.
+	// owner: @ialidzhikov
+	// alpha: v1.37.0
+	SecretBindingProviderPopulator featuregate.Feature = "SecretBindingProviderPopulator"
 )
