@@ -27,7 +27,7 @@ set -o pipefail
 #     <group>            List of groups to generate (generate all if unset)
 
 if ! command -v controller-gen &> /dev/null ; then
-  >&2 echo "controller-gen not available, please install it first by running 'make install-requirements'"
+  >&2 echo "controller-gen not available"
   exit 1
 fi
 

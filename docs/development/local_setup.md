@@ -101,18 +101,11 @@ For other OS please check the [docker installation documentation](https://docs.d
 brew install iproute2mac
 ```
 
-## Installing yaml2json and jq
+## Installing jq
 
 ```bash
-go get -u github.com/bronze1man/yaml2json
 brew install jq
 ```
-
-And make sure the yaml2json binary is on your `PATH`
-```bash
-export PATH=$PATH:$(go env GOPATH)/bin
-```
-
 
 ## Installing GNU Parallel
 
@@ -124,13 +117,13 @@ brew install parallel
 
 ## [macOS only] Install GNU core utilities
 
-When running on macOS you have to install the GNU core utilities:
+When running on macOS, install the GNU core utilities and friends:
 
 ```bash
-brew install coreutils gnu-sed
+brew install coreutils gnu-sed gnu-tar grep
 ```
 
-This will create symbolic links for the GNU utilities with `g` prefix in `/usr/local/bin`, e.g., `gsed` or `gbase64`. To allow using them without the `g` prefix please put `/usr/local/opt/coreutils/libexec/gnubin` at the beginning of your `PATH` environment variable, e.g., `export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH`.
+This will create symbolic links for the GNU utilities with `g` prefix in `/usr/local/bin`, e.g., `gsed` or `gbase64`. To allow using them without the `g` prefix please put `/usr/local/opt/coreutils/libexec/gnubin` etc. at the beginning of your `PATH` environment variable, e.g., `export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH` (`brew` will print out instructions for each installed formula).
 
 ## [Windows only] WSL2
 

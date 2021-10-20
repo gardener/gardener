@@ -38,12 +38,18 @@ endif
 # Binaries                              #
 #########################################
 
-TOOLS_DIR      := hack/tools
-TOOLS_BIN_DIR  := $(TOOLS_DIR)/bin
-YQ             := $(TOOLS_BIN_DIR)/yq
-CONTROLLER_GEN := $(TOOLS_BIN_DIR)/controller-gen
-OS             := $(shell uname -s | tr '[:upper:]' '[:lower:]')
-ARCH           := $(shell uname -m)
+TOOLS_DIR                  := hack/tools
+TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin
+CONTROLLER_GEN             := $(TOOLS_BIN_DIR)/controller-gen
+GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
+GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
+MOCKGEN                    := $(TOOLS_BIN_DIR)/mockgen
+OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
+SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
+YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
+YQ                         := $(TOOLS_BIN_DIR)/yq
+OS                         := $(shell uname -s | tr '[:upper:]' '[:lower:]')
+ARCH                       := $(shell uname -m)
 
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 
@@ -51,12 +57,30 @@ ifeq ($(ARCH),x86_64)
 	ARCH := amd64
 endif
 
+$(CONTROLLER_GEN): go.mod
+	go build -o $(CONTROLLER_GEN) sigs.k8s.io/controller-tools/cmd/controller-gen
+
+$(GOIMPORTS): go.mod
+	go build -o $(GOIMPORTS) golang.org/x/tools/cmd/goimports
+
+$(GEN_CRD_API_REFERENCE_DOCS): go.mod
+	go build -o $(GEN_CRD_API_REFERENCE_DOCS) github.com/ahmetb/gen-crd-api-reference-docs
+
+$(MOCKGEN): go.mod
+	go build -o $(MOCKGEN) github.com/golang/mock/mockgen
+
+$(OPENAPI_GEN): go.mod
+	go build -o $(OPENAPI_GEN) k8s.io/kube-openapi/cmd/openapi-gen
+
+$(SETUP_ENVTEST): go.mod
+	go build -o $(SETUP_ENVTEST) sigs.k8s.io/controller-runtime/tools/setup-envtest
+
+$(YAML2JSON): go.mod
+	go build -o $(YAML2JSON) github.com/bronze1man/yaml2json
+
 $(YQ):
 	curl -L -o "$(YQ)" https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_$(OS)_$(ARCH)
 	chmod +x "$(YQ)"
-
-$(CONTROLLER_GEN): go.mod
-	go build -o $(TOOLS_BIN_DIR)/controller-gen sigs.k8s.io/controller-tools/cmd/controller-gen
 
 .PHONY: clean-bin
 clean-bin:
@@ -115,7 +139,7 @@ start-resource-manager:
 	@./hack/local-development/start-resource-manager
 
 .PHONY: start-gardenlet
-start-gardenlet: $(YQ)
+start-gardenlet: $(YQ) $(YAML2JSON)
 	@./hack/local-development/start-gardenlet
 
 .PHONY: start-landscaper-gardenlet
@@ -187,10 +211,6 @@ docker-push:
 
 .PHONY: install-requirements
 install-requirements:
-	@go install -mod=vendor github.com/onsi/ginkgo/ginkgo
-	@go install -mod=vendor github.com/ahmetb/gen-crd-api-reference-docs
-	@go install -mod=vendor github.com/golang/mock/mockgen
-	@go install -mod=vendor sigs.k8s.io/controller-runtime/tools/setup-envtest
 	@./hack/install-promtool.sh
 	@./hack/install-requirements.sh
 
@@ -208,26 +228,26 @@ check-generate:
 	@hack/check-generate.sh $(REPO_ROOT)
 
 .PHONY: check
-check:
+check: $(GOIMPORTS)
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-charts.sh ./charts
 
 .PHONY: generate
-generate: $(CONTROLLER_GEN)
+generate: $(CONTROLLER_GEN) $(GOIMPORTS) $(GEN_CRD_API_REFERENCE_DOCS) $(MOCKGEN) $(YAML2JSON)
 	@hack/update-protobuf.sh
 	@hack/update-codegen.sh --parallel
 	@hack/generate-parallel.sh charts cmd example extensions pkg plugin landscaper test
 	@hack/generate-monitoring-docs.sh
 
 .PHONY: generate-sequential
-generate-sequential: $(CONTROLLER_GEN)
+generate-sequential: $(CONTROLLER_GEN) $(GOIMPORTS) $(GEN_CRD_API_REFERENCE_DOCS) $(MOCKGEN) $(YAML2JSON)
 	@hack/update-protobuf.sh
 	@hack/update-codegen.sh
 	@hack/generate.sh ./charts/... ./cmd/... ./example/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/... ./test/...
 	@hack/generate-monitoring-docs.sh
 
 .PHONY: format
-format:
+format: $(GOIMPORTS)
 	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test ./landscaper ./hack
 
 .PHONY: test
@@ -235,7 +255,7 @@ test:
 	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/... ./landscaper/...
 
 .PHONY: test-integration
-test-integration:
+test-integration: $(SETUP_ENVTEST)
 	@./hack/test-integration.sh ./extensions/test/integration/envtest/... ./test/integration/envtest/...
 
 .PHONY: test-cov

@@ -22,7 +22,7 @@ ENVTEST_K8S_VERSION=${ENVTEST_K8S_VERSION:-"1.22"}
 
 echo "> Installing envtest tools@${ENVTEST_K8S_VERSION} with setup-envtest if necessary"
 if ! command -v setup-envtest &> /dev/null ; then
-  >&2 echo "setup-envtest not available, please install it first by running 'make install-requirements'"
+  >&2 echo "setup-envtest not available"
   exit 1
 fi
 
