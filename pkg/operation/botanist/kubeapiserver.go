@@ -32,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,6 +39,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 // DefaultKubeAPIServer returns a deployer for the kube-apiserver.
@@ -53,7 +54,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 		apiServerConfig = b.Shoot.GetInfo().Spec.Kubernetes.KubeAPIServer
 
 		admissionPlugins = kutil.GetAdmissionPluginsForVersion(b.Shoot.GetInfo().Spec.Kubernetes.Version)
-		apiAudiences     = []string{"kubernetes"}
+		apiAudiences     = []string{"kubernetes", "gardener"}
 		auditConfig      *kubeapiserver.AuditConfig
 		eventTTL         *metav1.Duration
 		featureGates     map[string]bool
@@ -68,6 +69,9 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 
 		if apiServerConfig.APIAudiences != nil {
 			apiAudiences = apiServerConfig.APIAudiences
+			if !containsGardenerAudience(apiAudiences) {
+				apiAudiences = append(apiAudiences, v1beta1constants.GardenerAudience)
+			}
 		}
 
 		auditConfig, err = b.computeKubeAPIServerAuditConfig(ctx, apiServerConfig.AuditConfig)
@@ -110,6 +114,17 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			WatchCacheSizes: watchCacheSizes,
 		},
 	), nil
+}
+
+func containsGardenerAudience(apiAudiences []string) bool {
+	found := false
+	for _, v := range apiAudiences {
+		if v == v1beta1constants.GardenerAudience {
+			found = true
+			break
+		}
+	}
+	return found
 }
 
 func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {

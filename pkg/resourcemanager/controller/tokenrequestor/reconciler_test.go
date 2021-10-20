@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tokenrequestor_test
+package tokenrequestor
 
 import (
 	"context"
@@ -102,8 +102,8 @@ var _ = Describe("Reconciler", func() {
 					Name:      secretName,
 					Namespace: metav1.NamespaceDefault,
 					Annotations: map[string]string{
-						"serviceaccount.shoot.gardener.cloud/name":      serviceAccountName,
-						"serviceaccount.shoot.gardener.cloud/namespace": serviceAccountNamespace,
+						"serviceaccount.resources.gardener.cloud/name":      serviceAccountName,
+						"serviceaccount.resources.gardener.cloud/namespace": serviceAccountNamespace,
 					},
 				},
 			}
@@ -133,12 +133,12 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
-			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.shoot.gardener.cloud/token-renew-timestamp", fakeNow.Add(renewDuration).Format(layout)))
+			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(renewDuration).Format(layout)))
 		})
 
 		It("should requeue because renew timestamp has not been reached", func() {
 			delay := time.Minute
-			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.shoot.gardener.cloud/token-renew-timestamp", fakeNow.Add(delay).Format(layout))
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(delay).Format(layout))
 
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 
@@ -149,7 +149,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("should issue a new token since the renew timestamp is in the past", func() {
 			expiredSince := time.Minute
-			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.shoot.gardener.cloud/token-renew-timestamp", fakeNow.Add(-expiredSince).Format(layout))
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(-expiredSince).Format(layout))
 
 			token = "new-token"
 			fakeCreateServiceAccountToken()
@@ -163,7 +163,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
-			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.shoot.gardener.cloud/token-renew-timestamp", fakeNow.Add(renewDuration).Format(layout)))
+			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(renewDuration).Format(layout)))
 		})
 
 		It("should reconcile the service account settings", func() {
@@ -184,7 +184,7 @@ var _ = Describe("Reconciler", func() {
 		It("should use the provided token expiration duration", func() {
 			expirationDuration = 10 * time.Minute
 			renewDuration = 8 * time.Minute
-			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.shoot.gardener.cloud/token-expiration-duration", expirationDuration.String())
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-expiration-duration", expirationDuration.String())
 			fakeCreateServiceAccountToken()
 
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
@@ -194,7 +194,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: renewDuration}))
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.shoot.gardener.cloud/token-renew-timestamp", fakeNow.Add(renewDuration).Format(layout)))
+			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(renewDuration).Format(layout)))
 		})
 
 		It("should set a finalizer on the secret", func() {
@@ -230,7 +230,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		It("should ignore the ServiceAccount on deletion if ignore-on-deletion annotation is set", func() {
-			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.shoot.gardener.cloud/skip-deletion", "true")
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/skip-deletion", "true")
 
 			fakeCreateServiceAccountToken()
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
@@ -252,7 +252,7 @@ var _ = Describe("Reconciler", func() {
 
 		Context("error", func() {
 			It("provided token expiration duration cannot be parsed", func() {
-				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.shoot.gardener.cloud/token-expiration-duration", "unparseable")
+				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-expiration-duration", "unparseable")
 
 				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 
@@ -262,7 +262,7 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("renew timestamp has invalid format", func() {
-				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.shoot.gardener.cloud/token-renew-timestamp", "invalid-format")
+				metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", "invalid-format")
 				Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 
 				result, err := ctrl.Reconcile(ctx, request)

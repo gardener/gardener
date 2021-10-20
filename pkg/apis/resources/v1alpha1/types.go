@@ -53,6 +53,23 @@ const (
 	// StaticTokenConsider is a constant for a label on a Secret which indicates that this Secret should be considered
 	// for the invalidation of the static ServiceAccount token.
 	StaticTokenConsider = "token-invalidator.resources.gardener.cloud/consider"
+
+	// ResourceManagerPurpose is a constant for the key in a label describing the purpose of the respective object reconciled by the resource manager.
+	ResourceManagerPurpose = "resources.gardener.cloud/purpose"
+	// LabelPurposeTokenRequest is a constant for a label value indicating that this secret should be reconciled by the token-requestor.
+	LabelPurposeTokenRequest = "tokenrequestor"
+	// ServiceAccountName is the key of an annotation of a secret whose value contains the service account name
+	ServiceAccountName = "serviceaccount.resources.gardener.cloud/name"
+	// ServiceAccountNamespace is the key of an annotation of a secret whose value contains the service account namespace
+	ServiceAccountNamespace = "serviceaccount.resources.gardener.cloud/namespace"
+	// ServiceAccountTokenExpirationDuration is the key of an annotation of a secret whose value contains the expiration duration of the token created
+	ServiceAccountTokenExpirationDuration = "serviceaccount.resources.gardener.cloud/token-expiration-duration"
+	// ServiceAccountTokenRenewTimestamp is the key of an annotation of a secret whose value contains the timestamp when the token needs to be renewed
+	ServiceAccountTokenRenewTimestamp = "serviceaccount.resources.gardener.cloud/token-renew-timestamp"
+	// ServiceAccountSkipDeletion is the key of an annotation of a secret whose value contains whether the serviceaccount referenced by this secret should be deleted
+	ServiceAccountSkipDeletion = "serviceaccount.resources.gardener.cloud/skip-deletion"
+	// DataKeyToken is the data key whos value contains the service account token
+	DataKeyToken = "token"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

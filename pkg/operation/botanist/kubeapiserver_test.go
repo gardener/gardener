@@ -192,14 +192,32 @@ var _ = Describe("KubeAPIServer", func() {
 		})
 
 		Describe("APIAudiences", func() {
-			It("should set the field to 'kubernetes' by default", func() {
+			It("should set the field to 'kubernetes' and 'gardener' by default", func() {
 				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(kubeAPIServer.GetValues().APIAudiences).To(ConsistOf("kubernetes"))
+				Expect(kubeAPIServer.GetValues().APIAudiences).To(ConsistOf("kubernetes", "gardener"))
 			})
 
 			It("should set the field to the configured values", func() {
 				apiAudiences := []string{"foo", "bar"}
+
+				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
+					Spec: gardencorev1beta1.ShootSpec{
+						Kubernetes: gardencorev1beta1.Kubernetes{
+							KubeAPIServer: &gardencorev1beta1.KubeAPIServerConfig{
+								APIAudiences: apiAudiences,
+							},
+						},
+					},
+				})
+
+				kubeAPIServer, err := botanist.DefaultKubeAPIServer(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(kubeAPIServer.GetValues().APIAudiences).To(Equal(append(apiAudiences, "gardener")))
+			})
+
+			It("should not add gardener audience if already present", func() {
+				apiAudiences := []string{"foo", "bar", "gardener"}
 
 				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Spec: gardencorev1beta1.ShootSpec{

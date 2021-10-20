@@ -17,14 +17,14 @@ package tokenrequestor
 import (
 	"fmt"
 
-	gardenerconstantsv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"sigs.k8s.io/controller-runtime/pkg/cluster"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/clock"
 	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -113,6 +113,5 @@ func isRelevantSecret(obj client.Object) bool {
 	if !ok {
 		return false
 	}
-	// TODO introduce constant for shoot-token purpose after part of g/g
-	return secret.Labels != nil && secret.Labels[gardenerconstantsv1beta1.GardenerPurpose] == "shoot-token"
+	return secret.Labels != nil && secret.Labels[resourcesv1alpha1.ResourceManagerPurpose] == resourcesv1alpha1.LabelPurposeTokenRequest
 }

@@ -377,14 +377,14 @@ It was created to handle the special case of issuing tokens to pods that run in 
 
 #### Reconciliation Loop
 
-This controller reconciles secrets in all namespaces in the targetCluster with the label: `gardener.cloud/purpose: shoot-token`.
-See [here](https://github.com/gardener/gardener-extension-provider-alicloud/blob/master/example/30-infrastructure.yaml#L54-L64) for an example of the secret.
+This controller reconciles secrets in all namespaces in the targetCluster with the label: `resources.gardener.cloud/purpose: tokenrequestor`.
+See [here](../../example/resource-manager/30-secret-tokenrequestor.yaml) for an example of the secret.
 
 The controller ensures a `ServiceAccount` exists in the target cluster as specified in the annotations of the `Secret` in the source cluster:
 
 ```yaml
-serviceaccount.shoot.gardener.cloud/name: <sa-name>
-serviceaccount.shoot.gardener.cloud/namespace: <sa-namespace>
+serviceaccount.resources.gardener.cloud/name: <sa-name>
+serviceaccount.resources.gardener.cloud/namespace: <sa-namespace>
 ```
 
 The requested tokens will act with the privileges which are assigned to this `ServiceAccount`.
@@ -392,5 +392,10 @@ The requested tokens will act with the privileges which are assigned to this `Se
 The controller will then request a token via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) and populate it into the `.data.token` field to the `Secret` in the source cluster.
 
 It also adds an annotation to the `Secret` to keep track when to renew the token before it expires.
-The tokens are issued to expire after 12 hours.
+By default the tokens are issued to expire after 12 hours. The expiration time can be set with the following annotation:
+
+```yaml
+serviceaccount.resources.gardener.cloud/token-expiration-duration: 6h
+```
+
 It automatically renews once 80% of the lifetime is reached.

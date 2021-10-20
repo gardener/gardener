@@ -51,8 +51,8 @@ var _ = Describe("TokenRequestor tests", func() {
 				Name:      secretName,
 				Namespace: namespace.Name,
 				Annotations: map[string]string{
-					"serviceaccount.shoot.gardener.cloud/name":      serviceAccountName,
-					"serviceaccount.shoot.gardener.cloud/namespace": namespace.Name,
+					"serviceaccount.resources.gardener.cloud/name":      serviceAccountName,
+					"serviceaccount.resources.gardener.cloud/namespace": namespace.Name,
 				},
 			},
 		}
@@ -73,7 +73,7 @@ var _ = Describe("TokenRequestor tests", func() {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
 		}).Should(BeNotFoundError())
 
-		secret.Labels = map[string]string{"gardener.cloud/purpose": "shoot-token"}
+		secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "tokenrequestor"}
 		Expect(testClient.Update(ctx, secret)).To(Succeed())
 
 		Eventually(func() error {
@@ -88,7 +88,7 @@ var _ = Describe("TokenRequestor tests", func() {
 	})
 
 	It("should behave correctly when: create w/ label, update w/o label, delete w/o label", func() {
-		secret.Labels = map[string]string{"gardener.cloud/purpose": "shoot-token"}
+		secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "tokenrequestor"}
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
 		Eventually(func() error {

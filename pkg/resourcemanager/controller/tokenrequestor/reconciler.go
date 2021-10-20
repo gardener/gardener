@@ -19,9 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-
 	"github.com/go-logr/logr"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -33,19 +30,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 const (
-	finalizerName                         = "resources.gardener.cloud/tokenrequestor-controller"
-	serviceAccountName                    = "serviceaccount.shoot.gardener.cloud/name"
-	serviceAccountNamespace               = "serviceaccount.shoot.gardener.cloud/namespace"
-	serviceAccountTokenExpirationDuration = "serviceaccount.shoot.gardener.cloud/token-expiration-duration"
-	serviceAccountTokenRenewTimestamp     = "serviceaccount.shoot.gardener.cloud/token-renew-timestamp"
-	serviceAccountSkipDeletion            = "serviceaccount.shoot.gardener.cloud/skip-deletion"
-	// TODO use constant also in Gardenlet
-	dataKeyToken              = "token"
+	finalizerName             = "resources.gardener.cloud/tokenrequestor-controller"
 	layout                    = "2006-01-02T15:04:05.000Z"
-	defaultExpirationDuration = time.Hour * 12
+	defaultExpirationDuration = 12 * time.Hour
 )
 
 type reconciler struct {
@@ -99,7 +93,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
-	mustRequeue, requeueAfter, err := r.requeue(secret.Annotations[serviceAccountTokenRenewTimestamp])
+	mustRequeue, requeueAfter, err := r.requeue(secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp])
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -132,16 +126,11 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 }
 
 func shouldDeleteServiceAccount(secret *corev1.Secret) bool {
-	return secret.Annotations[serviceAccountSkipDeletion] != "true"
+	return secret.Annotations[resourcesv1alpha1.ServiceAccountSkipDeletion] != "true"
 }
 
 func (r *reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1.Secret) (*corev1.ServiceAccount, error) {
-	serviceAccount := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secret.Annotations[serviceAccountName],
-			Namespace: secret.Annotations[serviceAccountNamespace],
-		},
-	}
+	serviceAccount := getServiceAccountFromAnnotations(secret.Annotations)
 
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.targetClient, serviceAccount, func() error {
 		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
@@ -154,12 +143,7 @@ func (r *reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1
 }
 
 func (r *reconciler) deleteServiceAccount(ctx context.Context, secret *corev1.Secret) error {
-	serviceAccount := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      secret.Annotations[serviceAccountName],
-			Namespace: secret.Annotations[serviceAccountNamespace],
-		},
-	}
+	serviceAccount := getServiceAccountFromAnnotations(secret.Annotations)
 
 	return client.IgnoreNotFound(r.targetClient.Delete(ctx, serviceAccount))
 }
@@ -171,8 +155,8 @@ func (r *reconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret,
 		secret.Data = make(map[string][]byte, 1)
 	}
 
-	secret.Data[dataKeyToken] = []byte(token)
-	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, serviceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(layout))
+	secret.Data[resourcesv1alpha1.DataKeyToken] = []byte(token)
+	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(layout))
 
 	return r.client.Patch(ctx, secret, patch)
 }
@@ -180,7 +164,7 @@ func (r *reconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret,
 func (r *reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.ServiceAccount, expirationSeconds int64) (*authenticationv1.TokenRequest, error) {
 	tokenRequest := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{
-			Audiences:         []string{kubeapiserver.GardenerAudience},
+			Audiences:         []string{v1beta1constants.GardenerAudience},
 			ExpirationSeconds: &expirationSeconds,
 		},
 	}
@@ -216,7 +200,7 @@ func tokenExpirationSeconds(secret *corev1.Secret) (int64, error) {
 		err                error
 	)
 
-	if v, ok := secret.Annotations[serviceAccountTokenExpirationDuration]; ok {
+	if v, ok := secret.Annotations[resourcesv1alpha1.ServiceAccountTokenExpirationDuration]; ok {
 		expirationDuration, err = time.ParseDuration(v)
 		if err != nil {
 			return 0, err
@@ -224,4 +208,13 @@ func tokenExpirationSeconds(secret *corev1.Secret) (int64, error) {
 	}
 
 	return int64(expirationDuration / time.Second), nil
+}
+
+func getServiceAccountFromAnnotations(annotations map[string]string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      annotations[resourcesv1alpha1.ServiceAccountName],
+			Namespace: annotations[resourcesv1alpha1.ServiceAccountNamespace],
+		},
+	}
 }

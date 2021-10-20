@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
-	"github.com/gardener/gardener/test/framework"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -87,9 +86,6 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	By("stopping manager")
 	mgrCancel()
-
-	By("running cleanup actions")
-	framework.RunCleanupActions()
 
 	By("stopping test environment")
 	Expect(testEnv.Stop()).To(Succeed())

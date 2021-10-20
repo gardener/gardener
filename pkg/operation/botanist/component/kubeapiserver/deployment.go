@@ -23,12 +23,12 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -64,9 +64,6 @@ const (
 	ContainerNameKubeAPIServer            = "kube-apiserver"
 	containerNameVPNSeed                  = "vpn-seed"
 	containerNameAPIServerProxyPodMutator = "apiserver-proxy-pod-mutator"
-
-	// GardenerAudience is the identifier for Gardener controllers when interacting with the API Server
-	GardenerAudience = "gardener"
 
 	volumeNameAdmissionConfiguration   = "kube-apiserver-admission-config"
 	volumeNameAuditPolicy              = "audit-policy-config"
@@ -440,8 +437,7 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--audit-log-maxbackup=5")
 	out = append(out, "--authorization-mode=Node,RBAC")
 
-	audiences := append(k.values.APIAudiences, GardenerAudience)
-	out = append(out, "--api-audiences="+strings.Join(audiences, ","))
+	out = append(out, "--api-audiences="+strings.Join(k.values.APIAudiences, ","))
 
 	out = append(out, fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA))
 	out = append(out, "--enable-aggregator-routing=true")
