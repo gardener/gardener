@@ -31,7 +31,6 @@ else
   trap cleanup_kubeconfig EXIT
 fi
 
-YQ="$REPO_ROOT/hack/tools/bin/yq"
 GARDEN_KUBECONFIG="${GARDEN_KUBECONFIG:-$kubeconfig}"
 
 # determine the seed to manage; if multiple seeds exist on the
@@ -39,18 +38,18 @@ GARDEN_KUBECONFIG="${GARDEN_KUBECONFIG:-$kubeconfig}"
 if [ -n "${SEED_NAME:-}" ]; then
   seedConfig="$(kubectl --kubeconfig="$GARDEN_KUBECONFIG" get seed "$SEED_NAME" -o yaml)"
 else
-  seeds="$(kubectl --kubeconfig="$GARDEN_KUBECONFIG" get seeds -o yaml | $YQ eval '.items' -)"
-  case $(echo "$seeds" | $YQ eval 'length' -) in
+  seeds="$(kubectl --kubeconfig="$GARDEN_KUBECONFIG" get seeds -o yaml | yq eval '.items' -)"
+  case $(echo "$seeds" | yq eval 'length' -) in
     0)
       echo "No seed found in garden cluster."
       exit 1
       ;;
     1)
-      seedConfig="$(echo "$seeds" | $YQ eval '.[0]' -)"
-      SEED_NAME="$(echo "$seedConfig" | $YQ eval '.metadata.name' -)"
+      seedConfig="$(echo "$seeds" | yq eval '.[0]' -)"
+      SEED_NAME="$(echo "$seedConfig" | yq eval '.metadata.name' -)"
       ;;
     *)
-      names="$(echo "$seeds" | $YQ eval --tojson --indent 0 '[.[].metadata.name]' -)"
+      names="$(echo "$seeds" | yq eval --tojson --indent 0 '[.[].metadata.name]' -)"
       echo "Multiple seeds exist in the garden, please specify \$SEED_NAME to select one of $names"
       exit 1
       ;;
@@ -59,7 +58,7 @@ fi
 
 # cleanup a bit to make the generated configuration file look a bit neater
 tmpFile="$DEV_DIR/seed-$SEED_NAME.yaml"
-echo "$seedConfig" | $YQ eval 'del(
+echo "$seedConfig" | yq eval 'del(
   .apiVersion,
   .kind,
   .status,
@@ -80,12 +79,12 @@ if [ ! -f "$configFile" ]; then
 fi
 
 # update gardenlet config
-$YQ eval-all --inplace 'select(fileIndex==0).seedConfig = select(fileIndex==1) | select(fileIndex==0)' "$configFile" "$tmpFile"
+yq eval-all --inplace 'select(fileIndex==0).seedConfig = select(fileIndex==1) | select(fileIndex==0)' "$configFile" "$tmpFile"
 
 # fetch seed kubeconfig
 if [ -z "${SEED_KUBECONFIG:-}" ]; then
-  seedKubeconfigName="$($YQ eval '.spec.secretRef.name' "$tmpFile")"
-  seedKubeconfigNamespace="$($YQ eval '.spec.secretRef.namespace' "$tmpFile")"
+  seedKubeconfigName="$(yq eval '.spec.secretRef.name' "$tmpFile")"
+  seedKubeconfigNamespace="$(yq eval '.spec.secretRef.namespace' "$tmpFile")"
   SEED_KUBECONFIG="$DEV_DIR/gardenlet-seed-$SEED_NAME.conf"
 
   if [ -z "$seedKubeconfigName" ] || [ -z "$seedKubeconfigNamespace" ]; then
@@ -96,7 +95,7 @@ if [ -z "${SEED_KUBECONFIG:-}" ]; then
   fi
 
   kubectl --kubeconfig="$GARDEN_KUBECONFIG" --namespace "$seedKubeconfigNamespace" get secret "$seedKubeconfigName" -o yaml |
-    $YQ eval '.data.kubeconfig' - |
+    yq eval '.data.kubeconfig' - |
     base64 -d > "$SEED_KUBECONFIG"
 fi
 
@@ -105,10 +104,10 @@ GARDENLET_CHARTS_DIR=$REPO_ROOT/charts/gardener/gardenlet
 GARDENLET_CHARTS_RUNTIME_DIR="$GARDENLET_CHARTS_DIR/charts/runtime"
 tmpConfig="${configFile}.tmp"
 gardenletChartValues="$DEV_DIR/gardenlet-charts-values.yaml"
-$YQ eval 'del(.apiVersion, .kind)' "$configFile" |
-  $YQ eval '{"config": .}' - > "$tmpConfig"
-$YQ eval-all 'select(fi==0).global.gardenlet * select(fi==1)' "$GARDENLET_CHARTS_DIR/values.yaml" "$tmpConfig" |
-  $YQ eval '{"global": {"gardenlet": . }}' - > "$gardenletChartValues"
+yq eval 'del(.apiVersion, .kind)' "$configFile" |
+  yq eval '{"config": .}' - > "$tmpConfig"
+yq eval-all 'select(fi==0).global.gardenlet * select(fi==1)' "$GARDENLET_CHARTS_DIR/values.yaml" "$tmpConfig" |
+  yq eval '{"global": {"gardenlet": . }}' - > "$gardenletChartValues"
 rm -f "$tmpConfig"
 
 # garden namespace is required for the gardenlet leader election, service account, roles and role bindings.
@@ -117,7 +116,7 @@ kubectl   --kubeconfig="$SEED_KUBECONFIG" get    namespace garden &>/dev/null ||
 
 # apply RBAC resources in seed cluster
 helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -f "$gardenletChartValues" |
-  $YQ eval 'select(.apiVersion=="rbac.authorization.k8s.io/v1")' - |
+  yq eval 'select(.apiVersion=="rbac.authorization.k8s.io/v1")' - |
   kubectl --kubeconfig="$SEED_KUBECONFIG" auth reconcile --remove-extra-permissions --remove-extra-subjects -f -
 helm template gardenlet "$GARDENLET_CHARTS_RUNTIME_DIR" -s templates/serviceaccount.yaml -f "$gardenletChartValues" |
   kubectl --kubeconfig="$SEED_KUBECONFIG" apply -f -
@@ -129,8 +128,8 @@ cp "$SEED_KUBECONFIG" "$SEED_KUBECONFIG_GARDENLET_TOKEN"
 
 # use the token of the gardenlet service account to authenticated against the seed API
 token=$(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get secret $(kubectl --kubeconfig="$SEED_KUBECONFIG" --namespace garden get serviceaccount gardenlet -o jsonpath='{.secrets[0].name}') -o jsonpath='{.data.token}' | base64 --decode)
-user=$(kubectl --kubeconfig="$SEED_KUBECONFIG" config view --raw --minify -o json | $YQ eval '.["current-context"] as $currentContext | .contexts[] | select(.name == $currentContext) | .context.user' -)
-USER_VALUE=$user TOKEN_VALUE=$token $YQ eval --inplace '.users = [{"name": strenv(USER_VALUE), "user": {"token": strenv(TOKEN_VALUE)}}]' $SEED_KUBECONFIG_GARDENLET_TOKEN
+user=$(kubectl --kubeconfig="$SEED_KUBECONFIG" config view --raw --minify -o json | yq eval '.["current-context"] as $currentContext | .contexts[] | select(.name == $currentContext) | .context.user' -)
+USER_VALUE=$user TOKEN_VALUE=$token yq eval --inplace '.users = [{"name": strenv(USER_VALUE), "user": {"token": strenv(TOKEN_VALUE)}}]' $SEED_KUBECONFIG_GARDENLET_TOKEN
 
 file_imagevector_overwrite="$(mktemp_imagevector_overwrite github.com/gardener/gardener "$REPO_ROOT" "$REPO_ROOT"/charts)"
 if [ ! -f "$file_imagevector_overwrite" ]; then
