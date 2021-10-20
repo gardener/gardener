@@ -147,17 +147,10 @@ In addtion each alert must contain the following labels:
 
 ### Alert Tests
 
-Execute the tests in `$GARDENERHOME/.ci/test` or if you want to only test the Prometheus alerts:
+To test the Prometheus alerts:
 
 ```bash
-# Install promtool
-go get -u github.com/prometheus/prometheus/cmd/promtool
-
-# Move to seed-monitoring/prometheus chart
-cd $GARDENERHOME/charts/seed-monitoring/charts/prometheus/
-
-# Execute tests
-promtool test rules rules-tests/*test.yaml
+make test-prometheus
 ```
 
 If you want to add alert tests:

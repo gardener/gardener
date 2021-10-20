@@ -22,12 +22,12 @@ cp -r . /go/src/github.com/gardener/gardener
 cd /go/src/github.com/gardener/gardener
 
 if [ $use_cache = yes ] ; then
-  make install-requirements
+  make hack/tools/bin/golangci-lint
 
   # list of all to-be-cached directories
   cache_dirs=(
     "$(go env GOCACHE)"
-    "$(golangci-lint cache status | grep -i 'dir:' | awk '{print $2}')"
+    "$(hack/tools/bin/golangci-lint cache status | grep -i 'dir:' | awk '{print $2}')"
     # TODO: cache tools (golangci-lint, mockgen, envtest bins, promtool, protoc, ...)
   )
 
@@ -55,7 +55,6 @@ else
     # supposed to be run in release jobs
     make verify-extended
   else
-    make install-requirements
     # run test instead of test-cov to speed-up jobs, as coverage slows down tests significantly
     make check-generate verify
   fi

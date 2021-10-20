@@ -42,20 +42,18 @@ TOOLS_DIR                  := hack/tools
 TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin
 CONTROLLER_GEN             := $(TOOLS_BIN_DIR)/controller-gen
 GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
+GOLANGCI_LINT              := $(TOOLS_BIN_DIR)/golangci-lint
 GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
+HELM                       := $(TOOLS_BIN_DIR)/helm
 MOCKGEN                    := $(TOOLS_BIN_DIR)/mockgen
 OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
+PROMTOOL                   := $(TOOLS_BIN_DIR)/promtool
 SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
-OS                         := $(shell uname -s | tr '[:upper:]' '[:lower:]')
-ARCH                       := $(shell uname -m)
 
+export TOOLS_BIN_DIR := $(TOOLS_BIN_DIR)
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
-
-ifeq ($(ARCH),x86_64)
-	ARCH := amd64
-endif
 
 $(CONTROLLER_GEN): go.mod
 	go build -o $(CONTROLLER_GEN) sigs.k8s.io/controller-tools/cmd/controller-gen
@@ -63,14 +61,23 @@ $(CONTROLLER_GEN): go.mod
 $(GOIMPORTS): go.mod
 	go build -o $(GOIMPORTS) golang.org/x/tools/cmd/goimports
 
+$(GOLANGCI_LINT):
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.42.1
+
 $(GEN_CRD_API_REFERENCE_DOCS): go.mod
 	go build -o $(GEN_CRD_API_REFERENCE_DOCS) github.com/ahmetb/gen-crd-api-reference-docs
+
+$(HELM):
+	curl -sSfL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | HELM_INSTALL_DIR=$(TOOLS_BIN_DIR) USE_SUDO=false bash -s -- --version 'v3.5.4'
 
 $(MOCKGEN): go.mod
 	go build -o $(MOCKGEN) github.com/golang/mock/mockgen
 
 $(OPENAPI_GEN): go.mod
 	go build -o $(OPENAPI_GEN) k8s.io/kube-openapi/cmd/openapi-gen
+
+$(PROMTOOL): hack/tools/install-promtool.sh
+	@hack/tools/install-promtool.sh
 
 $(SETUP_ENVTEST): go.mod
 	go build -o $(SETUP_ENVTEST) sigs.k8s.io/controller-runtime/tools/setup-envtest
@@ -79,7 +86,7 @@ $(YAML2JSON): go.mod
 	go build -o $(YAML2JSON) github.com/bronze1man/yaml2json
 
 $(YQ):
-	curl -L -o "$(YQ)" https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_$(OS)_$(ARCH)
+	curl -L -o "$(YQ)" https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_$(shell uname -s | tr '[:upper:]' '[:lower:]')_$(shell uname -m | sed 's/x86_64/amd64/')
 	chmod +x "$(YQ)"
 
 .PHONY: clean-bin
@@ -99,7 +106,7 @@ dev-setup-register-gardener:
 	@./hack/local-development/dev-setup-register-gardener
 
 .PHONY: local-garden-up
-local-garden-up:
+local-garden-up: $(HELM)
 	@./hack/local-development/local-garden/start.sh $(LOCAL_GARDEN_LABEL) $(ACTIVATE_SEEDAUTHORIZER)
 
 .PHONY: local-garden-down
@@ -107,7 +114,7 @@ local-garden-down:
 	@./hack/local-development/local-garden/stop.sh $(LOCAL_GARDEN_LABEL)
 
 .PHONY: remote-garden-up
-remote-garden-up:
+remote-garden-up: $(HELM)
 	@./hack/local-development/remote-garden/start.sh $(REMOTE_GARDEN_LABEL)
 
 .PHONY: remote-garden-down
@@ -139,7 +146,7 @@ start-resource-manager:
 	@./hack/local-development/start-resource-manager
 
 .PHONY: start-gardenlet
-start-gardenlet: $(YQ) $(YAML2JSON)
+start-gardenlet: $(HELM) $(YAML2JSON) $(YQ)
 	@./hack/local-development/start-gardenlet
 
 .PHONY: start-landscaper-gardenlet
@@ -211,7 +218,6 @@ docker-push:
 
 .PHONY: install-requirements
 install-requirements:
-	@./hack/install-promtool.sh
 	@./hack/install-requirements.sh
 
 .PHONY: revendor
@@ -228,7 +234,7 @@ check-generate:
 	@hack/check-generate.sh $(REPO_ROOT)
 
 .PHONY: check
-check: $(GOIMPORTS)
+check: $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM)
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-charts.sh ./charts
 
@@ -251,7 +257,7 @@ format: $(GOIMPORTS)
 	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test ./landscaper ./hack
 
 .PHONY: test
-test:
+test: $(PROMTOOL)
 	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/... ./landscaper/...
 
 .PHONY: test-integration
@@ -259,7 +265,7 @@ test-integration: $(SETUP_ENVTEST)
 	@./hack/test-integration.sh ./extensions/test/integration/envtest/... ./test/integration/envtest/...
 
 .PHONY: test-cov
-test-cov:
+test-cov: $(PROMTOOL)
 	@./hack/test-cover.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/... ./landscaper/...
 
 .PHONY: test-cov-clean
@@ -267,11 +273,11 @@ test-cov-clean:
 	@./hack/test-cover-clean.sh
 
 .PHONY: test-prometheus
-test-prometheus:
+test-prometheus: $(PROMTOOL)
 	@./hack/test-prometheus.sh
 
 .PHONY: verify
 verify: check format test test-integration test-prometheus
 
 .PHONY: verify-extended
-verify-extended: install-requirements check-generate check format test-cov test-cov-clean test-integration test-prometheus
+verify-extended: check-generate check format test-cov test-cov-clean test-integration test-prometheus

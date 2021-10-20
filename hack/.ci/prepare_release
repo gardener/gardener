@@ -78,6 +78,7 @@ cp -R "$repo_root_dir" "$REPO_PATH"
 
 current_dir="$(pwd)"
 cd "$REPO_PATH"
+# TODO: can we drop this? Or do we rely on this to install stuff?
 make install-requirements
 cd "$current_dir"
 

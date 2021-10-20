@@ -16,7 +16,9 @@
 
 set -e
 
-echo "> Installing requirements"
+# this script is kept for compatability reasons (other repos might use this script as well to install these tools)
+# TODO: drop this script in a future release
+echo "> [DEPRECATED] Installing requirements"
 
 export GO111MODULE=on
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.41.1

@@ -18,10 +18,7 @@ set -e
 
 echo "> Installing promtool"
 
-if which promtool &>/dev/null; then
-  echo "promtool is already installed, skipping the installation..."
-  exit 0
-fi
+TOOLS_BIN_DIR=${TOOLS_BIN_DIR:-$(dirname $0)/bin}
 
 platform=$(uname -s | tr '[:upper:]' '[:lower:]')
 version="2.24.1"
@@ -34,11 +31,8 @@ function cleanup {
 }
 trap cleanup EXIT ERR INT TERM
 
-curl \
-  -L \
-  --output ${temp_dir}/${file_name} \
-  "https://github.com/prometheus/prometheus/releases/download/v${version}/${file_name}"
+curl -L -o ${temp_dir}/${file_name} "https://github.com/prometheus/prometheus/releases/download/v${version}/${file_name}"
 
 tar -xzm -C "${temp_dir}" -f "${temp_dir}/${file_name}"
-mv "${temp_dir}/${archive_name}/promtool" /usr/local/bin/
-chmod +x /usr/local/bin/promtool
+mv "${temp_dir}/${archive_name}/promtool" $TOOLS_BIN_DIR
+chmod +x $TOOLS_BIN_DIR/promtool
