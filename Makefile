@@ -35,63 +35,11 @@ ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 endif
 
 #########################################
-# Binaries                              #
+# Tools                                 #
 #########################################
 
-TOOLS_DIR                  := hack/tools
-TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin
-CONTROLLER_GEN             := $(TOOLS_BIN_DIR)/controller-gen
-GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
-GOLANGCI_LINT              := $(TOOLS_BIN_DIR)/golangci-lint
-GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
-HELM                       := $(TOOLS_BIN_DIR)/helm
-MOCKGEN                    := $(TOOLS_BIN_DIR)/mockgen
-OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
-PROMTOOL                   := $(TOOLS_BIN_DIR)/promtool
-SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
-YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
-YQ                         := $(TOOLS_BIN_DIR)/yq
-
-export TOOLS_BIN_DIR := $(TOOLS_BIN_DIR)
-export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
-
-$(CONTROLLER_GEN): go.mod
-	go build -o $(CONTROLLER_GEN) sigs.k8s.io/controller-tools/cmd/controller-gen
-
-$(GOIMPORTS): go.mod
-	go build -o $(GOIMPORTS) golang.org/x/tools/cmd/goimports
-
-$(GOLANGCI_LINT):
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.42.1
-
-$(GEN_CRD_API_REFERENCE_DOCS): go.mod
-	go build -o $(GEN_CRD_API_REFERENCE_DOCS) github.com/ahmetb/gen-crd-api-reference-docs
-
-$(HELM):
-	curl -sSfL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | HELM_INSTALL_DIR=$(TOOLS_BIN_DIR) USE_SUDO=false bash -s -- --version 'v3.5.4'
-
-$(MOCKGEN): go.mod
-	go build -o $(MOCKGEN) github.com/golang/mock/mockgen
-
-$(OPENAPI_GEN): go.mod
-	go build -o $(OPENAPI_GEN) k8s.io/kube-openapi/cmd/openapi-gen
-
-$(PROMTOOL): hack/tools/install-promtool.sh
-	@hack/tools/install-promtool.sh
-
-$(SETUP_ENVTEST): go.mod
-	go build -o $(SETUP_ENVTEST) sigs.k8s.io/controller-runtime/tools/setup-envtest
-
-$(YAML2JSON): go.mod
-	go build -o $(YAML2JSON) github.com/bronze1man/yaml2json
-
-$(YQ):
-	curl -L -o "$(YQ)" https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_$(shell uname -s | tr '[:upper:]' '[:lower:]')_$(shell uname -m | sed 's/x86_64/amd64/')
-	chmod +x "$(YQ)"
-
-.PHONY: clean-bin
-clean-bin:
-	rm -rf $(TOOLS_BIN_DIR)/*
+TOOLS_DIR := hack/tools
+include hack/tools.mk
 
 #########################################
 # Rules for local development scenarios #
