@@ -229,7 +229,7 @@ func (r *reconciler) restore(ctx context.Context, logger logr.Logger, worker *ex
 	}
 
 	// requeue to trigger reconciliation
-	return reconcile.Result{Requeue: true}, nil
+	return reconcile.Result{}, nil
 }
 
 func isWorkerMigrated(worker *extensionsv1alpha1.Worker) bool {

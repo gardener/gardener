@@ -169,7 +169,7 @@ var _ = Describe("Worker Reconcile", func() {
 			want:    reconcile.Result{},
 			wantErr: false,
 		}),
-		Entry("test migrate when operrationAnnotation Migrate occurs", &test{
+		Entry("test migrate when operationAnnotation Migrate occurs", &test{
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("migrate", nil),
@@ -185,7 +185,7 @@ var _ = Describe("Worker Reconcile", func() {
 			want:    reconcile.Result{},
 			wantErr: false,
 		}),
-		Entry("test error during migrate when operrationAnnotation Migrate occurs", &test{
+		Entry("test error during migrate when operationAnnotation Migrate occurs", &test{
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("migrate", errors.New("test")),
@@ -265,7 +265,7 @@ var _ = Describe("Worker Reconcile", func() {
 			want:    reconcile.Result{},
 			wantErr: true,
 		}),
-		Entry("test restore when operrationAnnotation Restore occurs", &test{
+		Entry("test restore when operationAnnotation Restore occurs", &test{
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("restore", nil),
@@ -278,10 +278,10 @@ var _ = Describe("Worker Reconcile", func() {
 					getCluster()).Build(),
 			},
 			args:    arguments,
-			want:    reconcile.Result{Requeue: true},
+			want:    reconcile.Result{},
 			wantErr: false,
 		}),
-		Entry("test error restore when operrationAnnotation Restore occurs", &test{
+		Entry("test error restore when operationAnnotation Restore occurs", &test{
 			fields: fields{
 				logger:          logger,
 				actuator:        newMockActuator("restore", errors.New("test")),

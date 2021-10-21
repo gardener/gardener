@@ -90,7 +90,9 @@ func (a *genericActuator) Restore(ctx context.Context, worker *extensionsv1alpha
 		return fmt.Errorf("failed to restore the machine deployment config: %w", err)
 	}
 
-	return nil
+	// Finally reconcile the worker so that the machine-controller-manager gets scaled up and OwnerReferences between
+	// machinedeployments, machinesets and machines are added properly.
+	return a.Reconcile(ctx, worker, cluster)
 }
 
 func (a *genericActuator) addStateToMachineDeployment(worker *extensionsv1alpha1.Worker, wantedMachineDeployments workercontroller.MachineDeployments) error {
