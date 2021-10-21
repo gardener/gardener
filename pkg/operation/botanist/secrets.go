@@ -61,6 +61,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"kube-scheduler",
 			"kube-controller-manager",
 			"cluster-autoscaler",
+			"kube-state-metrics",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}

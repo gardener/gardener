@@ -110,6 +110,15 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		scrapeConfigs.WriteString(fmt.Sprintln(cm.Data[v1beta1constants.PrometheusConfigMapScrapeConfig]))
 	}
 
+	// Create shoot token secret for kube-state-metrics and prometheus components
+	for _, name := range []string{
+		v1beta1constants.DeploymentNameKubeStateMetricsShoot,
+	} {
+		if err := gutil.NewShootAccessSecret(name, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
+			return err
+		}
+	}
+
 	alerting, err := b.getCustomAlertingConfigs(ctx, b.GetSecretKeysOfRole(v1beta1constants.GardenRoleAlerting))
 	if err != nil {
 		return err
@@ -334,7 +343,10 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		}
 	}
 
-	return nil
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObject(ctx, b.K8sSeedClient.Client(),
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-state-metrics", Namespace: b.Shoot.SeedNamespace}},
+	)
 }
 
 // DeploySeedGrafana deploys the grafana charts to the Seed cluster.
@@ -559,6 +571,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 				Name:      "kube-state-metrics",
 			},
 		},
+		gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeStateMetricsShoot, b.Shoot.SeedNamespace).Secret,
 		&autoscalingv1beta2.VerticalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: b.Shoot.SeedNamespace,
