@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package manager
+package builder
 
 import (
 	"context"
@@ -31,7 +31,7 @@ type Secret struct {
 	secret    *corev1.Secret
 }
 
-// NewSecret creates a new manager for a secret.
+// NewSecret creates a new builder for a secret.
 func NewSecret(client client.Client) *Secret {
 	return &Secret{
 		client:    client,

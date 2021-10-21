@@ -28,7 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/manager"
+	"github.com/gardener/gardener/pkg/utils/managedresources/builder"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/pointer"
@@ -54,9 +54,8 @@ func SecretName(name string, withPrefix bool) string {
 }
 
 // New initiates a new ManagedResource object which can be reconciled.
-func New(client client.Client, namespace, name, class string, keepObjects *bool, labels, injectedLabels map[string]string, forceOverwriteAnnotations *bool) *manager.ManagedResource {
-	mr := manager.
-		NewManagedResource(client).
+func New(client client.Client, namespace, name, class string, keepObjects *bool, labels, injectedLabels map[string]string, forceOverwriteAnnotations *bool) *builder.ManagedResource {
+	mr := builder.NewManagedResource(client).
 		WithNamespacedName(namespace, name).
 		WithClass(class).
 		WithLabels(labels).
@@ -73,7 +72,7 @@ func New(client client.Client, namespace, name, class string, keepObjects *bool,
 }
 
 // NewForShoot constructs a new ManagedResource object for the shoot's Gardener-Resource-Manager.
-func NewForShoot(c client.Client, namespace, name string, keepObjects bool) *manager.ManagedResource {
+func NewForShoot(c client.Client, namespace, name string, keepObjects bool) *builder.ManagedResource {
 	var (
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
 		labels         = map[string]string{LabelKeyOrigin: LabelValueGardener}
@@ -83,15 +82,14 @@ func NewForShoot(c client.Client, namespace, name string, keepObjects bool) *man
 }
 
 // NewForSeed constructs a new ManagedResource object for the seed's Gardener-Resource-Manager.
-func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *manager.ManagedResource {
+func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *builder.ManagedResource {
 	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, &keepObjects, nil, nil, nil)
 }
 
 // NewSecret initiates a new Secret object which can be reconciled.
-func NewSecret(client client.Client, namespace, name string, data map[string][]byte, secretNameWithPrefix bool) (string, *manager.Secret) {
+func NewSecret(client client.Client, namespace, name string, data map[string][]byte, secretNameWithPrefix bool) (string, *builder.Secret) {
 	secretName := SecretName(name, secretNameWithPrefix)
-	return secretName, manager.
-		NewSecret(client).
+	return secretName, builder.NewSecret(client).
 		WithNamespacedName(namespace, secretName).
 		WithKeyValues(data)
 }
@@ -140,7 +138,7 @@ func CreateForShoot(ctx context.Context, client client.Client, namespace, name s
 	return deployManagedResource(ctx, secret, managedResource)
 }
 
-func deployManagedResource(ctx context.Context, secret *manager.Secret, managedResource *manager.ManagedResource) error {
+func deployManagedResource(ctx context.Context, secret *builder.Secret, managedResource *builder.ManagedResource) error {
 	if err := secret.Reconcile(ctx); err != nil {
 		return fmt.Errorf("could not create or update secret of managed resources: %w", err)
 	}
@@ -156,15 +154,13 @@ func deployManagedResource(ctx context.Context, secret *manager.Secret, managedR
 func Delete(ctx context.Context, client client.Client, namespace string, name string, secretNameWithPrefix bool) error {
 	secretName := SecretName(name, secretNameWithPrefix)
 
-	if err := manager.
-		NewManagedResource(client).
+	if err := builder.NewManagedResource(client).
 		WithNamespacedName(namespace, name).
 		Delete(ctx); err != nil {
 		return fmt.Errorf("could not delete managed resource '%s/%s': %w", namespace, name, err)
 	}
 
-	if err := manager.
-		NewSecret(client).
+	if err := builder.NewSecret(client).
 		WithNamespacedName(namespace, secretName).
 		Delete(ctx); err != nil {
 		return fmt.Errorf("could not delete secret '%s/%s' of managed resource: %w", namespace, secretName, err)

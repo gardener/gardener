@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package manager_test
+package builder_test
 
 import (
 	"testing"
