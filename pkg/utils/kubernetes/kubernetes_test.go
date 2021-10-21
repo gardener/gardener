@@ -52,6 +52,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
 	fakerestclient "k8s.io/client-go/rest/fake"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -1561,6 +1562,39 @@ var _ = Describe("kubernetes", func() {
 				certificatesv1.UsageOCSPSigning,
 				certificatesv1.UsageMicrosoftSGC,
 				certificatesv1.UsageNetscapeSGC,
+			}))
+		})
+	})
+
+	Describe("#NewKubeconfig", func() {
+		var (
+			contextName = "context"
+			server      = "server"
+			caCert      = []byte("ca crt")
+			authInfo    = clientcmdv1.AuthInfo{Token: "foo"}
+		)
+
+		It("should return the expected kubeconfig", func() {
+			Expect(NewKubeconfig(contextName, server, caCert, authInfo)).To(Equal(&clientcmdv1.Config{
+				CurrentContext: contextName,
+				Clusters: []clientcmdv1.NamedCluster{{
+					Name: contextName,
+					Cluster: clientcmdv1.Cluster{
+						Server:                   `https://` + server,
+						CertificateAuthorityData: caCert,
+					},
+				}},
+				AuthInfos: []clientcmdv1.NamedAuthInfo{{
+					Name:     contextName,
+					AuthInfo: authInfo,
+				}},
+				Contexts: []clientcmdv1.NamedContext{{
+					Name: contextName,
+					Context: clientcmdv1.Context{
+						Cluster:  contextName,
+						AuthInfo: contextName,
+					},
+				}},
 			}))
 		})
 	})

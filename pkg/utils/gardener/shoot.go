@@ -24,6 +24,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -188,3 +189,10 @@ func IsShootProjectSecret(secretName string) (string, bool) {
 
 	return "", false
 }
+
+const (
+	// VolumeMountPathGenericKubeconfig is a constant for the path to which the generic shoot kubeconfig will be mounted.
+	VolumeMountPathGenericKubeconfig = "/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig"
+	// PathShootToken is a constant for the path at which the shoot token file is accessible.
+	PathShootToken = VolumeMountPathGenericKubeconfig + "/" + resourcesv1alpha1.DataKeyToken
+)

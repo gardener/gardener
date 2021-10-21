@@ -39,6 +39,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
@@ -630,4 +631,29 @@ func CertificatesV1beta1UsagesToCertificatesV1Usages(usages []certificatesv1beta
 		out = append(out, certificatesv1.KeyUsage(u))
 	}
 	return out
+}
+
+// NewKubeconfig returns a new kubeconfig structure.
+func NewKubeconfig(contextName, server string, caCert []byte, authInfo clientcmdv1.AuthInfo) *clientcmdv1.Config {
+	return &clientcmdv1.Config{
+		CurrentContext: contextName,
+		Clusters: []clientcmdv1.NamedCluster{{
+			Name: contextName,
+			Cluster: clientcmdv1.Cluster{
+				Server:                   `https://` + server,
+				CertificateAuthorityData: caCert,
+			},
+		}},
+		AuthInfos: []clientcmdv1.NamedAuthInfo{{
+			Name:     contextName,
+			AuthInfo: authInfo,
+		}},
+		Contexts: []clientcmdv1.NamedContext{{
+			Name: contextName,
+			Context: clientcmdv1.Context{
+				Cluster:  contextName,
+				AuthInfo: contextName,
+			},
+		}},
+	}
 }
