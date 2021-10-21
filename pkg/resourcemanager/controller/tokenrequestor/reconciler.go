@@ -25,6 +25,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/apimachinery/pkg/util/wait"
 	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,7 +41,11 @@ const (
 	finalizerName             = "resources.gardener.cloud/tokenrequestor-controller"
 	layout                    = "2006-01-02T15:04:05.000Z"
 	defaultExpirationDuration = 12 * time.Hour
+	maxExpirationDuration     = 24 * time.Hour
 )
+
+// exposed for testing
+var waitJitter = wait.Jitter
 
 type reconciler struct {
 	clock              clock.Clock
@@ -191,7 +196,11 @@ func (r *reconciler) requeue(renewTimestamp string) (bool, time.Duration, error)
 
 func (r *reconciler) renewDuration(expirationTimestamp time.Time) time.Duration {
 	expirationDuration := expirationTimestamp.UTC().Sub(r.clock.Now().UTC())
-	return expirationDuration * 80 / 100
+	if expirationDuration >= maxExpirationDuration {
+		expirationDuration = maxExpirationDuration
+	}
+
+	return waitJitter(expirationDuration*80/100, 0.05)
 }
 
 func tokenExpirationSeconds(secret *corev1.Secret) (int64, error) {
