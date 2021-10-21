@@ -63,6 +63,8 @@ var _ = Describe("Worker", func() {
 		namespace                    = "testnamespace"
 		extensionType                = "some-type"
 		region                       = "local"
+		technicalID                  = "shoot--test--somecluster"
+		clusterID                    = "a47edb90-fa63-4b65-984e-4968ab0864f6"
 		sshPublicKey                 = []byte("very-public")
 		kubernetesVersion            = semver.MustParse("1.15.5")
 		infrastructureProviderStatus = &runtime.RawExtension{Raw: []byte(`{"baz":"foo"}`)}
@@ -126,6 +128,8 @@ var _ = Describe("Worker", func() {
 			Namespace:                    namespace,
 			Type:                         extensionType,
 			Region:                       region,
+			TechnicalID:                  technicalID,
+			ClusterID:                    clusterID,
 			KubernetesVersion:            kubernetesVersion,
 			SSHPublicKey:                 sshPublicKey,
 			InfrastructureProviderStatus: infrastructureProviderStatus,
@@ -231,10 +235,12 @@ var _ = Describe("Worker", func() {
 					MaxUnavailable: worker1MaxUnavailable,
 					Annotations:    worker1Annotations,
 					Labels: utils.MergeStringMaps(worker1Labels, map[string]string{
-						"node.kubernetes.io/role":         "node",
-						"worker.gardener.cloud/pool":      worker1Name,
-						"worker.garden.sapcloud.io/group": worker1Name,
-						"worker.gardener.cloud/cri-name":  string(worker1CRIName),
+						"node.kubernetes.io/role":                                                   "node",
+						"worker.gardener.cloud/pool":                                                worker1Name,
+						"worker.gardener.cloud/technical-id":                                        technicalID,
+						"worker.gardener.cloud/cluster-id":                                          clusterID,
+						"worker.garden.sapcloud.io/group":                                           worker1Name,
+						"worker.gardener.cloud/cri-name":                                            string(worker1CRIName),
 						"containerruntime.worker.gardener.cloud/" + worker1CRIContainerRuntime1Type: "true",
 					}),
 					Taints:      worker1Taints,
@@ -273,6 +279,8 @@ var _ = Describe("Worker", func() {
 						"node.kubernetes.io/role":                 "node",
 						"worker.gardener.cloud/system-components": "true",
 						"worker.gardener.cloud/pool":              worker2Name,
+						"worker.gardener.cloud/technical-id":      technicalID,
+						"worker.gardener.cloud/cluster-id":        clusterID,
 						"worker.garden.sapcloud.io/group":         worker2Name,
 					},
 					MachineType: worker2MachineType,

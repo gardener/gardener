@@ -433,6 +433,10 @@ const (
 	LabelWorkerPoolDeprecated = "worker.garden.sapcloud.io/group"
 	// LabelWorkerPoolSystemComponents is a constant that indicates whether the worker pool should host system components
 	LabelWorkerPoolSystemComponents = "worker.gardener.cloud/system-components"
+	// LabelWorkerTechnicalID is a constant for a label that indicates the technical id this worker belongs to
+	LabelWorkerTechnicalID = "worker.gardener.cloud/technical-id"
+	// LabelWorkerClusterID is a constant for a label that indicates the cluster id this worker belongs to
+	LabelWorkerClusterID = "worker.gardener.cloud/cluster-id"
 
 	// EventResourceReferenced indicates that the resource deletion is in waiting mode because the resource is still
 	// being referenced by at least one other resource (e.g. a SecretBinding is still referenced by a Shoot)

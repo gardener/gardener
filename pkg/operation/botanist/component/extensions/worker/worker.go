@@ -71,6 +71,10 @@ type Values struct {
 	Type string
 	// Region is the region of the shoot.
 	Region string
+	// TechnicalID of the cluster this worker belongs to
+	TechnicalID string
+	// Cluster uuid this worker belongs to
+	ClusterID string
 	// Workers is the list of worker pools.
 	Workers []gardencorev1beta1.Worker
 	// KubernetesVersion is the Kubernetes version of the cluster for which the worker nodes shall be created.
@@ -168,6 +172,8 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		// worker pool name labels
 		labels[v1beta1constants.LabelWorkerPool] = workerPool.Name
 		labels[v1beta1constants.LabelWorkerPoolDeprecated] = workerPool.Name
+		labels[v1beta1constants.LabelWorkerTechnicalID] = w.values.TechnicalID
+		labels[v1beta1constants.LabelWorkerClusterID] = w.values.ClusterID
 
 		// add CRI labels selected by the RuntimeClass
 		if workerPool.CRI != nil {

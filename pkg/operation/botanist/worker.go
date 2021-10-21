@@ -43,6 +43,8 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 			Name:              b.Shoot.GetInfo().Name,
 			Type:              b.Shoot.GetInfo().Spec.Provider.Type,
 			Region:            b.Shoot.GetInfo().Spec.Region,
+			TechnicalID:       b.Shoot.GetInfo().Status.TechnicalID,
+			ClusterID:         string(b.Shoot.GetInfo().Status.UID),
 			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
 		},
