@@ -21,7 +21,6 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
@@ -243,26 +242,6 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				CertType:  secrets.ServerCert,
 				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},
-		},
-
-		// Secret definition for cluster-autoscaler
-		&secrets.ControlPlaneSecretConfig{
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: clusterautoscaler.SecretName,
-
-				CommonName:   clusterautoscaler.UserName,
-				Organization: nil,
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-
-			KubeConfigRequests: []secrets.KubeConfigRequest{{
-				ClusterName:   b.Shoot.SeedNamespace,
-				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			}},
 		},
 
 		// Secret definition for gardener-resource-manager
