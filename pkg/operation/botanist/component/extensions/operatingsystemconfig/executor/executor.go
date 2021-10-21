@@ -96,7 +96,6 @@ const (
 
 // Script returns the executor script that applies the downloaded cloud-config user-data.
 func Script(
-	bootstrapToken string,
 	cloudConfigUserData []byte,
 	hyperkubeImage *imagevector.Image,
 	kubernetesVersion string,
@@ -122,7 +121,6 @@ func Script(
 		"annotationKeyChecksum":                    AnnotationKeyChecksum,
 		"pathKubeletDirectory":                     kubelet.PathKubeletDirectory,
 		"pathDownloadsDirectory":                   downloader.PathDownloadsDirectory,
-		"bootstrapToken":                           bootstrapToken,
 		"pathBinaries":                             v1beta1constants.OperatingSystemConfigFilePathBinaries,
 		"pathBootstrapToken":                       downloader.PathBootstrapToken,
 		"pathCCDScript":                            downloader.PathCCDScript,
@@ -142,7 +140,6 @@ func Script(
 		"pathLastDownloadedHyperkubeImage":         PathLastDownloadedHyperkubeImage,
 		"pathScriptCopyKubernetesBinary":           kubelet.PathScriptCopyKubernetesBinary,
 		"bootstrapTokenPlaceholder":                downloader.BootstrapTokenPlaceholder,
-		"bootstrapTokenPlaceholderB64":             utils.EncodeBase64([]byte(downloader.BootstrapTokenPlaceholder)),
 		"cloudConfigUserData":                      utils.EncodeBase64(cloudConfigUserData),
 		"cloudConfigDownloaderName":                downloader.Name,
 		"executionMinDelaySeconds":                 downloader.UnitRestartSeconds,

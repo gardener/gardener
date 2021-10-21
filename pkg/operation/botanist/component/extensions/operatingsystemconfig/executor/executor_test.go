@@ -34,7 +34,6 @@ import (
 var _ = Describe("Executor", func() {
 	Describe("#Script", func() {
 		var (
-			bootstrapToken      string
 			cloudConfigUserData []byte
 			hyperkubeImage      *imagevector.Image
 			reloadConfigCommand string
@@ -45,7 +44,6 @@ var _ = Describe("Executor", func() {
 		)
 
 		BeforeEach(func() {
-			bootstrapToken = "token"
 			cloudConfigUserData = []byte("user-data")
 			hyperkubeImage = &imagevector.Image{Repository: "bar", Tag: pointer.String("v1.0")}
 			reloadConfigCommand = "/var/bin/reload"
@@ -62,9 +60,9 @@ var _ = Describe("Executor", func() {
 
 		DescribeTable("should correctly render the executor script",
 			func(kubernetesVersion string, copyKubernetesBinariesFn func(*imagevector.Image) string, kubeletDataVol *gardencorev1beta1.DataVolume, kubeletDataVolSize *string) {
-				script, err := executor.Script(bootstrapToken, cloudConfigUserData, hyperkubeImage, kubernetesVersion, kubeletDataVol, reloadConfigCommand, units)
+				script, err := executor.Script(cloudConfigUserData, hyperkubeImage, kubernetesVersion, kubeletDataVol, reloadConfigCommand, units)
 				Expect(err).ToNot(HaveOccurred())
-				testScript := scriptFor(bootstrapToken, cloudConfigUserData, hyperkubeImage, copyKubernetesBinariesFn, kubeletDataVolSize, reloadConfigCommand, units)
+				testScript := scriptFor(cloudConfigUserData, hyperkubeImage, copyKubernetesBinariesFn, kubeletDataVolSize, reloadConfigCommand, units)
 				Expect(string(script)).To(Equal(testScript))
 			},
 
@@ -93,7 +91,7 @@ var _ = Describe("Executor", func() {
 		It("should return an error because the data volume size cannot be parsed", func() {
 			kubeletDataVolume := &gardencorev1beta1.DataVolume{VolumeSize: "not-parsable"}
 
-			script, err := executor.Script(bootstrapToken, cloudConfigUserData, hyperkubeImage, "1.2.3", kubeletDataVolume, reloadConfigCommand, units)
+			script, err := executor.Script(cloudConfigUserData, hyperkubeImage, "1.2.3", kubeletDataVolume, reloadConfigCommand, units)
 			Expect(script).To(BeNil())
 			Expect(err).To(MatchError(ContainSubstring("quantities must match the regular expression")))
 		})
@@ -129,7 +127,6 @@ var _ = Describe("Executor", func() {
 })
 
 func scriptFor(
-	bootstrapToken string,
 	cloudConfigUserData []byte,
 	hyperkubeImage *imagevector.Image,
 	copyKubernetesBinariesFn func(*imagevector.Image) string,
@@ -259,15 +256,6 @@ fi
 md5sum ${PATH_CCD_SCRIPT} > ${PATH_CCD_SCRIPT_CHECKSUM}
 
 if [[ ! -f "/var/lib/kubelet/kubeconfig-real" ]] || [[ ! -f "/var/lib/kubelet/pki/kubelet-client-current.pem" ]]; then
-  BOOTSTRAP_TOKEN="` + bootstrapToken + `"
-  # If a bootstrap token file exists and the placeholder got replaced by the Worker extension then use it
-  if [[ -f "/var/lib/cloud-config-downloader/credentials/bootstrap-token" ]]; then
-    FILE_CONTENT="$(cat "/var/lib/cloud-config-downloader/credentials/bootstrap-token")"
-    if [[ $FILE_CONTENT != "<<BOOTSTRAP_TOKEN>>" ]] && [[ $FILE_CONTENT != "PDxCT09UU1RSQVBfVE9LRU4+Pg==" ]]; then
-      BOOTSTRAP_TOKEN="$FILE_CONTENT"
-    fi
-  fi
-
   cat <<EOF > "/var/lib/kubelet/kubeconfig-bootstrap"
 ---
 apiVersion: v1
@@ -287,7 +275,7 @@ users:
 - name: kubelet-bootstrap
   user:
     as-user-extra: {}
-    token: "$BOOTSTRAP_TOKEN"
+    token: "$(cat "/var/lib/cloud-config-downloader/credentials/bootstrap-token")"
 EOF
 
 else
