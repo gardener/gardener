@@ -210,6 +210,7 @@ var _ = Describe("Builder", func() {
 						Message:            fubarMessage,
 						Codes:              codes,
 					}).
+					WithCodes(codes...).
 					Build()
 			})
 
@@ -226,6 +227,38 @@ var _ = Describe("Builder", func() {
 					Reason:             bazReason,
 					Message:            fubarMessage,
 					Codes:              codes,
+				}))
+			})
+		})
+
+		Context("Clear error codes", func() {
+			JustBeforeEach(func() {
+				result, updated = bldr.
+					WithNowFunc(defaultTimeFunc).
+					WithOldCondition(gardencorev1beta1.Condition{
+						Type:               conditionType,
+						Status:             fooStatus,
+						LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
+						LastUpdateTime:     metav1.NewTime(time.Unix(11, 0)),
+						Reason:             bazReason,
+						Message:            fubarMessage,
+						Codes:              codes,
+					}).
+					Build()
+			})
+
+			It("should mark the result as updated", func() {
+				Expect(updated).To(BeTrue())
+			})
+
+			It("should return correct result", func() {
+				Expect(result).To(Equal(gardencorev1beta1.Condition{
+					Type:               conditionType,
+					Status:             fooStatus,
+					LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
+					LastUpdateTime:     defaultTime,
+					Reason:             bazReason,
+					Message:            fubarMessage,
 				}))
 			})
 		})
@@ -371,6 +404,7 @@ var _ = Describe("Builder", func() {
 						Message:            fubarMessage,
 						Codes:              []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded},
 					}).
+					WithCodes([]gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded}...).
 					Build()
 
 				Expect(result.LastUpdateTime).To(Equal(metav1.NewTime(time.Unix(11, 0))))
