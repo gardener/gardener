@@ -21,13 +21,15 @@
 HACK_PKG_PATH              := $(shell go list -tags tools -f '{{ .Dir }}' github.com/gardener/gardener/hack)
 TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin
 CONTROLLER_GEN             := $(TOOLS_BIN_DIR)/controller-gen
+GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
 GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
 GOLANGCI_LINT              := $(TOOLS_BIN_DIR)/golangci-lint
-GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
+GO_TO_PROTOBUF             := $(TOOLS_BIN_DIR)/go-to-protobuf
 HELM                       := $(TOOLS_BIN_DIR)/helm
 MOCKGEN                    := $(TOOLS_BIN_DIR)/mockgen
 OPENAPI_GEN                := $(TOOLS_BIN_DIR)/openapi-gen
 PROMTOOL                   := $(TOOLS_BIN_DIR)/promtool
+PROTOC_GEN_GOGO            := $(TOOLS_BIN_DIR)/protoc-gen-gogo
 SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
@@ -38,14 +40,17 @@ export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 $(CONTROLLER_GEN): go.mod
 	go build -o $(CONTROLLER_GEN) sigs.k8s.io/controller-tools/cmd/controller-gen
 
+$(GEN_CRD_API_REFERENCE_DOCS): go.mod
+	go build -o $(GEN_CRD_API_REFERENCE_DOCS) github.com/ahmetb/gen-crd-api-reference-docs
+
 $(GOIMPORTS): go.mod
 	go build -o $(GOIMPORTS) golang.org/x/tools/cmd/goimports
 
 $(GOLANGCI_LINT):
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) v1.42.1
 
-$(GEN_CRD_API_REFERENCE_DOCS): go.mod
-	go build -o $(GEN_CRD_API_REFERENCE_DOCS) github.com/ahmetb/gen-crd-api-reference-docs
+$(GO_TO_PROTOBUF): go.mod
+	go build -o $(GO_TO_PROTOBUF) k8s.io/code-generator/cmd/go-to-protobuf
 
 $(HELM):
 	curl -sSfL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | HELM_INSTALL_DIR=$(TOOLS_BIN_DIR) USE_SUDO=false bash -s -- --version 'v3.5.4'
@@ -61,6 +66,9 @@ $(PROMTOOL): $(HACK_PKG_PATH)/tools/install-promtool.sh
 
 $(SETUP_ENVTEST): go.mod
 	go build -o $(SETUP_ENVTEST) sigs.k8s.io/controller-runtime/tools/setup-envtest
+
+$(PROTOC_GEN_GOGO): go.mod
+	go build -o $(PROTOC_GEN_GOGO) k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo
 
 $(YAML2JSON): go.mod
 	go build -o $(YAML2JSON) github.com/bronze1man/yaml2json
