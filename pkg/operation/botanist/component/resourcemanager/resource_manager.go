@@ -157,6 +157,8 @@ type Values struct {
 	LeaseDuration *time.Duration
 	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources
 	MaxConcurrentHealthWorkers *int32
+	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations
+	MaxConcurrentTokenRequestorWorkers *int32
 	// RenewDeadline configures the renew deadline for leader election
 	RenewDeadline *time.Duration
 	// ResourceClass is used to filter resource resources
@@ -491,6 +493,9 @@ func (r *resourceManager) computeCommand() []string {
 	cmd = append(cmd, fmt.Sprintf("--health-bind-address=:%v", healthPort))
 	if r.values.MaxConcurrentHealthWorkers != nil {
 		cmd = append(cmd, fmt.Sprintf("--health-max-concurrent-workers=%d", *r.values.MaxConcurrentHealthWorkers))
+	}
+	if r.values.MaxConcurrentTokenRequestorWorkers != nil {
+		cmd = append(cmd, fmt.Sprintf("--token-requestor-max-concurrent-workers=%d", *r.values.MaxConcurrentTokenRequestorWorkers))
 	}
 	if r.values.HealthSyncPeriod != nil {
 		cmd = append(cmd, fmt.Sprintf("--health-sync-period=%s", *r.values.HealthSyncPeriod))
