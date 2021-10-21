@@ -161,6 +161,29 @@ var _ = Describe("helper", func() {
 					"LastUpdateTime":     Equal(testTime),
 				}),
 			),
+			Entry("clear codes",
+				gardencorev1beta1.Condition{
+					Type:               "type",
+					Status:             gardencorev1beta1.ConditionTrue,
+					Reason:             "reason",
+					Message:            "message",
+					LastTransitionTime: testTime,
+					LastUpdateTime:     testTime,
+					Codes:              []gardencorev1beta1.ErrorCode{gardencorev1beta1.ErrorInfraQuotaExceeded},
+				},
+				gardencorev1beta1.ConditionTrue,
+				"reason",
+				"message",
+				nil,
+				MatchFields(IgnoreExtras, Fields{
+					"Status":             Equal(gardencorev1beta1.ConditionTrue),
+					"Reason":             Equal("reason"),
+					"Message":            Equal("message"),
+					"LastTransitionTime": Equal(testTime),
+					"LastUpdateTime":     Satisfy(afterTestTime),
+					"Codes":              BeEmpty(),
+				}),
+			),
 		)
 
 		Describe("#MergeConditions", func() {
