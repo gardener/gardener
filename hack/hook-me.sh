@@ -31,14 +31,14 @@ createOrUpdateWebhookSVC(){
 namespace=${1:-}
 [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
 
-providerName=${2:-}
-[[ -z $providerName ]] && echo "Please specify the provider name (aws,gcp,azure,..etc.)!" && exit 1
+serviceName=${2:-}
+[[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
 
 local quicServerPort=${3:-}
 [[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
 
 tmpService=$(mktemp)
-kubectl get svc gardener-extension-provider-$providerName -o yaml > $tmpService
+kubectl get svc $serviceName -o yaml > $tmpService
 
     cat <<EOF | kubectl apply -f -
 ---
@@ -46,10 +46,10 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: gardener-extension-provider-$providerName
-    app.kubernetes.io/instance: provider-$providerName
-    app.kubernetes.io/name: gardener-extension-provider-$providerName
-  name: gardener-extension-provider-$providerName
+    app: $serviceName
+    app.kubernetes.io/instance: $serviceName
+    app.kubernetes.io/name: $serviceName
+  name: $serviceName
   namespace: $namespace
 spec:
   ports:
@@ -58,8 +58,8 @@ spec:
     targetPort: $quicServerPort
   selector:
     app: quic-server
-    app.kubernetes.io/instance: provider-$providerName
-    app.kubernetes.io/name: gardener-extension-provider-$providerName
+    app.kubernetes.io/instance: $serviceName
+    app.kubernetes.io/name: $serviceName
   type: ClusterIP
 EOF
 }
@@ -98,13 +98,13 @@ waitForQuicLBToBeReady(){
     namespace=${1:-}
     [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
 
-    providerName=${2:-}
-    [[ -z $providerName ]] && echo "Please specify the provider name (aws,gcp,azure,..etc.)!" && exit 1
+    serviceName=${2:-}
+    [[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
 
     # slightly different template for aws and everything else
     local template=""
-    case $providerName in
-    aws*)
+    case $serviceName in
+    gardener-extension-provider-aws*)
       template="{{ index (index  .status.loadBalancer.ingress 0).hostname }}"
       ;;
     *)
@@ -122,8 +122,8 @@ createServerDeploy(){
 namespace=${1:-}
 [[ -z $namespace ]] && echo "Please specify extension namespace!" && exit 1
 
-providerName=${2:-}
-[[ -z $providerName ]] && echo "Please specify the provider name (aws,gcp,azure,..etc.)!" && exit 1
+serviceName=${2:-}
+[[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
 
 local quicServerPort=${3:-}
 [[ -z $quicServerPort ]] && echo "Please specify the quic pod server port!" && exit 1
@@ -138,8 +138,8 @@ kind: Deployment
 metadata:
   labels:
     app: quic-server
-    app.kubernetes.io/instance: provider-$providerName
-    app.kubernetes.io/name: gardener-extension-provider-$providerName
+    app.kubernetes.io/instance: $serviceName
+    app.kubernetes.io/name: $serviceName
     networking.gardener.cloud/to-dns: allowed
     networking.gardener.cloud/to-public-networks: allowed
   name: quic-server
@@ -153,8 +153,8 @@ spec:
     metadata:
       labels:
         app: quic-server
-        app.kubernetes.io/instance: provider-$providerName
-        app.kubernetes.io/name: gardener-extension-provider-$providerName
+        app.kubernetes.io/instance: $serviceName
+        app.kubernetes.io/name: $serviceName
     spec:
       containers:
       - args:
@@ -215,6 +215,16 @@ createCerts() {
   [[ -z $dir ]] && echo "Please specify certs directory!" && exit 1
 
   mkdir -p $dir
+
+  local ipOrHostname=${2:-}
+  local template=""
+
+  # This will not validate the quads but it is enough to determine if the value is an ip or a hostname
+  if [[ $ipOrHostname =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    template="IP.1 = ${ipOrHostname}"
+  else
+    template="DNS.3 = ${ipOrHostname}"
+  fi
 (
   cd $dir
 
@@ -231,7 +241,8 @@ subjectAltName = @alt_names
 [alt_names]
 DNS.1 = localhost
 DNS.2 = quic-tunnel-server
-IP.1 = 127.0.0.1
+${template}
+IP.2 = 127.0.0.1
 EOF
 
   cat > client.conf << EOF
@@ -323,7 +334,7 @@ usage(){
   echo ""
 
   echo "========================================================USAGE======================================================================"
-  echo "> ./hack/hook-me.sh <provider e.g., aws> <extension namespace e.g. extension-provider-aws-fpr6w> <webhookserver port e.g., 8443> [<quic-server port, e.g. 9443>]"
+  echo "> ./hack/hook-me.sh <service e.g., gardener-extension-provider-aws> <extension namespace e.g. extension-provider-aws-fpr6w> <webhookserver port e.g., 8443> [<quic-server port, e.g. 9443>]"
   echo "> \`make EXTENSION_NAMESPACE=<extension namespace e.g. extension-provider-aws-fpr6w> WEBHOOK_CONFIG_MODE=service start\`"
   echo "=================================================================================================================================="
 
@@ -342,8 +353,8 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
         usage
   fi
 
-  providerName=${1:-}
-  [[ -z $providerName ]] && echo "Please specify the provider name (aws,gcp,azure,..etc.)!" && exit 1
+  serviceName=${1:-}
+  [[ -z $serviceName ]] && echo "Please specify the service name (gardener-extension-provider-{aws,gcp,azure},..etc.)!" && exit 1
 
   namespace=${2:-}
   [[ -z $namespace ]] && echo "Please specify the extension namespace!" && exit 1
@@ -371,24 +382,24 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
             createQuicLB $namespace $quicTunnelPort && sleep 2s
 
             echo "[STEP 3] Waiting for Quic LB Service to be created..!";
-            output=$(waitForQuicLBToBeReady $namespace $providerName)
+            output=$(waitForQuicLBToBeReady $namespace $serviceName)
             loadbalancerIPOrHostName=$(echo "$output" | tail -n1)
             echo "[Info] LB IP is $loadbalancerIPOrHostName"
 
             echo "[STEP 4] Creating the CA, client and server keys and certs..!";
-            createCerts $CERTS_DIR
+            createCerts $CERTS_DIR $loadbalancerIPOrHostName
 
             echo "[STEP 5] Loading quic tunnel certs into cluster..!";
             loadCerts $CERTS_DIR $namespace $QUIC_SECRET_NAME
 
             echo "[STEP 6] Creating the server Deploy for TLS Termination and Tunneling connection..!";
-            createServerDeploy $namespace $providerName $quicServerPort $quicTunnelPort
+            createServerDeploy $namespace $serviceName $quicServerPort $quicTunnelPort
 
             echo "[STEP 7] Waiting for Quic Deploy to be ready..!";
             waitForQuicDeployToBeReady $namespace
 
             echo "[STEP 8] Creating WebhookSVC LB..!"
-            createOrUpdateWebhookSVC $namespace $providerName $quicServerPort
+            createOrUpdateWebhookSVC $namespace $serviceName $quicServerPort
 
             echo "[STEP 9] Initializing the quic client";
             echo "[Info] Quic initialized, you are ready to go ahead and run \"make EXTENSION_NAMESPACE=$namespace WEBHOOK_CONFIG_MODE=service start\""
@@ -404,7 +415,8 @@ if [[ "${BASH_SOURCE[0]}" = "$0" ]]; then
               --upstream="host.docker.internal:$webhookServerPort" \
               --ca-file=/certs/ca.crt \
               --cert-file=/certs/client.crt \
-              --cert-key=/certs/client.key
+              --cert-key=/certs/client.key \
+              --v=3
         ;;
         [Nn]* ) echo "You need to set  \`ignoreResources\` to true and generate the controller installlation first in your extension chart before proceeding!"; exit;;
         * ) echo "Please answer yes or no.";;
