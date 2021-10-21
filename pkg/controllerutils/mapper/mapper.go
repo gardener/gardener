@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package handler
+package mapper
 
 import (
 	"context"
@@ -26,8 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	contextutil "github.com/gardener/gardener/pkg/utils/context"
 )
 
@@ -72,7 +72,7 @@ func (m *clusterToObjectMapper) Map(obj client.Object) []reconcile.Request {
 
 	utilruntime.HandleError(meta.EachListItem(objList, func(obj runtime.Object) error {
 		o := obj.(client.Object)
-		if !extensionspredicate.EvalGeneric(o, m.predicates...) {
+		if !predicateutils.EvalGeneric(o, m.predicates...) {
 			return nil
 		}
 

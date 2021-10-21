@@ -70,3 +70,23 @@ func NewZapLogger(logLevel string, format string) (*zap.Logger, error) {
 func NewZapLogr(logger *zap.Logger) logr.Logger {
 	return zapr.NewLogger(logger)
 }
+
+// ZapLogger is a Logger implementation.
+// If development is true, a Zap development config will be used
+// (stacktraces on warnings, no sampling), otherwise a Zap production
+// config will be used (stacktraces on errors, sampling).
+// Additionally, the time encoding is adjusted to `zapcore.ISO8601TimeEncoder`.
+func ZapLogger(development bool) logr.Logger {
+	return ctrlruntimelzap.New(func(o *ctrlruntimelzap.Options) {
+		var encCfg zapcore.EncoderConfig
+		if development {
+			encCfg = zap.NewDevelopmentEncoderConfig()
+		} else {
+			encCfg = zap.NewProductionEncoderConfig()
+		}
+		encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+
+		o.Encoder = zapcore.NewJSONEncoder(encCfg)
+		o.Development = development
+	})
+}

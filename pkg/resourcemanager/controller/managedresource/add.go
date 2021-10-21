@@ -19,13 +19,12 @@ import (
 	"fmt"
 	"time"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	gardenerconstantsv1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
-	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/go-logr/logr"
@@ -74,7 +73,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	mgr.GetLogger().Info("Used cluster id: " + conf.ClusterID)
 	c, err := controller.New(ControllerName, mgr, controller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-		Reconciler: extensionscontroller.OperationAnnotationWrapper(
+		Reconciler: reconcilerutils.OperationAnnotationWrapper(
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
 			&Reconciler{
 				targetClient:              conf.TargetClientConfig.Client,
@@ -97,7 +96,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		&handler.EnqueueRequestForObject{},
 		conf.ClassFilter, predicate.Or(
 			predicate.GenerationChangedPredicate{},
-			extensionspredicate.HasOperationAnnotation(),
+			predicateutils.HasOperationAnnotation(),
 			managerpredicate.ConditionStatusChanged(resourcesv1alpha1.ResourcesHealthy, managerpredicate.ConditionChangedToUnhealthy),
 		),
 	); err != nil {
@@ -106,7 +105,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 
 	if err := c.Watch(
 		&source.Kind{Type: &corev1.Secret{}},
-		extensionshandler.EnqueueRequestsFromMapper(mapper.SecretToManagedResourceMapper(conf.ClassFilter), extensionshandler.UpdateWithOldAndNew),
+		mapper.EnqueueRequestsFrom(SecretToManagedResourceMapper(conf.ClassFilter), mapper.UpdateWithOldAndNew),
 	); err != nil {
 		return fmt.Errorf("unable to watch Secrets mapping to ManagedResources: %w", err)
 	}

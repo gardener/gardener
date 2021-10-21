@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mapper
+package secret
 
 import (
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -52,6 +52,6 @@ func (m *managedResourceToSecretsMapper) Map(obj client.Object) []reconcile.Requ
 }
 
 // ManagedResourceToSecretsMapper returns a mapper that maps events for ManagedResources to their referenced secrets.
-func ManagedResourceToSecretsMapper() extensionshandler.Mapper {
+func ManagedResourceToSecretsMapper() mapper.Mapper {
 	return &managedResourceToSecretsMapper{}
 }

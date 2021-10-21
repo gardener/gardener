@@ -30,7 +30,6 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
@@ -100,56 +99,6 @@ var _ = Describe("Predicate", func() {
 
 		It("should not match the type", func() {
 			predicate := HasType("anotherType")
-
-			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeFalse())
-			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeFalse())
-		})
-	})
-
-	Describe("#HasName", func() {
-		var (
-			name         string
-			createEvent  event.CreateEvent
-			updateEvent  event.UpdateEvent
-			deleteEvent  event.DeleteEvent
-			genericEvent event.GenericEvent
-		)
-
-		BeforeEach(func() {
-			configMap := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: name,
-				},
-			}
-
-			createEvent = event.CreateEvent{
-				Object: configMap,
-			}
-			updateEvent = event.UpdateEvent{
-				ObjectOld: configMap,
-				ObjectNew: configMap,
-			}
-			deleteEvent = event.DeleteEvent{
-				Object: configMap,
-			}
-			genericEvent = event.GenericEvent{
-				Object: configMap,
-			}
-		})
-
-		It("should match the name", func() {
-			predicate := HasName(name)
-
-			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Delete(deleteEvent)).To(gomega.BeTrue())
-			gomega.Expect(predicate.Generic(genericEvent)).To(gomega.BeTrue())
-		})
-
-		It("should not match the name", func() {
-			predicate := HasName("anotherName")
 
 			gomega.Expect(predicate.Create(createEvent)).To(gomega.BeFalse())
 			gomega.Expect(predicate.Update(updateEvent)).To(gomega.BeFalse())

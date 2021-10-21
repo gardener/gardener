@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package reconciler
 
 import (
 	"context"
@@ -33,7 +33,7 @@ type operationAnnotationWrapper struct {
 // OperationAnnotationWrapper is a wrapper for an reconciler that
 // removes the Gardener operation annotation before `Reconcile` is called.
 //
-// This is useful in conjunction with the HasOperationAnnotationPredicate.
+// This is useful in conjunction with the HasOperationAnnotation predicate.
 func OperationAnnotationWrapper(newObjFunc func() client.Object, reconciler reconcile.Reconciler) reconcile.Reconciler {
 	return &operationAnnotationWrapper{
 		newObjFunc: newObjFunc,
@@ -41,18 +41,15 @@ func OperationAnnotationWrapper(newObjFunc func() client.Object, reconciler reco
 	}
 }
 
-// InjectClient implements inject.Client.
 func (o *operationAnnotationWrapper) InjectClient(client client.Client) error {
 	o.client = client
 	return nil
 }
 
-// InjectClient implements inject.Func.
 func (o *operationAnnotationWrapper) InjectFunc(f inject.Func) error {
 	return f(o.Reconciler)
 }
 
-// Reconcile removes the Gardener operation annotation if available and calls the inner `Reconcile`.
 func (o *operationAnnotationWrapper) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	obj := o.newObjFunc()
 	if err := o.client.Get(ctx, request.NamespacedName, obj); client.IgnoreNotFound(err) != nil {
@@ -72,5 +69,6 @@ func (o *operationAnnotationWrapper) Reconcile(ctx context.Context, request reco
 			return reconcile.Result{}, err
 		}
 	}
+
 	return o.Reconciler.Reconcile(ctx, request)
 }

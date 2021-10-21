@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,7 +15,13 @@
 package predicate
 
 import (
-	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-var log = runtimelog.Log.WithName("gardener-resource-manager")
+// HasName returns a predicate that matches the given name of a resource.
+func HasName(name string) predicate.Predicate {
+	return FromMapper(MapperFunc(func(e event.GenericEvent) bool {
+		return e.Object.GetName() == name
+	}), CreateTrigger, UpdateNewTrigger, DeleteTrigger, GenericTrigger)
+}

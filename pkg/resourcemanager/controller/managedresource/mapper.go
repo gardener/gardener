@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mapper
+package managedresource
 
 import (
 	"context"
 
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	grmpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	contextutils "github.com/gardener/gardener/pkg/utils/context"
 
 	corev1 "k8s.io/api/core/v1"
@@ -62,7 +62,7 @@ func (m *secretToManagedResourceMapper) Map(obj client.Object) []reconcile.Reque
 
 	var requests []reconcile.Request
 	for _, mr := range managedResourceList.Items {
-		if !grmpredicate.EvalGenericPredicate(&mr, m.predicates...) {
+		if !predicateutils.EvalGeneric(&mr, m.predicates...) {
 			continue
 		}
 
@@ -82,6 +82,6 @@ func (m *secretToManagedResourceMapper) Map(obj client.Object) []reconcile.Reque
 
 // SecretToManagedResourceMapper returns a mapper that returns requests for ManagedResources whose
 // referenced secrets have been modified.
-func SecretToManagedResourceMapper(predicates ...predicate.Predicate) extensionshandler.Mapper {
+func SecretToManagedResourceMapper(predicates ...predicate.Predicate) mapper.Mapper {
 	return &secretToManagedResourceMapper{predicates: predicates}
 }

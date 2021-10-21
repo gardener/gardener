@@ -24,10 +24,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	ctxutils "github.com/gardener/gardener/pkg/utils/context"
 )
 
@@ -64,7 +64,7 @@ func (m *secretToBackupEntryMapper) Map(obj client.Object) []reconcile.Request {
 	var requests []reconcile.Request
 	for _, backupEntry := range backupEntryList.Items {
 		if backupEntry.Spec.SecretRef.Name == secret.Name && backupEntry.Spec.SecretRef.Namespace == secret.Namespace {
-			if extensionspredicate.EvalGeneric(&backupEntry, m.predicates...) {
+			if predicateutils.EvalGeneric(&backupEntry, m.predicates...) {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name: backupEntry.Name,
@@ -79,7 +79,7 @@ func (m *secretToBackupEntryMapper) Map(obj client.Object) []reconcile.Request {
 
 // SecretToBackupEntryMapper returns a mapper that returns requests for BackupEntry whose
 // referenced secrets have been modified.
-func SecretToBackupEntryMapper(predicates []predicate.Predicate) extensionshandler.Mapper {
+func SecretToBackupEntryMapper(predicates []predicate.Predicate) mapper.Mapper {
 	return &secretToBackupEntryMapper{predicates: predicates}
 }
 
@@ -117,7 +117,7 @@ func (m *namespaceToBackupEntryMapper) Map(obj client.Object) []reconcile.Reques
 
 	var requests []reconcile.Request
 	for _, backupEntry := range backupEntryList.Items {
-		if !extensionspredicate.EvalGeneric(&backupEntry, m.predicates...) {
+		if !predicateutils.EvalGeneric(&backupEntry, m.predicates...) {
 			continue
 		}
 
@@ -135,6 +135,6 @@ func (m *namespaceToBackupEntryMapper) Map(obj client.Object) []reconcile.Reques
 
 // NamespaceToBackupEntryMapper returns a mapper that returns requests for BackupEntry whose
 // associated Shoot's seed namespace have been modified.
-func NamespaceToBackupEntryMapper(predicates []predicate.Predicate) extensionshandler.Mapper {
+func NamespaceToBackupEntryMapper(predicates []predicate.Predicate) mapper.Mapper {
 	return &namespaceToBackupEntryMapper{predicates: predicates}
 }

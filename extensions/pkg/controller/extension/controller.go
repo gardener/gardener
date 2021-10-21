@@ -12,40 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package backupentry
+package extension
 
 import (
-	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
+	"time"
 
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
+
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
-	// FinalizerName is the backupentry controller finalizer.
-	FinalizerName = "extensions.gardener.cloud/backupentry"
-	// ControllerName is the name of the controller
-	ControllerName = "backupentry_controller"
+	// FinalizerPrefix is the prefix name of the finalizer written by this controller.
+	FinalizerPrefix = "extensions.gardener.cloud"
 )
 
-// AddArgs are arguments for adding a BackupEntry controller to a manager.
+// AddArgs are arguments for adding an Extension resources controller to a manager.
 type AddArgs struct {
-	// Actuator is a BackupEntry actuator.
+	// Actuator is an Extension resource actuator.
 	Actuator Actuator
+	// Name is the name of the controller.
+	Name string
+	// FinalizerSuffix is the suffix for the finalizer name.
+	FinalizerSuffix string
 	// ControllerOptions are the controller options used for creating a controller.
 	// The options.Reconciler is always overridden with a reconciler created from the
 	// given actuator.
 	ControllerOptions controller.Options
 	// Predicates are the predicates to use.
-	// If unset, GenerationChangedPredicate will be used.
 	Predicates []predicate.Predicate
+	// Resync determines the requeue interval.
+	Resync time.Duration
 	// Type is the type of the resource considered for reconciliation.
 	Type string
 	// IgnoreOperationAnnotation specifies whether to ignore the operation annotation or not.
@@ -54,53 +58,45 @@ type AddArgs struct {
 	IgnoreOperationAnnotation bool
 }
 
-// DefaultPredicates returns the default predicates for a controlplane reconciler.
+// Add adds an Extension controller to the given manager using the given AddArgs.
+func Add(mgr manager.Manager, args AddArgs) error {
+	args.ControllerOptions.Reconciler = NewReconciler(args)
+	return add(mgr, args)
+}
+
+// DefaultPredicates returns the default predicates for an extension reconciler.
 func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 	if ignoreOperationAnnotation {
 		return []predicate.Predicate{
 			predicate.GenerationChangedPredicate{},
 		}
 	}
-
 	return []predicate.Predicate{
 		predicate.Or(
 			predicateutils.HasOperationAnnotation(),
 			extensionspredicate.LastOperationNotSuccessful(),
 			extensionspredicate.IsDeleting(),
 		),
+		extensionspredicate.ShootNotFailed(),
 	}
 }
 
-// Add creates a new BackupEntry Controller and adds it to the Manager.
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager, args AddArgs) error {
-	args.ControllerOptions.Reconciler = NewReconciler(args.Actuator)
-	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
-	return add(mgr, args, predicates)
-}
-
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, args AddArgs, predicates []predicate.Predicate) error {
-	ctrl, err := controller.New(ControllerName, mgr, args.ControllerOptions)
+func add(mgr manager.Manager, args AddArgs) error {
+	ctrl, err := controller.New(args.Name, mgr, args.ControllerOptions)
 	if err != nil {
 		return err
 	}
 
+	predicates := extensionspredicate.AddTypePredicate(args.Predicates, args.Type)
+
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
-			&source.Kind{Type: &corev1.Namespace{}},
-			mapper.EnqueueRequestsFrom(NamespaceToBackupEntryMapper(predicates), mapper.UpdateWithNew),
-		); err != nil {
-			return err
-		}
-
-		if err := ctrl.Watch(
-			&source.Kind{Type: &corev1.Secret{}},
-			mapper.EnqueueRequestsFrom(SecretToBackupEntryMapper(predicates), mapper.UpdateWithNew),
+			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
+			mapper.EnqueueRequestsFrom(ClusterToExtensionMapper(predicates...), mapper.UpdateWithNew),
 		); err != nil {
 			return err
 		}
 	}
 
-	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.BackupEntry{}}, &handler.EnqueueRequestForObject{}, predicates...)
+	return ctrl.Watch(&source.Kind{Type: &extensionsv1alpha1.Extension{}}, &handler.EnqueueRequestForObject{}, predicates...)
 }

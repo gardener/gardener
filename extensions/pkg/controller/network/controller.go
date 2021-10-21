@@ -15,9 +15,10 @@
 package network
 
 import (
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -62,7 +63,7 @@ func DefaultPredicates(ignoreOperationAnnotation bool) []predicate.Predicate {
 
 	return []predicate.Predicate{
 		predicate.Or(
-			extensionspredicate.HasOperationAnnotation(),
+			predicateutils.HasOperationAnnotation(),
 			extensionspredicate.LastOperationNotSuccessful(),
 			extensionspredicate.IsDeleting(),
 		),
@@ -89,7 +90,7 @@ func add(mgr manager.Manager, args AddArgs) error {
 	if args.IgnoreOperationAnnotation {
 		if err := ctrl.Watch(
 			&source.Kind{Type: &extensionsv1alpha1.Cluster{}},
-			extensionshandler.EnqueueRequestsFromMapper(ClusterToNetworkMapper(predicates), extensionshandler.UpdateWithNew),
+			mapper.EnqueueRequestsFrom(ClusterToNetworkMapper(predicates), mapper.UpdateWithNew),
 		); err != nil {
 			return err
 		}

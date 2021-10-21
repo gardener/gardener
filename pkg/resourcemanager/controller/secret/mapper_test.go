@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mapper_test
+package secret_test
 
 import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	. "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
 
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -28,10 +28,10 @@ import (
 )
 
 var _ = Describe("#ManagedResourceToSecretsMapper", func() {
-	var m extensionshandler.Mapper
+	var m mapper.Mapper
 
 	BeforeEach(func() {
-		m = mapper.ManagedResourceToSecretsMapper()
+		m = ManagedResourceToSecretsMapper()
 	})
 
 	It("should do nothing, if Object is nil", func() {

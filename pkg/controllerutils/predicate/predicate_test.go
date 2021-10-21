@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	. "github.com/gardener/gardener/pkg/predicate"
+	. "github.com/gardener/gardener/pkg/controllerutils/predicate"
 )
 
 var _ = Describe("Predicate", func() {

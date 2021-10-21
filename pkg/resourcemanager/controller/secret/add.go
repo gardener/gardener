@@ -17,9 +17,9 @@ package secret
 import (
 	"fmt"
 
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/mapper"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/spf13/pflag"
@@ -63,7 +63,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 
 	if err := secretController.Watch(
 		&source.Kind{Type: &resourcesv1alpha1.ManagedResource{}},
-		extensionshandler.EnqueueRequestsFromMapper(mapper.ManagedResourceToSecretsMapper(), extensionshandler.UpdateWithOldAndNew),
+		mapper.EnqueueRequestsFrom(ManagedResourceToSecretsMapper(), mapper.UpdateWithOldAndNew),
 		predicate.GenerationChangedPredicate{},
 	); err != nil {
 		return fmt.Errorf("unable to watch ManagedResources: %w", err)
@@ -76,7 +76,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		&handler.EnqueueRequestForObject{},
 		// Only requeue secrets from create/update events with the controller's finalizer to not flood the controller
 		// with too many unnecessary requests for all secrets in cluster/namespace.
-		managerpredicate.HasFinalizer(conf.ClassFilter.FinalizerName()),
+		predicateutils.HasFinalizer(conf.ClassFilter.FinalizerName()),
 	); err != nil {
 		return fmt.Errorf("unable to watch Secrets: %w", err)
 	}

@@ -25,9 +25,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
-	extensionshandler "github.com/gardener/gardener/extensions/pkg/handler"
-	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/controllerutils/mapper"
+	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	ctxutils "github.com/gardener/gardener/pkg/utils/context"
 )
 
@@ -73,7 +73,7 @@ func (m *secretToBackupBucketMapper) Map(obj client.Object) []reconcile.Request 
 	var requests []reconcile.Request
 	for _, backupBucket := range backupBucketList.Items {
 		if backupBucket.Spec.SecretRef.Name == secret.Name && backupBucket.Spec.SecretRef.Namespace == secret.Namespace {
-			if extensionspredicate.EvalGeneric(&backupBucket, m.predicates...) {
+			if predicateutils.EvalGeneric(&backupBucket, m.predicates...) {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
 						Name: backupBucket.Name,
@@ -87,6 +87,6 @@ func (m *secretToBackupBucketMapper) Map(obj client.Object) []reconcile.Request 
 
 // SecretToBackupBucketMapper returns a mapper that returns requests for BackupBucket whose
 // referenced secrets have been modified.
-func SecretToBackupBucketMapper(predicates []predicate.Predicate) extensionshandler.Mapper {
+func SecretToBackupBucketMapper(predicates []predicate.Predicate) mapper.Mapper {
 	return &secretToBackupBucketMapper{predicates: predicates}
 }

@@ -56,3 +56,15 @@ func Not(p predicate.Predicate) predicate.Predicate {
 		},
 	}
 }
+
+// EvalGeneric returns true if all predicates match for the given object.
+func EvalGeneric(obj client.Object, predicates ...predicate.Predicate) bool {
+	e := event.GenericEvent{Object: obj}
+	for _, p := range predicates {
+		if !p.Generic(e) {
+			return false
+		}
+	}
+
+	return true
+}
