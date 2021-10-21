@@ -611,4 +611,18 @@ var _ = Describe("helper", func() {
 			}, map[string]int{"seed": 1, "seed2": 3, "seed3": 2, "seed4": 1})
 		})
 	})
+
+	DescribeTable("#SecretBindingHasType",
+		func(secretBinding *core.SecretBinding, toFind string, expected bool) {
+			actual := SecretBindingHasType(secretBinding, toFind)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with nil SecretBinding", nil, "foo", false),
+		Entry("with empty provider field", &core.SecretBinding{}, "foo", false),
+		Entry("when single-value provider type equals to the given type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo"}}, "foo", true),
+		Entry("when single-value provider type does not match the given type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo"}}, "bar", false),
+		Entry("when multi-value provider type contains the given type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo,bar"}}, "bar", true),
+		Entry("when multi-value provider type does not contain the given type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo,bar"}}, "baz", false),
+	)
 })

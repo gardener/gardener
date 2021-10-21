@@ -25,11 +25,13 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	corelisters "github.com/gardener/gardener/pkg/client/core/listers/core/internalversion"
 	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
@@ -45,6 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 const (
@@ -64,11 +67,12 @@ func Register(plugins *admission.Plugins) {
 // ValidateShoot contains listers and and admission handler.
 type ValidateShoot struct {
 	*admission.Handler
-	cloudProfileLister corelisters.CloudProfileLister
-	seedLister         corelisters.SeedLister
-	shootLister        corelisters.ShootLister
-	projectLister      corelisters.ProjectLister
-	readyFunc          admission.ReadyFunc
+	cloudProfileLister  corelisters.CloudProfileLister
+	seedLister          corelisters.SeedLister
+	shootLister         corelisters.ShootLister
+	projectLister       corelisters.ProjectLister
+	secretBindingLister corelisters.SecretBindingLister
+	readyFunc           admission.ReadyFunc
 }
 
 var (
@@ -104,12 +108,16 @@ func (v *ValidateShoot) SetInternalCoreInformerFactory(f coreinformers.SharedInf
 	projectInformer := f.Core().InternalVersion().Projects()
 	v.projectLister = projectInformer.Lister()
 
+	secretBindingInformer := f.Core().InternalVersion().SecretBindings()
+	v.secretBindingLister = secretBindingInformer.Lister()
+
 	readyFuncs = append(
 		readyFuncs,
 		seedInformer.Informer().HasSynced,
 		shootInformer.Informer().HasSynced,
 		cloudProfileInformer.Informer().HasSynced,
 		projectInformer.Informer().HasSynced,
+		secretBindingInformer.Informer().HasSynced,
 	)
 }
 
@@ -212,13 +220,22 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
 	}
 
+	var secretBinding *core.SecretBinding
+	if utilfeature.DefaultFeatureGate.Enabled(features.RequiredSecretBindingProvider) {
+		secretBinding, err = v.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName)
+		if err != nil {
+			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced secret binding: %+v", err.Error()))
+		}
+	}
+
 	// begin of validation code
 	validationContext := &validationContext{
-		cloudProfile: cloudProfile,
-		project:      project,
-		seed:         seed,
-		shoot:        shoot,
-		oldShoot:     oldShoot,
+		cloudProfile:  cloudProfile,
+		project:       project,
+		seed:          seed,
+		secretBinding: secretBinding,
+		shoot:         shoot,
+		oldShoot:      oldShoot,
 	}
 
 	if err := validationContext.validateProjectMembership(a); err != nil {
@@ -247,7 +264,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	allErrs = append(allErrs, validationContext.validateShootNetworks()...)
 	allErrs = append(allErrs, validationContext.validateKubernetes()...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
-	allErrs = append(allErrs, validationContext.validateProvider()...)
+	allErrs = append(allErrs, validationContext.validateProvider(a)...)
 
 	dnsErrors, err := validationContext.validateDNSDomainUniqueness(v.shootLister)
 	if err != nil {
@@ -263,11 +280,12 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 }
 
 type validationContext struct {
-	cloudProfile *core.CloudProfile
-	project      *core.Project
-	seed         *core.Seed
-	shoot        *core.Shoot
-	oldShoot     *core.Shoot
+	cloudProfile  *core.CloudProfile
+	project       *core.Project
+	seed          *core.Seed
+	secretBinding *core.SecretBinding
+	shoot         *core.Shoot
+	oldShoot      *core.Shoot
 }
 
 func (c *validationContext) validateProjectMembership(a admission.Attributes) error {
@@ -534,7 +552,7 @@ func (c *validationContext) validateKubernetes() field.ErrorList {
 	return allErrs
 }
 
-func (c *validationContext) validateProvider() field.ErrorList {
+func (c *validationContext) validateProvider(a admission.Attributes) field.ErrorList {
 	var (
 		allErrs field.ErrorList
 		path    = field.NewPath("spec", "provider")
@@ -544,6 +562,19 @@ func (c *validationContext) validateProvider() field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must equal provider type of referenced CloudProfile: %q", c.cloudProfile.Spec.Type)))
 		// exit early, all other validation errors will be misleading
 		return allErrs
+	}
+
+	if a.GetOperation() == admission.Create && utilfeature.DefaultFeatureGate.Enabled(features.RequiredSecretBindingProvider) {
+		if !gardencorehelper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
+			var secretBindingProviderType string
+			if c.secretBinding.Provider != nil {
+				secretBindingProviderType = c.secretBinding.Provider.Type
+			}
+
+			allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must match provider type of referenced SecretBinding: %q", secretBindingProviderType)))
+			// exit early, all other validation errors will be misleading
+			return allErrs
+		}
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {

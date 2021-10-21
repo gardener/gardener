@@ -16,10 +16,12 @@ package validation
 
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/features"
 
 	corev1 "k8s.io/api/core/v1"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 // ValidateSecretBinding validates a SecretBinding object.
@@ -82,6 +84,10 @@ func validateSecretBindingProvider(provider *core.SecretBindingProvider, fldPath
 	allErrs := field.ErrorList{}
 
 	if provider == nil {
+		if utilfeature.DefaultFeatureGate.Enabled(features.RequiredSecretBindingProvider) {
+			allErrs = append(allErrs, field.Required(fldPath, "must specify a provider"))
+		}
+
 		return allErrs
 	}
 

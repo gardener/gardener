@@ -39,6 +39,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha` | `1.35` |        |
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
 | SecretBindingProviderPopulator               | `false` | `Alpha` | `1.37` |        |
+| RequiredSecretBindingProvider                | `false` | `Alpha` | `1.37` |        |
 
 ## Feature gates for graduated or deprecated features
 
@@ -111,3 +112,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `WorkerPoolKubernetesVersion` allows to overwrite the Kubernetes version used for shoot clusters per worker pool (see [this document](../usage/worker_pool_k8s_versions.md))
 * `CopyEtcdBackupsDuringControlPlaneMigration` enables the copy of etcd backups from the object store of the source seed to the object store of the destination seed during control plane migration.
 * `SecretBindingProviderPopulator` enables the SecretBinding provider populator controller in the gardener-controller-manager. The controller is responsible to populate the provider.type of the SecretBinding resource based on its current usage.
+* `RequiredSecretBindingProvider` enables a validation on Gardener API server that requires the provider type of a SecretBinding to be set and to match Shoot provider type.

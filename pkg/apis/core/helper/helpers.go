@@ -16,9 +16,11 @@ package helper
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/Masterminds/semver"
 	corev1 "k8s.io/api/core/v1"
@@ -391,4 +393,21 @@ func CalculateSeedUsage(shootList []*core.Shoot) map[string]int {
 	}
 
 	return m
+}
+
+// SecretBindingHasType checks if the given SecretBinding has the given provider type.
+func SecretBindingHasType(secretBinding *core.SecretBinding, toFind string) bool {
+	if secretBinding == nil {
+		return false
+	}
+	if secretBinding.Provider == nil {
+		return false
+	}
+
+	types := strings.Split(secretBinding.Provider.Type, ",")
+	if len(types) == 0 {
+		return false
+	}
+
+	return utils.ValueExists(toFind, types)
 }

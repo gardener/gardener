@@ -17,6 +17,8 @@ package validation_test
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	. "github.com/gardener/gardener/pkg/apis/core/validation"
+	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/utils/test"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -26,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 var _ = Describe("SecretBinding Validation Tests", func() {
@@ -151,6 +154,30 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("quotas"),
+			}))
+		})
+
+		It("should allow nil provider when RequiredSecretBindingProvider feature gate is not enabled", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.RequiredSecretBindingProvider, false)()
+
+			secretBinding.Provider = nil
+
+			errorList := ValidateSecretBinding(secretBinding)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid nil provider when RequiredSecretBindingProvider feature gate is enabled", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.RequiredSecretBindingProvider, true)()
+
+			secretBinding.Provider = nil
+
+			errorList := ValidateSecretBinding(secretBinding)
+
+			Expect(errorList).To(HaveLen(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("provider"),
 			}))
 		})
 	})
