@@ -54,6 +54,15 @@ import (
 func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 	return b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
 		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
+
+		// Remove legacy secrets from ShootState.
+		// TODO(rfranzke): Remove in a future version.
+		for _, name := range []string{
+			"kube-scheduler",
+		} {
+			gardenerResourceDataList.Delete(name)
+		}
+
 		switch b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] {
 		case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
 			if err := b.rotateKubeconfigSecrets(ctx, &gardenerResourceDataList); err != nil {

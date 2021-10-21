@@ -19,9 +19,9 @@ import (
 	"fmt"
 	"strconv"
 
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+
 	"github.com/Masterminds/semver"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -37,9 +37,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/kubescheduler"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
@@ -62,17 +64,13 @@ var _ = Describe("KubeScheduler", func() {
 		configEmpty *gardencorev1beta1.KubeSchedulerConfig
 		configFull  = &gardencorev1beta1.KubeSchedulerConfig{KubernetesConfig: gardencorev1beta1.KubernetesConfig{FeatureGates: map[string]bool{"Foo": true, "Bar": false, "Baz": false}}, KubeMaxPDVols: pointer.String("23")}
 
-		secretNameKubeconfig     = "kubeconfig-secret"
-		secretChecksumKubeconfig = "1234"
-		secretNameServer         = "server-secret"
-		secretChecksumServer     = "5678"
-		secrets                  = Secrets{
-			Kubeconfig: component.Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig},
-			Server:     component.Secret{Name: secretNameServer, Checksum: secretChecksumServer},
-		}
+		secretNameServer     = "server-secret"
+		secretChecksumServer = "5678"
+		secrets              = Secrets{Server: component.Secret{Name: secretNameServer, Checksum: secretChecksumServer}}
 
 		vpaName                   = "kube-scheduler-vpa"
 		serviceName               = "kube-scheduler"
+		secretName                = "shoot-access-kube-scheduler"
 		deploymentName            = "kube-scheduler"
 		managedResourceName       = "shoot-core-kube-scheduler"
 		managedResourceSecretName = "managedresource-shoot-core-kube-scheduler"
@@ -85,6 +83,20 @@ var _ = Describe("KubeScheduler", func() {
 			}
 			Expect(kutil.MakeUnique(cm)).To(Succeed())
 			return cm
+		}
+		secret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secretName,
+				Namespace: namespace,
+				Annotations: map[string]string{
+					"serviceaccount.resources.gardener.cloud/name":      "kube-scheduler",
+					"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+				},
+				Labels: map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
 		}
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 		vpa           = &autoscalingv1beta2.VerticalPodAutoscaler{
@@ -170,8 +182,7 @@ var _ = Describe("KubeScheduler", func() {
 					Template: corev1.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Annotations: map[string]string{
-								"checksum/secret-" + secretNameKubeconfig: secretChecksumKubeconfig,
-								"checksum/secret-" + secretNameServer:     secretChecksumServer,
+								"checksum/secret-" + secretNameServer: secretChecksumServer,
 							},
 							Labels: map[string]string{
 								"app":                                "kubernetes",
@@ -184,6 +195,7 @@ var _ = Describe("KubeScheduler", func() {
 							},
 						},
 						Spec: corev1.PodSpec{
+							AutomountServiceAccountToken: pointer.Bool(false),
 							Containers: []corev1.Container{
 								{
 									Name:            "kube-scheduler",
@@ -224,10 +236,6 @@ var _ = Describe("KubeScheduler", func() {
 									},
 									VolumeMounts: []corev1.VolumeMount{
 										{
-											Name:      secretNameKubeconfig,
-											MountPath: "/var/lib/kube-scheduler",
-										},
-										{
 											Name:      secretNameServer,
 											MountPath: "/var/lib/kube-scheduler-server",
 										},
@@ -239,14 +247,6 @@ var _ = Describe("KubeScheduler", func() {
 								},
 							},
 							Volumes: []corev1.Volume{
-								{
-									Name: secretNameKubeconfig,
-									VolumeSource: corev1.VolumeSource{
-										Secret: &corev1.SecretVolumeSource{
-											SecretName: secretNameKubeconfig,
-										},
-									},
-								},
 								{
 									Name: secretNameServer,
 									VolumeSource: corev1.VolumeSource{
@@ -271,8 +271,62 @@ var _ = Describe("KubeScheduler", func() {
 				},
 			}
 
+			Expect(gutil.InjectGenericKubeconfig(deploy, secret.Name)).To(Succeed())
 			Expect(references.InjectAnnotations(deploy)).To(Succeed())
 			return deploy
+		}
+		clusterRoleBinding1YAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:kube-scheduler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-scheduler
+subjects:
+- kind: ServiceAccount
+  name: kube-scheduler
+  namespace: kube-system
+`
+		clusterRoleBinding2YAML = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  creationTimestamp: null
+  name: gardener.cloud:target:kube-scheduler-volume
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:volume-scheduler
+subjects:
+- kind: ServiceAccount
+  name: kube-scheduler
+  namespace: kube-system
+`
+		managedResourceSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceSecretName,
+				Namespace: namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{
+				"clusterrolebinding____gardener.cloud_target_kube-scheduler.yaml":        []byte(clusterRoleBinding1YAML),
+				"clusterrolebinding____gardener.cloud_target_kube-scheduler-volume.yaml": []byte(clusterRoleBinding2YAML),
+			},
+		}
+		managedResource = &resourcesv1alpha1.ManagedResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      managedResourceName,
+				Namespace: namespace,
+				Labels:    map[string]string{"origin": "gardener"},
+			},
+			Spec: resourcesv1alpha1.ManagedResourceSpec{
+				SecretRefs: []corev1.LocalObjectReference{
+					{Name: managedResourceSecretName},
+				},
+				InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
+				KeepObjects:  pointer.Bool(false),
+			},
 		}
 	)
 
@@ -288,12 +342,7 @@ var _ = Describe("KubeScheduler", func() {
 
 	Describe("#Deploy", func() {
 		Context("missing secret information", func() {
-			It("should return an error because the kubeconfig secret information is not provided", func() {
-				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(ContainSubstring("missing kubeconfig secret information")))
-			})
-
-			It("should return an error because the kubeconfig secret information is not provided", func() {
-				kubeScheduler.SetSecrets(Secrets{Kubeconfig: component.Secret{Name: secretNameKubeconfig, Checksum: secretChecksumKubeconfig}})
+			It("should return an error because the server secret information is not provided", func() {
 				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(ContainSubstring("missing server secret information")))
 			})
 		})
@@ -321,11 +370,25 @@ var _ = Describe("KubeScheduler", func() {
 				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
+			It("should fail when the secret cannot be created", func() {
+				gomock.InOrder(
+					c.EXPECT().Create(ctx, configMapFor(version)),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
+				)
+
+				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
+			})
+
 			It("should fail because the deployment cannot be created", func() {
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, configMapFor(version)),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).Return(fakeErr),
 				)
@@ -338,6 +401,8 @@ var _ = Describe("KubeScheduler", func() {
 					c.EXPECT().Create(ctx, configMapFor(version)),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
@@ -347,49 +412,60 @@ var _ = Describe("KubeScheduler", func() {
 				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail because the managed resource cannot be deleted", func() {
+			It("should fail because the managed resource cannot be created", func() {
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, configMapFor(version)),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()),
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}).Return(fakeErr),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
 				)
 
 				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail because the managed resource secret cannot be deleted", func() {
+			It("should fail because the managed resource secret cannot be created", func() {
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, configMapFor(version)),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()),
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
-					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}).Return(fakeErr),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}), gomock.Any()).Return(fakeErr),
 				)
 
 				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail because the legacy config map cannot be deleted", func() {
+			It("should fail because the legacy secret cannot be deleted", func() {
 				gomock.InOrder(
 					c.EXPECT().Create(ctx, configMapFor(version)),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, serviceName), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, secret.Name), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(namespace, vpaName), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{}), gomock.Any()),
-					c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
-					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}),
-					c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "kube-scheduler-config"}}).Return(fakeErr),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{}), gomock.Any()),
+					c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "kube-scheduler"}}).Return(fakeErr),
 				)
 
 				Expect(kubeScheduler.Deploy(ctx)).To(MatchError(fakeErr))
@@ -413,6 +489,11 @@ var _ = Describe("KubeScheduler", func() {
 							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(serviceFor(version)))
 							}),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+								Expect(obj).To(DeepEqual(secret))
+							}),
 						c.EXPECT().Get(ctx, kutil.Key(namespace, deploymentName), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 						c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -423,12 +504,21 @@ var _ = Describe("KubeScheduler", func() {
 							Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
 								Expect(obj).To(DeepEqual(vpa))
 							}),
+
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
+							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
+								Expect(obj).To(DeepEqual(managedResourceSecret))
+							}),
+						c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+						c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
+							Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
+								Expect(obj).To(DeepEqual(managedResource))
+							}),
 					)
 
 					gomock.InOrder(
-						c.EXPECT().Delete(ctx, &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace}}),
-						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace}}),
-						c.EXPECT().Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "kube-scheduler-config"}}),
+						c.EXPECT().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "kube-scheduler"}}),
 					)
 
 					Expect(kubeScheduler.Deploy(ctx)).To(Succeed())
@@ -488,7 +578,7 @@ func componentConfigYAMLForKubernetesVersion(version string) string {
 	return `apiVersion: ` + apiVersion + `
 kind: KubeSchedulerConfiguration
 clientConnection:
-  kubeconfig: /var/lib/kube-scheduler/kubeconfig
+  kubeconfig: /var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig
 leaderElection:
   leaderElect: true`
 }
@@ -506,8 +596,8 @@ func commandForKubernetesVersion(version string, port int32, featureGateFlags ..
 
 	command = append(
 		command,
-		"--authentication-kubeconfig=/var/lib/kube-scheduler/kubeconfig",
-		"--authorization-kubeconfig=/var/lib/kube-scheduler/kubeconfig",
+		"--authentication-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
+		"--authorization-kubeconfig=/var/run/secrets/gardener.cloud/shoot/generic-kubeconfig/kubeconfig",
 		"--client-ca-file=/var/lib/kube-scheduler-server/ca.crt",
 		"--tls-cert-file=/var/lib/kube-scheduler-server/kube-scheduler-server.crt",
 		"--tls-private-key-file=/var/lib/kube-scheduler-server/kube-scheduler-server.key",
