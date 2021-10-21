@@ -60,6 +60,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 		// TODO(rfranzke): Remove in a future version.
 		for _, name := range []string{
 			"kube-scheduler",
+			"kube-controller-manager",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}
