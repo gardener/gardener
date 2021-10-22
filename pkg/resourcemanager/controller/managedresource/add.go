@@ -24,7 +24,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils/mapper"
 	predicateutils "github.com/gardener/gardener/pkg/controllerutils/predicate"
 	reconcilerutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 
 	"github.com/go-logr/logr"
@@ -34,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -65,7 +65,7 @@ type ControllerConfig struct {
 	ClusterID                 string
 	GarbageCollectorActivated bool
 
-	TargetClientConfig resourcemanagercmd.TargetClientConfig
+	TargetCluster cluster.Cluster
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -76,9 +76,9 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		Reconciler: reconcilerutils.OperationAnnotationWrapper(
 			func() client.Object { return &resourcesv1alpha1.ManagedResource{} },
 			&Reconciler{
-				targetClient:              conf.TargetClientConfig.Client,
-				targetRESTMapper:          conf.TargetClientConfig.RESTMapper,
-				targetScheme:              conf.TargetClientConfig.Scheme,
+				targetClient:              conf.TargetCluster.GetClient(),
+				targetRESTMapper:          conf.TargetCluster.GetRESTMapper(),
+				targetScheme:              conf.TargetCluster.GetScheme(),
 				class:                     conf.ClassFilter,
 				alwaysUpdate:              conf.AlwaysUpdate,
 				syncPeriod:                conf.SyncPeriod,

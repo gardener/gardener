@@ -41,7 +41,8 @@ var Now = time.Now
 type reconciler struct {
 	log          logr.Logger
 	syncPeriod   time.Duration
-	targetClient client.Client
+	targetReader client.Reader
+	targetWriter client.Writer
 }
 
 func (r *reconciler) InjectLogger(l logr.Logger) error {
@@ -72,7 +73,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 	} {
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind(resource.listKind))
-		if err := r.targetClient.List(ctx, objList, labels); err != nil {
+		if err := r.targetReader.List(ctx, objList, labels); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -97,7 +98,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 	} {
 		objList := &metav1.PartialObjectMetadataList{}
 		objList.SetGroupVersionKind(gvk)
-		if err := r.targetClient.List(ctx, objList); err != nil {
+		if err := r.targetReader.List(ctx, objList); err != nil {
 			return reconcile.Result{}, err
 		}
 		items = append(items, objList.Items...)
@@ -143,7 +144,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, _ reconcile.Request
 				"name", objId.name,
 			)
 
-			if err := r.targetClient.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
+			if err := r.targetWriter.Delete(ctx, obj); client.IgnoreNotFound(err) != nil {
 				results <- err
 			}
 		})

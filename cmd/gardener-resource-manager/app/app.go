@@ -18,14 +18,16 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	garbagecollectorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector"
 	healthcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/health"
 	resourcecontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/managedresource"
 	secretcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/secret"
+	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/resourcemanager/healthz"
+	"github.com/gardener/gardener/pkg/resourcemanager/readyz"
+	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -43,12 +45,13 @@ func NewResourceManagerCommand() *cobra.Command {
 
 	managerOpts := &resourcemanagercmd.ManagerOptions{}
 	sourceClientOpts := &resourcemanagercmd.SourceClientOptions{}
-	targetClientOpts := &resourcemanagercmd.TargetClientOptions{}
+	targetClusterOpts := &resourcemanagercmd.TargetClusterOptions{}
 
 	resourceControllerOpts := &resourcecontroller.ControllerOptions{}
 	secretControllerOpts := &secretcontroller.ControllerOptions{}
 	healthControllerOpts := &healthcontroller.ControllerOptions{}
 	gcControllerOpts := &garbagecollectorcontroller.ControllerOptions{}
+	tokenInvalidatorControllerOpts := &tokeninvalidatorcontroller.ControllerOptions{}
 
 	cmd := &cobra.Command{
 		Use: "gardener-resource-manager",
@@ -67,11 +70,12 @@ func NewResourceManagerCommand() *cobra.Command {
 			if err := resourcemanagercmd.CompleteAll(
 				managerOpts,
 				sourceClientOpts,
-				targetClientOpts,
+				targetClusterOpts,
 				resourceControllerOpts,
 				secretControllerOpts,
 				healthControllerOpts,
 				gcControllerOpts,
+				tokenInvalidatorControllerOpts,
 			); err != nil {
 				return err
 			}
@@ -82,20 +86,16 @@ func NewResourceManagerCommand() *cobra.Command {
 			managerOpts.Completed().Apply(&managerOptions)
 			sourceClientOpts.Completed().ApplyManagerOptions(&managerOptions)
 			sourceClientOpts.Completed().ApplyClientSet(&healthz.DefaultAddOptions.ClientSet)
-			targetClientOpts.Completed().Apply(&resourceControllerOpts.Completed().TargetClientConfig)
-			targetClientOpts.Completed().Apply(&healthControllerOpts.Completed().TargetClientConfig)
+			resourceControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 			resourceControllerOpts.Completed().ApplyClassFilter(&secretControllerOpts.Completed().ClassFilter)
 			resourceControllerOpts.Completed().ApplyClassFilter(&healthControllerOpts.Completed().ClassFilter)
+			resourceControllerOpts.Completed().GarbageCollectorActivated = gcControllerOpts.Completed().SyncPeriod > 0
 			if err := resourceControllerOpts.Completed().ApplyDefaultClusterId(ctx, entryLog, sourceClientOpts.Completed().RESTConfig); err != nil {
 				return err
 			}
-			resourceControllerOpts.Completed().GarbageCollectorActivated = gcControllerOpts.Completed().SyncPeriod > 0
-
-			uncachedTargetClientConfig, err := resourcemanagercmd.NewTargetClientConfig(targetClientOpts.KubeconfigPath, true, 0)
-			if err != nil {
-				return err
-			}
-			uncachedTargetClientConfig.Apply(&gcControllerOpts.Completed().TargetClientConfig)
+			healthControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
+			gcControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
+			tokenInvalidatorControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
 
 			// setup manager
 			mgr, err := manager.New(sourceClientOpts.Completed().RESTConfig, managerOptions)
@@ -103,42 +103,35 @@ func NewResourceManagerCommand() *cobra.Command {
 				return fmt.Errorf("could not instantiate manager: %w", err)
 			}
 
-			// add controllers and health endpoint to manager
-			if err := resourcemanagercmd.AddAllToManager(
-				mgr,
+			if err := mgr.Add(targetClusterOpts.Completed().Cluster); err != nil {
+				return fmt.Errorf("could not add target cluster to manager: %w", err)
+			}
+
+			// add controllers, health endpoint and webhooks to manager
+			if err := resourcemanagercmd.AddAllToManager(mgr,
+				// controllers
 				resourcecontroller.AddToManager,
 				secretcontroller.AddToManager,
 				healthcontroller.AddToManager,
 				garbagecollectorcontroller.AddToManager,
+				tokeninvalidatorcontroller.AddToManager,
+				// health/ready endpoints
 				healthz.AddToManager,
+				readyz.AddToManager,
+				// webhooks
+				tokeninvalidatorwebhook.AddToManager,
 			); err != nil {
 				return err
 			}
 
-			// start the target cache and exit if there was an error
+			// start manager and exit if there was an error
 			var wg sync.WaitGroup
 			errChan := make(chan error)
 
 			go func() {
 				defer wg.Done()
-
 				wg.Add(1)
-				if err := targetClientOpts.Completed().Start(ctx); err != nil {
-					errChan <- fmt.Errorf("error syncing target cache: %w", err)
-				}
-			}()
 
-			ctxWaitForCache, cancelWaitForCache := context.WithTimeout(ctx, 5*time.Minute)
-			defer cancelWaitForCache()
-
-			if !targetClientOpts.Completed().WaitForCacheSync(ctxWaitForCache) {
-				return fmt.Errorf("timed out waiting for target cache to sync")
-			}
-
-			go func() {
-				defer wg.Done()
-
-				wg.Add(1)
 				if err := mgr.Start(ctx); err != nil {
 					errChan <- fmt.Errorf("error running manager: %w", err)
 				}
@@ -161,12 +154,13 @@ func NewResourceManagerCommand() *cobra.Command {
 	resourcemanagercmd.AddAllFlags(
 		cmd.Flags(),
 		managerOpts,
-		targetClientOpts,
+		targetClusterOpts,
 		sourceClientOpts,
 		resourceControllerOpts,
 		secretControllerOpts,
 		healthControllerOpts,
 		gcControllerOpts,
+		tokenInvalidatorControllerOpts,
 	)
 	verflag.AddFlags(cmd.Flags())
 

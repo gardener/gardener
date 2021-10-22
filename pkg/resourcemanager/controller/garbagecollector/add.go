@@ -20,14 +20,13 @@ import (
 
 	"github.com/spf13/pflag"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 )
 
 // ControllerName is the name of the controller.
@@ -43,8 +42,8 @@ type ControllerOptions struct {
 
 // ControllerConfig is the completed configuration for the controller.
 type ControllerConfig struct {
-	SyncPeriod         time.Duration
-	TargetClientConfig resourcemanagercmd.TargetClientConfig
+	SyncPeriod    time.Duration
+	TargetCluster cluster.Cluster
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -57,7 +56,8 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		MaxConcurrentReconciles: 1,
 		Reconciler: &reconciler{
 			syncPeriod:   conf.SyncPeriod,
-			targetClient: conf.TargetClientConfig.Client,
+			targetReader: conf.TargetCluster.GetAPIReader(),
+			targetWriter: conf.TargetCluster.GetClient(),
 		},
 	})
 	if err != nil {

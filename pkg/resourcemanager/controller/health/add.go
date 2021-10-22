@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -30,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
 	managerpredicate "github.com/gardener/gardener/pkg/resourcemanager/predicate"
 )
 
@@ -51,8 +51,8 @@ type ControllerConfig struct {
 	MaxConcurrentWorkers int
 	SyncPeriod           time.Duration
 
-	ClassFilter        managerpredicate.ClassFilter
-	TargetClientConfig resourcemanagercmd.TargetClientConfig
+	ClassFilter   managerpredicate.ClassFilter
+	TargetCluster cluster.Cluster
 }
 
 // AddToManagerWithOptions adds the controller to a Manager with the given config.
@@ -62,8 +62,8 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		Reconciler: &reconciler{
 			syncPeriod:   conf.SyncPeriod,
 			classFilter:  &conf.ClassFilter,
-			targetClient: conf.TargetClientConfig.Client,
-			targetScheme: conf.TargetClientConfig.Scheme,
+			targetClient: conf.TargetCluster.GetClient(),
+			targetScheme: conf.TargetCluster.GetScheme(),
 		},
 	})
 	if err != nil {

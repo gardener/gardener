@@ -5,8 +5,15 @@ image:
 
 resources: {}
 
+serverBindAddress: 0.0.0.0
+serverPort: 9449
 metricsPort: 8080
 healthPort: 8081
+
+serverCertificate: |
+  some-tls-certificate
+serverPrivateKey: |
+  some-private-key
 
 controllers:
 # cacheResyncPeriod: 24h0m0s
@@ -19,6 +26,8 @@ controllers:
     concurrentSyncs: 10
   garbageCollector:
     syncPeriod: ""
+  tokenInvalidator:
+    concurrentSyncs: 0
 
 leaderElection:
   enabled: true
@@ -27,6 +36,7 @@ leaderElection:
   renewDeadline: 10s
   retryPeriod: 2s
 
+# targetNamespace: ""
 # targetKubeconfig: |
 #   apiVersion: v1
 #   clusters:
