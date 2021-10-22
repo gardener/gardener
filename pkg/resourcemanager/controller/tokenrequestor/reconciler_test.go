@@ -263,7 +263,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(MatchError(ContainSubstring("not found")))
 		})
 
-		It("should ignore the ServiceAccount on deletion if ignore-on-deletion annotation is set", func() {
+		It("should ignore the ServiceAccount on deletion if skip-deletion annotation is set", func() {
 			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/skip-deletion", "true")
 
 			fakeCreateServiceAccountToken()

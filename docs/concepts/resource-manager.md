@@ -373,7 +373,7 @@ In order to enable the _TokenInvalidator_ you have to set `--token-invalidator-m
 This controller provides the service to create and auto-renew tokens via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/).
 
 It provides a functionality similar to the kubelet's [Service Account Token Volume Projection](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection).
-It was created to handle the special case of issuing tokens to pods that run in a different cluster than the API server they communicate with.
+It was created to handle the special case of issuing tokens to pods that run in a different cluster than the API server they communicate with (hence, using the native token volume projection feature is not possible).
 
 #### Reconciliation Loop
 

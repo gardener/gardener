@@ -101,7 +101,7 @@ func AddToManager(mgr manager.Manager) error {
 
 // AddFlags adds the needed command line flags to the given FlagSet.
 func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.IntVar(&o.maxConcurrentWorkers, "token-invalidator-max-concurrent-workers", 0, "number of worker threads for concurrent token invalidation reconciliations")
+	fs.IntVar(&o.maxConcurrentWorkers, "token-invalidator-max-concurrent-workers", 0, "number of worker threads for concurrent token invalidation reconciliations (default: 0)")
 }
 
 // Complete completes the given command line flags and set the defaultControllerConfig accordingly.

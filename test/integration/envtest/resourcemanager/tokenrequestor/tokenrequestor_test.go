@@ -17,14 +17,13 @@ package tokenrequestor_test
 import (
 	"context"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("TokenRequestor tests", func() {
@@ -46,6 +45,8 @@ var _ = Describe("TokenRequestor tests", func() {
 				Name: "test-namespace",
 			},
 		}
+		Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
+
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secretName,
@@ -62,11 +63,9 @@ var _ = Describe("TokenRequestor tests", func() {
 				Namespace: namespace.Name,
 			},
 		}
-
-		Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
 	})
 
-	It("should behave correctly when: create w/o label, update w label, delete w label", func() {
+	It("should behave correctly when: create w/o label, update w/ label, delete w/ label", func() {
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
 		Consistently(func() error {
@@ -117,16 +116,20 @@ var _ = Describe("TokenRequestor tests", func() {
 		Consistently(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
 		}).Should(Succeed())
+
+		// Remove finalizers since the TokenRequestor will not act on this secret anymore
+		patch = secret.DeepCopy()
+		secret.Finalizers = nil
+		Expect(testClient.Patch(ctx, secret, client.MergeFrom(patch))).To(Succeed())
 	})
 
 	AfterEach(func() {
-		// clean up of secret and service Account
-		Expect(testClient.Delete(ctx, serviceAccount)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(testClient.Delete(ctx, secret)).To(Or(Succeed(), BeNotFoundError()))
 		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
+			return testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
 		}).Should(BeNotFoundError())
 
-		Expect(testClient.Delete(ctx, secret)).To(Or(Succeed(), BeNotFoundError()))
+		Expect(testClient.Delete(ctx, serviceAccount)).To(Or(Succeed(), BeNotFoundError()))
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
 		}).Should(BeNotFoundError())

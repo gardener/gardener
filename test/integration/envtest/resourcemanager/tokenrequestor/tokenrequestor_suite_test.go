@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
 
 	"github.com/go-logr/logr"
@@ -56,6 +57,8 @@ var _ = BeforeSuite(func() {
 
 	By("starting test environment")
 	testEnv = &envtest.Environment{}
+	testEnv.ControlPlane.GetAPIServer().Configure().Set("api-audiences", v1beta1constants.GardenerAudience)
+
 	restConfig, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(restConfig).ToNot(BeNil())
