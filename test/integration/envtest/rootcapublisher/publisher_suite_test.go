@@ -18,7 +18,10 @@ import (
 	"context"
 	"testing"
 
-	resourcemanagercmd "github.com/gardener/gardener/pkg/resourcemanager/cmd"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+
+	"sigs.k8s.io/controller-runtime/pkg/cluster"
+
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
 	"github.com/gardener/gardener/test/framework"
 
@@ -57,9 +60,6 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(restConfig).ToNot(BeNil())
 
-	testClient, err = client.New(restConfig, client.Options{Scheme: k8sscheme.Scheme})
-	Expect(err).ToNot(HaveOccurred())
-
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
 		Scheme:             k8sscheme.Scheme,
@@ -67,10 +67,23 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
+	cl, err := cluster.New(restConfig, func(opts *cluster.Options) {
+		opts.Scheme = k8sscheme.Scheme
+		opts.NewClient = func(_ cache.Cache, config *rest.Config, opts client.Options, _ ...client.Object) (client.Client, error) {
+			testClient, err = client.New(config, opts)
+			if err != nil {
+				return nil, err
+			}
+
+			return testClient, nil
+		}
+	})
+	Expect(err).ToNot(HaveOccurred())
+
 	err = rootcapublisher.AddToManagerWithOptions(mgr, rootcapublisher.ControllerConfig{
 		MaxConcurrentWorkers: 1,
 		RootCAPath:           "testdata/dummy.crt",
-		TargetClientConfig:   resourcemanagercmd.TargetClientConfig{Client: testClient},
+		TargetCluster:        cl,
 	})
 	Expect(err).ToNot(HaveOccurred())
 

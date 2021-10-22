@@ -73,8 +73,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	}
 
 	if err := rootCAController.Watch(
-		// &source.Kind{Type: &corev1.Namespace{}},
-		source.NewKindWithCache(&corev1.Namespace{}, conf.TargetCache),
+		source.NewKindWithCache(&corev1.Namespace{}, conf.TargetCluster.GetCache()),
 		&handler.EnqueueRequestForObject{},
 		predicate.Funcs{
 			CreateFunc:  func(e event.CreateEvent) bool { return true },
@@ -90,7 +89,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 	configMap.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("ConfigMap"))
 
 	if err := rootCAController.Watch(
-		&source.Kind{Type: configMap},
+		source.NewKindWithCache(configMap, conf.TargetCluster.GetCache()),
 		&handler.EnqueueRequestForOwner{OwnerType: &corev1.Namespace{}},
 		predicate.Funcs{
 			CreateFunc:  func(e event.CreateEvent) bool { return false },
