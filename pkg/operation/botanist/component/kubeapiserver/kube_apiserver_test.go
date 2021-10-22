@@ -1971,7 +1971,7 @@ rules:
 						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--advertise-address=")))
 					})
 
-					It("should configure additional api audiences if provided", func() {
+					It("should configure the api audiences if provided", func() {
 						var (
 							apiAudience1 = "foo"
 							apiAudience2 = "bar"
@@ -1985,6 +1985,12 @@ rules:
 						Expect(deployment.Spec.Template.Spec.Containers[0].Command).To(ContainElement(
 							"--api-audiences=" + apiAudience1 + "," + apiAudience2,
 						))
+					})
+
+					It("should not configure the api audiences if not provided", func() {
+						deployAndRead()
+
+						Expect(deployment.Spec.Template.Spec.Containers[0].Command).NotTo(ContainElement(ContainSubstring("--api-audiences=")))
 					})
 
 					It("should configure the feature gates if provided", func() {

@@ -392,10 +392,18 @@ The requested tokens will act with the privileges which are assigned to this `Se
 The controller will then request a token via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) and populate it into the `.data.token` field to the `Secret` in the source cluster.
 
 It also adds an annotation to the `Secret` to keep track when to renew the token before it expires.
-By default the tokens are issued to expire after 12 hours. The expiration time can be set with the following annotation:
+By default, the tokens are issued to expire after 12 hours. The expiration time can be set with the following annotation:
 
 ```yaml
 serviceaccount.resources.gardener.cloud/token-expiration-duration: 6h
 ```
 
-It automatically renews once 80% of the lifetime is reached.
+It automatically renews once 80% of the lifetime is reached or after `24h`.
+
+If the `Secret` is annotated with
+
+```yaml
+serviceaccount.resources.gardener.cloud/skip-deletion: "true"
+```
+
+then the respective `ServiceAccount` will not be deleted when the `Secret` is deleted.

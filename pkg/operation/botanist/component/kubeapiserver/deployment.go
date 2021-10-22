@@ -437,7 +437,9 @@ func (k *kubeAPIServer) computeKubeAPIServerCommand() []string {
 	out = append(out, "--audit-log-maxbackup=5")
 	out = append(out, "--authorization-mode=Node,RBAC")
 
-	out = append(out, "--api-audiences="+strings.Join(k.values.APIAudiences, ","))
+	if len(k.values.APIAudiences) > 0 {
+		out = append(out, "--api-audiences="+strings.Join(k.values.APIAudiences, ","))
+	}
 
 	out = append(out, fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA))
 	out = append(out, "--enable-aggregator-routing=true")

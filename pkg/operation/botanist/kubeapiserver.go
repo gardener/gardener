@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -69,7 +70,7 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 
 		if apiServerConfig.APIAudiences != nil {
 			apiAudiences = apiServerConfig.APIAudiences
-			if !containsGardenerAudience(apiAudiences) {
+			if !utils.ValueExists(v1beta1constants.GardenerAudience, apiAudiences) {
 				apiAudiences = append(apiAudiences, v1beta1constants.GardenerAudience)
 			}
 		}
@@ -114,17 +115,6 @@ func (b *Botanist) DefaultKubeAPIServer(ctx context.Context) (kubeapiserver.Inte
 			WatchCacheSizes: watchCacheSizes,
 		},
 	), nil
-}
-
-func containsGardenerAudience(apiAudiences []string) bool {
-	found := false
-	for _, v := range apiAudiences {
-		if v == v1beta1constants.GardenerAudience {
-			found = true
-			break
-		}
-	}
-	return found
 }
 
 func (b *Botanist) computeKubeAPIServerAdmissionPlugins(defaultPlugins, configuredPlugins []gardencorev1beta1.AdmissionPlugin) []gardencorev1beta1.AdmissionPlugin {
