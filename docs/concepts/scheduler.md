@@ -108,4 +108,4 @@ In case the scheduler fails to find a suitable seed, the operation is being retr
 
 ## Current Limitation / Future Plans
 
-- Azure has unfortunately a geographically non-hierarchical naming pattern and does not start with the continent. This is the reason why we will exchange the implementation of the `MinimalRegion` strategy with a more suitable one in the future.
+- Azure has unfortunately a geographically non-hierarchical naming pattern and does not start with the continent. This is the reason why we will exchange the implementation of the `MinimalDistance` strategy with a more suitable one in the future.
