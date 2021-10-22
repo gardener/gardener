@@ -49,17 +49,21 @@ var _ = Describe("ResourceManager", func() {
 		var (
 			resourceManager *mockresourcemanager.MockInterface
 
-			ctx           = context.TODO()
-			fakeErr       = fmt.Errorf("fake err")
-			secretName    = "gardener-resource-manager"
-			seedNamespace = "fake-seed-ns"
-			checksum      = "1234"
+			ctx              = context.TODO()
+			fakeErr          = fmt.Errorf("fake err")
+			secretName       = "gardener-resource-manager"
+			secretNameServer = "gardener-resource-manager-server"
+			seedNamespace    = "fake-seed-ns"
+			checksum         = "1234"
+			checksumServer   = "5678"
 		)
 
 		BeforeEach(func() {
 			resourceManager = mockresourcemanager.NewMockInterface(ctrl)
 
 			botanist.StoreCheckSum(secretName, checksum)
+			botanist.StoreCheckSum(secretNameServer, checksumServer)
+
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
 					ControlPlane: &shootpkg.ControlPlane{
@@ -70,7 +74,9 @@ var _ = Describe("ResourceManager", func() {
 			}
 
 			resourceManager.EXPECT().SetSecrets(resourcemanager.Secrets{
-				Kubeconfig: component.Secret{Name: secretName, Checksum: checksum}})
+				Kubeconfig: component.Secret{Name: secretName, Checksum: checksum},
+				Server:     component.Secret{Name: secretNameServer, Checksum: checksumServer},
+			})
 		})
 
 		It("should set the secrets and deploy", func() {
@@ -80,7 +86,7 @@ var _ = Describe("ResourceManager", func() {
 
 		It("should fail when the deploy function fails", func() {
 			resourceManager.EXPECT().Deploy(ctx).Return(fakeErr)
-			Expect(botanist.DeployGardenerResourceManager(ctx)).To(Equal(fakeErr))
+			Expect(botanist.DeployGardenerResourceManager(ctx)).To(MatchError(fakeErr))
 		})
 	})
 })
