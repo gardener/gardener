@@ -27,13 +27,11 @@ import (
 	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -48,18 +46,14 @@ type Controller struct {
 	gardenCache runtimecache.Cache
 	logger      logrus.FieldLogger
 
-	config                        *config.GardenletConfiguration
-	gardenClusterIdentity         string
-	identity                      *gardencorev1beta1.Gardener
-	careReconciler                reconcile.Reconciler
-	seedRegistrationReconciler    reconcile.Reconciler
-	recorder                      record.EventRecorder
-	imageVector                   imagevector.ImageVector
-	shootReconciliationDueTracker *reconciliationDueTracker
+	config                     *config.GardenletConfiguration
+	shootReconciler            reconcile.Reconciler
+	careReconciler             reconcile.Reconciler
+	seedRegistrationReconciler reconcile.Reconciler
 
-	shootCareQueue        workqueue.RateLimitingInterface
 	shootQueue            workqueue.RateLimitingInterface
 	shootSeedQueue        workqueue.RateLimitingInterface
+	shootCareQueue        workqueue.RateLimitingInterface
 	seedRegistrationQueue workqueue.RateLimitingInterface
 
 	hasSyncedFuncs         []cache.InformerSynced
@@ -95,14 +89,10 @@ func NewShootController(
 		gardenCache: gardenClient.Cache(),
 		logger:      logger,
 
-		config:                        config,
-		identity:                      identity,
-		gardenClusterIdentity:         gardenClusterIdentity,
-		careReconciler:                NewCareReconciler(clientMap, logger, imageVector, identity, gardenClusterIdentity, config),
-		seedRegistrationReconciler:    NewSeedRegistrationReconciler(clientMap, recorder, logger),
-		recorder:                      recorder,
-		imageVector:                   imageVector,
-		shootReconciliationDueTracker: newReconciliationDueTracker(),
+		config:                     config,
+		shootReconciler:            NewShootReconciler(clientMap, recorder, logger, imageVector, identity, gardenClusterIdentity, config),
+		careReconciler:             NewCareReconciler(clientMap, logger, imageVector, identity, gardenClusterIdentity, config),
+		seedRegistrationReconciler: NewSeedRegistrationReconciler(clientMap, recorder, logger),
 
 		shootCareQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
 		shootQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
@@ -191,13 +181,13 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int
 	c.logger.Info("Shoot controller initialized.")
 
 	for i := 0; i < shootWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootQueue, "Shoot", reconcile.Func(c.reconcileShootRequest), &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootQueue, "Shoot", c.shootReconciler, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootCareWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.shootCareQueue, "Shoot Care", c.careReconciler, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootWorkers/2+1; i++ {
-		controllerutils.CreateWorker(ctx, c.shootSeedQueue, "Shooted Seeds Reconciliation", reconcile.Func(c.reconcileShootRequest), &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.shootSeedQueue, "Shooted Seeds Reconciliation", c.shootReconciler, &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.seedRegistrationQueue, "Shooted Seeds Registration", c.seedRegistrationReconciler, &waitGroup, c.workerCh)
 	}
 
@@ -250,13 +240,6 @@ func (c *Controller) getShootQueue(ctx context.Context, obj interface{}) workque
 		return c.shootSeedQueue
 	}
 	return c.shootQueue
-}
-
-func (c *Controller) newProgressReporter(reporterFn flow.ProgressReporterFn) flow.ProgressReporter {
-	if c.config.Controllers.Shoot != nil && c.config.Controllers.Shoot.ProgressReportPeriod != nil {
-		return flow.NewDelayingProgressReporter(clock.RealClock{}, reporterFn, c.config.Controllers.Shoot.ProgressReportPeriod.Duration)
-	}
-	return flow.NewImmediateProgressReporter(reporterFn)
 }
 
 func (c *Controller) shootIsSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot) bool {

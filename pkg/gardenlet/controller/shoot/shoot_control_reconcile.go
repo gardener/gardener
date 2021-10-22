@@ -35,7 +35,7 @@ import (
 
 // runReconcileShootFlow reconciles the Shoot cluster's state.
 // It receives an Operation object <o> which stores the Shoot object.
-func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	// We create the botanists (which will do the actual work).
 	var (
 		botanist        *botanistpkg.Botanist
@@ -550,7 +550,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 
 	if err := f.Run(ctx, flow.Opts{
 		Logger:           o.Logger,
-		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
+		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,
 		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
 	}); err != nil {
