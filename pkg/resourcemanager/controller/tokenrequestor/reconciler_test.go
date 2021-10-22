@@ -41,22 +41,12 @@ import (
 
 var _ = Describe("Reconciler", func() {
 	Describe("#Reconcile", func() {
-		var oldWaitJitter func(time.Duration, float64) time.Duration
-
-		BeforeSuite(func() {
-			oldWaitJitter = waitJitter
-			waitJitter = func(d time.Duration, _ float64) time.Duration { return d }
-		})
-
-		AfterSuite(func() {
-			waitJitter = oldWaitJitter
-		})
-
 		var (
 			ctx = context.TODO()
 
-			logger    logr.Logger
-			fakeClock clock.Clock
+			logger     logr.Logger
+			fakeClock  clock.Clock
+			fakeJitter func(time.Duration, float64) time.Duration
 
 			sourceClient, targetClient client.Client
 			coreV1Client               *corev1fake.FakeCoreV1
@@ -95,15 +85,9 @@ var _ = Describe("Reconciler", func() {
 
 		BeforeEach(func() {
 			logger = log.Log.WithName("test")
-
-			secretName = "kube-scheduler"
-			serviceAccountName = "kube-scheduler-serviceaccount"
-			serviceAccountNamespace = "kube-system"
-			// If no token-expiration-duration is set then the default of 12 hours is used
-			expectedRenewDuration = 12 * time.Hour * 80 / 100
-			token = "foo"
 			fakeNow = time.Date(2021, 10, 4, 10, 0, 0, 0, time.UTC)
 			fakeClock = clock.NewFakeClock(fakeNow)
+			fakeJitter = func(d time.Duration, _ float64) time.Duration { return d }
 
 			sourceClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 			targetClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
@@ -111,12 +95,20 @@ var _ = Describe("Reconciler", func() {
 
 			ctrl = &reconciler{
 				clock:              fakeClock,
+				jitter:             fakeJitter,
 				targetClient:       targetClient,
 				targetCoreV1Client: coreV1Client,
 			}
 
 			Expect(ctrl.InjectLogger(logger)).To(Succeed())
 			Expect(ctrl.InjectClient(sourceClient)).To(Succeed())
+
+			secretName = "kube-scheduler"
+			serviceAccountName = "kube-scheduler-serviceaccount"
+			serviceAccountNamespace = "kube-system"
+			// If no token-expiration-duration is set then the default of 12 hours is used
+			expectedRenewDuration = 12 * time.Hour * 80 / 100
+			token = "foo"
 
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{

@@ -25,7 +25,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/clock"
-	"k8s.io/apimachinery/pkg/util/wait"
 	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,11 +43,9 @@ const (
 	maxExpirationDuration     = 24 * time.Hour
 )
 
-// exposed for testing
-var waitJitter = wait.Jitter
-
 type reconciler struct {
 	clock              clock.Clock
+	jitter             func(time.Duration, float64) time.Duration
 	log                logr.Logger
 	targetClient       client.Client
 	targetCoreV1Client corev1clientset.CoreV1Interface
@@ -200,7 +197,7 @@ func (r *reconciler) renewDuration(expirationTimestamp time.Time) time.Duration 
 		expirationDuration = maxExpirationDuration
 	}
 
-	return waitJitter(expirationDuration*80/100, 0.05)
+	return r.jitter(expirationDuration*80/100, 0.05)
 }
 
 func tokenExpirationSeconds(secret *corev1.Secret) (int64, error) {
