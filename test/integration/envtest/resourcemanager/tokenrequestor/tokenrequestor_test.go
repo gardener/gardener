@@ -98,9 +98,9 @@ var _ = Describe("TokenRequestor tests", func() {
 
 		Expect(testClient.Delete(ctx, serviceAccount)).To(Succeed())
 
-		patch := secret.DeepCopy()
+		patch := client.MergeFrom(secret.DeepCopy())
 		secret.Labels = nil
-		Expect(testClient.Patch(ctx, secret, client.MergeFrom(patch))).To(Succeed())
+		Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 
 		Consistently(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
@@ -120,9 +120,9 @@ var _ = Describe("TokenRequestor tests", func() {
 		}).Should(Succeed())
 
 		// Remove finalizers since the TokenRequestor will not act on this secret anymore
-		patch = secret.DeepCopy()
+		patch = client.MergeFrom(secret.DeepCopy())
 		secret.Finalizers = nil
-		Expect(testClient.Patch(ctx, secret, client.MergeFrom(patch))).To(Succeed())
+		Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 	})
 
 	It("should be able to authenticate with the created token", func() {
