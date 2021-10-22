@@ -156,7 +156,7 @@ func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Conte
 		})
 		generateSecrets = g.Add(flow.Task{
 			Name:         "Generating secrets and saving them into ShootState",
-			Fn:           flow.TaskFn(botanist.GenerateAndSaveSecrets),
+			Fn:           botanist.GenerateAndSaveSecrets,
 			Dependencies: flow.NewTaskIDs(ensureShootStateExists),
 		})
 		deploySecrets = g.Add(flow.Task{
@@ -226,7 +226,7 @@ func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Conte
 		})
 		deleteAllManagedResourcesFromShootNamespace = g.Add(flow.Task{
 			Name:         "Deleting all Managed Resources from the Shoot's namespace",
-			Fn:           flow.TaskFn(botanist.DeleteAllManagedResourcesObjects),
+			Fn:           botanist.DeleteAllManagedResourcesObjects,
 			Dependencies: flow.NewTaskIDs(keepManagedResourcesObjectsInShoot, ensureResourceManagerScaledUp),
 		})
 		waitForManagedResourcesDeletion = g.Add(flow.Task{
@@ -241,27 +241,27 @@ func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Conte
 		})
 		waitUntilAPIServerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until kube-apiserver doesn't exist",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServer.WaitCleanup),
+			Fn:           botanist.Shoot.Components.ControlPlane.KubeAPIServer.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(prepareKubeAPIServerForMigration),
 		})
 		migrateIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating nginx ingress DNS record",
-			Fn:           flow.TaskFn(botanist.MigrateIngressDNSResources),
+			Fn:           botanist.MigrateIngressDNSResources,
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		migrateExternalDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating external domain DNS record",
-			Fn:           flow.TaskFn(botanist.MigrateExternalDNSResources),
+			Fn:           botanist.MigrateExternalDNSResources,
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		migrateInternalDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.MigrateInternalDNSResources),
+			Fn:           botanist.MigrateInternalDNSResources,
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		migrateOwnerDNSRecord = g.Add(flow.Task{
 			Name:         "Migrating owner domain DNS record",
-			Fn:           flow.TaskFn(botanist.MigrateOwnerDNSResources),
+			Fn:           botanist.MigrateOwnerDNSResources,
 			Dependencies: flow.NewTaskIDs(waitUntilAPIServerDeleted),
 		})
 		destroyDNSRecords = g.Add(flow.Task{
@@ -271,7 +271,7 @@ func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Conte
 		})
 		destroyDNSProviders = g.Add(flow.Task{
 			Name:         "Deleting DNS providers",
-			Fn:           flow.TaskFn(botanist.DeleteDNSProviders),
+			Fn:           botanist.DeleteDNSProviders,
 			Dependencies: flow.NewTaskIDs(migrateIngressDNSRecord, migrateExternalDNSRecord, migrateInternalDNSRecord, migrateOwnerDNSRecord),
 		})
 		createETCDSnapshot = g.Add(flow.Task{
@@ -286,12 +286,12 @@ func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Conte
 		})
 		migrateBackupEntryInGarden = g.Add(flow.Task{
 			Name:         "Migrate BackupEntry to new seed",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.BackupEntry.Migrate),
+			Fn:           botanist.Shoot.Components.BackupEntry.Migrate,
 			Dependencies: flow.NewTaskIDs(createETCDSnapshot),
 		})
 		waitUntilBackupEntryInGardenMigrated = g.Add(flow.Task{
 			Name:         "Waiting for BackupEntry to be migrated to new seed",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.BackupEntry.WaitMigrate),
+			Fn:           botanist.Shoot.Components.BackupEntry.WaitMigrate,
 			Dependencies: flow.NewTaskIDs(migrateBackupEntryInGarden),
 		})
 		deleteNamespace = g.Add(flow.Task{
