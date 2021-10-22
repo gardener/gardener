@@ -62,6 +62,9 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 			"kube-controller-manager",
 			"cluster-autoscaler",
 			"kube-state-metrics",
+			// TODO(rfranzke): Uncomment this in a future release once all monitoring configurations of extensions have been
+			// adapted.
+			// "prometheus",
 		} {
 			gardenerResourceDataList.Delete(name)
 		}

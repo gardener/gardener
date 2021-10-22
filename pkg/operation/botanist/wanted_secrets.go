@@ -294,6 +294,8 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		},
 
 		// Secret definition for prometheus
+		// TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
+		// adapted.
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: "prometheus",

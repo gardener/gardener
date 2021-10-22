@@ -60,8 +60,9 @@ const (
 scheme: https
 tls_config:
   insecure_skip_verify: true
-  cert_file: /etc/prometheus/seed/prometheus.crt
-  key_file: /etc/prometheus/seed/prometheus.key
+authorization:
+  type: Bearer
+  credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
 honor_labels: false
 scrape_timeout: 15s
 kubernetes_sd_configs:
