@@ -278,7 +278,7 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 		r.gardenSecrets = secrets
 	}
 
-	operation, err := NewOperation(
+	o, err := NewOperation(
 		careCtx,
 		gardenClientSet,
 		seedClient,
@@ -300,7 +300,7 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
-	if err := operation.InitializeSeedClients(careCtx); err != nil {
+	if err := o.InitializeSeedClients(careCtx); err != nil {
 		log.Errorf("Health checks cannot be performed: %s", err.Error())
 
 		if err := careSetupFailure(ctx, gardenClient, shoot, "Precondition failed: seed client cannot be constructed", conditions, constraints); err != nil {
@@ -310,14 +310,14 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 	}
 
 	staleExtensionHealthCheckThreshold := confighelper.StaleExtensionHealthChecksThreshold(r.config.Controllers.ShootCare.StaleExtensionHealthChecks)
-	initializeShootClients := shootClientInitializer(careCtx, operation)
+	initializeShootClients := shootClientInitializer(careCtx, o)
 
 	var updatedConditions, updatedConstraints, seedConditions []gardencorev1beta1.Condition
 
 	_ = flow.Parallel(
 		// Trigger health check
 		func(ctx context.Context) error {
-			shootHealth := NewHealthCheck(operation, initializeShootClients)
+			shootHealth := NewHealthCheck(o, initializeShootClients)
 			updatedConditions = shootHealth.Check(
 				ctx,
 				r.conditionThresholdsToProgressingMapping(),
@@ -331,15 +331,15 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 		// It should watch Seed objects and enqueue them if they belong to a ManagedSeed and the conditions have changed.
 		// Then it should update the conditions on the Shoot object.
 		func(ctx context.Context) error {
-			seedConditions, err = retrieveSeedConditions(ctx, operation)
+			seedConditions, err = retrieveSeedConditions(ctx, o)
 			if err != nil {
-				operation.Logger.Errorf("Error retrieving seed conditions: %+v", err)
+				o.Logger.Errorf("Error retrieving seed conditions: %+v", err)
 			}
 			return nil
 		},
 		// Trigger constraint checks
 		func(ctx context.Context) error {
-			constraint := NewConstraintCheck(operation, initializeShootClients)
+			constraint := NewConstraintCheck(o, initializeShootClients)
 			updatedConstraints = constraint.Check(
 				ctx,
 				constraints,
@@ -348,7 +348,7 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 		},
 		// Trigger garbage collection
 		func(ctx context.Context) error {
-			garbageCollector := NewGarbageCollector(operation, initializeShootClients)
+			garbageCollector := NewGarbageCollector(o, initializeShootClients)
 			garbageCollector.Collect(ctx)
 			// errors during garbage collection are only being logged and do not cause the care operation to fail
 			return nil
@@ -361,7 +361,7 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 	if gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) ||
 		gardencorev1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
 		if err := patchShootStatus(ctx, gardenClient, shoot, updatedConditions, updatedConstraints); err != nil {
-			operation.Logger.Errorf("Could not update Shoot status: %+v", err)
+			o.Logger.Errorf("Could not update Shoot status: %+v", err)
 			return nil // We do not want to run in the exponential backoff for the condition checks.
 		}
 	}
@@ -369,7 +369,7 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 	// Update Shoot status label according to status if necessary
 	actualStatus := string(shootpkg.ComputeStatus(shoot.Status.LastOperation, shoot.Status.LastErrors, updatedConditions...))
 	if err := PatchShootStatusLabel(ctx, gardenClient, shoot, actualStatus); err != nil {
-		operation.Logger.Errorf("Could not update Shoot status label: %+v", err)
+		o.Logger.Errorf("Could not update Shoot status label: %+v", err)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
