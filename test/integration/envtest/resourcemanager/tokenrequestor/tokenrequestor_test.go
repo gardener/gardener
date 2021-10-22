@@ -23,6 +23,8 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -121,6 +123,30 @@ var _ = Describe("TokenRequestor tests", func() {
 		patch = secret.DeepCopy()
 		secret.Finalizers = nil
 		Expect(testClient.Patch(ctx, secret, client.MergeFrom(patch))).To(Succeed())
+	})
+
+	It("should be able to authenticate with the created token", func() {
+		secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "tokenrequestor"}
+		Expect(testClient.Create(ctx, secret)).To(Succeed())
+
+		Eventually(func() error {
+			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
+		}).Should(Succeed())
+
+		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+
+		var (
+			newClient     client.Client
+			newRestConfig = &rest.Config{
+				Host:            restConfig.Host,
+				BearerToken:     string(secret.Data["token"]),
+				TLSClientConfig: rest.TLSClientConfig{CAData: restConfig.TLSClientConfig.CAData},
+			}
+		)
+		newClient, err = client.New(newRestConfig, client.Options{Scheme: kubernetesscheme.Scheme})
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(newClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeForbiddenError())
 	})
 
 	AfterEach(func() {
