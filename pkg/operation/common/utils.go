@@ -25,6 +25,7 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -165,11 +166,15 @@ func DeleteVpa(ctx context.Context, c client.Client, namespace string, isShoot b
 
 	if isShoot {
 		resources = append(resources,
+			gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameVPAAdmissionController, namespace).Secret,
+			gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameVPARecommender, namespace).Secret,
+			gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameVPAUpdater, namespace).Secret,
+			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: VPASecretName, Namespace: namespace}},
+			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: namespace}},
+			// TODO(rfranzke): Remove in a future release.
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-admission-controller", Namespace: namespace}},
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: namespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: VPASecretName, Namespace: namespace}},
 			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: namespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-vpa-admission-controller", Namespace: namespace}},
 		)
 	} else {
 		resources = append(resources,

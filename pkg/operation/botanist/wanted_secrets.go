@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
@@ -84,12 +83,6 @@ func (b *Botanist) wantedCertificateAuthorities() map[string]*secrets.Certificat
 	return wantedCertificateAuthorities
 }
 
-var vpaSecrets = map[string]string{
-	charts.ImageNameVpaAdmissionController: common.VpaAdmissionControllerName,
-	charts.ImageNameVpaRecommender:         common.VpaRecommenderName,
-	charts.ImageNameVpaUpdater:             common.VpaUpdaterName,
-}
-
 func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig {
 	staticTokenConfig := &secrets.StaticTokenSecretConfig{
 		Name: kubeapiserver.SecretNameStaticToken,
@@ -104,15 +97,6 @@ func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig 
 				UserID:   common.KubeAPIServerHealthCheck,
 			},
 		},
-	}
-
-	if b.Shoot.WantsVerticalPodAutoscaler {
-		for secretName, username := range vpaSecrets {
-			staticTokenConfig.Tokens[secretName] = secrets.TokenConfig{
-				Username: username,
-				UserID:   secretName,
-			}
-		}
 	}
 
 	if b.isShootNodeLoggingEnabled() {

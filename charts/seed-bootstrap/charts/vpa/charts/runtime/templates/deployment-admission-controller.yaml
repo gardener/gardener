@@ -68,7 +68,7 @@ spec:
             mountPath: "/etc/tls-certs"
             readOnly: true
 {{- if not .Values.admissionController.enableServiceAccount }}
-          - name: vpa-admission-controller
+          - name: shoot-access
             mountPath: /var/run/secrets/kubernetes.io/serviceaccount
             readOnly: true
 {{- end }}
@@ -86,8 +86,19 @@ spec:
           secret:
             secretName: vpa-tls-certs
 {{- if not .Values.admissionController.enableServiceAccount }}
-        - name: vpa-admission-controller
-          secret:
-            secretName: vpa-admission-controller
+        - name: shoot-access
+          projected:
+            defaultMode: 420
+            sources:
+            - secret:
+                items:
+                - key: ca.crt
+                  path: ca.crt
+                name: ca
+            - secret:
+                items:
+                - key: token
+                  path: token
+                name: shoot-access-vpa-admission-controller
 {{- end }}
 {{- end }}

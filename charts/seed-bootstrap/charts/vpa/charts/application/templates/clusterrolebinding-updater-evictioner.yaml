@@ -18,8 +18,8 @@ subjects:
   name: vpa-updater
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: gardener.cloud:vpa:updater
+- kind: ServiceAccount
+  name: vpa-updater
+  namespace: kube-system
 {{- end }}
 {{- end }}

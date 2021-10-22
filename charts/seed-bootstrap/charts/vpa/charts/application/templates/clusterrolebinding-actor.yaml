@@ -19,9 +19,9 @@ subjects:
   name: vpa-recommender
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: gardener.cloud:vpa:recommender
+- kind: ServiceAccount
+  name: vpa-recommender
+  namespace: kube-system
 {{- end }}
 {{- end }}
 {{- if .Values.updater.enabled }}
@@ -30,9 +30,9 @@ subjects:
   name: vpa-updater
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: gardener.cloud:vpa:updater
+- kind: ServiceAccount
+  name: vpa-updater
+  namespace: kube-system
 {{- end }}
 {{- end }}
 {{- end }}

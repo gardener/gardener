@@ -35,7 +35,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
@@ -173,12 +172,6 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 
 	if b.isShootNodeLoggingEnabled() {
 		if err := b.storePromtailRBACAuthToken(secretsManager.StaticToken); err != nil {
-			return err
-		}
-	}
-
-	if b.Shoot.WantsVerticalPodAutoscaler {
-		if err := b.storeStaticTokenAsSecrets(ctx, secretsManager.StaticToken, secretsManager.DeployedSecrets[v1beta1constants.SecretNameCACluster].Data[secrets.DataKeyCertificateCA], vpaSecrets); err != nil {
 			return err
 		}
 	}
@@ -370,37 +363,6 @@ func (b *Botanist) storePromtailRBACAuthToken(staticToken *secretutils.StaticTok
 	}
 
 	b.PromtailRBACAuthToken = promtailRBACAuthToken.Token
-	return nil
-}
-
-func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *secretutils.StaticToken, caCert []byte, secretNameToUsername map[string]string) error {
-	for secretName, username := range secretNameToUsername {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretName,
-				Namespace: b.Shoot.SeedNamespace,
-			},
-			Type: corev1.SecretTypeOpaque,
-		}
-
-		token, err := staticToken.GetTokenForUsername(username)
-		if err != nil {
-			return err
-		}
-
-		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
-			secret.Data = map[string][]byte{
-				secretutils.DataKeyToken:         []byte(token.Token),
-				secretutils.DataKeyCertificateCA: caCert,
-			}
-			return nil
-		}); err != nil {
-			return err
-		}
-
-		b.StoreCheckSum(secretName, utils.ComputeSecretChecksum(secret.Data))
-	}
-
 	return nil
 }
 

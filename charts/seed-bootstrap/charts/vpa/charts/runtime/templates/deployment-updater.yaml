@@ -65,7 +65,7 @@ spec:
 {{- end }}
 {{- if not .Values.updater.enableServiceAccount }}
         volumeMounts:
-        - name: vpa-updater
+        - name: shoot-access
           mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           readOnly: true
 {{- end }}
@@ -80,8 +80,19 @@ spec:
         - containerPort: 8080
 {{- if not .Values.updater.enableServiceAccount }}
       volumes:
-      - name: vpa-updater
-        secret:
-          secretName: vpa-updater
+      - name: shoot-access
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              items:
+              - key: ca.crt
+                path: ca.crt
+              name: ca
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: shoot-access-vpa-updater
 {{- end }}
 {{- end }}

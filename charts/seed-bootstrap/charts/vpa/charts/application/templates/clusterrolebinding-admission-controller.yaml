@@ -18,8 +18,8 @@ subjects:
   name: vpa-admission-controller
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: gardener.cloud:vpa:admission-controller
+- kind: ServiceAccount
+  name: vpa-admission-controller
+  namespace: kube-system
 {{- end }}
 {{- end }}

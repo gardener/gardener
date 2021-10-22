@@ -55,7 +55,7 @@ spec:
         - name: KUBERNETES_SERVICE_PORT
           value: "443"
         volumeMounts:
-        - name: vpa-recommender
+        - name: shoot-access
           mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           readOnly: true
 {{- end }}
@@ -71,8 +71,19 @@ spec:
         - containerPort: 8080
 {{- if not .Values.recommender.enableServiceAccount }}
       volumes:
-      - name: vpa-recommender
-        secret:
-          secretName: vpa-recommender
+      - name: shoot-access
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              items:
+              - key: ca.crt
+                path: ca.crt
+              name: ca
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: shoot-access-vpa-recommender
 {{- end }}
 {{- end }}
