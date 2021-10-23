@@ -117,10 +117,6 @@ func (b *Botanist) generateStaticTokenConfig() *secrets.StaticTokenSecretConfig 
 	}
 
 	if b.isShootNodeLoggingEnabled() {
-		staticTokenConfig.Tokens[logging.LokiKubeRBACProxyName] = secrets.TokenConfig{
-			Username: logging.KubeRBACProxyUserName,
-			UserID:   logging.KubeRBACProxyUserName,
-		}
 		staticTokenConfig.Tokens[logging.PromtailName] = secrets.TokenConfig{
 			Username: logging.PromtailRBACName,
 			UserID:   logging.PromtailRBACName,
@@ -596,44 +592,20 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		}},
 	})
 
-	// Secret definition for lokiKubeRBACProxy
 	if b.isShootNodeLoggingEnabled() {
+		// Secret definition for loki (ingress)
+		secretList = append(secretList, &secrets.CertificateSecretConfig{
+			Name: common.LokiTLS,
 
-		var kubeRBACToken *secrets.Token
-		if staticToken != nil {
-			var err error
-			kubeRBACToken, err = staticToken.GetTokenForUsername(logging.KubeRBACProxyUserName)
-			if err != nil {
-				return nil, err
-			}
-		}
+			CommonName:   b.ComputeLokiHost(),
+			Organization: []string{"gardener.cloud:monitoring:ingress"},
+			DNSNames:     b.ComputeLokiHosts(),
+			IPAddresses:  nil,
 
-		secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name:      logging.SecretNameLokiKubeRBACProxyKubeconfig,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-			Token: kubeRBACToken,
-
-			KubeConfigRequests: []secrets.KubeConfigRequest{
-				{
-					ClusterName:   b.Shoot.SeedNamespace,
-					APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
-				},
-			}},
-			// Secret definition for loki (ingress)
-			&secrets.CertificateSecretConfig{
-				Name: common.LokiTLS,
-
-				CommonName:   b.ComputeLokiHost(),
-				Organization: []string{"gardener.cloud:monitoring:ingress"},
-				DNSNames:     b.ComputeLokiHosts(),
-				IPAddresses:  nil,
-
-				CertType:  secrets.ServerCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-				Validity:  &endUserCrtValidity,
-			})
+			CertType:  secrets.ServerCert,
+			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			Validity:  &endUserCrtValidity,
+		})
 	}
 
 	// Secret definitions for dependency-watchdog-internal and external probes

@@ -310,10 +310,6 @@ func (b *Botanist) rotateKubeconfigSecrets(ctx context.Context, gardenerResource
 		common.KubecfgSecretName,
 	}
 
-	if b.isShootNodeLoggingEnabled() {
-		secrets = append(secrets, logging.SecretNameLokiKubeRBACProxyKubeconfig)
-	}
-
 	if err := b.deleteSecrets(ctx, gardenerResourceDataList, secrets...); err != nil {
 		return err
 	}

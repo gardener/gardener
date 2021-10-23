@@ -163,10 +163,9 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// Logging
-	o.Shoot.Components.Logging.ShootRBACProxy, err = logging.NewKubeRBACProxy(&logging.KubeRBACProxyOptions{
-		Client:                    b.K8sSeedClient.Client(),
-		Namespace:                 b.Shoot.SeedNamespace,
-		IsShootNodeLoggingEnabled: b.isShootNodeLoggingEnabled(),
+	o.Shoot.Components.Logging.ShootRBACProxy, err = logging.NewKubeRBACProxy(&logging.Values{
+		Client:    b.K8sSeedClient.Client(),
+		Namespace: b.Shoot.SeedNamespace,
 	})
 	if err != nil {
 		return nil, err

@@ -21,7 +21,6 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	. "github.com/gardener/gardener/pkg/operation/common"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -30,7 +29,6 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	schedulingv1 "k8s.io/api/scheduling/v1"
@@ -319,7 +317,6 @@ var _ = Describe("common", func() {
 			&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
 			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: v1beta1constants.GardenNamespace}},
 			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
 			&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
 			&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: v1beta1constants.GardenNamespace}},
 		}
@@ -341,52 +338,6 @@ var _ = Describe("common", func() {
 			}
 
 			err := DeleteSeedLoggingStack(ctx, c)
-			Expect(err).ToNot(HaveOccurred())
-		})
-	})
-
-	Describe("#DeleteShootLoggingStack", func() {
-		var (
-			ctrl *gomock.Controller
-			c    *mockclient.MockClient
-			ctx  context.Context
-		)
-
-		resources := []client.Object{
-			//shoot components
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-loki", Namespace: v1beta1constants.GardenNamespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-to-loki", Namespace: v1beta1constants.GardenNamespace}},
-			&hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "loki-config", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
-			&appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "loki-loki-0", Namespace: v1beta1constants.GardenNamespace}},
-			&networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
-			&extensionsv1beta1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: "loki", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: logging.SecretNameLokiKubeRBACProxyKubeconfig, Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: LokiTLS, Namespace: v1beta1constants.GardenNamespace}},
-			&networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-from-prometheus-to-loki-telegraf", Namespace: v1beta1constants.GardenNamespace}},
-			&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "telegraf-config", Namespace: v1beta1constants.GardenNamespace}},
-		}
-
-		BeforeEach(func() {
-			ctrl = gomock.NewController(GinkgoT())
-			c = mockclient.NewMockClient(ctrl)
-
-			ctx = context.TODO()
-		})
-
-		AfterEach(func() {
-			ctrl.Finish()
-		})
-
-		It("should delete all shoot logging stack components", func() {
-			for _, resource := range resources {
-				c.EXPECT().Delete(ctx, resource)
-			}
-
-			err := DeleteShootLoggingStack(ctx, c, v1beta1constants.GardenNamespace)
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
