@@ -22,3 +22,4 @@ spec:
         name: net-curl
         command: ["sh", "-c"]
         args: ["sleep 300"]
+      serviceAccountName: {{ .name }}
