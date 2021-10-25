@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/gardener"
+	"github.com/gardener/gardener/pkg/utils/test"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/logger"
@@ -987,11 +990,32 @@ var _ = Describe("Etcd", func() {
 	})
 
 	Describe("#Destroy", func() {
+		var (
+			etcdRes *druidv1alpha1.Etcd
+			nowFunc func() time.Time
+		)
+		BeforeEach(func() {
+			nowFunc = func() time.Time {
+				return time.Date(1, 1, 1, 1, 1, 1, 1, time.UTC)
+			}
+
+			etcdRes = &druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{
+				Name:      "etcd-" + testRole,
+				Namespace: testNamespace,
+				Annotations: map[string]string{
+					"confirmation.gardener.cloud/deletion": "true",
+					"gardener.cloud/timestamp":             nowFunc().String(),
+				},
+			}}
+		})
+
 		It("should properly delete all expected objects", func() {
+			defer test.WithVar(&gardener.TimeNow, nowFunc)()
+
 			gomock.InOrder(
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()),
+				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-				c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
+				c.EXPECT().Delete(ctx, etcdRes),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: networkPolicyName, Namespace: testNamespace}}),
 			)
 
@@ -999,8 +1023,10 @@ var _ = Describe("Etcd", func() {
 		})
 
 		It("should fail when the hvpa deletion fails", func() {
+			defer test.WithVar(&gardener.TimeNow, nowFunc)()
+
 			gomock.InOrder(
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()),
+				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}).Return(fakeErr),
 			)
 
@@ -1008,20 +1034,24 @@ var _ = Describe("Etcd", func() {
 		})
 
 		It("should fail when the etcd deletion fails", func() {
+			defer test.WithVar(&gardener.TimeNow, nowFunc)()
+
 			gomock.InOrder(
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()),
+				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-				c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(fakeErr),
+				c.EXPECT().Delete(ctx, etcdRes).Return(fakeErr),
 			)
 
 			Expect(etcd.Destroy(ctx)).To(MatchError(fakeErr))
 		})
 
 		It("should fail when the network policy deletion fails", func() {
+			defer test.WithVar(&gardener.TimeNow, nowFunc)()
+
 			gomock.InOrder(
-				c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()),
+				c.EXPECT().Patch(ctx, etcdRes, gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-				c.EXPECT().Delete(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
+				c.EXPECT().Delete(ctx, etcdRes),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: networkPolicyName, Namespace: testNamespace}}).Return(fakeErr),
 			)
 
