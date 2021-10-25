@@ -194,6 +194,17 @@ This reconciliation loop watches the `ControllerRegistration` resource and adds 
 
 This loop also watches the `Seed` object and adds finalizers to it at creation. If a `.metadata.deletionTimestamp` is set for the seed then the controller checks for existing `ControllerInstallation` objects which reference this seed. If no such objects exist then it removes the finalizer and allows the deletion.
 
+### "CertificateSigningRequest" controller
+
+After the [gardenlet](./gardenlet.md) gets deployed on the Seed cluster it needs to establish itself as a trusted party to communicate with the Gardener API server. It runs through a bootstrap flow similar to the [kubelet bootstrap](https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet-tls-bootstrapping/) process.
+
+On startup the gardenlet uses a `kubeconfig` with a [bootstrap token](https://kubernetes.io/docs/reference/access-authn-authz/bootstrap-tokens/) which authenticates it as being part of the `system:bootstrappers` group. This kubeconfig is used to create a [`CertificateSigningRequest`]( https://kubernetes.io/docs/reference/access-authn-authz/certificate-signing-requests/) (CSR) against the Gardener API server.
+
+The controller in `gardener-controller-manager` checks whether the `CertificateSigningRequest` has the expected organisation, common name and usages which the gardenlet would request.
+
+It only auto-approves the CSR if the client making the request is allowed to "create" the 
+`certificatesigningrequests/seedclient` subresource. Clients with the `system:bootstrappers` group are bound to the `gardener.cloud:system:seed-bootstrapper` `ClusterRole`, hence, they have such privileges. As the bootstrap kubeconfig for the gardenlet contains a bootstrap token which is authenticated as being part of the [`systems:bootstrappers` group](../../charts/gardener/controlplane/charts/application/templates/clusterrolebinding-seed-bootstrapper.yaml), its created CSR gets auto-approved.
+
 ### "Bastion" Controller
 
 `Bastion` resources have a limited lifetime, which can be extended up to a certain amount by performing a heartbeat on
