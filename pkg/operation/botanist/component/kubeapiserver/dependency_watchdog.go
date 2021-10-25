@@ -16,6 +16,7 @@ package kubeapiserver
 
 import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
@@ -23,13 +24,6 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-)
-
-const (
-	// DependencyWatchdogExternalProbeSecretName is the name of the kubecfg secret with internal DNS for external access.
-	DependencyWatchdogExternalProbeSecretName = "dependency-watchdog-external-probe"
-	// DependencyWatchdogInternalProbeSecretName is the name of the kubecfg secret with cluster IP access.
-	DependencyWatchdogInternalProbeSecretName = "dependency-watchdog-internal-probe"
 )
 
 // DependencyWatchdogEndpointConfiguration returns the configuration for the dependency watchdog (endpoint role)
@@ -66,8 +60,8 @@ func DependencyWatchdogProbeConfiguration() ([]scalerapi.ProbeDependants, error)
 	return []scalerapi.ProbeDependants{{
 		Name: "shoot-" + v1beta1constants.DeploymentNameKubeAPIServer,
 		Probe: &scalerapi.ProbeConfig{
-			External:      &scalerapi.ProbeDetails{KubeconfigSecretName: DependencyWatchdogExternalProbeSecretName},
-			Internal:      &scalerapi.ProbeDetails{KubeconfigSecretName: DependencyWatchdogInternalProbeSecretName},
+			External:      &scalerapi.ProbeDetails{KubeconfigSecretName: dependencywatchdog.ExternalProbeSecretName},
+			Internal:      &scalerapi.ProbeDetails{KubeconfigSecretName: dependencywatchdog.InternalProbeSecretName},
 			PeriodSeconds: pointer.Int32(30),
 		},
 		DependantScales: []*scalerapi.DependantScaleDetails{{

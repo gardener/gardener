@@ -171,12 +171,12 @@ func defaultDependencyWatchdogs(
 	}
 
 	var (
-		dwdEndpointValues = dependencywatchdog.Values{Role: dependencywatchdog.RoleEndpoint, Image: image.String()}
-		dwdProbeValues    = dependencywatchdog.Values{Role: dependencywatchdog.RoleProbe, Image: image.String()}
+		dwdEndpointValues = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleEndpoint, Image: image.String()}
+		dwdProbeValues    = dependencywatchdog.BootstrapperValues{Role: dependencywatchdog.RoleProbe, Image: image.String()}
 	)
 
-	dwdEndpoint = component.OpDestroy(dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdEndpointValues))
-	dwdProbe = component.OpDestroy(dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdProbeValues))
+	dwdEndpoint = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdEndpointValues))
+	dwdProbe = component.OpDestroy(dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdProbeValues))
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
@@ -203,7 +203,7 @@ func defaultDependencyWatchdogs(
 		}
 
 		dwdEndpointValues.ValuesEndpoint = dependencywatchdog.ValuesEndpoint{ServiceDependants: dependencyWatchdogEndpointConfigurations}
-		dwdEndpoint = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdEndpointValues)
+		dwdEndpoint = dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdEndpointValues)
 	}
 
 	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(seedSettings) {
@@ -226,7 +226,7 @@ func defaultDependencyWatchdogs(
 		}
 
 		dwdProbeValues.ValuesProbe = dependencywatchdog.ValuesProbe{ProbeDependantsList: dependencyWatchdogProbeConfigurations}
-		dwdProbe = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdProbeValues)
+		dwdProbe = dependencywatchdog.NewBootstrapper(c, v1beta1constants.GardenNamespace, dwdProbeValues)
 	}
 
 	return

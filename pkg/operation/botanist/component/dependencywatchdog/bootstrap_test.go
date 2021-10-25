@@ -56,7 +56,7 @@ var _ = Describe("DependencyWatchdog", func() {
 	})
 
 	Describe("#Deploy, #Destroy", func() {
-		testSuite := func(values Values, configMapDataHash string) {
+		testSuite := func(values BootstrapperValues, configMapDataHash string) {
 			var (
 				managedResource       *resourcesv1alpha1.ManagedResource
 				managedResourceSecret *corev1.Secret
@@ -355,7 +355,7 @@ status: {}
 			)
 
 			BeforeEach(func() {
-				dwd = New(c, namespace, values)
+				dwd = NewBootstrapper(c, namespace, values)
 
 				managedResource = &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
@@ -425,11 +425,11 @@ status: {}
 		}
 
 		Describe("RoleEndpoint", func() {
-			testSuite(Values{Role: RoleEndpoint, Image: image}, "885b78df")
+			testSuite(BootstrapperValues{Role: RoleEndpoint, Image: image}, "885b78df")
 		})
 
 		Describe("RoleProbe", func() {
-			testSuite(Values{Role: RoleProbe, Image: image}, "07491e14")
+			testSuite(BootstrapperValues{Role: RoleProbe, Image: image}, "07491e14")
 		})
 	})
 
@@ -441,7 +441,7 @@ status: {}
 		)
 
 		BeforeEach(func() {
-			dwd = New(c, namespace, Values{Role: role})
+			dwd = NewBootstrapper(c, namespace, BootstrapperValues{Role: role})
 			managedResource = &resourcesv1alpha1.ManagedResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      managedResourceName,
