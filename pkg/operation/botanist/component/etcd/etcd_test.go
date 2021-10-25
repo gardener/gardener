@@ -989,8 +989,9 @@ var _ = Describe("Etcd", func() {
 	Describe("#Destroy", func() {
 		It("should properly delete all expected objects", func() {
 			gomock.InOrder(
+				c.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-				c.EXPECT().Delete(ctx, &druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, gomock.Any()),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: networkPolicyName, Namespace: testNamespace}}),
 			)
 
@@ -999,6 +1000,7 @@ var _ = Describe("Etcd", func() {
 
 		It("should fail when the hvpa deletion fails", func() {
 			gomock.InOrder(
+				c.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}).Return(fakeErr),
 			)
 
@@ -1007,8 +1009,9 @@ var _ = Describe("Etcd", func() {
 
 		It("should fail when the etcd deletion fails", func() {
 			gomock.InOrder(
+				c.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-				c.EXPECT().Delete(ctx, &druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}).Return(fakeErr),
+				c.EXPECT().Delete(ctx, gomock.Any()).Return(fakeErr),
 			)
 
 			Expect(etcd.Destroy(ctx)).To(MatchError(fakeErr))
@@ -1016,8 +1019,9 @@ var _ = Describe("Etcd", func() {
 
 		It("should fail when the network policy deletion fails", func() {
 			gomock.InOrder(
+				c.EXPECT().Patch(ctx, gomock.Any(), gomock.Any()),
 				c.EXPECT().Delete(ctx, &hvpav1alpha1.Hvpa{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
-				c.EXPECT().Delete(ctx, &druidv1alpha1.Etcd{ObjectMeta: metav1.ObjectMeta{Name: "etcd-" + testRole, Namespace: testNamespace}}),
+				c.EXPECT().Delete(ctx, gomock.Any()),
 				c.EXPECT().Delete(ctx, &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: networkPolicyName, Namespace: testNamespace}}).Return(fakeErr),
 			)
 
