@@ -75,8 +75,10 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 
 // DeployGardenerResourceManager deploys the gardener-resource-manager
 func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
-	kubeCfg := component.Secret{Name: resourcemanager.SecretName, Checksum: b.LoadCheckSum(resourcemanager.SecretName)}
-	b.Shoot.Components.ControlPlane.ResourceManager.SetSecrets(resourcemanager.Secrets{Kubeconfig: kubeCfg})
+	b.Shoot.Components.ControlPlane.ResourceManager.SetSecrets(resourcemanager.Secrets{
+		Kubeconfig: component.Secret{Name: resourcemanager.SecretName, Checksum: b.LoadCheckSum(resourcemanager.SecretName)},
+		Server:     component.Secret{Name: resourcemanager.SecretNameServer, Checksum: b.LoadCheckSum(resourcemanager.SecretNameServer)},
+	})
 
 	return b.Shoot.Components.ControlPlane.ResourceManager.Deploy(ctx)
 }

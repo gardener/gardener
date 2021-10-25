@@ -141,8 +141,9 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			gutil.GetAPIServerDomain(b.Shoot.InternalClusterDomain),
 		}, kubernetes.DNSNamesForService("kubernetes", metav1.NamespaceDefault)...)
 
-		kubeControllerManagerCertDNSNames = kubernetes.DNSNamesForService(kubecontrollermanager.ServiceName, b.Shoot.SeedNamespace)
-		kubeSchedulerCertDNSNames         = kubernetes.DNSNamesForService(kubescheduler.ServiceName, b.Shoot.SeedNamespace)
+		kubeControllerManagerCertDNSNames   = kubernetes.DNSNamesForService(kubecontrollermanager.ServiceName, b.Shoot.SeedNamespace)
+		gardenerResourceManagerCertDNSNames = kubernetes.DNSNamesForService(resourcemanager.ServiceName, b.Shoot.SeedNamespace)
+		kubeSchedulerCertDNSNames           = kubernetes.DNSNamesForService(kubescheduler.ServiceName, b.Shoot.SeedNamespace)
 
 		etcdCertDNSNames = append(
 			b.Shoot.Components.ControlPlane.EtcdMain.ServiceDNSNames(),
@@ -316,6 +317,19 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				ClusterName:   b.Shoot.SeedNamespace,
 				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
 			}},
+		},
+
+		// Secret definition for gardener-resource-manager server
+		&secrets.CertificateSecretConfig{
+			Name: resourcemanager.SecretNameServer,
+
+			CommonName:   v1beta1constants.DeploymentNameGardenerResourceManager,
+			Organization: nil,
+			DNSNames:     gardenerResourceManagerCertDNSNames,
+			IPAddresses:  nil,
+
+			CertType:  secrets.ServerCert,
+			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
 		},
 
 		// Secret definition for kube-proxy

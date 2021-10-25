@@ -271,6 +271,18 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 			SigningCA: certificateAuthorities[caSeed],
 			Validity:  &endUserCrtValidity,
 		},
+		// Secret definition for gardener-resource-manager server
+		&secretsutils.CertificateSecretConfig{
+			Name: resourcemanager.SecretNameServer,
+
+			CommonName:   v1beta1constants.DeploymentNameGardenerResourceManager,
+			Organization: nil,
+			DNSNames:     kutil.DNSNamesForService(resourcemanager.ServiceName, v1beta1constants.GardenNamespace),
+			IPAddresses:  nil,
+
+			CertType:  secretsutils.ServerCert,
+			SigningCA: certificateAuthorities[caSeed],
+		},
 	}
 
 	return secretList, nil
@@ -1029,7 +1041,7 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
-	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, imageVector, imageVectorOverwrites, seed, log, anySNI)
+	return runCreateSeedFlow(ctx, gardenClient, seedClient, kubernetesVersion, imageVector, imageVectorOverwrites, seed, log, anySNI, deployedSecretsMap)
 }
 
 func runCreateSeedFlow(
@@ -1042,6 +1054,7 @@ func runCreateSeedFlow(
 	seed *Seed,
 	log logrus.FieldLogger,
 	anySNI bool,
+	deployedSecretsMap map[string]*corev1.Secret,
 ) error {
 	secretData, err := getDNSProviderSecretData(ctx, gardenClient, seed)
 	if err != nil {
@@ -1068,7 +1081,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, kubernetesVersion.String(), imageVector)
+	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, deployedSecretsMap[resourcemanager.SecretNameServer])
 	if err != nil {
 		return err
 	}

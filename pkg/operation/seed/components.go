@@ -38,6 +38,7 @@ import (
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -91,7 +92,7 @@ func defaultGardenerSeedAdmissionController(c client.Client, imageVector imageve
 	return seedadmissioncontroller.New(c, v1beta1constants.GardenNamespace, image.String()), nil
 }
 
-func defaultGardenerResourceManager(c client.Client, seedVersion string, imageVector imagevector.ImageVector) (component.DeployWaiter, error) {
+func defaultGardenerResourceManager(c client.Client, imageVector imagevector.ImageVector, serverSecret *corev1.Secret) (component.DeployWaiter, error) {
 	image, err := imageVector.FindImage(charts.ImageNameGardenerResourceManager)
 	if err != nil {
 		return nil, err
@@ -103,12 +104,18 @@ func defaultGardenerResourceManager(c client.Client, seedVersion string, imageVe
 	}
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
-	return resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), 1, resourcemanager.Values{
+	gardenerResourceManager := resourcemanager.New(c, v1beta1constants.GardenNamespace, image.String(), 1, resourcemanager.Values{
 		ConcurrentSyncs:  pointer.Int32(20),
 		HealthSyncPeriod: utils.DurationPtr(time.Minute),
 		ResourceClass:    pointer.String(v1beta1constants.SeedResourceManagerClass),
 		SyncPeriod:       utils.DurationPtr(time.Hour),
-	}), nil
+	})
+
+	gardenerResourceManager.SetSecrets(resourcemanager.Secrets{
+		Server: component.Secret{Name: resourcemanager.SecretNameServer, Checksum: utils.ComputeSecretChecksum(serverSecret.Data)},
+	})
+
+	return gardenerResourceManager, nil
 }
 
 func defaultNetworkPolicies(c client.Client, seed *gardencorev1beta1.Seed, sniEnabled bool) (component.DeployWaiter, error) {

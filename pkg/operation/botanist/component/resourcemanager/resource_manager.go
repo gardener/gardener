@@ -40,19 +40,29 @@ import (
 )
 
 const (
+	// ServiceName is the name of the service of the gardener-resource-manager.
+	ServiceName = "gardener-resource-manager"
+
 	// SecretName is a constant for the secret name for the gardener resource manager's kubeconfig secret.
 	SecretName = "gardener-resource-manager"
+	// SecretNameServer is the name of the gardener-resource-manager server certificate secret.
+	SecretNameServer = "gardener-resource-manager-server"
+
 	// UserName is the name that should be used for the secret that the gardener resource manager uses to
 	// authenticate itself with the kube-apiserver (e.g., the common name in its client certificate).
 	UserName = "gardener.cloud:system:gardener-resource-manager"
 
-	clusterRoleName           = "gardener-resource-manager-seed"
-	containerName             = v1beta1constants.DeploymentNameGardenerResourceManager
-	healthPort                = 8081
-	metricsPort               = 8080
-	roleName                  = "gardener-resource-manager"
-	serviceAccountName        = "gardener-resource-manager"
+	clusterRoleName    = "gardener-resource-manager-seed"
+	containerName      = v1beta1constants.DeploymentNameGardenerResourceManager
+	healthPort         = 8081
+	metricsPort        = 8080
+	roleName           = "gardener-resource-manager"
+	serviceAccountName = "gardener-resource-manager"
+
+	volumeNameKubeconfig      = "gardener-resource-manager"
+	volumeNameCerts           = "tls"
 	volumeMountPathKubeconfig = "/etc/gardener-resource-manager"
+	volumeMountPathCerts      = "/etc/gardener-resource-manager-tls"
 )
 
 var (
@@ -128,6 +138,7 @@ type resourceManager struct {
 	image     string
 	replicas  int32
 	values    Values
+	secrets   Secrets
 }
 
 // Values holds the optional configuration options for the gardener resource manager
@@ -140,9 +151,6 @@ type Values struct {
 	ConcurrentSyncs *int32
 	// HealthSyncPeriod describes the duration of how often the health of existing resources should be synced
 	HealthSyncPeriod *time.Duration
-	// Kubeconfig configures the gardener-resource-manager to target another cluster for creating resources.
-	// If this is not set resources are created in the cluster the gardener-resource-manager is deployed in
-	Kubeconfig *component.Secret
 	// LeaseDuration configures the lease duration for leader election
 	LeaseDuration *time.Duration
 	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources
@@ -163,6 +171,10 @@ type Values struct {
 }
 
 func (r *resourceManager) Deploy(ctx context.Context) error {
+	if r.secrets.Server.Name == "" || r.secrets.Server.Checksum == "" {
+		return fmt.Errorf("missing server secret information")
+	}
+
 	if err := r.ensureServiceAccount(ctx); err != nil {
 		return err
 	}
@@ -208,8 +220,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 }
 
 func (r *resourceManager) ensureRBAC(ctx context.Context) error {
-	targetDiffersFromSourceCluster := r.values.Kubeconfig != nil
-	if targetDiffersFromSourceCluster {
+	if targetDiffersFromSourceCluster := r.secrets.Kubeconfig.Name != ""; targetDiffersFromSourceCluster {
 		if r.values.WatchedNamespace == nil {
 			if err := r.ensureClusterRole(ctx, allowManagedResources); err != nil {
 				return err
@@ -353,7 +364,7 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 }
 
 func (r *resourceManager) emptyService() *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}}
+	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: r.namespace}}
 }
 
 func (r *resourceManager) ensureDeployment(ctx context.Context) error {
@@ -419,28 +430,40 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 			},
 		}
 
-		if r.values.Kubeconfig != nil {
-			deployment.Spec.Template.ObjectMeta.Annotations = map[string]string{
-				"checksum/secret-" + r.values.Kubeconfig.Name: r.values.Kubeconfig.Checksum,
-			}
-			deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
-				{
-					Name: "gardener-resource-manager",
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName:  r.values.Kubeconfig.Name,
-							DefaultMode: pointer.Int32(420),
-						},
+		if r.secrets.Server.Name != "" {
+			metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.Server.Name, r.secrets.Server.Checksum)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeNameCerts,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  r.secrets.Server.Name,
+						DefaultMode: pointer.Int32(420),
 					},
 				},
-			}
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = []corev1.VolumeMount{
-				{
-					MountPath: volumeMountPathKubeconfig,
-					Name:      "gardener-resource-manager",
-					ReadOnly:  true,
+			})
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+				MountPath: volumeMountPathCerts,
+				Name:      volumeNameCerts,
+				ReadOnly:  true,
+			})
+		}
+
+		if r.secrets.Kubeconfig.Name != "" {
+			metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.Kubeconfig.Name, r.secrets.Kubeconfig.Checksum)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeNameKubeconfig,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  r.secrets.Kubeconfig.Name,
+						DefaultMode: pointer.Int32(420),
+					},
 				},
-			}
+			})
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+				MountPath: volumeMountPathKubeconfig,
+				Name:      volumeNameKubeconfig,
+				ReadOnly:  true,
+			})
 		}
 
 		return nil
@@ -497,7 +520,10 @@ func (r *resourceManager) computeCommand() []string {
 	if r.values.TargetDisableCache != nil {
 		cmd = append(cmd, "--target-disable-cache")
 	}
-	if r.values.Kubeconfig != nil {
+	if r.secrets.Server.Name != "" {
+		cmd = append(cmd, fmt.Sprintf("--tls-cert-dir=%s", volumeMountPathCerts))
+	}
+	if r.secrets.Kubeconfig.Name != "" {
 		cmd = append(cmd, fmt.Sprintf("--target-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig))
 	}
 	return cmd
@@ -540,8 +566,7 @@ func (r *resourceManager) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 }
 
 func (r *resourceManager) getLabels() map[string]string {
-	partOfShootControlPlane := r.values.Kubeconfig != nil
-	if partOfShootControlPlane {
+	if partOfShootControlPlane := r.secrets.Kubeconfig.Name != ""; partOfShootControlPlane {
 		return utils.MergeStringMaps(appLabel(), map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
@@ -551,8 +576,7 @@ func (r *resourceManager) getLabels() map[string]string {
 }
 
 func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
-	partOfShootControlPlane := r.values.Kubeconfig != nil
-	if partOfShootControlPlane {
+	if partOfShootControlPlane := r.secrets.Kubeconfig.Name != ""; partOfShootControlPlane {
 		return utils.MergeStringMaps(appLabel(), map[string]string{
 			v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
 			v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
@@ -577,10 +601,14 @@ func (r *resourceManager) Wait(_ context.Context) error { return nil }
 func (r *resourceManager) WaitCleanup(_ context.Context) error { return nil }
 
 // SetSecrets sets the secrets for the gardener-resource-manager.
-func (r *resourceManager) SetSecrets(s Secrets) { r.values.Kubeconfig = &s.Kubeconfig }
+func (r *resourceManager) SetSecrets(s Secrets) { r.secrets = s }
 
 // Secrets is collection of secrets for the gardener-resource-manager.
 type Secrets struct {
-	// Kubeconfig enables the gardener-resource-manager to deploy resources into a different cluster than the one it is running in.
+	// Kubeconfig enables the gardener-resource-manager to deploy resources into a different cluster than the one it is
+	// running in.
 	Kubeconfig component.Secret
+	// Server is a secret containing a x509 TLS server certificate and key for the HTTPS server inside the
+	// gardener-resource-manager (which is used for webhooks).
+	Server component.Secret
 }
