@@ -163,6 +163,11 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 
 	if a.GetOperation() == admission.Delete {
 		shoot, convertIsSuccessful = a.GetOldObject().(*core.Shoot)
+		old, ok := a.GetOldObject().(*core.Shoot)
+		if !ok {
+			return apierrors.NewInternalError(errors.New("could not convert old resource into Shoot object"))
+		}
+		oldShoot = old
 	} else {
 		shoot, convertIsSuccessful = a.GetObject().(*core.Shoot)
 	}

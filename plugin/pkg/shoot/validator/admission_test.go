@@ -904,6 +904,17 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(context.TODO(), attrs, nil)
 						Expect(err).ToNot(HaveOccurred())
 					})
+
+					It("delete should pass even if the Seed specified in shoot manifest has non-tolerated taints", func() {
+						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).ToNot(HaveOccurred())
+					})
 				})
 
 				Context("seed capacity", func() {
