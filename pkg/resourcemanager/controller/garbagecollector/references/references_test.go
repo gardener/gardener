@@ -76,6 +76,8 @@ var _ = Describe("References", func() {
 
 			annotations = map[string]string{
 				"some-existing": "annotation",
+				"reference.resources.gardener.cloud/configmap-1234567": "cm0",
+				"reference.resources.gardener.cloud/secret-1234567":    "secret0",
 			}
 			podSpec = corev1.PodSpec{
 				Containers: []corev1.Container{
