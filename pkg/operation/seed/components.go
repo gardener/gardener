@@ -221,6 +221,6 @@ func defaultExternalAuthzServer(
 		c,
 		v1beta1constants.GardenNamespace,
 		image.String(),
-		1,
+		3,
 	), nil
 }

@@ -40,6 +40,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 )
 
 var _ = Describe("ExtAuthzServer", func() {
@@ -55,17 +56,19 @@ var _ = Describe("ExtAuthzServer", func() {
 		revisionHistoryLimit int32 = 1
 		maxSurge                   = intstr.FromInt(100)
 		maxUnavailable             = intstr.FromInt(0)
+		maxUnavailablePDB          = intstr.FromInt(1)
 		vpaUpdateMode              = autoscalingv1beta2.UpdateModeAuto
 
 		deploymentName = DeploymentName
 		serviceName    = DeploymentName
 		vpaName        = fmt.Sprintf("%s-vpa", DeploymentName)
 
-		expectedDeployment      *appsv1.Deployment
-		expectedDestinationRule *istionetworkingv1beta1.DestinationRule
-		expectedService         *corev1.Service
-		expectedVirtualService  *istionetworkingv1beta1.VirtualService
-		expectedVpa             *autoscalingv1beta2.VerticalPodAutoscaler
+		expectedDeployment          *appsv1.Deployment
+		expectedDestinationRule     *istionetworkingv1beta1.DestinationRule
+		expectedService             *corev1.Service
+		expectedVirtualService      *istionetworkingv1beta1.VirtualService
+		expectedVpa                 *autoscalingv1beta2.VerticalPodAutoscaler
+		expectedPodDisruptionBudget *policyv1beta1.PodDisruptionBudget
 	)
 
 	BeforeEach(func() {
@@ -76,6 +79,7 @@ var _ = Describe("ExtAuthzServer", func() {
 		Expect(corev1.AddToScheme(s)).To(Succeed())
 		Expect(appsv1.AddToScheme(s)).To(Succeed())
 		Expect(autoscalingv1beta2.AddToScheme(s)).To(Succeed())
+		Expect(policyv1beta1.AddToScheme(s)).To(Succeed())
 
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 
@@ -115,6 +119,24 @@ var _ = Describe("ExtAuthzServer", func() {
 						},
 					},
 					Spec: corev1.PodSpec{
+						Affinity: &corev1.Affinity{
+							PodAntiAffinity: &corev1.PodAntiAffinity{
+								RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+									{
+										LabelSelector: &metav1.LabelSelector{
+											MatchExpressions: []metav1.LabelSelectorRequirement{
+												{
+													Key:      "app",
+													Operator: "In",
+													Values:   []string{DeploymentName},
+												},
+											},
+										},
+										TopologyKey: "kubernetes.io/hostname",
+									},
+								},
+							},
+						},
 						AutomountServiceAccountToken: pointer.Bool(false),
 						PriorityClassName:            "system-cluster-critical",
 						DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
@@ -261,6 +283,22 @@ var _ = Describe("ExtAuthzServer", func() {
 		}
 	})
 
+	expectedPodDisruptionBudget = &policyv1beta1.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            deploymentName + "-pdb",
+			Namespace:       namespace,
+			ResourceVersion: "1",
+			Labels:          getLabels(),
+		},
+		TypeMeta: metav1.TypeMeta{Kind: "PodDisruptionBudget", APIVersion: "policy/v1beta1"},
+		Spec: policyv1beta1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &maxUnavailablePDB,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: getLabels(),
+			},
+		},
+	}
+
 	JustBeforeEach(func() {
 		defaultDepWaiter = NewExtAuthServer(c, namespace, image, replicas)
 	})
@@ -289,6 +327,10 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), actualVpa)).To(Succeed())
 			Expect(actualVpa).To(DeepEqual(expectedVpa))
 
+			actualPodDisruptionBudget := &policyv1beta1.PodDisruptionBudget{}
+			Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), actualPodDisruptionBudget)).To(Succeed())
+			Expect(actualPodDisruptionBudget).To(DeepEqual(expectedPodDisruptionBudget))
+
 		})
 
 		It("destroy succeeds", func() {
@@ -299,6 +341,7 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), &corev1.Service{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), &autoscalingv1beta2.VerticalPodAutoscaler{})).To(Succeed())
+			Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), &policyv1beta1.PodDisruptionBudget{})).To(Succeed())
 
 			Expect(defaultDepWaiter.Destroy(ctx)).To(Succeed())
 
@@ -307,6 +350,7 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), &corev1.Service{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), &autoscalingv1beta2.VerticalPodAutoscaler{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), &policyv1beta1.PodDisruptionBudget{})).To(BeNotFoundError())
 		})
 
 	})

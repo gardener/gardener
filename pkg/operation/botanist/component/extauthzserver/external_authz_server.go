@@ -30,6 +30,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -76,6 +77,7 @@ func (a *authServer) Deploy(ctx context.Context) error {
 		service         = a.emptyService()
 		virtualService  = a.emptyVirtualService()
 		vpa             = a.emptyVPA()
+		pdb             = a.emptyPDB()
 
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 	)
@@ -106,6 +108,24 @@ func (a *authServer) Deploy(ctx context.Context) error {
 					},
 				},
 				Spec: corev1.PodSpec{
+					Affinity: &corev1.Affinity{
+						PodAntiAffinity: &corev1.PodAntiAffinity{
+							RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+								{
+									LabelSelector: &metav1.LabelSelector{
+										MatchExpressions: []metav1.LabelSelectorRequirement{
+											{
+												Key:      "app",
+												Operator: "In",
+												Values:   []string{DeploymentName},
+											},
+										},
+									},
+									TopologyKey: "kubernetes.io/hostname",
+								},
+							},
+						},
+					},
 					AutomountServiceAccountToken: pointer.Bool(false),
 					PriorityClassName:            "system-cluster-critical",
 					DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
@@ -233,6 +253,23 @@ func (a *authServer) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pdb, func() error {
+		maxUnavailable := intstr.FromInt(1)
+
+		pdb.ObjectMeta = metav1.ObjectMeta{
+			Name:      DeploymentName + "-pdb",
+			Namespace: a.namespace,
+			Labels:    getLabels(),
+		}
+		pdb.Spec.MaxUnavailable = &maxUnavailable
+		pdb.Spec.Selector = &metav1.LabelSelector{
+			MatchLabels: getLabels(),
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -245,6 +282,7 @@ func (a *authServer) Destroy(ctx context.Context) error {
 		a.emptyService(),
 		a.emptyVirtualService(),
 		a.emptyVPA(),
+		a.emptyPDB(),
 	)
 }
 
@@ -269,4 +307,14 @@ func (a *authServer) emptyVirtualService() *networkingv1beta1.VirtualService {
 
 func (a *authServer) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-vpa", Namespace: a.namespace}}
+}
+
+func (a *authServer) emptyPDB() *policyv1beta1.PodDisruptionBudget {
+	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-pdb", Namespace: a.namespace}}
+}
+
+func getLabels() map[string]string {
+	return map[string]string{
+		v1beta1constants.LabelApp: DeploymentName,
+	}
 }
