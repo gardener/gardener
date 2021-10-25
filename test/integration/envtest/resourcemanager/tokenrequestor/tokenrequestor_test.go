@@ -74,7 +74,7 @@ var _ = Describe("TokenRequestor tests", func() {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
 		}).Should(BeNotFoundError())
 
-		secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "tokenrequestor"}
+		secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "token-requestor"}
 		Expect(testClient.Update(ctx, secret)).To(Succeed())
 
 		Eventually(func() error {
@@ -89,20 +89,18 @@ var _ = Describe("TokenRequestor tests", func() {
 	})
 
 	It("should behave correctly when: create w/ label, update w/o label, delete w/o label", func() {
-		secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "tokenrequestor"}
+		secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "token-requestor"}
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
 		}).Should(Succeed())
 
-		Expect(testClient.Delete(ctx, serviceAccount)).To(Succeed())
-
 		patch := client.MergeFrom(secret.DeepCopy())
 		secret.Labels = nil
 		Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 
-		Consistently(func() error {
+		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
 		}).Should(BeNotFoundError())
 
@@ -118,15 +116,10 @@ var _ = Describe("TokenRequestor tests", func() {
 		Consistently(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
 		}).Should(Succeed())
-
-		// Remove finalizers since the TokenRequestor will not act on this secret anymore
-		patch = client.MergeFrom(secret.DeepCopy())
-		secret.Finalizers = nil
-		Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 	})
 
 	It("should be able to authenticate with the created token", func() {
-		secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "tokenrequestor"}
+		secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "token-requestor"}
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
 		Eventually(func() error {
@@ -146,7 +139,9 @@ var _ = Describe("TokenRequestor tests", func() {
 		newClient, err = client.New(newRestConfig, client.Options{Scheme: kubernetesscheme.Scheme})
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(newClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(BeForbiddenError())
+		Eventually(func() error {
+			return newClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
+		}).Should(BeForbiddenError())
 	})
 
 	AfterEach(func() {

@@ -37,8 +37,7 @@ import (
 )
 
 const (
-	finalizerName             = "resources.gardener.cloud/tokenrequestor-controller"
-	layout                    = "2006-01-02T15:04:05.000Z"
+	finalizerName             = "resources.gardener.cloud/token-requestor"
 	defaultExpirationDuration = 12 * time.Hour
 	maxExpirationDuration     = 24 * time.Hour
 )
@@ -77,7 +76,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("could not fetch Secret: %w", err)
 	}
 
-	if secret.DeletionTimestamp != nil {
+	if secret.DeletionTimestamp != nil || !isRelevantSecret(secret) {
 		if shouldDeleteServiceAccount(secret) {
 			if err := r.deleteServiceAccount(ctx, secret); err != nil {
 				return reconcile.Result{}, err
@@ -158,7 +157,7 @@ func (r *reconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret,
 	}
 
 	secret.Data[resourcesv1alpha1.DataKeyToken] = []byte(token)
-	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(layout))
+	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
 
 	return r.client.Patch(ctx, secret, patch)
 }
@@ -179,13 +178,13 @@ func (r *reconciler) requeue(renewTimestamp string) (bool, time.Duration, error)
 		return false, 0, nil
 	}
 
-	renewTime, err := time.Parse(layout, renewTimestamp)
+	renewTime, err := time.Parse(time.RFC3339, renewTimestamp)
 	if err != nil {
 		return false, 0, fmt.Errorf("could not parse renew timestamp: %w", err)
 	}
 
-	if r.clock.Now().UTC().Before(renewTime) {
-		return true, renewTime.Sub(r.clock.Now().UTC()), nil
+	if r.clock.Now().UTC().Before(renewTime.UTC()) {
+		return true, renewTime.UTC().Sub(r.clock.Now().UTC()), nil
 	}
 
 	return false, 0, nil

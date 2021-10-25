@@ -35,7 +35,7 @@ import (
 )
 
 // ControllerName is the name of the controller.
-const ControllerName = "tokenrequestor-controller"
+const ControllerName = "token-requestor"
 
 // defaultControllerConfig is the default config for the controller.
 var defaultControllerConfig ControllerConfig
@@ -80,7 +80,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		&handler.EnqueueRequestForObject{},
 		predicate.Funcs{
 			CreateFunc:  func(e event.CreateEvent) bool { return isRelevantSecret(e.Object) },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantSecret(e.ObjectNew) },
+			UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantSecretUpdate(e.ObjectOld, e.ObjectNew) },
 			DeleteFunc:  func(e event.DeleteEvent) bool { return isRelevantSecret(e.Object) },
 			GenericFunc: func(e event.GenericEvent) bool { return false },
 		},
@@ -94,7 +94,7 @@ func AddToManager(mgr manager.Manager) error {
 
 // AddFlags adds the needed command line flags to the given FlagSet.
 func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.IntVar(&o.maxConcurrentWorkers, "tokenrequestor-max-concurrent-workers", 0, "number of worker threads for concurrent tokenrequestor reconciliations (default: 0)")
+	fs.IntVar(&o.maxConcurrentWorkers, "token-requestor-max-concurrent-workers", 0, "number of worker threads for concurrent token request reconciliations (default: 0)")
 }
 
 // Complete completes the given command line flags and set the defaultControllerConfig accordingly.
@@ -116,4 +116,8 @@ func isRelevantSecret(obj client.Object) bool {
 		return false
 	}
 	return secret.Labels != nil && secret.Labels[resourcesv1alpha1.ResourceManagerPurpose] == resourcesv1alpha1.LabelPurposeTokenRequest
+}
+
+func isRelevantSecretUpdate(oldObj, newObj client.Object) bool {
+	return isRelevantSecret(newObj) || (isRelevantSecret(oldObj) && !isRelevantSecret(newObj))
 }

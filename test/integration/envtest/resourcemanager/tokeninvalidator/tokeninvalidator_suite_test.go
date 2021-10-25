@@ -82,12 +82,10 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controllers and webhooks")
-	tokenInvalidatorControllerOpts := &tokeninvalidatorcontroller.ControllerOptions{}
-	Expect(tokenInvalidatorControllerOpts.Complete()).To(Succeed())
-	tokenInvalidatorControllerOpts.Completed().MaxConcurrentWorkers = 1
-	tokenInvalidatorControllerOpts.Completed().TargetCluster = mgr
-
-	Expect(tokeninvalidatorcontroller.AddToManager(mgr)).To(Succeed())
+	Expect(tokeninvalidatorcontroller.AddToManagerWithOptions(mgr, tokeninvalidatorcontroller.ControllerConfig{
+		MaxConcurrentWorkers: 5,
+		TargetCluster:        mgr,
+	})).To(Succeed())
 	Expect(tokeninvalidatorwebhook.AddToManager(mgr)).To(Succeed())
 
 	By("starting manager")

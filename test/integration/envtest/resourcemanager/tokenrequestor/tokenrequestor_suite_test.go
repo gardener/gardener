@@ -71,12 +71,10 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controllers and webhooks")
-	tokenRequestorControllerOpts := &tokenrequestor.ControllerOptions{}
-	Expect(tokenRequestorControllerOpts.Complete()).To(Succeed())
-	tokenRequestorControllerOpts.Completed().TargetCluster = mgr
-	tokenRequestorControllerOpts.Completed().MaxConcurrentWorkers = 5
-
-	Expect(tokenrequestor.AddToManager(mgr)).To(Succeed())
+	Expect(tokenrequestor.AddToManagerWithOptions(mgr, tokenrequestor.ControllerConfig{
+		MaxConcurrentWorkers: 5,
+		TargetCluster:        mgr,
+	})).To(Succeed())
 
 	By("starting manager")
 	var mgrContext context.Context

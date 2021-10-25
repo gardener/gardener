@@ -377,7 +377,7 @@ It was created to handle the special case of issuing tokens to pods that run in 
 
 #### Reconciliation Loop
 
-This controller reconciles secrets in all namespaces in the targetCluster with the label: `resources.gardener.cloud/purpose: tokenrequestor`.
+This controller reconciles secrets in all namespaces in the targetCluster with the label: `resources.gardener.cloud/purpose: token-requestor`.
 See [here](../../example/resource-manager/30-secret-tokenrequestor.yaml) for an example of the secret.
 
 The controller ensures a `ServiceAccount` exists in the target cluster as specified in the annotations of the `Secret` in the source cluster:

@@ -54,9 +54,17 @@ var _ = BeforeSuite(func() {
 	By("starting test environment")
 	var err error
 	testEnv = &envtest.Environment{}
+
 	restConfig, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(restConfig).ToNot(BeNil())
+
+	testClient, err = client.New(restConfig, client.Options{Scheme: k8sscheme.Scheme})
+	Expect(err).ToNot(HaveOccurred())
+
+	certFile, err = os.ReadFile("testdata/dummy.crt")
+	Expect(err).To(BeNil())
+	Expect(certFile).ToNot(BeEmpty())
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -65,22 +73,15 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	testClient, err = client.New(restConfig, client.Options{Scheme: k8sscheme.Scheme})
-	Expect(err).ToNot(HaveOccurred())
-
-	err = rootcapublisher.AddToManagerWithOptions(mgr, rootcapublisher.ControllerConfig{
+	By("registering controllers and webhooks")
+	Expect(rootcapublisher.AddToManagerWithOptions(mgr, rootcapublisher.ControllerConfig{
 		MaxConcurrentWorkers: 1,
 		RootCAPath:           "testdata/dummy.crt",
 		TargetCluster:        mgr,
-	})
-	Expect(err).ToNot(HaveOccurred())
+	})).ToNot(HaveOccurred())
 
 	var mgrContext context.Context
 	mgrContext, mgrCancel = context.WithCancel(ctx)
-
-	certFile, err = os.ReadFile("testdata/dummy.crt")
-	Expect(err).To(BeNil())
-	Expect(certFile).ToNot(BeEmpty())
 
 	By("start manager")
 	go func() {

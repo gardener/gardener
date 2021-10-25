@@ -47,7 +47,7 @@ spec:
         - --health-sync-period={{ .Values.controllers.managedResourceHealth.syncPeriod }}
         - --health-max-concurrent-workers={{ .Values.controllers.managedResourceHealth.concurrentSyncs }}
         - --token-invalidator-max-concurrent-workers={{ .Values.controllers.tokenInvalidator.concurrentSyncs }}
-        - --tokenrequestor-max-concurrent-workers={{ .Values.controllers.tokenRequestor.concurrentSyncs }}
+        - --token-requestor-max-concurrent-workers={{ .Values.controllers.tokenRequestor.concurrentSyncs }}
         - --always-update={{ .Values.controllers.managedResource.alwaysUpdate }}
         {{- if .Values.targetKubeconfig }}
         - --target-kubeconfig=/etc/gardener-resource-manager/target-kubeconfig/kubeconfig.yaml

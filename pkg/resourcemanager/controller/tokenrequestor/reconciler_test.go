@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -70,13 +72,20 @@ var _ = Describe("Reconciler", func() {
 						return false, nil, fmt.Errorf("subresource should be 'token'")
 					}
 
-					cAction, _ := action.(testing.CreateAction)
-					tr, _ := cAction.GetObject().(*authenticationv1.TokenRequest)
+					cAction, ok := action.(testing.CreateAction)
+					if !ok {
+						return false, nil, fmt.Errorf("could not convert action (type %T) to type testing.CreateAction", cAction)
+					}
+
+					tokenRequest, ok := cAction.GetObject().(*authenticationv1.TokenRequest)
+					if !ok {
+						return false, nil, fmt.Errorf("could not convert object (type %T) to type *authenticationv1.TokenRequest", cAction.GetObject())
+					}
 
 					return true, &authenticationv1.TokenRequest{
 						Status: authenticationv1.TokenRequestStatus{
 							Token:               token,
-							ExpirationTimestamp: metav1.Time{Time: fakeNow.Add(time.Duration(*tr.Spec.ExpirationSeconds) * time.Second)},
+							ExpirationTimestamp: metav1.Time{Time: fakeNow.Add(time.Duration(*tokenRequest.Spec.ExpirationSeconds) * time.Second)},
 						},
 					}, nil
 				})
@@ -118,6 +127,9 @@ var _ = Describe("Reconciler", func() {
 						"serviceaccount.resources.gardener.cloud/name":      serviceAccountName,
 						"serviceaccount.resources.gardener.cloud/namespace": serviceAccountNamespace,
 					},
+					Labels: map[string]string{
+						"resources.gardener.cloud/purpose": "token-requestor",
+					},
 				},
 			}
 			serviceAccount = &corev1.ServiceAccount{
@@ -146,12 +158,12 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
-			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(layout)))
+			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 		})
 
 		It("should requeue because renew timestamp has not been reached", func() {
 			delay := time.Minute
-			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(delay).Format(layout))
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(delay).Format(time.RFC3339))
 
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 
@@ -162,7 +174,7 @@ var _ = Describe("Reconciler", func() {
 
 		It("should issue a new token since the renew timestamp is in the past", func() {
 			expiredSince := time.Minute
-			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(-expiredSince).Format(layout))
+			metav1.SetMetaDataAnnotation(&secret.ObjectMeta, "serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(-expiredSince).Format(time.RFC3339))
 
 			token = "new-token"
 			fakeCreateServiceAccountToken()
@@ -176,7 +188,7 @@ var _ = Describe("Reconciler", func() {
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
-			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(layout)))
+			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 		})
 
 		It("should reconcile the service account settings", func() {
@@ -194,6 +206,20 @@ var _ = Describe("Reconciler", func() {
 			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
 		})
 
+		It("should delete the service account if the secret does not have the purpose label", func() {
+			Expect(targetClient.Create(ctx, serviceAccount)).To(Succeed())
+			secret.Labels = nil
+			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+
+			result, err := ctrl.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(reconcile.Result{}))
+
+			Eventually(func() error {
+				return targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
+			}).Should(BeNotFoundError())
+		})
+
 		It("should use the provided token expiration duration", func() {
 			expirationDuration := 10 * time.Minute
 			expectedRenewDuration = 8 * time.Minute
@@ -207,7 +233,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(layout)))
+			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
 		})
 
 		It("should always renew the token after 24h", func() {
@@ -231,7 +257,7 @@ var _ = Describe("Reconciler", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-			Expect(secret.Finalizers).To(ConsistOf("resources.gardener.cloud/tokenrequestor-controller"))
+			Expect(secret.Finalizers).To(ConsistOf("resources.gardener.cloud/token-requestor"))
 		})
 
 		It("should remove the finalizer from the secret after deleting the ServiceAccount", func() {
