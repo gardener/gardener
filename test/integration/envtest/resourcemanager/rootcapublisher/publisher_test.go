@@ -49,31 +49,37 @@ var _ = Describe("Root CA Controller tests", func() {
 		}).Should(Succeed())
 	})
 
-	It("should successfully create a config map on creating a namespace", func() {})
+	It("should successfully create a config map on creating a namespace", func() {
+		Eventually(func() map[string]string {
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+
+			return configMap.Data
+		}).Should(SatisfyAll(Not(BeNil()), HaveKeyWithValue("ca.crt", "    -----BEGIN CERTIFICATE-----\n    ...\n    -----END CERTIFICATE-----\n")))
+	})
 
 	It("should successfully update the config map if manual update occur", func() {
 		configMap.Data = nil
 		Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
 		Eventually(func() map[string]string {
-			if err := testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
-				return nil
-			}
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 
 			return configMap.Data
-		}).Should(Not(BeNil()))
+		}).Should(SatisfyAll(Not(BeNil()), HaveKeyWithValue("ca.crt", "    -----BEGIN CERTIFICATE-----\n    ...\n    -----END CERTIFICATE-----\n")))
 	})
 
-	It("should keep the config map in the desired state after delete of the config map", func() {
+	It("should recreate the config map if it gets deleted", func() {
 		Expect(testClient.Delete(ctx, configMap)).To(Succeed())
+
 		Eventually(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
 		}).Should(BeNotFoundError())
 
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-		}).Should(Succeed())
+		Eventually(func() map[string]string {
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 
+			return configMap.Data
+		}).Should(SatisfyAll(Not(BeNil()), HaveKeyWithValue("ca.crt", "    -----BEGIN CERTIFICATE-----\n    ...\n    -----END CERTIFICATE-----\n")))
 	})
 
 	It("should ignore config maps with different name", func() {
@@ -90,9 +96,8 @@ var _ = Describe("Root CA Controller tests", func() {
 		cm.Data["foo"] = "newbar"
 
 		Consistently(func() map[string]string {
-			if err := testClient.Patch(ctx, cm, client.MergeFrom(baseCM)); err != nil {
-				return nil
-			}
+			Expect(testClient.Patch(ctx, cm, client.MergeFrom(baseCM))).To(Succeed())
+
 			return cm.Data
 		}).Should(SatisfyAll(HaveLen(1), HaveKeyWithValue("foo", "newbar")))
 	})
@@ -103,9 +108,8 @@ var _ = Describe("Root CA Controller tests", func() {
 		Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
 		Consistently(func() map[string]string {
-			if err := testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap); err != nil {
-				return nil
-			}
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+
 			return configMap.Data
 		}).Should(BeNil())
 	})
