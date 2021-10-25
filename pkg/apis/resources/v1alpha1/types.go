@@ -68,8 +68,10 @@ const (
 	ServiceAccountTokenRenewTimestamp = "serviceaccount.resources.gardener.cloud/token-renew-timestamp"
 	// ServiceAccountSkipDeletion is the key of an annotation of a secret whose value contains whether the serviceaccount referenced by this secret should be deleted
 	ServiceAccountSkipDeletion = "serviceaccount.resources.gardener.cloud/skip-deletion"
-	// DataKeyToken is the data key whos value contains the service account token
+	// DataKeyToken is the data key whose value contains a service account token.
 	DataKeyToken = "token"
+	// DataKeyKubeconfig is the data key whose value contains a kubeconfig with a service account token.
+	DataKeyKubeconfig = "kubeconfig"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

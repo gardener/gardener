@@ -24,8 +24,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/clock"
 	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -156,7 +159,9 @@ func (r *reconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret,
 		secret.Data = make(map[string][]byte, 1)
 	}
 
-	secret.Data[resourcesv1alpha1.DataKeyToken] = []byte(token)
+	if err := updateTokenInSecretData(secret.Data, token); err != nil {
+		return err
+	}
 	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
 
 	return r.client.Patch(ctx, secret, patch)
@@ -222,4 +227,39 @@ func getServiceAccountFromAnnotations(annotations map[string]string) *corev1.Ser
 			Namespace: annotations[resourcesv1alpha1.ServiceAccountNamespace],
 		},
 	}
+}
+
+func updateTokenInSecretData(data map[string][]byte, token string) error {
+	if _, ok := data[resourcesv1alpha1.DataKeyKubeconfig]; !ok {
+		data[resourcesv1alpha1.DataKeyToken] = []byte(token)
+		return nil
+	}
+
+	kubeconfig := &clientcmdv1.Config{}
+	if _, _, err := clientcmdlatest.Codec.Decode(data[resourcesv1alpha1.DataKeyKubeconfig], nil, kubeconfig); err != nil {
+		return err
+	}
+
+	var userName string
+	for _, context := range kubeconfig.Contexts {
+		if context.Name == kubeconfig.CurrentContext {
+			userName = context.Context.AuthInfo
+			break
+		}
+	}
+
+	for i, users := range kubeconfig.AuthInfos {
+		if users.Name == userName {
+			kubeconfig.AuthInfos[i].AuthInfo.Token = token
+			break
+		}
+	}
+
+	kubeconfigEncoded, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
+	if err != nil {
+		return err
+	}
+
+	data[resourcesv1alpha1.DataKeyKubeconfig] = kubeconfigEncoded
+	return nil
 }

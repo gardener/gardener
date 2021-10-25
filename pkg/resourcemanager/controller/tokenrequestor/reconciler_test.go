@@ -144,7 +144,7 @@ var _ = Describe("Reconciler", func() {
 			}}
 		})
 
-		It("should generate a new service account, a new token and requeue", func() {
+		It("should create a new service account, generate a new token and requeue", func() {
 			fakeCreateServiceAccountToken()
 			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
 			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(MatchError(ContainSubstring("not found")))
@@ -159,6 +159,38 @@ var _ = Describe("Reconciler", func() {
 			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
 			Expect(secret.Data).To(HaveKeyWithValue("token", []byte(token)))
 			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
+		})
+
+		It("should create a new service account, generate a new token for the kubeconfig and requeue", func() {
+			secret.Data = map[string][]byte{"kubeconfig": newKubeconfigRaw("")}
+
+			fakeCreateServiceAccountToken()
+			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(MatchError(ContainSubstring("not found")))
+
+			result, err := ctrl.Reconcile(ctx, request)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(reconcile.Result{Requeue: true, RequeueAfter: expectedRenewDuration}))
+
+			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(Succeed())
+			Expect(serviceAccount.AutomountServiceAccountToken).To(PointTo(BeFalse()))
+
+			Expect(sourceClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.Data).NotTo(HaveKey("token"))
+			Expect(secret.Data).To(HaveKeyWithValue("kubeconfig", newKubeconfigRaw(token)))
+			Expect(secret.Annotations).To(HaveKeyWithValue("serviceaccount.resources.gardener.cloud/token-renew-timestamp", fakeNow.Add(expectedRenewDuration).Format(time.RFC3339)))
+		})
+
+		It("should fail when the provided kubeconfig cannot be decoded", func() {
+			secret.Data = map[string][]byte{"kubeconfig": []byte("some non-decodeable stuff")}
+
+			fakeCreateServiceAccountToken()
+			Expect(sourceClient.Create(ctx, secret)).To(Succeed())
+			Expect(targetClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)).To(MatchError(ContainSubstring("not found")))
+
+			result, err := ctrl.Reconcile(ctx, request)
+			Expect(err).To(MatchError(ContainSubstring("cannot unmarshal string into Go value of type")))
+			Expect(result).To(Equal(reconcile.Result{}))
 		})
 
 		It("should requeue because renew timestamp has not been reached", func() {
@@ -324,3 +356,25 @@ var _ = Describe("Reconciler", func() {
 		})
 	})
 })
+
+func newKubeconfigRaw(token string) []byte {
+	return []byte(`apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: AAAA
+    server: some-server-url
+  name: shoot--foo--bar
+contexts:
+- context:
+    cluster: shoot--foo--bar
+    user: shoot--foo--bar-token
+  name: shoot--foo--bar
+current-context: shoot--foo--bar
+kind: Config
+preferences: {}
+users:
+- name: shoot--foo--bar-token
+  user:
+    token: ` + token + `
+`)
+}

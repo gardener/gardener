@@ -391,7 +391,34 @@ The requested tokens will act with the privileges which are assigned to this `Se
 
 The controller will then request a token via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) and populate it into the `.data.token` field to the `Secret` in the source cluster.
 
-It also adds an annotation to the `Secret` to keep track when to renew the token before it expires.
+Alternatively, the client can provide a raw kubeconfig (in YAML or JSON format) via the `Secret`'s `.data.kubeconfig` field.
+The controller will then populate the requested token in the kubeconfig.
+For example, if `.data.kubeconfig` is
+
+```yaml
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: AAAA
+    server: some-server-url
+  name: shoot--foo--bar
+contexts:
+- context:
+    cluster: shoot--foo--bar
+    user: shoot--foo--bar-token
+  name: shoot--foo--bar
+current-context: shoot--foo--bar
+kind: Config
+preferences: {}
+users:
+- name: shoot--foo--bar-token
+  user:
+    token: ""
+```
+
+then the `.users[0].user.token` field of the kubeconfig will be updated accordingly. 
+
+The controller also adds an annotation to the `Secret` to keep track when to renew the token before it expires.
 By default, the tokens are issued to expire after 12 hours. The expiration time can be set with the following annotation:
 
 ```yaml
