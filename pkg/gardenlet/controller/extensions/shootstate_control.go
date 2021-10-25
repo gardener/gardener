@@ -48,7 +48,6 @@ type ShootStateControl struct {
 	seedClient      kubernetes.Interface
 	log             *logrus.Logger
 	recorder        record.EventRecorder
-	decoder         runtime.Decoder
 }
 
 // NewShootStateControl creates a new instance of ShootStateControl.
@@ -58,7 +57,6 @@ func NewShootStateControl(k8sGardenClient, seedClient kubernetes.Interface, log 
 		seedClient:      seedClient,
 		log:             log,
 		recorder:        recorder,
-		decoder:         extensions.NewGardenDecoder(),
 	}
 }
 
@@ -254,7 +252,7 @@ func (s *ShootStateControl) getClusterFromRequest(ctx context.Context, req recon
 }
 
 func (s *ShootStateControl) getShootStateFromCluster(ctx context.Context, cluster *extensionsv1alpha1.Cluster) (*gardencorev1alpha1.ShootState, error) {
-	shoot, err := extensions.ShootFromCluster(s.decoder, cluster)
+	shoot, err := extensions.ShootFromCluster(cluster)
 	if err != nil {
 		return nil, err
 	}

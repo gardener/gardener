@@ -32,7 +32,6 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -45,8 +44,7 @@ const RequeueAfter = time.Minute
 type reconciler struct {
 	logger logr.Logger
 
-	client  client.Client
-	decoder runtime.Decoder
+	client client.Client
 
 	csiMigrationKubernetesVersion       string
 	storageClassNameToLegacyProvisioner map[string]string
@@ -57,7 +55,6 @@ type reconciler struct {
 func NewReconciler(csiMigrationKubernetesVersion string, storageClassNameToLegacyProvisioner map[string]string) reconcile.Reconciler {
 	return &reconciler{
 		logger:                              log.Log.WithName(ControllerName),
-		decoder:                             extensionscontroller.NewGardenDecoder(),
 		csiMigrationKubernetesVersion:       csiMigrationKubernetesVersion,
 		storageClassNameToLegacyProvisioner: storageClassNameToLegacyProvisioner,
 	}
@@ -77,7 +74,7 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	shoot, err := extensionscontroller.ShootFromCluster(r.decoder, cluster)
+	shoot, err := extensionscontroller.ShootFromCluster(cluster)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

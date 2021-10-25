@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -113,15 +112,9 @@ var _ = Describe("Predicate", func() {
 	)
 
 	Describe("#ClusterShootProviderType", func() {
-		var decoder runtime.Decoder
-
-		BeforeEach(func() {
-			decoder = extensionscontroller.NewGardenDecoder()
-		})
-
 		It("should match the type", func() {
 			var (
-				predicate                                           = ClusterShootProviderType(decoder, extensionType)
+				predicate                                           = ClusterShootProviderType(extensionType)
 				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version, nil)
 			)
 
@@ -133,7 +126,7 @@ var _ = Describe("Predicate", func() {
 
 		It("should not match the type", func() {
 			var (
-				predicate                                           = ClusterShootProviderType(decoder, extensionType)
+				predicate                                           = ClusterShootProviderType(extensionType)
 				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents("other-extension-type", version, nil)
 			)
 
@@ -145,15 +138,9 @@ var _ = Describe("Predicate", func() {
 	})
 
 	Describe("#ClusterShootKubernetesVersionForCSIMigrationAtLeast", func() {
-		var decoder runtime.Decoder
-
-		BeforeEach(func() {
-			decoder = extensionscontroller.NewGardenDecoder()
-		})
-
 		It("should match the minimum kubernetes version", func() {
 			var (
-				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder, version)
+				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(version)
 				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, version, nil)
 			)
 
@@ -165,7 +152,7 @@ var _ = Describe("Predicate", func() {
 
 		It("should not match the minimum kubernetes version", func() {
 			var (
-				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder, version)
+				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(version)
 				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17", nil)
 			)
 
@@ -177,7 +164,7 @@ var _ = Describe("Predicate", func() {
 
 		It("should not match minimum kubernetes version due to overwrite", func() {
 			var (
-				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder, version)
+				predicate                                           = ClusterShootKubernetesVersionForCSIMigrationAtLeast(version)
 				createEvent, updateEvent, deleteEvent, genericEvent = computeEvents(extensionType, "1.17", pointer.String("1.17"))
 			)
 
