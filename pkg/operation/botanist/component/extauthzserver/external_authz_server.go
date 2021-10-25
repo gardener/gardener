@@ -255,12 +255,7 @@ func (a *authServer) Deploy(ctx context.Context) error {
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pdb, func() error {
 		maxUnavailable := intstr.FromInt(1)
-
-		pdb.ObjectMeta = metav1.ObjectMeta{
-			Name:      DeploymentName + "-pdb",
-			Namespace: a.namespace,
-			Labels:    getLabels(),
-		}
+		pdb.Labels = getLabels()
 		pdb.Spec.MaxUnavailable = &maxUnavailable
 		pdb.Spec.Selector = &metav1.LabelSelector{
 			MatchLabels: getLabels(),
