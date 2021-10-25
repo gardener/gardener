@@ -63,6 +63,8 @@ spec:
           value: {{ .Values.endpoint }}
         - name: OPENVPN_PORT
           value: {{ .Values.port | quote }}
+        - name: REVERSED_VPN_HEADER
+          value: {{ .Values.reversedVPN.header }}
       {{- end }}
         - name: SERVICE_NETWORK
           value: {{ .Values.serviceNetwork }}
