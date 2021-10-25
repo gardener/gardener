@@ -16,6 +16,7 @@ package rootcapublisher_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
@@ -42,6 +43,7 @@ var (
 	restConfig *rest.Config
 	testEnv    *envtest.Environment
 	mgrCancel  context.CancelFunc
+	certFile   []byte
 
 	testClient client.Client
 )
@@ -75,6 +77,10 @@ var _ = BeforeSuite(func() {
 
 	var mgrContext context.Context
 	mgrContext, mgrCancel = context.WithCancel(ctx)
+
+	certFile, err = os.ReadFile("testdata/dummy.crt")
+	Expect(err).To(BeNil())
+	Expect(certFile).ToNot(BeEmpty())
 
 	By("start manager")
 	go func() {
