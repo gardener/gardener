@@ -523,10 +523,7 @@ func (e *etcd) Deploy(ctx context.Context) error {
 }
 
 func (e *etcd) Destroy(ctx context.Context) error {
-	if err := gutil.ConfirmDeletion(ctx, e.client, e.etcd); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
+	if err := gutil.ConfirmDeletion(ctx, e.client, e.etcd); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
