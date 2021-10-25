@@ -18,8 +18,8 @@ const (
 	// SimpleLoadDeploymentName is the name of the simple load deployment template
 	SimpleLoadDeploymentName = "simple-load-deployment.yaml.tpl"
 
-	// NginxDaemonSetName is the name of the nginx deamonset template
-	NginxDaemonSetName = "network-nginx-deamonset.yaml.tpl"
+	// NginxDaemonSetName is the name of the nginx daemonset template
+	NginxDaemonSetName = "network-nginx-daemonset.yaml.tpl"
 
 	// GuestbookAppName is the name if the guestbook app deployment template
 	GuestbookAppName = "guestbook-app.yaml.tpl"
