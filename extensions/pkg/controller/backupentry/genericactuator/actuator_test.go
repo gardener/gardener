@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	mockgenericactuator "github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator/mock"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	"github.com/golang/mock/gomock"
@@ -79,11 +80,11 @@ var _ = Describe("Actuator", func() {
 			"foo":        []byte("bar"),
 		}
 
-		etcdBackupSecretKey = client.ObjectKey{Namespace: shootTechnicalID, Name: genericactuator.BackupSecretName}
+		etcdBackupSecretKey = client.ObjectKey{Namespace: shootTechnicalID, Name: v1beta1constants.BackupSecretName}
 		etcdBackupSecret    = &corev1.Secret{
 			TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            genericactuator.BackupSecretName,
+				Name:            v1beta1constants.BackupSecretName,
 				Namespace:       shootTechnicalID,
 				ResourceVersion: "1",
 			},

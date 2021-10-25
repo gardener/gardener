@@ -109,8 +109,8 @@ func (r *reconciler) reconcile(ctx context.Context, bastion *extensionsv1alpha1.
 
 	r.logger.Info("Starting the reconciliation of bastion", "bastion", kutil.ObjectName(bastion))
 	if err := r.actuator.Reconcile(ctx, bastion, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, bastion, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling bastion")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling bastion")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled bastion"); err != nil {
@@ -134,8 +134,8 @@ func (r *reconciler) delete(ctx context.Context, bastion *extensionsv1alpha1.Bas
 	r.logger.Info("Starting the deletion of bastion", "bastion", kutil.ObjectName(bastion))
 
 	if err := r.actuator.Delete(ctx, bastion, cluster); err != nil {
-		_ = r.statusUpdater.Error(ctx, bastion, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error deleting bastion")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, bastion, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error deleting bastion")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, bastion, operationType, "Successfully reconciled bastion"); err != nil {

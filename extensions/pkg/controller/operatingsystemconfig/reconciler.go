@@ -152,21 +152,21 @@ func (r *reconciler) reconcile(ctx context.Context, osc *extensionsv1alpha1.Oper
 	r.logger.Info("Starting the reconciliation of operatingsystemconfig", "operatingsystemconfig", kutil.ObjectName(osc))
 	userData, command, units, err := r.actuator.Reconcile(ctx, osc)
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Error reconciling operatingsystemconfig")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Error reconciling operatingsystemconfig")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), operationType, "Could not apply secret for generated cloud config")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), operationType, "Could not apply secret for generated cloud config")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
 	setOSCStatus(osc, secret, command, units)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
+		return reconcilerutils.ReconcileErr(err)
 	}
 	if err := r.statusUpdater.Success(ctx, osc, operationType, "Successfully reconciled operatingsystemconfig"); err != nil {
 		return reconcile.Result{}, err
@@ -187,21 +187,21 @@ func (r *reconciler) restore(ctx context.Context, osc *extensionsv1alpha1.Operat
 	r.logger.Info("Starting the restoration of operatingsystemconfig", "operatingsystemconfig", kutil.ObjectName(osc))
 	userData, command, units, err := r.actuator.Restore(ctx, osc)
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring operatingsystemconfig")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Error restoring operatingsystemconfig")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	secret, err := r.reconcileOSCResultSecret(ctx, osc, userData)
 	if err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not apply secret for generated cloud config")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	patch := client.MergeFrom(osc.DeepCopy())
 	setOSCStatus(osc, secret, command, units)
 	if err := r.client.Status().Patch(ctx, osc, patch); err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeRestore, "Could not update units and secret ref.")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeRestore, "Successfully restored operatingsystemconfig"); err != nil {
@@ -227,8 +227,8 @@ func (r *reconciler) delete(ctx context.Context, osc *extensionsv1alpha1.Operati
 
 	r.logger.Info("Starting the deletion of operatingsystemconfig", "operatingsystemconfig", kutil.ObjectName(osc))
 	if err := r.actuator.Delete(ctx, osc); err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting operatingsystemconfig")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeDelete, "Error deleting operatingsystemconfig")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeDelete, "Successfully deleted operatingsystemconfig"); err != nil {
@@ -255,8 +255,8 @@ func (r *reconciler) migrate(ctx context.Context, osc *extensionsv1alpha1.Operat
 
 	r.logger.Info("Starting the migration of operatingsystemconfig", "operatingsystemconfig", kutil.ObjectName(osc))
 	if err := r.actuator.Migrate(ctx, osc); err != nil {
-		_ = r.statusUpdater.Error(ctx, osc, extensionscontroller.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating operatingsystemconfig")
-		return extensionscontroller.ReconcileErr(err)
+		_ = r.statusUpdater.Error(ctx, osc, reconcilerutils.ReconcileErrCauseOrErr(err), gardencorev1beta1.LastOperationTypeMigrate, "Error migrating operatingsystemconfig")
+		return reconcilerutils.ReconcileErr(err)
 	}
 
 	if err := r.statusUpdater.Success(ctx, osc, gardencorev1beta1.LastOperationTypeMigrate, "Successfully migrated operatingsystemconfig"); err != nil {

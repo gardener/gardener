@@ -17,10 +17,10 @@ package worker
 import (
 	"context"
 
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	errorutils "github.com/gardener/gardener/pkg/controllerutils/reconciler"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -85,7 +85,7 @@ func (r *stateReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 	if err := r.actuator.Reconcile(ctx, worker); err != nil {
 		msg := "Error updating worker state"
 		logger.Error(err, msg)
-		return extensionscontroller.ReconcileErr(err)
+		return errorutils.ReconcileErr(err)
 	}
 
 	msg := "Successfully updated worker state"

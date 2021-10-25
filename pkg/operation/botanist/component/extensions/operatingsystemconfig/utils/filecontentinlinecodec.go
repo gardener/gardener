@@ -17,8 +17,8 @@ package utils
 import (
 	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cloudinit"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 )
 
 // FileContentInlineCodec contains methods for encoding and decoding byte slices
@@ -78,13 +78,13 @@ func (c *fileContentInlineCodec) Decode(fci *extensionsv1alpha1.FileContentInlin
 	return data, nil
 }
 
-func getFileCodec(encoding string) (cloudinit.FileCodec, error) {
+func getFileCodec(encoding string) (extensionsv1alpha1helper.FileCodec, error) {
 	if encoding == "" {
 		return nil, nil
 	}
-	fileCodecID, err := cloudinit.ParseFileCodecID(encoding)
+	fileCodecID, err := extensionsv1alpha1helper.ParseFileCodecID(encoding)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse file codec ID '%s': %w", encoding, err)
 	}
-	return cloudinit.FileCodecForID(fileCodecID), nil
+	return extensionsv1alpha1helper.FileCodecForID(fileCodecID), nil
 }

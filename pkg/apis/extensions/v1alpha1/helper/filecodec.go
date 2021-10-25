@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloudinit
+package helper
 
 import (
 	"bytes"
@@ -20,24 +20,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 )
 
-// FileCodecID is the id of a FileCodec for cloud-init scripts.
-type FileCodecID string
-
-const (
-	// B64FileCodecID is the base64 file codec id.
-	B64FileCodecID FileCodecID = "b64"
-	// GZIPFileCodecID is the gzip file codec id.
-	GZIPFileCodecID FileCodecID = "gzip"
-	// GZIPB64FileCodecID is the gzip combined with base64 codec id.
-	GZIPB64FileCodecID FileCodecID = "gzip+b64"
-)
-
-var validFileCodecIDs = map[FileCodecID]struct{}{
-	B64FileCodecID:     {},
-	GZIPFileCodecID:    {},
-	GZIPB64FileCodecID: {},
+var validFileCodecIDs = map[extensionsv1alpha1.FileCodecID]struct{}{
+	extensionsv1alpha1.B64FileCodecID:     {},
+	extensionsv1alpha1.GZIPFileCodecID:    {},
+	extensionsv1alpha1.GZIPB64FileCodecID: {},
 }
 
 // FileCodec is a codec to en- and decode data in cloud-init scripts with.j
@@ -93,21 +83,21 @@ func (gzipFileCodec) Decode(data []byte) ([]byte, error) {
 }
 
 // ParseFileCodecID tries to parse a string into a FileCodecID.
-func ParseFileCodecID(s string) (FileCodecID, error) {
-	id := FileCodecID(s)
+func ParseFileCodecID(s string) (extensionsv1alpha1.FileCodecID, error) {
+	id := extensionsv1alpha1.FileCodecID(s)
 	if _, ok := validFileCodecIDs[id]; !ok {
 		return id, fmt.Errorf("invalid file codec id %q", id)
 	}
 	return id, nil
 }
 
-var fileCodecIDToFileCodec = map[FileCodecID]FileCodec{
-	B64FileCodecID:  B64FileCodec,
-	GZIPFileCodecID: GZIPFileCodec,
+var fileCodecIDToFileCodec = map[extensionsv1alpha1.FileCodecID]FileCodec{
+	extensionsv1alpha1.B64FileCodecID:  B64FileCodec,
+	extensionsv1alpha1.GZIPFileCodecID: GZIPFileCodec,
 }
 
 // FileCodecForID retrieves the FileCodec for the given FileCodecID.
-func FileCodecForID(id FileCodecID) FileCodec {
+func FileCodecForID(id extensionsv1alpha1.FileCodecID) FileCodec {
 	return fileCodecIDToFileCodec[id]
 }
 

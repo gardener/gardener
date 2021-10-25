@@ -2959,6 +2959,11 @@ FileContent
 </tr>
 </tbody>
 </table>
+<h3 id="extensions.gardener.cloud/v1alpha1.FileCodecID">FileCodecID
+(<code>string</code> alias)</p></h3>
+<p>
+<p>FileCodecID is the id of a FileCodec for cloud-init scripts.</p>
+</p>
 <h3 id="extensions.gardener.cloud/v1alpha1.FileContent">FileContent
 </h3>
 <p>

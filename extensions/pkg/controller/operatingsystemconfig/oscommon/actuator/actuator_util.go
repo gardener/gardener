@@ -17,9 +17,9 @@ package actuator
 import (
 	"context"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cloudinit"
 	commonosgenerator "github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/generator"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	extensionsv1alpha1helper "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1/helper"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
@@ -69,7 +69,7 @@ func DataForFileContent(ctx context.Context, c client.Client, namespace string, 
 		if len(inline.Encoding) == 0 {
 			return []byte(inline.Data), nil
 		}
-		return cloudinit.Decode(inline.Encoding, []byte(inline.Data))
+		return extensionsv1alpha1helper.Decode(inline.Encoding, []byte(inline.Data))
 	}
 
 	secret := &corev1.Secret{}

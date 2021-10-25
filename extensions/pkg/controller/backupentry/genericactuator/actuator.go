@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -83,7 +84,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 	}
 
 	backupSecretData := backupSecret.DeepCopy().Data
-	backupSecretData[DataKeyBackupBucketName] = []byte(be.Spec.BucketName)
+	backupSecretData[v1beta1constants.DataKeyBackupBucketName] = []byte(be.Spec.BucketName)
 	etcdSecretData, err := a.backupEntryDelegate.GetETCDSecretData(ctx, be, backupSecretData)
 	if err != nil {
 		return err
@@ -91,7 +92,7 @@ func (a *actuator) deployEtcdBackupSecret(ctx context.Context, be *extensionsv1a
 
 	etcdSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      BackupSecretName,
+			Name:      v1beta1constants.BackupSecretName,
 			Namespace: shootTechnicalID,
 		},
 	}

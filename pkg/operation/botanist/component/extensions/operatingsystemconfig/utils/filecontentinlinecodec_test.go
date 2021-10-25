@@ -15,7 +15,6 @@
 package utils
 
 import (
-	"github.com/gardener/gardener/extensions/pkg/controller/operatingsystemconfig/oscommon/cloudinit"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	. "github.com/onsi/ginkgo"
@@ -29,7 +28,7 @@ kind: KubeletConfiguration
 `)
 
 		fileContent = &extensionsv1alpha1.FileContentInline{
-			Encoding: string(cloudinit.B64FileCodecID),
+			Encoding: "b64",
 			Data:     `YXBpVmVyc2lvbjoga3ViZWxldC5jb25maWcuazhzLmlvL3YxYmV0YTEKa2luZDogS3ViZWxldENvbmZpZ3VyYXRpb24K`,
 		}
 	)
@@ -40,7 +39,7 @@ kind: KubeletConfiguration
 			c := NewFileContentInlineCodec()
 
 			// Call Encode and check result
-			fci, err := c.Encode(data, string(cloudinit.B64FileCodecID))
+			fci, err := c.Encode(data, "b64")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fci).To(Equal(fileContent))
 		})
