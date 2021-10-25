@@ -420,16 +420,6 @@ func validateKubeProxyUpdate(newConfig, oldConfig *core.KubeProxyConfig, version
 	if ok, _ := versionutils.CheckVersionMeetsConstraint(version, "< 1.16"); ok {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newMode, oldMode, fldPath.Child("mode"))...)
 	}
-	// The enabled flag is immutable for now to ensure that the networking extensions have time to adapt to it.
-	newEnabled := true
-	oldEnabled := true
-	if newConfig != nil && newConfig.Enabled != nil {
-		newEnabled = *newConfig.Enabled
-	}
-	if oldConfig != nil && oldConfig.Enabled != nil {
-		oldEnabled = *oldConfig.Enabled
-	}
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newEnabled, oldEnabled, fldPath.Child("enabled"))...)
 	return allErrs
 }
 

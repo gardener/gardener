@@ -1866,7 +1866,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should fail when kube-proxy is switched off", func() {
+			It("should not fail when kube-proxy is switched off", func() {
 				kubernetesConfig := core.KubernetesConfig{}
 				disabled := false
 				config := core.KubeProxyConfig{
@@ -1884,12 +1884,7 @@ var _ = Describe("Shoot Validation Tests", func() {
 
 				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, metav1.ObjectMeta{}, field.NewPath("spec"))
 
-				Expect(errorList).ToNot(BeEmpty())
-				Expect(errorList).To(ConsistOfFields(Fields{
-					"Type":   Equal(field.ErrorTypeInvalid),
-					"Field":  Equal("spec.kubernetes.kubeProxy.enabled"),
-					"Detail": Equal(`field is immutable`),
-				}))
+				Expect(errorList).To(BeEmpty())
 			})
 		})
 
