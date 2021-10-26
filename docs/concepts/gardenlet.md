@@ -248,6 +248,10 @@ into all of your seeds (if they aren’t managed, as mentioned earlier).
 
 More information: [Deploy a Gardenlet](../deployment/deploy_gardenlet.md) for all instructions.
 
+## Gardenlet Allowed Version Skew
+
+The gardenlet version should always match the Gardener control plane version and may be at most (e.g. during the update of an installation) one minor version behind (never ahead).
+
 ## Related Links
 
 [Gardener Architecture](https://github.com/gardener/documentation/wiki/Architecture)
