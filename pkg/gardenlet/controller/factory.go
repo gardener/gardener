@@ -30,8 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	gardenmetrics "github.com/gardener/gardener/pkg/controllerutils/metrics"
-	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	backupbucketcontroller "github.com/gardener/gardener/pkg/gardenlet/controller/backupbucket"
@@ -128,9 +126,6 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	gardenNamespace := &corev1.Namespace{}
 	runtime.Must(gardenClientSet.Client().Get(ctx, kutil.Key(v1beta1constants.GardenNamespace), gardenNamespace))
 
-	// Initialize the workqueue metrics collection.
-	gardenmetrics.RegisterWorkqueMetrics()
-
 	seedName := f.cfg.SeedConfig.Name
 	seedClient, err := f.clientMap.GetClient(ctx, keys.ForSeedWithName(seedName))
 	if err != nil {
@@ -178,21 +173,6 @@ func (f *GardenletControllerFactory) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed initializing Shoot controller: %w", err)
 	}
-
-	// Initialize the Controller metrics collection.
-	gardenmetrics.RegisterControllerMetrics(
-		gardenlet.ControllerWorkerSum,
-		gardenlet.ScrapeFailures,
-		backupBucketController,
-		backupEntryController,
-		bastionController,
-		controllerInstallationController,
-		extensionsController,
-		managedSeedController,
-		networkPolicyController,
-		seedController,
-		shootController,
-	)
 
 	controllerCtx, cancel := context.WithCancel(ctx)
 
