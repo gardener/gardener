@@ -392,7 +392,7 @@ The requested tokens will act with the privileges which are assigned to this `Se
 The controller will then request a token via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) and populate it into the `.data.token` field to the `Secret` in the source cluster.
 
 Alternatively, the client can provide a raw kubeconfig (in YAML or JSON format) via the `Secret`'s `.data.kubeconfig` field.
-The controller will then populate the requested token in the kubeconfig.
+The controller will then populate the requested token in the kubeconfig for the user used in the `.current-context`.
 For example, if `.data.kubeconfig` is
 
 ```yaml
