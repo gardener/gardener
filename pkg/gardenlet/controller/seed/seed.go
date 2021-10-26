@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -31,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/healthz"
@@ -169,19 +167,4 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	}
 
 	waitGroup.Wait()
-}
-
-// RunningWorkers returns the number of running workers.
-func (c *Controller) RunningWorkers() int {
-	return c.numberOfRunningWorkers
-}
-
-// CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
-func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
-	metric, err := prometheus.NewConstMetric(gardenlet.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "seed")
-	if err != nil {
-		gardenlet.ScrapeFailures.With(prometheus.Labels{"kind": "seed-controller"}).Inc()
-		return
-	}
-	ch <- metric
 }

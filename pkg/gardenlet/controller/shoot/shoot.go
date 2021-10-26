@@ -24,14 +24,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet"
 	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/cache"
@@ -225,21 +223,6 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers int
 	}
 
 	waitGroup.Wait()
-}
-
-// RunningWorkers returns the number of running workers.
-func (c *Controller) RunningWorkers() int {
-	return c.numberOfRunningWorkers
-}
-
-// CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
-func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
-	metric, err := prometheus.NewConstMetric(gardenlet.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "shoot")
-	if err != nil {
-		gardenlet.ScrapeFailures.With(prometheus.Labels{"kind": "shoot-controller"}).Inc()
-		return
-	}
-	ch <- metric
 }
 
 func (c *Controller) getShootQueue(ctx context.Context, obj interface{}) workqueue.RateLimitingInterface {

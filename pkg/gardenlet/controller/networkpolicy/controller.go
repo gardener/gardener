@@ -19,14 +19,6 @@ import (
 	"sync"
 	"time"
 
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
-	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
-	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -37,6 +29,12 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/helper"
+	"github.com/gardener/gardener/pkg/gardenlet/controller/networkpolicy/hostnameresolver"
 )
 
 // Controller watching the endpoints resource "kubernetes" of the Seeds's kube-apiserver in the default namespace
@@ -189,19 +187,4 @@ func (c *Controller) Stop() {
 	}
 
 	c.waitGroup.Wait()
-}
-
-// RunningWorkers returns the number of running workers.
-func (c *Controller) RunningWorkers() int {
-	return c.numberOfRunningWorkers
-}
-
-// CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
-func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
-	metric, err := prometheus.NewConstMetric(gardenlet.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "networkpolicy")
-	if err != nil {
-		gardenlet.ScrapeFailures.With(prometheus.Labels{"kind": "networkpolicy-controller"}).Inc()
-		return
-	}
-	ch <- metric
 }

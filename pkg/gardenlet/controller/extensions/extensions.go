@@ -20,12 +20,6 @@ import (
 	"sync"
 	"time"
 
-	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/gardenlet"
-	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/sirupsen/logrus"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -33,6 +27,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 // Controller watches the extension resources and has several control loops.
@@ -217,19 +215,4 @@ func extensionPredicateFunc(f func(extensionsv1alpha1.Object, extensionsv1alpha1
 		)
 		return ok1 && ok2 && f(newExtensionObj, oldExtensionObj)
 	}
-}
-
-// RunningWorkers returns the number of running workers.
-func (c *Controller) RunningWorkers() int {
-	return c.numberOfRunningWorkers
-}
-
-// CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
-func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
-	metric, err := prometheus.NewConstMetric(gardenlet.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "extensions")
-	if err != nil {
-		gardenlet.ScrapeFailures.With(prometheus.Labels{"kind": "extensions-controller"}).Inc()
-		return
-	}
-	ch <- metric
 }
