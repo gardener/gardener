@@ -5,7 +5,7 @@ creation-date: 2020-04-20
 status: removed/dropped
 authors:
 - "@zanetworker"
-  reviewers:
+reviewers:
 - "@mvladev"
 ---
 
