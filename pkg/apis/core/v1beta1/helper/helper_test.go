@@ -2137,6 +2137,16 @@ var _ = Describe("helper", func() {
 		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("4.5.6")}, semver.MustParse("4.5.6")),
 	)
 
+	DescribeTable("#GetSecretBindingTypes",
+		func(secretBinding *gardencorev1beta1.SecretBinding, expected []string) {
+			actual := GetSecretBindingTypes(secretBinding)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with single-value provider type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo"}}, []string{"foo"}),
+		Entry("with multi-value provider type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo,bar,baz"}}, []string{"foo", "bar", "baz"}),
+	)
+
 	DescribeTable("#SecretBindingHasType",
 		func(secretBinding *gardencorev1beta1.SecretBinding, toFind string, expected bool) {
 			actual := SecretBindingHasType(secretBinding, toFind)

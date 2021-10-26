@@ -143,6 +143,9 @@ const (
 	LabelSeedProvider = "seed.gardener.cloud/provider"
 	// LabelShootProvider is used to identify the shoot provider.
 	LabelShootProvider = "shoot.gardener.cloud/provider"
+	// LabelShootProviderPrefix is used to prefix label that indicates the provider type.
+	// The label key is in the form provider.shoot.gardener.cloud/<type>.
+	LabelShootProviderPrefix = "provider.shoot.gardener.cloud/"
 	// LabelNetworkingProvider is used to identify the networking provider for the cni plugin.
 	LabelNetworkingProvider = "networking.shoot.gardener.cloud/provider"
 	// LabelExtensionPrefix is used to prefix extension specific labels.

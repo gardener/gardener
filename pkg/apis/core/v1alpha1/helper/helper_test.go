@@ -1050,6 +1050,16 @@ var _ = Describe("helper", func() {
 		),
 	)
 
+	DescribeTable("#GetSecretBindingTypes",
+		func(secretBinding *gardencorev1alpha1.SecretBinding, expected []string) {
+			actual := GetSecretBindingTypes(secretBinding)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with single-value provider type", &gardencorev1alpha1.SecretBinding{Provider: &gardencorev1alpha1.SecretBindingProvider{Type: "foo"}}, []string{"foo"}),
+		Entry("with multi-value provider type", &gardencorev1alpha1.SecretBinding{Provider: &gardencorev1alpha1.SecretBindingProvider{Type: "foo,bar,baz"}}, []string{"foo", "bar", "baz"}),
+	)
+
 	DescribeTable("#SecretBindingHasType",
 		func(secretBinding *gardencorev1alpha1.SecretBinding, toFind string, expected bool) {
 			actual := SecretBindingHasType(secretBinding, toFind)

@@ -612,6 +612,16 @@ var _ = Describe("helper", func() {
 		})
 	})
 
+	DescribeTable("#GetSecretBindingTypes",
+		func(secretBinding *core.SecretBinding, expected []string) {
+			actual := GetSecretBindingTypes(secretBinding)
+			Expect(actual).To(Equal(expected))
+		},
+
+		Entry("with single-value provider type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo"}}, []string{"foo"}),
+		Entry("with multi-value provider type", &core.SecretBinding{Provider: &core.SecretBindingProvider{Type: "foo,bar,baz"}}, []string{"foo", "bar", "baz"}),
+	)
+
 	DescribeTable("#SecretBindingHasType",
 		func(secretBinding *core.SecretBinding, toFind string, expected bool) {
 			actual := SecretBindingHasType(secretBinding, toFind)
