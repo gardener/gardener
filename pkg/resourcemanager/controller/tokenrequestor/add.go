@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tokeninvalidator
+package tokenrequestor
 
 import (
+	"fmt"
+
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/apimachinery/pkg/util/wait"
+	corev1clientset "k8s.io/client-go/kubernetes/typed/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/cluster"
 	crcontroller "sigs.k8s.io/controller-runtime/pkg/controller"
@@ -29,12 +31,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // ControllerName is the name of the controller.
-const ControllerName = "token-invalidator"
+const ControllerName = "token-requestor"
 
 // defaultControllerConfig is the default config for the controller.
 var defaultControllerConfig ControllerConfig
@@ -56,39 +57,26 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 		return nil
 	}
 
-	c, err := crcontroller.New(ControllerName, mgr,
-		crcontroller.Options{
-			MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-			Reconciler:              NewReconciler(conf.TargetCluster.GetClient(), conf.TargetCluster.GetAPIReader()),
-		},
-	)
+	coreV1Client, err := corev1clientset.NewForConfig(conf.TargetCluster.GetConfig())
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create coreV1Client: %w", err)
 	}
 
-	secret := &metav1.PartialObjectMetadata{}
-	secret.SetGroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
+	ctrl, err := crcontroller.New(ControllerName, mgr, crcontroller.Options{
+		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
+		Reconciler:              NewReconciler(clock.RealClock{}, wait.Jitter, conf.TargetCluster.GetClient(), coreV1Client),
+	})
+	if err != nil {
+		return fmt.Errorf("unable to set up tokenRequestor controller: %w", err)
+	}
 
-	if err := c.Watch(
-		source.NewKindWithCache(secret, conf.TargetCluster.GetCache()),
+	return ctrl.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
 		&handler.EnqueueRequestForObject{},
 		predicate.Funcs{
 			CreateFunc:  func(e event.CreateEvent) bool { return isRelevantSecret(e.Object) },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantSecret(e.ObjectNew) },
-			DeleteFunc:  func(e event.DeleteEvent) bool { return false },
-			GenericFunc: func(e event.GenericEvent) bool { return false },
-		},
-	); err != nil {
-		return err
-	}
-
-	return c.Watch(
-		source.NewKindWithCache(&corev1.ServiceAccount{}, conf.TargetCluster.GetCache()),
-		handler.EnqueueRequestsFromMapFunc(mapServiceAccountToSecrets),
-		predicate.Funcs{
-			CreateFunc:  func(e event.CreateEvent) bool { return false },
-			UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantServiceAccountUpdate(e) },
-			DeleteFunc:  func(e event.DeleteEvent) bool { return false },
+			UpdateFunc:  func(e event.UpdateEvent) bool { return isRelevantSecretUpdate(e.ObjectOld, e.ObjectNew) },
+			DeleteFunc:  func(e event.DeleteEvent) bool { return isRelevantSecret(e.Object) },
 			GenericFunc: func(e event.GenericEvent) bool { return false },
 		},
 	)
@@ -101,7 +89,7 @@ func AddToManager(mgr manager.Manager) error {
 
 // AddFlags adds the needed command line flags to the given FlagSet.
 func (o *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
-	fs.IntVar(&o.maxConcurrentWorkers, "token-invalidator-max-concurrent-workers", 0, "number of worker threads for concurrent token invalidation reconciliations (default: 0)")
+	fs.IntVar(&o.maxConcurrentWorkers, "token-requestor-max-concurrent-workers", 0, "number of worker threads for concurrent token request reconciliations (default: 0)")
 }
 
 // Complete completes the given command line flags and set the defaultControllerConfig accordingly.
@@ -118,43 +106,13 @@ func (o *ControllerOptions) Completed() *ControllerConfig {
 }
 
 func isRelevantSecret(obj client.Object) bool {
-	metadata, ok := obj.(*metav1.PartialObjectMetadata)
+	secret, ok := obj.(*corev1.Secret)
 	if !ok {
 		return false
 	}
-
-	return metav1.HasAnnotation(metadata.ObjectMeta, corev1.ServiceAccountNameKey)
+	return secret.Labels != nil && secret.Labels[resourcesv1alpha1.ResourceManagerPurpose] == resourcesv1alpha1.LabelPurposeTokenRequest
 }
 
-func isRelevantServiceAccountUpdate(e event.UpdateEvent) bool {
-	oldSA, ok := e.ObjectOld.(*corev1.ServiceAccount)
-	if !ok {
-		return false
-	}
-
-	newSA, ok := e.ObjectNew.(*corev1.ServiceAccount)
-	if !ok {
-		return false
-	}
-
-	return !apiequality.Semantic.DeepEqual(oldSA.AutomountServiceAccountToken, newSA.AutomountServiceAccountToken) ||
-		oldSA.Labels[resourcesv1alpha1.StaticTokenSkip] != newSA.Labels[resourcesv1alpha1.StaticTokenSkip]
-}
-
-func mapServiceAccountToSecrets(obj client.Object) []reconcile.Request {
-	sa, ok := obj.(*corev1.ServiceAccount)
-	if !ok {
-		return nil
-	}
-
-	out := make([]reconcile.Request, 0, len(sa.Secrets))
-
-	for _, secretRef := range sa.Secrets {
-		out = append(out, reconcile.Request{NamespacedName: types.NamespacedName{
-			Name:      secretRef.Name,
-			Namespace: sa.Namespace,
-		}})
-	}
-
-	return out
+func isRelevantSecretUpdate(oldObj, newObj client.Object) bool {
+	return isRelevantSecret(newObj) || (isRelevantSecret(oldObj) && !isRelevantSecret(newObj))
 }

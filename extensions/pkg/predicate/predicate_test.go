@@ -35,6 +35,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 var _ = Describe("Predicate", func() {
@@ -200,9 +201,9 @@ var _ = Describe("Predicate", func() {
 
 		BeforeEach(func() {
 			mapper = &shootNotFailedMapper{log: Log.WithName("shoot-not-failed")}
-			gomega.Expect(mapper.InjectStopChannel(context.TODO().Done())).To(gomega.Succeed())
-			gomega.Expect(mapper.InjectCache(cache)).To(gomega.Succeed())
-			gomega.Expect(mapper.InjectClient(c)).To(gomega.Succeed())
+			gomega.Expect(inject.StopChannelInto(context.TODO().Done(), mapper)).To(gomega.BeTrue())
+			gomega.Expect(inject.CacheInto(cache, mapper)).To(gomega.BeTrue())
+			gomega.Expect(inject.ClientInto(c, mapper)).To(gomega.BeTrue())
 
 			infrastructure = &extensionsv1alpha1.Infrastructure{ObjectMeta: metav1.ObjectMeta{Namespace: name}}
 			e = event.GenericEvent{

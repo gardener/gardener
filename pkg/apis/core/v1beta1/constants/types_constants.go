@@ -484,6 +484,9 @@ const (
 	BackupSecretName string = "etcd-backup"
 	// DataKeyBackupBucketName is the name of a data key whose value contains the backup bucket name.
 	DataKeyBackupBucketName string = "bucketName"
+
+	// GardenerAudience is the identifier for Gardener controllers when interacting with the API Server
+	GardenerAudience = "gardener"
 )
 
 // ControlPlaneSecretRoles contains all role values used for control plane secrets synced to the Garden cluster.

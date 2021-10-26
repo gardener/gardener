@@ -12,19 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package rootcapublisher_test
+package tokenrequestor_test
 
 import (
 	"context"
-	"os"
 	"testing"
 
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
-	"github.com/gardener/gardener/test/framework"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	k8sscheme "k8s.io/client-go/kubernetes/scheme"
+	"go.uber.org/zap/zapcore"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -33,69 +34,59 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-func TestRootCAPublisher(t *testing.T) {
+func TestTokenInvalidator(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Root CA Controller Integration Test Suite")
+	RunSpecs(t, "TokenInvalidator Integration Test Suite")
 }
 
 var (
-	ctx        = context.Background()
-	restConfig *rest.Config
-	testEnv    *envtest.Environment
-	mgrCancel  context.CancelFunc
-	certFile   []byte
+	ctx       = context.Background()
+	mgrCancel context.CancelFunc
 
+	logger     logr.Logger
+	testEnv    *envtest.Environment
+	restConfig *rest.Config
 	testClient client.Client
+
+	err error
 )
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter)))
+	logger = logzap.New(logzap.UseDevMode(true), logzap.WriteTo(GinkgoWriter), logzap.Level(zapcore.Level(1)))
+	logf.SetLogger(logger)
 
 	By("starting test environment")
-	var err error
 	testEnv = &envtest.Environment{}
+	testEnv.ControlPlane.GetAPIServer().Configure().Set("api-audiences", v1beta1constants.GardenerAudience)
 
 	restConfig, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(restConfig).ToNot(BeNil())
 
-	testClient, err = client.New(restConfig, client.Options{Scheme: k8sscheme.Scheme})
+	testClient, err = client.New(restConfig, client.Options{Scheme: scheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 
-	certFile, err = os.ReadFile("testdata/dummy.crt")
-	Expect(err).To(BeNil())
-	Expect(certFile).ToNot(BeEmpty())
-
-	By("setup manager")
-	mgr, err := manager.New(restConfig, manager.Options{
-		Scheme:             k8sscheme.Scheme,
-		MetricsBindAddress: "0",
-	})
-	Expect(err).ToNot(HaveOccurred())
+	By("setting up manager")
+	mgr, err := manager.New(restConfig, manager.Options{MetricsBindAddress: "0"})
+	Expect(err).NotTo(HaveOccurred())
 
 	By("registering controllers and webhooks")
-	Expect(rootcapublisher.AddToManagerWithOptions(mgr, rootcapublisher.ControllerConfig{
-		MaxConcurrentWorkers: 1,
-		RootCAPath:           "testdata/dummy.crt",
+	Expect(tokenrequestor.AddToManagerWithOptions(mgr, tokenrequestor.ControllerConfig{
+		MaxConcurrentWorkers: 5,
 		TargetCluster:        mgr,
-	})).ToNot(HaveOccurred())
+	})).To(Succeed())
 
+	By("starting manager")
 	var mgrContext context.Context
 	mgrContext, mgrCancel = context.WithCancel(ctx)
-
-	By("start manager")
 	go func() {
-		err := mgr.Start(mgrContext)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
 })
 
 var _ = AfterSuite(func() {
 	By("stopping manager")
 	mgrCancel()
-
-	By("running cleanup actions")
-	framework.RunCleanupActions()
 
 	By("stopping test environment")
 	Expect(testEnv.Stop()).To(Succeed())

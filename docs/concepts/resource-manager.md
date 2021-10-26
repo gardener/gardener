@@ -367,3 +367,70 @@ Any attempt to regenerate the token or creating a new such secret will again mak
 > You can opt-out of this behaviour for `ServiceAccount`s setting `.automountServiceAccountToken=false` by labeling them with `token-invalidator.resources.gardener.cloud/skip=true`.
 
 In order to enable the _TokenInvalidator_ you have to set `--token-invalidator-max-concurrent-workers` to a value larger than `0`.
+
+### TokenRequestor
+
+This controller provides the service to create and auto-renew tokens via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/).
+
+It provides a functionality similar to the kubelet's [Service Account Token Volume Projection](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection).
+It was created to handle the special case of issuing tokens to pods that run in a different cluster than the API server they communicate with (hence, using the native token volume projection feature is not possible).
+
+#### Reconciliation Loop
+
+This controller reconciles secrets in all namespaces in the targetCluster with the label: `resources.gardener.cloud/purpose: token-requestor`.
+See [here](../../example/resource-manager/30-secret-tokenrequestor.yaml) for an example of the secret.
+
+The controller ensures a `ServiceAccount` exists in the target cluster as specified in the annotations of the `Secret` in the source cluster:
+
+```yaml
+serviceaccount.resources.gardener.cloud/name: <sa-name>
+serviceaccount.resources.gardener.cloud/namespace: <sa-namespace>
+```
+
+The requested tokens will act with the privileges which are assigned to this `ServiceAccount`.
+
+The controller will then request a token via the [`TokenRequest` API](https://kubernetes.io/docs/reference/kubernetes-api/authentication-resources/token-request-v1/) and populate it into the `.data.token` field to the `Secret` in the source cluster.
+
+Alternatively, the client can provide a raw kubeconfig (in YAML or JSON format) via the `Secret`'s `.data.kubeconfig` field.
+The controller will then populate the requested token in the kubeconfig for the user used in the `.current-context`.
+For example, if `.data.kubeconfig` is
+
+```yaml
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: AAAA
+    server: some-server-url
+  name: shoot--foo--bar
+contexts:
+- context:
+    cluster: shoot--foo--bar
+    user: shoot--foo--bar-token
+  name: shoot--foo--bar
+current-context: shoot--foo--bar
+kind: Config
+preferences: {}
+users:
+- name: shoot--foo--bar-token
+  user:
+    token: ""
+```
+
+then the `.users[0].user.token` field of the kubeconfig will be updated accordingly. 
+
+The controller also adds an annotation to the `Secret` to keep track when to renew the token before it expires.
+By default, the tokens are issued to expire after 12 hours. The expiration time can be set with the following annotation:
+
+```yaml
+serviceaccount.resources.gardener.cloud/token-expiration-duration: 6h
+```
+
+It automatically renews once 80% of the lifetime is reached or after `24h`.
+
+If the `Secret` is annotated with
+
+```yaml
+serviceaccount.resources.gardener.cloud/skip-deletion: "true"
+```
+
+then the respective `ServiceAccount` will not be deleted when the `Secret` is deleted.
