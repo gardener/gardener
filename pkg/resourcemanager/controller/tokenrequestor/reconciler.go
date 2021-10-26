@@ -45,6 +45,21 @@ const (
 	maxExpirationDuration     = 24 * time.Hour
 )
 
+// NewReconciler returns a new instance of the reconciler.
+func NewReconciler(
+	clock clock.Clock,
+	jitter func(time.Duration, float64) time.Duration,
+	targetClient client.Client,
+	targetCoreV1Client corev1clientset.CoreV1Interface,
+) reconcile.Reconciler {
+	return &reconciler{
+		clock:              clock,
+		jitter:             jitter,
+		targetClient:       targetClient,
+		targetCoreV1Client: targetCoreV1Client,
+	}
+}
+
 type reconciler struct {
 	clock              clock.Clock
 	jitter             func(time.Duration, float64) time.Duration
@@ -241,9 +256,9 @@ func updateTokenInSecretData(data map[string][]byte, token string) error {
 	}
 
 	var userName string
-	for _, context := range kubeconfig.Contexts {
-		if context.Name == kubeconfig.CurrentContext {
-			userName = context.Context.AuthInfo
+	for _, namedContext := range kubeconfig.Contexts {
+		if namedContext.Name == kubeconfig.CurrentContext {
+			userName = namedContext.Context.AuthInfo
 			break
 		}
 	}

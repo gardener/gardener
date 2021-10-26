@@ -17,14 +17,18 @@ package tokenrequestor_test
 import (
 	"context"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -118,30 +122,73 @@ var _ = Describe("TokenRequestor tests", func() {
 		}).Should(Succeed())
 	})
 
-	It("should be able to authenticate with the created token", func() {
-		secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "token-requestor"}
-		Expect(testClient.Create(ctx, secret)).To(Succeed())
+	Context("it should be able to authenticate", func() {
+		var newRestConfig *rest.Config
 
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
-		}).Should(Succeed())
+		AfterEach(func() {
+			var newClient client.Client
+			newClient, err = client.New(newRestConfig, client.Options{Scheme: kubernetesscheme.Scheme})
+			Expect(err).ToNot(HaveOccurred())
 
-		Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Eventually(func() error {
+				return newClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
+			}).Should(BeForbiddenError())
+		})
 
-		var (
-			newClient     client.Client
+		It("should be able to authenticate with the created token", func() {
+			secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "token-requestor"}
+			Expect(testClient.Create(ctx, secret)).To(Succeed())
+
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
+			}).Should(Succeed())
+
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+
 			newRestConfig = &rest.Config{
 				Host:            restConfig.Host,
 				BearerToken:     string(secret.Data["token"]),
 				TLSClientConfig: rest.TLSClientConfig{CAData: restConfig.TLSClientConfig.CAData},
 			}
-		)
-		newClient, err = client.New(newRestConfig, client.Options{Scheme: kubernetesscheme.Scheme})
-		Expect(err).ToNot(HaveOccurred())
+		})
 
-		Eventually(func() error {
-			return newClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
-		}).Should(BeForbiddenError())
+		It("should be able to authenticate with the updated kubeconfig", func() {
+			kubeconfig := &clientcmdv1.Config{
+				CurrentContext: "config",
+				Clusters: []clientcmdv1.NamedCluster{{
+					Name: "config",
+					Cluster: clientcmdv1.Cluster{
+						Server:                   restConfig.Host,
+						CertificateAuthorityData: restConfig.TLSClientConfig.CAData,
+					},
+				}},
+				AuthInfos: []clientcmdv1.NamedAuthInfo{{
+					Name: "config",
+				}},
+				Contexts: []clientcmdv1.NamedContext{{
+					Name: "config",
+					Context: clientcmdv1.Context{
+						Cluster:  "config",
+						AuthInfo: "config",
+					},
+				}},
+			}
+			kubeconfigRaw, err := runtime.Encode(clientcmdlatest.Codec, kubeconfig)
+			Expect(err).NotTo(HaveOccurred())
+
+			secret.Data = map[string][]byte{"kubeconfig": kubeconfigRaw}
+			secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "token-requestor"}
+			Expect(testClient.Create(ctx, secret)).To(Succeed())
+
+			Eventually(func() error {
+				return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
+			}).Should(Succeed())
+
+			Expect(testClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+
+			newRestConfig, err = kubernetes.RESTConfigFromClientConnectionConfiguration(nil, secret.Data["kubeconfig"])
+			Expect(err).ToNot(HaveOccurred())
+		})
 	})
 
 	AfterEach(func() {

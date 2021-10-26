@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tokenrequestor
+package tokenrequestor_test
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	. "github.com/gardener/gardener/pkg/resourcemanager/controller/tokenrequestor"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/go-logr/logr"
@@ -39,6 +40,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 )
 
 var _ = Describe("Reconciler", func() {
@@ -53,7 +55,7 @@ var _ = Describe("Reconciler", func() {
 			sourceClient, targetClient client.Client
 			coreV1Client               *corev1fake.FakeCoreV1
 
-			ctrl *reconciler
+			ctrl reconcile.Reconciler
 
 			secret         *corev1.Secret
 			serviceAccount *corev1.ServiceAccount
@@ -102,15 +104,9 @@ var _ = Describe("Reconciler", func() {
 			targetClient = fakeclient.NewClientBuilder().WithScheme(scheme.Scheme).Build()
 			coreV1Client = &corev1fake.FakeCoreV1{Fake: &testing.Fake{}}
 
-			ctrl = &reconciler{
-				clock:              fakeClock,
-				jitter:             fakeJitter,
-				targetClient:       targetClient,
-				targetCoreV1Client: coreV1Client,
-			}
-
-			Expect(ctrl.InjectLogger(logger)).To(Succeed())
-			Expect(ctrl.InjectClient(sourceClient)).To(Succeed())
+			ctrl = NewReconciler(fakeClock, fakeJitter, targetClient, coreV1Client)
+			Expect(inject.LoggerInto(logger, ctrl)).To(BeTrue())
+			Expect(inject.ClientInto(sourceClient, ctrl)).To(BeTrue())
 
 			secretName = "kube-scheduler"
 			serviceAccountName = "kube-scheduler-serviceaccount"

@@ -64,12 +64,7 @@ func AddToManagerWithOptions(mgr manager.Manager, conf ControllerConfig) error {
 
 	ctrl, err := crcontroller.New(ControllerName, mgr, crcontroller.Options{
 		MaxConcurrentReconciles: conf.MaxConcurrentWorkers,
-		Reconciler: &reconciler{
-			clock:              clock.RealClock{},
-			jitter:             wait.Jitter,
-			targetClient:       conf.TargetCluster.GetClient(),
-			targetCoreV1Client: coreV1Client,
-		},
+		Reconciler:              NewReconciler(clock.RealClock{}, wait.Jitter, conf.TargetCluster.GetClient(), coreV1Client),
 	})
 	if err != nil {
 		return fmt.Errorf("unable to set up tokenRequestor controller: %w", err)
