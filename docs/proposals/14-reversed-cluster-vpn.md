@@ -8,7 +8,7 @@ authors:
 - "@scheererj"
 - "@docktofuture"
 reviewers:
-- @mvladev
+- "@mvladev"
 ---
 
 # GEP-14: Reversed Cluster VPN
