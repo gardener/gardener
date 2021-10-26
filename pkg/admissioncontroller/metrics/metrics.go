@@ -17,7 +17,7 @@ package metrics
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	runtimemetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 // Namespace is the metric namespace for the gardener-admission-controller.
@@ -25,7 +25,7 @@ const Namespace = "gardener_admission_controller"
 
 var (
 	// Factory is used for registering metrics in the controller-runtime metrics registry.
-	Factory = promauto.With(metrics.Registry)
+	Factory = promauto.With(runtimemetrics.Registry)
 
 	// RejectedResources defines the counter rejected_resources_total.
 	RejectedResources = Factory.NewCounterVec(
