@@ -160,6 +160,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	o.Shoot.Components.SourceBackupEntry = b.SourceBackupEntry()
 	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry()
 	o.Shoot.Components.DependencyWatchdogAccess = b.DefaultDependencyWatchdogAccess()
+	o.Shoot.Components.GardenerAccess = b.DefaultGardenerAccess()
 	o.Shoot.Components.NetworkPolicies, err = b.DefaultNetworkPolicies(sniPhase)
 	if err != nil {
 		return nil, err
