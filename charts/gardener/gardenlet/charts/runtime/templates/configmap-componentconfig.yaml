@@ -147,6 +147,12 @@ data:
       renewDeadline: {{ required ".Values.global.gardenlet.config.leaderElection.renewDeadline is required" .Values.global.gardenlet.config.leaderElection.renewDeadline }}
       retryPeriod: {{ required ".Values.global.gardenlet.config.leaderElection.retryPeriod is required" .Values.global.gardenlet.config.leaderElection.retryPeriod }}
       resourceLock: {{ required ".Values.global.gardenlet.config.leaderElection.resourceLock is required" .Values.global.gardenlet.config.leaderElection.resourceLock }}
+      {{- if .Values.global.gardenlet.config.leaderElection.resourceName }}
+      resourceName: {{ .Values.global.gardenlet.config.leaderElection.resourceName }}
+      {{- end }}
+      {{- if .Values.global.gardenlet.config.leaderElection.resourceNamespace }}
+      resourceNamespace: {{ .Values.global.gardenlet.config.leaderElection.resourceNamespace }}
+      {{- end }}
     logLevel: {{ required ".Values.global.gardenlet.config.logLevel is required" .Values.global.gardenlet.config.logLevel }}
     kubernetesLogLevel: {{ required ".Values.global.gardenlet.config.kubernetesLogLevel is required" .Values.global.gardenlet.config.kubernetesLogLevel }}
     server:

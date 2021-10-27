@@ -32,7 +32,7 @@ type ControllerManagerConfiguration struct {
 	// Controllers defines the configuration of the controllers.
 	Controllers ControllerManagerControllerConfiguration
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection LeaderElectionConfiguration
+	LeaderElection *componentbaseconfig.LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
@@ -275,16 +275,6 @@ type ManagedSeedSetControllerConfiguration struct {
 	MaxShootRetries *int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
-}
-
-// LeaderElectionConfiguration defines the configuration of leader election
-// clients for components that can run with leader election enabled.
-type LeaderElectionConfiguration struct {
-	componentbaseconfig.LeaderElectionConfiguration
-	// LockObjectNamespace defines the namespace of the lock object.
-	LockObjectNamespace string
-	// LockObjectName defines the lock object name.
-	LockObjectName string
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

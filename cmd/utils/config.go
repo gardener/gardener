@@ -26,7 +26,7 @@ import (
 )
 
 // MakeLeaderElectionConfig creates a *leaderelection.LeaderElectionConfig from a set of configurations
-func MakeLeaderElectionConfig(cfg componentbaseconfig.LeaderElectionConfiguration, lockObjectNamespace string, lockObjectName string, client k8s.Interface, recorder record.EventRecorder) (*leaderelection.LeaderElectionConfig, error) {
+func MakeLeaderElectionConfig(cfg componentbaseconfig.LeaderElectionConfiguration, client k8s.Interface, recorder record.EventRecorder) (*leaderelection.LeaderElectionConfig, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get hostname: %w", err)
@@ -34,8 +34,8 @@ func MakeLeaderElectionConfig(cfg componentbaseconfig.LeaderElectionConfiguratio
 
 	lock, err := resourcelock.New(
 		cfg.ResourceLock,
-		lockObjectNamespace,
-		lockObjectName,
+		cfg.ResourceNamespace,
+		cfg.ResourceName,
 		client.CoreV1(),
 		client.CoordinationV1(),
 		resourcelock.ResourceLockConfig{

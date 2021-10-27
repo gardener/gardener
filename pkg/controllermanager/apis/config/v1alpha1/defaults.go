@@ -172,6 +172,10 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	if obj.LogFormat == "" {
 		obj.LogFormat = logger.FormatJSON
 	}
+
+	if obj.LeaderElection == nil {
+		obj.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
+	}
 }
 
 // SetDefaults_ClientConnectionConfiguration sets defaults for the garden client connection.
@@ -185,18 +189,18 @@ func SetDefaults_ClientConnectionConfiguration(obj *componentbaseconfigv1alpha1.
 }
 
 // SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener controller manager.
-func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
+func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.LeaderElectionConfiguration) {
 	if obj.ResourceLock == "" {
 		obj.ResourceLock = resourcelock.LeasesResourceLock
 	}
 
-	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(&obj.LeaderElectionConfiguration)
+	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(obj)
 
-	if len(obj.LockObjectNamespace) == 0 {
-		obj.LockObjectNamespace = ControllerManagerDefaultLockObjectNamespace
+	if obj.ResourceNamespace == "" {
+		obj.ResourceNamespace = ControllerManagerDefaultLockObjectNamespace
 	}
-	if len(obj.LockObjectName) == 0 {
-		obj.LockObjectName = ControllerManagerDefaultLockObjectName
+	if obj.ResourceName == "" {
+		obj.ResourceName = ControllerManagerDefaultLockObjectName
 	}
 }
 

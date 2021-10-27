@@ -374,9 +374,7 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		}
 
 		leaderElectionConfig, err = cmdutils.MakeLeaderElectionConfig(
-			cfg.LeaderElection.LeaderElectionConfiguration,
-			*cfg.LeaderElection.LockObjectNamespace,
-			*cfg.LeaderElection.LockObjectName,
+			*cfg.LeaderElection,
 			k8sSeedClientLeaderElection,
 			cmdutils.CreateRecorder(k8sSeedClientLeaderElection, "gardenlet"),
 		)

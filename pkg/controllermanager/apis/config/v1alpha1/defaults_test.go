@@ -139,25 +139,23 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.LeaderElection.RenewDeadline).To(Equal(metav1.Duration{Duration: 10 * time.Second}))
 				Expect(obj.LeaderElection.RetryPeriod).To(Equal(metav1.Duration{Duration: 2 * time.Second}))
 				Expect(obj.LeaderElection.ResourceLock).To(Equal("leases"))
-				Expect(obj.LeaderElection.LockObjectNamespace).To(Equal("garden"))
-				Expect(obj.LeaderElection.LockObjectName).To(Equal("gardener-controller-manager-leader-election"))
+				Expect(obj.LeaderElection.ResourceNamespace).To(Equal("garden"))
+				Expect(obj.LeaderElection.ResourceName).To(Equal("gardener-controller-manager-leader-election"))
 			})
 			It("should not overwrite custom settings", func() {
-				expectedLeaderElection := &LeaderElectionConfiguration{
-					LeaderElectionConfiguration: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-						LeaderElect:   pointer.Bool(true),
-						ResourceLock:  "foo",
-						RetryPeriod:   metav1.Duration{Duration: 40 * time.Second},
-						RenewDeadline: metav1.Duration{Duration: 41 * time.Second},
-						LeaseDuration: metav1.Duration{Duration: 42 * time.Second},
-					},
-					LockObjectName:      "lock-object",
-					LockObjectNamespace: "other-garden-ns",
+				expectedLeaderElection := &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
+					LeaderElect:       pointer.Bool(true),
+					ResourceLock:      "foo",
+					RetryPeriod:       metav1.Duration{Duration: 40 * time.Second},
+					RenewDeadline:     metav1.Duration{Duration: 41 * time.Second},
+					LeaseDuration:     metav1.Duration{Duration: 42 * time.Second},
+					ResourceNamespace: "other-garden-ns",
+					ResourceName:      "lock-object",
 				}
-				obj.LeaderElection = *expectedLeaderElection.DeepCopy()
+				obj.LeaderElection = expectedLeaderElection.DeepCopy()
 				SetObjectDefaults_ControllerManagerConfiguration(obj)
 
-				Expect(obj.LeaderElection).To(Equal(*expectedLeaderElection))
+				Expect(obj.LeaderElection).To(Equal(expectedLeaderElection))
 			})
 		})
 	})

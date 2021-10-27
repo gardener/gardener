@@ -50,7 +50,7 @@ type GardenletConfiguration struct {
 	Resources *ResourcesConfiguration `json:"resources,omitempty"`
 	// LeaderElection defines the configuration of leader election client.
 	// +optional
-	LeaderElection *LeaderElectionConfiguration `json:"leaderElection,omitempty"`
+	LeaderElection *componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	// +optional
 	LogLevel *string `json:"logLevel,omitempty"`
@@ -359,18 +359,6 @@ type ResourcesConfiguration struct {
 	// Defaults to 0.
 	// +optional
 	Reserved corev1.ResourceList `json:"reserved,omitempty"`
-}
-
-// LeaderElectionConfiguration defines the configuration of leader election
-// clients for components that can run with leader election enabled.
-type LeaderElectionConfiguration struct {
-	componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:",inline"`
-	// LockObjectNamespace defines the namespace of the lock object.
-	// +optional
-	LockObjectNamespace *string `json:"lockObjectNamespace,omitempty"`
-	// LockObjectName defines the lock object name.
-	// +optional
-	LockObjectName *string `json:"lockObjectName,omitempty"`
 }
 
 // SeedConfig contains configuration for the seed cluster.

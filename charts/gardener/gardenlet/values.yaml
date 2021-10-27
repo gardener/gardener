@@ -116,6 +116,8 @@ global:
         renewDeadline: 10s
         retryPeriod: 2s
         resourceLock: leases
+      # resourceName: gardenlet-leader-election
+      # resourceNamespace: garden
       logLevel: info
       kubernetesLogLevel: 0
       server:

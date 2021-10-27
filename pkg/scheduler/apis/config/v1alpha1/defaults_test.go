@@ -134,10 +134,10 @@ var _ = Describe("Defaults", func() {
 					ResourceNamespace: "other-garden-ns",
 					ResourceName:      "lock-object",
 				}
-				obj.LeaderElection = *expectedLeaderElection.DeepCopy()
+				obj.LeaderElection = expectedLeaderElection.DeepCopy()
 				configv1alpha1.SetObjectDefaults_SchedulerConfiguration(obj)
 
-				Expect(obj.LeaderElection).To(Equal(*expectedLeaderElection))
+				Expect(obj.LeaderElection).To(Equal(expectedLeaderElection))
 			})
 		})
 	})

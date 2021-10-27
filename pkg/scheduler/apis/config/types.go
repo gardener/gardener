@@ -56,7 +56,7 @@ type SchedulerConfiguration struct {
 	// settings for the proxy server to use when communicating with the gardener-apiserver.
 	ClientConnection componentbaseconfig.ClientConnectionConfiguration
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection componentbaseconfig.LeaderElectionConfiguration
+	LeaderElection *componentbaseconfig.LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string
 	// LogFormat is the output format for the logs. Must be one of [text,json].

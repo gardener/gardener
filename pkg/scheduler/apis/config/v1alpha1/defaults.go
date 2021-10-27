@@ -55,6 +55,10 @@ func SetDefaults_SchedulerConfiguration(obj *SchedulerConfiguration) {
 	if obj.Schedulers.Shoot.ConcurrentSyncs == 0 {
 		obj.Schedulers.Shoot.ConcurrentSyncs = 5
 	}
+
+	if obj.LeaderElection == nil {
+		obj.LeaderElection = &componentbaseconfigv1alpha1.LeaderElectionConfiguration{}
+	}
 }
 
 // SetDefaults_ClientConnectionConfiguration sets defaults for the garden client connection.
@@ -75,10 +79,10 @@ func SetDefaults_LeaderElectionConfiguration(obj *componentbaseconfigv1alpha1.Le
 
 	componentbaseconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(obj)
 
-	if len(obj.ResourceNamespace) == 0 {
+	if obj.ResourceNamespace == "" {
 		obj.ResourceNamespace = SchedulerDefaultLockObjectNamespace
 	}
-	if len(obj.ResourceName) == 0 {
+	if obj.ResourceName == "" {
 		obj.ResourceName = SchedulerDefaultLockObjectName
 	}
 }
