@@ -15,7 +15,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/gardener/gardener/cmd/gardener-resource-manager/app"
@@ -34,11 +33,7 @@ func main() {
 		}),
 	)
 
-	zapLogger, err := logger.NewZapLogger("info", "json")
-	if err != nil {
-		panic(fmt.Errorf("failed to init logger: %w", err))
-	}
-	runtimelog.SetLogger(logger.NewZapLogr(zapLogger))
+	runtimelog.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
 
 	ctx := signals.SetupSignalHandler()
 

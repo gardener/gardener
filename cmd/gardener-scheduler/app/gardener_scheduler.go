@@ -38,7 +38,7 @@ import (
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -109,17 +109,16 @@ func runCommand(ctx context.Context, opts *Options) error {
 	}
 
 	// Initialize logger
-	zapLogger, err := logger.NewZapLogger(cfg.LogLevel, cfg.LogFormat)
+	log, err := logger.NewZapLogger(cfg.LogLevel, cfg.LogFormat)
 	if err != nil {
 		return fmt.Errorf("failed to init logger: %w", err)
 	}
 
 	// set the logger used by sigs.k8s.io/controller-runtime
-	zapLogr := logger.NewZapLogr(zapLogger)
-	ctrlruntimelog.SetLogger(zapLogr)
+	runtimelog.SetLogger(log)
 
-	zapLogr.Info("Starting Gardener scheduler...", "version", version.Get())
-	zapLogr.Info("Feature Gates", "featureGates", schedulerfeatures.FeatureGate.String())
+	log.Info("Starting Gardener scheduler...", "version", version.Get())
+	log.Info("Feature Gates", "featureGates", schedulerfeatures.FeatureGate.String())
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.
@@ -141,7 +140,6 @@ func runCommand(ctx context.Context, opts *Options) error {
 		LeaderElectionID:           cfg.LeaderElection.ResourceName,
 		LeaderElectionNamespace:    cfg.LeaderElection.ResourceNamespace,
 		LeaderElectionResourceLock: cfg.LeaderElection.ResourceLock,
-		Logger:                     zapLogr,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create controller manager: %w", err)
