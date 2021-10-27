@@ -64,7 +64,7 @@ func NewResourceManagerCommand() *cobra.Command {
 			ctx, cancel := context.WithCancel(cmd.Context())
 			defer cancel()
 
-			log.Info("Starting gardener-resource-manager...", "version", version.Get().GitVersion)
+			log.Info("Starting gardener-resource-manager...", "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
 			})

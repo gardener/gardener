@@ -228,7 +228,7 @@ func NewGardenerAdmissionControllerCommand() *cobra.Command {
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true
 
-			log.Info("Starting " + Name + "...")
+			log.Info("Starting "+Name+"...", "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
 			})

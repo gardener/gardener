@@ -18,25 +18,19 @@ import (
 	"os"
 
 	"github.com/gardener/gardener/cmd/gardener-resource-manager/app"
+	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/logger"
 
-	"k8s.io/client-go/rest"
 	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 func main() {
-	rest.SetDefaultWarningHandler(
-		rest.NewWarningWriter(os.Stderr, rest.WarningWriterOptions{
-			// only print a given warning the first time we receive it
-			Deduplicate: true,
-		}),
-	)
+	utils.DeduplicateWarnings()
 
 	runtimelog.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
 
 	ctx := signals.SetupSignalHandler()
-
 	if err := app.NewResourceManagerCommand().ExecuteContext(ctx); err != nil {
 		runtimelog.Log.Error(err, "error executing the main controller command")
 		os.Exit(1)

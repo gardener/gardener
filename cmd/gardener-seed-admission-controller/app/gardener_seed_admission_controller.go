@@ -65,7 +65,7 @@ func NewSeedAdmissionControllerCommand() *cobra.Command {
 
 			cmd.SilenceUsage = true
 
-			log.Info("Starting " + Name + "...")
+			log.Info("Starting "+Name+"...", "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
 			})
@@ -120,8 +120,6 @@ func (o *Options) validate() error {
 
 // Run runs gardener-seed-admission-controller using the specified options.
 func (o *Options) Run(ctx context.Context) error {
-	log.Info("Starting Gardener Seed admission controller...", "version", version.Get())
-
 	log.Info("getting rest config")
 	restConfig, err := config.GetConfig()
 	if err != nil {
