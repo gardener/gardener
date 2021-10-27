@@ -124,6 +124,22 @@ func (b *Botanist) WaitUntilEtcdsReady(ctx context.Context) error {
 	)(ctx)
 }
 
+// DestroyEtcd destroys the etcd main and events.
+func (b *Botanist) DestroyEtcd(ctx context.Context) error {
+	return flow.Parallel(
+		b.Shoot.Components.ControlPlane.EtcdMain.Destroy,
+		b.Shoot.Components.ControlPlane.EtcdEvents.Destroy,
+	)(ctx)
+}
+
+// WaitUntilEtcdsDeleted waits until both etcd-main and etcd-events are deleted.
+func (b *Botanist) WaitUntilEtcdsDeleted(ctx context.Context) error {
+	return flow.Parallel(
+		b.Shoot.Components.ControlPlane.EtcdMain.WaitCleanup,
+		b.Shoot.Components.ControlPlane.EtcdEvents.WaitCleanup,
+	)(ctx)
+}
+
 // SnapshotEtcd executes into the etcd-main pod and triggers a full snapshot.
 func (b *Botanist) SnapshotEtcd(ctx context.Context) error {
 	return b.Shoot.Components.ControlPlane.EtcdMain.Snapshot(ctx, kubernetes.NewPodExecutor(b.K8sSeedClient.RESTConfig()))
