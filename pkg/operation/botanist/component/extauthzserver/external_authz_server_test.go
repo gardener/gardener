@@ -27,6 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -69,6 +70,7 @@ var _ = Describe("ExtAuthzServer", func() {
 		expectedVirtualService      *istionetworkingv1beta1.VirtualService
 		expectedVpa                 *autoscalingv1beta2.VerticalPodAutoscaler
 		expectedPodDisruptionBudget *policyv1beta1.PodDisruptionBudget
+		expectedPriorityClass       *schedulingv1.PriorityClass
 	)
 
 	BeforeEach(func() {
@@ -80,11 +82,26 @@ var _ = Describe("ExtAuthzServer", func() {
 		Expect(appsv1.AddToScheme(s)).To(Succeed())
 		Expect(autoscalingv1beta2.AddToScheme(s)).To(Succeed())
 		Expect(policyv1beta1.AddToScheme(s)).To(Succeed())
+		Expect(schedulingv1.AddToScheme(s)).To(Succeed())
 
 		c = fake.NewClientBuilder().WithScheme(s).Build()
 
 		var err error
 		Expect(err).NotTo(HaveOccurred())
+
+		expectedPriorityClass = &schedulingv1.PriorityClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            deploymentName,
+				ResourceVersion: "1",
+			},
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "PriorityClass",
+				APIVersion: "scheduling.k8s.io/v1",
+			},
+			Description:   "This class is used to ensure that the reversed-vpn-auth-server has a high priority and is not preempted in favor of other pods.",
+			GlobalDefault: false,
+			Value:         1000000000,
+		}
 
 		expectedDeployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -138,7 +155,7 @@ var _ = Describe("ExtAuthzServer", func() {
 							},
 						},
 						AutomountServiceAccountToken: pointer.Bool(false),
-						PriorityClassName:            "system-cluster-critical",
+						PriorityClassName:            DeploymentName,
 						DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 						Containers: []corev1.Container{
 							{
@@ -307,6 +324,10 @@ var _ = Describe("ExtAuthzServer", func() {
 		It("succeeds", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
+			actualPriorityClass := &schedulingv1.PriorityClass{}
+			Expect(c.Get(ctx, kutil.Key(expectedPriorityClass.Name), actualPriorityClass)).To(Succeed())
+			Expect(actualPriorityClass).To(DeepEqual(expectedPriorityClass))
+
 			actualDeployment := &appsv1.Deployment{}
 			Expect(c.Get(ctx, kutil.Key(expectedDeployment.Namespace, expectedDeployment.Name), actualDeployment)).To(Succeed())
 			Expect(actualDeployment).To(DeepEqual(expectedDeployment))
@@ -336,6 +357,7 @@ var _ = Describe("ExtAuthzServer", func() {
 		It("destroy succeeds", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
+			Expect(c.Get(ctx, kutil.Key(expectedPriorityClass.Name), &schedulingv1.PriorityClass{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedDeployment.Namespace, expectedDeployment.Name), &appsv1.Deployment{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedDestinationRule.Namespace, expectedDestinationRule.Name), &istionetworkingv1beta1.DestinationRule{})).To(Succeed())
 			Expect(c.Get(ctx, kutil.Key(expectedService.Namespace, expectedService.Name), &corev1.Service{})).To(Succeed())
@@ -351,6 +373,7 @@ var _ = Describe("ExtAuthzServer", func() {
 			Expect(c.Get(ctx, kutil.Key(expectedVirtualService.Namespace, expectedVirtualService.Name), &istionetworkingv1beta1.VirtualService{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedVpa.Namespace, expectedVpa.Name), &autoscalingv1beta2.VerticalPodAutoscaler{})).To(BeNotFoundError())
 			Expect(c.Get(ctx, kutil.Key(expectedPodDisruptionBudget.Namespace, expectedPodDisruptionBudget.Name), &policyv1beta1.PodDisruptionBudget{})).To(BeNotFoundError())
+			Expect(c.Get(ctx, kutil.Key(expectedPriorityClass.Name), &schedulingv1.PriorityClass{})).To(BeNotFoundError())
 		})
 
 	})

@@ -31,6 +31,7 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	schedulingv1 "k8s.io/api/scheduling/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -78,9 +79,19 @@ func (a *authServer) Deploy(ctx context.Context) error {
 		virtualService  = a.emptyVirtualService()
 		vpa             = a.emptyVPA()
 		pdb             = a.emptyPDB()
+		pc              = a.emptyPC()
 
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 	)
+
+	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, pc, func() error {
+		pc.Description = "This class is used to ensure that the reversed-vpn-auth-server has a high priority and is not preempted in favor of other pods."
+		pc.GlobalDefault = false
+		pc.Value = 1000000000
+		return nil
+	}); err != nil {
+		return err
+	}
 
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, a.client, deployment, func() error {
 		maxSurge := intstr.FromInt(100)
@@ -127,7 +138,7 @@ func (a *authServer) Deploy(ctx context.Context) error {
 						},
 					},
 					AutomountServiceAccountToken: pointer.Bool(false),
-					PriorityClassName:            "system-cluster-critical",
+					PriorityClassName:            pc.Name,
 					DNSPolicy:                    corev1.DNSDefault, // make sure to not use the coredns for DNS resolution.
 					Containers: []corev1.Container{
 						{
@@ -278,6 +289,7 @@ func (a *authServer) Destroy(ctx context.Context) error {
 		a.emptyVirtualService(),
 		a.emptyVPA(),
 		a.emptyPDB(),
+		a.emptyPC(),
 	)
 }
 
@@ -306,6 +318,10 @@ func (a *authServer) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 
 func (a *authServer) emptyPDB() *policyv1beta1.PodDisruptionBudget {
 	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName + "-pdb", Namespace: a.namespace}}
+}
+
+func (a *authServer) emptyPC() *schedulingv1.PriorityClass {
+	return &schedulingv1.PriorityClass{ObjectMeta: metav1.ObjectMeta{Name: DeploymentName}}
 }
 
 func getLabels() map[string]string {
