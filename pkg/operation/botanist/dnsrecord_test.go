@@ -200,7 +200,7 @@ var _ = Describe("dnsrecord", func() {
 						Type: externalProvider,
 					},
 					SecretRef: corev1.SecretReference{
-						Name:      shootName + "-" + DNSExternalName,
+						Name:      "dnsrecord-" + shootName + "-" + DNSExternalName,
 						Namespace: seedNamespace,
 					},
 					Zone:       pointer.String(externalZone),
@@ -212,7 +212,7 @@ var _ = Describe("dnsrecord", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = client.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSExternalName, Namespace: seedNamespace}, secret)
+			err = client.Get(ctx, types.NamespacedName{Name: "dnsrecord-" + shootName + "-" + DNSExternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -220,7 +220,7 @@ var _ = Describe("dnsrecord", func() {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            shootName + "-" + DNSExternalName,
+					Name:            "dnsrecord-" + shootName + "-" + DNSExternalName,
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 				},
@@ -262,7 +262,7 @@ var _ = Describe("dnsrecord", func() {
 						Type: internalProvider,
 					},
 					SecretRef: corev1.SecretReference{
-						Name:      shootName + "-" + DNSInternalName,
+						Name:      "dnsrecord-" + shootName + "-" + DNSInternalName,
 						Namespace: seedNamespace,
 					},
 					Zone:       pointer.String(internalZone),
@@ -274,7 +274,7 @@ var _ = Describe("dnsrecord", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = client.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSInternalName, Namespace: seedNamespace}, secret)
+			err = client.Get(ctx, types.NamespacedName{Name: "dnsrecord-" + shootName + "-" + DNSInternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -282,7 +282,7 @@ var _ = Describe("dnsrecord", func() {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:            shootName + "-" + DNSInternalName,
+					Name:            "dnsrecord-" + shootName + "-" + DNSInternalName,
 					Namespace:       seedNamespace,
 					ResourceVersion: "1",
 				},
