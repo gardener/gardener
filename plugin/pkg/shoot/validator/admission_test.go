@@ -224,6 +224,9 @@ var _ = Describe("validator", func() {
 								Zones: []string{"europe-a"},
 							},
 						},
+						InfrastructureConfig: &runtime.RawExtension{Raw: []byte(`{
+"kind": "InfrastructureConfig",
+"apiVersion": "some.random.config/v1beta1"}`)},
 					},
 				},
 			}
@@ -2119,6 +2122,66 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 					Expect(err.Error()).To(ContainSubstring("spec.provider.workers[0].volume.size"))
 					Expect(err.Error()).To(ContainSubstring("spec.provider.workers[2].volume.size"))
+				})
+			})
+
+			Context("infrastructureConfig checks", func() {
+				BeforeEach(func() {
+					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+"kind": "InfrastructureConfig",
+"apiVersion": "azure.provider.extensions.gardener.cloud/__internal",
+"networks": {"vnet": {"cidr": "10.250.0.0/16"}}
+}`),
+					}
+				})
+
+				It("ensures new clusters cannot use the apiVersion 'internal'", func() {
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).To(BeForbiddenError())
+					Expect(err.Error()).To(ContainSubstring("must not use apiVersion 'internal'"))
+				})
+
+				// TODO (voelzmo): remove this test and the associated production code once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
+				It("ensures existing clusters can still use the apiVersion 'internal' for compatibility reasons", func() {
+					oldShoot := shoot.DeepCopy()
+
+					// update the Shoot spec to avoid early exit in the admission process
+					shoot.Spec.Provider.Workers[0].Maximum = 1337
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("admits new clusters using other apiVersion than 'internal'", func() {
+					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+"kind": "InfrastructureConfig",
+"apiVersion": "azure.provider.extensions.gardener.cloud/v1",
+"networks": {"vnet": {"cidr": "10.250.0.0/16"}}
+}`),
+					}
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					err := admissionHandler.Admit(context.TODO(), attrs, nil)
+
+					Expect(err).ToNot(HaveOccurred())
 				})
 			})
 		})

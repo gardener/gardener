@@ -24,14 +24,18 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
@@ -239,7 +243,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	allErrs = append(allErrs, validationContext.validateShootNetworks()...)
 	allErrs = append(allErrs, validationContext.validateKubernetes()...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
-	allErrs = append(allErrs, validationContext.validateProvider()...)
+	allErrs = append(allErrs, validationContext.validateProvider(a)...)
 
 	dnsErrors, err := validationContext.validateDNSDomainUniqueness(v.shootLister)
 	if err != nil {
@@ -526,7 +530,7 @@ func (c *validationContext) validateKubernetes() field.ErrorList {
 	return allErrs
 }
 
-func (c *validationContext) validateProvider() field.ErrorList {
+func (c *validationContext) validateProvider(a admission.Attributes) field.ErrorList {
 	var (
 		allErrs field.ErrorList
 		path    = field.NewPath("spec", "provider")
@@ -536,6 +540,14 @@ func (c *validationContext) validateProvider() field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must equal provider type of referenced CloudProfile: %q", c.cloudProfile.Spec.Type)))
 		// exit early, all other validation errors will be misleading
 		return allErrs
+	}
+
+	// TODO (voelzmo): remove this 'if' statement once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
+	if a.GetOperation() == admission.Create {
+		_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(c.shoot.Spec.Provider.InfrastructureConfig.Raw, nil, nil)
+		if gvk.Version == runtime.APIVersionInternal {
+			allErrs = append(allErrs, field.Invalid(path.Child("infrastructureConfig"), gvk, "must not use apiVersion 'internal'"))
+		}
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {
