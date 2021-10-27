@@ -88,64 +88,64 @@ func InjectAnnotations(obj runtime.Object, additional ...string) error {
 	switch o := obj.(type) {
 	case *corev1.Pod:
 		referenceAnnotations := computeAnnotations(o.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
 
 	case *appsv1.Deployment:
 		referenceAnnotations := computeAnnotations(o.Spec.Template.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
-		o.Spec.Template.Annotations = utils.MergeStringMaps(o.Spec.Template.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+		o.Spec.Template.Annotations = mergeAnnotations(o.Spec.Template.Annotations, referenceAnnotations)
 
 	case *appsv1beta2.Deployment:
 		referenceAnnotations := computeAnnotations(o.Spec.Template.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
-		o.Spec.Template.Annotations = utils.MergeStringMaps(o.Spec.Template.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+		o.Spec.Template.Annotations = mergeAnnotations(o.Spec.Template.Annotations, referenceAnnotations)
 
 	case *appsv1beta1.Deployment:
 		referenceAnnotations := computeAnnotations(o.Spec.Template.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
-		o.Spec.Template.Annotations = utils.MergeStringMaps(o.Spec.Template.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+		o.Spec.Template.Annotations = mergeAnnotations(o.Spec.Template.Annotations, referenceAnnotations)
 
 	case *appsv1.StatefulSet:
 		referenceAnnotations := computeAnnotations(o.Spec.Template.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
-		o.Spec.Template.Annotations = utils.MergeStringMaps(o.Spec.Template.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+		o.Spec.Template.Annotations = mergeAnnotations(o.Spec.Template.Annotations, referenceAnnotations)
 
 	case *appsv1beta2.StatefulSet:
 		referenceAnnotations := computeAnnotations(o.Spec.Template.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
-		o.Spec.Template.Annotations = utils.MergeStringMaps(o.Spec.Template.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+		o.Spec.Template.Annotations = mergeAnnotations(o.Spec.Template.Annotations, referenceAnnotations)
 
 	case *appsv1beta1.StatefulSet:
 		referenceAnnotations := computeAnnotations(o.Spec.Template.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
-		o.Spec.Template.Annotations = utils.MergeStringMaps(o.Spec.Template.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+		o.Spec.Template.Annotations = mergeAnnotations(o.Spec.Template.Annotations, referenceAnnotations)
 
 	case *appsv1.DaemonSet:
 		referenceAnnotations := computeAnnotations(o.Spec.Template.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
-		o.Spec.Template.Annotations = utils.MergeStringMaps(o.Spec.Template.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+		o.Spec.Template.Annotations = mergeAnnotations(o.Spec.Template.Annotations, referenceAnnotations)
 
 	case *appsv1beta2.DaemonSet:
 		referenceAnnotations := computeAnnotations(o.Spec.Template.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
-		o.Spec.Template.Annotations = utils.MergeStringMaps(o.Spec.Template.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+		o.Spec.Template.Annotations = mergeAnnotations(o.Spec.Template.Annotations, referenceAnnotations)
 
 	case *batchv1.Job:
 		referenceAnnotations := computeAnnotations(o.Spec.Template.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
-		o.Spec.Template.Annotations = utils.MergeStringMaps(o.Spec.Template.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+		o.Spec.Template.Annotations = mergeAnnotations(o.Spec.Template.Annotations, referenceAnnotations)
 
 	case *batchv1.CronJob:
 		referenceAnnotations := computeAnnotations(o.Spec.JobTemplate.Spec.Template.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
-		o.Spec.JobTemplate.Annotations = utils.MergeStringMaps(o.Spec.JobTemplate.Annotations, referenceAnnotations)
-		o.Spec.JobTemplate.Spec.Template.Annotations = utils.MergeStringMaps(o.Spec.JobTemplate.Spec.Template.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+		o.Spec.JobTemplate.Annotations = mergeAnnotations(o.Spec.JobTemplate.Annotations, referenceAnnotations)
+		o.Spec.JobTemplate.Spec.Template.Annotations = mergeAnnotations(o.Spec.JobTemplate.Spec.Template.Annotations, referenceAnnotations)
 
 	case *batchv1beta1.CronJob:
 		referenceAnnotations := computeAnnotations(o.Spec.JobTemplate.Spec.Template.Spec, additional...)
-		o.Annotations = utils.MergeStringMaps(o.Annotations, referenceAnnotations)
-		o.Spec.JobTemplate.Annotations = utils.MergeStringMaps(o.Spec.JobTemplate.Annotations, referenceAnnotations)
-		o.Spec.JobTemplate.Spec.Template.Annotations = utils.MergeStringMaps(o.Spec.JobTemplate.Spec.Template.Annotations, referenceAnnotations)
+		o.Annotations = mergeAnnotations(o.Annotations, referenceAnnotations)
+		o.Spec.JobTemplate.Annotations = mergeAnnotations(o.Spec.JobTemplate.Annotations, referenceAnnotations)
+		o.Spec.JobTemplate.Spec.Template.Annotations = mergeAnnotations(o.Spec.JobTemplate.Spec.Template.Annotations, referenceAnnotations)
 
 	default:
 		return fmt.Errorf("unhandled object type %T", obj)
@@ -194,4 +194,17 @@ func computeAnnotations(spec corev1.PodSpec, additional ...string) map[string]st
 	}
 
 	return out
+}
+
+func mergeAnnotations(oldAnnotations, newAnnotations map[string]string) map[string]string {
+	// Remove all existing annotations with the AnnotationKeyPrefix to make sure that no longer referenced resources
+	// do not remain in the annotations.
+	old := make(map[string]string, len(oldAnnotations))
+	for k, v := range oldAnnotations {
+		if !strings.HasPrefix(k, AnnotationKeyPrefix) {
+			old[k] = v
+		}
+	}
+
+	return utils.MergeStringMaps(old, newAnnotations)
 }

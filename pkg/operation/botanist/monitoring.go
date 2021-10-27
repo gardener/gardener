@@ -485,9 +485,12 @@ func (b *Botanist) deployGrafanaCharts(ctx context.Context, role, dashboards, ba
 
 	// TODO(rfranzke): Remove in a future release.
 	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-dashboard-providers"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-datasources"}},
-		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-dashboards"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-operators-dashboard-providers"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-operators-datasources"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-operators-dashboards"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-users-dashboard-providers"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-users-datasources"}},
+		&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: "grafana-users-dashboards"}},
 	)
 }
 
