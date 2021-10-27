@@ -57,7 +57,7 @@ Number of IPs per podCIDRs: 256
 With the configuration above a Shoot cluster can at most have **16 nodes** which are ready to run workload in the Pod network.
 
 Beside the configuration in `.spec.networking.pods`, users can tune the `nodeCIDRMaskSize` used by Kube-Controller-Manager on shoot creation.
-A smaller IP range for nodes means more `podCIDRs` and thus the ability to provision more nodes in the cluster, but less available IPs for Pods running on the node.
+A smaller IP range per node means more `podCIDRs` and thus the ability to provision more nodes in the cluster, but less available IPs for Pods running on each of the nodes.
 
 ```yaml
 apiVersion: core.gardener.cloud/v1beta1
