@@ -375,9 +375,14 @@ This controller provides the service to create and auto-renew tokens via the [`T
 It provides a functionality similar to the kubelet's [Service Account Token Volume Projection](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#service-account-token-volume-projection).
 It was created to handle the special case of issuing tokens to pods that run in a different cluster than the API server they communicate with (hence, using the native token volume projection feature is not possible).
 
+The controller differentiates between `source cluster` and `target cluster`.
+The `source cluster` hosts the gardener resource manager pod. Secrets in this cluster are watched and modified by the controller.
+The `target cluster` _can_ be configured to point to another cluster. The existence of ServiceAccounts are ensured and token requests are issued against the target.
+When the grm is deployed as part of the Shoot's controlplane in the Seed the `source cluster` is the Seed while the `target cluster` points to the Shoot.
+
 #### Reconciliation Loop
 
-This controller reconciles secrets in all namespaces in the targetCluster with the label: `resources.gardener.cloud/purpose: token-requestor`.
+This controller reconciles secrets in all namespaces in the source cluster with the label: `resources.gardener.cloud/purpose: token-requestor`.
 See [here](../../example/resource-manager/30-secret-tokenrequestor.yaml) for an example of the secret.
 
 The controller ensures a `ServiceAccount` exists in the target cluster as specified in the annotations of the `Secret` in the source cluster:
