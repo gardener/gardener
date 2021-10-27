@@ -126,6 +126,11 @@ func (g *gardenerSeedAdmissionController) Deploy(ctx context.Context) error {
 					Verbs:     []string{"get", "list"},
 				},
 				{
+					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
+					Resources: []string{"etcds"},
+					Verbs:     []string{"get", "list"},
+				},
+				{
 					APIGroups: []string{extensionsv1alpha1.SchemeGroupVersion.Group},
 					Resources: []string{
 						"backupbuckets",
