@@ -76,6 +76,9 @@ const (
 	// ProjectedTokenSkip is a constant for a label on a Pod which indicates that this Pod should not be considered for
 	// an automatic mount of a projected ServiceAccount token.
 	ProjectedTokenSkip = "projected-token-mount.resources.gardener.cloud/skip"
+	// ProjectedTokenExpirationSeconds is a constant for a label on a Pod which overwrites the default token expiration
+	// seconds for the automatic mount of a projected ServiceAccount token.
+	ProjectedTokenExpirationSeconds = "projected-token-mount.resources.gardener.cloud/expiration-seconds"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

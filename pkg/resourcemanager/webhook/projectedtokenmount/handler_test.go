@@ -50,9 +50,9 @@ var _ = Describe("Handler", func() {
 		pod            *corev1.Pod
 		serviceAccount *corev1.ServiceAccount
 
-		namespace                = "some-namespace"
-		serviceAccountName       = "some-service-account"
-		expirationSeconds  int64 = 1337
+		namespace          = "some-namespace"
+		serviceAccountName = "some-service-account"
+		expirationSeconds  int64
 
 		patchType = admissionv1.PatchTypeJSONPatch
 	)
@@ -67,7 +67,11 @@ var _ = Describe("Handler", func() {
 		handler = NewHandler(fakeClient, expirationSeconds)
 		Expect(admission.InjectDecoderInto(decoder, handler)).To(BeTrue())
 
-		request = admission.Request{}
+		request = admission.Request{
+			AdmissionRequest: admissionv1.AdmissionRequest{
+				Operation: admissionv1.Create,
+			},
+		}
 		pod = &corev1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: namespace,
@@ -84,9 +88,25 @@ var _ = Describe("Handler", func() {
 			},
 			AutomountServiceAccountToken: pointer.Bool(false),
 		}
+
+		expirationSeconds = 1337
 	})
 
 	Describe("#Handle", func() {
+		It("should allow because operation is not 'create'", func() {
+			request.Operation = admissionv1.Update
+
+			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+				AdmissionResponse: admissionv1.AdmissionResponse{
+					Allowed: true,
+					Result: &metav1.Status{
+						Reason: "only 'create' operation is handled",
+						Code:   http.StatusOK,
+					},
+				},
+			}))
+		})
+
 		It("should return an error because the pod cannot be decoded", func() {
 			request.Object.Raw = []byte(`{]`)
 
@@ -122,7 +142,7 @@ var _ = Describe("Handler", func() {
 
 			Entry("explicit opt out",
 				func() {
-					pod.Annotations = map[string]string{"projected-token-mount.resources.gardener.cloud/skip": "true"}
+					pod.Labels = map[string]string{"projected-token-mount.resources.gardener.cloud/skip": "true"}
 				},
 				"pod explicitly opts out of projected service account token mount",
 			),
@@ -196,56 +216,58 @@ var _ = Describe("Handler", func() {
 				AdmissionResponse: admissionv1.AdmissionResponse{
 					Allowed: true,
 					Result: &metav1.Status{
-						Reason: "pod already has service account defaultVolume mount",
+						Reason: "pod already has service account volume mount",
 						Code:   http.StatusOK,
 					},
 				},
 			}))
 		})
 
-		It("should mutate", func() {
-			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
+		Context("should mutate", func() {
+			AfterEach(func() {
+				Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
 
-			objData, err := runtime.Encode(encoder, pod)
-			Expect(err).NotTo(HaveOccurred())
-			request.Object.Raw = objData
+				objData, err := runtime.Encode(encoder, pod)
+				Expect(err).NotTo(HaveOccurred())
+				request.Object.Raw = objData
 
-			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-				Patches: []jsonpatch.JsonPatchOperation{
-					{
-						Operation: "add",
-						Path:      "/spec/volumes",
-						Value: []interface{}{
-							map[string]interface{}{
-								"name": "kube-api-access-gardener",
-								"projected": map[string]interface{}{
-									"defaultMode": float64(420),
-									"sources": []interface{}{
-										map[string]interface{}{
-											"serviceAccountToken": map[string]interface{}{
-												"expirationSeconds": float64(expirationSeconds),
-												"path":              "token",
+				Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+					Patches: []jsonpatch.JsonPatchOperation{
+						{
+							Operation: "add",
+							Path:      "/spec/volumes",
+							Value: []interface{}{
+								map[string]interface{}{
+									"name": "kube-api-access-gardener",
+									"projected": map[string]interface{}{
+										"defaultMode": float64(420),
+										"sources": []interface{}{
+											map[string]interface{}{
+												"serviceAccountToken": map[string]interface{}{
+													"expirationSeconds": float64(expirationSeconds),
+													"path":              "token",
+												},
 											},
-										},
-										map[string]interface{}{
-											"configMap": map[string]interface{}{
-												"name": "kube-root-ca.crt",
-												"items": []interface{}{
-													map[string]interface{}{
-														"key":  "ca.crt",
-														"path": "ca.crt",
+											map[string]interface{}{
+												"configMap": map[string]interface{}{
+													"name": "kube-root-ca.crt",
+													"items": []interface{}{
+														map[string]interface{}{
+															"key":  "ca.crt",
+															"path": "ca.crt",
+														},
 													},
 												},
 											},
-										},
-										map[string]interface{}{
-											"downwardAPI": map[string]interface{}{
-												"items": []interface{}{
-													map[string]interface{}{
-														"path": "namespace",
-														"fieldRef": map[string]interface{}{
-															"apiVersion": "v1",
-															"fieldPath":  "metadata.namespace",
+											map[string]interface{}{
+												"downwardAPI": map[string]interface{}{
+													"items": []interface{}{
+														map[string]interface{}{
+															"path": "namespace",
+															"fieldRef": map[string]interface{}{
+																"apiVersion": "v1",
+																"fieldPath":  "metadata.namespace",
+															},
 														},
 													},
 												},
@@ -255,35 +277,42 @@ var _ = Describe("Handler", func() {
 								},
 							},
 						},
-					},
-					{
-						Operation: "add",
-						Path:      "/spec/containers/0/volumeMounts",
-						Value: []interface{}{
-							map[string]interface{}{
-								"name":      "kube-api-access-gardener",
-								"readOnly":  true,
-								"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+						{
+							Operation: "add",
+							Path:      "/spec/containers/0/volumeMounts",
+							Value: []interface{}{
+								map[string]interface{}{
+									"name":      "kube-api-access-gardener",
+									"readOnly":  true,
+									"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+								},
+							},
+						},
+						{
+							Operation: "add",
+							Path:      "/spec/containers/1/volumeMounts",
+							Value: []interface{}{
+								map[string]interface{}{
+									"name":      "kube-api-access-gardener",
+									"readOnly":  true,
+									"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+								},
 							},
 						},
 					},
-					{
-						Operation: "add",
-						Path:      "/spec/containers/1/volumeMounts",
-						Value: []interface{}{
-							map[string]interface{}{
-								"name":      "kube-api-access-gardener",
-								"readOnly":  true,
-								"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
-							},
-						},
+					AdmissionResponse: admissionv1.AdmissionResponse{
+						Allowed:   true,
+						PatchType: &patchType,
 					},
-				},
-				AdmissionResponse: admissionv1.AdmissionResponse{
-					Allowed:   true,
-					PatchType: &patchType,
-				},
-			}))
+				}))
+			})
+
+			It("normal case", func() {})
+
+			It("with overridden expiration seconds", func() {
+				expirationSeconds = 8998
+				pod.Annotations = map[string]string{"projected-token-mount.resources.gardener.cloud/expiration-seconds": "8998"}
+			})
 		})
 	})
 })

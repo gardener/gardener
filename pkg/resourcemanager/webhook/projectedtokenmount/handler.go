@@ -18,11 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -31,13 +34,13 @@ import (
 )
 
 type handler struct {
-	targetClient      client.Client
+	targetClient      client.Reader
 	decoder           *admission.Decoder
 	expirationSeconds int64
 }
 
 // NewHandler returns a new handler.
-func NewHandler(targetClient client.Client, expirationSeconds int64) admission.Handler {
+func NewHandler(targetClient client.Reader, expirationSeconds int64) admission.Handler {
 	return &handler{
 		targetClient:      targetClient,
 		expirationSeconds: expirationSeconds,
@@ -50,12 +53,16 @@ func (h *handler) InjectDecoder(d *admission.Decoder) error {
 }
 
 func (h *handler) Handle(ctx context.Context, req admission.Request) admission.Response {
+	if req.Operation != admissionv1.Create {
+		return admission.Allowed("only 'create' operation is handled")
+	}
+
 	pod := &corev1.Pod{}
 	if err := h.decoder.Decode(req, pod); err != nil {
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
-	if metav1.HasAnnotation(pod.ObjectMeta, resourcesv1alpha1.ProjectedTokenSkip) {
+	if metav1.HasLabel(pod.ObjectMeta, resourcesv1alpha1.ProjectedTokenSkip) {
 		return admission.Allowed("pod explicitly opts out of projected service account token mount")
 	}
 
@@ -74,11 +81,16 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 
 	for _, volume := range pod.Spec.Volumes {
 		if strings.HasPrefix(volume.Name, serviceAccountVolumeNamePrefix) {
-			return admission.Allowed("pod already has service account defaultVolume mount")
+			return admission.Allowed("pod already has service account volume mount")
 		}
 	}
 
-	pod.Spec.Volumes = append(pod.Spec.Volumes, getVolume(h.expirationSeconds))
+	expirationSeconds, err := tokenExpirationSeconds(pod.Annotations, h.expirationSeconds)
+	if err != nil {
+		return admission.Errored(http.StatusUnprocessableEntity, err)
+	}
+
+	pod.Spec.Volumes = append(pod.Spec.Volumes, getVolume(expirationSeconds))
 	for i := range pod.Spec.Containers {
 		pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, getVolumeMount())
 	}
@@ -100,6 +112,13 @@ func volumeName() string {
 	return serviceAccountVolumeNamePrefix + serviceAccountVolumeNameSuffix
 }
 
+func tokenExpirationSeconds(annotations map[string]string, defaultExpirationSeconds int64) (int64, error) {
+	if v, ok := annotations[resourcesv1alpha1.ProjectedTokenExpirationSeconds]; ok {
+		return strconv.ParseInt(v, 10, 64)
+	}
+	return defaultExpirationSeconds, nil
+}
+
 func getVolume(expirationSeconds int64) corev1.Volume {
 	return corev1.Volume{
 		Name: volumeName(),
@@ -116,12 +135,10 @@ func getVolume(expirationSeconds int64) corev1.Volume {
 					{
 						ConfigMap: &corev1.ConfigMapProjection{
 							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "kube-root-ca.crt",
-								// TODO: Use constant after https://github.com/gardener/gardener/pull/4832 is merged.
+								Name: rootcapublisher.RootCACertConfigMapName,
 							},
 							Items: []corev1.KeyToPath{{
-								// TODO: Use constant after https://github.com/gardener/gardener/pull/4832 is merged.
-								Key:  "ca.crt",
+								Key:  rootcapublisher.RootCADataKey,
 								Path: "ca.crt",
 							}},
 						},

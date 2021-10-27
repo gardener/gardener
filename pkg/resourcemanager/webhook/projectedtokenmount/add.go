@@ -44,7 +44,7 @@ type WebhookConfig struct {
 // AddToManagerWithOptions adds the webhook to a Manager with the given config.
 func AddToManagerWithOptions(mgr manager.Manager, conf WebhookConfig) error {
 	server := mgr.GetWebhookServer()
-	server.Register(WebhookPath, &webhook.Admission{Handler: NewHandler(conf.TargetCluster.GetClient(), conf.ExpirationSeconds)})
+	server.Register(WebhookPath, &webhook.Admission{Handler: NewHandler(conf.TargetCluster.GetCache(), conf.ExpirationSeconds)})
 	return nil
 }
 

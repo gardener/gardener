@@ -471,6 +471,7 @@ spec:
             path: namespace
 ```
 
-> The `expirationSeconds` are defaulted to `12h` and can be overwritten with the `--projected-token-mount-expiration-seconds` flag.
+> The `expirationSeconds` are defaulted to `12h` and can be overwritten with the `--projected-token-mount-expiration-seconds` flag, or with the `projected-token-mount.resources.gardener.cloud/expiration-seconds` annotation on a `Pod` resource.
 
 The volume will be mounted into all containers specified in the `Pod` to the path `/var/run/secrets/kubernetes.io/serviceaccount`.
+This is the default location where client libraries expect to find the tokens and mimics the [upstream `ServiceAccount` admission plugin](https://github.com/kubernetes/kubernetes/tree/v1.22.2/plugin/pkg/admission/serviceaccount), see [this document](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#serviceaccount-admission-controller) for more information.
