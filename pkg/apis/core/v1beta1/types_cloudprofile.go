@@ -84,6 +84,22 @@ type CloudProfileSpec struct {
 	// +patchStrategy=merge
 	// +optional
 	VolumeTypes []VolumeType `json:"volumeTypes,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,9,rep,name=volumeTypes"`
+	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
+	// +optional
+	Monitoring *MonitoringConfig `json:"monitoring,omitempty" protobuf:"bytes,10,opt,name=monitoring"`
+}
+
+// MonitoringConfig contains settings for the monitoring stack.
+type MonitoringConfig struct {
+	// RemoteWriteURL is optional and contains an Url for remote write setting in prometheus.
+	// +optional
+	RemoteWriteURL string `json:"remoteWriteURL,omitempty" protobuf:"bytes,1,opt,name=remoteWriteURL"`
+	// RemoteWriteKeep contains a list of metrics that will be remote written
+	// +optional
+	RemoteWriteKeep []string `json:"remoteWriteKeep,omitempty" protobuf:"bytes,2,opt,name=remoteWriteKeep"`
+	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
+	// +optional
+	ExternalLabels map[string]string `json:"externalLabels,omitempty" protobuf:"bytes,3,opt,name=externalLabels"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile

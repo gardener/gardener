@@ -69,6 +69,18 @@ type CloudProfileSpec struct {
 	Type string
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	VolumeTypes []VolumeType
+	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
+	Monitoring *MonitoringConfig
+}
+
+// MonitoringConfig contains settings for the monitoring stack.
+type MonitoringConfig struct {
+	// RemoteWriteURL is optional and contains an Url for remote write setting in prometheus.
+	RemoteWriteURL string
+	// RemoteWriteKeep contains a list of metrics that will be remote written
+	RemoteWriteKeep []string
+	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
+	ExternalLabels map[string]string
 }
 
 // GetProviderType gets the type of the provider.

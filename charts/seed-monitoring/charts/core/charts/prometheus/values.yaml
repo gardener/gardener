@@ -307,3 +307,17 @@ resources:
   limits:
     cpu: 350m
     memory: 760Mi
+
+#remoteWrite:
+#  url: remoteWriteUrl
+#  basic_auth:
+#    username: user
+#    password: password
+#  keep:
+#  - metric1
+#  - metric2
+#  - metric3
+#  - metric4
+
+#externalLabels:
+#  env: test

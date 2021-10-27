@@ -309,6 +309,10 @@ message CloudProfileSpec {
   // +patchStrategy=merge
   // +optional
   repeated VolumeType volumeTypes = 9;
+
+  // MonitoringConfig is optional and adds additional settings for the monitoring stack.
+  // +optional
+  optional MonitoringConfig monitoring = 10;
 }
 
 // ClusterAutoscaler contains the configuration flags for the Kubernetes cluster autoscaler.
@@ -1381,6 +1385,21 @@ message Monitoring {
   // Alerting contains information about the alerting configuration for the shoot cluster.
   // +optional
   optional Alerting alerting = 1;
+}
+
+// MonitoringConfig contains settings for the monitoring stack.
+message MonitoringConfig {
+  // RemoteWriteURL is optional and contains an Url for remote write setting in prometheus.
+  // +optional
+  optional string remoteWriteURL = 1;
+
+  // RemoteWriteKeep contains a list of metrics that will be remote written
+  // +optional
+  repeated string remoteWriteKeep = 2;
+
+  // ExternalLabels is optional and sets additional external labels for the monitoring stack.
+  // +optional
+  map<string, string> externalLabels = 3;
 }
 
 // NamedResourceReference is a named reference to a resource.

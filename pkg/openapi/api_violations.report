@@ -24,6 +24,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MachineControllerManagerSettings,NodeConditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MachineImage,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MachineImageVersion,CRI
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,MonitoringConfig,RemoteWriteKeep
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,NginxIngress,LoadBalancerSourceRanges
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,OIDCConfig,SigningAlgs
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1alpha1,PlantSpec,Endpoints
@@ -78,6 +79,7 @@ API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineControllerManagerSettings,NodeConditions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImage,Versions
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MachineImageVersion,CRI
+API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,MonitoringConfig,RemoteWriteKeep
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,NginxIngress,LoadBalancerSourceRanges
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,OIDCConfig,SigningAlgs
 API rule violation: list_type_missing,github.com/gardener/gardener/pkg/apis/core/v1beta1,PlantSpec,Endpoints

@@ -209,6 +209,38 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	prometheusConfig["podAnnotations"] = podAnnotations
 
+	// Add remotewrite to prometheus when enabled
+	if  b.Shoot.CloudProfile.Spec.Monitoring != nil &&
+		b.Shoot.CloudProfile.Spec.Monitoring.RemoteWriteURL != "" {
+		// if remoteWrite Url is set add config into values
+		remoteWriteConfig := map[string]interface{}{
+			"url": b.Shoot.CloudProfile.Spec.Monitoring.RemoteWriteURL,
+		}
+		// get secret for basic_auth in remote write
+		remoteWriteBasicAuth := b.LoadSecret(v1beta1constants.GardenRoleGlobalRemoteWriteMonitoring)
+		if remoteWriteBasicAuth != nil {
+			remoteWriteUsername := string(remoteWriteBasicAuth.Data["username"])
+			remoteWritePassword := string(remoteWriteBasicAuth.Data["password"])
+			if remoteWriteUsername != "" &&
+				remoteWritePassword != "" {
+				remoteWriteConfig["basic_auth"] = map[string]interface{}{
+					"username": remoteWriteUsername,
+					"password": remoteWritePassword,
+				}
+			}
+		}
+		// add list with keep metrics if set
+		if len(b.Shoot.CloudProfile.Spec.Monitoring.RemoteWriteKeep) != 0 {
+			remoteWriteConfig["keep"] = b.Shoot.CloudProfile.Spec.Monitoring.RemoteWriteKeep
+		}
+		prometheusConfig["remoteWrite"] = remoteWriteConfig
+	}
+
+	// set externalLabels
+	if b.Shoot.CloudProfile.Spec.Monitoring != nil {
+		prometheusConfig["externalLabels"] = b.Shoot.CloudProfile.Spec.Monitoring.ExternalLabels
+	}
+
 	prometheus, err := b.InjectSeedShootImages(prometheusConfig, prometheusImages...)
 	if err != nil {
 		return err

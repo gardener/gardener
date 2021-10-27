@@ -245,6 +245,14 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 			secretsMap[v1beta1constants.GardenRoleGlobalMonitoring] = &monitoringSecret
 			logInfo = append(logInfo, fmt.Sprintf("monitoring basic auth secret %q", secret.Name))
 		}
+
+		// Retrieving basic auth secret for remote write monitoring with a label
+		// indicating the Garden role global-monitoring.
+		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleGlobalRemoteWriteMonitoring {
+			monitoringSecret := secret
+			secretsMap[v1beta1constants.GardenRoleGlobalRemoteWriteMonitoring] = &monitoringSecret
+			logInfo = append(logInfo, fmt.Sprintf("monitoring basic auth secret %q", secret.Name))
+		}
 	}
 
 	// Check if an internal domain secret is required

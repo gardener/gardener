@@ -26,6 +26,29 @@ data:
         seed_provider: {{ .Values.seed.provider }}
         shoot_infra: {{ .Values.shoot.provider }}
         ignoreAlerts: {{ .Values.ignoreAlerts }}
+    {{- if .Values.externalLabels }}
+    {{ toYaml .Values.externalLabels | indent 4 }}
+    {{- end }}
+    {{- if .Values.remoteWrite }}
+    {{- if .Values.remoteWrite.url }}
+    remote_write:
+    - url: {{ .Values.remoteWrite.url }}
+    {{- if .Values.remoteWrite.basic_auth }}
+      basic_auth:
+        username: {{ .Values.remoteWrite.basic_auth.username }}
+        password: {{ .Values.remoteWrite.basic_auth.password }}
+    {{- end }}
+    {{- if .Values.remoteWrite.keep }}
+      write_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.remoteWrite.keep | indent 6 }}
+    {{- end }}
+      queue_config:
+          max_shards: 100
+          batch_send_deadline: 20s
+          min_backoff: 500ms
+          max_backoff: 60s
+    {{- end }}
+    {{- end }}
     rule_files:
     - /etc/prometheus/rules/*.yaml
     alerting:
