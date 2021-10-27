@@ -27,7 +27,6 @@ import (
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/utils/pointer"
 )
@@ -274,31 +273,6 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.deployment.seedSelector.matchLabels"),
-			}))))
-		})
-
-		It("should forbid to set an empty deployment type", func() {
-			controllerRegistration.Spec.Deployment.Type = pointer.String("")
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.deployment.type"),
-			}))))
-		})
-
-		It("should forbid specifying a ProviderConfig and referring to a ControllerDeployment", func() {
-			controllerRegistration.Spec.Deployment.ProviderConfig = &runtime.RawExtension{}
-			controllerRegistration.Spec.Deployment.DeploymentRefs = []core.DeploymentRef{
-				{Name: "foo"},
-			}
-
-			errorList := ValidateControllerRegistration(controllerRegistration)
-
-			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.deployment.providerConfig"),
 			}))))
 		})
 

@@ -16,7 +16,6 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // +genclient
@@ -83,16 +82,6 @@ type DeploymentRef struct {
 
 // ControllerRegistrationDeployment contains information for how this controller is deployed.
 type ControllerRegistrationDeployment struct {
-	// Type is the deployment type.
-	// Deprecated: Declare type via `ControllerDeployment` instead.
-	// ATTENTION: This field will be deleted with Gardener v1.32.
-	// +optional
-	Type *string `json:"type,omitempty" protobuf:"bytes,1,opt,name=type"`
-	// ProviderConfig contains type-specific configuration.
-	// Deprecated: Use `DeploymentRefs` instead.
-	// ATTENTION: This field will be deleted with Gardener v1.32.
-	// +optional
-	ProviderConfig *runtime.RawExtension `json:"providerConfig,omitempty" protobuf:"bytes,2,opt,name=providerConfig"`
 	// Policy controls how the controller is deployed. It defaults to 'OnDemand'.
 	// +optional
 	Policy *ControllerDeploymentPolicy `json:"policy,omitempty" protobuf:"bytes,3,opt,name=policy"`

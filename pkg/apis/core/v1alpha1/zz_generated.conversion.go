@@ -2349,8 +2349,6 @@ func Convert_core_ControllerRegistration_To_v1alpha1_ControllerRegistration(in *
 }
 
 func autoConvert_v1alpha1_ControllerRegistrationDeployment_To_core_ControllerRegistrationDeployment(in *ControllerRegistrationDeployment, out *core.ControllerRegistrationDeployment, s conversion.Scope) error {
-	out.Type = (*string)(unsafe.Pointer(in.Type))
-	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Policy = (*core.ControllerDeploymentPolicy)(unsafe.Pointer(in.Policy))
 	out.SeedSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
 	out.DeploymentRefs = *(*[]core.DeploymentRef)(unsafe.Pointer(&in.DeploymentRefs))
@@ -2363,8 +2361,6 @@ func Convert_v1alpha1_ControllerRegistrationDeployment_To_core_ControllerRegistr
 }
 
 func autoConvert_core_ControllerRegistrationDeployment_To_v1alpha1_ControllerRegistrationDeployment(in *core.ControllerRegistrationDeployment, out *ControllerRegistrationDeployment, s conversion.Scope) error {
-	out.Type = (*string)(unsafe.Pointer(in.Type))
-	out.ProviderConfig = (*runtime.RawExtension)(unsafe.Pointer(in.ProviderConfig))
 	out.Policy = (*ControllerDeploymentPolicy)(unsafe.Pointer(in.Policy))
 	out.SeedSelector = (*metav1.LabelSelector)(unsafe.Pointer(in.SeedSelector))
 	out.DeploymentRefs = *(*[]DeploymentRef)(unsafe.Pointer(&in.DeploymentRefs))
