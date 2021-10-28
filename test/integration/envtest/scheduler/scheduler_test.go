@@ -33,15 +33,28 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-var (
-	seeds        []*gardencorev1beta1.Seed
-	seed         *gardencorev1beta1.Seed
-	shoot        *gardencorev1beta1.Shoot
-	cloudProfile *gardencorev1beta1.CloudProfile
-	providerType = "provider-type"
-)
-
 var _ = Describe("Scheduler tests", func() {
+	var (
+		seeds        []*gardencorev1beta1.Seed
+		shoot        *gardencorev1beta1.Shoot
+		cloudProfile *gardencorev1beta1.CloudProfile
+		providerType = "provider-type"
+	)
+	AfterEach(func() {
+		Expect(ConfirmDeletion(ctx, testClient, shoot)).To(Succeed())
+		Expect(testClient.Delete(ctx, shoot)).To(Succeed())
+		Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
+
+		for _, seed := range seeds {
+			Expect(testClient.Delete(ctx, seed)).To(Succeed())
+		}
+		seeds = nil
+		cloudProfile = nil
+		shoot = nil
+
+		By("Stopping Manager")
+		mgrCancel()
+	})
 	Context("SameRegion Scheduling Strategy", func() {
 		BeforeEach(func() {
 			mgr := createManager(&config.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: config.SameRegion})
@@ -53,22 +66,13 @@ var _ = Describe("Scheduler tests", func() {
 			}()
 		})
 
-		AfterEach(func() {
-			Expect(ConfirmDeletion(ctx, testClient, shoot)).To(Succeed())
-			Expect(testClient.Delete(ctx, shoot)).To(Succeed())
-			Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
-			Expect(testClient.Delete(ctx, seed)).To(Succeed())
-
-			By("Stopping Manager")
-			mgrCancel()
-		})
-
 		It("should fail because no Seed in same region exist", func() {
 			By("create cloudprofile")
 			cloudProfile = createCloudProfile("cloudprofile", providerType, "other-region")
 
 			By("create seed")
-			seed = createSeed("seed", providerType, "some-region")
+			seed := createSeed("seed", providerType, "some-region")
+			seeds = append(seeds, seed)
 
 			By("create shoot")
 			shoot = createShoot("shoot", providerType, cloudProfile.Name, "other-region", pointer.String("somedns.example.com"))
@@ -84,7 +88,8 @@ var _ = Describe("Scheduler tests", func() {
 			cloudProfile = createCloudProfile("cloudprofile", providerType, "some-region")
 
 			By("create seed")
-			seed = createSeed("seed", providerType, "some-region")
+			seed := createSeed("seed", providerType, "some-region")
+			seeds = append(seeds, seed)
 
 			By("create shoot")
 			shoot = createShoot("shoot", providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
@@ -105,20 +110,6 @@ var _ = Describe("Scheduler tests", func() {
 			go func() {
 				Expect(mgr.Start(mgrContext)).To(Succeed())
 			}()
-		})
-
-		AfterEach(func() {
-			Expect(ConfirmDeletion(ctx, testClient, shoot)).To(Succeed())
-			Expect(testClient.Delete(ctx, shoot)).To(Succeed())
-			Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
-
-			for _, seed := range seeds {
-				Expect(testClient.Delete(ctx, seed)).To(Succeed())
-			}
-			seeds = nil
-
-			By("Stopping Manager")
-			mgrCancel()
 		})
 
 		It("should successfully schedule to Seed in region with minimal distance", func() {
