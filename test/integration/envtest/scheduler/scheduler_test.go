@@ -128,7 +128,7 @@ var _ = Describe("Scheduler tests", func() {
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
-			}).Should(PointTo(Equal("seed")))
+			}).Should(PointTo(Equal(seed.Name)))
 		})
 	})
 
