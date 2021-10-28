@@ -99,7 +99,7 @@ var _ = Describe("Scheduler tests", func() {
 			mgrCancel()
 		})
 
-		It("Should fail because no Seed in same region exist", func() {
+		It("should fail because no Seed in same region exist", func() {
 			By("create cloudprofile")
 			cloudProfile = createCloudProfile("cloudprofile", providerType, "other-region")
 
