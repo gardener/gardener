@@ -83,7 +83,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/sets"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -301,41 +300,9 @@ func deployCertificates(ctx context.Context, seed *Seed, c client.Client, existi
 		return nil, err
 	}
 
-	// Only necessary to renew certificates for Grafana, Prometheus
-	// TODO: (timuthy) remove in future version.
-	var (
-		renewedLabel = "cert.gardener.cloud/renewed-endpoint"
-		browserCerts = sets.NewString(grafanaTLS, prometheusTLS)
-	)
-	for name, secret := range existingSecretsMap {
-		_, ok := secret.Labels[renewedLabel]
-		if browserCerts.Has(name) && !ok {
-			if err := c.Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
-				return nil, err
-			}
-			delete(existingSecretsMap, name)
-		}
-	}
-
 	secrets, err := secretsutils.GenerateClusterSecrets(ctx, c, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
-	}
-
-	// Only necessary to renew certificates for Grafana, Prometheus
-	// TODO: (timuthy) remove in future version.
-	for name, secret := range secrets {
-		_, ok := secret.Labels[renewedLabel]
-		if browserCerts.Has(name) && !ok {
-			if secret.Labels == nil {
-				secret.Labels = make(map[string]string)
-			}
-			secret.Labels[renewedLabel] = "true"
-
-			if err := c.Update(ctx, secret); err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	return secrets, nil
