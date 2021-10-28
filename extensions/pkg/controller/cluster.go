@@ -20,8 +20,6 @@ import "github.com/gardener/gardener/pkg/extensions"
 type Cluster = extensions.Cluster
 
 var (
-	// NewGardenDecoder returns a new Garden API decoder.
-	NewGardenDecoder = extensions.NewGardenDecoder
 	// GetCluster tries to read Gardener's Cluster extension resource in the given namespace.
 	GetCluster = extensions.GetCluster
 	// CloudProfileFromCluster returns the CloudProfile resource inside the Cluster resource.

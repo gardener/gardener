@@ -15,7 +15,6 @@
 package csimigration
 
 import (
-	extensionscontroller "github.com/gardener/gardener/extensions/pkg/controller"
 	extensionspredicate "github.com/gardener/gardener/extensions/pkg/predicate"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -67,10 +66,9 @@ func Add(mgr manager.Manager, args AddArgs) error {
 	}
 
 	var (
-		decoder           = extensionscontroller.NewGardenDecoder()
 		defaultPredicates = []predicate.Predicate{
-			extensionspredicate.ClusterShootProviderType(decoder, args.Type),
-			extensionspredicate.ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder, args.CSIMigrationKubernetesVersion),
+			extensionspredicate.ClusterShootProviderType(args.Type),
+			extensionspredicate.ClusterShootKubernetesVersionForCSIMigrationAtLeast(args.CSIMigrationKubernetesVersion),
 			ClusterCSIMigrationControllerNotFinished(),
 		}
 	)

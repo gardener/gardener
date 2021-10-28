@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -180,7 +179,7 @@ func HasPurpose(purpose extensionsv1alpha1.Purpose) predicate.Predicate {
 }
 
 // ClusterShootProviderType is a predicate for the provider type of the shoot in the cluster resource.
-func ClusterShootProviderType(decoder runtime.Decoder, providerType string) predicate.Predicate {
+func ClusterShootProviderType(providerType string) predicate.Predicate {
 	f := func(obj client.Object) bool {
 		if obj == nil {
 			return false
@@ -191,7 +190,7 @@ func ClusterShootProviderType(decoder runtime.Decoder, providerType string) pred
 			return false
 		}
 
-		shoot, err := extensionscontroller.ShootFromCluster(decoder, cluster)
+		shoot, err := extensionscontroller.ShootFromCluster(cluster)
 		if err != nil {
 			return false
 		}
@@ -247,7 +246,7 @@ func GardenCoreProviderType(providerType string) predicate.Predicate {
 }
 
 // ClusterShootKubernetesVersionForCSIMigrationAtLeast is a predicate for the kubernetes version of the shoot in the cluster resource.
-func ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder runtime.Decoder, kubernetesVersion string) predicate.Predicate {
+func ClusterShootKubernetesVersionForCSIMigrationAtLeast(kubernetesVersion string) predicate.Predicate {
 	f := func(obj client.Object) bool {
 		if obj == nil {
 			return false
@@ -258,7 +257,7 @@ func ClusterShootKubernetesVersionForCSIMigrationAtLeast(decoder runtime.Decoder
 			return false
 		}
 
-		shoot, err := extensionscontroller.ShootFromCluster(decoder, cluster)
+		shoot, err := extensionscontroller.ShootFromCluster(cluster)
 		if err != nil {
 			return false
 		}
