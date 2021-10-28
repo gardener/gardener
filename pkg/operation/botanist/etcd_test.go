@@ -377,6 +377,52 @@ var _ = Describe("Etcd", func() {
 		})
 	})
 
+	Describe("#DestroyEtcd", func() {
+		var (
+			etcdMain, etcdEvents *mocketcd.MockInterface
+		)
+
+		BeforeEach(func() {
+			etcdMain, etcdEvents = mocketcd.NewMockInterface(ctrl), mocketcd.NewMockInterface(ctrl)
+
+			botanist.Shoot = &shootpkg.Shoot{
+				Components: &shootpkg.Components{
+					ControlPlane: &shootpkg.ControlPlane{
+						EtcdMain:   etcdMain,
+						EtcdEvents: etcdEvents,
+					},
+				},
+			}
+		})
+
+		It("should fail when the destroy function fails for etcd-main", func() {
+			etcdMain.EXPECT().Destroy(ctx).Return(fakeErr)
+			etcdEvents.EXPECT().Destroy(ctx)
+
+			err := botanist.DestroyEtcd(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
+			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr)))
+		})
+
+		It("should fail when the destroy function fails for etcd-events", func() {
+			etcdMain.EXPECT().Destroy(ctx)
+			etcdEvents.EXPECT().Destroy(ctx).Return(fakeErr)
+
+			err := botanist.DestroyEtcd(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
+			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr)))
+		})
+
+		It("should succeed when both etcd-main and etcd-events destroy is successful", func() {
+			etcdMain.EXPECT().Destroy(ctx)
+			etcdEvents.EXPECT().Destroy(ctx)
+
+			Expect(botanist.DestroyEtcd(ctx)).To(Succeed())
+		})
+	})
+
 	Describe("#ScaleETCDTo*", func() {
 		var (
 			etcdEvents = &druidv1alpha1.Etcd{

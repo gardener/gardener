@@ -85,6 +85,13 @@ rules:
   - get
   - list
 - apiGroups:
+  - druid.gardener.cloud
+  resources:
+  - etcds
+  verbs:
+  - get
+  - list
+- apiGroups:
   - extensions.gardener.cloud
   resources:
   - backupbuckets

@@ -207,6 +207,7 @@ rules:
   - etcds
   verbs:
   - create
+  - delete
   - get
   - list
   - watch
