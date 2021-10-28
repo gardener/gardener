@@ -25,6 +25,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -594,8 +596,33 @@ func appLabel() map[string]string {
 	}
 }
 
-// Wait signals whether a deployment is ready or needs more time to be deployed. Gardener-Resource-Manager is ready immediately.
-func (r *resourceManager) Wait(_ context.Context) error { return nil }
+var (
+	// IntervalWaitForDeployment is the interval used while waiting for the Deployments to become healthy
+	// or deleted.
+	IntervalWaitForDeployment = 5 * time.Second
+	// TimeoutWaitForDeployment is the timeout used while waiting for the Deployments to become healthy
+	// or deleted.
+	TimeoutWaitForDeployment = 5 * time.Minute
+)
+
+// Wait signals whether a deployment is ready or needs more time to be deployed.
+func (r *resourceManager) Wait(ctx context.Context) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, TimeoutWaitForDeployment)
+	defer cancel()
+
+	return retry.Until(timeoutCtx, IntervalWaitForDeployment, func(ctx context.Context) (done bool, err error) {
+		deployment := r.emptyDeployment()
+		if err := r.client.Get(ctx, client.ObjectKeyFromObject(deployment), deployment); err != nil {
+			return retry.SevereError(err)
+		}
+
+		if err := health.CheckDeployment(deployment); err != nil {
+			return retry.MinorError(err)
+		}
+
+		return retry.Ok()
+	})
+}
 
 // WaitCleanup for destruction to finish and component to be fully removed. Gardener-Resource-manager does not need to wait for cleanup.
 func (r *resourceManager) WaitCleanup(_ context.Context) error { return nil }

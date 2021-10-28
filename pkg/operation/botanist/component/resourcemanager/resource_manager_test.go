@@ -25,6 +25,7 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/golang/mock/gomock"
@@ -39,8 +40,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("ResourceManager", func() {
@@ -815,8 +818,49 @@ var _ = Describe("ResourceManager", func() {
 	})
 
 	Describe("#Wait", func() {
-		It("should return nil as it's not implemented as of now", func() {
+		var fakeClient client.Client
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+			resourceManager = New(fakeClient, deployNamespace, image, replicas, cfg)
+		})
+
+		It("should successfully wait for the deployment to be ready", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			timer := time.AfterFunc(10*time.Millisecond, func() {
+				deployment.Status.Conditions = []appsv1.DeploymentCondition{
+					{
+						Type:   appsv1.DeploymentAvailable,
+						Status: corev1.ConditionTrue,
+					},
+				}
+				Expect(fakeClient.Status().Update(ctx, deployment)).To(Succeed())
+			})
+			defer timer.Stop()
+
 			Expect(resourceManager.Wait(ctx)).To(Succeed())
+		})
+
+		It("should fail while waiting for the deployment to be ready", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
+
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionFalse,
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring(`condition "Available" has invalid status False (expected True)`)))
 		})
 	})
 
