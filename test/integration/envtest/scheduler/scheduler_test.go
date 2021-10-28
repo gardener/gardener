@@ -75,8 +75,7 @@ var _ = Describe("Scheduler tests", func() {
 		)
 
 		BeforeEach(func() {
-			currentConfig := &config.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: config.SameRegion}
-			mgr := createManager(currentConfig)
+			mgr := createManager(&config.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: config.SameRegion})
 			mgrContext, mgrCancel = context.WithCancel(ctx)
 
 			By("start manager")
