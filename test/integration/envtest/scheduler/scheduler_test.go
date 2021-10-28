@@ -12,38 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/**
-	Overview
-		- Tests the Gardener Scheduler
-
-	Prerequisites
-		- The Gardener-Scheduler is running
-
-	BeforeSuite
-		- Parse valid Shoot from example folder and flags. Remove the Spec.SeedName.
-		- If running in TestMachinery: Scale down the GardenerController Manager
-
-	AfterSuite
-		- Delete Shoot
-        - If running in TestMachinery: Scale up the GardenerController Manager
-
-	Test: SameRegion Scheduling Strategy Test
-		1) Create Shoot in region where no Seed exists. (e.g Shoot in eu-west-1 and only Seed exists in us-east-1)
-		   Expected Output
-			 - should fail because no Seed in same region exists1)
-	Test: Minimal Distance Scheduling Strategy Test
-		1) Create Shoot in region where no Seed exists. (e.g Shoot in eu-west-1 and only Seed exists in us-east-1)
-		   Expected Output
-			 - should successfully schedule to Seed in region with minimal distance
-	Test: Api Server ShootBindingStrategy test
-		1) Request APiServer to schedule shoot to non-existing seed
-		   Expected Output
-			 - Error from ApiServer
-		2) Request APiServer to schedule shoot that is already scheduled to another seed
-		   Expected Output
-			 - Error from ApiServer
- **/
-
 package scheduler
 
 import (
@@ -53,44 +21,41 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 	shootcontroller "github.com/gardener/gardener/pkg/scheduler/controller/shoot"
+	. "github.com/gardener/gardener/pkg/utils/gardener"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+)
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
+var (
+	seeds        []*gardencorev1beta1.Seed
+	seed         *gardencorev1beta1.Seed
+	shoot        *gardencorev1beta1.Shoot
+	cloudProfile *gardencorev1beta1.CloudProfile
+	providerType = "provider-type"
 )
 
 var _ = Describe("Scheduler tests", func() {
 	Context("SameRegion Scheduling Strategy", func() {
-		var (
-			seed         *gardencorev1beta1.Seed
-			shoot        *gardencorev1beta1.Shoot
-			cloudProfile *gardencorev1beta1.CloudProfile
-			providerType = "provider-type"
-		)
-
 		BeforeEach(func() {
 			mgr := createManager(&config.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: config.SameRegion})
 			mgrContext, mgrCancel = context.WithCancel(ctx)
 
 			By("start manager")
 			go func() {
-				err := mgr.Start(mgrContext)
-				Expect(err).ToNot(HaveOccurred())
+				Expect(mgr.Start(mgrContext)).To(Succeed())
 			}()
 		})
 
 		AfterEach(func() {
-			patch := client.MergeFrom(shoot.DeepCopy())
-			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "confirmation.gardener.cloud/deletion", "true")
-			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+			Expect(ConfirmDeletion(ctx, testClient, shoot)).To(Succeed())
 			Expect(testClient.Delete(ctx, shoot)).To(Succeed())
-
 			Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
 			Expect(testClient.Delete(ctx, seed)).To(Succeed())
 
@@ -114,7 +79,7 @@ var _ = Describe("Scheduler tests", func() {
 			}).Should(BeNil())
 		})
 
-		It("Should pass because Seed and Shoot in the same region", func() {
+		It("should pass because Seed and Shoot in the same region", func() {
 			By("create cloudprofile")
 			cloudProfile = createCloudProfile("cloudprofile", providerType, "some-region")
 
@@ -122,8 +87,7 @@ var _ = Describe("Scheduler tests", func() {
 			seed = createSeed("seed", providerType, "some-region")
 
 			By("create shoot")
-			DNS := pointer.String("somedns.example.com")
-			shoot = createShoot("shoot", providerType, "cloudprofile", "some-region", DNS)
+			shoot = createShoot("shoot", providerType, cloudProfile.Name, "some-region", pointer.String("somedns.example.com"))
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -133,13 +97,6 @@ var _ = Describe("Scheduler tests", func() {
 	})
 
 	Context("MinimalDistance Scheduling Strategy", func() {
-		var (
-			seeds        [5]*gardencorev1beta1.Seed
-			shoot        *gardencorev1beta1.Shoot
-			cloudProfile *gardencorev1beta1.CloudProfile
-			providerType = "provider-type"
-		)
-
 		BeforeEach(func() {
 			mgr := createManager(&config.ShootSchedulerConfiguration{ConcurrentSyncs: 1, Strategy: config.MinimalDistance})
 			mgrContext, mgrCancel = context.WithCancel(ctx)
@@ -151,43 +108,41 @@ var _ = Describe("Scheduler tests", func() {
 		})
 
 		AfterEach(func() {
-			patch := client.MergeFrom(shoot.DeepCopy())
-			metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, "confirmation.gardener.cloud/deletion", "true")
-			Expect(testClient.Patch(ctx, shoot, patch)).To(Succeed())
+			Expect(ConfirmDeletion(ctx, testClient, shoot)).To(Succeed())
 			Expect(testClient.Delete(ctx, shoot)).To(Succeed())
-
 			Expect(testClient.Delete(ctx, cloudProfile)).To(Succeed())
 
-			for i := range seeds {
-				Expect(testClient.Delete(ctx, seeds[i])).To(Succeed())
+			for _, seed := range seeds {
+				Expect(testClient.Delete(ctx, seed)).To(Succeed())
 			}
+			seeds = nil
+
 			By("Stopping Manager")
 			mgrCancel()
 		})
 
-		It("Should successfully schedule to Seed in region with minimal distance", func() {
+		It("should successfully schedule to Seed in region with minimal distance", func() {
 			By("create cloudprofile")
 			cloudProfile = createCloudProfile("cloudprofile", providerType, "eu-west-1")
 
 			By("create seed")
-			seeds[0] = createSeed("seed1", providerType, "us-east-1")
-			seeds[1] = createSeed("seed2", providerType, "ca-central-1")
-			seeds[2] = createSeed("seed3", providerType, "eu-east-1")
-			seeds[3] = createSeed("seed4", providerType, "ap-west-1")
-			seeds[4] = createSeed("seed5", providerType, "us-central-2")
+			seed1 := createSeed("seed1", providerType, "us-east-1")
+			seed2 := createSeed("seed2", providerType, "ca-central-1")
+			seed3 := createSeed("seed3", providerType, "eu-east-1")
+			seed4 := createSeed("seed4", providerType, "ap-west-1")
+			seed5 := createSeed("seed5", providerType, "us-central-2")
+			seeds = append(seeds, seed1, seed2, seed3, seed4, seed5)
 
 			By("create shoot")
-			DNS := pointer.String("somedns.example.com")
-			shoot = createShoot("shoot", providerType, "cloudprofile", "eu-west-1", DNS)
+			shoot = createShoot("shoot", providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"))
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
-			}).Should(PointTo(Equal("seed3")))
+			}).Should(PointTo(Equal(seed3.Name)))
 		})
 
-		It("Should successfully schedule to Seed in region with minimal distance", func() {
-
+		It("should successfully schedule to Seed in region with minimal distance", func() {
 			By("create cloudprofile")
 			cloudProfile = createCloudProfile("cloudprofile", providerType, "eu-west-1")
 
@@ -200,8 +155,7 @@ var _ = Describe("Scheduler tests", func() {
 			seeds = append(seeds, seed1, seed2, seed3, seed4, seed5)
 
 			By("create shoot")
-			DNS := pointer.String("somedns.example.com")
-			shoot = createShoot("shoot", providerType, "cloudprofile", "eu-west-1", DNS)
+			shoot = createShoot("shoot", providerType, cloudProfile.Name, "eu-west-1", pointer.String("somedns.example.com"))
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
@@ -209,25 +163,25 @@ var _ = Describe("Scheduler tests", func() {
 			}).Should(PointTo(Or(Equal(seed3.Name), Equal(seed5.Name))))
 		})
 
-		It("Should successfully schedule to Seed in region with minimal distance", func() {
+		It("should successfully schedule to Seed in region with minimal distance", func() {
 			By("create cloudprofile")
 			cloudProfile = createCloudProfile("cloudprofile", providerType, "us-east-2")
 
 			By("create seed")
-			seeds[0] = createSeed("seed1", providerType, "eu-east-2")
-			seeds[1] = createSeed("seed2", providerType, "eu-west-1")
-			seeds[2] = createSeed("seed3", providerType, "ap-east-1")
-			seeds[3] = createSeed("seed4", providerType, "eu-central-2")
-			seeds[4] = createSeed("seed5", providerType, "sa-east-1")
+			seed1 := createSeed("seed1", providerType, "eu-east-2")
+			seed2 := createSeed("seed2", providerType, "eu-west-1")
+			seed3 := createSeed("seed3", providerType, "ap-east-1")
+			seed4 := createSeed("seed4", providerType, "eu-central-2")
+			seed5 := createSeed("seed5", providerType, "sa-east-1")
+			seeds = append(seeds, seed1, seed2, seed3, seed4, seed5)
 
 			By("create shoot")
-			DNS := pointer.String("somedns.example.com")
-			shoot = createShoot("shoot", providerType, "cloudprofile", "us-east-2", DNS)
+			shoot = createShoot("shoot", providerType, cloudProfile.Name, "us-east-2", pointer.String("somedns.example.com"))
 
 			Eventually(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
 				return shoot.Spec.SeedName
-			}).Should(PointTo(Equal("seed1")))
+			}).Should(PointTo(Equal(seed1.Name)))
 		})
 	})
 })
@@ -349,9 +303,7 @@ func createShoot(shootName, providerType, cloudProfile, region string, dnsDomain
 			},
 			Kubernetes:        gardencorev1beta1.Kubernetes{Version: "1.21.1"},
 			SecretBindingName: "secret",
-			DNS: &gardencorev1beta1.DNS{
-				Domain: DNS,
-			},
+			DNS:               &gardencorev1beta1.DNS{Domain: dnsDomain},
 		},
 	}
 	Expect(testClient.Create(ctx, obj)).To(Succeed())
