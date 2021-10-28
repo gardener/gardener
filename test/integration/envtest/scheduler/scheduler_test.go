@@ -68,7 +68,6 @@ import (
 var _ = Describe("Scheduler tests", func() {
 	Context("Same Region Scheduling Strategy test", func() {
 		var (
-			ctx          = context.Background()
 			seed         *gardencorev1beta1.Seed
 			shoot        *gardencorev1beta1.Shoot
 			cloudProfile *gardencorev1beta1.CloudProfile
