@@ -116,7 +116,6 @@ var _ = Describe("Scheduler tests", func() {
 		})
 
 		It("Should pass because Seed and Shoot in the same region", func() {
-
 			By("create cloudprofile")
 			cloudProfile = createCloudProfile("cloudprofile", providerType, "some-region")
 
