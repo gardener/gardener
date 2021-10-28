@@ -249,7 +249,7 @@ func createManager(config *config.ShootSchedulerConfiguration) manager.Manager {
 	return mgr
 }
 
-func createSeed(seedName string, providerType string, region string) *gardencorev1beta1.Seed {
+func createSeed(seedName, providerType, region string) *gardencorev1beta1.Seed {
 	obj := &gardencorev1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: seedName,
