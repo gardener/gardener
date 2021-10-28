@@ -66,7 +66,6 @@ import (
 )
 
 var _ = Describe("Scheduler tests", func() {
-
 	Context("Same Region Scheduling Strategy test", func() {
 		var (
 			ctx          = context.Background()
