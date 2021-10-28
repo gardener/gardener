@@ -290,6 +290,16 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServer.Wait).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer, scaleUpKubeAPIServer),
 		})
+		deployGardenerResourceManager = g.Add(flow.Task{
+			Name:         "Deploying gardener-resource-manager",
+			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Scale up gardener-resource-manager",
+			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+		})
 		deployControlPlaneExposure = g.Add(flow.Task{
 			Name:         "Deploying shoot control plane exposure components",
 			Fn:           flow.TaskFn(botanist.DeployControlPlaneExposure).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(useSNI).DoIf(cleanupShootResources),
@@ -317,16 +327,6 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 			Name:         "Scale up Kubernetes controller manager",
 			Fn:           flow.TaskFn(botanist.ScaleKubeControllerManagerToOne).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
-		})
-		deployGardenerResourceManager = g.Add(flow.Task{
-			Name:         "Deploying gardener-resource-manager",
-			Fn:           flow.TaskFn(botanist.DeployGardenerResourceManager).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(initializeShootClients),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Scale up gardener-resource-manager",
-			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
 		deleteSeedMonitoring = g.Add(flow.Task{
 			Name:         "Deleting shoot monitoring stack in Seed",
