@@ -110,8 +110,7 @@ var _ = Describe("Scheduler tests", func() {
 			seed = createSeed("seed", providerType, "some-region")
 
 			By("create shoot")
-			DNS := pointer.String("somedns.example.com")
-			shoot = createShoot("shoot", providerType, "cloudprofile", "other-region", DNS)
+			shoot = createShoot("shoot", providerType, cloudProfile.Name, "other-region", pointer.String("somedns.example.com"))
 
 			Consistently(func() *string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)).To(Succeed())
