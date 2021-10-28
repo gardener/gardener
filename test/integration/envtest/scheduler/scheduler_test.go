@@ -66,7 +66,7 @@ import (
 )
 
 var _ = Describe("Scheduler tests", func() {
-	Context("Same Region Scheduling Strategy test", func() {
+	Context("SameRegion Scheduling Strategy", func() {
 		var (
 			seed         *gardencorev1beta1.Seed
 			shoot        *gardencorev1beta1.Shoot
