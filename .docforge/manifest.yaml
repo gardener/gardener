@@ -1,6 +1,73 @@
-nodesSelector:
-  path: https://github.com/gardener/gardener/tree/master/docs    
+{{- $vers := Split .versions "," -}}
+{{ $defaultBranch := (index $vers 0) }}
+structure:
+- name: _index.md
+  source: https://github.com/gardener/gardener/blob/{{$defaultBranch}}/README.md
+- name: concepts
+  properties:
+    frontmatter:
+      title: Concepts
+      weight: 1
+  nodes:
+  - nodesSelector:
+      path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/concepts
+- name: deployment
+  properties:
+    frontmatter:
+      title: Deployment
+      weight: 2
+  nodes:
+  - nodesSelector:
+      path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/deployment
+- name: development
+  properties:
+    frontmatter:
+      title: Development
+      weight: 3
+  nodes:
+  - nodesSelector:
+      path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/development
+- name: extensions
+  properties:
+    frontmatter:
+      title: Extensions
+      weight: 4
+  nodes:
+  - nodesSelector:
+      path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/extensions
+- name: monitoring
+  properties:
+    frontmatter:
+      title: Monitoring
+      weight: 5
+  nodes:
+  - nodesSelector:
+      path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/monitoring
+- name: proposals
+  properties:
+    frontmatter:
+      title: Proposals
+      weight: 6
+  nodes:
+  - nodesSelector:
+      path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/proposals
+- name: testing
+  properties:
+    frontmatter:
+      title: Testing
+      weight: 7
+  nodes:
+  - nodesSelector:
+      path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/testing
+- name: usage
+  properties:
+    frontmatter:
+      title: Usage
+      weight: 8
+  nodes:
+  - nodesSelector:
+      path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/usage
 links:
   downloads:
     scope:
-      gardener/gardener/(blob|raw)/(.*)/docs: ~
+      "gardener/gardener/(blob|raw)/(.*)/docs": ~
