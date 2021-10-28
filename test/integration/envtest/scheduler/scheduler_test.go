@@ -100,7 +100,6 @@ var _ = Describe("Scheduler tests", func() {
 		})
 
 		It("Should fail because no Seed in same region exist", func() {
-
 			By("create cloudprofile")
 			cloudProfile = createCloudProfile("cloudprofile", providerType, "other-region")
 
