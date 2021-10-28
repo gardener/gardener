@@ -322,6 +322,20 @@ func (mr *MockTerraformerMockRecorder) SetTerminationGracePeriodSeconds(arg0 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTerminationGracePeriodSeconds", reflect.TypeOf((*MockTerraformer)(nil).SetTerminationGracePeriodSeconds), arg0)
 }
 
+// UseV1 mocks base method.
+func (m *MockTerraformer) UseV1(arg0 bool) terraformer.Terraformer {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UseV1", arg0)
+	ret0, _ := ret[0].(terraformer.Terraformer)
+	return ret0
+}
+
+// UseV1 indicates an expected call of UseV1.
+func (mr *MockTerraformerMockRecorder) UseV1(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UseV1", reflect.TypeOf((*MockTerraformer)(nil).UseV1), arg0)
+}
+
 // UseV2 mocks base method.
 func (m *MockTerraformer) UseV2(arg0 bool) terraformer.Terraformer {
 	m.ctrl.T.Helper()
