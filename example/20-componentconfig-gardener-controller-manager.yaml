@@ -66,6 +66,8 @@ leaderElection:
   renewDeadline: 10s
   retryPeriod: 2s
   resourceLock: leases
+  resourceNamespace: garden
+  resourceName: gardener-controller-manager-leader-election
 logLevel: info
 logFormat: text
 kubernetesLogLevel: 0
