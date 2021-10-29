@@ -34,7 +34,8 @@ type ControllerManagerConfiguration struct {
 	// Controllers defines the configuration of the controllers.
 	Controllers ControllerManagerControllerConfiguration `json:"controllers"`
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection *componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection"`
+	// +optional
+	LeaderElection *componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:"leaderElection,omitempty"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string `json:"logLevel"`
 	// LogFormat is the output format for the logs. Must be one of [text,json].
