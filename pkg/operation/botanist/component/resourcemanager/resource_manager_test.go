@@ -61,29 +61,30 @@ var _ = Describe("ResourceManager", func() {
 		replicas        int32 = 1
 
 		// optional configuration
-		clusterIdentity                    = "foo"
-		secretNameKubeconfig               = "kubeconfig-secret"
-		secretNameServer                   = "server-secret"
-		secretMountPathKubeconfig          = "/etc/gardener-resource-manager"
-		secretMountPathServer              = "/etc/gardener-resource-manager-tls"
-		secretMountPathAPIAccess           = "/var/run/secrets/kubernetes.io/serviceaccount"
-		secretChecksumKubeconfig           = "1234"
-		secretChecksumServer               = "5678"
-		secrets                            Secrets
-		alwaysUpdate                             = true
-		concurrentSyncs                    int32 = 20
-		clusterRoleName                          = "gardener-resource-manager-seed"
-		serviceAccountSecretName                 = "sa-secret"
-		healthSyncPeriod                         = time.Minute
-		leaseDuration                            = time.Second * 40
-		maxConcurrentHealthWorkers         int32 = 20
-		maxConcurrentTokenRequestorWorkers int32 = 21
-		renewDeadline                            = time.Second * 10
-		resourceClass                            = "fake-ResourceClass"
-		retryPeriod                              = time.Second * 20
-		syncPeriod                               = time.Second * 80
-		watchedNamespace                         = "fake-ns"
-		targetDisableCache                       = true
+		clusterIdentity                     = "foo"
+		secretNameKubeconfig                = "kubeconfig-secret"
+		secretNameServer                    = "server-secret"
+		secretMountPathKubeconfig           = "/etc/gardener-resource-manager"
+		secretMountPathServer               = "/etc/gardener-resource-manager-tls"
+		secretMountPathAPIAccess            = "/var/run/secrets/kubernetes.io/serviceaccount"
+		secretChecksumKubeconfig            = "1234"
+		secretChecksumServer                = "5678"
+		secrets                             Secrets
+		alwaysUpdate                              = true
+		concurrentSyncs                     int32 = 20
+		clusterRoleName                           = "gardener-resource-manager-seed"
+		serviceAccountSecretName                  = "sa-secret"
+		healthSyncPeriod                          = time.Minute
+		leaseDuration                             = time.Second * 40
+		maxConcurrentHealthWorkers          int32 = 20
+		maxConcurrentTokenRequestorWorkers  int32 = 21
+		maxConcurrentRootCAPublisherWorkers int32 = 22
+		renewDeadline                             = time.Second * 10
+		resourceClass                             = "fake-ResourceClass"
+		retryPeriod                               = time.Second * 20
+		syncPeriod                                = time.Second * 80
+		watchedNamespace                          = "fake-ns"
+		targetDisableCache                        = true
 
 		allowAll                   []rbacv1.PolicyRule
 		allowManagedResources      []rbacv1.PolicyRule
@@ -224,19 +225,20 @@ var _ = Describe("ResourceManager", func() {
 			},
 		}
 		cfg = Values{
-			AlwaysUpdate:                       &alwaysUpdate,
-			ClusterIdentity:                    &clusterIdentity,
-			ConcurrentSyncs:                    &concurrentSyncs,
-			HealthSyncPeriod:                   &healthSyncPeriod,
-			LeaseDuration:                      &leaseDuration,
-			MaxConcurrentHealthWorkers:         &maxConcurrentHealthWorkers,
-			MaxConcurrentTokenRequestorWorkers: &maxConcurrentTokenRequestorWorkers,
-			RenewDeadline:                      &renewDeadline,
-			ResourceClass:                      &resourceClass,
-			RetryPeriod:                        &retryPeriod,
-			SyncPeriod:                         &syncPeriod,
-			TargetDisableCache:                 &targetDisableCache,
-			WatchedNamespace:                   &watchedNamespace,
+			AlwaysUpdate:                        &alwaysUpdate,
+			ClusterIdentity:                     &clusterIdentity,
+			ConcurrentSyncs:                     &concurrentSyncs,
+			HealthSyncPeriod:                    &healthSyncPeriod,
+			LeaseDuration:                       &leaseDuration,
+			MaxConcurrentHealthWorkers:          &maxConcurrentHealthWorkers,
+			MaxConcurrentTokenRequestorWorkers:  &maxConcurrentTokenRequestorWorkers,
+			MaxConcurrentRootCAPublisherWorkers: &maxConcurrentRootCAPublisherWorkers,
+			RenewDeadline:                       &renewDeadline,
+			ResourceClass:                       &resourceClass,
+			RetryPeriod:                         &retryPeriod,
+			SyncPeriod:                          &syncPeriod,
+			TargetDisableCache:                  &targetDisableCache,
+			WatchedNamespace:                    &watchedNamespace,
 		}
 		resourceManager = New(c, deployNamespace, image, replicas, cfg)
 		resourceManager.SetSecrets(secrets)
@@ -248,6 +250,8 @@ var _ = Describe("ResourceManager", func() {
 			fmt.Sprintf("--health-bind-address=:%v", healthPort),
 			fmt.Sprintf("--health-max-concurrent-workers=%v", maxConcurrentHealthWorkers),
 			fmt.Sprintf("--token-requestor-max-concurrent-workers=%v", maxConcurrentTokenRequestorWorkers),
+			fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%v", maxConcurrentRootCAPublisherWorkers),
+			fmt.Sprintf("--root-ca-file=%s/ca.crt", secretMountPathAPIAccess),
 			fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
 			"--leader-election=true",
 			fmt.Sprintf("--leader-election-lease-duration=%v", leaseDuration),
@@ -270,6 +274,8 @@ var _ = Describe("ResourceManager", func() {
 			fmt.Sprintf("--health-bind-address=:%v", healthPort),
 			fmt.Sprintf("--health-max-concurrent-workers=%v", maxConcurrentHealthWorkers),
 			fmt.Sprintf("--token-requestor-max-concurrent-workers=%v", maxConcurrentTokenRequestorWorkers),
+			fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%v", maxConcurrentRootCAPublisherWorkers),
+			fmt.Sprintf("--root-ca-file=%s/ca.crt", secretMountPathAPIAccess),
 			fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
 			"--leader-election=true",
 			fmt.Sprintf("--leader-election-lease-duration=%v", leaseDuration),

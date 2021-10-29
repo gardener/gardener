@@ -67,6 +67,9 @@ const (
 	volumeMountPathKubeconfig      = "/etc/gardener-resource-manager"
 	volumeMountPathCerts           = "/etc/gardener-resource-manager-tls"
 	volumeMountPathAPIServerAccess = "/var/run/secrets/kubernetes.io/serviceaccount"
+
+	volumeNameRootCA      = "root-ca"
+	volumeMountPathRootCA = "/etc/gardener-resource-manager-root-ca"
 )
 
 var (
@@ -161,6 +164,8 @@ type Values struct {
 	MaxConcurrentHealthWorkers *int32
 	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations
 	MaxConcurrentTokenRequestorWorkers *int32
+	// MaxConcurrentRootCAPublisherWorkers configures the number of worker threads for concurrent root ca publishing reconciliations
+	MaxConcurrentRootCAPublisherWorkers *int32
 	// RenewDeadline configures the renew deadline for leader election
 	RenewDeadline *time.Duration
 	// ResourceClass is used to filter resource resources
@@ -531,6 +536,24 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 			})
 		}
 
+		if r.secrets.RootCA != nil {
+			metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.RootCA.Name, r.secrets.RootCA.Checksum)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeNameRootCA,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  r.secrets.RootCA.Name,
+						DefaultMode: pointer.Int32(420),
+					},
+				},
+			})
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+				MountPath: volumeMountPathRootCA,
+				Name:      volumeNameRootCA,
+				ReadOnly:  true,
+			})
+		}
+
 		return nil
 	})
 	return err
@@ -557,6 +580,16 @@ func (r *resourceManager) computeCommand() []string {
 	}
 	if r.values.MaxConcurrentTokenRequestorWorkers != nil {
 		cmd = append(cmd, fmt.Sprintf("--token-requestor-max-concurrent-workers=%d", *r.values.MaxConcurrentTokenRequestorWorkers))
+	}
+	if r.values.MaxConcurrentRootCAPublisherWorkers != nil {
+		cmd = append(cmd, fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%d", *r.values.MaxConcurrentRootCAPublisherWorkers))
+	}
+	if r.values.MaxConcurrentRootCAPublisherWorkers != nil {
+		if r.secrets.RootCA != nil {
+			cmd = append(cmd, fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathRootCA, secrets.DataKeyCertificateCA))
+		} else {
+			cmd = append(cmd, fmt.Sprintf("--root-ca-file=%s/ca.crt", volumeMountPathAPIServerAccess))
+		}
 	}
 	if r.values.HealthSyncPeriod != nil {
 		cmd = append(cmd, fmt.Sprintf("--health-sync-period=%s", *r.values.HealthSyncPeriod))
@@ -708,4 +741,6 @@ type Secrets struct {
 	// Server is a secret containing a x509 TLS server certificate and key for the HTTPS server inside the
 	// gardener-resource-manager (which is used for webhooks).
 	Server component.Secret
+	// RootCA is a secret containing the root CA secret of the target cluster.
+	RootCA *component.Secret
 }
