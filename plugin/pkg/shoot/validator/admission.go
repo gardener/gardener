@@ -301,7 +301,7 @@ func (c *validationContext) validateScheduling(a admission.Attributes, shootList
 	var (
 		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
 		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
-		mustCheckSchedulingConstraints = shootIsBeingScheduled || shootIsBeingRescheduled
+		mustCheckSchedulingConstraints = (shootIsBeingScheduled || shootIsBeingRescheduled) && a.GetOperation() != admission.Delete
 	)
 
 	if mustCheckSchedulingConstraints {
