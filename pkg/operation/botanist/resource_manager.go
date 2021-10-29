@@ -61,7 +61,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	// MRs (e.g. caused by extension upgrades) that are necessary for completing the hibernation flow.
 	// grm is scaled down later on as part of the HibernateControlPlane step, so we only specify replicas=0 if
 	// the shoot is already hibernated.
-	replicas := int32(1)
+	replicas := int32(3)
 	if b.Shoot.HibernationEnabled && b.Shoot.GetInfo().Status.IsHibernated {
 		replicas = 0
 	}
