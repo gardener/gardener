@@ -50,6 +50,7 @@
 * [Shoot Networking](usage/shoot_networking.md)
 * [Shoot Maintenance](usage/shoot_maintenance.md)
 * [Shoot Status](usage/shoot_status.md)
+* [Shoot Info `ConfigMap`](usage/shoot_info_configmap.md)
 * [Shoot Updates and Upgrades](usage/shoot_updates.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
 * [Tolerations](usage/tolerations.md)
