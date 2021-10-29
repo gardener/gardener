@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Root CA Controller tests", func() {
+var _ = Describe("RootCAPublisher tests", func() {
 	var (
 		namespace *corev1.Namespace
 		configMap *corev1.ConfigMap
@@ -55,12 +55,12 @@ var _ = Describe("Root CA Controller tests", func() {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
 
 				return configMap.Data
-			}).Should(SatisfyAll(Not(BeNil()), HaveKeyWithValue("ca.crt", string(certFile))))
+			}).Should(HaveKeyWithValue("ca.crt", string(caCert)))
 		})
 
-		It("should successfully create a config map on creating a namespace", func() {})
+		It("should create a config map on creating a namespace", func() {})
 
-		It("should successfully update the config map if manual update occur", func() {
+		It("should revert the config map data after manual changes", func() {
 			configMap.Data = nil
 			Expect(testClient.Update(ctx, configMap)).To(Succeed())
 		})
@@ -74,11 +74,11 @@ var _ = Describe("Root CA Controller tests", func() {
 		})
 	})
 
-	Context("Other config maps", func() {
+	Context("custom config maps", func() {
 		It("should ignore config maps with different name", func() {
 			cm := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
+					Name:      "my-other-configmap",
 					Namespace: namespace.Name,
 				},
 				Data: map[string]string{"foo": "bar"},
@@ -102,7 +102,6 @@ var _ = Describe("Root CA Controller tests", func() {
 
 			Consistently(func() map[string]string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
-
 				return configMap.Data
 			}).Should(BeNil())
 		})
