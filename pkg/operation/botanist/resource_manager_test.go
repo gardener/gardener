@@ -53,9 +53,11 @@ var _ = Describe("ResourceManager", func() {
 			fakeErr          = fmt.Errorf("fake err")
 			secretName       = "gardener-resource-manager"
 			secretNameServer = "gardener-resource-manager-server"
+			secretNameRootCA = "ca"
 			seedNamespace    = "fake-seed-ns"
 			checksum         = "1234"
 			checksumServer   = "5678"
+			checksumRootCA   = "9012"
 		)
 
 		BeforeEach(func() {
@@ -63,6 +65,7 @@ var _ = Describe("ResourceManager", func() {
 
 			botanist.StoreCheckSum(secretName, checksum)
 			botanist.StoreCheckSum(secretNameServer, checksumServer)
+			botanist.StoreCheckSum(secretNameRootCA, checksumRootCA)
 
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
@@ -76,6 +79,7 @@ var _ = Describe("ResourceManager", func() {
 			resourceManager.EXPECT().SetSecrets(resourcemanager.Secrets{
 				Kubeconfig: component.Secret{Name: secretName, Checksum: checksum},
 				Server:     component.Secret{Name: secretNameServer, Checksum: checksumServer},
+				RootCA:     &component.Secret{Name: secretNameRootCA, Checksum: checksumRootCA},
 			})
 		})
 
