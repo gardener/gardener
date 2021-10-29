@@ -85,12 +85,17 @@ var _ = Describe("RootCAPublisher tests", func() {
 			}
 			Expect(testClient.Create(ctx, cm)).To(Succeed())
 
-			baseCM := cm.DeepCopy()
+			Consistently(func() map[string]string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(cm), cm)).To(Succeed())
+				return cm.Data
+			}).Should(SatisfyAll(HaveLen(1), HaveKeyWithValue("foo", "bar")))
+
+			patch := client.MergeFrom(cm.DeepCopy())
 			cm.Data["foo"] = "newbar"
+			Expect(testClient.Patch(ctx, cm, patch)).To(Succeed())
 
 			Consistently(func() map[string]string {
-				Expect(testClient.Patch(ctx, cm, client.MergeFrom(baseCM))).To(Succeed())
-
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(cm), cm)).To(Succeed())
 				return cm.Data
 			}).Should(SatisfyAll(HaveLen(1), HaveKeyWithValue("foo", "newbar")))
 		})
