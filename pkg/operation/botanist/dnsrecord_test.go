@@ -457,4 +457,61 @@ var _ = Describe("dnsrecord", func() {
 			Expect(b.MigrateInternalDNSRecord(ctx)).To(MatchError(testErr))
 		})
 	})
+
+	Describe("#CleanupOrphanedDNSRecordSecrets", func() {
+		var orphanedInternalSecret *corev1.Secret
+		var regularInternalSecret *corev1.Secret
+		var orphanedExternalSecret *corev1.Secret
+		var regularExternalSecret *corev1.Secret
+
+		BeforeEach(func() {
+			// create an internal secret which is not prefixed with 'dnsrecord-' and is of the form '<shootName>-internal'
+			orphanedInternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-internal", shootName),
+				Namespace: seedNamespace,
+			}}
+			err := c.Create(ctx, orphanedInternalSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			// create a regular internal secret which is prefixed with 'dnsrecord-'
+			regularInternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("dnsrecord-%s-internal", shootName),
+				Namespace: seedNamespace,
+			}}
+			err = c.Create(ctx, regularInternalSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			// create an internal secret which is not prefixed with 'dnsrecord-' and is of the form '<shootName>-internal'
+			orphanedExternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s-external", shootName),
+				Namespace: seedNamespace,
+			}}
+			err = c.Create(ctx, orphanedExternalSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			// create a regular internal secret which is prefixed with 'dnsrecord-'
+			regularExternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("dnsrecord-%s-external", shootName),
+				Namespace: seedNamespace,
+			}}
+			err = c.Create(ctx, regularExternalSecret)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should clean up orphaned internal Secrets, but keep prefixed internal secrets", func() {
+			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: orphanedInternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
+			s := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: regularInternalSecret.Name, Namespace: seedNamespace}, s)).To(Succeed())
+			Expect(s).To(DeepDerivativeEqual(regularInternalSecret))
+		})
+
+		It("should clean up orphaned external Secrets, but keep prefixed external secrets", func() {
+			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
+			Expect(c.Get(ctx, client.ObjectKey{Name: orphanedExternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
+			s := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: regularExternalSecret.Name, Namespace: seedNamespace}, s)).To(Succeed())
+			Expect(s).To(DeepDerivativeEqual(regularExternalSecret))
+		})
+	})
 })
