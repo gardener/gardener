@@ -319,14 +319,33 @@ var _ = Describe("ResourceManager", func() {
 							"checksum/secret-" + secretNameServer:     secretChecksumServer,
 						},
 						Labels: map[string]string{
-							"networking.gardener.cloud/to-dns":             "allowed",
-							"networking.gardener.cloud/to-seed-apiserver":  "allowed",
-							"networking.gardener.cloud/to-shoot-apiserver": "allowed",
-							v1beta1constants.GardenRole:                    v1beta1constants.GardenRoleControlPlane,
-							v1beta1constants.LabelApp:                      "gardener-resource-manager",
+							"projected-token-mount.resources.gardener.cloud/skip": "true",
+							"networking.gardener.cloud/to-dns":                    "allowed",
+							"networking.gardener.cloud/to-seed-apiserver":         "allowed",
+							"networking.gardener.cloud/to-shoot-apiserver":        "allowed",
+							v1beta1constants.GardenRole:                           v1beta1constants.GardenRoleControlPlane,
+							v1beta1constants.LabelApp:                             "gardener-resource-manager",
 						},
 					},
 					Spec: corev1.PodSpec{
+						Affinity: &corev1.Affinity{
+							PodAntiAffinity: &corev1.PodAntiAffinity{
+								PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+									{
+										Weight: 100,
+										PodAffinityTerm: corev1.PodAffinityTerm{
+											TopologyKey: corev1.LabelHostname,
+											LabelSelector: &metav1.LabelSelector{
+												MatchLabels: map[string]string{
+													v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+													v1beta1constants.LabelApp:   "gardener-resource-manager",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
 						ServiceAccountName: "gardener-resource-manager",
 						Containers: []corev1.Container{
 							{
@@ -711,6 +730,8 @@ var _ = Describe("ResourceManager", func() {
 				deployment.Spec.Template.Spec.Containers[0].Command = cmd[:len(cmd)-1]
 				deployment.Spec.Template.Spec.Volumes = deployment.Spec.Template.Spec.Volumes[:len(deployment.Spec.Template.Spec.Volumes)-1]
 				deployment.Spec.Template.Spec.Containers[0].VolumeMounts = deployment.Spec.Template.Spec.Containers[0].VolumeMounts[:len(deployment.Spec.Template.Spec.Containers[0].VolumeMounts)-1]
+				deployment.Spec.Template.Labels["gardener.cloud/role"] = "seed"
+				deployment.Spec.Template.Spec.Affinity.PodAntiAffinity.PreferredDuringSchedulingIgnoredDuringExecution[0].PodAffinityTerm.LabelSelector.MatchLabels["gardener.cloud/role"] = "seed"
 				delete(deployment.Spec.Template.ObjectMeta.Annotations, "checksum/secret-"+secretNameKubeconfig)
 
 				// Remove controlplane label from resources
@@ -719,7 +740,6 @@ var _ = Describe("ResourceManager", func() {
 				delete(clusterRoleBinding.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				delete(service.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				delete(deployment.ObjectMeta.Labels, v1beta1constants.GardenRole)
-				delete(deployment.Spec.Template.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				delete(vpa.ObjectMeta.Labels, v1beta1constants.GardenRole)
 				// Remove networking label from deployment template
 				delete(deployment.Spec.Template.Labels, "networking.gardener.cloud/to-dns")
