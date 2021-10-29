@@ -78,8 +78,13 @@ cp -R "$repo_root_dir" "$REPO_PATH"
 
 current_dir="$(pwd)"
 cd "$REPO_PATH"
-# TODO: can we drop this? Or do we rely on this to install stuff?
-make install-requirements
+
+if make -n install-requirements &>/dev/null; then
+  make install-requirements
+else
+  echo "skipping optional 'make install-requirements' as it is not present"
+fi
+
 cd "$current_dir"
 
 echo "$EFFECTIVE_VERSION" > "$REPO_PATH/VERSION"
