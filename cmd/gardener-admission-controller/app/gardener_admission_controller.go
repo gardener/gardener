@@ -23,16 +23,13 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -62,6 +59,8 @@ var (
 	configDecoder runtime.Decoder
 
 	gracefulShutdownTimeout = 5 * time.Second
+
+	log = runtimelog.Log
 )
 
 func init() {
@@ -121,8 +120,6 @@ func (o *options) validate() error {
 
 // run runs gardener-admission-controller using the specified options.
 func (o *options) run(ctx context.Context) error {
-	log := logf.Log
-
 	log.Info("Starting Gardener admission controller...", "version", version.Get())
 
 	log.Info("getting rest config")
@@ -177,23 +174,23 @@ func (o *options) run(ctx context.Context) error {
 	log.Info("setting up webhook server")
 	server := mgr.GetWebhookServer()
 
-	namespaceValidationHandler, err := namespacedeletion.New(ctx, logf.Log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
+	namespaceValidationHandler, err := namespacedeletion.New(ctx, runtimelog.Log.WithName(namespacedeletion.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
 	}
-	seedRestrictionHandler, err := seedrestriction.New(ctx, logf.Log.WithName(seedrestriction.HandlerName), mgr.GetCache())
+	seedRestrictionHandler, err := seedrestriction.New(ctx, runtimelog.Log.WithName(seedrestriction.HandlerName), mgr.GetCache())
 	if err != nil {
 		return err
 	}
-	logSeedAuth := logf.Log.WithName(seedauthorizer.AuthorizerName)
 
+	logSeedAuth := runtimelog.Log.WithName(seedauthorizer.AuthorizerName)
 	server.Register(seedauthorizer.WebhookPath, seedauthorizer.NewHandler(logSeedAuth, seedauthorizer.NewAuthorizer(logSeedAuth, graph)))
 	server.Register(seedrestriction.WebhookPath, &webhook.Admission{Handler: seedRestrictionHandler})
 	server.Register(namespacedeletion.WebhookPath, &webhook.Admission{Handler: namespaceValidationHandler})
-	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(logf.Log.WithName(kubeconfigsecret.HandlerName))})
-	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(logf.Log.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
-	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(logf.Log.WithName(auditpolicy.HandlerName))})
-	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(logf.Log.WithName(internaldomainsecret.HandlerName))})
+	server.Register(kubeconfigsecret.WebhookPath, &webhook.Admission{Handler: kubeconfigsecret.New(runtimelog.Log.WithName(kubeconfigsecret.HandlerName))})
+	server.Register(resourcesize.WebhookPath, &webhook.Admission{Handler: resourcesize.New(runtimelog.Log.WithName(resourcesize.HandlerName), o.config.Server.ResourceAdmissionConfiguration)})
+	server.Register(auditpolicy.WebhookPath, &webhook.Admission{Handler: auditpolicy.New(runtimelog.Log.WithName(auditpolicy.HandlerName))})
+	server.Register(internaldomainsecret.WebhookPath, &webhook.Admission{Handler: internaldomainsecret.New(runtimelog.Log.WithName(internaldomainsecret.HandlerName))})
 
 	if utils.IsTrue(o.config.Server.EnableDebugHandlers) {
 		log.Info("registering debug handlers")
@@ -211,16 +208,7 @@ func (o *options) run(ctx context.Context) error {
 
 // NewGardenerAdmissionControllerCommand creates a *cobra.Command object with default parameters.
 func NewGardenerAdmissionControllerCommand() *cobra.Command {
-	var (
-		log = logzap.New(logzap.UseDevMode(false), func(opts *logzap.Options) {
-			encCfg := zap.NewProductionEncoderConfig()
-			// overwrite time encoding to human readable format
-			encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-			opts.Encoder = zapcore.NewJSONEncoder(encCfg)
-		})
-		opts = &options{}
-	)
-	logf.SetLogger(log)
+	opts := &options{}
 
 	cmd := &cobra.Command{
 		Use:   Name,
@@ -240,7 +228,7 @@ func NewGardenerAdmissionControllerCommand() *cobra.Command {
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true
 
-			log.Info("Starting " + Name + "...")
+			log.Info("Starting "+Name+"...", "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
 			})

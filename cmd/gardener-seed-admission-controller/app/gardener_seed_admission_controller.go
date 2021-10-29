@@ -22,13 +22,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -46,21 +43,13 @@ const (
 
 var (
 	gracefulShutdownTimeout = 5 * time.Second
+
+	log = runtimelog.Log
 )
 
 // NewSeedAdmissionControllerCommand creates a new *cobra.Command able to run gardener-seed-admission-controller.
 func NewSeedAdmissionControllerCommand() *cobra.Command {
-	var (
-		log = logzap.New(logzap.UseDevMode(false), func(opts *logzap.Options) {
-			encCfg := zap.NewProductionEncoderConfig()
-			// overwrite time encoding to human readable format
-			encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-			opts.Encoder = zapcore.NewJSONEncoder(encCfg)
-		})
-		opts = &Options{}
-	)
-
-	logf.SetLogger(log)
+	opts := &Options{}
 
 	cmd := &cobra.Command{
 		Use:   Name,
@@ -76,7 +65,7 @@ func NewSeedAdmissionControllerCommand() *cobra.Command {
 
 			cmd.SilenceUsage = true
 
-			log.Info("Starting " + Name + "...")
+			log.Info("Starting "+Name+"...", "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
 				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
 			})
@@ -131,10 +120,6 @@ func (o *Options) validate() error {
 
 // Run runs gardener-seed-admission-controller using the specified options.
 func (o *Options) Run(ctx context.Context) error {
-	log := logf.Log
-
-	log.Info("Starting Gardener Seed admission controller...", "version", version.Get())
-
 	log.Info("getting rest config")
 	restConfig, err := config.GetConfig()
 	if err != nil {
@@ -157,9 +142,9 @@ func (o *Options) Run(ctx context.Context) error {
 
 	log.Info("setting up webhook server")
 	server := mgr.GetWebhookServer()
-	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(logf.Log.WithName(extensioncrds.HandlerName))})
+	server.Register(extensioncrds.WebhookPath, &webhook.Admission{Handler: extensioncrds.New(runtimelog.Log.WithName(extensioncrds.HandlerName))})
 	server.Register(podschedulername.WebhookPath, &webhook.Admission{Handler: admission.HandlerFunc(podschedulername.DefaultShootControlPlanePodsSchedulerName)})
-	server.Register(extensionresources.WebhookPath, &webhook.Admission{Handler: extensionresources.New(logf.Log.WithName(extensionresources.HandlerName), o.AllowInvalidExtensionResources)})
+	server.Register(extensionresources.WebhookPath, &webhook.Admission{Handler: extensionresources.New(runtimelog.Log.WithName(extensionresources.HandlerName), o.AllowInvalidExtensionResources)})
 
 	log.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {

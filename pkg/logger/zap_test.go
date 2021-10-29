@@ -15,11 +15,10 @@
 package logger_test
 
 import (
-	. "github.com/gardener/gardener/pkg/logger"
-	"go.uber.org/zap/zapcore"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	. "github.com/gardener/gardener/pkg/logger"
 )
 
 var _ = Describe("zap", func() {
@@ -27,28 +26,29 @@ var _ = Describe("zap", func() {
 		It("should return a pointer to a Logger object ('debug' level)", func() {
 			logger, err := NewZapLogger(DebugLevel, FormatText)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(logger.Core().Enabled(zapcore.DebugLevel)).To(BeTrue())
+			Expect(logger.V(0).Enabled()).To(BeTrue())
+			Expect(logger.V(1).Enabled()).To(BeTrue())
 		})
 
 		It("should return a pointer to a Logger object ('info' level)", func() {
 			logger, err := NewZapLogger(InfoLevel, FormatText)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(logger.Core().Enabled(zapcore.DebugLevel)).To(BeFalse())
-			Expect(logger.Core().Enabled(zapcore.InfoLevel)).To(BeTrue())
+			Expect(logger.V(0).Enabled()).To(BeTrue())
+			Expect(logger.V(1).Enabled()).To(BeFalse())
 		})
 
 		It("should default to 'info' level", func() {
 			logger, err := NewZapLogger("", FormatText)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(logger.Core().Enabled(zapcore.DebugLevel)).To(BeFalse())
-			Expect(logger.Core().Enabled(zapcore.InfoLevel)).To(BeTrue())
+			Expect(logger.V(0).Enabled()).To(BeTrue())
+			Expect(logger.V(1).Enabled()).To(BeFalse())
 		})
 
 		It("should return a pointer to a Logger object ('error' level)", func() {
 			logger, err := NewZapLogger(ErrorLevel, FormatText)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(logger.Core().Enabled(zapcore.InfoLevel)).To(BeFalse())
-			Expect(logger.Core().Enabled(zapcore.ErrorLevel)).To(BeTrue())
+			Expect(logger.V(0).Enabled()).To(BeFalse())
+			Expect(logger.V(1).Enabled()).To(BeFalse())
 		})
 
 		It("should reject invalid log level", func() {

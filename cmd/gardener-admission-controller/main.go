@@ -20,12 +20,16 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardener-admission-controller/app"
 	"github.com/gardener/gardener/cmd/utils"
+	"github.com/gardener/gardener/pkg/logger"
 
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 func main() {
 	utils.DeduplicateWarnings()
+
+	runtimelog.SetLogger(logger.MustNewZapLogger(logger.InfoLevel, logger.FormatJSON))
 
 	ctx := signals.SetupSignalHandler()
 	if err := app.NewGardenerAdmissionControllerCommand().ExecuteContext(ctx); err != nil {

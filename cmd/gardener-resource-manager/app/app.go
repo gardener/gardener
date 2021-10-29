@@ -39,12 +39,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-var log = runtimelog.Log.WithName("gardener-resource-manager")
+var log = runtimelog.Log
 
 // NewResourceManagerCommand creates a new command for running gardener resource manager controllers.
 func NewResourceManagerCommand() *cobra.Command {
-	entryLog := log.WithName("entrypoint")
-
 	managerOpts := &resourcemanagercmd.ManagerOptions{}
 	sourceClientOpts := &resourcemanagercmd.SourceClientOptions{}
 	targetClusterOpts := &resourcemanagercmd.TargetClusterOptions{}
@@ -66,9 +64,9 @@ func NewResourceManagerCommand() *cobra.Command {
 			ctx, cancel := context.WithCancel(cmd.Context())
 			defer cancel()
 
-			entryLog.Info("Starting gardener-resource-manager...", "version", version.Get().GitVersion)
+			log.Info("Starting gardener-resource-manager...", "version", version.Get())
 			cmd.Flags().VisitAll(func(flag *pflag.Flag) {
-				entryLog.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
+				log.Info(fmt.Sprintf("FLAG: --%s=%s", flag.Name, flag.Value))
 			})
 
 			if err := resourcemanagercmd.CompleteAll(
@@ -96,7 +94,7 @@ func NewResourceManagerCommand() *cobra.Command {
 			resourceControllerOpts.Completed().ApplyClassFilter(&secretControllerOpts.Completed().ClassFilter)
 			resourceControllerOpts.Completed().ApplyClassFilter(&healthControllerOpts.Completed().ClassFilter)
 			resourceControllerOpts.Completed().GarbageCollectorActivated = gcControllerOpts.Completed().SyncPeriod > 0
-			if err := resourceControllerOpts.Completed().ApplyDefaultClusterId(ctx, entryLog, sourceClientOpts.Completed().RESTConfig); err != nil {
+			if err := resourceControllerOpts.Completed().ApplyDefaultClusterId(ctx, log, sourceClientOpts.Completed().RESTConfig); err != nil {
 				return err
 			}
 			healthControllerOpts.Completed().TargetCluster = targetClusterOpts.Completed().Cluster
@@ -154,7 +152,7 @@ func NewResourceManagerCommand() *cobra.Command {
 				return err
 
 			case <-cmd.Context().Done():
-				entryLog.Info("Stop signal received, shutting down.")
+				log.Info("Stop signal received, shutting down.")
 				wg.Wait()
 				return nil
 			}

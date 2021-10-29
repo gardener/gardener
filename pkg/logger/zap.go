@@ -16,59 +16,55 @@ package logger
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/go-logr/logr"
-	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	ctrlruntimelzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	logzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-// NewZapLogger creates a new logger backed by Zap.
-func NewZapLogger(logLevel string, format string) (*zap.Logger, error) {
-	var lvl zapcore.Level
-	switch logLevel {
+func setCommonEncoderConfigOptions(encoderConfig *zapcore.EncoderConfig) {
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.EncodeDuration = zapcore.StringDurationEncoder
+}
+
+// MustNewZapLogger is like NewZapLogger but panics on invalid input.
+func MustNewZapLogger(level string, format string) logr.Logger {
+	logger, err := NewZapLogger(level, format)
+	utilruntime.Must(err)
+	return logger
+}
+
+// NewZapLogger creates a new logr.Logger backed by Zap.
+func NewZapLogger(level string, format string) (logr.Logger, error) {
+	var opts []logzap.Opts
+
+	// map our log levels to zap levels
+	var zapLevel zapcore.LevelEnabler
+	switch level {
 	case DebugLevel:
-		lvl = zap.DebugLevel
+		zapLevel = zap.DebugLevel
 	case ErrorLevel:
-		lvl = zap.ErrorLevel
+		zapLevel = zap.ErrorLevel
 	case "", InfoLevel:
-		lvl = zap.InfoLevel
+		zapLevel = zap.InfoLevel
 	default:
-		return nil, fmt.Errorf("invalid log level %q", logLevel)
+		return nil, fmt.Errorf("invalid log level %q", level)
 	}
+	opts = append(opts, logzap.Level(zapLevel))
 
-	encCfg := zap.NewProductionEncoderConfig()
-	encCfg.TimeKey = "time"
-	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-	encCfg.EncodeDuration = zapcore.StringDurationEncoder
-
-	var encoder zapcore.Encoder
+	// map our log format to encoder
 	switch format {
 	case FormatText:
-		encoder = zapcore.NewConsoleEncoder(encCfg)
+		opts = append(opts, logzap.ConsoleEncoder(setCommonEncoderConfigOptions))
 	case "", FormatJSON:
-		encoder = zapcore.NewJSONEncoder(encCfg)
+		opts = append(opts, logzap.JSONEncoder(setCommonEncoderConfigOptions))
 	default:
 		return nil, fmt.Errorf("invalid log format %q", format)
 	}
 
-	sink := zapcore.AddSync(os.Stderr)
-	opts := []zap.Option{
-		zap.AddCaller(),
-		zap.ErrorOutput(sink),
-	}
-
-	kubeEncoder := &ctrlruntimelzap.KubeAwareEncoder{Encoder: encoder}
-	coreLog := zapcore.NewCore(kubeEncoder, sink, zap.NewAtomicLevelAt(lvl))
-
-	return zap.New(coreLog, opts...), nil
-}
-
-// NewZapLogr wraps a Zap logger into a standard logr-compatible logger.
-func NewZapLogr(logger *zap.Logger) logr.Logger {
-	return zapr.NewLogger(logger)
+	return logzap.New(opts...), nil
 }
 
 // ZapLogger is a Logger implementation.
@@ -76,15 +72,17 @@ func NewZapLogr(logger *zap.Logger) logr.Logger {
 // (stacktraces on warnings, no sampling), otherwise a Zap production
 // config will be used (stacktraces on errors, sampling).
 // Additionally, the time encoding is adjusted to `zapcore.ISO8601TimeEncoder`.
+// This is used by extensions for historical reasons.
+// TODO: consolidate this with NewZapLogger and make everything configurable in a harmonized way
 func ZapLogger(development bool) logr.Logger {
-	return ctrlruntimelzap.New(func(o *ctrlruntimelzap.Options) {
+	return logzap.New(func(o *logzap.Options) {
 		var encCfg zapcore.EncoderConfig
 		if development {
 			encCfg = zap.NewDevelopmentEncoderConfig()
 		} else {
 			encCfg = zap.NewProductionEncoderConfig()
 		}
-		encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+		setCommonEncoderConfigOptions(&encCfg)
 
 		o.Encoder = zapcore.NewJSONEncoder(encCfg)
 		o.Development = development
