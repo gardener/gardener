@@ -75,6 +75,11 @@ func (b *Botanist) wantedCertificateAuthorities() map[string]*secrets.Certificat
 			CommonName: "metrics-server",
 			CertType:   secrets.CACert,
 		},
+		v1beta1constants.SecretNameCAVPN: {
+			Name:       v1beta1constants.SecretNameCAVPN,
+			CommonName: "vpn",
+			CertType:   secrets.CACert,
+		},
 	}
 
 	return wantedCertificateAuthorities
@@ -693,7 +698,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				Name:       vpnseedserver.VpnShootSecretName,
 				CommonName: "vpn-shoot-client",
 				CertType:   secrets.ClientCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCAVPN],
 			},
 
 			// Secret definition for vpn-seed-server (OpenVPN server side)
@@ -702,7 +707,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				CommonName: "vpn-seed-server",
 				DNSNames:   kubernetes.DNSNamesForService(vpnseedserver.ServiceName, b.Shoot.SeedNamespace),
 				CertType:   secrets.ServerCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCAVPN],
 			},
 
 			&secrets.VPNTLSAuthConfig{
@@ -714,7 +719,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 				Name:       kubeapiserver.SecretNameHTTPProxy,
 				CommonName: "kube-apiserver-http-proxy",
 				CertType:   secrets.ClientCert,
-				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
+				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCAVPN],
 			},
 		)
 	} else {
