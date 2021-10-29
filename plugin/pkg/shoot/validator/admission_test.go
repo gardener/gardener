@@ -992,6 +992,31 @@ var _ = Describe("validator", func() {
 						err := admissionHandler.Admit(context.TODO(), attrs, nil)
 						Expect(err).To(MatchError(ContainSubstring("already has the maximum number of shoots scheduled on it")))
 					})
+
+					It("should allow Shoot deletion even though seed's allocatable capacity is exhausted / over exhausted", func() {
+						seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
+
+						otherShoot := shoot.DeepCopy()
+						otherShoot.Name = "other-shoot-1"
+						otherShoot.Spec.SeedName = &seedName
+						Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
+
+						otherShoot = shoot.DeepCopy()
+						otherShoot.Name = "other-shoot-2"
+						otherShoot.Spec.SeedName = &seedName
+						Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
+
+						// admission for DELETION uses the old Shoot object
+						oldShoot.Spec.SeedName = &seedName
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).ToNot(HaveOccurred())
+					})
 				})
 			})
 
