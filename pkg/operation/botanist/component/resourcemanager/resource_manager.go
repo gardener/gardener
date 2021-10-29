@@ -33,6 +33,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -187,27 +188,25 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		return fmt.Errorf("missing server secret information")
 	}
 
-	if err := r.ensureServiceAccount(ctx); err != nil {
-		return err
+	for _, fn := range []func(context.Context) error{
+		r.ensureServiceAccount,
+		r.ensureRBAC,
+		r.ensureService,
+		r.ensureDeployment,
+		r.ensurePodDisruptionBudget,
+		r.ensureVPA,
+	} {
+		if err := fn(ctx); err != nil {
+			return err
+		}
 	}
 
-	if err := r.ensureRBAC(ctx); err != nil {
-		return err
-	}
-
-	if err := r.ensureService(ctx); err != nil {
-		return err
-	}
-
-	if err := r.ensureDeployment(ctx); err != nil {
-		return err
-	}
-
-	return r.ensureVPA(ctx)
+	return nil
 }
 
 func (r *resourceManager) Destroy(ctx context.Context) error {
 	objectsToDelete := []client.Object{
+		r.emptyPodDisruptionBudget(),
 		r.emptyVPA(),
 		r.emptyDeployment(),
 		r.emptyService(),
@@ -687,6 +686,27 @@ func (r *resourceManager) ensureVPA(ctx context.Context) error {
 
 func (r *resourceManager) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-vpa", Namespace: r.namespace}}
+}
+
+func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
+	pdb := r.emptyPodDisruptionBudget()
+	maxUnavailable := intstr.FromInt(1)
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
+		pdb.Labels = r.getLabels()
+		pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &maxUnavailable,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: r.getDeploymentTemplateLabels(),
+			},
+		}
+		return nil
+	})
+	return err
+}
+
+func (r *resourceManager) emptyPodDisruptionBudget() *policyv1beta1.PodDisruptionBudget {
+	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}}
 }
 
 func (r *resourceManager) getLabels() map[string]string {
