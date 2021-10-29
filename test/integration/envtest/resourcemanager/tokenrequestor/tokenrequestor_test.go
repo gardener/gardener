@@ -61,6 +61,9 @@ var _ = Describe("TokenRequestor tests", func() {
 					"serviceaccount.resources.gardener.cloud/name":      serviceAccountName,
 					"serviceaccount.resources.gardener.cloud/namespace": namespace.Name,
 				},
+				Labels: map[string]string{
+					"resources.gardener.cloud/purpose": "token-requestor",
+				},
 			},
 		}
 		serviceAccount = &corev1.ServiceAccount{
@@ -72,6 +75,7 @@ var _ = Describe("TokenRequestor tests", func() {
 	})
 
 	It("should behave correctly when: create w/o label, update w/ label, delete w/ label", func() {
+		secret.Labels = nil
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
 		Consistently(func() error {
@@ -87,13 +91,12 @@ var _ = Describe("TokenRequestor tests", func() {
 
 		Expect(testClient.Delete(ctx, secret)).To(Succeed())
 
-		Eventually(func() error {
+		Consistently(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
-		}).Should(BeNotFoundError())
+		}).Should(Succeed())
 	})
 
 	It("should behave correctly when: create w/ label, update w/o label, delete w/o label", func() {
-		secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "token-requestor"}
 		Expect(testClient.Create(ctx, secret)).To(Succeed())
 
 		Eventually(func() error {
@@ -104,17 +107,10 @@ var _ = Describe("TokenRequestor tests", func() {
 		secret.Labels = nil
 		Expect(testClient.Patch(ctx, secret, patch)).To(Succeed())
 
-		Eventually(func() error {
+		Consistently(func() error {
 			return testClient.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount)
-		}).Should(BeNotFoundError())
+		}).Should(Succeed())
 
-		serviceAccount = &corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAccountName,
-				Namespace: namespace.Name,
-			},
-		}
-		Expect(testClient.Create(ctx, serviceAccount)).To(Succeed())
 		Expect(testClient.Delete(ctx, secret)).To(Succeed())
 
 		Consistently(func() error {
@@ -136,7 +132,6 @@ var _ = Describe("TokenRequestor tests", func() {
 		})
 
 		It("should be able to authenticate with the created token", func() {
-			secret.Labels = map[string]string{"resources.gardener.cloud/purpose": "token-requestor"}
 			Expect(testClient.Create(ctx, secret)).To(Succeed())
 
 			Eventually(func() error {
