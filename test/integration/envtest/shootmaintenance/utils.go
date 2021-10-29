@@ -133,7 +133,6 @@ func patchCloudProfileForKubernetesVersionMaintenance(ctx context.Context, garde
 
 // DeleteShoot deletes the given shoot
 func deleteShoot(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot) error {
-
 	err := gutil.ConfirmDeletion(ctx, gardenClient, shoot)
 	if err != nil {
 		return err
