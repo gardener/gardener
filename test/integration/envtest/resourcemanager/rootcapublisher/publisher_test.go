@@ -43,34 +43,48 @@ var _ = Describe("RootCAPublisher tests", func() {
 		}
 
 		Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
-
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-		}).Should(Succeed())
 	})
 
 	Context("kube-root-ca.crt config map", func() {
-		AfterEach(func() {
-			Eventually(func() map[string]string {
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
-
-				return configMap.Data
-			}).Should(HaveKeyWithValue("ca.crt", string(caCert)))
-		})
-
-		It("should create a config map on creating a namespace", func() {})
-
-		It("should revert the config map data after manual changes", func() {
-			configMap.Data = nil
-			Expect(testClient.Update(ctx, configMap)).To(Succeed())
-		})
-
-		It("should recreate the config map if it gets deleted", func() {
-			Expect(testClient.Delete(ctx, configMap)).To(Succeed())
-
+		BeforeEach(func() {
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-			}).Should(BeNotFoundError())
+			}).Should(Succeed())
+		})
+
+		Context("controller should be active", func() {
+			AfterEach(func() {
+				Eventually(func(g Gomega) map[string]string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+					return configMap.Data
+				}).Should(HaveKeyWithValue("ca.crt", string(caCert)))
+			})
+
+			It("should create a config map on creating a namespace", func() {})
+
+			It("should revert the config map data after manual changes", func() {
+				configMap.Data = nil
+				Expect(testClient.Update(ctx, configMap)).To(Succeed())
+			})
+
+			It("should recreate the config map if it gets deleted", func() {
+				Expect(testClient.Delete(ctx, configMap)).To(Succeed())
+
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+				}).Should(BeNotFoundError())
+			})
+		})
+
+		It("should ignore config maps that are managed by the upstream rootcapublisher controller", func() {
+			configMap.Data = nil
+			configMap.Annotations = map[string]string{"kubernetes.io/description": "test description"}
+			Expect(testClient.Update(ctx, configMap)).To(Succeed())
+
+			Consistently(func() map[string]string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+				return configMap.Data
+			}).Should(BeNil())
 		})
 	})
 
@@ -98,17 +112,6 @@ var _ = Describe("RootCAPublisher tests", func() {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(cm), cm)).To(Succeed())
 				return cm.Data
 			}).Should(SatisfyAll(HaveLen(1), HaveKeyWithValue("foo", "newbar")))
-		})
-
-		It("should ignore config maps that are updated by the k8s publisher", func() {
-			configMap.Data = nil
-			configMap.Annotations = map[string]string{"kubernetes.io/description": "test description"}
-			Expect(testClient.Update(ctx, configMap)).To(Succeed())
-
-			Consistently(func() map[string]string {
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
-				return configMap.Data
-			}).Should(BeNil())
 		})
 	})
 })
