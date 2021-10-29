@@ -75,7 +75,7 @@ var _ = Describe("dnsrecord", func() {
 		ctrl *gomock.Controller
 
 		scheme *runtime.Scheme
-		client client.Client
+		c      client.Client
 
 		externalDNSRecord *mockdnsrecord.MockInterface
 		internalDNSRecord *mockdnsrecord.MockInterface
@@ -95,7 +95,7 @@ var _ = Describe("dnsrecord", func() {
 		scheme = runtime.NewScheme()
 		Expect(extensionsv1alpha1.AddToScheme(scheme)).NotTo(HaveOccurred())
 		Expect(corev1.AddToScheme(scheme)).NotTo(HaveOccurred())
-		client = fake.NewClientBuilder().WithScheme(scheme).Build()
+		c = fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		externalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
 		internalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
@@ -154,11 +154,11 @@ var _ = Describe("dnsrecord", func() {
 		})
 
 		renderer := cr.NewWithServerVersion(&version.Info{})
-		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(client, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
+		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
 
 		b.K8sSeedClient = fakeclientset.NewClientSetBuilder().
-			WithClient(client).
+			WithClient(c).
 			WithChartApplier(chartApplier).
 			Build()
 
@@ -172,14 +172,14 @@ var _ = Describe("dnsrecord", func() {
 
 	Context("DefaultExternalDNSRecord", func() {
 		It("should create a component that creates the DNSRecord and its secret on Deploy", func() {
-			c := b.DefaultExternalDNSRecord()
-			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
-			c.SetValues([]string{address})
+			r := b.DefaultExternalDNSRecord()
+			r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			r.SetValues([]string{address})
 
-			Expect(c.Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(r.Deploy(ctx)).ToNot(HaveOccurred())
 
 			dnsRecord := &extensionsv1alpha1.DNSRecord{}
-			err := client.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSExternalName, Namespace: seedNamespace}, dnsRecord)
+			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSExternalName, Namespace: seedNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
 				TypeMeta: metav1.TypeMeta{
@@ -212,7 +212,7 @@ var _ = Describe("dnsrecord", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = client.Get(ctx, types.NamespacedName{Name: "dnsrecord-" + shootName + "-" + DNSExternalName, Namespace: seedNamespace}, secret)
+			err = c.Get(ctx, types.NamespacedName{Name: "dnsrecord-" + shootName + "-" + DNSExternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
@@ -234,14 +234,14 @@ var _ = Describe("dnsrecord", func() {
 
 	Context("DefaultInternalDNSRecord", func() {
 		It("should create a component that creates the DNSRecord and its secret on Deploy", func() {
-			c := b.DefaultInternalDNSRecord()
-			c.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
-			c.SetValues([]string{address})
+			r := b.DefaultInternalDNSRecord()
+			r.SetRecordType(extensionsv1alpha1.DNSRecordTypeA)
+			r.SetValues([]string{address})
 
-			Expect(c.Deploy(ctx)).ToNot(HaveOccurred())
+			Expect(r.Deploy(ctx)).ToNot(HaveOccurred())
 
 			dnsRecord := &extensionsv1alpha1.DNSRecord{}
-			err := client.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSInternalName, Namespace: seedNamespace}, dnsRecord)
+			err := c.Get(ctx, types.NamespacedName{Name: shootName + "-" + DNSInternalName, Namespace: seedNamespace}, dnsRecord)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(dnsRecord).To(DeepDerivativeEqual(&extensionsv1alpha1.DNSRecord{
 				TypeMeta: metav1.TypeMeta{
@@ -274,7 +274,7 @@ var _ = Describe("dnsrecord", func() {
 			}))
 
 			secret := &corev1.Secret{}
-			err = client.Get(ctx, types.NamespacedName{Name: "dnsrecord-" + shootName + "-" + DNSInternalName, Namespace: seedNamespace}, secret)
+			err = c.Get(ctx, types.NamespacedName{Name: "dnsrecord-" + shootName + "-" + DNSInternalName, Namespace: seedNamespace}, secret)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(secret).To(DeepDerivativeEqual(&corev1.Secret{
 				TypeMeta: metav1.TypeMeta{
