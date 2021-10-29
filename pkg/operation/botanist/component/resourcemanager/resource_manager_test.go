@@ -66,12 +66,14 @@ var _ = Describe("ResourceManager", func() {
 		secretNameServer                   = "server-secret"
 		secretMountPathKubeconfig          = "/etc/gardener-resource-manager"
 		secretMountPathServer              = "/etc/gardener-resource-manager-tls"
+		secretMountPathAPIAccess           = "/var/run/secrets/kubernetes.io/serviceaccount"
 		secretChecksumKubeconfig           = "1234"
 		secretChecksumServer               = "5678"
 		secrets                            Secrets
 		alwaysUpdate                             = true
 		concurrentSyncs                    int32 = 20
 		clusterRoleName                          = "gardener-resource-manager-seed"
+		serviceAccountSecretName                 = "sa-secret"
 		healthSyncPeriod                         = time.Minute
 		leaseDuration                            = time.Second * 40
 		maxConcurrentHealthWorkers         int32 = 20
@@ -80,8 +82,8 @@ var _ = Describe("ResourceManager", func() {
 		resourceClass                            = "fake-ResourceClass"
 		retryPeriod                              = time.Second * 20
 		syncPeriod                               = time.Second * 80
-		targetDisableCache                       = true
 		watchedNamespace                         = "fake-ns"
+		targetDisableCache                       = true
 
 		allowAll                   []rbacv1.PolicyRule
 		allowManagedResources      []rbacv1.PolicyRule
@@ -288,6 +290,7 @@ var _ = Describe("ResourceManager", func() {
 				Namespace: deployNamespace,
 				Labels:    defaultLabels,
 			},
+			AutomountServiceAccountToken: pointer.Bool(false),
 		}
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -363,6 +366,11 @@ var _ = Describe("ResourceManager", func() {
 								},
 								VolumeMounts: []corev1.VolumeMount{
 									{
+										MountPath: secretMountPathAPIAccess,
+										Name:      "kube-api-access-gardener",
+										ReadOnly:  true,
+									},
+									{
 										MountPath: secretMountPathServer,
 										Name:      "tls",
 										ReadOnly:  true,
@@ -376,6 +384,44 @@ var _ = Describe("ResourceManager", func() {
 							},
 						},
 						Volumes: []corev1.Volume{
+							{
+								Name: "kube-api-access-gardener",
+								VolumeSource: corev1.VolumeSource{
+									Projected: &corev1.ProjectedVolumeSource{
+										DefaultMode: pointer.Int32(420),
+										Sources: []corev1.VolumeProjection{
+											{
+												ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+													ExpirationSeconds: pointer.Int64(43200),
+													Path:              "token",
+												},
+											},
+											{
+												Secret: &corev1.SecretProjection{
+													LocalObjectReference: corev1.LocalObjectReference{
+														Name: serviceAccountSecretName,
+													},
+													Items: []corev1.KeyToPath{{
+														Key:  "ca.crt",
+														Path: "ca.crt",
+													}},
+												},
+											},
+											{
+												DownwardAPI: &corev1.DownwardAPIProjection{
+													Items: []corev1.DownwardAPIVolumeFile{{
+														FieldRef: &corev1.ObjectFieldSelector{
+															APIVersion: "v1",
+															FieldPath:  "metadata.namespace",
+														},
+														Path: "namespace",
+													}},
+												},
+											},
+										},
+									},
+								},
+							},
 							{
 								Name: "tls",
 								VolumeSource: corev1.VolumeSource{
@@ -451,6 +497,10 @@ var _ = Describe("ResourceManager", func() {
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(service))
 						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, serviceAccount.Name), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.ServiceAccount) error {
+						(&corev1.ServiceAccount{Secrets: []corev1.ObjectReference{{Name: serviceAccountSecretName}}}).DeepCopyInto(obj)
+						return nil
+					}),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -513,7 +563,7 @@ var _ = Describe("ResourceManager", func() {
 				Expect(resourceManager.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail because the deployment can not be created", func() {
+			It("should fail because the service account has no token yet", func() {
 				gomock.InOrder(
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
@@ -523,11 +573,10 @@ var _ = Describe("ResourceManager", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
-					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
-					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).Return(fakeErr),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, serviceAccount.Name), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
 				)
 
-				Expect(resourceManager.Deploy(ctx)).To(MatchError(fakeErr))
+				Expect(resourceManager.Deploy(ctx)).To(MatchError(ContainSubstring("has no secrets yet")))
 			})
 
 			It("should fail because the deployment can not be created", func() {
@@ -540,6 +589,31 @@ var _ = Describe("ResourceManager", func() {
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Service{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, serviceAccount.Name), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.ServiceAccount) error {
+						(&corev1.ServiceAccount{Secrets: []corev1.ObjectReference{{Name: serviceAccountSecretName}}}).DeepCopyInto(obj)
+						return nil
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).Return(fakeErr),
+				)
+
+				Expect(resourceManager.Deploy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should fail because the VPA can not be created", func() {
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.ServiceAccount{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(watchedNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.Role{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.Role{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&rbacv1.RoleBinding{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&rbacv1.RoleBinding{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&corev1.Service{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Service{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, serviceAccount.Name), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.ServiceAccount) error {
+						(&corev1.ServiceAccount{Secrets: []corev1.ObjectReference{{Name: serviceAccountSecretName}}}).DeepCopyInto(obj)
+						return nil
+					}),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager-vpa"), gomock.AssignableToTypeOf(&autoscalingv1beta2.VerticalPodAutoscaler{})),
@@ -582,6 +656,10 @@ var _ = Describe("ResourceManager", func() {
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(service))
 						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, serviceAccount.Name), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.ServiceAccount) error {
+						(&corev1.ServiceAccount{Secrets: []corev1.ObjectReference{{Name: serviceAccountSecretName}}}).DeepCopyInto(obj)
+						return nil
+					}),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
@@ -669,6 +747,10 @@ var _ = Describe("ResourceManager", func() {
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {
 							Expect(obj).To(DeepEqual(service))
 						}),
+					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, serviceAccount.Name), gomock.AssignableToTypeOf(&corev1.ServiceAccount{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj *corev1.ServiceAccount) error {
+						(&corev1.ServiceAccount{Secrets: []corev1.ObjectReference{{Name: serviceAccountSecretName}}}).DeepCopyInto(obj)
+						return nil
+					}),
 					c.EXPECT().Get(ctx, kutil.Key(deployNamespace, "gardener-resource-manager"), gomock.AssignableToTypeOf(&appsv1.Deployment{})),
 					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&appsv1.Deployment{}), gomock.Any()).
 						Do(func(ctx context.Context, obj runtime.Object, _ client.Patch, _ ...client.PatchOption) {

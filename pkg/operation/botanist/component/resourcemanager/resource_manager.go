@@ -61,10 +61,12 @@ const (
 	roleName           = "gardener-resource-manager"
 	serviceAccountName = "gardener-resource-manager"
 
-	volumeNameKubeconfig      = "gardener-resource-manager"
-	volumeNameCerts           = "tls"
-	volumeMountPathKubeconfig = "/etc/gardener-resource-manager"
-	volumeMountPathCerts      = "/etc/gardener-resource-manager-tls"
+	volumeNameKubeconfig           = "gardener-resource-manager"
+	volumeNameCerts                = "tls"
+	volumeNameAPIServerAccess      = "kube-api-access-gardener"
+	volumeMountPathKubeconfig      = "/etc/gardener-resource-manager"
+	volumeMountPathCerts           = "/etc/gardener-resource-manager-tls"
+	volumeMountPathAPIServerAccess = "/var/run/secrets/kubernetes.io/serviceaccount"
 )
 
 var (
@@ -374,6 +376,22 @@ func (r *resourceManager) emptyService() *corev1.Service {
 func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	deployment := r.emptyDeployment()
 
+	// TODO(rfranzke): Remove this special handling when we only support seed clusters of at least K8s 1.20.
+	//                 Then we can use the 'kube-root-ca.crt' configmap to get access to the CA cert.
+	var rootCAVolumeSourceName string
+	{
+		serviceAccount := r.emptyServiceAccount()
+		if err2 := r.client.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount); err2 != nil {
+			return err2
+		}
+
+		if len(serviceAccount.Secrets) == 0 {
+			return fmt.Errorf("service account has no secrets yet, cannot mount root-ca volume")
+		}
+
+		rootCAVolumeSourceName = serviceAccount.Secrets[0].Name
+	}
+
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
@@ -429,8 +447,51 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 							SuccessThreshold:    1,
 							TimeoutSeconds:      5,
 						},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      volumeNameAPIServerAccess,
+							MountPath: volumeMountPathAPIServerAccess,
+							ReadOnly:  true,
+						}},
 					},
 				},
+				Volumes: []corev1.Volume{{
+					Name: volumeNameAPIServerAccess,
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							DefaultMode: pointer.Int32(420),
+							Sources: []corev1.VolumeProjection{
+								{
+									ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+										ExpirationSeconds: pointer.Int64(60 * 60 * 12),
+										Path:              "token",
+									},
+								},
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: rootCAVolumeSourceName,
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  "ca.crt",
+											Path: "ca.crt",
+										}},
+									},
+								},
+								{
+									DownwardAPI: &corev1.DownwardAPIProjection{
+										Items: []corev1.DownwardAPIVolumeFile{{
+											FieldRef: &corev1.ObjectFieldSelector{
+												APIVersion: "v1",
+												FieldPath:  "metadata.namespace",
+											},
+											Path: "namespace",
+										}},
+									},
+								},
+							},
+						},
+					},
+				}},
 			},
 		}
 
@@ -540,6 +601,7 @@ func (r *resourceManager) ensureServiceAccount(ctx context.Context) error {
 	serviceAccount := r.emptyServiceAccount()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, serviceAccount, func() error {
 		serviceAccount.Labels = r.getLabels()
+		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 		return nil
 	})
 	return err
@@ -583,6 +645,9 @@ func (r *resourceManager) getLabels() map[string]string {
 }
 
 func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
+	// TODO(rfranzke): Add 'projected-token-mount.resources.gardener.cloud/skip=true' label after
+	//                 https://github.com/gardener/gardener/pull/4873 is merged.
+
 	if partOfShootControlPlane := r.secrets.Kubeconfig.Name != ""; partOfShootControlPlane {
 		return utils.MergeStringMaps(appLabel(), map[string]string{
 			v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
