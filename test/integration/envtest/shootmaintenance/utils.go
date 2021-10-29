@@ -1,4 +1,4 @@
-// Copyright (c) 2020 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Deprecated: this is the deprecated gardener testframework.
-// Use gardener/test/framework instead
-package maintenance
+package shoot_maintenance
 
 import (
 	"context"
@@ -28,57 +26,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/logger"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 )
 
-// CleanupCloudProfile tries to patch the CloudProfile to make sure the machine image version & kubernetes version introduced during the integration test is being removed
-func CleanupCloudProfile(ctx context.Context, gardenClient client.Client, cloudProfileName string, testMachineImage gardencorev1beta1.ShootMachineImage, testKubernetesVersions []gardencorev1beta1.ExpirableVersion) error {
-	// then delete the test versions
-	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err = gardenClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile); err != nil {
-		return err
-	}
-	patch := client.StrategicMergeFrom(cloudProfile.DeepCopy())
-
-	// clean machine image
-	var removedCloudProfileImages []gardencorev1beta1.MachineImage
-	for _, image := range cloudProfile.Spec.MachineImages {
-		versionExists, index := helper.ShootMachineImageVersionExists(image, testMachineImage)
-		if versionExists {
-			image.Versions = append(image.Versions[:index], image.Versions[index+1:]...)
-		}
-		removedCloudProfileImages = append(removedCloudProfileImages, image)
-	}
-	cloudProfile.Spec.MachineImages = removedCloudProfileImages
-
-	// clean kubernetes CloudProfile Version
-	var removedKubernetesVersions []gardencorev1beta1.ExpirableVersion
-	for _, cloudprofileVersion := range cloudProfile.Spec.Kubernetes.Versions {
-		versionShouldBeRemoved := false
-		for _, versionToBeRemoved := range testKubernetesVersions {
-			if cloudprofileVersion.Version == versionToBeRemoved.Version {
-				versionShouldBeRemoved = true
-				break
-			}
-		}
-		if !versionShouldBeRemoved {
-			removedKubernetesVersions = append(removedKubernetesVersions, cloudprofileVersion)
-		}
-	}
-	cloudProfile.Spec.Kubernetes.Versions = removedKubernetesVersions
-
-	// update Cloud Profile to remove the test machine image
-	if err = gardenClient.Patch(ctx, cloudProfile, patch); err != nil {
-		logger.Logger.Errorf("failed to patch CloudProfile %s: %v", cloudProfile.Name, err)
-		return err
-	}
-	return nil
-}
-
 // WaitForExpectedMachineImageMaintenance polls a shoot until the given deadline is exceeded. Checks if the shoot's machine image  equals the targetImage and if an image update is required.
-func WaitForExpectedMachineImageMaintenance(ctx context.Context, logger *logrus.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetMachineImage gardencorev1beta1.ShootMachineImage, imageUpdateRequired bool, deadline time.Time) error {
+func waitForExpectedMachineImageMaintenance(ctx context.Context, logger *logrus.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetMachineImage gardencorev1beta1.ShootMachineImage, imageUpdateRequired bool, deadline time.Time) error {
 	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
 		shoot := &gardencorev1beta1.Shoot{}
 		err := gardenClient.Get(ctx, client.ObjectKey{Namespace: s.Namespace, Name: s.Name}, shoot)
@@ -113,7 +66,7 @@ func WaitForExpectedMachineImageMaintenance(ctx context.Context, logger *logrus.
 }
 
 // WaitForExpectedKubernetesVersionMaintenance polls a shoot until the given deadline is exceeded. Checks if the shoot's kubernetes version equals the targetVersion and if an kubernetes version update is required.
-func WaitForExpectedKubernetesVersionMaintenance(ctx context.Context, logger *logrus.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetVersion string, kubernetesVersionUpdateRequired bool, deadline time.Time) error {
+func waitForExpectedKubernetesVersionMaintenance(ctx context.Context, logger *logrus.Logger, gardenClient client.Client, s *gardencorev1beta1.Shoot, targetVersion string, kubernetesVersionUpdateRequired bool, deadline time.Time) error {
 	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
 		shoot := &gardencorev1beta1.Shoot{}
 		err := gardenClient.Get(ctx, client.ObjectKey{Namespace: s.Namespace, Name: s.Name}, shoot)
@@ -139,17 +92,10 @@ func WaitForExpectedKubernetesVersionMaintenance(ctx context.Context, logger *lo
 	}, ctx.Done())
 }
 
-// StartShootMaintenance adds the maintenance annotation on the Shoot to start the Shoot Maintenance
-func StartShootMaintenance(ctx context.Context, c client.Client, shoot *gardencorev1beta1.Shoot) error {
-	patch := client.MergeFrom(shoot.DeepCopy())
-	metav1.SetMetaDataAnnotation(&shoot.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationMaintain)
-	return c.Patch(ctx, shoot, patch)
-}
-
 // PatchCloudProfileForMachineImageMaintenance patches the images of the Cloud Profile
-func PatchCloudProfileForMachineImageMaintenance(ctx context.Context, c client.Client, cloudProfileName string, testMachineImage gardencorev1beta1.ShootMachineImage, expirationDate *metav1.Time, classification *gardencorev1beta1.VersionClassification) error {
+func patchCloudProfileForMachineImageMaintenance(ctx context.Context, gardenClient client.Client, cloudProfileName string, testMachineImage gardencorev1beta1.ShootMachineImage, expirationDate *metav1.Time, classification *gardencorev1beta1.VersionClassification) error {
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := c.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile); err != nil {
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile); err != nil {
 		return err
 	}
 	patch := client.StrategicMergeFrom(cloudProfile.DeepCopy())
@@ -163,13 +109,13 @@ func PatchCloudProfileForMachineImageMaintenance(ctx context.Context, c client.C
 		}
 	}
 
-	return c.Patch(ctx, cloudProfile, patch)
+	return gardenClient.Patch(ctx, cloudProfile, patch)
 }
 
 // PatchCloudProfileForKubernetesVersionMaintenance patches a specific kubernetes version of the Cloud Profile
-func PatchCloudProfileForKubernetesVersionMaintenance(ctx context.Context, c client.Client, cloudProfileName string, targetVersion string, expirationDate *metav1.Time, classification *gardencorev1beta1.VersionClassification) error {
+func patchCloudProfileForKubernetesVersionMaintenance(ctx context.Context, gardenClient client.Client, cloudProfileName string, targetVersion string, expirationDate *metav1.Time, classification *gardencorev1beta1.VersionClassification) error {
 	cloudProfile := &gardencorev1beta1.CloudProfile{}
-	if err := c.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile); err != nil {
+	if err := gardenClient.Get(ctx, client.ObjectKey{Name: cloudProfileName}, cloudProfile); err != nil {
 		return err
 	}
 	patch := client.StrategicMergeFrom(cloudProfile.DeepCopy())
@@ -182,5 +128,14 @@ func PatchCloudProfileForKubernetesVersionMaintenance(ctx context.Context, c cli
 		}
 	}
 
-	return c.Patch(ctx, cloudProfile, patch)
+	return gardenClient.Patch(ctx, cloudProfile, patch)
+}
+
+// DeleteShoot deletes the given shoot
+func deleteShoot(ctx context.Context, gardenClient client.Client, shoot *gardencorev1beta1.Shoot) error {
+	err := gutil.ConfirmDeletion(ctx, gardenClient, shoot)
+	if err != nil {
+		return err
+	}
+	return client.IgnoreNotFound(gardenClient.Delete(ctx, shoot))
 }
