@@ -376,9 +376,9 @@ It provides a functionality similar to the kubelet's [Service Account Token Volu
 It was created to handle the special case of issuing tokens to pods that run in a different cluster than the API server they communicate with (hence, using the native token volume projection feature is not possible).
 
 The controller differentiates between `source cluster` and `target cluster`.
-The `source cluster` hosts the gardener resource manager pod. Secrets in this cluster are watched and modified by the controller.
+The `source cluster` hosts the gardener-resource-manager pod. Secrets in this cluster are watched and modified by the controller.
 The `target cluster` _can_ be configured to point to another cluster. The existence of ServiceAccounts are ensured and token requests are issued against the target.
-When the grm is deployed as part of the Shoot's controlplane in the Seed the `source cluster` is the Seed while the `target cluster` points to the Shoot.
+When the gardener-resource-manager is deployed next to the Shoot's controlplane in the Seed the `source cluster` is the Seed while the `target cluster` points to the Shoot.
 
 #### Reconciliation Loop
 
