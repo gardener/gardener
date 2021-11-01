@@ -917,6 +917,18 @@ func RunReconcileSeedFlow(
 		return err
 	}
 
+	// .spec.selector of a StatefulSet is immutable. If StatefulSet's .spec.selector contains
+	// the deprecated role label key, we delete it and let it to be re-created below with the chart apply.
+	// TODO (ialidzhikov): remove in a future version
+	if loggingEnabled {
+		stsKeys := []client.ObjectKey{
+			kutil.Key(v1beta1constants.GardenNamespace, v1beta1constants.StatefulSetNameLoki),
+		}
+		if err := common.DeleteStatefulSetsHavingDeprecatedRoleLabelKey(ctx, seedClient, stsKeys); err != nil {
+			return err
+		}
+	}
+
 	values := kubernetes.Values(map[string]interface{}{
 		"priorityClassName": v1beta1constants.PriorityClassNameShootControlPlane,
 		"global": map[string]interface{}{

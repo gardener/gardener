@@ -1455,7 +1455,6 @@ rules:
 						"reference.resources.gardener.cloud/configmap-d4419cd4": "audit-policy-config-f5b578b4",
 					}))
 					Expect(deployment.Spec.Template.Labels).To(Equal(map[string]string{
-						"garden.sapcloud.io/role":          "controlplane",
 						"gardener.cloud/role":              "controlplane",
 						"app":                              "kubernetes",
 						"role":                             "apiserver",

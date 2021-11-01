@@ -388,12 +388,12 @@ func DeleteGrafanaByRole(ctx context.Context, k8sClient kubernetes.Interface, na
 	return nil
 }
 
-// DeleteDeploymentsHavingDeprecatedRoleLabelKey deletes the Deployments with the passed object keys if
-// the corresponding Deployment .spec.selector contains the deprecated "garden.sapcloud.io/role" label key.
-func DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx context.Context, c client.Client, keys []client.ObjectKey) error {
+// DeleteStatefulSetsHavingDeprecatedRoleLabelKey deletes the StatefulSets with the passed object keys if
+// the corresponding StatefulSet .spec.selector contains the deprecated "garden.sapcloud.io/role" label key.
+func DeleteStatefulSetsHavingDeprecatedRoleLabelKey(ctx context.Context, c client.Client, keys []client.ObjectKey) error {
 	for _, key := range keys {
-		deployment := &appsv1.Deployment{}
-		if err := c.Get(ctx, key, deployment); err != nil {
+		sts := &appsv1.StatefulSet{}
+		if err := c.Get(ctx, key, sts); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
@@ -401,12 +401,12 @@ func DeleteDeploymentsHavingDeprecatedRoleLabelKey(ctx context.Context, c client
 			return err
 		}
 
-		if _, ok := deployment.Spec.Selector.MatchLabels[v1beta1constants.DeprecatedGardenRole]; ok {
-			if err := c.Delete(ctx, deployment); client.IgnoreNotFound(err) != nil {
+		if _, ok := sts.Spec.Selector.MatchLabels[v1beta1constants.DeprecatedGardenRole]; ok {
+			if err := c.Delete(ctx, sts); client.IgnoreNotFound(err) != nil {
 				return err
 			}
 
-			if err := kutil.WaitUntilResourceDeleted(ctx, c, deployment, 2*time.Second); err != nil {
+			if err := kutil.WaitUntilResourceDeleted(ctx, c, sts, 2*time.Second); err != nil {
 				return err
 			}
 		}

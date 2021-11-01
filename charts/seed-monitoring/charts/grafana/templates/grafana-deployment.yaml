@@ -28,7 +28,6 @@ spec:
 {{ include "grafana.deployment.annotations" . | indent 8 }}
       labels:
         gardener.cloud/role: monitoring
-        garden.sapcloud.io/role: monitoring
         component: grafana
         networking.gardener.cloud/to-dns: allowed
         role: {{ .Values.role }}
