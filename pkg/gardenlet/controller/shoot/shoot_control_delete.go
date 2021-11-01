@@ -43,7 +43,7 @@ import (
 
 // runDeleteShootFlow deletes a Shoot cluster entirely.
 // It receives an Operation object <o> which stores the Shoot object and an ErrorContext which contains error from the previous operation.
-func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
 		botanist                             *botanistpkg.Botanist
 		kubeAPIServerDeploymentFound         = true
@@ -507,7 +507,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 		destroyIngressDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying nginx ingress DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyIngressDNSResources),
+			Fn:           botanist.DestroyIngressDNSResources,
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		destroyInfrastructure = g.Add(flow.Task{
@@ -522,7 +522,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 		})
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyExternalDNSResources),
+			Fn:           botanist.DestroyExternalDNSResources,
 			Dependencies: flow.NewTaskIDs(syncPointCleaned, deleteKubeAPIServer),
 		})
 		deleteGrafana = g.Add(flow.Task{
@@ -544,17 +544,17 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyInternalDNSResources),
+			Fn:           botanist.DestroyInternalDNSResources,
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		destroyOwnerDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying owner domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyOwnerDNSResources),
+			Fn:           botanist.DestroyOwnerDNSResources,
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		deleteDNSProviders = g.Add(flow.Task{
 			Name:         "Deleting additional DNS providers",
-			Fn:           flow.TaskFn(botanist.DeleteDNSProviders),
+			Fn:           botanist.DeleteDNSProviders,
 			Dependencies: flow.NewTaskIDs(destroyInternalDomainDNSRecord, destroyOwnerDomainDNSRecord),
 		})
 		destroyReferencedResources = g.Add(flow.Task{
@@ -592,7 +592,7 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 
 	if err := f.Run(ctx, flow.Opts{
 		Logger:           o.Logger,
-		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
+		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
 		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
 		ErrorContext:     errorContext,
 	}); err != nil {
@@ -610,8 +610,8 @@ func (c *Controller) runDeleteShootFlow(ctx context.Context, o *operation.Operat
 	return nil
 }
 
-func (c *Controller) removeFinalizerFrom(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
-	if err := c.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), nil, shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
+func (r *shootReconciler) removeFinalizerFrom(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
+	if err := r.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), nil, shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
 		return err
 	}
 
@@ -622,7 +622,7 @@ func (c *Controller) removeFinalizerFrom(ctx context.Context, gardenClient kuber
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
 	return retryutils.UntilTimeout(ctx, time.Second, 30*time.Second, func(context.Context) (bool, error) {
-		err := c.gardenCache.Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
+		err := gardenClient.Cache().Get(ctx, client.ObjectKeyFromObject(shoot), shoot)
 		if apierrors.IsNotFound(err) {
 			return retryutils.Ok()
 		}

@@ -315,14 +315,14 @@ var _ = Describe("Shoot Care Control", func() {
 					revertFns = append(revertFns,
 						test.WithVars(&NewHealthCheck,
 							healthCheckFunc(func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-								copy := append(cond[:0:0], cond...)
-								return copy
+								conditionsCopy := append(cond[:0:0], cond...)
+								return conditionsCopy
 							}),
 						),
 						test.WithVars(&NewConstraintCheck,
 							constraintCheckFunc(func(constr []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
-								copy := append(constr[:0:0], constr...)
-								return copy
+								constraintsCopy := append(constr[:0:0], constr...)
+								return constraintsCopy
 							}),
 						),
 					)
@@ -680,7 +680,7 @@ func healthCheckFunc(fn resultingConditionFunc) NewHealthCheckFunc {
 
 type resultingConstraintFunc func(cond []gardencorev1beta1.Condition) []gardencorev1beta1.Condition
 
-func (c resultingConstraintFunc) Check(ctx context.Context, constraints []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
+func (c resultingConstraintFunc) Check(_ context.Context, constraints []gardencorev1beta1.Condition) []gardencorev1beta1.Condition {
 	return c(constraints)
 }
 
@@ -765,6 +765,6 @@ type failingPatchClient struct {
 	client.Client
 }
 
-func (c failingPatchClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+func (c failingPatchClient) Patch(context.Context, client.Object, client.Patch, ...client.PatchOption) error {
 	return c.err
 }

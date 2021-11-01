@@ -35,7 +35,7 @@ import (
 
 // runReconcileShootFlow reconciles the Shoot cluster's state.
 // It receives an Operation object <o> which stores the Shoot object.
-func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
+func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	// We create the botanists (which will do the actual work).
 	var (
 		botanist        *botanistpkg.Botanist
@@ -131,7 +131,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		generateSecrets = g.Add(flow.Task{
 			Name: "Generating secrets and saving them into ShootState",
-			Fn:   flow.TaskFn(botanist.GenerateAndSaveSecrets),
+			Fn:   botanist.GenerateAndSaveSecrets,
 			Dependencies: func() flow.TaskIDs {
 				taskIDs := flow.NewTaskIDs(deployNamespace, ensureShootStateExists)
 				if !dnsEnabled && !o.Shoot.HibernationEnabled {
@@ -142,7 +142,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		deploySecrets = g.Add(flow.Task{
 			Name:         "Deploying Shoot certificates / keys",
-			Fn:           flow.TaskFn(botanist.DeploySecrets),
+			Fn:           botanist.DeploySecrets,
 			Dependencies: flow.NewTaskIDs(deployNamespace, generateSecrets, ensureShootStateExists),
 		})
 		deploySeedLogging = g.Add(flow.Task{
@@ -157,7 +157,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		deployOwnerDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying owner domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployOwnerDNSResources),
+			Fn:           botanist.DeployOwnerDNSResources,
 			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployReferencedResources),
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
@@ -238,17 +238,17 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 		})
 		generateEncryptionConfigurationMetaData = g.Add(flow.Task{
 			Name:         "Generating etcd encryption configuration",
-			Fn:           flow.TaskFn(botanist.GenerateEncryptionConfiguration),
+			Fn:           botanist.GenerateEncryptionConfiguration,
 			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists),
 		})
 		persistETCDEncryptionConfiguration = g.Add(flow.Task{
 			Name:         "Persisting etcd encryption configuration in ShootState",
-			Fn:           flow.TaskFn(botanist.PersistEncryptionConfiguration),
+			Fn:           botanist.PersistEncryptionConfiguration,
 			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData),
 		})
 		createOrUpdateETCDEncryptionConfiguration = g.Add(flow.Task{
 			Name:         "Applying etcd encryption configuration",
-			Fn:           flow.TaskFn(botanist.ApplyEncryptionConfiguration),
+			Fn:           botanist.ApplyEncryptionConfiguration,
 			Dependencies: flow.NewTaskIDs(deployNamespace, ensureShootStateExists, generateEncryptionConfigurationMetaData, persistETCDEncryptionConfiguration),
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
@@ -550,7 +550,7 @@ func (c *Controller) runReconcileShootFlow(ctx context.Context, o *operation.Ope
 
 	if err := f.Run(ctx, flow.Opts{
 		Logger:           o.Logger,
-		ProgressReporter: c.newProgressReporter(o.ReportShootProgress),
+		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,
 		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
 	}); err != nil {
