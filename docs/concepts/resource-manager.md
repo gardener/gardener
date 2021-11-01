@@ -441,7 +441,7 @@ then the respective `ServiceAccount` will not be deleted when the `Secret` is de
 
 When this webhook is activated then it automatically injects projected `ServiceAccount` token volumes into `Pod`s and all its containers if all of the following preconditions are fulfilled:
 
-1. The `Pod` is NOT annotated with `projected-token-mount.resources.gardener.cloud/skip=true`.
+1. The `Pod` is NOT labeled with `projected-token-mount.resources.gardener.cloud/skip=true`.
 2. The `Pod`'s `.spec.serviceAccountName` field is NOT empty and NOT set to `default`.
 3. The `ServiceAccount` specified in the `Pod`'s `.spec.serviceAccountName` sets `.automountServiceAccountToken=false`.
 4. The `Pod`'s `.spec.volumes[]` DO NOT already contain a volume with a name prefixed with `kube-api-access-`.
