@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Root CA Controller tests", func() {
+var _ = Describe("RootCAPublisher tests", func() {
 	var (
 		namespace *corev1.Namespace
 		configMap *corev1.ConfigMap
@@ -43,68 +43,75 @@ var _ = Describe("Root CA Controller tests", func() {
 		}
 
 		Expect(testClient.Create(ctx, namespace)).To(Or(Succeed(), BeAlreadyExistsError()))
-
-		Eventually(func() error {
-			return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-		}).Should(Succeed())
 	})
 
 	Context("kube-root-ca.crt config map", func() {
-		AfterEach(func() {
-			Eventually(func() map[string]string {
-				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
-
-				return configMap.Data
-			}).Should(SatisfyAll(Not(BeNil()), HaveKeyWithValue("ca.crt", string(certFile))))
-		})
-
-		It("should successfully create a config map on creating a namespace", func() {})
-
-		It("should successfully update the config map if manual update occur", func() {
-			configMap.Data = nil
-			Expect(testClient.Update(ctx, configMap)).To(Succeed())
-		})
-
-		It("should recreate the config map if it gets deleted", func() {
-			Expect(testClient.Delete(ctx, configMap)).To(Succeed())
-
+		BeforeEach(func() {
 			Eventually(func() error {
 				return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
-			}).Should(BeNotFoundError())
-		})
-	})
-
-	Context("Other config maps", func() {
-		It("should ignore config maps with different name", func() {
-			cm := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: namespace.Name,
-				},
-				Data: map[string]string{"foo": "bar"},
-			}
-			Expect(testClient.Create(ctx, cm)).To(Succeed())
-
-			baseCM := cm.DeepCopy()
-			cm.Data["foo"] = "newbar"
-
-			Consistently(func() map[string]string {
-				Expect(testClient.Patch(ctx, cm, client.MergeFrom(baseCM))).To(Succeed())
-
-				return cm.Data
-			}).Should(SatisfyAll(HaveLen(1), HaveKeyWithValue("foo", "newbar")))
+			}).Should(Succeed())
 		})
 
-		It("should ignore config maps that are updated by the k8s publisher", func() {
+		Context("controller should be active", func() {
+			AfterEach(func() {
+				Eventually(func(g Gomega) map[string]string {
+					g.Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
+					return configMap.Data
+				}).Should(HaveKeyWithValue("ca.crt", string(caCert)))
+			})
+
+			It("should create a config map on creating a namespace", func() {})
+
+			It("should revert the config map data after manual changes", func() {
+				configMap.Data = nil
+				Expect(testClient.Update(ctx, configMap)).To(Succeed())
+			})
+
+			It("should recreate the config map if it gets deleted", func() {
+				Expect(testClient.Delete(ctx, configMap)).To(Succeed())
+
+				Eventually(func() error {
+					return testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)
+				}).Should(BeNotFoundError())
+			})
+		})
+
+		It("should ignore config maps that are managed by the upstream rootcapublisher controller", func() {
 			configMap.Data = nil
 			configMap.Annotations = map[string]string{"kubernetes.io/description": "test description"}
 			Expect(testClient.Update(ctx, configMap)).To(Succeed())
 
 			Consistently(func() map[string]string {
 				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(configMap), configMap)).To(Succeed())
-
 				return configMap.Data
 			}).Should(BeNil())
+		})
+	})
+
+	Context("custom config maps", func() {
+		It("should ignore config maps with different name", func() {
+			cm := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-other-configmap",
+					Namespace: namespace.Name,
+				},
+				Data: map[string]string{"foo": "bar"},
+			}
+			Expect(testClient.Create(ctx, cm)).To(Succeed())
+
+			Consistently(func() map[string]string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(cm), cm)).To(Succeed())
+				return cm.Data
+			}).Should(SatisfyAll(HaveLen(1), HaveKeyWithValue("foo", "bar")))
+
+			patch := client.MergeFrom(cm.DeepCopy())
+			cm.Data["foo"] = "newbar"
+			Expect(testClient.Patch(ctx, cm, patch)).To(Succeed())
+
+			Consistently(func() map[string]string {
+				Expect(testClient.Get(ctx, client.ObjectKeyFromObject(cm), cm)).To(Succeed())
+				return cm.Data
+			}).Should(SatisfyAll(HaveLen(1), HaveKeyWithValue("foo", "newbar")))
 		})
 	})
 })

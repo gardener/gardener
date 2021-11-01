@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/rootcapublisher"
-	"github.com/gardener/gardener/test/framework"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -39,13 +38,14 @@ func TestRootCAPublisher(t *testing.T) {
 }
 
 var (
-	ctx        = context.Background()
-	restConfig *rest.Config
-	testEnv    *envtest.Environment
-	mgrCancel  context.CancelFunc
-	certFile   []byte
+	ctx = context.Background()
 
+	testEnv    *envtest.Environment
+	restConfig *rest.Config
 	testClient client.Client
+	mgrCancel  context.CancelFunc
+
+	caCert []byte
 )
 
 var _ = BeforeSuite(func() {
@@ -62,9 +62,10 @@ var _ = BeforeSuite(func() {
 	testClient, err = client.New(restConfig, client.Options{Scheme: k8sscheme.Scheme})
 	Expect(err).ToNot(HaveOccurred())
 
-	certFile, err = os.ReadFile("testdata/dummy.crt")
+	const rootCAPath = "testdata/ca.crt"
+	caCert, err = os.ReadFile(rootCAPath)
 	Expect(err).To(BeNil())
-	Expect(certFile).ToNot(BeEmpty())
+	Expect(caCert).ToNot(BeEmpty())
 
 	By("setup manager")
 	mgr, err := manager.New(restConfig, manager.Options{
@@ -76,26 +77,22 @@ var _ = BeforeSuite(func() {
 	By("registering controllers and webhooks")
 	Expect(rootcapublisher.AddToManagerWithOptions(mgr, rootcapublisher.ControllerConfig{
 		MaxConcurrentWorkers: 1,
-		RootCAPath:           "testdata/dummy.crt",
+		RootCAPath:           rootCAPath,
 		TargetCluster:        mgr,
-	})).ToNot(HaveOccurred())
+	})).To(Succeed())
 
 	var mgrContext context.Context
 	mgrContext, mgrCancel = context.WithCancel(ctx)
 
 	By("start manager")
 	go func() {
-		err := mgr.Start(mgrContext)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(mgr.Start(mgrContext)).To(Succeed())
 	}()
 })
 
 var _ = AfterSuite(func() {
 	By("stopping manager")
 	mgrCancel()
-
-	By("running cleanup actions")
-	framework.RunCleanupActions()
 
 	By("stopping test environment")
 	Expect(testEnv.Stop()).To(Succeed())
