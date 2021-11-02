@@ -3,7 +3,7 @@
 LABEL="${1:-local-garden}"
 SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
 
-IMAGE=k8s.gcr.io/kube-controller-manager:v1.20.2
+IMAGE=k8s.gcr.io/kube-controller-manager:v1.22.3
 MOUNTS="-v $SCRIPTPATH/certificates/certs:/certs -v $SCRIPTPATH/certificates/keys:/keys -v $SCRIPTPATH/kubeconfigs/default-kube-controller-manager.conf:/kubeconfig"
 
 while ! KUBECONFIG=$SCRIPTPATH/kubeconfigs/default-admin.conf kubectl cluster-info > /dev/null 2>&1;
