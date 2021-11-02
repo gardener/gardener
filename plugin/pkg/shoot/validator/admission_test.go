@@ -882,8 +882,10 @@ var _ = Describe("validator", func() {
 
 					It("update should pass because the Seed stays the same, even if it has non-tolerated taints", func() {
 						oldShoot.Spec.SeedName = pointer.String("seed")
-						shoot.Spec.Provider.Workers[0].Maximum = 10
 						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+
+						// Modify the Shoot spec to avoid an early exit optimization during the admission
+						shoot.Spec.Provider.Workers[0].Maximum = 10
 
 						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
