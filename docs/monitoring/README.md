@@ -58,7 +58,7 @@ An optional collection of all Shoot Prometheus metrics to a central prometheus (
     externalLabels: # add additional labels to metrics to identify it on the central instance
       additional: label
     remoteWriteURL: https://remoteWriteUrl # remote write URL
-    remoteWriteKeep: # metrics that should be forwarded to the external write endpint. Im empty all metrics get forwarded
+    remoteWriteKeep: # metrics that should be forwarded to the external write endpoint. If empty all metrics get forwarded
     - kube_pod_container_info
 ```
 
