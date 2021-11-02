@@ -35,7 +35,17 @@ import (
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/loki" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
-	if !b.Shoot.IsLoggingEnabled() {
+
+	// loki disabled
+	var lokiDisabled bool
+	if b.Config != nil &&
+		b.Config.Logging != nil &&
+		b.Config.Logging.Loki != nil &&
+		b.Config.Logging.Loki.Disable != nil {
+		lokiDisabled = *b.Config.Logging.Loki.Disable
+	}
+
+	if !b.Shoot.IsLoggingEnabled() || lokiDisabled {
 		return common.DeleteShootLoggingStack(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 	}
 

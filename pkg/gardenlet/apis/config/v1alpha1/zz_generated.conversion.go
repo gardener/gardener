@@ -989,6 +989,7 @@ func Convert_config_Logging_To_v1alpha1_Logging(in *config.Logging, out *Logging
 }
 
 func autoConvert_v1alpha1_Loki_To_config_Loki(in *Loki, out *config.Loki, s conversion.Scope) error {
+	out.Disable = (*bool)(unsafe.Pointer(in.Disable))
 	if in.Garden != nil {
 		in, out := &in.Garden, &out.Garden
 		*out = new(config.GardenLoki)
@@ -1007,6 +1008,7 @@ func Convert_v1alpha1_Loki_To_config_Loki(in *Loki, out *config.Loki, s conversi
 }
 
 func autoConvert_config_Loki_To_v1alpha1_Loki(in *config.Loki, out *Loki, s conversion.Scope) error {
+	out.Disable = (*bool)(unsafe.Pointer(in.Disable))
 	if in.Garden != nil {
 		in, out := &in.Garden, &out.Garden
 		*out = new(GardenLoki)

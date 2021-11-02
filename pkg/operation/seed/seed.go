@@ -488,6 +488,16 @@ func RunReconcileSeedFlow(
 
 	lokiValues["enabled"] = loggingEnabled
 
+	if loggingConfig != nil &&
+		loggingConfig.Loki != nil &&
+		loggingConfig.Loki.Disable != nil &&
+		*loggingConfig.Loki.Disable {
+		lokiValues["enabled"] = false
+		if err := common.DeleteLoki(ctx, seedClient, gardenNamespace.Name); err != nil {
+			return err
+		}
+	}
+
 	if loggingEnabled {
 		lokiValues["authEnabled"] = false
 
