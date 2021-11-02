@@ -10,7 +10,7 @@
 
 Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service and provides a fully validated extensibility framework that can be adjusted to any programmatic cloud or infrastructure provider.
 
-Gardener is 100% Kubernets-native and exposes its own Cluster API to create homogeneous clusters on all supported infrastructures. This API differs from [SIG Cluster Lifecycle](https://github.com/kubernetes/community/tree/master/sig-cluster-lifecycle)'s [Cluster API](https://github.com/kubernetes-sigs/cluster-api#cluster-api) that only harmonizes how to get to clusters, while [Gardener's Cluster API](https://gardener.cloud/docs/references/core/#core.gardener.cloud/v1beta1.Shoot) goes one step further and also harmonizes the make-up of the clusters themselves. That means, Gardener gives you homogeneous clusters with exactly the same bill of material, configuration and behavior on all supported infrastructures, which you can see further down below in the section on our K8s Conformance Test Coverage.
+Gardener is 100% Kubernetes-native and exposes its own Cluster API to create homogeneous clusters on all supported infrastructures. This API differs from [SIG Cluster Lifecycle](https://github.com/kubernetes/community/tree/master/sig-cluster-lifecycle)'s [Cluster API](https://github.com/kubernetes-sigs/cluster-api#cluster-api) that only harmonizes how to get to clusters, while [Gardener's Cluster API](https://gardener.cloud/docs/gardener/concepts/cluster-api/) goes one step further and also harmonizes the make-up of the clusters themselves. That means, Gardener gives you homogeneous clusters with exactly the same bill of material, configuration and behavior on all supported infrastructures, which you can see further down below in the section on our K8s Conformance Test Coverage.
 
 In 2020, SIG Cluster Lifecycle's Cluster API made a huge step forward with [`v1alpha3`](https://kubernetes.io/blog/2020/04/21/cluster-api-v1alpha3-delivers-new-features-and-an-improved-user-experience/) and the newly added support for declarative control plane management. This made it possible to integrate managed services like GKE or Gardener. We would be more than happy, if the community would be interested, to contribute a Gardener control plane provider. For more information on the relation between Gardener API and SIG Cluster Lifecycle's Cluster API, please see [here](docs/concepts/cluster-api.md).
 
@@ -28,7 +28,7 @@ Gardener reuses the identical Kubernetes design to span a scalable multi-cloud a
 * Node = Seed cluster
 * Pod = Shoot cluster
 
-Please find more information regarding the concepts and a detailed description of the architecture in our [Gardener Wiki](https://github.com/gardener/documentation/wiki/Architecture) and our blog posts on kubernetes.io: [Gardener - the Kubernetes Botanist (17.5.2018)](https://kubernetes.io/blog/2018/05/17/gardener) and [Gardener Project Update (2.12.2019)](https://kubernetes.io/blog/2019/12/02/gardener-project-update).
+Please find more information regarding the concepts and a detailed description of the architecture in our [Gardener Wiki](https://github.com/gardener/gardener/blob/master/docs/concepts/architecture.md) and our blog posts on kubernetes.io: [Gardener - the Kubernetes Botanist (17.5.2018)](https://kubernetes.io/blog/2018/05/17/gardener) and [Gardener Project Update (2.12.2019)](https://kubernetes.io/blog/2019/12/02/gardener-project-update).
 
 ----
 
