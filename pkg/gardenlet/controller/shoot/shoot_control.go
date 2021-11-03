@@ -153,18 +153,21 @@ func confineSpecUpdateRollout(maintenance *gardencorev1beta1.Maintenance) bool {
 }
 
 func (r *shootReconciler) syncClusterResourceToSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) error {
-	clusterName := shootpkg.ComputeTechnicalID(project.Name, shoot)
-
-	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*shoot.Spec.SeedName))
+	seedName := getActiveSeedName(shoot)
+	if seedName == nil {
+		return nil
+	}
+	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*seedName))
 	if err != nil {
 		return fmt.Errorf("could not initialize a new Kubernetes client for the seed cluster: %+v", err)
 	}
 
+	clusterName := shootpkg.ComputeTechnicalID(project.Name, shoot)
 	return gardenerextensions.SyncClusterResourceToSeed(ctx, seedClient.Client(), clusterName, shoot, cloudProfile, seed)
 }
 
 func (r *shootReconciler) checkSeedAndSyncClusterResource(ctx context.Context, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) error {
-	seedName := shoot.Spec.SeedName
+	seedName := getActiveSeedName(shoot)
 	if seedName == nil || seed == nil {
 		return nil
 	}
@@ -187,11 +190,12 @@ func (r *shootReconciler) checkSeedAndSyncClusterResource(ctx context.Context, s
 
 // deleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
 func (r *shootReconciler) deleteClusterResourceFromSeed(ctx context.Context, shoot *gardencorev1beta1.Shoot, projectName string) error {
-	if shoot.Spec.SeedName == nil {
+	seedName := getActiveSeedName(shoot)
+	if seedName == nil {
 		return nil
 	}
 
-	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*shoot.Spec.SeedName))
+	seedClient, err := r.clientMap.GetClient(ctx, keys.ForSeedWithName(*seedName))
 	if err != nil {
 		return fmt.Errorf("could not initialize a new Kubernetes client for the seed cluster: %+v", err)
 	}
@@ -203,6 +207,13 @@ func (r *shootReconciler) deleteClusterResourceFromSeed(ctx context.Context, sho
 	}
 
 	return client.IgnoreNotFound(seedClient.Client().Delete(ctx, cluster))
+}
+
+func getActiveSeedName(shoot *gardencorev1beta1.Shoot) *string {
+	if shoot.Status.SeedName != nil {
+		return shoot.Status.SeedName
+	}
+	return shoot.Spec.SeedName
 }
 
 func (r *shootReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
