@@ -10,7 +10,7 @@ which enables in-line configuration changes.
 
 ## How to use
 
-To customize your CoreDNS cluster config, you can simply edit a `ConfigMap` named `custom-dns` in the `kube-system` namespace.
+To customize your CoreDNS cluster config, you can simply edit a `ConfigMap` named `coredns-custom` in the `kube-system` namespace.
 By editing, this `ConfigMap`, you are modifying CoreDNS configuration, therefore care is advised.
 
 For example, to apply new config to CoreDNS that would point all `.global` DNS requests to another DNS pod, simply edit the configuration as follows:
