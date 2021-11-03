@@ -378,26 +378,30 @@ func (r *resourceManager) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: r.namespace}}
 }
 
+// TODO(rfranzke): Remove this special handling when we only support seed clusters of at least K8s 1.20.
+//                 Then we can use the 'kube-root-ca.crt' configmap to get access to the CA cert.
+func (r *resourceManager) getRootCAVolumeSourceName(ctx context.Context) (string, error) {
+	serviceAccount := r.emptyServiceAccount()
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount); err != nil {
+		return "", err
+	}
+
+	if len(serviceAccount.Secrets) == 0 {
+		return "", fmt.Errorf("service account has no secrets yet, cannot mount root-ca volume")
+	}
+
+	return serviceAccount.Secrets[0].Name, nil
+}
+
 func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	deployment := r.emptyDeployment()
 
-	// TODO(rfranzke): Remove this special handling when we only support seed clusters of at least K8s 1.20.
-	//                 Then we can use the 'kube-root-ca.crt' configmap to get access to the CA cert.
-	var rootCAVolumeSourceName string
-	{
-		serviceAccount := r.emptyServiceAccount()
-		if err2 := r.client.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount); err2 != nil {
-			return err2
-		}
-
-		if len(serviceAccount.Secrets) == 0 {
-			return fmt.Errorf("service account has no secrets yet, cannot mount root-ca volume")
-		}
-
-		rootCAVolumeSourceName = serviceAccount.Secrets[0].Name
+	rootCAVolumeSourceName, err := r.getRootCAVolumeSourceName(ctx)
+	if err != nil {
+		return err
 	}
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
 		deployment.Spec.Replicas = &r.replicas
@@ -588,6 +592,8 @@ func (r *resourceManager) computeCommand() []string {
 		if r.secrets.RootCA != nil {
 			cmd = append(cmd, fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathRootCA, secrets.DataKeyCertificateCA))
 		} else {
+			// default to using the CA cert from the mounted service account. Relevant when source=target cluster.
+			// In this case, the CA cert of the source cluster is published.
 			cmd = append(cmd, fmt.Sprintf("--root-ca-file=%s/ca.crt", volumeMountPathAPIServerAccess))
 		}
 	}
