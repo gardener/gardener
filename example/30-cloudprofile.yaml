@@ -48,11 +48,18 @@ spec:
   #   minSize: 10Gi  # optional, either size or minSize must be configured
     usable: true
 # monitoring:
-#   externalLabels: # add additional labels to metrics to identify it on the central instance
-#     additional: label
-#   remoteWriteURL: https://remoteWriteUrl # remote write URL
-#   remoteWriteKeep: # metrics that should be forwarded to the external write endpoint. If empty all metrics get forwarded
-#     - kube_pod_container_info
+#   shoot:
+#     remoteWrite:
+#       url: https://remoteWriteUrl # remote write URL
+#       keep:# metrics that should be forwarded to the external write endpoint. If empty all metrics get forwarded
+#       - kube_pod_container_info
+#       queueConfig: | # queue_config of prometheus remote write as multiline string
+#         max_shards: 100
+#         batch_send_deadline: 20s
+#         min_backoff: 500ms
+#         max_backoff: 60s
+#     externalLabels: # add additional labels to metrics to identify it on the central instance
+#       additional: label
   volumeTypes: # optional (not needed in every environment, may only be specified if no machineType has a `storage` field)
   - name: gp2
     class: standard

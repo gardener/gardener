@@ -75,12 +75,26 @@ type CloudProfileSpec struct {
 
 // MonitoringConfig contains settings for the monitoring stack.
 type MonitoringConfig struct {
-	// RemoteWriteURL is optional and contains an Url for remote write setting in prometheus.
-	RemoteWriteURL string
-	// RemoteWriteKeep contains a list of metrics that will be remote written
-	RemoteWriteKeep []string
+	// Shoot is optional and contains settings for the shoot monitoring stack.
+	Shoot *ShootMonitoringConfig
+}
+
+// ShootMonitoringConfig contains settings for the shoot monitoring stack.
+type ShootMonitoringConfig struct {
+	// RemoteWrite is optional and contains remote write setting.
+	RemoteWrite RemoteWriteMonitoringConfig
 	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
 	ExternalLabels map[string]string
+}
+
+// RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.
+type RemoteWriteMonitoringConfig struct {
+	// URL contains an Url for remote write setting in prometheus.
+	URL string
+	// Keep contains a list of metrics that will be remote written
+	Keep []string
+	// QueueConfig contains the queue_config for prometheus remote write.
+	QueueConfig string
 }
 
 // GetProviderType gets the type of the provider.

@@ -211,13 +211,14 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 
 	// Add remotewrite to prometheus when enabled
 	if  b.Shoot.CloudProfile.Spec.Monitoring != nil &&
-		b.Shoot.CloudProfile.Spec.Monitoring.RemoteWriteURL != "" {
+		b.Shoot.CloudProfile.Spec.Monitoring.Shoot != nil &&
+		b.Shoot.CloudProfile.Spec.Monitoring.Shoot.RemoteWrite.URL != "" {
 		// if remoteWrite Url is set add config into values
 		remoteWriteConfig := map[string]interface{}{
-			"url": b.Shoot.CloudProfile.Spec.Monitoring.RemoteWriteURL,
+			"url": b.Shoot.CloudProfile.Spec.Monitoring.Shoot.RemoteWrite.URL,
 		}
 		// get secret for basic_auth in remote write
-		remoteWriteBasicAuth := b.LoadSecret(v1beta1constants.GardenRoleGlobalRemoteWriteMonitoring)
+		remoteWriteBasicAuth := b.LoadSecret(v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring)
 		if remoteWriteBasicAuth != nil {
 			remoteWriteUsername := string(remoteWriteBasicAuth.Data["username"])
 			remoteWritePassword := string(remoteWriteBasicAuth.Data["password"])
@@ -230,15 +231,21 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			}
 		}
 		// add list with keep metrics if set
-		if len(b.Shoot.CloudProfile.Spec.Monitoring.RemoteWriteKeep) != 0 {
-			remoteWriteConfig["keep"] = b.Shoot.CloudProfile.Spec.Monitoring.RemoteWriteKeep
+		if len(b.Shoot.CloudProfile.Spec.Monitoring.Shoot.RemoteWrite.Keep) != 0 {
+			remoteWriteConfig["keep"] = b.Shoot.CloudProfile.Spec.Monitoring.Shoot.RemoteWrite.Keep
+		}
+		// add queue_config if set
+		if len(b.Shoot.CloudProfile.Spec.Monitoring.Shoot.RemoteWrite.QueueConfig) != 0 {
+			remoteWriteConfig["queue_config"] = b.Shoot.CloudProfile.Spec.Monitoring.Shoot.RemoteWrite.QueueConfig
 		}
 		prometheusConfig["remoteWrite"] = remoteWriteConfig
 	}
 
 	// set externalLabels
-	if b.Shoot.CloudProfile.Spec.Monitoring != nil {
-		prometheusConfig["externalLabels"] = b.Shoot.CloudProfile.Spec.Monitoring.ExternalLabels
+	if b.Shoot.CloudProfile.Spec.Monitoring != nil &&
+		b.Shoot.CloudProfile.Spec.Monitoring.Shoot != nil &&
+		len(b.Shoot.CloudProfile.Spec.Monitoring.Shoot.ExternalLabels) != 0 {
+		prometheusConfig["externalLabels"] = b.Shoot.CloudProfile.Spec.Monitoring.Shoot.ExternalLabels
 	}
 
 	prometheus, err := b.InjectSeedShootImages(prometheusConfig, prometheusImages...)

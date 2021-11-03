@@ -1299,17 +1299,9 @@ message Monitoring {
 
 // MonitoringConfig contains settings for the monitoring stack.
 message MonitoringConfig {
-  // RemoteWriteURL is optional and contains an Url for remote write setting in prometheus.
+  // Shoot is optional and contains settings for the shoot monitoring stack.
   // +optional
-  optional string remoteWriteURL = 1;
-
-  // RemoteWriteKeep contains a list of metrics that will be remote written
-  // +optional
-  repeated string remoteWriteKeep = 2;
-
-  // ExternalLabels is optional and sets additional external labels for the monitoring stack.
-  // +optional
-  map<string, string> externalLabels = 3;
+  optional ShootMonitoringConfig shoot = 1;
 }
 
 // NamedResourceReference is a named reference to a resource.
@@ -1663,6 +1655,20 @@ message Region {
   // quality, reliability, access restrictions, etc.
   // +optional
   map<string, string> labels = 3;
+}
+
+// RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.
+message RemoteWriteMonitoringConfig {
+  // URL contains an Url for remote write setting in prometheus.
+  optional string url = 1;
+
+  // Keep contains a list of metrics that will be remote written
+  // +optional
+  repeated string keep = 2;
+
+  // QueueConfig contains the queue_config for prometheus remote write.
+  // +optional
+  optional string queueConfig = 3;
 }
 
 // ResourceWatchCacheSize contains configuration of the API server's watch cache size for one specific resource.
@@ -2080,6 +2086,17 @@ message ShootMachineImage {
   // If version is not provided, it will be defaulted to the latest version from the CloudProfile.
   // +optional
   optional string version = 3;
+}
+
+// ShootMonitoringConfig contains settings for the shoot monitoring stack.
+message ShootMonitoringConfig {
+  // RemoteWrite is optional and contains remote write setting.
+  // +optional
+  optional RemoteWriteMonitoringConfig remoteWrite = 1;
+
+  // ExternalLabels is optional and sets additional external labels for the monitoring stack.
+  // +optional
+  map<string, string> externalLabels = 2;
 }
 
 // ShootNetworks contains the default networks CIDRs for shoots.

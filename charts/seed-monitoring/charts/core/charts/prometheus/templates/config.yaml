@@ -27,7 +27,7 @@ data:
         shoot_infra: {{ .Values.shoot.provider }}
         ignoreAlerts: {{ .Values.ignoreAlerts }}
     {{- if .Values.externalLabels }}
-    {{ toYaml .Values.externalLabels | indent 4 }}
+{{ toYaml .Values.externalLabels | indent 8 }}
     {{- end }}
     {{- if .Values.remoteWrite }}
     {{- if .Values.remoteWrite.url }}
@@ -42,11 +42,10 @@ data:
       write_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.remoteWrite.keep | indent 6 }}
     {{- end }}
+    {{- if .Values.remoteWrite.queue_config }}
       queue_config:
-          max_shards: 100
-          batch_send_deadline: 20s
-          min_backoff: 500ms
-          max_backoff: 60s
+{{ .Values.remoteWrite.queue_config | indent 8}}
+    {{- end }}
     {{- end }}
     {{- end }}
     rule_files:

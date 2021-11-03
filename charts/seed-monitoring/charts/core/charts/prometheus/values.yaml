@@ -310,6 +310,11 @@ resources:
 
 #remoteWrite:
 #  url: remoteWriteUrl
+#  queue_config: |
+#     max_shards: 100
+#     batch_send_deadline: 20s
+#     min_backoff: 500ms
+#     max_backoff: 60s
 #  basic_auth:
 #    username: user
 #    password: password

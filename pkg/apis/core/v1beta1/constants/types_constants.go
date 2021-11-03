@@ -189,8 +189,8 @@ const (
 	GardenRoleOpenVPNDiffieHellman = "openvpn-diffie-hellman"
 	// GardenRoleGlobalMonitoring is the value of the GardenRole key indicating type 'global-monitoring'
 	GardenRoleGlobalMonitoring = "global-monitoring"
-	// GardenRoleGlobalRemoteWriteMonitoring is the value of the GardenRole key indicating type 'global-remote-write-monitoring'
-	GardenRoleGlobalRemoteWriteMonitoring = "global-remote-write-monitoring"
+	// GardenRoleGlobalShootRemoteWriteMonitoring is the value of the GardenRole key indicating type 'global-shoot-remote-write-monitoring'
+	GardenRoleGlobalShootRemoteWriteMonitoring = "global-shoot-remote-write-monitoring"
 	// GardenRoleAlerting is the value of GardenRole key indicating type 'alerting'.
 	GardenRoleAlerting = "alerting"
 	// GardenRoleHvpa is the value of GardenRole key indicating type 'hvpa'.

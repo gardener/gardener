@@ -140,6 +140,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.QuotaList":                              schema_pkg_apis_core_v1alpha1_QuotaList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.QuotaSpec":                              schema_pkg_apis_core_v1alpha1_QuotaSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Region":                                 schema_pkg_apis_core_v1alpha1_Region(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.RemoteWriteMonitoringConfig":            schema_pkg_apis_core_v1alpha1_RemoteWriteMonitoringConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceData":                           schema_pkg_apis_core_v1alpha1_ResourceData(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ResourceWatchCacheSize":                 schema_pkg_apis_core_v1alpha1_ResourceWatchCacheSize(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SecretBinding":                          schema_pkg_apis_core_v1alpha1_SecretBinding(ref),
@@ -170,6 +171,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootExtensionStatusList":               schema_pkg_apis_core_v1alpha1_ShootExtensionStatusList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootList":                              schema_pkg_apis_core_v1alpha1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootMachineImage":                      schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootMonitoringConfig":                  schema_pkg_apis_core_v1alpha1_ShootMonitoringConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootNetworks":                          schema_pkg_apis_core_v1alpha1_ShootNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootSpec":                              schema_pkg_apis_core_v1alpha1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootState":                             schema_pkg_apis_core_v1alpha1_ShootState(ref),
@@ -282,6 +284,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaList":                               schema_pkg_apis_core_v1beta1_QuotaList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.QuotaSpec":                               schema_pkg_apis_core_v1beta1_QuotaSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.Region":                                  schema_pkg_apis_core_v1beta1_Region(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.RemoteWriteMonitoringConfig":             schema_pkg_apis_core_v1beta1_RemoteWriteMonitoringConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ResourceWatchCacheSize":                  schema_pkg_apis_core_v1beta1_ResourceWatchCacheSize(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBinding":                           schema_pkg_apis_core_v1beta1_SecretBinding(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SecretBindingList":                       schema_pkg_apis_core_v1beta1_SecretBindingList(ref),
@@ -310,6 +313,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootAdvertisedAddress":                  schema_pkg_apis_core_v1beta1_ShootAdvertisedAddress(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootList":                               schema_pkg_apis_core_v1beta1_ShootList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMachineImage":                       schema_pkg_apis_core_v1beta1_ShootMachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMonitoringConfig":                   schema_pkg_apis_core_v1beta1_ShootMonitoringConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootNetworks":                           schema_pkg_apis_core_v1beta1_ShootNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootSpec":                               schema_pkg_apis_core_v1beta1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootStatus":                             schema_pkg_apis_core_v1beta1_ShootStatus(ref),
@@ -4495,47 +4499,17 @@ func schema_pkg_apis_core_v1alpha1_MonitoringConfig(ref common.ReferenceCallback
 				Description: "MonitoringConfig contains settings for the monitoring stack.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"remoteWriteURL": {
+					"shoot": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RemoteWriteURL is optional and contains an Url for remote write setting in prometheus.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"remoteWriteKeep": {
-						SchemaProps: spec.SchemaProps{
-							Description: "RemoteWriteKeep contains a list of metrics that will be remote written",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
-						},
-					},
-					"externalLabels": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ExternalLabels is optional and sets additional external labels for the monitoring stack.",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
+							Description: "Shoot is optional and contains settings for the shoot monitoring stack.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootMonitoringConfig"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ShootMonitoringConfig"},
 	}
 }
 
@@ -5600,6 +5574,50 @@ func schema_pkg_apis_core_v1alpha1_Region(ref common.ReferenceCallback) common.O
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.AvailabilityZone"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_RemoteWriteMonitoringConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"url": {
+						SchemaProps: spec.SchemaProps{
+							Description: "URL contains an Url for remote write setting in prometheus.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"keep": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Keep contains a list of metrics that will be remote written",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"queueConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "QueueConfig contains the queue_config for prometheus remote write.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"url"},
+			},
+		},
 	}
 }
 
@@ -6886,6 +6904,44 @@ func schema_pkg_apis_core_v1alpha1_ShootMachineImage(ref common.ReferenceCallbac
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ShootMonitoringConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootMonitoringConfig contains settings for the shoot monitoring stack.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"remoteWrite": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RemoteWrite is optional and contains remote write setting.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.RemoteWriteMonitoringConfig"),
+						},
+					},
+					"externalLabels": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalLabels is optional and sets additional external labels for the monitoring stack.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.RemoteWriteMonitoringConfig"},
 	}
 }
 
@@ -11285,47 +11341,17 @@ func schema_pkg_apis_core_v1beta1_MonitoringConfig(ref common.ReferenceCallback)
 				Description: "MonitoringConfig contains settings for the monitoring stack.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"remoteWriteURL": {
+					"shoot": {
 						SchemaProps: spec.SchemaProps{
-							Description: "RemoteWriteURL is optional and contains an Url for remote write setting in prometheus.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"remoteWriteKeep": {
-						SchemaProps: spec.SchemaProps{
-							Description: "RemoteWriteKeep contains a list of metrics that will be remote written",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
-						},
-					},
-					"externalLabels": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ExternalLabels is optional and sets additional external labels for the monitoring stack.",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Default: "",
-										Type:    []string{"string"},
-										Format:  "",
-									},
-								},
-							},
+							Description: "Shoot is optional and contains settings for the shoot monitoring stack.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMonitoringConfig"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.ShootMonitoringConfig"},
 	}
 }
 
@@ -12390,6 +12416,50 @@ func schema_pkg_apis_core_v1beta1_Region(ref common.ReferenceCallback) common.Op
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1beta1.AvailabilityZone"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_RemoteWriteMonitoringConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"url": {
+						SchemaProps: spec.SchemaProps{
+							Description: "URL contains an Url for remote write setting in prometheus.",
+							Default:     "",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"keep": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Keep contains a list of metrics that will be remote written",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+					"queueConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "QueueConfig contains the queue_config for prometheus remote write.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"url"},
+			},
+		},
 	}
 }
 
@@ -13589,6 +13659,44 @@ func schema_pkg_apis_core_v1beta1_ShootMachineImage(ref common.ReferenceCallback
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/runtime.RawExtension"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_ShootMonitoringConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootMonitoringConfig contains settings for the shoot monitoring stack.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"remoteWrite": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RemoteWrite is optional and contains remote write setting.",
+							Default:     map[string]interface{}{},
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.RemoteWriteMonitoringConfig"),
+						},
+					},
+					"externalLabels": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ExternalLabels is optional and sets additional external labels for the monitoring stack.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: "",
+										Type:    []string{"string"},
+										Format:  "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.RemoteWriteMonitoringConfig"},
 	}
 }
 

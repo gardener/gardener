@@ -91,15 +91,31 @@ type CloudProfileSpec struct {
 
 // MonitoringConfig contains settings for the monitoring stack.
 type MonitoringConfig struct {
-	// RemoteWriteURL is optional and contains an Url for remote write setting in prometheus.
+	// Shoot is optional and contains settings for the shoot monitoring stack.
 	// +optional
-	RemoteWriteURL string `json:"remoteWriteURL,omitempty" protobuf:"bytes,1,opt,name=remoteWriteURL"`
-	// RemoteWriteKeep contains a list of metrics that will be remote written
+	Shoot *ShootMonitoringConfig `json:"shoot,omitempty" protobuf:"bytes,1,opt,name=shoot"`
+}
+
+// ShootMonitoringConfig contains settings for the shoot monitoring stack.
+type ShootMonitoringConfig struct {
+	// RemoteWrite is optional and contains remote write setting.
 	// +optional
-	RemoteWriteKeep []string `json:"remoteWriteKeep,omitempty" protobuf:"bytes,2,opt,name=remoteWriteKeep"`
+	RemoteWrite RemoteWriteMonitoringConfig `json:"remoteWrite,omitempty" protobuf:"bytes,1,opt,name=remoteWrite"`
 	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
 	// +optional
-	ExternalLabels map[string]string `json:"externalLabels,omitempty" protobuf:"bytes,3,opt,name=externalLabels"`
+	ExternalLabels map[string]string `json:"externalLabels,omitempty" protobuf:"bytes,2,opt,name=externalLabels"`
+}
+
+// RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.
+type RemoteWriteMonitoringConfig struct {
+	// URL contains an Url for remote write setting in prometheus.
+	URL string `json:"url" protobuf:"bytes,1,opt,name=url"`
+	// Keep contains a list of metrics that will be remote written
+	// +optional
+	Keep []string `json:"keep,omitempty" protobuf:"bytes,2,opt,name=keep"`
+	// QueueConfig contains the queue_config for prometheus remote write.
+	// +optional
+	QueueConfig string `json:"queueConfig,omitempty" protobuf:"bytes,3,opt,name=queueConfig"`
 }
 
 // SeedSelector contains constraints for selecting seed to be usable for shoots using a profile

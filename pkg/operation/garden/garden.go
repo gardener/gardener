@@ -247,10 +247,10 @@ func ReadGardenSecrets(ctx context.Context, c client.Reader, namespace string, l
 		}
 
 		// Retrieving basic auth secret for remote write monitoring with a label
-		// indicating the Garden role global-monitoring.
-		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleGlobalRemoteWriteMonitoring {
+		// indicating the Garden role global-shoot-remote-write-monitoring.
+		if secret.Labels[v1beta1constants.GardenRole] == v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring {
 			monitoringSecret := secret
-			secretsMap[v1beta1constants.GardenRoleGlobalRemoteWriteMonitoring] = &monitoringSecret
+			secretsMap[v1beta1constants.GardenRoleGlobalShootRemoteWriteMonitoring] = &monitoringSecret
 			logInfo = append(logInfo, fmt.Sprintf("monitoring basic auth secret %q", secret.Name))
 		}
 	}

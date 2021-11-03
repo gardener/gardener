@@ -6115,38 +6115,16 @@ Alerting
 <tbody>
 <tr>
 <td>
-<code>remoteWriteURL</code></br>
+<code>shoot</code></br>
 <em>
-string
+<a href="#core.gardener.cloud/v1beta1.ShootMonitoringConfig">
+ShootMonitoringConfig
+</a>
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>RemoteWriteURL is optional and contains an Url for remote write setting in prometheus.</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>remoteWriteKeep</code></br>
-<em>
-[]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>RemoteWriteKeep contains a list of metrics that will be remote written</p>
-</td>
-</tr>
-<tr>
-<td>
-<code>externalLabels</code></br>
-<em>
-map[string]string
-</em>
-</td>
-<td>
-<em>(Optional)</em>
-<p>ExternalLabels is optional and sets additional external labels for the monitoring stack.</p>
+<p>Shoot is optional and contains settings for the shoot monitoring stack.</p>
 </td>
 </tr>
 </tbody>
@@ -7164,6 +7142,60 @@ map[string]string
 <p>Labels is an optional set of key-value pairs that contain certain administrator-controlled labels for this region.
 It can be used by Gardener administrators/operators to provide additional information about a region, e.g. wrt
 quality, reliability, access restrictions, etc.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.RemoteWriteMonitoringConfig">RemoteWriteMonitoringConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.ShootMonitoringConfig">ShootMonitoringConfig</a>)
+</p>
+<p>
+<p>RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>url</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<p>URL contains an Url for remote write setting in prometheus.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>keep</code></br>
+<em>
+[]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Keep contains a list of metrics that will be remote written</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>queueConfig</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>QueueConfig contains the queue_config for prometheus remote write.</p>
 </td>
 </tr>
 </tbody>
@@ -8598,6 +8630,51 @@ string
 <em>(Optional)</em>
 <p>Version is the version of the shoot&rsquo;s image.
 If version is not provided, it will be defaulted to the latest version from the CloudProfile.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.ShootMonitoringConfig">ShootMonitoringConfig
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.MonitoringConfig">MonitoringConfig</a>)
+</p>
+<p>
+<p>ShootMonitoringConfig contains settings for the shoot monitoring stack.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>remoteWrite</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.RemoteWriteMonitoringConfig">
+RemoteWriteMonitoringConfig
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>RemoteWrite is optional and contains remote write setting.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>externalLabels</code></br>
+<em>
+map[string]string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ExternalLabels is optional and sets additional external labels for the monitoring stack.</p>
 </td>
 </tr>
 </tbody>
