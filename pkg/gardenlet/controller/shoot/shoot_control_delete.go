@@ -198,6 +198,11 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Wait).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Ensuring advertised addresses for the Shoot",
+			Fn:           botanist.UpdateAdvertisedAddresses,
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
+		})
 		generateSecrets = g.Add(flow.Task{
 			Name:         "Generating secrets and saving them into ShootState",
 			Fn:           flow.TaskFn(botanist.GenerateAndSaveSecrets).DoIf(nonTerminatingNamespace),
@@ -611,7 +616,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 }
 
 func (r *shootReconciler) removeFinalizerFrom(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot) error {
-	if err := r.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), nil, shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
+	if err := r.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), shoot, "", nil, gardencorev1beta1.LastOperationTypeDelete); err != nil {
 		return err
 	}
 

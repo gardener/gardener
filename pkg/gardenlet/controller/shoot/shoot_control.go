@@ -383,7 +383,7 @@ func (r *shootReconciler) deleteShoot(ctx context.Context, logger logrus.FieldLo
 	if failedOrIgnored {
 		if syncErr := r.syncClusterResourceToSeed(ctx, shoot, project, cloudProfile, seed); syncErr != nil {
 			logger.WithError(syncErr).Infof("Not allowed to update Shoot with error, trying to sync Cluster resource again")
-			updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), nil, shoot, syncErr.Error(), operationType, shoot.Status.LastErrors...)
+			updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, syncErr.Error(), operationType, shoot.Status.LastErrors...)
 			return reconcile.Result{}, utilerrors.WithSuppressed(syncErr, updateErr)
 		}
 
@@ -400,7 +400,7 @@ func (r *shootReconciler) deleteShoot(ctx context.Context, logger logrus.FieldLo
 
 	o, operationErr := r.initializeOperation(ctx, logger, gardenClient, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
-		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), o, shoot, fmt.Sprintf("Could not initialize a new operation for Shoot deletion: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
+		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, fmt.Sprintf("Could not initialize a new operation for Shoot deletion: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
 	}
 
@@ -412,7 +412,7 @@ func (r *shootReconciler) deleteShoot(ctx context.Context, logger logrus.FieldLo
 
 	if flowErr := r.runDeleteShootFlow(ctx, o); flowErr != nil {
 		r.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, flowErr.Description)
-		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), o, shoot, flowErr.Description, operationType, flowErr.LastErrors...)
+		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, flowErr.Description, operationType, flowErr.LastErrors...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 
@@ -423,7 +423,7 @@ func (r *shootReconciler) deleteShoot(ctx context.Context, logger logrus.FieldLo
 func (r *shootReconciler) finalizeShootDeletion(ctx context.Context, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, projectName string) (reconcile.Result, error) {
 	if cleanErr := r.deleteClusterResourceFromSeed(ctx, shoot, projectName); cleanErr != nil {
 		lastErr := v1beta1helper.LastError(fmt.Sprintf("Could not delete Cluster resource in seed: %s", cleanErr))
-		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), nil, shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeDelete, *lastErr)
+		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, lastErr.Description, gardencorev1beta1.LastOperationTypeDelete, *lastErr)
 		r.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventDeleteError, lastErr.Description)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(lastErr.Description), updateErr)
 	}
@@ -493,7 +493,7 @@ func (r *shootReconciler) reconcileShoot(ctx context.Context, logger logrus.Fiel
 	if failedOrIgnored {
 		if syncErr := r.syncClusterResourceToSeed(ctx, shoot, project, cloudProfile, seed); syncErr != nil {
 			logger.WithError(syncErr).Infof("Not allowed to update Shoot with error, trying to sync Cluster resource again")
-			updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), nil, shoot, syncErr.Error(), operationType, shoot.Status.LastErrors...)
+			updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, syncErr.Error(), operationType, shoot.Status.LastErrors...)
 			return reconcile.Result{}, utilerrors.WithSuppressed(syncErr, updateErr)
 		}
 
@@ -519,7 +519,7 @@ func (r *shootReconciler) reconcileShoot(ctx context.Context, logger logrus.Fiel
 
 	o, operationErr := r.initializeOperation(ctx, logger, gardenClient, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
-		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), o, shoot, fmt.Sprintf("Could not initialize a new operation for Shoot reconciliation: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
+		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, fmt.Sprintf("Could not initialize a new operation for Shoot reconciliation: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
 	}
 
@@ -543,18 +543,18 @@ func (r *shootReconciler) reconcileShoot(ctx context.Context, logger logrus.Fiel
 
 	if flowErr := r.runReconcileShootFlow(ctx, o); flowErr != nil {
 		r.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, flowErr.Description)
-		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), o, shoot, flowErr.Description, operationType, flowErr.LastErrors...)
+		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, flowErr.Description, operationType, flowErr.LastErrors...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 
 	r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "Reconciled Shoot cluster state")
-	if err := r.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), o, shoot, o.Shoot.SeedNamespace, &seed.Name, operationType); err != nil {
+	if err := r.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), shoot, o.Shoot.SeedNamespace, &seed.Name, operationType); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	if syncErr := r.syncClusterResourceToSeed(ctx, shoot, project, cloudProfile, seed); syncErr != nil {
 		logger.WithError(syncErr).Infof("Cluster resource sync to seed failed")
-		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), o, shoot, syncErr.Error(), operationType, shoot.Status.LastErrors...)
+		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, syncErr.Error(), operationType, shoot.Status.LastErrors...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(syncErr, updateErr)
 	}
 
@@ -661,7 +661,6 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 func (r *shootReconciler) patchShootStatusOperationSuccess(
 	ctx context.Context,
 	gardenClient client.Client,
-	op *operation.Operation,
 	shoot *gardencorev1beta1.Shoot,
 	shootSeedNamespace string,
 	seedName *string,
@@ -738,17 +737,12 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		LastUpdateTime: now,
 	}
 
-	if op != nil {
-		shoot.Status.AdvertisedAddresses = op.ToAdvertisedAddresses()
-	}
-
 	return gardenClient.Status().Patch(ctx, shoot, patch)
 }
 
 func (r *shootReconciler) patchShootStatusOperationError(
 	ctx context.Context,
 	gardenClient client.Client,
-	op *operation.Operation,
 	shoot *gardencorev1beta1.Shoot,
 	description string,
 	operationType gardencorev1beta1.LastOperationType,
@@ -779,10 +773,6 @@ func (r *shootReconciler) patchShootStatusOperationError(
 	shoot.Status.LastOperation.State = state
 	shoot.Status.LastOperation.Description = description
 	shoot.Status.LastOperation.LastUpdateTime = now
-
-	if op != nil {
-		shoot.Status.AdvertisedAddresses = op.ToAdvertisedAddresses()
-	}
 
 	if err := gardenClient.Status().Patch(ctx, shoot, statusPatch); err != nil {
 		return err

@@ -700,6 +700,15 @@ func (o *Operation) ToAdvertisedAddresses() []gardencorev1beta1.ShootAdvertisedA
 	return addresses
 }
 
+// UpdateAdvertisedAddresses updates the shoot.status.advertisedAddresses with the list of
+// addresses on which the API server of the shoot is accessible.
+func (o *Operation) UpdateAdvertisedAddresses(ctx context.Context) error {
+	return o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
+		shoot.Status.AdvertisedAddresses = o.ToAdvertisedAddresses()
+		return nil
+	})
+}
+
 // StoreCheckSum stores the passed checksum under the given key from the operation. Calling this function is thread-safe.
 func (o *Operation) StoreCheckSum(key, value string) {
 	o.checkSumsMutex.Lock()
