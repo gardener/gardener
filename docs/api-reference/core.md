@@ -9965,6 +9965,21 @@ KubeletConfig
 If set, all <code>spec.kubernetes.kubelet</code> settings will be overwritten for this worker pool (no merge of settings).</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>version</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Version is the semantic Kubernetes version to use for the Kubelet in this Worker Group.
+If not specified the kubelet version is derived from the global shoot cluster kubernetes version.
+version must be equal or lower than the version of the shoot kubernetes version.
+Only one minor version difference to other worker groups and global kubernetes version is allowed.</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.WorkerSystemComponents">WorkerSystemComponents

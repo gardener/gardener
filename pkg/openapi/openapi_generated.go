@@ -7760,6 +7760,13 @@ func schema_pkg_apis_core_v1alpha1_WorkerKubernetes(ref common.ReferenceCallback
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.KubeletConfig"),
 						},
 					},
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the semantic Kubernetes version to use for the Kubelet in this Worker Group. If not specified the kubelet version is derived from the global shoot cluster kubernetes version. version must be equal or lower than the version of the shoot kubernetes version. Only one minor version difference to other worker groups and global kubernetes version is allowed.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -14270,6 +14277,13 @@ func schema_pkg_apis_core_v1beta1_WorkerKubernetes(ref common.ReferenceCallback)
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubelet contains configuration settings for all kubelets of this worker pool. If set, all `spec.kubernetes.kubelet` settings will be overwritten for this worker pool (no merge of settings).",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.KubeletConfig"),
+						},
+					},
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the semantic Kubernetes version to use for the Kubelet in this Worker Group. If not specified the kubelet version is derived from the global shoot cluster kubernetes version. version must be equal or lower than the version of the shoot kubernetes version. Only one minor version difference to other worker groups and global kubernetes version is allowed.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
