@@ -18,6 +18,8 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -40,6 +42,7 @@ import (
 	seedmanagementinformer "github.com/gardener/gardener/pkg/client/seedmanagement/informers/externalversions"
 	settingsclientset "github.com/gardener/gardener/pkg/client/settings/clientset/versioned"
 	settingsinformer "github.com/gardener/gardener/pkg/client/settings/informers/externalversions"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/openapi"
 
@@ -47,6 +50,7 @@ import (
 	"github.com/spf13/pflag"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -63,6 +67,7 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
@@ -329,6 +334,35 @@ func (o *Options) Run(ctx context.Context) error {
 		return err
 	}); err != nil {
 		return err
+	}
+
+	if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerPoolKubernetesVersion) {
+		if err := server.GenericAPIServer.AddPostStartHook("validate-WorkerPoolKubernetesVersion-feature-gate", func(hookContext genericapiserver.PostStartHookContext) error {
+			timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
+			defer cancel()
+
+			shootInformer := o.CoreInformerFactory.Core().InternalVersion().Shoots()
+			if !cache.WaitForCacheSync(timeoutCtx.Done(), shootInformer.Informer().HasSynced) {
+				return fmt.Errorf("error while waiting for shoot informer cache to be synced")
+			}
+
+			shoots, err := shootInformer.Lister().List(labels.Everything())
+			if err != nil {
+				return err
+			}
+
+			for _, shoot := range shoots {
+				for _, worker := range shoot.Spec.Provider.Workers {
+					if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
+						return fmt.Errorf("WorkerPoolKubernetesVersion feature gate cannot be disabled since shoot %q still has worker pool %q which specifies .kubernetes.version", shoot.Name, worker.Name)
+					}
+				}
+			}
+
+			return nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	return server.GenericAPIServer.PrepareRun().Run(ctx.Done())

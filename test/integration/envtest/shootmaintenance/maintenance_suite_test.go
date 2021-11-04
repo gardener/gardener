@@ -59,7 +59,10 @@ var _ = BeforeSuite(func() {
 	By("starting test environment")
 	testEnv = &envtest.GardenerTestEnvironment{
 		GardenerAPIServer: &envtest.GardenerAPIServer{
-			Args: []string{"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction"},
+			Args: []string{
+				"--disable-admission-plugins=ResourceReferenceManager,ExtensionValidator,ShootQuotaValidator,ShootValidator,ShootTolerationRestriction",
+				"--feature-gates=WorkerPoolKubernetesVersion=true",
+			},
 		},
 	}
 	var err error

@@ -1101,9 +1101,13 @@ func ValidateWorker(worker core.Worker, kubernetesVersion string, fldPath *field
 	}
 	if worker.Kubernetes != nil {
 		if worker.Kubernetes.Version != nil {
-			workerGroupKubernetesVersion := *worker.Kubernetes.Version
-			allErrs = append(allErrs, validateWorkerGroupAndControlPlaneKubernetesVersion(kubernetesVersion, workerGroupKubernetesVersion, fldPath.Child("kubernetes", "version"))...)
-			kubernetesVersion = workerGroupKubernetesVersion
+			if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerPoolKubernetesVersion) {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubernetes", "version"), "worker pool kubernetes version may only be set if WorkerPoolKubernetesVersion feature gate is enabled"))
+			} else {
+				workerGroupKubernetesVersion := *worker.Kubernetes.Version
+				allErrs = append(allErrs, validateWorkerGroupAndControlPlaneKubernetesVersion(kubernetesVersion, workerGroupKubernetesVersion, fldPath.Child("kubernetes", "version"))...)
+				kubernetesVersion = workerGroupKubernetesVersion
+			}
 		}
 
 		if worker.Kubernetes.Kubelet != nil {
