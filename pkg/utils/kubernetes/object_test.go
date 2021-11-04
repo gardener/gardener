@@ -21,6 +21,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,6 +58,18 @@ var _ = Describe("Object", func() {
 	AfterEach(func() {
 		ctrl.Finish()
 	})
+
+	DescribeTable("#ParseObjectName",
+		func(objectName, expectedNamespace, expectedName string) {
+			namespace, name := ParseObjectName(objectName)
+			Expect(namespace).To(Equal(expectedNamespace))
+			Expect(name).To(Equal(expectedName))
+		},
+		Entry("namespaced name", "foo/bar", "foo", "bar"),
+		Entry("non-namespaced name", "foo", "", "foo"),
+		Entry("non-namespaced name with a separator", "/foo", "", "foo"),
+		Entry("empty name", "", "", ""),
+	)
 
 	Describe("#DeleteObjects", func() {
 		It("should fail because an object fails to delete", func() {

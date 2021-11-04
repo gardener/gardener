@@ -28,11 +28,13 @@ import (
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils/errors"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	retryutils "github.com/gardener/gardener/pkg/utils/retry"
 
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -51,6 +53,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		kubeAPIServerDeploymentReplicas      int32
 		infrastructure                       *extensionsv1alpha1.Infrastructure
 		controlPlaneDeploymentNeeded         bool
+		additionalDNSProviders               map[string]component.DeployWaiter
 		tasksWithErrors                      []string
 		err                                  error
 	)
@@ -144,6 +147,12 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			controlPlaneDeploymentNeeded, err = needsControlPlaneDeployment(ctx, o, kubeAPIServerDeploymentFound, infrastructure)
 			return err
 		}),
+		errors.ToExecute("Get additional DNS providers that are used by DNSEntry resources", func() error {
+			if additionalDNSProviders, err = getUsedAdditionalDNSProviders(ctx, o); err != nil {
+				return err
+			}
+			return nil
+		}),
 	)
 
 	if err != nil {
@@ -219,8 +228,10 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(deployReferencedResources, waitUntilKubeAPIServerServiceIsReady),
 		})
 		deployAdditionalDNSProviders = g.Add(flow.Task{
-			Name:         "Deploying additional DNS providers",
-			Fn:           flow.TaskFn(botanist.DeployAdditionalDNSProviders).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
+			Name: "Deploying additional DNS providers",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				return botanist.DeployDNSProviders(ctx, additionalDNSProviders)
+			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(nonTerminatingNamespace),
 			Dependencies: flow.NewTaskIDs(deployReferencedResources),
 		})
 		_ = g.Add(flow.Task{
@@ -680,4 +691,23 @@ func extensionResourceStillExists(ctx context.Context, reader client.Reader, obj
 		return false, false, err
 	}
 	return true, obj.GetDeletionTimestamp() != nil, nil
+}
+
+// getUsedAdditionalDNSProviders returns all additional DNS providers that are used by DNSEntry resources
+// in the shoot namespace in the seed cluster.
+func getUsedAdditionalDNSProviders(ctx context.Context, o *operation.Operation) (map[string]component.DeployWaiter, error) {
+	dnsEntryList := &dnsv1alpha1.DNSEntryList{}
+	if err := o.K8sSeedClient.APIReader().List(ctx, dnsEntryList, client.InNamespace(o.Shoot.SeedNamespace)); err != nil {
+		return nil, err
+	}
+	dnsProviders := make(map[string]component.DeployWaiter)
+	for _, dnsEntry := range dnsEntryList.Items {
+		if dnsEntry.Status.Provider != nil && len(dnsEntry.Status.Targets) > 0 {
+			_, name := kutil.ParseObjectName(*dnsEntry.Status.Provider)
+			if provider, ok := o.Shoot.Components.Extensions.DNS.AdditionalProviders[name]; ok {
+				dnsProviders[name] = provider
+			}
+		}
+	}
+	return dnsProviders, nil
 }

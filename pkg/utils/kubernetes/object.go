@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -38,6 +39,15 @@ func ObjectName(obj client.Object) string {
 		return obj.GetName()
 	}
 	return client.ObjectKeyFromObject(obj).String()
+}
+
+// ParseObjectName parses the given object name (in the format <namespace>/<name>) to its constituent namespace and name.
+// If the given object name is not namespaced, an empty namespace is returned.
+func ParseObjectName(objectName string) (string, string) {
+	if parts := strings.Split(objectName, string(types.Separator)); len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return "", objectName
 }
 
 // DeleteObjects deletes a list of Kubernetes objects.

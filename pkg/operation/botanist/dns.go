@@ -372,9 +372,14 @@ func (b *Botanist) APIServerSNIPodMutatorEnabled() bool {
 
 // DeployAdditionalDNSProviders deploys all additional DNS providers in the shoot namespace of the seed.
 func (b *Botanist) DeployAdditionalDNSProviders(ctx context.Context) error {
-	fns := make([]flow.TaskFn, 0, len(b.Shoot.Components.Extensions.DNS.AdditionalProviders))
+	return b.DeployDNSProviders(ctx, b.Shoot.Components.Extensions.DNS.AdditionalProviders)
+}
 
-	for _, v := range b.Shoot.Components.Extensions.DNS.AdditionalProviders {
+// DeployDNSProviders deploys the specified DNS providers in the shoot namespace of the seed.
+func (b *Botanist) DeployDNSProviders(ctx context.Context, dnsProviders map[string]component.DeployWaiter) error {
+	fns := make([]flow.TaskFn, 0, len(dnsProviders))
+
+	for _, v := range dnsProviders {
 		dnsProvider := v
 		fns = append(fns, func(ctx context.Context) error {
 			return component.OpWaiter(dnsProvider).Deploy(ctx)
