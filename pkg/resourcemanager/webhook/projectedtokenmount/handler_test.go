@@ -244,43 +244,47 @@ var _ = Describe("Handler", func() {
 				Expect(err).NotTo(HaveOccurred())
 				request.Object.Raw = objData
 
-				Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
-					Patches: []jsonpatch.JsonPatchOperation{
-						{
-							Operation: "add",
-							Path:      "/spec/volumes",
-							Value: []interface{}{
-								map[string]interface{}{
-									"name": "kube-api-access-gardener",
-									"projected": map[string]interface{}{
-										"defaultMode": float64(420),
-										"sources": []interface{}{
-											map[string]interface{}{
-												"serviceAccountToken": map[string]interface{}{
-													"expirationSeconds": float64(expirationSeconds),
-													"path":              "token",
-												},
+				response := handler.Handle(ctx, request)
+
+				Expect(response.AdmissionResponse).To(Equal(admissionv1.AdmissionResponse{
+					Allowed:   true,
+					PatchType: &patchType,
+				}))
+				Expect(response.Patches).To(ConsistOf(
+					jsonpatch.JsonPatchOperation{
+						Operation: "add",
+						Path:      "/spec/volumes",
+						Value: []interface{}{
+							map[string]interface{}{
+								"name": "kube-api-access-gardener",
+								"projected": map[string]interface{}{
+									"defaultMode": float64(420),
+									"sources": []interface{}{
+										map[string]interface{}{
+											"serviceAccountToken": map[string]interface{}{
+												"expirationSeconds": float64(expirationSeconds),
+												"path":              "token",
 											},
-											map[string]interface{}{
-												"configMap": map[string]interface{}{
-													"name": "kube-root-ca.crt",
-													"items": []interface{}{
-														map[string]interface{}{
-															"key":  "ca.crt",
-															"path": "ca.crt",
-														},
+										},
+										map[string]interface{}{
+											"configMap": map[string]interface{}{
+												"name": "kube-root-ca.crt",
+												"items": []interface{}{
+													map[string]interface{}{
+														"key":  "ca.crt",
+														"path": "ca.crt",
 													},
 												},
 											},
-											map[string]interface{}{
-												"downwardAPI": map[string]interface{}{
-													"items": []interface{}{
-														map[string]interface{}{
-															"path": "namespace",
-															"fieldRef": map[string]interface{}{
-																"apiVersion": "v1",
-																"fieldPath":  "metadata.namespace",
-															},
+										},
+										map[string]interface{}{
+											"downwardAPI": map[string]interface{}{
+												"items": []interface{}{
+													map[string]interface{}{
+														"path": "namespace",
+														"fieldRef": map[string]interface{}{
+															"apiVersion": "v1",
+															"fieldPath":  "metadata.namespace",
 														},
 													},
 												},
@@ -290,34 +294,30 @@ var _ = Describe("Handler", func() {
 								},
 							},
 						},
-						{
-							Operation: "add",
-							Path:      "/spec/containers/0/volumeMounts",
-							Value: []interface{}{
-								map[string]interface{}{
-									"name":      "kube-api-access-gardener",
-									"readOnly":  true,
-									"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
-								},
-							},
-						},
-						{
-							Operation: "add",
-							Path:      "/spec/containers/1/volumeMounts",
-							Value: []interface{}{
-								map[string]interface{}{
-									"name":      "kube-api-access-gardener",
-									"readOnly":  true,
-									"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
-								},
+					},
+					jsonpatch.JsonPatchOperation{
+						Operation: "add",
+						Path:      "/spec/containers/0/volumeMounts",
+						Value: []interface{}{
+							map[string]interface{}{
+								"name":      "kube-api-access-gardener",
+								"readOnly":  true,
+								"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
 							},
 						},
 					},
-					AdmissionResponse: admissionv1.AdmissionResponse{
-						Allowed:   true,
-						PatchType: &patchType,
+					jsonpatch.JsonPatchOperation{
+						Operation: "add",
+						Path:      "/spec/containers/1/volumeMounts",
+						Value: []interface{}{
+							map[string]interface{}{
+								"name":      "kube-api-access-gardener",
+								"readOnly":  true,
+								"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+							},
+						},
 					},
-				}))
+				))
 			})
 
 			It("normal case", func() {})
