@@ -4008,6 +4008,18 @@ github.com/gardener/gardener/pkg/apis/core/v1beta1.MachineControllerManagerSetti
 <p>MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>kubernetesVersion</code></br>
+<em>
+string
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>KubernetesVersion is the kubernetes version in this worker pool</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="extensions.gardener.cloud/v1alpha1.WorkerSpec">WorkerSpec

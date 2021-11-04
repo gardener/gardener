@@ -1656,6 +1656,11 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 		*out = new(v1beta1.MachineControllerManagerSettings)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.KubernetesVersion != nil {
+		in, out := &in.KubernetesVersion, &out.KubernetesVersion
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

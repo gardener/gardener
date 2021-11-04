@@ -144,6 +144,9 @@ type WorkerPool struct {
 	// MachineControllerManagerSettings contains configurations for different worker-pools. Eg. MachineDrainTimeout, MachineHealthTimeout.
 	// +optional
 	MachineControllerManagerSettings *gardencorev1beta1.MachineControllerManagerSettings `json:"machineControllerManager,omitempty"`
+	// KubernetesVersion is the kubernetes version in this worker pool
+	// +optional
+	KubernetesVersion *string `json:"kubernetesVersion,omitempty"`
 }
 
 // MachineImage contains logical information about the name and the version of the machie image that
