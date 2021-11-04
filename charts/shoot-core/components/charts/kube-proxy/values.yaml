@@ -1,12 +1,10 @@
-global:
-  podNetwork: 1.2.3.4/24
+vpaEnabled: true
+podNetwork: 1.2.3.4/24
 kubeconfig: dummy-b64-data-here
-kubernetesVersion: 1.15.2
 #featureGates: {}
 #  CustomResourceValidation: true
 #  RotateKubeletServerCertificate: false
 images:
-  kube-proxy: image-repository
   alpine: image-repository
 podAnnotations: {}
 
@@ -14,3 +12,17 @@ enableIPVS: false
 
 ports:
   metrics: 10249
+
+workerPools:
+- name: ""
+  kubernetesVersion: 1.15.0
+  kubeProxyImage: image-repository:image-tag
+- name: cpu-worker
+  kubernetesVersion: 1.15.2
+  kubeProxyImage: image-repository:image-tag
+- name: cpu-worker
+  kubernetesVersion: 1.15.1
+  kubeProxyImage: image-repository:image-tag
+- name: cpu-worker2
+  kubernetesVersion: 1.14.8
+  kubeProxyImage: image-repository:image-tag

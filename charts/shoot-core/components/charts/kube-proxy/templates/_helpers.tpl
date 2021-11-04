@@ -1,3 +1,11 @@
+{{- define "kube-proxy.name" -}}
+{{- if eq .name "" -}}
+kube-proxy
+{{- else -}}
+kube-proxy-{{ .name }}-v{{ .kubernetesVersion }}
+{{- end -}}
+{{- end -}}
+
 {{- define "kube-proxy.componentconfig.data" -}}
 config.yaml: |-
   ---
@@ -6,7 +14,7 @@ config.yaml: |-
   clientConnection:
     kubeconfig: /var/lib/kube-proxy-kubeconfig/kubeconfig
 {{- if not .Values.enableIPVS }}
-  clusterCIDR: {{ .Values.global.podNetwork }}
+  clusterCIDR: {{ .Values.podNetwork }}
 {{- end }}
   metricsBindAddress: 0.0.0.0:{{ .Values.ports.metrics }}
   mode: {{ include "kube-proxy.mode" . }}
@@ -39,7 +47,7 @@ cleanup.sh: |
     echo "Nothing to cleanup - the mode didn't change."
     exit 0
   fi
-  {{- if semverCompare "< 1.17" .Values.kubernetesVersion }}
+  {{- if semverCompare "< 1.17" .kubernetesVersion }}
   /hyperkube kube-proxy
   {{- else }}
   /usr/local/bin/kube-proxy
@@ -48,7 +56,7 @@ cleanup.sh: |
 {{- end -}}
 
 {{- define "kube-proxy.cleanup-script.name" -}}
-kube-proxy-cleanup-script-{{ include "kube-proxy.cleanup-script.data" . | sha256sum | trunc 8 }}
+{{ include "kube-proxy.name" . }}-cleanup-script-{{ include "kube-proxy.cleanup-script.data" . | sha256sum | trunc 8 }}
 {{- end }}
 
 {{- define "kube-proxy.conntrack-fix-script.data" -}}
