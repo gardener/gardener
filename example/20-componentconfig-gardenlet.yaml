@@ -113,7 +113,7 @@ featureGates:
 #       [Output]
 #           ...
 #   loki:
-#     disable: false
+#     enabled: true
 #     garden:
 #       priority: 100
 #   shootNodeLogging:

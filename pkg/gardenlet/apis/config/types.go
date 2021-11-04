@@ -326,9 +326,10 @@ type FluentBit struct {
 
 // Loki contains configuration for the Loki.
 type Loki struct {
-	// Disable the shoot and seed Loki to only use FluentBit with a custom output.
-	// Should be used with fluentBit.output to specify own output.
-	Disable *bool
+	// Enabled is used to enable or disable the shoot and seed Loki.
+	// If FluentBit is used with a custom output the Loki can, Loki is maybe unused and can be disabled.
+	// If not set, by default Loki is enabled
+	Enabled *bool
 	// Garden contains configuration for the Loki in garden namespace.
 	Garden *GardenLoki
 }
