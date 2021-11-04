@@ -2065,47 +2065,149 @@ var _ = Describe("Shoot Validation Tests", func() {
 				"Field": Equal("spec.kubernetes.version"),
 			}))
 		})
+
 		It("should forbid removing the kubernetes version", func() {
 			newShoot := prepareShootForUpdate(shoot)
 			newShoot.Spec.Kubernetes.Version = ""
 
-			errorList := ValidateShootUpdate(newShoot, shoot)
-
-			Expect(errorList).To(HaveLen(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.kubernetes.version"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.kubernetes.version"),
-			}))
+			Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.version"),
+					"Detail": Equal("cannot validate kubernetes version upgrade because it is unset"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
+					"Detail": Equal("cannot validate kubernetes version upgrade because it is unset"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeRequired),
+					"Field":  Equal("spec.kubernetes.version"),
+					"Detail": Equal("kubernetes version must not be empty"),
+				})),
+			))
 		})
 
 		It("should forbid kubernetes version downgrades", func() {
 			newShoot := prepareShootForUpdate(shoot)
 			newShoot.Spec.Kubernetes.Version = "1.7.2"
 
-			errorList := ValidateShootUpdate(newShoot, shoot)
-
-			Expect(errorList).To(HaveLen(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.kubernetes.version"),
-			}))
+			Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.version"),
+					"Detail": Equal("kubernetes version downgrade is not supported"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
+					"Detail": Equal("kubernetes version downgrade is not supported"),
+				})),
+			))
 		})
 
 		It("should forbid kubernetes version upgrades skipping a minor version", func() {
 			newShoot := prepareShootForUpdate(shoot)
 			newShoot.Spec.Kubernetes.Version = "1.17.1"
 
-			errorList := ValidateShootUpdate(newShoot, shoot)
+			Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.kubernetes.version"),
+					"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
+					"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
+				})),
+			))
+		})
 
-			Expect(errorList).To(HaveLen(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.kubernetes.version"),
-			}))
+		Context("worker pool kubernetes version", func() {
+
+			It("should forbid worker pool kubernetes version higher than control plane", func() {
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.16.0")}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
+					"Detail": Equal("worker group kubernetes version must not be higher than control plane version"),
+				}))))
+			})
+
+			It("should work to set worker pool kubernetes version equal to control plane version", func() {
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should work to set worker pool kubernetes version lower one minor than control plane version", func() {
+
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.16.0"
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("should work to set worker pool kubernetes version lower two minor than control plane version", func() {
+
+				shoot.Spec.Kubernetes.Version = "1.16.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.17.0"
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("forbid to set worker pool kubernetes version lower three minor than control plane version", func() {
+
+				shoot.Spec.Kubernetes.Version = "1.17.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Kubernetes.Version = "1.18.0"
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
+					"Detail": Equal("worker group kubernetes version must be at most two minor versions behind control plane version"),
+				}))))
+			})
+
+			It("should work to set worker pool kubernetes version to nil with one minor difference", func() {
+
+				shoot.Spec.Kubernetes.Version = "1.16.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: nil}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(BeEmpty())
+			})
+
+			It("forbid to set worker pool kubernetes version to nil with two minor difference", func() {
+
+				shoot.Spec.Kubernetes.Version = "1.17.0"
+				shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.15.2")}
+
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: nil}
+
+				Expect(ValidateShootUpdate(newShoot, shoot)).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(field.ErrorTypeForbidden),
+					"Field":  Equal("spec.provider.workers[0].kubernetes.version"),
+					"Detail": Equal("kubernetes version upgrade cannot skip a minor version"),
+				}))))
+			})
 		})
 
 		Context("networking section", func() {
