@@ -20,8 +20,6 @@ import (
 	"strings"
 	"time"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -45,6 +43,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -82,6 +81,8 @@ var _ = Describe("OperatingSystemConfig", func() {
 			kubeletDataVolumeName   = "foo"
 			machineTypes            []gardencorev1beta1.MachineType
 			sshPublicKeys           = []string{"ssh-public-key", "ssh-public-key-b"}
+			kubernetesVersion       = semver.MustParse("1.2.3")
+			workerKubernetesVersion = "4.5.6"
 
 			ccdUnitContent = "ccd-unit-content"
 
@@ -141,6 +142,9 @@ var _ = Describe("OperatingSystemConfig", func() {
 						Name: gardencorev1beta1.CRINameContainerD,
 					},
 					KubeletDataVolumeName: &kubeletDataVolumeName,
+					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+						Version: &workerKubernetesVersion,
+					},
 				},
 			}
 			empty    *extensionsv1alpha1.OperatingSystemConfig
@@ -163,7 +167,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 			values = &Values{
 				Namespace:         namespace,
 				Workers:           workers,
-				KubernetesVersion: semver.MustParse("1.2.3"),
+				KubernetesVersion: kubernetesVersion,
 				DownloaderValues: DownloaderValues{
 					APIServerURL: apiServerURL,
 				},
@@ -189,18 +193,23 @@ var _ = Describe("OperatingSystemConfig", func() {
 			expected = make([]*extensionsv1alpha1.OperatingSystemConfig, 0, 2*len(workers))
 			for _, worker := range workers {
 				var (
-					criName   extensionsv1alpha1.CRIName
+					criName   = extensionsv1alpha1.CRINameDocker
 					criConfig *extensionsv1alpha1.CRIConfig
 				)
 				if worker.CRI != nil {
 					criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
 					criConfig = &extensionsv1alpha1.CRIConfig{Name: extensionsv1alpha1.CRIName(worker.CRI.Name)}
-				} else {
-					criName = extensionsv1alpha1.CRINameDocker
 				}
 
+				k8sVersion := values.KubernetesVersion
+				if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
+					k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
+				}
+
+				key := Key(worker.Name, k8sVersion)
+
 				downloaderUnits, downloaderFiles, _ := downloaderConfigFn(
-					"cloud-config-"+worker.Name+"-77ac3",
+					key,
 					apiServerURL,
 				)
 				originalUnits, originalFiles, _ := originalConfigFn(components.Context{
@@ -213,13 +222,13 @@ var _ = Describe("OperatingSystemConfig", func() {
 					KubeletCLIFlags:         kubeletCLIFlags,
 					KubeletConfigParameters: kubeletConfigParameters,
 					KubeletDataVolumeName:   &kubeletDataVolumeName,
-					KubernetesVersion:       values.KubernetesVersion,
+					KubernetesVersion:       k8sVersion,
 					SSHPublicKeys:           sshPublicKeys,
 				})
 
 				oscDownloader := &extensionsv1alpha1.OperatingSystemConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cloud-config-" + worker.Name + "-77ac3-" + worker.Machine.Image.Name + "-downloader",
+						Name:      key + "-" + worker.Machine.Image.Name + "-downloader",
 						Namespace: namespace,
 						Annotations: map[string]string{
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
@@ -240,7 +249,7 @@ var _ = Describe("OperatingSystemConfig", func() {
 
 				oscOriginal := &extensionsv1alpha1.OperatingSystemConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cloud-config-" + worker.Name + "-77ac3-" + worker.Machine.Image.Name + "-original",
+						Name:      key + "-" + worker.Machine.Image.Name + "-original",
 						Namespace: namespace,
 						Annotations: map[string]string{
 							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
@@ -350,15 +359,21 @@ var _ = Describe("OperatingSystemConfig", func() {
 			BeforeEach(func() {
 				extensions := make([]gardencorev1alpha1.ExtensionResourceState, 0, 2*len(workers))
 				for _, worker := range workers {
+					k8sVersion := values.KubernetesVersion
+					if worker.Kubernetes != nil && worker.Kubernetes.Version != nil {
+						k8sVersion = semver.MustParse(*worker.Kubernetes.Version)
+					}
+					key := Key(worker.Name, k8sVersion)
+
 					extensions = append(extensions,
 						gardencorev1alpha1.ExtensionResourceState{
-							Name:    pointer.String("cloud-config-" + worker.Name + "-77ac3-" + worker.Machine.Image.Name + "-downloader"),
+							Name:    pointer.String(key + "-" + worker.Machine.Image.Name + "-downloader"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
 							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeProvision)),
 							State:   &runtime.RawExtension{Raw: stateDownloader},
 						},
 						gardencorev1alpha1.ExtensionResourceState{
-							Name:    pointer.String("cloud-config-" + worker.Name + "-77ac3-" + worker.Machine.Image.Name + "-original"),
+							Name:    pointer.String(key + "-" + worker.Machine.Image.Name + "-original"),
 							Kind:    extensionsv1alpha1.OperatingSystemConfigResource,
 							Purpose: pointer.String(string(extensionsv1alpha1.OperatingSystemConfigPurposeReconcile)),
 							State:   &runtime.RawExtension{Raw: stateOriginal},
@@ -617,19 +632,19 @@ var _ = Describe("OperatingSystemConfig", func() {
 					},
 					worker2Name: {
 						Downloader: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-77ac3-type2-downloader",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-77ac3-type2-downloader"),
+							Content: "foobar-cloud-config-" + worker2Name + "-32209-type2-downloader",
+							Command: pointer.String("foo-cloud-config-" + worker2Name + "-32209-type2-downloader"),
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-77ac3-type2-downloader",
-								"baz-cloud-config-" + worker2Name + "-77ac3-type2-downloader",
+								"bar-cloud-config-" + worker2Name + "-32209-type2-downloader",
+								"baz-cloud-config-" + worker2Name + "-32209-type2-downloader",
 							},
 						},
 						Original: Data{
-							Content: "foobar-cloud-config-" + worker2Name + "-77ac3-type2-original",
-							Command: pointer.String("foo-cloud-config-" + worker2Name + "-77ac3-type2-original"),
+							Content: "foobar-cloud-config-" + worker2Name + "-32209-type2-original",
+							Command: pointer.String("foo-cloud-config-" + worker2Name + "-32209-type2-original"),
 							Units: []string{
-								"bar-cloud-config-" + worker2Name + "-77ac3-type2-original",
-								"baz-cloud-config-" + worker2Name + "-77ac3-type2-original",
+								"bar-cloud-config-" + worker2Name + "-32209-type2-original",
+								"baz-cloud-config-" + worker2Name + "-32209-type2-original",
 							},
 						},
 					},
@@ -800,14 +815,17 @@ var _ = Describe("OperatingSystemConfig", func() {
 	})
 
 	Describe("#Key", func() {
-		var workerName = "foo"
+		var (
+			workerName        = "foo"
+			kubernetesVersion = "1.2.3"
+		)
 
 		It("should return an empty string", func() {
 			Expect(Key(workerName, nil)).To(BeEmpty())
 		})
 
 		It("should return the expected key", func() {
-			Expect(Key(workerName, semver.MustParse("1.2.3"))).To(Equal("cloud-config-" + workerName + "-77ac3"))
+			Expect(Key(workerName, semver.MustParse(kubernetesVersion))).To(Equal("cloud-config-" + workerName + "-77ac3"))
 		})
 	})
 })

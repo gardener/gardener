@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Machines", func() {
@@ -173,7 +174,12 @@ var _ = Describe("Machines", func() {
 				v, err = WorkerPoolHash(*p, cluster)
 			})
 
-			It("when changing the kubernetes patch version", func() {
+			It("when changing the kubernetes patch version of the worker pool version", func() {
+				p.KubernetesVersion = pointer.String("1.2.4")
+				v, err = WorkerPoolHash(*p, cluster)
+			})
+
+			It("when changing the kubernetes patch version of the control plane version", func() {
 				v, err = WorkerPoolHash(*p, &extensionscontroller.Cluster{
 					Shoot: &gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{
@@ -237,7 +243,12 @@ var _ = Describe("Machines", func() {
 				v, err = WorkerPoolHash(*p, cluster)
 			})
 
-			It("when changing the kubernetes major/minor version", func() {
+			It("when changing the kubernetes major/minor version of the worker pool version", func() {
+				p.KubernetesVersion = pointer.String("1.3.3")
+				v, err = WorkerPoolHash(*p, cluster)
+			})
+
+			It("when changing the kubernetes major/minor version of the control plane version", func() {
 				v, err = WorkerPoolHash(*p, &extensionscontroller.Cluster{
 					Shoot: &gardencorev1beta1.Shoot{
 						Spec: gardencorev1beta1.ShootSpec{

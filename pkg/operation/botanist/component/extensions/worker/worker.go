@@ -192,6 +192,11 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			userData = []byte(val.Downloader.Content)
 		}
 
+		workerPoolKubernetesVersion := w.values.KubernetesVersion.String()
+		if workerPool.Kubernetes != nil && workerPool.Kubernetes.Version != nil {
+			workerPoolKubernetesVersion = *workerPool.Kubernetes.Version
+		}
+
 		pools = append(pools, extensionsv1alpha1.WorkerPool{
 			Name:           workerPool.Name,
 			Minimum:        workerPool.Minimum,
@@ -211,6 +216,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 			Volume:                           volume,
 			DataVolumes:                      dataVolumes,
 			KubeletDataVolumeName:            workerPool.KubeletDataVolumeName,
+			KubernetesVersion:                &workerPoolKubernetesVersion,
 			Zones:                            workerPool.Zones,
 			MachineControllerManagerSettings: workerPool.MachineControllerManagerSettings,
 		})

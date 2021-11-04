@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/downloader"
@@ -141,11 +142,6 @@ var (
 // 1. A secret containing the dedicated cloud config execution script for each worker group
 // 2. A secret containing some shared RBAC policies for downloading the cloud config execution script
 func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Context) error {
-	hyperkubeImage, err := b.ImageVector.FindImage(charts.ImageNameHyperkube, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
-	if err != nil {
-		return err
-	}
-
 	var (
 		managedResource                  = managedresources.NewForShoot(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, CloudConfigExecutionManagedResourceName, false)
 		managedResourceSecretsCount      = len(b.Shoot.GetInfo().Spec.Provider.Workers) + 1
@@ -164,6 +160,16 @@ func (b *Botanist) DeployManagedResourceForCloudConfigExecutor(ctx context.Conte
 		oscData, ok := workerNameToOperatingSystemConfigMaps[worker.Name]
 		if !ok {
 			return fmt.Errorf("did not find osc data for worker pool %q", worker.Name)
+		}
+
+		kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(b.Shoot.KubernetesVersion, worker.Kubernetes)
+		if err != nil {
+			return err
+		}
+
+		hyperkubeImage, err := b.ImageVector.FindImage(charts.ImageNameHyperkube, imagevector.RuntimeVersion(kubernetesVersion.String()), imagevector.TargetVersion(kubernetesVersion.String()))
+		if err != nil {
+			return err
 		}
 
 		secretName, data, err := b.generateCloudConfigExecutorResourcesForWorker(worker, oscData.Original, hyperkubeImage)
@@ -232,9 +238,13 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 	map[string][]byte,
 	error,
 ) {
+	kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(b.Shoot.KubernetesVersion, worker.Kubernetes)
+	if err != nil {
+		return "", nil, err
+	}
 	var (
 		registry   = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-		secretName = operatingsystemconfig.Key(worker.Name, b.Shoot.KubernetesVersion)
+		secretName = operatingsystemconfig.Key(worker.Name, kubernetesVersion)
 	)
 
 	var kubeletDataVolume *gardencorev1beta1.DataVolume
@@ -248,7 +258,7 @@ func (b *Botanist) generateCloudConfigExecutorResourcesForWorker(
 		}
 	}
 
-	executorScript, err := ExecutorScriptFn([]byte(oscDataOriginal.Content), hyperkubeImage, b.Shoot.KubernetesVersion.String(), kubeletDataVolume, *oscDataOriginal.Command, oscDataOriginal.Units)
+	executorScript, err := ExecutorScriptFn([]byte(oscDataOriginal.Content), hyperkubeImage, kubernetesVersion.String(), kubeletDataVolume, *oscDataOriginal.Command, oscDataOriginal.Units)
 	if err != nil {
 		return "", nil, err
 	}

@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
@@ -195,8 +196,11 @@ type Data struct {
 // Deploy uses the client to create or update the OperatingSystemConfig custom resources.
 func (o *operatingSystemConfig) Deploy(ctx context.Context) error {
 	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
-		d := o.newDeployer(osc, worker, purpose)
-		_, err := d.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
+		d, err := o.newDeployer(osc, worker, purpose)
+		if err != nil {
+			return err
+		}
+		_, err = d.deploy(ctx, v1beta1constants.GardenerOperationReconcile)
 		return err
 	})
 
@@ -207,7 +211,10 @@ func (o *operatingSystemConfig) Deploy(ctx context.Context) error {
 // namespace in the Seed and restore its state.
 func (o *operatingSystemConfig) Restore(ctx context.Context, shootState *v1alpha1.ShootState) error {
 	fns := o.forEachWorkerPoolAndPurposeTaskFn(func(ctx context.Context, osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) error {
-		d := o.newDeployer(osc, worker, purpose)
+		d, err := o.newDeployer(osc, worker, purpose)
+		if err != nil {
+			return err
+		}
 		return extensions.RestoreExtensionWithDeployFunction(ctx, o.client, shootState, extensionsv1alpha1.OperatingSystemConfigResource, d.deploy)
 	})
 
@@ -309,12 +316,20 @@ func (o *operatingSystemConfig) WaitCleanup(ctx context.Context) error {
 
 // DeleteStaleResources deletes unused OperatingSystemConfig resources from the shoot namespace in the seed.
 func (o *operatingSystemConfig) DeleteStaleResources(ctx context.Context) error {
-	return o.deleteOperatingSystemConfigResources(ctx, o.getWantedOSCNames())
+	wantedOSCs, err := o.getWantedOSCNames()
+	if err != nil {
+		return err
+	}
+	return o.deleteOperatingSystemConfigResources(ctx, wantedOSCs)
 }
 
 // WaitCleanupStaleResources waits until all unused OperatingSystemConfig resources are cleaned up.
 func (o *operatingSystemConfig) WaitCleanupStaleResources(ctx context.Context) error {
-	return o.waitCleanup(ctx, o.getWantedOSCNames())
+	wantedOSCs, err := o.getWantedOSCNames()
+	if err != nil {
+		return err
+	}
+	return o.waitCleanup(ctx, wantedOSCs)
 }
 
 func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames sets.String) error {
@@ -335,7 +350,7 @@ func (o *operatingSystemConfig) waitCleanup(ctx context.Context, wantedOSCNames 
 
 // getWantedOSCNames returns the names of all OSC resources, that are currently needed based
 // on the configured worker pools.
-func (o *operatingSystemConfig) getWantedOSCNames() sets.String {
+func (o *operatingSystemConfig) getWantedOSCNames() (sets.String, error) {
 	wantedOSCNames := sets.NewString()
 
 	for _, worker := range o.values.Workers {
@@ -347,11 +362,15 @@ func (o *operatingSystemConfig) getWantedOSCNames() sets.String {
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			wantedOSCNames.Insert(Key(worker.Name, o.values.KubernetesVersion) + keySuffix(worker.Machine.Image.Name, purpose))
+			kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+			if err != nil {
+				return nil, err
+			}
+			wantedOSCNames.Insert(Key(worker.Name, kubernetesVersion) + keySuffix(worker.Machine.Image.Name, purpose))
 		}
 	}
 
-	return wantedOSCNames
+	return wantedOSCNames, nil
 }
 
 func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv1alpha1.OperatingSystemConfig, gardencorev1beta1.Worker, extensionsv1alpha1.OperatingSystemConfigPurpose) error) error {
@@ -364,7 +383,11 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurpose(fn func(*extensionsv
 			extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
 			extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
 		} {
-			oscName := Key(worker.Name, o.values.KubernetesVersion) + keySuffix(worker.Machine.Image.Name, purpose)
+			kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+			if err != nil {
+				return err
+			}
+			oscName := Key(worker.Name, kubernetesVersion) + keySuffix(worker.Machine.Image.Name, purpose)
 
 			osc, ok := o.oscs[oscName]
 			if !ok {
@@ -436,7 +459,7 @@ func (o *operatingSystemConfig) WorkerNameToOperatingSystemConfigsMap() map[stri
 	return o.workerNameToOSCs
 }
 
-func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) deployer {
+func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSystemConfig, worker gardencorev1beta1.Worker, purpose extensionsv1alpha1.OperatingSystemConfigPurpose) (deployer, error) {
 	criName := extensionsv1alpha1.CRINameDocker
 	if worker.CRI != nil {
 		criName = extensionsv1alpha1.CRIName(worker.CRI.Name)
@@ -459,12 +482,17 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 	}
 	setDefaultEvictionMemoryAvailable(kubeletConfigParameters.EvictionHard, kubeletConfigParameters.EvictionSoft, o.values.MachineTypes, worker.Machine.Type)
 
+	kubernetesVersion, err := v1beta1helper.CalculateEffectiveKubernetesVersion(o.values.KubernetesVersion, worker.Kubernetes)
+	if err != nil {
+		return deployer{}, err
+	}
+
 	return deployer{
 		client:                  o.client,
 		osc:                     osc,
 		worker:                  worker,
 		purpose:                 purpose,
-		key:                     Key(worker.Name, o.values.KubernetesVersion),
+		key:                     Key(worker.Name, kubernetesVersion),
 		apiServerURL:            o.values.APIServerURL,
 		caBundle:                caBundle,
 		clusterDNSAddress:       o.values.ClusterDNSAddress,
@@ -475,11 +503,11 @@ func (o *operatingSystemConfig) newDeployer(osc *extensionsv1alpha1.OperatingSys
 		kubeletConfigParameters: kubeletConfigParameters,
 		kubeletCLIFlags:         kubeletCLIFlags,
 		kubeletDataVolumeName:   worker.KubeletDataVolumeName,
-		kubernetesVersion:       o.values.KubernetesVersion,
+		kubernetesVersion:       kubernetesVersion,
 		sshPublicKeys:           o.values.SSHPublicKeys,
 		lokiIngressHostName:     o.values.LokiIngressHostName,
 		promtailRBACAuthToken:   o.values.PromtailRBACAuthToken,
-	}
+	}, nil
 }
 
 func setDefaultEvictionMemoryAvailable(evictionHard, evictionSoft map[string]string, machineTypes []gardencorev1beta1.MachineType, machineType string) {
