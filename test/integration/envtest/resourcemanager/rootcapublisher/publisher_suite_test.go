@@ -32,7 +32,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+// TODO: This test suite is disabled because of a known flake in the test.
+// Enable the test suite again after fixing the flake.
+
 func TestRootCAPublisher(t *testing.T) {
+	t.Skipf("Temporarily skipping the test suite because of known flake...")
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Root CA Controller Integration Test Suite")
 }
