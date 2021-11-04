@@ -146,6 +146,7 @@ func Script(
 		"executionMaxDelaySeconds":                 ExecutionMaxDelaySeconds,
 		"hyperkubeImage":                           hyperkubeImage.String(),
 		"kubernetesVersion":                        kubernetesVersion,
+		"labelWorkerKubernetesVersion":             v1beta1constants.LabelWorkerKubernetesVersion,
 		"reloadConfigCommand":                      reloadConfigCommand,
 		"scriptCopyKubernetesBinary":               utils.EncodeBase64(scriptCopyKubernetesBinary.Bytes()),
 		"units":                                    units,

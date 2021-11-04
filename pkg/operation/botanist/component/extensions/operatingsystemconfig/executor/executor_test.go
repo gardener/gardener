@@ -62,7 +62,7 @@ var _ = Describe("Executor", func() {
 			func(kubernetesVersion string, copyKubernetesBinariesFn func(*imagevector.Image) string, kubeletDataVol *gardencorev1beta1.DataVolume, kubeletDataVolSize *string) {
 				script, err := executor.Script(cloudConfigUserData, hyperkubeImage, kubernetesVersion, kubeletDataVol, reloadConfigCommand, units)
 				Expect(err).ToNot(HaveOccurred())
-				testScript := scriptFor(cloudConfigUserData, hyperkubeImage, copyKubernetesBinariesFn, kubeletDataVolSize, reloadConfigCommand, units)
+				testScript := scriptFor(cloudConfigUserData, hyperkubeImage, kubernetesVersion, copyKubernetesBinariesFn, kubeletDataVolSize, reloadConfigCommand, units)
 				Expect(string(script)).To(Equal(testScript))
 			},
 
@@ -129,6 +129,7 @@ var _ = Describe("Executor", func() {
 func scriptFor(
 	cloudConfigUserData []byte,
 	hyperkubeImage *imagevector.Image,
+	kubernetesVersion string,
 	copyKubernetesBinariesFn func(*imagevector.Image) string,
 	kubeletDataVolumeSize *string,
 	reloadConfigCommand string,
@@ -364,8 +365,12 @@ rm "$PATH_CLOUDCONFIG" "$PATH_CCD_SCRIPT_CHECKSUM"
 
 # Now that the most recent cloud-config user data was applied, let's update the checksum/cloud-config-data annotation on
 # the Node object if possible and store the current date.
-if [[ ! -z "$NODENAME" ]] && [[ -f "$PATH_CHECKSUM" ]]; then
-  /opt/bin/kubectl --kubeconfig="/var/lib/kubelet/kubeconfig-real" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+if [[ ! -z "$NODENAME" ]]; then
+  /opt/bin/kubectl --kubeconfig="/var/lib/kubelet/kubeconfig-real" label node "$NODENAME" "worker.gardener.cloud/kubernetes-version=` + kubernetesVersion + `" --overwrite
+
+  if [[ -f "$PATH_CHECKSUM" ]]; then
+    /opt/bin/kubectl --kubeconfig="/var/lib/kubelet/kubeconfig-real" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+  fi
 fi
 date +%s > "$PATH_EXECUTION_LAST_DATE"
 `

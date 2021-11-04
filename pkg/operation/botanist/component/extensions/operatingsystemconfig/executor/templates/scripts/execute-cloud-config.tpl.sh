@@ -229,7 +229,11 @@ rm "$PATH_CLOUDCONFIG" "$PATH_CCD_SCRIPT_CHECKSUM"
 
 # Now that the most recent cloud-config user data was applied, let's update the checksum/cloud-config-data annotation on
 # the Node object if possible and store the current date.
-if [[ ! -z "$NODENAME" ]] && [[ -f "$PATH_CHECKSUM" ]]; then
-  {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+if [[ ! -z "$NODENAME" ]]; then
+  {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" label node "$NODENAME" "{{ .labelWorkerKubernetesVersion }}={{ .kubernetesVersion }}" --overwrite
+
+  if [[ -f "$PATH_CHECKSUM" ]]; then
+    {{ .pathBinaries }}/kubectl --kubeconfig="{{ .pathKubeletKubeconfigReal }}" annotate node "$NODENAME" "checksum/cloud-config-data=$(cat "$PATH_CHECKSUM")" --overwrite
+  fi
 fi
 date +%s > "$PATH_EXECUTION_LAST_DATE"
