@@ -1397,3 +1397,12 @@ func CalculateSeedUsage(shootList []gardencorev1beta1.Shoot) map[string]int {
 
 	return m
 }
+
+// CalculateEffectiveKubernetesVersion if a shoot has kubernetes version specified by worker group, return this,
+// otherwise the shoot kubernetes version
+func CalculateEffectiveKubernetesVersion(controlPlaneVersion *semver.Version, workerKubernetes *gardencorev1beta1.WorkerKubernetes) (*semver.Version, error) {
+	if workerKubernetes != nil && workerKubernetes.Version != nil {
+		return semver.NewVersion(*workerKubernetes.Version)
+	}
+	return controlPlaneVersion, nil
+}
