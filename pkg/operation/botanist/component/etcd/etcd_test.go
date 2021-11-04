@@ -635,6 +635,62 @@ var _ = Describe("Etcd", func() {
 				Expect(etcd.Deploy(ctx)).To(Succeed())
 			})
 
+			It("should not panic during deploy when etcd resource exists, but its status is not yet populated", func() {
+				oldTimeNow := TimeNow
+				defer func() { TimeNow = oldTimeNow }()
+				TimeNow = func() time.Time { return now }
+
+				var (
+					existingReplicas int32 = 245
+					retainReplicas         = true
+				)
+
+				etcd = New(c, log, testNamespace, testRole, class, retainReplicas, storageCapacity, &defragmentationSchedule)
+				setSecretsAndHVPAConfig()
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")).DoAndReturn(func(ctx context.Context, _ client.ObjectKey, obj client.Object) error {
+						(&druidv1alpha1.Etcd{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      etcdName,
+								Namespace: testNamespace,
+							},
+							Spec: druidv1alpha1.EtcdSpec{
+								Replicas: int(existingReplicas),
+							},
+						}).DeepCopyInto(obj.(*druidv1alpha1.Etcd))
+						return nil
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&appsv1.StatefulSet{})).Return(apierrors.NewNotFound(schema.GroupResource{}, "")),
+
+					c.EXPECT().Get(ctx, kutil.Key(testNamespace, networkPolicyName), gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&networkingv1.NetworkPolicy{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(networkPolicy))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(testNamespace, etcdName), gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&druidv1alpha1.Etcd{}), gomock.Any()).Do(func(ctx context.Context, obj *druidv1alpha1.Etcd, _ client.Patch, _ ...client.PatchOption) {
+						// ignore status when comparing
+						obj.Status = druidv1alpha1.EtcdStatus{}
+
+						Expect(obj).To(DeepEqual(etcdObjFor(
+							class,
+							int(existingReplicas),
+							nil,
+							"",
+							"",
+							nil,
+							nil,
+						)))
+					}),
+					c.EXPECT().Get(ctx, kutil.Key(testNamespace, hvpaName), gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&hvpav1alpha1.Hvpa{}), gomock.Any()).Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+						Expect(obj).To(DeepEqual(hvpaFor(class, existingReplicas, scaleDownUpdateMode)))
+					}),
+				)
+
+				Expect(etcd.Deploy(ctx)).To(Succeed())
+			})
+
 			It("should successfully deploy (normal etcd) and retain replicas (etcd found)", func() {
 				oldTimeNow := TimeNow
 				defer func() { TimeNow = oldTimeNow }()
