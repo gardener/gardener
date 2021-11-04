@@ -17,6 +17,7 @@
 # tools as needed.
 # Recipes in the top-level make file should declare dependencies on the respective tool recipes (e.g. $(CONTROLLER_GEN))
 # as needed. If the required tool (version) is not built/installed yet, make will make sure to build/install it.
+# The *_VERSION variables in this file contain the "default" values, but can be overwritten in the top level make file.
 
 HACK_PKG_PATH              := $(shell go list -tags tools -f '{{ .Dir }}' github.com/gardener/gardener/hack)
 TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin
@@ -33,6 +34,11 @@ PROTOC_GEN_GOGO            := $(TOOLS_BIN_DIR)/protoc-gen-gogo
 SETUP_ENVTEST              := $(TOOLS_BIN_DIR)/setup-envtest
 YAML2JSON                  := $(TOOLS_BIN_DIR)/yaml2json
 YQ                         := $(TOOLS_BIN_DIR)/yq
+
+# default tool versions
+GOLANGCI_LINT_VERSION ?= v1.42.1
+HELM_VERSION ?= v3.5.4
+YQ_VERSION ?= v4.9.6
 
 export TOOLS_BIN_DIR := $(TOOLS_BIN_DIR)
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
@@ -74,14 +80,12 @@ $(GEN_CRD_API_REFERENCE_DOCS): go.mod
 $(GOIMPORTS): go.mod
 	go build -o $(GOIMPORTS) golang.org/x/tools/cmd/goimports
 
-GOLANGCI_LINT_VERSION := v1.42.1
 $(GOLANGCI_LINT): $(call tool_version_file,$(GOLANGCI_LINT),$(GOLANGCI_LINT_VERSION))
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(TOOLS_BIN_DIR) $(GOLANGCI_LINT_VERSION)
 
 $(GO_TO_PROTOBUF): go.mod
 	go build -o $(GO_TO_PROTOBUF) k8s.io/code-generator/cmd/go-to-protobuf
 
-HELM_VERSION := v3.5.4
 $(HELM): $(call tool_version_file,$(HELM),$(HELM_VERSION))
 	curl -sSfL https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | HELM_INSTALL_DIR=$(TOOLS_BIN_DIR) USE_SUDO=false bash -s -- --version $(HELM_VERSION)
 
@@ -103,7 +107,6 @@ $(PROTOC_GEN_GOGO): go.mod
 $(YAML2JSON): go.mod
 	go build -o $(YAML2JSON) github.com/bronze1man/yaml2json
 
-YQ_VERSION := v4.9.6
 $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
 	curl -L -o $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$(shell uname -s | tr '[:upper:]' '[:lower:]')_$(shell uname -m | sed 's/x86_64/amd64/')
 	chmod +x $(YQ)
