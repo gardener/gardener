@@ -86,6 +86,9 @@ type GardenletConfiguration struct {
 	// ExposureClassHandlers is a list of optional of exposure class handlers.
 	// +optional
 	ExposureClassHandlers []ExposureClassHandler `json:"exposureClassHandlers,omitempty"`
+	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
+	// +optional
+	Monitoring *MonitoringConfig `json:"monitoring,omitempty"`
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -505,6 +508,35 @@ type ExposureClassHandler struct {
 type LoadBalancerServiceConfig struct {
 	// Annotations is a key value map to annotate the underlying load balancer services.
 	Annotations map[string]string `json:"annotations"`
+}
+
+// MonitoringConfig contains settings for the monitoring stack.
+type MonitoringConfig struct {
+	// Shoot is optional and contains settings for the shoot monitoring stack.
+	// +optional
+	Shoot *ShootMonitoringConfig `json:"shoot,omitempty"`
+}
+
+// ShootMonitoringConfig contains settings for the shoot monitoring stack.
+type ShootMonitoringConfig struct {
+	// RemoteWrite is optional and contains remote write setting.
+	// +optional
+	RemoteWrite RemoteWriteMonitoringConfig `json:"remoteWrite,omitempty"`
+	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
+	// +optional
+	ExternalLabels map[string]string `json:"externalLabels,omitempty"`
+}
+
+// RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.
+type RemoteWriteMonitoringConfig struct {
+	// URL contains an Url for remote write setting in prometheus.
+	URL string `json:"url"`
+	// Keep contains a list of metrics that will be remote written
+	// +optional
+	Keep []string `json:"keep,omitempty"`
+	// QueueConfig contains the queue_config for prometheus remote write.
+	// +optional
+	QueueConfig string `json:"queueConfig,omitempty"`
 }
 
 const (

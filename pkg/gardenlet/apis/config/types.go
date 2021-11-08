@@ -69,6 +69,8 @@ type GardenletConfiguration struct {
 	SNI *SNI
 	// ExposureClassHandlers is a list of optional of exposure class handlers.
 	ExposureClassHandlers []ExposureClassHandler
+	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
+	Monitoring *MonitoringConfig
 }
 
 // GardenClientConnection specifies the kubeconfig file and the client connection settings
@@ -424,4 +426,28 @@ type ExposureClassHandler struct {
 type LoadBalancerServiceConfig struct {
 	// Annotations is a key value map to annotate the underlying load balancer services.
 	Annotations map[string]string
+}
+
+// MonitoringConfig contains settings for the monitoring stack.
+type MonitoringConfig struct {
+	// Shoot is optional and contains settings for the shoot monitoring stack.
+	Shoot *ShootMonitoringConfig
+}
+
+// ShootMonitoringConfig contains settings for the shoot monitoring stack.
+type ShootMonitoringConfig struct {
+	// RemoteWrite is optional and contains remote write setting.
+	RemoteWrite RemoteWriteMonitoringConfig
+	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
+	ExternalLabels map[string]string
+}
+
+// RemoteWriteMonitoringConfig contains settings for the remote write setting for monitoring stack.
+type RemoteWriteMonitoringConfig struct {
+	// URL contains an Url for remote write setting in prometheus.
+	URL string
+	// Keep contains a list of metrics that will be remote written
+	Keep []string
+	// QueueConfig contains the queue_config for prometheus remote write.
+	QueueConfig string
 }
