@@ -492,6 +492,12 @@ go.opentelemetry.io/proto/otlp/resource/v1
 go.opentelemetry.io/proto/otlp/trace/v1
 # go.uber.org/atomic v1.7.0
 go.uber.org/atomic
+# go.uber.org/automaxprocs v1.4.0
+## explicit
+go.uber.org/automaxprocs
+go.uber.org/automaxprocs/internal/cgroups
+go.uber.org/automaxprocs/internal/runtime
+go.uber.org/automaxprocs/maxprocs
 # go.uber.org/goleak v1.1.10
 ## explicit
 go.uber.org/goleak
