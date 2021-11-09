@@ -65,6 +65,12 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 		return fmt.Errorf("failed to deploy the machine classes: %w", err)
 	}
 
+	// Wait until the machine class credentials secret has been acquired.
+	logger.Info("Waiting until the machine class credentials secret has been acquired")
+	if err := a.waitUntilCredentialsSecretAcquiredOrReleased(ctx, true, worker, workerDelegate); err != nil {
+		return fmt.Errorf("failed while waiting for the machine class credentials secret to be acquired: %w", err)
+	}
+
 	if workerCredentialsDelegate, ok := workerDelegate.(WorkerCredentialsDelegate); ok {
 		// Update cloud credentials for all existing machine class secrets
 		cloudCredentials, err := workerCredentialsDelegate.GetMachineControllerManagerCloudCredentials(ctx)
@@ -103,6 +109,12 @@ func (a *genericActuator) Delete(ctx context.Context, worker *extensionsv1alpha1
 	// Wait until all machine resources have been properly deleted.
 	if err := a.waitUntilMachineResourcesDeleted(ctx, logger, worker, workerDelegate); err != nil {
 		return gardencorev1beta1helper.DetermineError(err, fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
+	}
+
+	// Wait until the machine class credentials secret has been released.
+	logger.Info("Waiting until the machine class credentials secret has been released")
+	if err := a.waitUntilCredentialsSecretAcquiredOrReleased(ctx, false, worker, workerDelegate); err != nil {
+		return fmt.Errorf("failed while waiting for the machine class credentials secret to be released: %w", err)
 	}
 
 	// Delete the machine-controller-manager.
@@ -166,8 +178,6 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 		countMachineDeployments  = -1
 		countMachineClasses      = -1
 		countMachineClassSecrets = -1
-
-		releasedMachineClassCredentialsSecret = false
 	)
 	logger.Info("Waiting until all machine resources have been deleted")
 
@@ -241,14 +251,27 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 			msg += fmt.Sprintf("%d machine class secrets, ", countMachineClassSecrets)
 		}
 
-		// Check whether the finalizer of the machine class credentials secret is removed.
+		if countMachines != 0 || countMachineSets != 0 || countMachineDeployments != 0 || countMachineClasses != 0 || countMachineClassSecrets != 0 {
+			msg := fmt.Sprintf("Waiting until the following machine resources have been deleted: %s", strings.TrimSuffix(msg, ", "))
+			logger.Info(msg)
+			return retryutils.MinorError(errors.New(msg))
+		}
+
+		return retryutils.Ok()
+	})
+}
+
+func (a *genericActuator) waitUntilCredentialsSecretAcquiredOrReleased(ctx context.Context, acquired bool, worker *extensionsv1alpha1.Worker, workerDelegate WorkerDelegate) error {
+	acquiredOrReleased := false
+	return retryutils.UntilTimeout(ctx, 5*time.Second, 5*time.Minute, func(ctx context.Context) (bool, error) {
+		// Check whether the finalizer of the machine class credentials secret has been added or removed.
 		// This check is only applicable when the given workerDelegate does not implement the
 		// deprecated WorkerCredentialsDelegate interface, i.e. machine classes reference a separate
 		// Secret for cloud provider credentials.
-		if !releasedMachineClassCredentialsSecret {
+		if !acquiredOrReleased {
 			_, ok := workerDelegate.(WorkerCredentialsDelegate)
 			if ok {
-				releasedMachineClassCredentialsSecret = true
+				acquiredOrReleased = true
 			} else {
 				secret, err := kutil.GetSecretByReference(ctx, a.client, &worker.Spec.SecretRef)
 				if err != nil {
@@ -258,20 +281,15 @@ func (a *genericActuator) waitUntilMachineResourcesDeleted(ctx context.Context, 
 				// We need to check for both mcmFinalizer and mcmProviderFinalizer:
 				// - mcmFinalizer is the finalizer used by machine controller manager and its in-tree providers
 				// - mcmProviderFinalizer is the finalizer used by out-of-tree machine controller providers
-				if controllerutil.ContainsFinalizer(secret, mcmFinalizer) || controllerutil.ContainsFinalizer(secret, mcmProviderFinalizer) {
-					msg += "1 machine class credentials secret, "
-				} else {
-					releasedMachineClassCredentialsSecret = true
+				if (controllerutil.ContainsFinalizer(secret, mcmFinalizer) || controllerutil.ContainsFinalizer(secret, mcmProviderFinalizer)) == acquired {
+					acquiredOrReleased = true
 				}
 			}
 		}
 
-		if countMachines != 0 || countMachineSets != 0 || countMachineDeployments != 0 || countMachineClasses != 0 || countMachineClassSecrets != 0 || !releasedMachineClassCredentialsSecret {
-			msg := fmt.Sprintf("Waiting until the following machine resources have been deleted or released: %s", strings.TrimSuffix(msg, ", "))
-			logger.Info(msg)
-			return retryutils.MinorError(errors.New(msg))
+		if !acquiredOrReleased {
+			return retryutils.MinorError(errors.New("machine class credentials secret has not yet been acquired or released"))
 		}
-
 		return retryutils.Ok()
 	})
 }
