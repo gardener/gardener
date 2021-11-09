@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
@@ -32,6 +33,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -186,27 +188,25 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		return fmt.Errorf("missing server secret information")
 	}
 
-	if err := r.ensureServiceAccount(ctx); err != nil {
-		return err
+	for _, fn := range []func(context.Context) error{
+		r.ensureServiceAccount,
+		r.ensureRBAC,
+		r.ensureService,
+		r.ensureDeployment,
+		r.ensurePodDisruptionBudget,
+		r.ensureVPA,
+	} {
+		if err := fn(ctx); err != nil {
+			return err
+		}
 	}
 
-	if err := r.ensureRBAC(ctx); err != nil {
-		return err
-	}
-
-	if err := r.ensureService(ctx); err != nil {
-		return err
-	}
-
-	if err := r.ensureDeployment(ctx); err != nil {
-		return err
-	}
-
-	return r.ensureVPA(ctx)
+	return nil
 }
 
 func (r *resourceManager) Destroy(ctx context.Context) error {
 	objectsToDelete := []client.Object{
+		r.emptyPodDisruptionBudget(),
 		r.emptyVPA(),
 		r.emptyDeployment(),
 		r.emptyService(),
@@ -410,9 +410,24 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: r.getDeploymentTemplateLabels(),
+				Labels: utils.MergeStringMaps(r.getDeploymentTemplateLabels(), r.getNetworkPolicyLabels(), map[string]string{
+					resourcesv1alpha1.ProjectedTokenSkip: "true",
+				}),
 			},
 			Spec: corev1.PodSpec{
+				Affinity: &corev1.Affinity{
+					PodAntiAffinity: &corev1.PodAntiAffinity{
+						PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+							{
+								Weight: 100,
+								PodAffinityTerm: corev1.PodAffinityTerm{
+									TopologyKey:   corev1.LabelHostname,
+									LabelSelector: &metav1.LabelSelector{MatchLabels: r.getDeploymentTemplateLabels()},
+								},
+							},
+						},
+					},
+				},
 				ServiceAccountName: serviceAccountName,
 				Containers: []corev1.Container{
 					{
@@ -673,6 +688,27 @@ func (r *resourceManager) emptyVPA() *autoscalingv1beta2.VerticalPodAutoscaler {
 	return &autoscalingv1beta2.VerticalPodAutoscaler{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager-vpa", Namespace: r.namespace}}
 }
 
+func (r *resourceManager) ensurePodDisruptionBudget(ctx context.Context) error {
+	pdb := r.emptyPodDisruptionBudget()
+	maxUnavailable := intstr.FromInt(1)
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, pdb, func() error {
+		pdb.Labels = r.getLabels()
+		pdb.Spec = policyv1beta1.PodDisruptionBudgetSpec{
+			MaxUnavailable: &maxUnavailable,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: r.getDeploymentTemplateLabels(),
+			},
+		}
+		return nil
+	})
+	return err
+}
+
+func (r *resourceManager) emptyPodDisruptionBudget() *policyv1beta1.PodDisruptionBudget {
+	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}}
+}
+
 func (r *resourceManager) getLabels() map[string]string {
 	if partOfShootControlPlane := r.secrets.Kubeconfig.Name != ""; partOfShootControlPlane {
 		return utils.MergeStringMaps(appLabel(), map[string]string{
@@ -684,19 +720,26 @@ func (r *resourceManager) getLabels() map[string]string {
 }
 
 func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
-	// TODO(rfranzke): Add 'projected-token-mount.resources.gardener.cloud/skip=true' label after
-	//                 https://github.com/gardener/gardener/pull/4873 is merged.
-
+	role := v1beta1constants.GardenRoleSeed
 	if partOfShootControlPlane := r.secrets.Kubeconfig.Name != ""; partOfShootControlPlane {
-		return utils.MergeStringMaps(appLabel(), map[string]string{
-			v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
+		role = v1beta1constants.GardenRoleControlPlane
+	}
+
+	return utils.MergeStringMaps(appLabel(), map[string]string{
+		v1beta1constants.GardenRole: role,
+	})
+}
+
+func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
+	if partOfShootControlPlane := r.secrets.Kubeconfig.Name != ""; partOfShootControlPlane {
+		return map[string]string{
 			v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToSeedAPIServer:  v1beta1constants.LabelNetworkPolicyAllowed,
-		})
+		}
 	}
 
-	return appLabel()
+	return nil
 }
 
 func appLabel() map[string]string {
