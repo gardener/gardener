@@ -47,5 +47,7 @@ func SetObjectDefaults_ControllerManagerConfiguration(in *ControllerManagerConfi
 	if in.Controllers.ManagedSeedSet != nil {
 		SetDefaults_ManagedSeedSetControllerConfiguration(in.Controllers.ManagedSeedSet)
 	}
-	SetDefaults_LeaderElectionConfiguration(&in.LeaderElection)
+	if in.LeaderElection != nil {
+		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)
+	}
 }

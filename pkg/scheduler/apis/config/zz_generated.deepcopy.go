@@ -64,7 +64,11 @@ func (in *SchedulerConfiguration) DeepCopyInto(out *SchedulerConfiguration) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	out.ClientConnection = in.ClientConnection
-	out.LeaderElection = in.LeaderElection
+	if in.LeaderElection != nil {
+		in, out := &in.LeaderElection, &out.LeaderElection
+		*out = new(componentbaseconfig.LeaderElectionConfiguration)
+		**out = **in
+	}
 	in.Server.DeepCopyInto(&out.Server)
 	if in.Debugging != nil {
 		in, out := &in.Debugging, &out.Debugging

@@ -407,6 +407,8 @@ global:
         renewDeadline: 10s
         retryPeriod: 2s
         resourceLock: leases
+    #   resourceName: gardener-controller-manager-leader-election
+    #   resourceNamespace: garden
       logLevel: info
       kubernetesLogLevel: 0
       server:
@@ -461,8 +463,8 @@ global:
         renewDeadline: 10s
         retryPeriod: 2s
         resourceLock: leases
-        resourceNamespace: garden
-        resourceName: gardener-scheduler-leader-election
+      # resourceNamespace: garden
+      # resourceName: gardener-scheduler-leader-election
       logLevel: info
       server:
         healthProbes:

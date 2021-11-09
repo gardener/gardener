@@ -136,6 +136,12 @@ data:
       renewDeadline: {{ required ".Values.global.controller.config.leaderElection.renewDeadline is required" .Values.global.controller.config.leaderElection.renewDeadline }}
       retryPeriod: {{ required ".Values.global.controller.config.leaderElection.retryPeriod is required" .Values.global.controller.config.leaderElection.retryPeriod }}
       resourceLock: {{ required ".Values.global.controller.config.leaderElection.resourceLock is required" .Values.global.controller.config.leaderElection.resourceLock }}
+      {{- if .Values.global.controller.config.leaderElection.resourceName }}
+      resourceName: {{ .Values.global.controller.config.leaderElection.resourceName }}
+      {{- end }}
+      {{- if .Values.global.controller.config.leaderElection.resourceNamespace }}
+      resourceNamespace: {{ .Values.global.controller.config.leaderElection.resourceNamespace }}
+      {{- end }}
     logLevel: {{ required ".Values.global.controller.config.logLevel is required" .Values.global.controller.config.logLevel }}
     kubernetesLogLevel: {{ required ".Values.global.controller.config.kubernetesLogLevel is required" .Values.global.controller.config.kubernetesLogLevel }}
     server:

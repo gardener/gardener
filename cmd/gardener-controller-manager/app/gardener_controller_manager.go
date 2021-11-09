@@ -253,9 +253,7 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 		}
 
 		leaderElectionConfig, err = utils.MakeLeaderElectionConfig(
-			cfg.LeaderElection.LeaderElectionConfiguration,
-			cfg.LeaderElection.LockObjectNamespace,
-			cfg.LeaderElection.LockObjectName,
+			*cfg.LeaderElection,
 			k8sGardenClientLeaderElection,
 			recorder,
 		)

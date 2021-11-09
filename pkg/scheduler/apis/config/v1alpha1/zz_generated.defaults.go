@@ -36,6 +36,8 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 func SetObjectDefaults_SchedulerConfiguration(in *SchedulerConfiguration) {
 	SetDefaults_SchedulerConfiguration(in)
 	SetDefaults_ClientConnectionConfiguration(&in.ClientConnection)
-	SetDefaults_LeaderElectionConfiguration(&in.LeaderElection)
+	if in.LeaderElection != nil {
+		SetDefaults_LeaderElectionConfiguration(in.LeaderElection)
+	}
 	SetDefaults_ServerConfiguration(&in.Server)
 }

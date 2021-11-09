@@ -125,8 +125,14 @@ func autoConvert_v1alpha1_SchedulerConfiguration_To_config_SchedulerConfiguratio
 	if err := configv1alpha1.Convert_v1alpha1_ClientConnectionConfiguration_To_config_ClientConnectionConfiguration(&in.ClientConnection, &out.ClientConnection, s); err != nil {
 		return err
 	}
-	if err := configv1alpha1.Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(&in.LeaderElection, &out.LeaderElection, s); err != nil {
-		return err
+	if in.LeaderElection != nil {
+		in, out := &in.LeaderElection, &out.LeaderElection
+		*out = new(componentbaseconfig.LeaderElectionConfiguration)
+		if err := configv1alpha1.Convert_v1alpha1_LeaderElectionConfiguration_To_config_LeaderElectionConfiguration(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.LeaderElection = nil
 	}
 	out.LogLevel = in.LogLevel
 	out.LogFormat = in.LogFormat
@@ -158,8 +164,14 @@ func autoConvert_config_SchedulerConfiguration_To_v1alpha1_SchedulerConfiguratio
 	if err := configv1alpha1.Convert_config_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(&in.ClientConnection, &out.ClientConnection, s); err != nil {
 		return err
 	}
-	if err := configv1alpha1.Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(&in.LeaderElection, &out.LeaderElection, s); err != nil {
-		return err
+	if in.LeaderElection != nil {
+		in, out := &in.LeaderElection, &out.LeaderElection
+		*out = new(configv1alpha1.LeaderElectionConfiguration)
+		if err := configv1alpha1.Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.LeaderElection = nil
 	}
 	out.LogLevel = in.LogLevel
 	out.LogFormat = in.LogFormat

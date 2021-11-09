@@ -43,7 +43,7 @@ type GardenletConfiguration struct {
 	// Resources defines the total capacity for seed resources and the amount reserved for use by Gardener.
 	Resources *ResourcesConfiguration
 	// LeaderElection defines the configuration of leader election client.
-	LeaderElection *LeaderElectionConfiguration
+	LeaderElection *componentbaseconfig.LeaderElectionConfiguration
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel *string
 	// LogFormat is the output format for the logs. Must be one of [text,json].
@@ -294,16 +294,6 @@ type ResourcesConfiguration struct {
 	// Reserved defines the resources of a seed that are reserved for use by Gardener.
 	// Defaults to 0.
 	Reserved corev1.ResourceList
-}
-
-// LeaderElectionConfiguration defines the configuration of leader election
-// clients for components that can run with leader election enabled.
-type LeaderElectionConfiguration struct {
-	componentbaseconfig.LeaderElectionConfiguration
-	// LockObjectNamespace defines the namespace of the lock object.
-	LockObjectNamespace *string
-	// LockObjectName defines the lock object name.
-	LockObjectName *string
 }
 
 // SeedConfig contains configuration for the seed cluster.

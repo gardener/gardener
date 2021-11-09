@@ -146,20 +146,18 @@ var _ = Describe("Defaults", func() {
 				Expect(obj.LeaderElection.RenewDeadline).To(Equal(metav1.Duration{Duration: 10 * time.Second}))
 				Expect(obj.LeaderElection.RetryPeriod).To(Equal(metav1.Duration{Duration: 2 * time.Second}))
 				Expect(obj.LeaderElection.ResourceLock).To(Equal("leases"))
-				Expect(obj.LeaderElection.LockObjectNamespace).To(PointTo(Equal("garden")))
-				Expect(obj.LeaderElection.LockObjectName).To(PointTo(Equal("gardenlet-leader-election")))
+				Expect(obj.LeaderElection.ResourceNamespace).To(Equal("garden"))
+				Expect(obj.LeaderElection.ResourceName).To(Equal("gardenlet-leader-election"))
 			})
 			It("should not overwrite custom settings", func() {
-				expectedLeaderElection := &LeaderElectionConfiguration{
-					LeaderElectionConfiguration: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-						LeaderElect:   pointer.Bool(true),
-						ResourceLock:  "foo",
-						RetryPeriod:   metav1.Duration{Duration: 40 * time.Second},
-						RenewDeadline: metav1.Duration{Duration: 41 * time.Second},
-						LeaseDuration: metav1.Duration{Duration: 42 * time.Second},
-					},
-					LockObjectName:      pointer.String("lock-object"),
-					LockObjectNamespace: pointer.String("other-garden-ns"),
+				expectedLeaderElection := &componentbaseconfigv1alpha1.LeaderElectionConfiguration{
+					LeaderElect:       pointer.Bool(true),
+					ResourceLock:      "foo",
+					RetryPeriod:       metav1.Duration{Duration: 40 * time.Second},
+					RenewDeadline:     metav1.Duration{Duration: 41 * time.Second},
+					LeaseDuration:     metav1.Duration{Duration: 42 * time.Second},
+					ResourceName:      "lock-object",
+					ResourceNamespace: "other-garden-ns",
 				}
 				obj.LeaderElection = expectedLeaderElection.DeepCopy()
 				SetObjectDefaults_GardenletConfiguration(obj)

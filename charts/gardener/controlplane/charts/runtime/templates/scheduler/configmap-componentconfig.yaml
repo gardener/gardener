@@ -36,8 +36,12 @@ data:
       renewDeadline: {{ required ".Values.global.scheduler.config.leaderElection.renewDeadline is required" .Values.global.scheduler.config.leaderElection.renewDeadline }}
       retryPeriod: {{ required ".Values.global.scheduler.config.leaderElection.retryPeriod is required" .Values.global.scheduler.config.leaderElection.retryPeriod }}
       resourceLock: {{ required ".Values.global.scheduler.config.leaderElection.resourceLock is required" .Values.global.scheduler.config.leaderElection.resourceLock }}
-      resourceNamespace: {{ required ".Values.global.scheduler.config.leaderElection.resourceNamespace is required" .Values.global.scheduler.config.leaderElection.resourceNamespace }}
-      resourceName: {{ required ".Values.global.scheduler.config.leaderElection.resourceName is required" .Values.global.scheduler.config.leaderElection.resourceName }}
+      {{- if .Values.global.scheduler.config.leaderElection.resourceNamespace }}
+      resourceNamespace: {{ .Values.global.scheduler.config.leaderElection.resourceNamespace }}
+      {{- end }}
+      {{- if .Values.global.scheduler.config.leaderElection.resourceName }}
+      resourceName: {{ .Values.global.scheduler.config.leaderElection.resourceName }}
+      {{- end }}
     logLevel: {{ required ".Values.global.scheduler.config.logLevel is required" .Values.global.scheduler.config.logLevel }}
     server:
       healthProbes:
