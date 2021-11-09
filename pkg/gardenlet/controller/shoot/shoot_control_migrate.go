@@ -53,7 +53,13 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 	)
 
 	if failed || ignored {
-		return reconcile.Result{}, fmt.Errorf("shoot %s is failed or ignored, will skip migration preparation", shoot.GetName())
+		if syncErr := r.syncClusterResourceToSeed(ctx, shoot, project, cloudProfile, seed); syncErr != nil {
+			logger.WithError(syncErr).Infof("Not allowed to update Shoot with error, trying to sync Cluster resource again")
+			updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), nil, shoot, syncErr.Error(), gardencorev1beta1.LastOperationTypeMigrate, shoot.Status.LastErrors...)
+			return reconcile.Result{}, utilerrors.WithSuppressed(syncErr, updateErr)
+		}
+		logger.Info("Shoot is failed or ignored")
+		return reconcile.Result{}, nil
 	}
 
 	r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventPrepareMigration, "Prepare Shoot cluster for migration")
@@ -66,6 +72,11 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 	if operationErr != nil {
 		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), o, shoot, fmt.Sprintf("Could not initialize a new operation for preparation of Shoot Control Plane migration: %s", operationErr.Error()), gardencorev1beta1.LastOperationTypeMigrate, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
+	}
+	// At this point the migration is allowed, hence, check if the seed is up-to-date, then sync the Cluster resource
+	// initialize a new operation and, eventually, start the migration flow.
+	if err := r.checkSeedAndSyncClusterResource(ctx, shoot, project, cloudProfile, seed); err != nil {
+		return patchShootStatusAndRequeueOnSyncError(ctx, gardenClient.Client(), shoot, logger, err)
 	}
 
 	if flowErr := r.runPrepareShootControlPlaneMigration(ctx, o); flowErr != nil {
