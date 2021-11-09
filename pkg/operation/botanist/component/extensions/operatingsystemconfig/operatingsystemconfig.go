@@ -66,6 +66,8 @@ type Interface interface {
 	DeleteStaleResources(context.Context) error
 	// WaitCleanupStaleResources waits until all unused OperatingSystemConfig resources are cleaned up.
 	WaitCleanupStaleResources(context.Context) error
+	// SetAPIServerAdress sets the APIServerURL value.
+	SetAPIServerAdress(string)
 	// SetCABundle sets the CABundle value.
 	SetCABundle(*string)
 	// SetKubeletCACertificate sets the KubeletCACertificate value.
@@ -396,6 +398,11 @@ func (o *operatingSystemConfig) forEachWorkerPoolAndPurposeTaskFn(fn func(contex
 	})
 
 	return fns
+}
+
+// SetAPIServerAdress sets the APIServerURL value.
+func (o *operatingSystemConfig) SetAPIServerAdress(address string) {
+	o.values.APIServerURL = address
 }
 
 // SetCABundle sets the CABundle value.

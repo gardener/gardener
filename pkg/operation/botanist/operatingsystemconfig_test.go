@@ -61,9 +61,11 @@ var _ = Describe("operatingsystemconfig", func() {
 		fakeErr    = fmt.Errorf("fake")
 		shootState = &gardencorev1alpha1.ShootState{}
 
+		apiServerAddress      = "1.2.3.4"
 		ca                    = []byte("ca")
 		caKubelet             = []byte("ca-kubelet")
 		caCloudProfile        = "ca-cloud-profile"
+		shootDomain           = "shoot.domain.com"
 		sshPublicKey          = []byte("ssh-public-key")
 		sshPublicKeyOld       = []byte("ssh-public-key-old")
 		kubernetesVersion     = "1.2.3"
@@ -75,6 +77,7 @@ var _ = Describe("operatingsystemconfig", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		operatingSystemConfig = mockoperatingsystemconfig.NewMockInterface(ctrl)
 		botanist = &Botanist{Operation: &operation.Operation{
+			APIServerAddress: apiServerAddress,
 			Shoot: &shootpkg.Shoot{
 				CloudProfile: &gardencorev1beta1.CloudProfile{},
 				Components: &shootpkg.Components{
@@ -82,7 +85,8 @@ var _ = Describe("operatingsystemconfig", func() {
 						OperatingSystemConfig: operatingSystemConfig,
 					},
 				},
-				Purpose: "development",
+				InternalClusterDomain: shootDomain,
+				Purpose:               "development",
 			},
 			Seed: &seedpkg.Seed{},
 		}}
@@ -110,12 +114,27 @@ var _ = Describe("operatingsystemconfig", func() {
 	})
 
 	Describe("#DeployOperatingSystemConfig", func() {
-		BeforeEach(func() {
-			operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
-			operatingSystemConfig.EXPECT().SetSSHPublicKeys([]string{string(sshPublicKey), string(sshPublicKeyOld)})
+		Context("deploy (DNS disabled)", func() {
+			It("should deploy successfully (DisableDNS=true)", func() {
+				botanist.Shoot.DisableDNS = true
+
+				operatingSystemConfig.EXPECT().SetAPIServerAdress(fmt.Sprintf("https://%s", apiServerAddress))
+				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
+				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
+				operatingSystemConfig.EXPECT().SetSSHPublicKeys([]string{string(sshPublicKey), string(sshPublicKeyOld)})
+
+				operatingSystemConfig.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployOperatingSystemConfig(ctx)).To(Succeed())
+			})
 		})
 
 		Context("deploy", func() {
+			BeforeEach(func() {
+				operatingSystemConfig.EXPECT().SetAPIServerAdress(fmt.Sprintf("https://api.%s", shootDomain))
+				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
+				operatingSystemConfig.EXPECT().SetSSHPublicKeys([]string{string(sshPublicKey), string(sshPublicKeyOld)})
+			})
+
 			It("should deploy successfully (no CA)", func() {
 				botanist.LoadSecret("ca").Data["ca.crt"] = nil
 				operatingSystemConfig.EXPECT().SetCABundle(nil)
@@ -177,6 +196,10 @@ var _ = Describe("operatingsystemconfig", func() {
 
 		Context("restore", func() {
 			BeforeEach(func() {
+				operatingSystemConfig.EXPECT().SetAPIServerAdress(fmt.Sprintf("https://api.%s", shootDomain))
+				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
+				operatingSystemConfig.EXPECT().SetSSHPublicKeys([]string{string(sshPublicKey), string(sshPublicKeyOld)})
+
 				botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 					Status: gardencorev1beta1.ShootStatus{
 						LastOperation: &gardencorev1beta1.LastOperation{
