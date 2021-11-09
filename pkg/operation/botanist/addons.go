@@ -363,8 +363,8 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	}
 
 	var (
-		poolNameVersionToImage = make(workerPoolKubeProxyImages)
-		kubernetesVersion      = b.Shoot.GetInfo().Spec.Kubernetes.Version
+		workerPoolKubeProxyImages = make(map[string]workerPoolKubeProxyImage)
+		kubernetesVersion         = b.Shoot.GetInfo().Spec.Kubernetes.Version
 	)
 
 	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
@@ -373,7 +373,8 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			return nil, err
 		}
 
-		poolNameVersionToImage.Upsert(worker.Name, kubernetesVersion, image.String())
+		key := workerPoolKubeProxyImagesKey(worker.Name, kubernetesVersion)
+		workerPoolKubeProxyImages[key] = workerPoolKubeProxyImage{worker.Name, kubernetesVersion, image.String()}
 	}
 
 	nodeList := &corev1.NodeList{}
@@ -393,7 +394,8 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			return nil, err
 		}
 
-		poolNameVersionToImage.Upsert(poolName, kubernetesVersion, image.String())
+		key := workerPoolKubeProxyImagesKey(poolName, kubernetesVersion)
+		workerPoolKubeProxyImages[key] = workerPoolKubeProxyImage{poolName, kubernetesVersion, image.String()}
 	}
 
 	var workerPools []map[string]string
@@ -412,7 +414,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		})
 	}
 
-	for _, obj := range poolNameVersionToImage {
+	for _, obj := range workerPoolKubeProxyImages {
 		workerPools = append(workerPools, map[string]string{
 			"name":              obj.poolName,
 			"kubernetesVersion": obj.kubernetesVersion,
@@ -628,19 +630,12 @@ func (b *Botanist) outOfClusterAPIServerFQDN() string {
 	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
 }
 
-type (
-	workerPoolKubeProxyImage struct {
-		poolName          string
-		kubernetesVersion string
-		image             string
-	}
-	workerPoolKubeProxyImages map[string]workerPoolKubeProxyImage
-)
-
-func (w workerPoolKubeProxyImages) Upsert(poolName, kubernetesVersion, image string) {
-	w[w.key(poolName, kubernetesVersion)] = workerPoolKubeProxyImage{poolName, kubernetesVersion, image}
+type workerPoolKubeProxyImage struct {
+	poolName          string
+	kubernetesVersion string
+	image             string
 }
 
-func (w workerPoolKubeProxyImages) key(poolName, kubernetesVersion string) string {
+func workerPoolKubeProxyImagesKey(poolName, kubernetesVersion string) string {
 	return poolName + "@" + kubernetesVersion
 }
