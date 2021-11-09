@@ -33,4 +33,7 @@ echo "using envtest tools installed at '$KUBEBUILDER_ASSETS'"
 echo "> Integration Tests"
 
 export KUBEBUILDER_CONTROLPLANE_START_TIMEOUT=2m
+export GOMEGA_DEFAULT_EVENTUALLY_TIMEOUT=5s
+export GOMEGA_DEFAULT_EVENTUALLY_POLLING_INTERVAL=200ms
+
 GO111MODULE=on go test -timeout=5m -mod=vendor $@ | grep -v 'no test files'

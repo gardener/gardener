@@ -19,13 +19,11 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
@@ -123,7 +121,7 @@ var _ = Describe("TokenRequestor tests", func() {
 
 		AfterEach(func() {
 			var newClient client.Client
-			newClient, err = client.New(newRestConfig, client.Options{Scheme: kubernetesscheme.Scheme})
+			newClient, err = client.New(newRestConfig, client.Options{Mapper: testClient.RESTMapper()})
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() error {
