@@ -61,10 +61,15 @@ const (
 	roleName           = "gardener-resource-manager"
 	serviceAccountName = "gardener-resource-manager"
 
-	volumeNameKubeconfig      = "gardener-resource-manager"
-	volumeNameCerts           = "tls"
-	volumeMountPathKubeconfig = "/etc/gardener-resource-manager"
-	volumeMountPathCerts      = "/etc/gardener-resource-manager-tls"
+	volumeNameKubeconfig           = "gardener-resource-manager"
+	volumeNameCerts                = "tls"
+	volumeNameAPIServerAccess      = "kube-api-access-gardener"
+	volumeMountPathKubeconfig      = "/etc/gardener-resource-manager"
+	volumeMountPathCerts           = "/etc/gardener-resource-manager-tls"
+	volumeMountPathAPIServerAccess = "/var/run/secrets/kubernetes.io/serviceaccount"
+
+	volumeNameRootCA      = "root-ca"
+	volumeMountPathRootCA = "/etc/gardener-resource-manager-root-ca"
 )
 
 var (
@@ -159,6 +164,8 @@ type Values struct {
 	MaxConcurrentHealthWorkers *int32
 	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations
 	MaxConcurrentTokenRequestorWorkers *int32
+	// MaxConcurrentRootCAPublisherWorkers configures the number of worker threads for concurrent root ca publishing reconciliations
+	MaxConcurrentRootCAPublisherWorkers *int32
 	// RenewDeadline configures the renew deadline for leader election
 	RenewDeadline *time.Duration
 	// ResourceClass is used to filter resource resources
@@ -371,10 +378,30 @@ func (r *resourceManager) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: r.namespace}}
 }
 
+// TODO(rfranzke): Remove this special handling when we only support seed clusters of at least K8s 1.20.
+//                 Then we can use the 'kube-root-ca.crt' configmap to get access to the CA cert.
+func (r *resourceManager) getRootCAVolumeSourceName(ctx context.Context) (string, error) {
+	serviceAccount := r.emptyServiceAccount()
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(serviceAccount), serviceAccount); err != nil {
+		return "", err
+	}
+
+	if len(serviceAccount.Secrets) == 0 {
+		return "", fmt.Errorf("service account has no secrets yet, cannot mount root-ca volume")
+	}
+
+	return serviceAccount.Secrets[0].Name, nil
+}
+
 func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 	deployment := r.emptyDeployment()
 
-	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
+	rootCAVolumeSourceName, err := r.getRootCAVolumeSourceName(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = controllerutils.GetAndCreateOrMergePatch(ctx, r.client, deployment, func() error {
 		deployment.Labels = r.getLabels()
 
 		deployment.Spec.Replicas = &r.replicas
@@ -429,8 +456,51 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 							SuccessThreshold:    1,
 							TimeoutSeconds:      5,
 						},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      volumeNameAPIServerAccess,
+							MountPath: volumeMountPathAPIServerAccess,
+							ReadOnly:  true,
+						}},
 					},
 				},
+				Volumes: []corev1.Volume{{
+					Name: volumeNameAPIServerAccess,
+					VolumeSource: corev1.VolumeSource{
+						Projected: &corev1.ProjectedVolumeSource{
+							DefaultMode: pointer.Int32(420),
+							Sources: []corev1.VolumeProjection{
+								{
+									ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+										ExpirationSeconds: pointer.Int64(60 * 60 * 12),
+										Path:              "token",
+									},
+								},
+								{
+									Secret: &corev1.SecretProjection{
+										LocalObjectReference: corev1.LocalObjectReference{
+											Name: rootCAVolumeSourceName,
+										},
+										Items: []corev1.KeyToPath{{
+											Key:  "ca.crt",
+											Path: "ca.crt",
+										}},
+									},
+								},
+								{
+									DownwardAPI: &corev1.DownwardAPIProjection{
+										Items: []corev1.DownwardAPIVolumeFile{{
+											FieldRef: &corev1.ObjectFieldSelector{
+												APIVersion: "v1",
+												FieldPath:  "metadata.namespace",
+											},
+											Path: "namespace",
+										}},
+									},
+								},
+							},
+						},
+					},
+				}},
 			},
 		}
 
@@ -470,6 +540,24 @@ func (r *resourceManager) ensureDeployment(ctx context.Context) error {
 			})
 		}
 
+		if r.secrets.RootCA != nil {
+			metav1.SetMetaDataAnnotation(&deployment.Spec.Template.ObjectMeta, "checksum/secret-"+r.secrets.RootCA.Name, r.secrets.RootCA.Checksum)
+			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: volumeNameRootCA,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  r.secrets.RootCA.Name,
+						DefaultMode: pointer.Int32(420),
+					},
+				},
+			})
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
+				MountPath: volumeMountPathRootCA,
+				Name:      volumeNameRootCA,
+				ReadOnly:  true,
+			})
+		}
+
 		return nil
 	})
 	return err
@@ -496,6 +584,18 @@ func (r *resourceManager) computeCommand() []string {
 	}
 	if r.values.MaxConcurrentTokenRequestorWorkers != nil {
 		cmd = append(cmd, fmt.Sprintf("--token-requestor-max-concurrent-workers=%d", *r.values.MaxConcurrentTokenRequestorWorkers))
+	}
+	if r.values.MaxConcurrentRootCAPublisherWorkers != nil {
+		cmd = append(cmd, fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%d", *r.values.MaxConcurrentRootCAPublisherWorkers))
+	}
+	if r.values.MaxConcurrentRootCAPublisherWorkers != nil {
+		if r.secrets.RootCA != nil {
+			cmd = append(cmd, fmt.Sprintf("--root-ca-file=%s/%s", volumeMountPathRootCA, secrets.DataKeyCertificateCA))
+		} else {
+			// default to using the CA cert from the mounted service account. Relevant when source=target cluster.
+			// In this case, the CA cert of the source cluster is published.
+			cmd = append(cmd, fmt.Sprintf("--root-ca-file=%s/ca.crt", volumeMountPathAPIServerAccess))
+		}
 	}
 	if r.values.HealthSyncPeriod != nil {
 		cmd = append(cmd, fmt.Sprintf("--health-sync-period=%s", *r.values.HealthSyncPeriod))
@@ -540,6 +640,7 @@ func (r *resourceManager) ensureServiceAccount(ctx context.Context) error {
 	serviceAccount := r.emptyServiceAccount()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, serviceAccount, func() error {
 		serviceAccount.Labels = r.getLabels()
+		serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
 		return nil
 	})
 	return err
@@ -583,6 +684,9 @@ func (r *resourceManager) getLabels() map[string]string {
 }
 
 func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
+	// TODO(rfranzke): Add 'projected-token-mount.resources.gardener.cloud/skip=true' label after
+	//                 https://github.com/gardener/gardener/pull/4873 is merged.
+
 	if partOfShootControlPlane := r.secrets.Kubeconfig.Name != ""; partOfShootControlPlane {
 		return utils.MergeStringMaps(appLabel(), map[string]string{
 			v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
@@ -643,4 +747,6 @@ type Secrets struct {
 	// Server is a secret containing a x509 TLS server certificate and key for the HTTPS server inside the
 	// gardener-resource-manager (which is used for webhooks).
 	Server component.Secret
+	// RootCA is a secret containing the root CA secret of the target cluster.
+	RootCA *component.Secret
 }
