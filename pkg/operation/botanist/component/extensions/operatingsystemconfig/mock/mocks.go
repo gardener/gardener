@@ -106,6 +106,18 @@ func (mr *MockInterfaceMockRecorder) Restore(arg0, arg1 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Restore", reflect.TypeOf((*MockInterface)(nil).Restore), arg0, arg1)
 }
 
+// SetAPIServerURL mocks base method.
+func (m *MockInterface) SetAPIServerURL(arg0 string) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetAPIServerURL", arg0)
+}
+
+// SetAPIServerURL indicates an expected call of SetAPIServerURL.
+func (mr *MockInterfaceMockRecorder) SetAPIServerURL(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetAPIServerURL", reflect.TypeOf((*MockInterface)(nil).SetAPIServerURL), arg0)
+}
+
 // SetCABundle mocks base method.
 func (m *MockInterface) SetCABundle(arg0 *string) {
 	m.ctrl.T.Helper()
