@@ -20,7 +20,7 @@ If fields shall be removed permanently from the API then a proper deprecation pe
     1. Make sure that the existing field numbers in the protobuf tags are not changed.
 1. If necessary then implement/adapt the conversion logic defined in the versioned APIs (e.g., `pkg/apis/core/v1beta1/conversions*.go`).
 1. If necessary then implement/adapt defaulting logic defined in the versioned APIs (e.g., `pkg/apis/core/v1beta1/defaults*.go`).
-1. Run the code generation: `make install-requirements generate`
+1. Run the code generation: `make generate`
 1. If necessary then implement/adapt validation logic defined in the internal API (e.g., `pkg/apis/core/validation/validation*.go`).
 1. If necessary then adapt the exemplary YAML manifests of the Gardener resources defined in `example/*.yaml`.
 1. In most cases it makes sense to add/adapt the documentation for administrators/operators and/or end-users in the `docs` folder to provide information on purpose and usage of the added/changed fields.

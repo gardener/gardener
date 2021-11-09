@@ -35,32 +35,11 @@ ifneq ($(strip $(shell git status --porcelain 2>/dev/null)),)
 endif
 
 #########################################
-# Binaries                              #
+# Tools                                 #
 #########################################
 
-TOOLS_DIR      := hack/tools
-TOOLS_BIN_DIR  := $(TOOLS_DIR)/bin
-YQ             := $(TOOLS_BIN_DIR)/yq
-CONTROLLER_GEN := $(TOOLS_BIN_DIR)/controller-gen
-OS             := $(shell uname -s | tr '[:upper:]' '[:lower:]')
-ARCH           := $(shell uname -m)
-
-export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
-
-ifeq ($(ARCH),x86_64)
-	ARCH := amd64
-endif
-
-$(YQ):
-	curl -L -o "$(YQ)" https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_$(OS)_$(ARCH)
-	chmod +x "$(YQ)"
-
-$(CONTROLLER_GEN): go.mod
-	go build -o $(TOOLS_BIN_DIR)/controller-gen sigs.k8s.io/controller-tools/cmd/controller-gen
-
-.PHONY: clean-bin
-clean-bin:
-	rm -rf $(TOOLS_BIN_DIR)/*
+TOOLS_DIR := hack/tools
+include hack/tools.mk
 
 #########################################
 # Rules for local development scenarios #
@@ -75,7 +54,7 @@ dev-setup-register-gardener:
 	@./hack/local-development/dev-setup-register-gardener
 
 .PHONY: local-garden-up
-local-garden-up:
+local-garden-up: $(HELM)
 	@./hack/local-development/local-garden/start.sh $(LOCAL_GARDEN_LABEL) $(ACTIVATE_SEEDAUTHORIZER)
 
 .PHONY: local-garden-down
@@ -83,7 +62,7 @@ local-garden-down:
 	@./hack/local-development/local-garden/stop.sh $(LOCAL_GARDEN_LABEL)
 
 .PHONY: remote-garden-up
-remote-garden-up:
+remote-garden-up: $(HELM)
 	@./hack/local-development/remote-garden/start.sh $(REMOTE_GARDEN_LABEL)
 
 .PHONY: remote-garden-down
@@ -115,7 +94,7 @@ start-resource-manager:
 	@./hack/local-development/start-resource-manager
 
 .PHONY: start-gardenlet
-start-gardenlet: $(YQ)
+start-gardenlet: $(HELM) $(YAML2JSON) $(YQ)
 	@./hack/local-development/start-gardenlet
 
 .PHONY: start-landscaper-gardenlet
@@ -187,11 +166,6 @@ docker-push:
 
 .PHONY: install-requirements
 install-requirements:
-	@go install -mod=vendor github.com/onsi/ginkgo/ginkgo
-	@go install -mod=vendor github.com/ahmetb/gen-crd-api-reference-docs
-	@go install -mod=vendor github.com/golang/mock/mockgen
-	@go install -mod=vendor sigs.k8s.io/controller-runtime/tools/setup-envtest
-	@./hack/install-promtool.sh
 	@./hack/install-requirements.sh
 
 .PHONY: revendor
@@ -208,38 +182,38 @@ check-generate:
 	@hack/check-generate.sh $(REPO_ROOT)
 
 .PHONY: check
-check:
+check: $(GOIMPORTS) $(GOLANGCI_LINT) $(HELM)
 	@hack/check.sh --golangci-lint-config=./.golangci.yaml ./cmd/... ./extensions/... ./pkg/... ./plugin/... ./test/...
 	@hack/check-charts.sh ./charts
 
 .PHONY: generate
-generate: $(CONTROLLER_GEN)
+generate: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC_GEN_GOGO) $(YAML2JSON)
 	@hack/update-protobuf.sh
 	@hack/update-codegen.sh --parallel
 	@hack/generate-parallel.sh charts cmd example extensions pkg plugin landscaper test
 	@hack/generate-monitoring-docs.sh
 
 .PHONY: generate-sequential
-generate-sequential: $(CONTROLLER_GEN)
+generate-sequential: $(CONTROLLER_GEN) $(GEN_CRD_API_REFERENCE_DOCS) $(GOIMPORTS) $(GO_TO_PROTOBUF) $(MOCKGEN) $(OPENAPI_GEN) $(PROTOC_GEN_GOGO) $(YAML2JSON)
 	@hack/update-protobuf.sh
 	@hack/update-codegen.sh
 	@hack/generate.sh ./charts/... ./cmd/... ./example/... ./extensions/... ./pkg/... ./plugin/... ./landscaper/... ./test/...
 	@hack/generate-monitoring-docs.sh
 
 .PHONY: format
-format:
+format: $(GOIMPORTS)
 	@./hack/format.sh ./cmd ./extensions ./pkg ./plugin ./test ./landscaper ./hack
 
 .PHONY: test
-test:
+test: $(PROMTOOL)
 	@./hack/test.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/... ./landscaper/...
 
 .PHONY: test-integration
-test-integration:
+test-integration: $(SETUP_ENVTEST)
 	@./hack/test-integration.sh ./extensions/test/integration/envtest/... ./test/integration/envtest/...
 
 .PHONY: test-cov
-test-cov:
+test-cov: $(PROMTOOL)
 	@./hack/test-cover.sh ./cmd/... ./extensions/pkg/... ./pkg/... ./plugin/... ./landscaper/...
 
 .PHONY: test-cov-clean
@@ -247,11 +221,11 @@ test-cov-clean:
 	@./hack/test-cover-clean.sh
 
 .PHONY: test-prometheus
-test-prometheus:
+test-prometheus: $(PROMTOOL)
 	@./hack/test-prometheus.sh
 
 .PHONY: verify
 verify: check format test test-integration test-prometheus
 
 .PHONY: verify-extended
-verify-extended: install-requirements check-generate check format test-cov test-cov-clean test-integration test-prometheus
+verify-extended: check-generate check format test-cov test-cov-clean test-integration test-prometheus

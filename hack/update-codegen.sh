@@ -341,8 +341,7 @@ export -f shoottolerationrestriction_groups
 openapi_definitions() {
   echo "Generating openapi definitions"
   rm -Rf ./${PROJECT_ROOT}/openapi/openapi_generated.go
-  go install ./${PROJECT_ROOT}/vendor/k8s.io/kube-openapi/cmd/openapi-gen
-  ${GOPATH}/bin/openapi-gen "$@" \
+  openapi-gen "$@" \
     --v 1 \
     --logtostderr \
     --input-dirs=github.com/gardener/gardener/pkg/apis/authentication/v1alpha1 \

@@ -36,13 +36,8 @@ APIROOTS=${APIROOTS:-$(git grep --files-with-matches -e '// +k8s:protobuf-gen=pa
 )}
 popd > /dev/null
 
-rm -f ${GOPATH}/bin/go-to-protobuf
-rm -f ${GOPATH}/bin/protoc-gen-gogo
-
-GOFLAGS="" go build -o ${GOPATH}/bin "$PROJECT_ROOT/vendor/k8s.io/code-generator/cmd/go-to-protobuf"
-GOFLAGS="" go build -o ${GOPATH}/bin "$PROJECT_ROOT/vendor/k8s.io/code-generator/cmd/go-to-protobuf/protoc-gen-gogo"
-
 if [[ -z "$(which protoc)" || "$(protoc --version)" != "libprotoc 3."* ]]; then
+  # TODO: install to local hack/tools/bin dir
   if [[ "$(uname -s)" == *"Darwin"* ]]; then
     brew install protobuf
   else
