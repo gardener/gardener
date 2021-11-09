@@ -3,11 +3,19 @@
 structure:
 - name: _index.md
   source: https://github.com/gardener/gardener/blob/{{$defaultBranch}}/README.md
+- name: api-reference
+  properties:
+    frontmatter:
+      title: API Reference
+      weight: 1
+  nodes:
+  - nodesSelector:
+      path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/api-reference
 - name: concepts
   properties:
     frontmatter:
       title: Concepts
-      weight: 1
+      weight: 2
   nodes:
   - nodesSelector:
       path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/concepts
@@ -15,7 +23,7 @@ structure:
   properties:
     frontmatter:
       title: Deployment
-      weight: 2
+      weight: 3
   nodes:
   - nodesSelector:
       path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/deployment
@@ -23,7 +31,7 @@ structure:
   properties:
     frontmatter:
       title: Development
-      weight: 3
+      weight: 4
   nodes:
   - nodesSelector:
       path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/development
@@ -31,7 +39,7 @@ structure:
   properties:
     frontmatter:
       title: Extensions
-      weight: 4
+      weight: 5
   nodes:
   - nodesSelector:
       path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/extensions
@@ -39,7 +47,7 @@ structure:
   properties:
     frontmatter:
       title: Monitoring
-      weight: 5
+      weight: 6
   nodes:
   - nodesSelector:
       path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/monitoring
@@ -47,7 +55,7 @@ structure:
   properties:
     frontmatter:
       title: Proposals
-      weight: 6
+      weight: 7
   nodes:
   - nodesSelector:
       path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/proposals
@@ -55,7 +63,7 @@ structure:
   properties:
     frontmatter:
       title: Testing
-      weight: 7
+      weight: 8
   nodes:
   - nodesSelector:
       path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/testing
@@ -63,7 +71,7 @@ structure:
   properties:
     frontmatter:
       title: Usage
-      weight: 8
+      weight: 9
   nodes:
   - nodesSelector:
       path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/usage

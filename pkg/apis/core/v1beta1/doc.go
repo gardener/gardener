@@ -19,7 +19,7 @@
 // +k8s:defaulter-gen=TypeMeta
 // +k8s:protobuf-gen=package
 
-//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/core-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../hack/api-reference/core.md
+//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/core-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../docs/api-reference/core.md
 
 // Package v1beta1 is a version of the API.
 // +groupName=core.gardener.cloud

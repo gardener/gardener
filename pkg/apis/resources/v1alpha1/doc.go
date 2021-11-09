@@ -17,7 +17,7 @@
 // +k8s:openapi-gen=true
 // +k8s:defaulter-gen=TypeMeta
 
-//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/resources-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../hack/api-reference/resources.md
+//go:generate gen-crd-api-reference-docs -api-dir . -config ../../../../hack/api-reference/resources-config.json -template-dir ../../../../hack/api-reference/template -out-file ../../../../docs/api-reference/resources.md
 
 // Package v1alpha1 contains the configuration of the Gardener Resource Manager.
 // +groupName=resources.gardener.cloud
