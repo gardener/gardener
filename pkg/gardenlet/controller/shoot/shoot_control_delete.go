@@ -661,10 +661,11 @@ func needsControlPlaneDeployment(ctx context.Context, o *operation.Operation, ku
 	if err != nil {
 		return false, err
 	}
+
 	// treat `ControlPlane` in deletion as if it is already gone. If it is marked for deletion, we also shouldn't wait
 	// for it to be reconciled, as it can potentially block the whole deletion flow (deletion depends on other control
 	// plane components like kcm and grm) which are scaled up later in the flow
-	if (!exists || markedForDeletion) && !kubeAPIServerDeploymentFound {
+	if !exists && !kubeAPIServerDeploymentFound || markedForDeletion {
 		return false, nil
 	}
 
