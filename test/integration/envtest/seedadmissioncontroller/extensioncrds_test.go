@@ -17,7 +17,6 @@ package seedadmissioncontroller_test
 import (
 	"context"
 	"fmt"
-	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -115,7 +114,7 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 				}
 			}
 			return true
-		}, 5*time.Second, 200*time.Millisecond).Should(BeTrue())
+		}).Should(BeTrue())
 	})
 
 	objectID := func(obj client.Object) string {
@@ -126,34 +125,34 @@ var _ = Describe("Extension CRDs Webhook Handler", func() {
 		Eventually(func() string {
 			err := c.Delete(ctx, obj)
 			return string(apierrors.ReasonForError(err))
-		}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("annotation to delete"), objectID(obj))
+		}).Should(ContainSubstring("annotation to delete"), objectID(obj))
 	}
 
 	testDeleteCollectionUnconfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() string {
 			err := c.DeleteAllOf(ctx, obj, client.InNamespace(obj.GetNamespace()))
 			return string(apierrors.ReasonForError(err))
-		}, 5*time.Second, 200*time.Millisecond).Should(ContainSubstring("annotation to delete"), objectID(obj))
+		}).Should(ContainSubstring("annotation to delete"), objectID(obj))
 	}
 
 	testDeletionConfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() error {
 			return c.Delete(ctx, obj)
-		}, 5*time.Second, 200*time.Millisecond).ShouldNot(HaveOccurred(), objectID(obj))
+		}).ShouldNot(HaveOccurred(), objectID(obj))
 		Eventually(func() bool {
 			err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 			return apierrors.IsNotFound(err) || meta.IsNoMatchError(err)
-		}, 5*time.Second, 200*time.Millisecond).Should(BeTrue(), objectID(obj))
+		}).Should(BeTrue(), objectID(obj))
 	}
 
 	testDeleteCollectionConfirmed := func(ctx context.Context, obj client.Object) {
 		Eventually(func() error {
 			return c.DeleteAllOf(ctx, obj, client.InNamespace(obj.GetNamespace()))
-		}, 5*time.Second, 200*time.Millisecond).ShouldNot(HaveOccurred(), objectID(obj))
+		}).ShouldNot(HaveOccurred(), objectID(obj))
 		Eventually(func() bool {
 			err := c.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 			return apierrors.IsNotFound(err) || meta.IsNoMatchError(err)
-		}, 5*time.Second, 200*time.Millisecond).Should(BeTrue(), objectID(obj))
+		}).Should(BeTrue(), objectID(obj))
 	}
 
 	Context("extension resources", func() {
