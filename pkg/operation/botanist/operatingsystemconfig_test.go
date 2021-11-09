@@ -118,7 +118,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			It("should deploy successfully (DisableDNS=true)", func() {
 				botanist.Shoot.DisableDNS = true
 
-				operatingSystemConfig.EXPECT().SetAPIServerAdress(fmt.Sprintf("https://%s", apiServerAddress))
+				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://%s", apiServerAddress))
 				operatingSystemConfig.EXPECT().SetCABundle(pointer.String("\n" + string(ca)))
 				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys([]string{string(sshPublicKey), string(sshPublicKeyOld)})
@@ -130,7 +130,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 		Context("deploy", func() {
 			BeforeEach(func() {
-				operatingSystemConfig.EXPECT().SetAPIServerAdress(fmt.Sprintf("https://api.%s", shootDomain))
+				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))
 				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys([]string{string(sshPublicKey), string(sshPublicKeyOld)})
 			})
@@ -196,7 +196,7 @@ var _ = Describe("operatingsystemconfig", func() {
 
 		Context("restore", func() {
 			BeforeEach(func() {
-				operatingSystemConfig.EXPECT().SetAPIServerAdress(fmt.Sprintf("https://api.%s", shootDomain))
+				operatingSystemConfig.EXPECT().SetAPIServerURL(fmt.Sprintf("https://api.%s", shootDomain))
 				operatingSystemConfig.EXPECT().SetKubeletCACertificate(string(caKubelet))
 				operatingSystemConfig.EXPECT().SetSSHPublicKeys([]string{string(sshPublicKey), string(sshPublicKeyOld)})
 

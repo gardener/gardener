@@ -81,7 +81,7 @@ func (b *Botanist) DefaultOperatingSystemConfig() (operatingsystemconfig.Interfa
 // DeployOperatingSystemConfig deploys the OperatingSystemConfig custom resource and triggers the restore operation in
 // case the Shoot is in the restore phase of the control plane migration.
 func (b *Botanist) DeployOperatingSystemConfig(ctx context.Context) error {
-	b.Shoot.Components.Extensions.OperatingSystemConfig.SetAPIServerAdress(fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)))
+	b.Shoot.Components.Extensions.OperatingSystemConfig.SetAPIServerURL(fmt.Sprintf("https://%s", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true)))
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetCABundle(b.getOperatingSystemConfigCABundle())
 	b.Shoot.Components.Extensions.OperatingSystemConfig.SetKubeletCACertificate(string(b.LoadSecret(v1beta1constants.SecretNameCAKubelet).Data[secrets.DataKeyCertificateCA]))
 
