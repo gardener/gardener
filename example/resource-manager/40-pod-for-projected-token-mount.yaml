@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: example
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: example
+spec:
+  serviceAccountName: example
+  containers:
+  - name: nginx
+    image: nginx:latest

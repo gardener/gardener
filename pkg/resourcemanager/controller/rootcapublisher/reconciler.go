@@ -31,6 +31,8 @@ import (
 const (
 	// RootCACertConfigMapName is a constant for the name of the ConfigMap which contains the root CA certificate.
 	RootCACertConfigMapName = "kube-root-ca.crt"
+	// RootCADataKey is a constant for the data key in a ConfigMap containing the root CA certificate.
+	RootCADataKey = "ca.crt"
 
 	// DescriptionAnnotation is constant for annotation key of the config map.
 	DescriptionAnnotation = "kubernetes.io/description"
@@ -78,7 +80,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.targetClient, configmap, func() error {
 		if _, found := configmap.Annotations[DescriptionAnnotation]; !found {
-			configmap.Data = map[string]string{"ca.crt": r.rootCA}
+			configmap.Data = map[string]string{RootCADataKey: r.rootCA}
 			configmap.OwnerReferences = []metav1.OwnerReference{*ownerReference}
 		}
 

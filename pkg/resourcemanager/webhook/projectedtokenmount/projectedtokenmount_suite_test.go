@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tokeninvalidator_test
+package projectedtokenmount_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestTokenInvalidator(t *testing.T) {
+func TestProjectedTokenMount(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Webhook TokenInvalidator Suite")
+	RunSpecs(t, "Webhook ProjectedTokenMount Suite")
 }
