@@ -1,14 +1,17 @@
-{{- if .Values.global.vpaEnabled }}
+{{- if .Values.vpaEnabled }}
+{{- range $i, $pool := .Values.workerPools }}
+---
 apiVersion: "autoscaling.k8s.io/v1beta2"
 kind: VerticalPodAutoscaler
 metadata:
-  name: kube-proxy
-  namespace: {{ .Release.Namespace }}
+  name: {{ include "kube-proxy.name" $pool }}
+  namespace: {{ $.Release.Namespace }}
 spec:
   targetRef:
     apiVersion: {{ include "daemonsetversion" . }}
     kind: DaemonSet
-    name: kube-proxy
+    name: {{ include "kube-proxy.name" $pool }}
   updatePolicy:
     updateMode: "Auto"
+{{- end }}
 {{- end }}

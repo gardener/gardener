@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/original/components/containerd"
@@ -38,6 +39,7 @@ func CLIFlags(kubernetesVersion *semver.Version, criName extensionsv1alpha1.CRIN
 		"--bootstrap-kubeconfig="+PathKubeconfigBootstrap,
 		"--config="+PathKubeletConfig,
 		"--kubeconfig="+PathKubeconfigReal,
+		fmt.Sprintf("--node-labels=%s=%s", v1beta1constants.LabelWorkerKubernetesVersion, kubernetesVersion.String()),
 	)
 
 	if version.ConstraintK8sLess119.Check(kubernetesVersion) {

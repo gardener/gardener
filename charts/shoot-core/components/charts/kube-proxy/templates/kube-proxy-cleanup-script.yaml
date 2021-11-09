@@ -1,15 +1,19 @@
+{{- range $i, $pool := .Values.workerPools }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "kube-proxy.cleanup-script.name" . }}
+  name: {{ include "kube-proxy.cleanup-script.name" $pool }}
   namespace: kube-system
   labels:
     app: kubernetes
     gardener.cloud/role: system-component
     origin: gardener
     role: proxy
+    pool: {{ $pool.name }}
+    version: {{ $pool.kubernetesVersion }}
     resources.gardener.cloud/garbage-collectable-reference: "true"
 immutable: true
 data:
-{{ include "kube-proxy.cleanup-script.data" . | indent 2 }}
+{{ include "kube-proxy.cleanup-script.data" $pool | indent 2 }}
+{{- end }}

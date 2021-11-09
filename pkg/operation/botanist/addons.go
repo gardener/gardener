@@ -33,10 +33,12 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	versionutils "github.com/gardener/gardener/pkg/utils/version"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -288,12 +290,13 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"allowPrivilegedContainers": *b.Shoot.GetInfo().Spec.Kubernetes.AllowPrivilegedContainers,
 		}
 		kubeProxyConfig = map[string]interface{}{
-			"kubeconfig":        kubeProxySecret.Data["kubeconfig"],
-			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
+			"kubeconfig": kubeProxySecret.Data["kubeconfig"],
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-kube-proxy": b.LoadCheckSum("kube-proxy"),
 			},
 			"enableIPVS": b.Shoot.IPVSEnabled(),
+			"podNetwork": b.Shoot.Networks.Pods.String(),
+			"vpaEnabled": b.Shoot.WantsVerticalPodAutoscaler,
 		}
 		verticalPodAutoscaler = map[string]interface{}{
 			"application": map[string]interface{}{
@@ -359,6 +362,67 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		}
 	}
 
+	var (
+		workerPoolKubeProxyImages = make(map[string]workerPoolKubeProxyImage)
+		kubernetesVersion         = b.Shoot.GetInfo().Spec.Kubernetes.Version
+	)
+
+	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
+		image, err := b.ImageVector.FindImage(charts.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion), imagevector.TargetVersion(kubernetesVersion))
+		if err != nil {
+			return nil, err
+		}
+
+		key := workerPoolKubeProxyImagesKey(worker.Name, kubernetesVersion)
+		workerPoolKubeProxyImages[key] = workerPoolKubeProxyImage{worker.Name, kubernetesVersion, image.String()}
+	}
+
+	nodeList := &corev1.NodeList{}
+	if err := b.K8sShootClient.Client().List(ctx, nodeList); err != nil {
+		return nil, err
+	}
+
+	for _, node := range nodeList.Items {
+		poolName, ok1 := node.Labels[v1beta1constants.LabelWorkerPool]
+		kubernetesVersion, ok2 := node.Labels[v1beta1constants.LabelWorkerKubernetesVersion]
+		if !ok1 || !ok2 {
+			continue
+		}
+
+		image, err := b.ImageVector.FindImage(charts.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion), imagevector.TargetVersion(kubernetesVersion))
+		if err != nil {
+			return nil, err
+		}
+
+		key := workerPoolKubeProxyImagesKey(poolName, kubernetesVersion)
+		workerPoolKubeProxyImages[key] = workerPoolKubeProxyImage{poolName, kubernetesVersion, image.String()}
+	}
+
+	var workerPools []map[string]string
+
+	// TODO(rfranzke): Delete this in a future version.
+	{
+		kubeProxyImage, err := b.ImageVector.FindImage(charts.ImageNameKubeProxy, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
+		if err != nil {
+			return nil, err
+		}
+
+		workerPools = append(workerPools, map[string]string{
+			"name":              "",
+			"kubernetesVersion": b.Shoot.GetInfo().Spec.Kubernetes.Version,
+			"kubeProxyImage":    kubeProxyImage.String(),
+		})
+	}
+
+	for _, obj := range workerPoolKubeProxyImages {
+		workerPools = append(workerPools, map[string]string{
+			"name":              obj.poolName,
+			"kubernetesVersion": obj.kubernetesVersion,
+			"kubeProxyImage":    obj.image,
+		})
+	}
+	kubeProxyConfig["workerPools"] = workerPools
+
 	if domain := b.Shoot.ExternalClusterDomain; domain != nil {
 		shootInfo["domain"] = *domain
 	}
@@ -386,7 +450,7 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		return nil, err
 	}
 
-	kubeProxy, err := b.InjectShootShootImages(kubeProxyConfig, charts.ImageNameKubeProxy, charts.ImageNameAlpine)
+	kubeProxy, err := b.InjectShootShootImages(kubeProxyConfig, charts.ImageNameAlpine)
 	if err != nil {
 		return nil, err
 	}
@@ -564,4 +628,14 @@ func (b *Botanist) generateOptionalAddonsChart(_ context.Context) (*chartrendere
 // available.
 func (b *Botanist) outOfClusterAPIServerFQDN() string {
 	return fmt.Sprintf("%s.", b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true))
+}
+
+type workerPoolKubeProxyImage struct {
+	poolName          string
+	kubernetesVersion string
+	image             string
+}
+
+func workerPoolKubeProxyImagesKey(poolName, kubernetesVersion string) string {
+	return poolName + "@" + kubernetesVersion
 }

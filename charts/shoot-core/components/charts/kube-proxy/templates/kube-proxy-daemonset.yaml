@@ -1,20 +1,21 @@
 {{- define "kube-proxy.daemonset.annotations" -}}
 reference.resources.gardener.cloud/configmap-{{ include "kube-proxy.componentconfig.name" . | sha256sum | trunc 8 }}: {{ include "kube-proxy.componentconfig.name" . }}
-reference.resources.gardener.cloud/configmap-{{ include "kube-proxy.cleanup-script.name" . | sha256sum | trunc 8 }}: {{ include "kube-proxy.cleanup-script.name" . }}
 reference.resources.gardener.cloud/configmap-{{ include "kube-proxy.conntrack-fix-script.name" . | sha256sum | trunc 8 }}: {{ include "kube-proxy.conntrack-fix-script.name" . }}
 reference.resources.gardener.cloud/secret-{{ include "kube-proxy.secret-kubeconfig.name" . | sha256sum | trunc 8 }}: {{ include "kube-proxy.secret-kubeconfig.name" . }}
 {{- end -}}
+{{- range $i, $pool := .Values.workerPools }}
 ---
 apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
 metadata:
-  name: kube-proxy
+  name: {{ include "kube-proxy.name" $pool }}
   namespace: kube-system
   labels:
     gardener.cloud/role: system-component
     origin: gardener
   annotations:
-{{ include "kube-proxy.daemonset.annotations" . | indent 4 }}
+{{ include "kube-proxy.daemonset.annotations" $ | indent 4 }}
+    reference.resources.gardener.cloud/configmap-{{ include "kube-proxy.cleanup-script.name" $pool | sha256sum | trunc 8 }}: {{ include "kube-proxy.cleanup-script.name" $pool }}
 spec:
   updateStrategy:
     type: RollingUpdate
@@ -22,27 +23,48 @@ spec:
     matchLabels:
       app: kubernetes
       role: proxy
+{{- if ne $pool.name "" }}
+      pool: {{ $pool.name }}
+      version: {{ $pool.kubernetesVersion }}
+{{- end }}
   template:
     metadata:
       annotations:
-        scheduler.alpha.kubernetes.io/critical-pod: ''
-{{ include "kube-proxy.daemonset.annotations" . | indent 8 }}
-{{- if .Values.podAnnotations }}
-{{ toYaml .Values.podAnnotations | indent 8 }}
+{{ include "kube-proxy.daemonset.annotations" $ | indent 8 }}
+        reference.resources.gardener.cloud/configmap-{{ include "kube-proxy.cleanup-script.name" $pool | sha256sum | trunc 8 }}: {{ include "kube-proxy.cleanup-script.name" $pool }}
+{{- if $.Values.podAnnotations }}
+{{ toYaml $.Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
         gardener.cloud/role: system-component
         origin: gardener
         app: kubernetes
         role: proxy
+{{- if ne $pool.name "" }}
+        pool: {{ $pool.name }}
+        version: {{ $pool.kubernetesVersion }}
+{{- end }}
     spec:
-{{- if (semverCompare ">= 1.16" .Values.kubernetesVersion) }}
+{{- if eq $pool.name "" }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: worker.gardener.cloud/kubernetes-version
+                operator: DoesNotExist
+{{- else }}
+      nodeSelector:
+        worker.gardener.cloud/pool: {{ $pool.name }}
+        worker.gardener.cloud/kubernetes-version: {{ $pool.kubernetesVersion }}
+{{- end }}
+{{- if (semverCompare ">= 1.16" $pool.kubernetesVersion) }}
       initContainers:
       - name: cleanup
-        image: {{ index .Values.images "kube-proxy" }}
+        image: {{ $pool.kubeProxyImage }}
         env:
         - name: KUBE_PROXY_MODE
-          value: {{ include "kube-proxy.mode" . }}
+          value: {{ include "kube-proxy.mode" $ }}
         imagePullPolicy: IfNotPresent
         command:
         - sh
@@ -78,10 +100,10 @@ spec:
       automountServiceAccountToken: false
       containers:
       - name: kube-proxy
-        image: {{ index .Values.images "kube-proxy" }}
+        image: {{ $pool.kubeProxyImage }}
         imagePullPolicy: IfNotPresent
         command:
-        {{- if semverCompare "< 1.17" .Values.kubernetesVersion }}
+        {{- if semverCompare "< 1.17" $pool.kubernetesVersion }}
         - /hyperkube
         - kube-proxy
         {{- else }}
@@ -95,15 +117,15 @@ spec:
           requests:
             cpu: 20m
             memory: 64Mi
-          {{- if .Values.global.vpaEnabled }}
+          {{- if $.Values.vpaEnabled }}
           limits:
             cpu: 80m
             memory: 256Mi
           {{- end }}
         ports:
-        - containerPort: {{ .Values.ports.metrics }}
+        - containerPort: {{ $.Values.ports.metrics }}
           protocol: TCP
-          hostPort: {{ .Values.ports.metrics }}
+          hostPort: {{ $.Values.ports.metrics }}
           name: metrics
         volumeMounts:
         - name: kubeconfig
@@ -119,7 +141,7 @@ spec:
           mountPath: /lib/modules
       # sidecar container with fix for conntrack
       - name: conntrack-fix
-        image: {{ index .Values.images "alpine" }}
+        image: {{ index $.Values.images "alpine" }}
         imagePullPolicy: IfNotPresent
         command:
         - /bin/sh
@@ -135,10 +157,10 @@ spec:
       volumes:
       - name: kubeconfig
         secret:
-          secretName: {{ include "kube-proxy.secret-kubeconfig.name" . }}
+          secretName: {{ include "kube-proxy.secret-kubeconfig.name" $ }}
       - name: kube-proxy-config
         configMap:
-          name: {{ include "kube-proxy.componentconfig.name" . }}
+          name: {{ include "kube-proxy.componentconfig.name" $ }}
       - name: ssl-certs-hosts
         hostPath:
           path: /usr/share/ca-certificates
@@ -150,7 +172,7 @@ spec:
           path: /lib/modules
       - name: kube-proxy-cleanup-script
         configMap:
-          name: {{ include "kube-proxy.cleanup-script.name" . }}
+          name: {{ include "kube-proxy.cleanup-script.name" $pool }}
           defaultMode: 0777
       - name: kube-proxy-dir
         hostPath:
@@ -162,5 +184,5 @@ spec:
           type: FileOrCreate
       - name: conntrack-fix-script
         configMap:
-          name: {{ include "kube-proxy.conntrack-fix-script.name" . }}
-
+          name: {{ include "kube-proxy.conntrack-fix-script.name" $ }}
+{{- end }}
