@@ -34,10 +34,15 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	secretutils "github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientcmdlatest "k8s.io/client-go/tools/clientcmd/api/latest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -49,6 +54,15 @@ import (
 func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 	return b.SaveGardenerResourceDataInShootState(ctx, func(gardenerResourceData *[]gardencorev1alpha1.GardenerResourceData) error {
 		gardenerResourceDataList := gardencorev1alpha1helper.GardenerResourceDataList(*gardenerResourceData)
+
+		// Remove legacy secrets from ShootState.
+		// TODO(rfranzke): Remove in a future version.
+		for _, name := range []string{
+			"kube-scheduler",
+		} {
+			gardenerResourceDataList.Delete(name)
+		}
+
 		switch b.Shoot.GetInfo().Annotations[v1beta1constants.GardenerOperation] {
 		case v1beta1constants.ShootOperationRotateKubeconfigCredentials:
 			if err := b.rotateKubeconfigSecrets(ctx, &gardenerResourceDataList); err != nil {
@@ -185,7 +199,33 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 		b.ControlPlaneWildcardCert = certSecret
 	}
 
-	return nil
+	return b.reconcileGenericKubeconfigSecret(ctx)
+}
+
+func (b *Botanist) reconcileGenericKubeconfigSecret(ctx context.Context) error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      v1beta1constants.SecretNameGenericTokenKubeconfig,
+			Namespace: b.Shoot.SeedNamespace,
+		},
+	}
+
+	kubeconfig, err := runtime.Encode(clientcmdlatest.Codec, kutil.NewKubeconfig(
+		b.Shoot.SeedNamespace,
+		b.Shoot.ComputeInClusterAPIServerAddress(true),
+		b.LoadSecret(v1beta1constants.SecretNameCACluster).Data[secretutils.DataKeyCertificateCA],
+		clientcmdv1.AuthInfo{TokenFile: gutil.PathShootToken},
+	))
+	if err != nil {
+		return err
+	}
+
+	_, err = controllerutils.CreateOrGetAndMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
+		secret.Type = corev1.SecretTypeOpaque
+		secret.Data = map[string][]byte{secretutils.DataKeyKubeconfig: kubeconfig}
+		return nil
+	})
+	return err
 }
 
 // DeployCloudProviderSecret creates or updates the cloud provider secret in the Shoot namespace
@@ -302,7 +342,7 @@ func (b *Botanist) deleteBasicAuthDependantSecrets(ctx context.Context, gardener
 	return b.deleteSecrets(ctx, gardenerResourceDataList, kubeapiserver.SecretNameBasicAuth, common.KubecfgSecretName)
 }
 
-func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secrets.StaticToken) error {
+func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secretutils.StaticToken) error {
 	kubeAPIServerHealthCheckToken, err := staticToken.GetTokenForUsername(common.KubeAPIServerHealthCheck)
 	if err != nil {
 		return err
@@ -312,7 +352,7 @@ func (b *Botanist) storeAPIServerHealthCheckToken(staticToken *secrets.StaticTok
 	return nil
 }
 
-func (b *Botanist) storePromtailRBACAuthToken(staticToken *secrets.StaticToken) error {
+func (b *Botanist) storePromtailRBACAuthToken(staticToken *secretutils.StaticToken) error {
 	promtailRBACAuthToken, err := staticToken.GetTokenForUsername(logging.PromtailRBACName)
 	if err != nil {
 		return err
@@ -322,7 +362,7 @@ func (b *Botanist) storePromtailRBACAuthToken(staticToken *secrets.StaticToken) 
 	return nil
 }
 
-func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *secrets.StaticToken, caCert []byte, secretNameToUsername map[string]string) error {
+func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *secretutils.StaticToken, caCert []byte, secretNameToUsername map[string]string) error {
 	for secretName, username := range secretNameToUsername {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -339,8 +379,8 @@ func (b *Botanist) storeStaticTokenAsSecrets(ctx context.Context, staticToken *s
 
 		if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, b.K8sSeedClient.Client(), secret, func() error {
 			secret.Data = map[string][]byte{
-				secrets.DataKeyToken:         []byte(token.Token),
-				secrets.DataKeyCertificateCA: caCert,
+				secretutils.DataKeyToken:         []byte(token.Token),
+				secretutils.DataKeyCertificateCA: caCert,
 			}
 			return nil
 		}); err != nil {
@@ -362,12 +402,12 @@ func getExpiredCerts(gardenerResourceDataList gardencorev1alpha1helper.GardenerR
 			continue
 		}
 
-		certObj := &secrets.CertificateJSONData{}
+		certObj := &secretutils.CertificateJSONData{}
 		if err := json.Unmarshal(data.Data.Raw, certObj); err != nil {
 			return nil, err
 		}
 
-		expired, err := secrets.CertificateIsExpired(certObj.Certificate, renewalWindow)
+		expired, err := secretutils.CertificateIsExpired(certObj.Certificate, renewalWindow)
 		if err != nil {
 			return nil, err
 		}

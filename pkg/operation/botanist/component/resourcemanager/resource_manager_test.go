@@ -25,6 +25,7 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	secretsutils "github.com/gardener/gardener/pkg/utils/secrets"
+	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/golang/mock/gomock"
@@ -39,8 +40,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
+	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("ResourceManager", func() {
@@ -58,26 +61,27 @@ var _ = Describe("ResourceManager", func() {
 		replicas        int32 = 1
 
 		// optional configuration
-		clusterIdentity            = "foo"
-		secretNameKubeconfig       = "kubeconfig-secret"
-		secretNameServer           = "server-secret"
-		secretMountPathKubeconfig  = "/etc/gardener-resource-manager"
-		secretMountPathServer      = "/etc/gardener-resource-manager-tls"
-		secretChecksumKubeconfig   = "1234"
-		secretChecksumServer       = "5678"
-		secrets                    Secrets
-		alwaysUpdate                     = true
-		concurrentSyncs            int32 = 20
-		clusterRoleName                  = "gardener-resource-manager-seed"
-		healthSyncPeriod                 = time.Minute
-		leaseDuration                    = time.Second * 40
-		maxConcurrentHealthWorkers int32 = 20
-		renewDeadline                    = time.Second * 10
-		resourceClass                    = "fake-ResourceClass"
-		retryPeriod                      = time.Second * 20
-		syncPeriod                       = time.Second * 80
-		targetDisableCache               = true
-		watchedNamespace                 = "fake-ns"
+		clusterIdentity                    = "foo"
+		secretNameKubeconfig               = "kubeconfig-secret"
+		secretNameServer                   = "server-secret"
+		secretMountPathKubeconfig          = "/etc/gardener-resource-manager"
+		secretMountPathServer              = "/etc/gardener-resource-manager-tls"
+		secretChecksumKubeconfig           = "1234"
+		secretChecksumServer               = "5678"
+		secrets                            Secrets
+		alwaysUpdate                             = true
+		concurrentSyncs                    int32 = 20
+		clusterRoleName                          = "gardener-resource-manager-seed"
+		healthSyncPeriod                         = time.Minute
+		leaseDuration                            = time.Second * 40
+		maxConcurrentHealthWorkers         int32 = 20
+		maxConcurrentTokenRequestorWorkers int32 = 21
+		renewDeadline                            = time.Second * 10
+		resourceClass                            = "fake-ResourceClass"
+		retryPeriod                              = time.Second * 20
+		syncPeriod                               = time.Second * 80
+		targetDisableCache                       = true
+		watchedNamespace                         = "fake-ns"
 
 		allowAll                   []rbacv1.PolicyRule
 		allowManagedResources      []rbacv1.PolicyRule
@@ -218,18 +222,19 @@ var _ = Describe("ResourceManager", func() {
 			},
 		}
 		cfg = Values{
-			AlwaysUpdate:               &alwaysUpdate,
-			ClusterIdentity:            &clusterIdentity,
-			ConcurrentSyncs:            &concurrentSyncs,
-			HealthSyncPeriod:           &healthSyncPeriod,
-			LeaseDuration:              &leaseDuration,
-			MaxConcurrentHealthWorkers: &maxConcurrentHealthWorkers,
-			RenewDeadline:              &renewDeadline,
-			ResourceClass:              &resourceClass,
-			RetryPeriod:                &retryPeriod,
-			SyncPeriod:                 &syncPeriod,
-			TargetDisableCache:         &targetDisableCache,
-			WatchedNamespace:           &watchedNamespace,
+			AlwaysUpdate:                       &alwaysUpdate,
+			ClusterIdentity:                    &clusterIdentity,
+			ConcurrentSyncs:                    &concurrentSyncs,
+			HealthSyncPeriod:                   &healthSyncPeriod,
+			LeaseDuration:                      &leaseDuration,
+			MaxConcurrentHealthWorkers:         &maxConcurrentHealthWorkers,
+			MaxConcurrentTokenRequestorWorkers: &maxConcurrentTokenRequestorWorkers,
+			RenewDeadline:                      &renewDeadline,
+			ResourceClass:                      &resourceClass,
+			RetryPeriod:                        &retryPeriod,
+			SyncPeriod:                         &syncPeriod,
+			TargetDisableCache:                 &targetDisableCache,
+			WatchedNamespace:                   &watchedNamespace,
 		}
 		resourceManager = New(c, deployNamespace, image, replicas, cfg)
 		resourceManager.SetSecrets(secrets)
@@ -240,6 +245,7 @@ var _ = Describe("ResourceManager", func() {
 			"--garbage-collector-sync-period=12h",
 			fmt.Sprintf("--health-bind-address=:%v", healthPort),
 			fmt.Sprintf("--health-max-concurrent-workers=%v", maxConcurrentHealthWorkers),
+			fmt.Sprintf("--token-requestor-max-concurrent-workers=%v", maxConcurrentTokenRequestorWorkers),
 			fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
 			"--leader-election=true",
 			fmt.Sprintf("--leader-election-lease-duration=%v", leaseDuration),
@@ -261,6 +267,7 @@ var _ = Describe("ResourceManager", func() {
 			"--garbage-collector-sync-period=12h",
 			fmt.Sprintf("--health-bind-address=:%v", healthPort),
 			fmt.Sprintf("--health-max-concurrent-workers=%v", maxConcurrentHealthWorkers),
+			fmt.Sprintf("--token-requestor-max-concurrent-workers=%v", maxConcurrentTokenRequestorWorkers),
 			fmt.Sprintf("--health-sync-period=%v", healthSyncPeriod),
 			"--leader-election=true",
 			fmt.Sprintf("--leader-election-lease-duration=%v", leaseDuration),
@@ -815,8 +822,49 @@ var _ = Describe("ResourceManager", func() {
 	})
 
 	Describe("#Wait", func() {
-		It("should return nil as it's not implemented as of now", func() {
+		var fakeClient client.Client
+
+		BeforeEach(func() {
+			fakeClient = fakeclient.NewClientBuilder().WithScheme(kubernetesscheme.Scheme).Build()
+			resourceManager = New(fakeClient, deployNamespace, image, replicas, cfg)
+		})
+
+		It("should successfully wait for the deployment to be ready", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 100*time.Millisecond)()
+
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			timer := time.AfterFunc(10*time.Millisecond, func() {
+				deployment.Status.Conditions = []appsv1.DeploymentCondition{
+					{
+						Type:   appsv1.DeploymentAvailable,
+						Status: corev1.ConditionTrue,
+					},
+				}
+				Expect(fakeClient.Status().Update(ctx, deployment)).To(Succeed())
+			})
+			defer timer.Stop()
+
 			Expect(resourceManager.Wait(ctx)).To(Succeed())
+		})
+
+		It("should fail while waiting for the deployment to be ready", func() {
+			defer test.WithVars(&IntervalWaitForDeployment, time.Millisecond)()
+			defer test.WithVars(&TimeoutWaitForDeployment, 10*time.Millisecond)()
+
+			deployment.Status.Conditions = []appsv1.DeploymentCondition{
+				{
+					Type:   appsv1.DeploymentAvailable,
+					Status: corev1.ConditionFalse,
+				},
+			}
+
+			Expect(fakeClient.Create(ctx, deployment)).To(Succeed())
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(deployment), deployment)).To(Succeed())
+
+			Expect(resourceManager.Wait(ctx)).To(MatchError(ContainSubstring(`condition "Available" has invalid status False (expected True)`)))
 		})
 	})
 

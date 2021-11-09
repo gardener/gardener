@@ -84,16 +84,13 @@ var _ = Describe("KubeScheduler", func() {
 
 			ctx              = context.TODO()
 			fakeErr          = fmt.Errorf("fake err")
-			secretName       = "kube-scheduler"
 			secretNameServer = "kube-scheduler-server"
-			checksum         = "1234"
 			checksumServer   = "5678"
 		)
 
 		BeforeEach(func() {
 			kubeScheduler = mockkubescheduler.NewMockInterface(ctrl)
 
-			botanist.StoreCheckSum(secretName, checksum)
 			botanist.StoreCheckSum(secretNameServer, checksumServer)
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
@@ -104,8 +101,7 @@ var _ = Describe("KubeScheduler", func() {
 			}
 
 			kubeScheduler.EXPECT().SetSecrets(kubescheduler.Secrets{
-				Kubeconfig: component.Secret{Name: secretName, Checksum: checksum},
-				Server:     component.Secret{Name: secretNameServer, Checksum: checksumServer},
+				Server: component.Secret{Name: secretNameServer, Checksum: checksumServer},
 			})
 		})
 

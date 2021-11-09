@@ -36,11 +36,9 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/controllerutils"
 )
 
 const (
-	finalizerName             = "resources.gardener.cloud/token-requestor"
 	defaultExpirationDuration = 12 * time.Hour
 	maxExpirationDuration     = 24 * time.Hour
 )
@@ -94,22 +92,8 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, fmt.Errorf("could not fetch Secret: %w", err)
 	}
 
-	if secret.DeletionTimestamp != nil || !isRelevantSecret(secret) {
-		if shouldDeleteServiceAccount(secret) {
-			if err := r.deleteServiceAccount(ctx, secret); err != nil {
-				return reconcile.Result{}, err
-			}
-		}
-
-		if err := controllerutils.PatchRemoveFinalizers(ctx, r.client, secret, finalizerName); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error removing finalizer from Secret: %+v", err)
-		}
-
+	if !isRelevantSecret(secret) {
 		return reconcile.Result{}, nil
-	}
-
-	if err := controllerutils.PatchAddFinalizers(ctx, r.client, secret, finalizerName); err != nil {
-		return reconcile.Result{}, err
 	}
 
 	mustRequeue, requeueAfter, err := r.requeue(secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp])
@@ -144,10 +128,6 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 	return reconcile.Result{Requeue: true, RequeueAfter: renewDuration}, nil
 }
 
-func shouldDeleteServiceAccount(secret *corev1.Secret) bool {
-	return secret.Annotations[resourcesv1alpha1.ServiceAccountSkipDeletion] != "true"
-}
-
 func (r *reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1.Secret) (*corev1.ServiceAccount, error) {
 	serviceAccount := getServiceAccountFromAnnotations(secret.Annotations)
 
@@ -159,12 +139,6 @@ func (r *reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1
 	}
 
 	return serviceAccount, nil
-}
-
-func (r *reconciler) deleteServiceAccount(ctx context.Context, secret *corev1.Secret) error {
-	serviceAccount := getServiceAccountFromAnnotations(secret.Annotations)
-
-	return client.IgnoreNotFound(r.targetClient.Delete(ctx, serviceAccount))
 }
 
 func (r *reconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret, token string, renewDuration time.Duration) error {

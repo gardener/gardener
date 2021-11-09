@@ -22,20 +22,22 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
-	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -48,8 +50,6 @@ import (
 const (
 	// ServiceName is the name of the service of the kube-scheduler.
 	ServiceName = "kube-scheduler"
-	// SecretName is a constant for the secret name for the kube-scheduler's kubeconfig secret.
-	SecretName = "kube-scheduler"
 	// SecretNameServer is the name of the kube-scheduler server certificate secret.
 	SecretNameServer = "kube-scheduler-server"
 
@@ -61,15 +61,14 @@ const (
 	portNameMetrics        = "metrics"
 	dataKeyComponentConfig = "config.yaml"
 
-	volumeNameConfig          = "kube-scheduler-config"
-	volumeMountPathKubeconfig = "/var/lib/kube-scheduler"
-	volumeMountPathServer     = "/var/lib/kube-scheduler-server"
-	volumeMountPathConfig     = "/var/lib/kube-scheduler-config"
+	volumeNameConfig      = "kube-scheduler-config"
+	volumeMountPathServer = "/var/lib/kube-scheduler-server"
+	volumeMountPathConfig = "/var/lib/kube-scheduler-config"
 
 	componentConfigTmpl = `apiVersion: {{ .apiVersion }}
 kind: KubeSchedulerConfiguration
 clientConnection:
-  kubeconfig: ` + volumeMountPathKubeconfig + "/" + secrets.DataKeyKubeconfig + `
+  kubeconfig: ` + gutil.PathGenericKubeconfig + `
 leaderElection:
   leaderElect: true`
 )
@@ -113,9 +112,6 @@ type kubeScheduler struct {
 }
 
 func (k *kubeScheduler) Deploy(ctx context.Context) error {
-	if k.secrets.Kubeconfig.Name == "" || k.secrets.Kubeconfig.Checksum == "" {
-		return fmt.Errorf("missing kubeconfig secret information")
-	}
 	if k.secrets.Server.Name == "" || k.secrets.Server.Checksum == "" {
 		return fmt.Errorf("missing server secret information")
 	}
@@ -135,9 +131,10 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 	utilruntime.Must(kutil.MakeUnique(configMap))
 
 	var (
-		vpa        = k.emptyVPA()
-		service    = k.emptyService()
-		deployment = k.emptyDeployment()
+		vpa               = k.emptyVPA()
+		service           = k.emptyService()
+		shootAccessSecret = k.newShootAccessSecret()
+		deployment        = k.emptyDeployment()
 
 		vpaUpdateMode = autoscalingv1beta2.UpdateModeAuto
 
@@ -168,6 +165,10 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := shootAccessSecret.Reconcile(ctx, k.client); err != nil {
+		return err
+	}
+
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, k.client, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
@@ -178,8 +179,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					"checksum/secret-" + k.secrets.Kubeconfig.Name: k.secrets.Kubeconfig.Checksum,
-					"checksum/secret-" + k.secrets.Server.Name:     k.secrets.Server.Checksum,
+					"checksum/secret-" + k.secrets.Server.Name: k.secrets.Server.Checksum,
 				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
@@ -190,6 +190,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 				}),
 			},
 			Spec: corev1.PodSpec{
+				AutomountServiceAccountToken: pointer.Bool(false),
 				Containers: []corev1.Container{
 					{
 						Name:            containerName,
@@ -230,10 +231,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 						},
 						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name:      k.secrets.Kubeconfig.Name,
-								MountPath: volumeMountPathKubeconfig,
-							},
-							{
 								Name:      k.secrets.Server.Name,
 								MountPath: volumeMountPathServer,
 							},
@@ -245,14 +242,6 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 					},
 				},
 				Volumes: []corev1.Volume{
-					{
-						Name: k.secrets.Kubeconfig.Name,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: k.secrets.Kubeconfig.Name,
-							},
-						},
-					},
 					{
 						Name: k.secrets.Server.Name,
 						VolumeSource: corev1.VolumeSource{
@@ -275,6 +264,7 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 			},
 		}
 
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name))
 		utilruntime.Must(references.InjectAnnotations(deployment))
 		return nil
 	}); err != nil {
@@ -306,12 +296,12 @@ func (k *kubeScheduler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if err := k.reconcileShootResources(ctx); err != nil {
+	if err := k.reconcileShootResources(ctx, shootAccessSecret.ServiceAccountName); err != nil {
 		return err
 	}
 
 	// TODO(rfranzke): Remove in a future release.
-	return kutil.DeleteObject(ctx, k.client, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler-config", Namespace: k.namespace}})
+	return kutil.DeleteObject(ctx, k.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "kube-scheduler", Namespace: k.namespace}})
 }
 
 func getLabels() map[string]string {
@@ -338,16 +328,52 @@ func (k *kubeScheduler) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameKubeScheduler, Namespace: k.namespace}}
 }
 
-func (k *kubeScheduler) emptyManagedResource() *resourcesv1alpha1.ManagedResource {
-	return &resourcesv1alpha1.ManagedResource{ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: k.namespace}}
+func (k *kubeScheduler) newShootAccessSecret() *gutil.ShootAccessSecret {
+	return gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameKubeScheduler, k.namespace)
 }
 
-func (k *kubeScheduler) emptyManagedResourceSecret() *corev1.Secret {
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: managedresources.SecretName(managedResourceName, true), Namespace: k.namespace}}
-}
+func (k *kubeScheduler) reconcileShootResources(ctx context.Context, serviceAccountName string) error {
+	var (
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
-func (k *kubeScheduler) reconcileShootResources(ctx context.Context) error {
-	return kutil.DeleteObjects(ctx, k.client, k.emptyManagedResource(), k.emptyManagedResourceSecret())
+		clusterRoleBinding1 = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:target:kube-scheduler",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "system:kube-scheduler",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccountName,
+				Namespace: metav1.NamespaceSystem,
+			}},
+		}
+		clusterRoleBinding2 = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "gardener.cloud:target:kube-scheduler-volume",
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     "system:volume-scheduler",
+			},
+			Subjects: []rbacv1.Subject{{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccountName,
+				Namespace: metav1.NamespaceSystem,
+			}},
+		}
+	)
+
+	data, err := registry.AddAllAndSerialize(clusterRoleBinding1, clusterRoleBinding2)
+	if err != nil {
+		return err
+	}
+
+	return managedresources.CreateForShoot(ctx, k.client, k.namespace, managedResourceName, false, data)
 }
 
 func (k *kubeScheduler) computeEnvironmentVariables() []corev1.EnvVar {
@@ -392,8 +418,8 @@ func (k *kubeScheduler) computeCommand(port int32) []string {
 	command = append(command, fmt.Sprintf("--config=%s/%s", volumeMountPathConfig, dataKeyComponentConfig))
 
 	command = append(command,
-		fmt.Sprintf("--authentication-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
-		fmt.Sprintf("--authorization-kubeconfig=%s/%s", volumeMountPathKubeconfig, secrets.DataKeyKubeconfig),
+		"--authentication-kubeconfig="+gutil.PathGenericKubeconfig,
+		"--authorization-kubeconfig="+gutil.PathGenericKubeconfig,
 		fmt.Sprintf("--client-ca-file=%s/%s", volumeMountPathServer, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--tls-cert-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyCertificatePEM(SecretNameServer)),
 		fmt.Sprintf("--tls-private-key-file=%s/%s", volumeMountPathServer, secrets.ControlPlaneSecretDataKeyPrivateKey(SecretNameServer)),
@@ -420,8 +446,6 @@ func init() {
 
 // Secrets is collection of secrets for the kube-scheduler.
 type Secrets struct {
-	// Kubeconfig is a secret which can be used by the kube-scheduler to communicate to the kube-apiserver.
-	Kubeconfig component.Secret
 	// Server is a secret for the HTTPS server inside the kube-scheduler (which is used for metrics and health checks).
 	Server component.Secret
 }

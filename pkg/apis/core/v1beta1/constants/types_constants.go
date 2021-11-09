@@ -56,6 +56,10 @@ const (
 	// for the shoot API server instead the DNS name or load balancer address.
 	SecretNameGardenerInternal = "gardener-internal"
 
+	// SecretNameGenericTokenKubeconfig is a constant for the name of the kubeconfig used by the shoot controlplane
+	// components to authenticate against the shoot Kubernetes API server.
+	SecretNameGenericTokenKubeconfig = "generic-token-kubeconfig"
+
 	// SecretPrefixGeneratedBackupBucket is a constant for the prefix of a secret name in the garden cluster related to
 	// BackpuBuckets.
 	SecretPrefixGeneratedBackupBucket = "generated-bucket-"
