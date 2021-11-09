@@ -37,11 +37,7 @@ import (
 	"github.com/gardener/gardener/test/framework"
 )
 
-// TODO: This test suite is disabled because of a known flake in the test (https://github.com/gardener/gardener/issues/4944).
-// Enable the test suite again after fixing the flake.
-
 func TestShootMaintenance(t *testing.T) {
-	t.Skipf("Temporarily skipping the test suite because of known flake...")
 	controllermanagerfeatures.RegisterFeatureGates()
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Shoot Maintenance Controller Integration Test Suite")
