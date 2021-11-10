@@ -212,6 +212,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	// Add remotewrite to prometheus when enabled
 	if  b.Config.Monitoring != nil &&
 		b.Config.Monitoring.Shoot != nil &&
+		b.Config.Monitoring.Shoot.RemoteWrite != nil &&
 		b.Config.Monitoring.Shoot.RemoteWrite.URL != "" {
 		// if remoteWrite Url is set add config into values
 		remoteWriteConfig := map[string]interface{}{
@@ -235,7 +236,8 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 			remoteWriteConfig["keep"] = b.Config.Monitoring.Shoot.RemoteWrite.Keep
 		}
 		// add queue_config if set
-		if len(b.Config.Monitoring.Shoot.RemoteWrite.QueueConfig) != 0 {
+		if b.Config.Monitoring.Shoot.RemoteWrite.QueueConfig != nil &&
+			len(*b.Config.Monitoring.Shoot.RemoteWrite.QueueConfig) != 0 {
 			remoteWriteConfig["queue_config"] = b.Config.Monitoring.Shoot.RemoteWrite.QueueConfig
 		}
 		prometheusConfig["remoteWrite"] = remoteWriteConfig

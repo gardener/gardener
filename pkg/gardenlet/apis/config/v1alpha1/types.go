@@ -521,7 +521,7 @@ type MonitoringConfig struct {
 type ShootMonitoringConfig struct {
 	// RemoteWrite is optional and contains remote write setting.
 	// +optional
-	RemoteWrite RemoteWriteMonitoringConfig `json:"remoteWrite,omitempty"`
+	RemoteWrite *RemoteWriteMonitoringConfig `json:"remoteWrite,omitempty"`
 	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
 	// +optional
 	ExternalLabels map[string]string `json:"externalLabels,omitempty"`
@@ -536,7 +536,7 @@ type RemoteWriteMonitoringConfig struct {
 	Keep []string `json:"keep,omitempty"`
 	// QueueConfig contains the queue_config for prometheus remote write.
 	// +optional
-	QueueConfig string `json:"queueConfig,omitempty"`
+	QueueConfig *string `json:"queueConfig,omitempty"`
 }
 
 const (

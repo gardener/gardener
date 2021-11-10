@@ -437,7 +437,7 @@ type MonitoringConfig struct {
 // ShootMonitoringConfig contains settings for the shoot monitoring stack.
 type ShootMonitoringConfig struct {
 	// RemoteWrite is optional and contains remote write setting.
-	RemoteWrite RemoteWriteMonitoringConfig
+	RemoteWrite *RemoteWriteMonitoringConfig
 	// ExternalLabels is optional and sets additional external labels for the monitoring stack.
 	ExternalLabels map[string]string
 }
@@ -449,5 +449,5 @@ type RemoteWriteMonitoringConfig struct {
 	// Keep contains a list of metrics that will be remote written
 	Keep []string
 	// QueueConfig contains the queue_config for prometheus remote write.
-	QueueConfig string
+	QueueConfig *string
 }

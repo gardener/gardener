@@ -1105,7 +1105,7 @@ func Convert_config_MonitoringConfig_To_v1alpha1_MonitoringConfig(in *config.Mon
 func autoConvert_v1alpha1_RemoteWriteMonitoringConfig_To_config_RemoteWriteMonitoringConfig(in *RemoteWriteMonitoringConfig, out *config.RemoteWriteMonitoringConfig, s conversion.Scope) error {
 	out.URL = in.URL
 	out.Keep = *(*[]string)(unsafe.Pointer(&in.Keep))
-	out.QueueConfig = in.QueueConfig
+	out.QueueConfig = (*string)(unsafe.Pointer(in.QueueConfig))
 	return nil
 }
 
@@ -1117,7 +1117,7 @@ func Convert_v1alpha1_RemoteWriteMonitoringConfig_To_config_RemoteWriteMonitorin
 func autoConvert_config_RemoteWriteMonitoringConfig_To_v1alpha1_RemoteWriteMonitoringConfig(in *config.RemoteWriteMonitoringConfig, out *RemoteWriteMonitoringConfig, s conversion.Scope) error {
 	out.URL = in.URL
 	out.Keep = *(*[]string)(unsafe.Pointer(&in.Keep))
-	out.QueueConfig = in.QueueConfig
+	out.QueueConfig = (*string)(unsafe.Pointer(in.QueueConfig))
 	return nil
 }
 
@@ -1413,9 +1413,7 @@ func Convert_config_ShootControllerConfiguration_To_v1alpha1_ShootControllerConf
 }
 
 func autoConvert_v1alpha1_ShootMonitoringConfig_To_config_ShootMonitoringConfig(in *ShootMonitoringConfig, out *config.ShootMonitoringConfig, s conversion.Scope) error {
-	if err := Convert_v1alpha1_RemoteWriteMonitoringConfig_To_config_RemoteWriteMonitoringConfig(&in.RemoteWrite, &out.RemoteWrite, s); err != nil {
-		return err
-	}
+	out.RemoteWrite = (*config.RemoteWriteMonitoringConfig)(unsafe.Pointer(in.RemoteWrite))
 	out.ExternalLabels = *(*map[string]string)(unsafe.Pointer(&in.ExternalLabels))
 	return nil
 }
@@ -1426,9 +1424,7 @@ func Convert_v1alpha1_ShootMonitoringConfig_To_config_ShootMonitoringConfig(in *
 }
 
 func autoConvert_config_ShootMonitoringConfig_To_v1alpha1_ShootMonitoringConfig(in *config.ShootMonitoringConfig, out *ShootMonitoringConfig, s conversion.Scope) error {
-	if err := Convert_config_RemoteWriteMonitoringConfig_To_v1alpha1_RemoteWriteMonitoringConfig(&in.RemoteWrite, &out.RemoteWrite, s); err != nil {
-		return err
-	}
+	out.RemoteWrite = (*RemoteWriteMonitoringConfig)(unsafe.Pointer(in.RemoteWrite))
 	out.ExternalLabels = *(*map[string]string)(unsafe.Pointer(&in.ExternalLabels))
 	return nil
 }
