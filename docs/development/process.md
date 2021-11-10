@@ -99,7 +99,7 @@ This section explains how to initiate cherry picks on release branches within th
 Before you initiate a cherry pick, make sure that the following prerequisites are accomplished.
 
 - A pull request merged against the `master` branch.
-- The release branch exists (example: [`release-v1.18`](https://github.com/gardener/gardener/tree/release-v1.18))
+- The release branch exists (check in the [branches section](https://github.com/gardener/gardener/branches))
 - Have the `gardener/gardener` repository cloned as follows:
   - the `origin` remote should point to your fork (alternatively this can be overwritten by passing `FORK_REMOTE=<fork-remote>`)
   - the `upstream` remote should point to the Gardener github org (alternatively this can be overwritten by passing `UPSTREAM_REMOTE=<upstream-remote>`)

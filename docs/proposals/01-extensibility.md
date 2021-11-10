@@ -229,7 +229,7 @@ spec:
 ### CRD definitions and workflow adaptation
 
 In the following we are outlining the CRD definitions which define the API between Gardener and the dedicated controllers.
-After that we will take a look at the current [reconciliation](https://github.com/gardener/gardener/blob/master/pkg/controller/shoot/shoot_control_reconcile.go)/[deletion](https://github.com/gardener/gardener/blob/master/pkg/controller/shoot/shoot_control_delete.go) flow and describe how it would look like in case we would implement this proposal.
+After that we will take a look at the current [reconciliation](../../pkg/gardenlet/controller/shoot/shoot_control_reconcile.go)/[deletion](../../pkg/gardenlet/controller/shoot/shoot_control_delete.go) flow and describe how it would look like in case we would implement this proposal.
 
 #### Custom resource definitions
 

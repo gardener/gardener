@@ -1,10 +1,10 @@
 # Shoot Status
 
-This document provides an overview of the [ShootStatus](https://gardener.cloud/docs/references/core/#core.gardener.cloud/v1beta1.ShootStatus).
+This document provides an overview of the [ShootStatus](../api-reference/core.md#shootstatus).
 
 ## Conditions
 
-The Shoot status consists of a set of conditions. A [Condition](https://gardener.cloud/docs/references/core/#core.gardener.cloud/v1beta1.Condition) has the following fields:
+The Shoot status consists of a set of conditions. A [Condition](../api-reference/core.md#condition) has the following fields:
 
 | Field name           | Description                                                                                                        |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------ |
@@ -89,7 +89,7 @@ The Shoot status holds information about the last operation that is performed on
 
 ### Last Errors
 
-The Shoot status also contains information about the last occurred error(s) (if any) during an operation. A [LastError](https://gardener.cloud/docs/references/core/#core.gardener.cloud/v1beta1.LastError) consists of identifier of the task returned error, human-readable message of the error and error codes (if any) associated with the error.
+The Shoot status also contains information about the last occurred error(s) (if any) during an operation. A [LastError](../api-reference/core.md#lasterror) consists of identifier of the task returned error, human-readable message of the error and error codes (if any) associated with the error.
 
 ### Error Codes
 
