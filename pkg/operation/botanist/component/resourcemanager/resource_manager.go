@@ -167,6 +167,8 @@ type Values struct {
 	LeaseDuration *time.Duration
 	// MaxConcurrentHealthWorkers configures the number of worker threads for concurrent health reconciliation of resources
 	MaxConcurrentHealthWorkers *int32
+	// MaxConcurrentTokenInvalidatorWorkers configures the number of worker threads for concurrent token invalidator reconciliations
+	MaxConcurrentTokenInvalidatorWorkers *int32
 	// MaxConcurrentTokenRequestorWorkers configures the number of worker threads for concurrent token requestor reconciliations
 	MaxConcurrentTokenRequestorWorkers *int32
 	// MaxConcurrentRootCAPublisherWorkers configures the number of worker threads for concurrent root ca publishing reconciliations
@@ -620,6 +622,9 @@ func (r *resourceManager) computeCommand() []string {
 	}
 	if r.values.MaxConcurrentTokenRequestorWorkers != nil {
 		cmd = append(cmd, fmt.Sprintf("--token-requestor-max-concurrent-workers=%d", *r.values.MaxConcurrentTokenRequestorWorkers))
+	}
+	if r.values.MaxConcurrentTokenInvalidatorWorkers != nil {
+		cmd = append(cmd, fmt.Sprintf("--token-invalidator-max-concurrent-workers=%d", *r.values.MaxConcurrentTokenInvalidatorWorkers))
 	}
 	if r.values.MaxConcurrentRootCAPublisherWorkers != nil {
 		cmd = append(cmd, fmt.Sprintf("--root-ca-publisher-max-concurrent-workers=%d", *r.values.MaxConcurrentRootCAPublisherWorkers))
