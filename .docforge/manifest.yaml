@@ -8,6 +8,7 @@ structure:
     frontmatter:
       title: API Reference
       weight: 1
+      aliases: "/api-reference/"
   nodes:
   - nodesSelector:
       path: https://github.com/gardener/gardener/tree/{{$defaultBranch}}/docs/api-reference
