@@ -498,20 +498,26 @@ var _ = Describe("dnsrecord", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("should clean up orphaned internal Secrets, but keep prefixed internal secrets", func() {
+		It("should clean up orphaned Secrets, but keep prefixed secrets", func() {
 			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: orphanedInternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
-			s := &corev1.Secret{}
-			Expect(c.Get(ctx, client.ObjectKey{Name: regularInternalSecret.Name, Namespace: seedNamespace}, s)).To(Succeed())
-			Expect(s).To(DeepDerivativeEqual(regularInternalSecret))
+			Expect(c.Get(ctx, client.ObjectKey{Name: orphanedExternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
+
+			internalSecret := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: regularInternalSecret.Name, Namespace: seedNamespace}, internalSecret)).To(Succeed())
+			Expect(internalSecret).To(DeepDerivativeEqual(regularInternalSecret))
+
+			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
+			externalSecret := &corev1.Secret{}
+			Expect(c.Get(ctx, client.ObjectKey{Name: regularExternalSecret.Name, Namespace: seedNamespace}, externalSecret)).To(Succeed())
+			Expect(externalSecret).To(DeepDerivativeEqual(regularExternalSecret))
 		})
 
-		It("should clean up orphaned external Secrets, but keep prefixed external secrets", func() {
+		It("should not fail the clean up of orphaned Secret when there are none", func() {
 			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: orphanedExternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
-			s := &corev1.Secret{}
-			Expect(c.Get(ctx, client.ObjectKey{Name: regularExternalSecret.Name, Namespace: seedNamespace}, s)).To(Succeed())
-			Expect(s).To(DeepDerivativeEqual(regularExternalSecret))
+			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
+
 		})
 	})
 })

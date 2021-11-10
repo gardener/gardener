@@ -19,6 +19,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -212,11 +213,11 @@ func (b *Botanist) deployOrRestoreDNSRecord(ctx context.Context, dnsRecord compo
 
 // CleanupOrphanedDNSRecordSecrets cleans up secrets related to DNSRecords which may be orphaned after introducing the 'dnsrecord-' prefix
 func (b *Botanist) CleanupOrphanedDNSRecordSecrets(ctx context.Context) error {
-	err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name + "-" + DNSInternalName, Namespace: b.Shoot.SeedNamespace}})
+	err := client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name + "-" + DNSInternalName, Namespace: b.Shoot.SeedNamespace}}))
 	if err != nil {
 		return err
 	}
-	err = b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name + "-" + DNSExternalName, Namespace: b.Shoot.SeedNamespace}})
+	err = client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name + "-" + DNSExternalName, Namespace: b.Shoot.SeedNamespace}}))
 	if err != nil {
 		return err
 	}
