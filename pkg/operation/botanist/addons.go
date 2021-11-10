@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/gardener/gardener/charts"
@@ -375,6 +376,17 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 	} else {
 		nodeLocalDNSConfig["dnsServer"] = b.Shoot.Networks.CoreDNS.String()
 	}
+
+	nodeLocalDNSForceTcpToClusterDNS := true
+	if forceTcp, err := strconv.ParseBool(b.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToClusterDns]); err == nil {
+		nodeLocalDNSForceTcpToClusterDNS = forceTcp
+	}
+	nodeLocalDNSConfig["forceTcpToClusterDNS"] = nodeLocalDNSForceTcpToClusterDNS
+	nodeLocalDNSForceTcpToUpstreamDNS := true
+	if forceTcp, err := strconv.ParseBool(b.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationNodeLocalDNSForceTcpToUpstreamDns]); err == nil {
+		nodeLocalDNSForceTcpToUpstreamDNS = forceTcp
+	}
+	nodeLocalDNSConfig["forceTcpToUpstreamDNS"] = nodeLocalDNSForceTcpToUpstreamDNS
 
 	nodelocalDNS, err := b.InjectShootShootImages(nodeLocalDNSConfig, charts.ImageNameNodeLocalDns)
 	if err != nil {
