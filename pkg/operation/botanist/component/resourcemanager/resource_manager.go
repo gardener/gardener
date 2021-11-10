@@ -35,6 +35,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -60,6 +61,8 @@ const (
 	containerName      = v1beta1constants.DeploymentNameGardenerResourceManager
 	healthPort         = 8081
 	metricsPort        = 8080
+	serverPort         = 9449
+	serverServicePort  = 443
 	roleName           = "gardener-resource-manager"
 	serviceAccountName = "gardener-resource-manager"
 
@@ -348,14 +351,26 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 	const (
 		healthPortName  = "health"
 		metricsPortName = "metrics"
+		serverPortName  = "server"
 	)
 
+	// TODO(rfranzke): This can be removed in a future version.
 	service := r.emptyService()
+	if err := r.client.Get(ctx, client.ObjectKeyFromObject(service), service); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+	} else if service.Spec.ClusterIP == corev1.ClusterIPNone {
+		if err2 := r.client.Delete(ctx, service); client.IgnoreNotFound(err2) != nil {
+			return err2
+		}
+	}
+
+	service = r.emptyService()
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, service, func() error {
 		service.Labels = r.getLabels()
 		service.Spec.Selector = appLabel()
 		service.Spec.Type = corev1.ServiceTypeClusterIP
-		service.Spec.ClusterIP = corev1.ClusterIPNone
 		desiredPorts := []corev1.ServicePort{
 			{
 				Name:     metricsPortName,
@@ -366,6 +381,12 @@ func (r *resourceManager) ensureService(ctx context.Context) error {
 				Name:     healthPortName,
 				Protocol: corev1.ProtocolTCP,
 				Port:     healthPort,
+			},
+			{
+				Name:       serverPortName,
+				Protocol:   corev1.ProtocolTCP,
+				Port:       serverServicePort,
+				TargetPort: intstr.FromInt(serverPort),
 			},
 		}
 		service.Spec.Ports = kutil.ReconcileServicePorts(service.Spec.Ports, desiredPorts, corev1.ServiceTypeClusterIP)
@@ -642,6 +663,7 @@ func (r *resourceManager) computeCommand() []string {
 	if r.values.TargetDisableCache != nil {
 		cmd = append(cmd, "--target-disable-cache")
 	}
+	cmd = append(cmd, fmt.Sprintf("--port=%d", serverPort))
 	if r.secrets.Server.Name != "" {
 		cmd = append(cmd, fmt.Sprintf("--tls-cert-dir=%s", volumeMountPathCerts))
 	}
