@@ -1144,7 +1144,7 @@ func runCreateSeedFlow(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying external authz server",
-			Fn:           extAuthzServer.Deploy,
+			Fn:           flow.TaskFn(extAuthzServer.Deploy).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
 			Dependencies: flow.NewTaskIDs(deployResourceManager),
 		})
 	)
