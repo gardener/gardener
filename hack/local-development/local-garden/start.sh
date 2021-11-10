@@ -32,7 +32,7 @@ $(dirname $0)/run-kube-etcd $LOCAL_GARDEN_LABEL
 $(dirname $0)/run-kube-apiserver $LOCAL_GARDEN_LABEL $ACTIVATE_SEEDAUTHORIZER
 $(dirname $0)/run-kube-controller-manager $LOCAL_GARDEN_LABEL
 
-echo "# This etcd will be used to storge gardener resources (e.g., seeds, shoots)"
+echo "# This etcd will be used to store gardener resources (e.g., seeds, shoots)"
 $(dirname $0)/run-gardener-etcd $LOCAL_GARDEN_LABEL
 
 for i in 1..10; do
