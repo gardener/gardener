@@ -64,3 +64,19 @@ logging:
     garden:
       priority: 100
 ```
+
+# Configure central logging
+
+For central logging, the output configuration of the fluent-bit log processor can be overwritten (`logging.fluentBit.output`) and the Loki instances deployments in Garden and Shoot namespace can be enabled/disabled (`logging.loki.enabled`), by default Loki is enabled.
+
+```yaml
+featureGates:
+  Logging: true
+logging:
+  fluentBit:
+    output: |-
+      [Output]
+          ...
+  loki:
+    enabled: false
+```

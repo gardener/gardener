@@ -384,7 +384,13 @@ type FluentBit struct {
 
 // Loki contains configuration for the Loki.
 type Loki struct {
+	// Enabled is used to enable or disable the shoot and seed Loki.
+	// If FluentBit is used with a custom output the Loki can, Loki is maybe unused and can be disabled.
+	// If not set, by default Loki is enabled
+	// +optional
+	Enabled *bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	// Garden contains configuration for the Loki in garden namespace.
+	// +optional
 	Garden *GardenLoki `json:"garden,omitempty" yaml:"garden,omitempty"`
 }
 
