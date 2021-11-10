@@ -56,7 +56,7 @@ case "${kubernetes_env}" in
 mkdir -p ${DEV_DIR}/landscaper
 
 cp ${EXAMPLE_DIR}/20-componentconfig-*.yaml ${DEV_DIR}/
-cp ${LANDSCAPER_DIR}/pkg/gardenlet/example/gardenlet-landscaper-imports.yaml ${DEV_DIR}/landscaper
+cp ${LANDSCAPER_DIR}/pkg/gardenlet/example/landscaper-gardenlet-imports.yaml ${DEV_DIR}/landscaper
 cp ${LANDSCAPER_DIR}/pkg/gardenlet/example/run-locally/gardenlet-landscaper-component-descriptor-list.yaml ${DEV_DIR}/landscaper
 
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden.yaml
