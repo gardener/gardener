@@ -210,7 +210,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	prometheusConfig["podAnnotations"] = podAnnotations
 
 	// Add remotewrite to prometheus when enabled
-	if  b.Config.Monitoring != nil &&
+	if b.Config.Monitoring != nil &&
 		b.Config.Monitoring.Shoot != nil &&
 		b.Config.Monitoring.Shoot.RemoteWrite != nil &&
 		b.Config.Monitoring.Shoot.RemoteWrite.URL != "" {
