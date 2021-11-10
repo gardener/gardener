@@ -22,14 +22,20 @@ import (
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/gardener/gardener/pkg/utils/managedresources"
 	"github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
+	admissionv1 "k8s.io/api/admission/v1"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,7 +53,8 @@ import (
 const (
 	// ServiceName is the name of the service of the gardener-resource-manager.
 	ServiceName = "gardener-resource-manager"
-
+	// ManagedResourceName is the name for the ManagedResource containing resources deployed to the shoot cluster.
+	ManagedResourceName = "shoot-core-gardener-resource-manager"
 	// SecretName is a constant for the secret name for the gardener resource manager's kubeconfig secret.
 	SecretName = "gardener-resource-manager"
 	// SecretNameServer is the name of the gardener-resource-manager server certificate secret.
@@ -181,6 +188,8 @@ type Values struct {
 	RetryPeriod *time.Duration
 	// SyncPeriod configures the duration of how often existing resources should be synced
 	SyncPeriod *time.Duration
+	// TargetDiffersFromSourceCluster states whether the target cluster is a different one than the source cluster
+	TargetDiffersFromSourceCluster bool
 	// TargetDisableCache disables the cache for target cluster and always talk directly to the API server (defaults to false)
 	TargetDisableCache *bool
 	// WatchedNamespace restricts the gardener-resource-manager to only watch ManagedResources in the defined namespace.
@@ -193,14 +202,22 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 		return fmt.Errorf("missing server secret information")
 	}
 
-	for _, fn := range []func(context.Context) error{
+	fns := []func(context.Context) error{
 		r.ensureServiceAccount,
 		r.ensureRBAC,
 		r.ensureService,
 		r.ensureDeployment,
 		r.ensurePodDisruptionBudget,
 		r.ensureVPA,
-	} {
+	}
+
+	if r.values.TargetDiffersFromSourceCluster {
+		fns = append(fns, r.ensureShootResources)
+	} else {
+		fns = append(fns, r.ensureMutatingWebhookConfiguration)
+	}
+
+	for _, fn := range fns {
 		if err := fn(ctx); err != nil {
 			return err
 		}
@@ -219,6 +236,22 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 		r.emptyClusterRole(),
 		r.emptyClusterRoleBinding(),
 	}
+
+	if r.values.TargetDiffersFromSourceCluster {
+		if err := managedresources.DeleteForShoot(ctx, r.client, r.namespace, ManagedResourceName); err != nil {
+			return err
+		}
+
+		timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+
+		if err := managedresources.WaitUntilDeleted(timeoutCtx, r.client, r.namespace, ManagedResourceName); err != nil {
+			return err
+		}
+	} else {
+		objectsToDelete = append(objectsToDelete, r.emptyMutatingWebhookConfiguration())
+	}
+
 	role, err := r.emptyRoleInWatchedNamespace()
 	if err == nil {
 		objectsToDelete = append(objectsToDelete, role)
@@ -236,7 +269,7 @@ func (r *resourceManager) Destroy(ctx context.Context) error {
 }
 
 func (r *resourceManager) ensureRBAC(ctx context.Context) error {
-	if targetDiffersFromSourceCluster := r.secrets.Kubeconfig.Name != ""; targetDiffersFromSourceCluster {
+	if r.values.TargetDiffersFromSourceCluster {
 		if r.values.WatchedNamespace == nil {
 			if err := r.ensureClusterRole(ctx, allowManagedResources); err != nil {
 				return err
@@ -736,8 +769,101 @@ func (r *resourceManager) emptyPodDisruptionBudget() *policyv1beta1.PodDisruptio
 	return &policyv1beta1.PodDisruptionBudget{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager", Namespace: r.namespace}}
 }
 
+func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context) error {
+	mutatingWebhookConfiguration := r.emptyMutatingWebhookConfiguration()
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, mutatingWebhookConfiguration, func() error {
+		mutatingWebhookConfiguration.Labels = appLabel()
+		mutatingWebhookConfiguration.Webhooks = r.getMutatingWebhookConfigurationWebhooks()
+		return nil
+	})
+	return err
+}
+
+func (r *resourceManager) emptyMutatingWebhookConfiguration() *admissionregistrationv1.MutatingWebhookConfiguration {
+	suffix := ""
+	if r.values.TargetDiffersFromSourceCluster {
+		suffix = "-shoot"
+	}
+	return &admissionregistrationv1.MutatingWebhookConfiguration{ObjectMeta: metav1.ObjectMeta{Name: "gardener-resource-manager" + suffix, Namespace: r.namespace}}
+}
+
+func (r *resourceManager) ensureShootResources(ctx context.Context) error {
+	var (
+		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
+
+		mutatingWebhookConfiguration = r.emptyMutatingWebhookConfiguration()
+	)
+
+	mutatingWebhookConfiguration.Labels = appLabel()
+	mutatingWebhookConfiguration.Webhooks = r.getMutatingWebhookConfigurationWebhooks()
+
+	data, err := registry.AddAllAndSerialize(mutatingWebhookConfiguration)
+	if err != nil {
+		return err
+	}
+
+	return managedresources.CreateForShoot(ctx, r.client, r.namespace, ManagedResourceName, false, data)
+}
+
+func (r *resourceManager) getMutatingWebhookConfigurationWebhooks() []admissionregistrationv1.MutatingWebhook {
+	var (
+		failurePolicy = admissionregistrationv1.Fail
+		matchPolicy   = admissionregistrationv1.Exact
+		sideEffect    = admissionregistrationv1.SideEffectClassNone
+
+		namespaceSelectorOperator metav1.LabelSelectorOperator
+		clientConfig              = admissionregistrationv1.WebhookClientConfig{CABundle: r.secrets.ServerCA.Data[secrets.DataKeyCertificateCA]}
+	)
+
+	if r.values.TargetDiffersFromSourceCluster {
+		namespaceSelectorOperator = metav1.LabelSelectorOpIn
+		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", ServiceName, r.namespace, serverServicePort, tokeninvalidator.WebhookPath))
+	} else {
+		namespaceSelectorOperator = metav1.LabelSelectorOpNotIn
+		clientConfig.Service = &admissionregistrationv1.ServiceReference{
+			Name:      ServiceName,
+			Namespace: r.namespace,
+			Path:      pointer.String(tokeninvalidator.WebhookPath),
+		}
+	}
+
+	return []admissionregistrationv1.MutatingWebhook{
+		{
+			Name: "token-invalidator.resources.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{{
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{corev1.GroupName},
+					APIVersions: []string{corev1.SchemeGroupVersion.Version},
+					Resources:   []string{"secrets"},
+				},
+				Operations: []admissionregistrationv1.OperationType{
+					admissionregistrationv1.Create,
+					admissionregistrationv1.Update,
+				},
+			}},
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      v1beta1constants.GardenerPurpose,
+					Operator: namespaceSelectorOperator,
+					Values:   []string{metav1.NamespaceSystem},
+				}},
+			},
+			ObjectSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenInvalidation},
+			},
+			ClientConfig:            clientConfig,
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			FailurePolicy:           &failurePolicy,
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		},
+	}
+}
+
 func (r *resourceManager) getLabels() map[string]string {
-	if partOfShootControlPlane := r.secrets.Kubeconfig.Name != ""; partOfShootControlPlane {
+	if r.values.TargetDiffersFromSourceCluster {
 		return utils.MergeStringMaps(appLabel(), map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
 		})
@@ -748,7 +874,7 @@ func (r *resourceManager) getLabels() map[string]string {
 
 func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
 	role := v1beta1constants.GardenRoleSeed
-	if partOfShootControlPlane := r.secrets.Kubeconfig.Name != ""; partOfShootControlPlane {
+	if r.values.TargetDiffersFromSourceCluster {
 		role = v1beta1constants.GardenRoleControlPlane
 	}
 
@@ -758,7 +884,7 @@ func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
 }
 
 func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
-	if partOfShootControlPlane := r.secrets.Kubeconfig.Name != ""; partOfShootControlPlane {
+	if r.values.TargetDiffersFromSourceCluster {
 		return map[string]string{
 			v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
 			v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
@@ -814,6 +940,9 @@ type Secrets struct {
 	// Kubeconfig enables the gardener-resource-manager to deploy resources into a different cluster than the one it is
 	// running in.
 	Kubeconfig component.Secret
+	// ServerCA is a secret containing a CA certificate which was used to sign the server certificate provided in the
+	// 'Server' secret.
+	ServerCA component.Secret
 	// Server is a secret containing a x509 TLS server certificate and key for the HTTPS server inside the
 	// gardener-resource-manager (which is used for webhooks).
 	Server component.Secret
