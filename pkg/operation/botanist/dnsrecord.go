@@ -30,7 +30,7 @@ import (
 func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
 		Name:       b.Shoot.GetInfo().Name + "-" + DNSExternalName,
-		SecretName: "dnsrecord-" + b.Shoot.GetInfo().Name + "-" + DNSExternalName,
+		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + DNSExternalName,
 		Namespace:  b.Shoot.SeedNamespace,
 		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}
@@ -56,7 +56,7 @@ func (b *Botanist) DefaultExternalDNSRecord() extensionsdnsrecord.Interface {
 func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
 		Name:       b.Shoot.GetInfo().Name + "-" + DNSInternalName,
-		SecretName: "dnsrecord-" + b.Shoot.GetInfo().Name + "-" + DNSInternalName,
+		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + DNSInternalName,
 		Namespace:  b.Shoot.SeedNamespace,
 		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}
@@ -82,7 +82,7 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 func (b *Botanist) DefaultOwnerDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
 		Name:          b.Shoot.GetInfo().Name + "-" + DNSOwnerName,
-		SecretName:    "dnsrecord-" + b.Shoot.GetInfo().Name + "-" + DNSInternalName,
+		SecretName:    DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + DNSInternalName,
 		Namespace:     b.Shoot.SeedNamespace,
 		ReconcileOnce: true,
 		TTL:           b.Config.Controllers.Shoot.DNSEntryTTLSeconds,

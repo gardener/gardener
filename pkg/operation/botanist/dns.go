@@ -48,6 +48,8 @@ const (
 	DNSProviderRoleAdditional = "managed-dns-provider"
 	// DNSRealmAnnotation is the annotation key for restricting provider access for shoot DNS entries
 	DNSRealmAnnotation = "dns.gardener.cloud/realms"
+	// DNSRecordSecretPrefix is a constant for prefixing secrets referenced by DNSRecords
+	DNSRecordSecretPrefix = "dnsrecord"
 )
 
 // DeployExternalDNS deploys the external DNSOwner, DNSProvider, and DNSEntry resources.

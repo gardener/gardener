@@ -141,7 +141,7 @@ func (b *Botanist) NeedsIngressDNS() bool {
 func (b *Botanist) DefaultIngressDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
 		Name:       b.Shoot.GetInfo().Name + "-" + common.ShootDNSIngressName,
-		SecretName: "dnsrecord-" + b.Shoot.GetInfo().Name + "-" + DNSExternalName,
+		SecretName: DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + DNSExternalName,
 		Namespace:  b.Shoot.SeedNamespace,
 		TTL:        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}
