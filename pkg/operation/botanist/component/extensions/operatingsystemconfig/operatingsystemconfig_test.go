@@ -303,6 +303,41 @@ var _ = Describe("OperatingSystemConfig", func() {
 					Expect(actual).To(Equal(obj))
 				}
 			})
+
+			It("should exclude the bootstrap token file if purpose is not provision", func() {
+				bootstrapTokenFile := extensionsv1alpha1.File{Path: "/var/lib/cloud-config-downloader/credentials/bootstrap-token"}
+				downloaderConfigFnWithBootstrapToken := func(cloudConfigUserDataSecretName, apiServerURL string) ([]extensionsv1alpha1.Unit, []extensionsv1alpha1.File, error) {
+					units, files, error := downloaderConfigFn(cloudConfigUserDataSecretName, apiServerURL)
+					return units, append(files, bootstrapTokenFile), error
+				}
+
+				defer test.WithVars(
+					&TimeNow, mockNow.Do,
+					&DownloaderConfigFn, downloaderConfigFnWithBootstrapToken,
+					&OriginalConfigFn, originalConfigFn,
+				)()
+
+				mockNow.EXPECT().Do().Return(now.UTC()).AnyTimes()
+
+				Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
+
+				for _, e := range expected {
+					if e.Spec.Purpose == extensionsv1alpha1.OperatingSystemConfigPurposeProvision {
+						e.Spec.Files = append(e.Spec.Files, bootstrapTokenFile)
+					}
+
+					actual := &extensionsv1alpha1.OperatingSystemConfig{}
+					Expect(c.Get(ctx, client.ObjectKey{Name: e.Name, Namespace: e.Namespace}, actual)).To(Succeed())
+
+					obj := e.DeepCopy()
+
+					obj.TypeMeta.APIVersion = extensionsv1alpha1.SchemeGroupVersion.String()
+					obj.TypeMeta.Kind = extensionsv1alpha1.OperatingSystemConfigResource
+					obj.ResourceVersion = "1"
+
+					Expect(actual).To(Equal(obj))
+				}
+			})
 		})
 
 		Describe("#Restore", func() {
