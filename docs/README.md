@@ -58,6 +58,16 @@
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
 
+## [API Reference](api-reference/README.md)
+
+* [`authentication.gardener.cloud` API Group](api-reference/authentication.md)
+* [`core.gardener.cloud` API Group](api-reference/core.md)
+* [`extensions.gardener.cloud` API Group](api-reference/extensions.md)
+* [`operations.gardener.cloud` API Group](api-reference/operations.md)
+* [`resources.gardener.cloud` API Group](api-reference/resources.md)
+* [`seedmanagement.gardener.cloud` API Group](api-reference/seedmanagement.md)
+* [`settings.gardener.cloud` API Group](api-reference/settings.md)
+
 ## Proposals
 
 * [GEP: Gardener Enhancement Proposal Description](proposals/README.md)

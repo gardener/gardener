@@ -30,5 +30,5 @@ for source_tree in $@; do
 done
 
 if [ -d "$PWD/docs/api-reference" ]; then
-  find ./docs/api-reference/ -type f -name "*.md" -exec rm '{}' \;
+  find ./docs/api-reference/ -type f -name "*.md" ! -name "README.md" -exec rm '{}' \;
 fi
