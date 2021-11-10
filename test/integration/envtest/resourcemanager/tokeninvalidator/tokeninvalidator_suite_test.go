@@ -18,6 +18,7 @@ import (
 	"context"
 	"testing"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/test/framework"
@@ -145,6 +146,11 @@ func getMutatingWebhookConfigurations() []admissionregistrationv1.MutatingWebhoo
 						admissionregistrationv1.Update,
 					},
 				}},
+				ObjectSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenInvalidation,
+					},
+				},
 				SideEffects:        &sideEffects,
 				FailurePolicy:      &failurePolicy,
 				MatchPolicy:        &matchPolicy,

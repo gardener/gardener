@@ -58,6 +58,8 @@ const (
 	ResourceManagerPurpose = "resources.gardener.cloud/purpose"
 	// LabelPurposeTokenRequest is a constant for a label value indicating that this secret should be reconciled by the token-requestor.
 	LabelPurposeTokenRequest = "token-requestor"
+	// LabelPurposeTokenInvalidation is a constant for a label value indicating that this secret should be considered by the token-invalidator.
+	LabelPurposeTokenInvalidation = "token-invalidator"
 	// ServiceAccountName is the key of an annotation of a secret whose value contains the service account name
 	ServiceAccountName = "serviceaccount.resources.gardener.cloud/name"
 	// ServiceAccountNamespace is the key of an annotation of a secret whose value contains the service account namespace
