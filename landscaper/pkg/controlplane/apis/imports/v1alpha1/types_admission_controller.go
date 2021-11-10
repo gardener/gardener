@@ -33,14 +33,14 @@ type GardenerAdmissionController struct {
 
 // AdmissionControllerComponentConfiguration contains the component configuration of the Gardener Admission Controller
 type AdmissionControllerComponentConfiguration struct {
-	// CABundle is a PEM encoded CA bundle which will be used by the Gardener API server
+	// CA is a PEM encoded CA bundle which will be used by the Gardener API server
 	// to validate the TLS serving certificate of the Gardener Admission Webhook server served
 	// by the Gardener Admission Controller.
-	// It is put into the MutatingWebhookConfiguration and ValidatingWebhookConfiguration
+	// The public key is put into the MutatingWebhookConfiguration and ValidatingWebhookConfiguration
 	// resources when registering the Webhooks.
 	// If left empty, generates a new CA or reuses the CA of an existing Admission controller deployment.
 	// +optional
-	CABundle *string `json:"caBundle,omitempty"`
+	CA *CA `json:"ca,omitempty"`
 	// TLS configures the TLS serving certificate of the Gardener Admission Controller webhooks.
 	// The certificate has to be signed by the provided CA bundle.
 	// If left empty, generates certificates signed by the provided CA bundle.

@@ -74,22 +74,26 @@ func ValidateAPIServerComponentConfiguration(config imports.APIServerComponentCo
 	allErrs = append(allErrs, ValidateAPIServerETCDConfiguration(config.Etcd, fldPath.Child("etcd"))...)
 
 	// validation of optional configuration
-
-	if config.CABundle == nil && config.TLS != nil {
-		// for security reasons, require the CA bundle of the provided TLS serving certs
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("caBundle"), "For security reasons, only providing the TLS serving certificates of the Gardener API server, but not the CA for verification, is forbidden."))
+	if (config.CA == nil || (config.CA.Crt == nil && config.CA.SecretRef == nil)) && config.TLS != nil {
+		// the control plane helm chart requires the public CA bundle to validate the Gardener API server TLS certificates
+		// in the webhook configurations in the virtual garden
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("ca").Child("crt"), "Only providing the TLS serving certificates of the Gardener API server, but not the CA for verification, is forbidden."))
+	} else if config.CA != nil && config.CA.Key == nil && config.CA.SecretRef == nil && config.TLS == nil {
+		// When providing a custom CA, we need to have the private key in order to generate the TLS serving certs
+		// of the Gardener API server
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("ca").Child("key"), "", "When providing a custom CA (public part) and the TLS serving Certificate of the Gardener API server are not provided, the private key of the CA is required in order to generate the TLS serving certs."))
 	}
 
-	if config.CABundle != nil {
-		allErrs = append(allErrs, ValidateCABundle(*config.CABundle, fldPath.Child("caBundle"))...)
+	if config.CA != nil {
+		allErrs = append(allErrs, ValidateCommonCA(*config.CA, fldPath.Child("ca"))...)
 	}
 
 	if config.TLS != nil {
 		errors := ValidateCommonTLSServer(*config.TLS, fldPath.Child("tls"))
 
 		// only makes sense to further validate the cert against the CA, if the cert is valid in the first place
-		if len(errors) == 0 && config.CABundle != nil {
-			allErrs = append(allErrs, ValidateTLSServingCertificateAgainstCA(config.TLS.Crt, *config.CABundle, fldPath.Child("tls").Child("crt"))...)
+		if len(errors) == 0 && config.TLS.Crt != nil && config.CA != nil && config.CA.Crt != nil {
+			allErrs = append(allErrs, ValidateTLSServingCertificateAgainstCA(*config.TLS.Crt, *config.CA.Crt, fldPath.Child("tls").Child("crt"))...)
 		}
 		allErrs = append(allErrs, errors...)
 	}
@@ -311,10 +315,14 @@ func ValidateAPIServerETCDConfiguration(config imports.APIServerEtcdConfiguratio
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("url"), config.Url, "url of etcd must be set"))
 	}
 
+	if config.SecretRef != nil && (config.CABundle != nil || config.ClientCert != nil || config.ClientKey != nil) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("secretRef"), config.Url, "cannot configure both the secret reference as well as supply the certificate values directly"))
+	}
+
 	// Do not verify the client certs against the given CA, as the client certs do not necessarily have to be signed by the
 	// same CA that signed etcd's TLS serving certificates.
 	if config.CABundle != nil {
-		allErrs = append(allErrs, ValidateCABundle(*config.CABundle, fldPath.Child("caBundle"))...)
+		allErrs = append(allErrs, ValidateCACertificate(*config.CABundle, fldPath.Child("caBundle"))...)
 	}
 
 	if config.ClientCert != nil {

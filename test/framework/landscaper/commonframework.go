@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	landscaperhealth "github.com/gardener/gardener/landscaper/utils/health"
+	landscaperhealth "github.com/gardener/gardener/landscaper/common/health"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/retry"

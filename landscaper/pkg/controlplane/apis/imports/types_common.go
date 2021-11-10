@@ -45,9 +45,28 @@ type Configuration struct {
 
 // TLSServer configures the TLS serving endpoints of a component
 type TLSServer struct {
+	// SecretRef is an optional reference to a secret in the runtime cluster that contains the TLS certificate and key
+	// Expects the following keys
+	// - tls.crt: Crt
+	// - tls.key: Key
+	SecretRef *corev1.SecretReference
 	// Cert is a certificate used by the component to serve TLS endpoints.
 	// If specified, the certificate must be signed by the configured CA.
-	Crt string
+	Crt *string
 	// Key is the key for the configured TLS certificate.
-	Key string
+	Key *string
+}
+
+// CA contains the x509 CA public cert and optionally a private key
+type CA struct {
+	// SecretRef is an optional reference to a secret in the runtime cluster that contains the CA certificate and key
+	// Expects the following optional keys
+	// - ca.crt:  Crt
+	// - ca.key:  Key
+	SecretRef *corev1.SecretReference
+	// Crt is the public part of the X509 CA certificate
+	Crt *string
+	// Crt is the private part of the X509 CA certificate
+	// The private key is required for signing
+	Key *string
 }

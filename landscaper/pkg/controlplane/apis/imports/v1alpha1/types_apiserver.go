@@ -80,12 +80,14 @@ type APIServerComponentConfiguration struct {
 	// Encryption configures an optional encryption configuration
 	// Defaults:
 	// - resources (controllerregistrations.core.gardener.cloud, shootstates.core.gardener.cloud)
-	//   providers: (identity: {})
+	//   providers:
+	//    - aescbc with a randomly generated key
+	//    - identity: {}
 	// +optional
 	Encryption *apiserverconfigv1.EncryptionConfiguration `json:"encryption,omitempty"`
 	// Etcd contains configuration for the etcd of the Gardener API server
 	Etcd APIServerEtcdConfiguration `json:"etcd"`
-	// CABundle is a PEM encoded CA bundle which will be used by the Kubernetes API server
+	// CA contains a PEM encoded CA public key which will be used by the Kubernetes API server
 	// (either the RuntimeCluster or the VirtualGarden cluster)
 	// to validate the Gardener Extension API server's TLS serving certificate.
 	// It is put into the APIService resources for the Gardener resource groups
@@ -93,9 +95,11 @@ type APIServerComponentConfiguration struct {
 	// has to be signed by this CA.
 	// For more information, please see:
 	// https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/#contacting-the-extension-apiserver
-	// If left empty, generates a new CA or reuses the CA of an existing API server deployment.
+	// If the TLS serving certificate of the Gardener Extension API server is not provided, then must contain the private key
+	// of the CA to generate missing TLS serving certificate.
+	// If left empty, generates a new CA or reuses the CA of an existing APIService registration.
 	// +optional
-	CABundle *string `json:"caBundle,omitempty"`
+	CA *CA `json:"ca,omitempty"`
 	// TLS contains the TLS serving certificate & key of the Gardener Extension API server
 	// If left empty, generates certificates signed by the provided CA bundle.
 	// +optional
@@ -249,6 +253,14 @@ type APIServerEtcdConfiguration struct {
 	// Optional. Etcd does not have to enforce client authentication.
 	// +optional
 	ClientKey *string `json:"clientKey,omitempty"`
+	// SecretRef is an optional reference to a secret in the runtime cluster that contains the etcd's CABundle
+	// Client certificate and key
+	// Expects the following keys
+	// - ca.crt:  CABundle
+	// - tls.crt: ClientCert
+	// - tls.key: ClientKey
+	// +optional
+	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
 }
 
 // APIServerAuditConfiguration contains audit logging configuration
@@ -328,16 +340,19 @@ type APIServerAdmissionConfiguration struct {
 	// For more information, see here: https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers#
 	// +optional
 	Plugins []apiserverv1.AdmissionPluginConfiguration `json:"plugins,omitempty"`
-	// ValidatingWebhook configures client-credentials to authenticate to validating webhooks
+	// ValidatingWebhook configures client-credentials to authenticate against validating webhooks
 	// +optional
 	ValidatingWebhook *APIServerAdmissionWebhookCredentials `json:"validatingWebhook,omitempty"`
-	// MutatingWebhook configures client-credentials to authenticate to validating webhooks
+	// MutatingWebhook configures client-credentials to authenticate against validating webhooks
 	// +optional
 	MutatingWebhook *APIServerAdmissionWebhookCredentials `json:"mutatingWebhook,omitempty"`
 }
 
 // APIServerAdmissionWebhookCredentials is required if your admission webhooks require authentication.
 // Contains client-credentials that can be used by the Gardener API server to authenticate to registered Webhooks.
+// Enable this if you want to configure non-Gardener Webhooks.
+// Not required for Gardener to work, as the in-cluster communication with the Gardener Admission Controller
+// does not require client authentication.
 // Also see https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#authenticate-apiservers
 type APIServerAdmissionWebhookCredentials struct {
 	// Kubeconfig contains the kubeconfig with credentials to authenticate to an admission webhook.
@@ -362,8 +377,7 @@ type APIServerAdmissionWebhookCredentials struct {
 // Service Account Volume Projection to be used for the APIServer Admission Webhook credentials
 type APIServerAdmissionWebhookCredentialsTokenProjection struct {
 	// Enabled configures if Service Account Volume Projection is used
-	// +optional
-	Enabled *bool `json:"enabled,omitempty"`
+	Enabled bool `json:"enabled"`
 	// Audience contains the intended audience of the token.
 	// A recipient of the token must identify itself with an identifier specified in the audience of the token,
 	// and otherwise should reject the token.

@@ -6,5 +6,5 @@ metadata:
 data:
   config: |
     # import configuration file.
-    # Please see landscaper/gardenlet/example/gardenlet-landscaper-imports.yaml to see what can be configured here.
+    # Please see landscaper/gardenlet/example/landscaper-gardenlet-imports.yaml to see what can be configured here.
 

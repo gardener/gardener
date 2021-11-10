@@ -1,3 +1,10 @@
+# Goal
+
+Deployment of a Gardener control plane consisting of the Gardener API Server, the Gardener Admission Controller, the Gardener Scheduler and the Gardener Controller Manager.
+Designed to run with minimal configuration to bootstrap a new or upgrade an existing installation.
+
+**NOTE**:  if the Control Plane deployment is run against an existing Gardener Installation, already deployed certificates should be picked up automatically if they are missing in the configuration.
+
 # Prerequisites
 
 1) A kubeconfig for a Kubernetes cluster (`runtime` cluster) to run the Gardener control plane pods (Gardener Extension API server, Gardener Controller Manager, Gardener Scheduler, Gardener Admission Controller)
@@ -28,7 +35,7 @@ Consider this option if
 ### 2) Virtual Garden
 
 **Prerequisites**
-- An Kubernetes API server deployment configured for API aggregation in the `runtime` cluster.
+- A Kubernetes API server deployment configured for API aggregation in the `runtime` cluster.
   This component does not deploy the such API server. It must already exist in the runtime cluster
   and setup for [API aggregation](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer).
   This is the case when the [virtual garden component](https://github.com/gardener/virtual-garden) of the Landscaper has already been deployed to the `runtime` cluster.
@@ -176,7 +183,7 @@ gardenerAPIserver:
 
 The Gardener cluster identity is a string that uniquely identifies the Gardener installation.
 It can be any string that uniquely identifies the landscape.
-If not provided, sets a default identity.
+If not provided, sets a generated default identity with the scheme `landscape-<4 digits>`.
 
 ``` yaml
 clusterIdentity: my-company-landscape-dev
@@ -214,20 +221,43 @@ gardenerAPIserver:
         -----BEGIN RSA PRIVATE KEY-----
         ...
         -----END RSA PRIVATE KEY-----
+      
+      # Alternatively: set a secret reference to a secret in the runtime cluster 
+      # containing the PEM-encoded TLS serving certificates (keys: `tls.crt`, `tls.key`)
+      # secretRef:
+      #   name: 
+      #   namespace:
 ```
 
-Also, it is recommended to provide the PEM encoded CA bundle that signed the Gardener Extension API server's TLS serving certificates(configured above).
-This CA bundle is set to the `APIService` resources for the Gardener resource groups in the to-be aggregated API server.
-This is how the to be-aggregated Kubernetes API server is able to validate the Gardener Extension API server's TLS serving certificate.
+If custom TLS serving certificates are configured, the corresponding PEM encoded public X509 CA certificate must also be provided.
+This CA bundle (`ca/crt`) is set to the `APIService` resources for the Gardener resource groups in the to-be aggregated API server.
+This is how the to be-aggregated Kubernetes API server is able to validate the Gardener Extension API server's TLS serving certificate (`tls/crt`).
 For more information, please consult the [documentation](https://kubernetes.io/docs/tasks/extend-kubernetes/configure-aggregation-layer/#contacting-the-extension-apiserver).
+
+The CA's corresponding private key (`ca/key`) is only required when 
+- a custom the TLS serving certificate of the Gardener Extension API server is not provided,
+- the public X509 CA is configured.
+Alternatively, leave both the CA and the TLS serving certificate blank so that they are auto-generated.
+
 
 ``` yaml
 gardenerAPIserver:
   componentConfiguration:
-    caBundle:
-      -----BEGIN CERTIFICATE-----
-       ...
-      -----END CERTIFICATE-----
+    ca:
+      crt: 
+        -----BEGIN CERTIFICATE-----
+         ...
+        -----END CERTIFICATE-----
+      key:
+        -----BEGIN RSA PRIVATE KEY-----
+         ...
+        -----END RSA PRIVATE KEY----- 
+      
+      # Alternatively: set a secret reference to a secret in the runtime cluster containing 
+      # the PEM-encoded CA certificate (keys: `ca.crt`, optionally: `ca.key`)
+      # secretRef:
+      #   name: 
+      #   namespace: 
 ```
 
 ## Gardener Controller Manager
@@ -247,6 +277,12 @@ gardenerControllerManager:
         -----BEGIN RSA PRIVATE KEY-----
         ...
         -----END RSA PRIVATE KEY-----
+      
+      # Alternatively: set a secret reference to a secret in the runtime cluster 
+      # containing the PEM-encoded TLS serving certificates (keys: `tls.crt`, `tls.key`)
+      # secretRef:
+      #   name: 
+      #   namespace:
 ```
 
 ## Gardener Admission Controller
@@ -258,20 +294,31 @@ gardenerAdmissionController:
   enabled: false:
 ```
 
-If the Admission Controller shall be used, you can provide a custom CA bundle as well as TLS serving certificates.
-The CA bundle is a PEM encoded CA bundle which will be used by the Gardener API server
-to validate the TLS serving certificate of the Gardener Admission Webhook server of the Gardener Admission Controller.
-The CA bundle is put into the `MutatingWebhookConfiguration` and `ValidatingWebhookConfiguration` resources when registering the Webhooks.
-The TLS serving certificate of the Gardener Admission Webhook server has to be signed by this CA.
+If the Admission Controller shall be used, you can provide a custom CA bundle (`ca`) as well as TLS serving certificates.
+The field `ca/crt` contains a PEM encoded X509 CA certificate which is used by the Gardener API server to validate the TLS serving certificate of the Gardener Admission Webhook server of the Gardener Admission Controller.
+The CA's private key (`ca/key`) is optionally used to generate missing TLS serving certificates for the Gardener Admission Controller.
+The CA certificate `ca/crt` is put into the `MutatingWebhookConfiguration` and `ValidatingWebhookConfiguration` resources when registering the Webhooks.
+The TLS serving certificate of the Gardener Admission Webhook server (`tls/crt`) has to be signed by this CA.
 
 
 ``` yaml
 gardenerAdmissionController:
   componentConfiguration:
-    caBundle:
-      -----BEGIN CERTIFICATE-----
-      ...
-      -----END CERTIFICATE-----
+    ca:
+      crt: |
+        -----BEGIN CERTIFICATE-----
+         ...
+        -----END CERTIFICATE-----
+      key: |
+        -----BEGIN RSA PRIVATE KEY-----
+         ...
+        -----END RSA PRIVATE KEY-----  
+      
+      # Alternatively: set a secret reference to a secret in the runtime cluster containing 
+      # the PEM-encoded CA certificate (keys: `ca.crt`, optionally: `ca.key`)
+      # secretRef:
+      #   name: 
+      #   namespace:
     tls:
       crt: |
         -----BEGIN CERTIFICATE-----
@@ -280,7 +327,13 @@ gardenerAdmissionController:
       key: |
         -----BEGIN RSA PRIVATE KEY-----
         ...
-        -----END RSA PRIVATE KEY-----
+        -----END RSA PRIVATE KEY------
+      
+      # Alternatively: set a secret reference to a secret in the runtime cluster 
+      # containing the PEM-encoded TLS serving certificates (keys: `tls.crt`, `tls.key`)
+      # secretRef:
+      #   name: 
+      #   namespace:
 ```
 
 ### Seed Authorizer
@@ -413,7 +466,8 @@ gardenerScheduler:
 
 # Minimal example configuration
 
-Below is a minimal example configuration to deploy a Gardener control plane.
+A minimal example configuration to deploy a Gardener control plane can be found [here](example/minimal_landscaper-controlplane-imports.yaml).
+**NOTE**:  if this is run against an existing Gardener Installation, already deployed certificates should be picked up automatically if they are missing in the configuration.
 
 **What needs to be filled in is:**
 - The kubeconfig of the `runtime` cluster
@@ -425,63 +479,8 @@ Below is a minimal example configuration to deploy a Gardener control plane.
 - The CA bundle of the etcd cluster.
 - If the etcd cluster has client authentication enabled: the client credentials which are signed by the etcd CA.
 
-```
-apiVersion: controlplane.gardener.landscaper.gardener.cloud/v1alpha1
-kind: Imports
-runtimeCluster:
-  apiVersion: landscaper.gardener.cloud/v1alpha1
-  kind: Target
-  spec:
-    type: landscaper.gardener.cloud/kubernetes-cluster
-    config:
-      kubeconfig: |
-        ---
-        apiVersion:...
-        # here goes the kubeconfig of the runtime cluster
+A custom CA certificate for the Gardener API server and the Gardener Admission Controller can be provided, 
+but will be generated and exported if left blank.
+This is also the case for the TLS serving certificates of the Gardener API Server, the Gardener Admission Controller and the Gardener Controller Manager.
 
-
-virtualGarden:
-  enabled: false
-  # specify when virtual garden option is enabled
-  #kubeconfig:
-  #  apiVersion: landscaper.gardener.cloud/v1alpha1
-  #  kind: Target
-  #  spec:
-  #    type: landscaper.gardener.cloud/kubernetes-cluster
-  #    config:
-  #      kubeconfig: |
-  #        ---
-  #        apiVersion:...
-  #        # here goes the kubeconfig of the virtual-garden cluster
-
-internalDomain:
-  provider: aws-route53
-  domain: internal.test.domain
-  credentials:
-    AWS_ACCESS_KEY_ID: <very-secret>
-    AWS_SECRET_ACCESS_KEY: <very-secret>
-
-
-gardenerAPIserver:
-  componentConfiguration:
-    etcd:
-      url: "virtual-garden-etcd-main-client.garden.svc:2379"
-      # recommended to set CA of Etcd cluster
-#      caBundle: |
-#        -----BEGIN CERTIFICATE-----
-#        ...
-#        -----END CERTIFICATE-----
-      # This configuration is required if the etcd has client authentication enabled
-      # client credentials have been signed by the etcd CA
-#      tls:
-#        crt: |
-#          -----BEGIN CERTIFICATE-----
-#          ...
-#          -----END CERTIFICATE-----
-#        key: |
-#          -----BEGIN RSA PRIVATE KEY-----
-#          ...
-#          -----END RSA PRIVATE KEY-----
-
-gardenerAdmissionController:
-  enabled: true
+All generated or existing certificates will be exported to a path on the local filesystem (path needs to be specified with the environment variable `EXPORTS_PATH`).

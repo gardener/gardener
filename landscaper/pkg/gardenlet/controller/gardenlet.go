@@ -52,7 +52,7 @@ type Landscaper struct {
 	imports *imports.Imports
 	// working on the external version of the GardenletConfiguration file
 	gardenletConfiguration *configv1alpha1.GardenletConfiguration
-	landscaperOperation    string
+	landscaperOperation    landscaperconstants.OperationType
 
 	chartPath string
 	// disables certain checks that require Gardener API groups in the Garden cluster
@@ -63,7 +63,7 @@ type Landscaper struct {
 }
 
 // NewGardenletLandscaper creates a new Gardenlet landscaper.
-func NewGardenletLandscaper(imports *imports.Imports, landscaperOperation, componentDescriptorPath string, isIntegrationTest bool) (*Landscaper, error) {
+func NewGardenletLandscaper(imports *imports.Imports, landscaperOperation landscaperconstants.OperationType, componentDescriptorPath string, isIntegrationTest bool) (*Landscaper, error) {
 	// Get external gardenlet config from import configuration
 	gardenletConfig, err := confighelper.ConvertGardenletConfigurationExternal(imports.ComponentConfiguration)
 	if err != nil {
@@ -96,7 +96,7 @@ func NewGardenletLandscaper(imports *imports.Imports, landscaperOperation, compo
 	}
 
 	landscaper := Landscaper{
-		log:                    logger.NewFieldLogger(logger.NewLogger("info", ""), "landscaper-gardenlet operation", landscaperOperation),
+		log:                    logger.NewFieldLogger(logger.NewLogger("info", ""), "landscaper-gardenlet operation", string(landscaperOperation)),
 		imports:                imports,
 		gardenletConfiguration: gardenletConfig,
 		landscaperOperation:    landscaperOperation,
@@ -139,9 +139,9 @@ func NewGardenletLandscaper(imports *imports.Imports, landscaperOperation, compo
 
 func (g Landscaper) Run(ctx context.Context) error {
 	switch g.landscaperOperation {
-	case string(landscaperconstants.OperationReconcile):
+	case landscaperconstants.OperationReconcile:
 		return g.Reconcile(ctx)
-	case string(landscaperconstants.OperationDelete):
+	case landscaperconstants.OperationDelete:
 		return g.Delete(ctx)
 	default:
 		return fmt.Errorf("environment variable \"OPERATION\" must either be set to %q or %q", landscaperconstants.OperationReconcile, landscaperconstants.OperationDelete)

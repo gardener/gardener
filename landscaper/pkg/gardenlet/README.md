@@ -43,7 +43,7 @@ Make sure to set the following environment variables:
 1. Run `make dev-setup` to create a default component descriptor and import file for local execution 
 in the directory `dev/landscaper`.
 
-2. Adjust the import file `landscaper/gardenlet-landscaper-imports.yaml` to your setup.
+2. Adjust the import file `landscaper/landscaper-gardenlet-imports.yaml` to your setup.
 Please check what can be configured [below](#import-configuration).
 
 3. Finally, run the below `make` statement to run the Gardenlet landscaper. 

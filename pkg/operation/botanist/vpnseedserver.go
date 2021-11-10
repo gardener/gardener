@@ -28,7 +28,8 @@ import (
 )
 
 const (
-	diffieHellmanKey = `-----BEGIN DH PARAMETERS-----
+	// DefaultDiffieHellmanKey is the default diffie-hellmann
+	DefaultDiffieHellmanKey = `-----BEGIN DH PARAMETERS-----
 MIIBCAKCAQEA7cBXxG9an6KRz/sB5uiSOTf7Eg+uWVkhXO4peKDTARzMYa8b7WR8
 B/Aw+AyUXtB3tXtrzeC5M3IHnuhFwMo3K4oSOkFJxatLlYKeY15r+Kt5vnOOT3BW
 eN5OnWlR5Wi7GZBWbaQgXVR79N4yst43sVhJus6By0lN6Olc9xD/ys9GH/ykJVIh
@@ -43,7 +44,7 @@ var diffieHellmanKeyChecksum string
 
 // init calculates the checksum of the default diffie hellman key
 func init() {
-	diffieHellmanKeyChecksum = utils.ComputeChecksum(map[string][]byte{"dh2048.pem": []byte(diffieHellmanKey)})
+	diffieHellmanKeyChecksum = utils.ComputeChecksum(map[string][]byte{"dh2048.pem": []byte(DefaultDiffieHellmanKey)})
 }
 
 // DefaultVPNSeedServer returns a deployer for the vpn-seed-server.
@@ -87,7 +88,7 @@ func (b *Botanist) DeployVPNServer(ctx context.Context) error {
 	}
 
 	checkSumDH := diffieHellmanKeyChecksum
-	openvpnDiffieHellmanSecret := map[string][]byte{"dh2048.pem": []byte(diffieHellmanKey)}
+	openvpnDiffieHellmanSecret := map[string][]byte{"dh2048.pem": []byte(DefaultDiffieHellmanKey)}
 	if dh := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); dh != nil {
 		openvpnDiffieHellmanSecret = dh.Data
 		checkSumDH = b.LoadCheckSum(v1beta1constants.GardenRoleOpenVPNDiffieHellman)

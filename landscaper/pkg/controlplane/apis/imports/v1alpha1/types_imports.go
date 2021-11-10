@@ -26,6 +26,10 @@ import (
 // Imports defines the import for the Gardener landscaper control plane component.
 type Imports struct {
 	metav1.TypeMeta `json:",inline"`
+	// Identity is the id that uniquely identifies this Gardener installation
+	// If not set, uses the existing identity of the installation or generates a default identity ("landscape-").
+	// +optional
+	Identity *string `json:"identity"`
 	// RuntimeCluster contains the kubeconfig for the cluster where the Gardener
 	// control plane pods will run.
 	// if you do NOT configure a "virtual Garden" installation, the API server of this cluster will
@@ -67,6 +71,9 @@ type Imports struct {
 	// Rbac configures common RBAC configuration
 	// +optional
 	Rbac *Rbac `json:"rbac,omitempty"`
+	// CertificateRotation determines whether to regenerate the certificates that are missing in the import configuration
+	// per default, missing configurations are taking from an existing Gardener installation
+	CertificateRotation *CertificateRotation `json:"certificateRotation,omitempty"`
 }
 
 // VirtualGarden contains configuration for the "Virtual Garden" setup option of Gardener
@@ -185,4 +192,10 @@ type SeedAuthorizer struct {
 	// Enabled configures whether the Seed Authorizer is enabled
 	// +optional
 	Enabled *bool `json:"enabled,omitempty"`
+}
+
+// CertificateRotation determines whether to regenerate the certificates that are missing in the import configuration.
+// Per default, missing configuration is taken from an existing Gardener installation
+type CertificateRotation struct {
+	Rotate bool `json:"rotate,omitempty"`
 }
