@@ -57,7 +57,7 @@ Optionally, the `DNSRecord` resource may contain also the following information:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: dnsrecord-external
+  name: dnsrecord-bar-external
   namespace: shoot--foo--bar
 type: Opaque
 data:
@@ -71,7 +71,7 @@ metadata:
 spec:
   type: aws-route53
   secretRef:
-    name: dnsrecord-external
+    name: dnsrecord-bar-external
     namespace: shoot--foo--bar
 # region: eu-west-1
 # zone: ZFOO
