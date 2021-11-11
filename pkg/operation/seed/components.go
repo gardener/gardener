@@ -15,6 +15,7 @@
 package seed
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"time"
@@ -22,6 +23,8 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
@@ -38,6 +41,7 @@ import (
 	"github.com/Masterminds/semver"
 	restarterapi "github.com/gardener/dependency-watchdog/pkg/restarter/api"
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
@@ -213,6 +217,7 @@ func defaultDependencyWatchdogs(
 }
 
 func defaultExternalAuthzServer(
+	ctx context.Context,
 	c client.Client,
 	seedVersion string,
 	imageVector imagevector.ImageVector,
@@ -225,10 +230,27 @@ func defaultExternalAuthzServer(
 		return nil, err
 	}
 
-	return extauthzserver.NewExtAuthServer(
+	extAuthServer := extauthzserver.NewExtAuthServer(
 		c,
 		v1beta1constants.GardenNamespace,
 		image.String(),
 		3,
-	), nil
+	)
+
+	if gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio) {
+		return extAuthServer, nil
+	}
+
+	vpnSeedDeployments := &appsv1.DeploymentList{}
+	if err := c.List(ctx, vpnSeedDeployments, client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}), client.Limit(1)); err != nil {
+		return nil, err
+	}
+
+	// Even though the ManagedIstio feature gate is turned off, there are still shoots which have not been reconciled yet.
+	// Thus, we cannot destroy the ext-authz-server.
+	if len(vpnSeedDeployments.Items) > 0 {
+		return component.NoOp(), nil
+	}
+
+	return component.OpDestroy(extAuthServer), nil
 }
