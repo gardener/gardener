@@ -30,10 +30,20 @@ type object struct {
 	Bool    *bool    `json:"bool,omitempty"`
 }
 
+// This is for instance an internal type which does not have json marshalling annotations
+type objectUpperCase struct {
+	Object  *objectUpperCase
+	Objects []objectUpperCase
+	String  *string
+	Int     *int32
+	Bool    *bool
+}
+
 var _ = Describe("Values", func() {
 	var (
-		obj    *object
-		values map[string]interface{}
+		obj      *object
+		objUpper *objectUpperCase
+		values   map[string]interface{}
 	)
 
 	BeforeEach(func() {
@@ -48,6 +58,19 @@ var _ = Describe("Values", func() {
 			},
 			Bool: pointer.Bool(true),
 		}
+
+		objUpper = &objectUpperCase{
+			Objects: []objectUpperCase{
+				{
+					Object: &objectUpperCase{
+						String: pointer.String("foo"),
+					},
+					Int: pointer.Int32(42),
+				},
+			},
+			Bool: pointer.Bool(true),
+		}
+
 		values = map[string]interface{}{
 			"objects": []interface{}{
 				map[string]interface{}{
@@ -88,6 +111,60 @@ var _ = Describe("Values", func() {
 		It("should fail if the object cannot be unmarshalled back to a values map", func() {
 			_, err := ToValuesMap("foo")
 			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("#ToValuesMapWithOptions", func() {
+		It("should convert an object to a values map with lower-case keys", func() {
+			result, err := ToValuesMapWithOptions(objUpper, Options{LowerCaseKeys: true})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(values))
+		})
+
+		It("should convert an object to a values map with lower-case keys - deep recursion", func() {
+			objUpper = &objectUpperCase{
+				Objects: []objectUpperCase{
+					{
+						Object: &objectUpperCase{
+							String: pointer.String("foo"),
+						},
+						Objects: []objectUpperCase{
+							{
+								Int: pointer.Int32(50),
+								Object: &objectUpperCase{
+									String: pointer.String("bar"),
+								},
+							},
+						},
+						Int: pointer.Int32(42),
+					},
+				},
+				Bool: pointer.Bool(true),
+			}
+
+			values = map[string]interface{}{
+				"objects": []interface{}{
+					map[string]interface{}{
+						"object": map[string]interface{}{
+							"string": "foo",
+						},
+						"objects": []interface{}{
+							map[string]interface{}{
+								"object": map[string]interface{}{
+									"string": "bar",
+								},
+								"int": float64(50),
+							},
+						},
+						"int": float64(42),
+					},
+				},
+				"bool": true,
+			}
+
+			result, err := ToValuesMapWithOptions(objUpper, Options{LowerCaseKeys: true})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(values))
 		})
 	})
 

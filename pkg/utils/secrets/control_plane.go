@@ -112,7 +112,7 @@ func (s *ControlPlaneSecretConfig) GenerateFromInfoData(infoData infodata.InfoDa
 	}
 
 	if len(s.KubeConfigRequests) > 0 {
-		kubeconfig, err := generateKubeconfig(s, certificate)
+		kubeconfig, err := GenerateKubeconfig(s, certificate)
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +151,7 @@ func (s *ControlPlaneSecretConfig) GenerateControlPlane() (*ControlPlane, error)
 	}
 
 	if len(s.KubeConfigRequests) > 0 {
-		kubeconfig, err := generateKubeconfig(s, certificate)
+		kubeconfig, err := GenerateKubeconfig(s, certificate)
 		if err != nil {
 			return nil, err
 		}
@@ -188,10 +188,10 @@ func (c *ControlPlane) SecretData() map[string][]byte {
 	return data
 }
 
-// generateKubeconfig generates a Kubernetes Kubeconfig for communicating with the kube-apiserver by using
+// GenerateKubeconfig generates a Kubernetes Kubeconfig for communicating with the kube-apiserver by using
 // a client certificate. If <basicAuthUser> and <basicAuthPass> are non-empty string, a second user object
 // containing the Basic Authentication credentials is added to the Kubeconfig.
-func generateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certificate) ([]byte, error) {
+func GenerateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certificate) ([]byte, error) {
 	if len(secret.KubeConfigRequests) == 0 {
 		return nil, fmt.Errorf("missing kubeconfig request for %q", secret.Name)
 	}

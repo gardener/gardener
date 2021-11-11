@@ -40,4 +40,25 @@ var _ = Describe("Helpers test", func() {
 			Expect(result).To(Equal(&config.SchedulerConfiguration{}))
 		})
 	})
+
+	Describe("#ConvertSchedulerConfigurationExternal", func() {
+		internalConfiguration := v1alpha1.SchedulerConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha1.SchemeGroupVersion.String(),
+				Kind:       "SchedulerConfiguration",
+			},
+		}
+
+		It("should convert the internal SchedulerConfiguration to an external one", func() {
+			result, err := ConvertSchedulerConfigurationExternal(&internalConfiguration)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(&v1alpha1.SchedulerConfiguration{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1alpha1.SchemeGroupVersion.String(),
+					Kind:       "SchedulerConfiguration",
+				},
+			}))
+		})
+	})
 })

@@ -48,6 +48,19 @@ func ConvertAdmissionControllerConfiguration(obj runtime.Object) (*apisconfig.Ad
 	return result, nil
 }
 
+// ConvertAdmissionControllerConfigurationExternal converts the given object to an external AdmissionControllerConfiguration version.
+func ConvertAdmissionControllerConfigurationExternal(obj runtime.Object) (*apisconfigv1alpha1.AdmissionControllerConfiguration, error) {
+	obj, err := scheme.ConvertToVersion(obj, apisconfigv1alpha1.SchemeGroupVersion)
+	if err != nil {
+		return nil, err
+	}
+	result, ok := obj.(*apisconfigv1alpha1.AdmissionControllerConfiguration)
+	if !ok {
+		return nil, fmt.Errorf("could not convert AdmissionControllerConfiguration to the external version")
+	}
+	return result, nil
+}
+
 // APIGroupMatches returns `true` if the given group has a match in the given limit.
 func APIGroupMatches(limit apisconfig.ResourceLimit, group string) bool {
 	for _, grp := range limit.APIGroups {

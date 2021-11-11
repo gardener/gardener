@@ -17,5 +17,5 @@
 package secrets
 
 var (
-	ExportGenerateKubeconfig = generateKubeconfig
+	ExportGenerateKubeconfig = GenerateKubeconfig
 )
