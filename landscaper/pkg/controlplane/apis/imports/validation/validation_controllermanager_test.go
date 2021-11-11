@@ -67,9 +67,7 @@ var _ = Describe("ValidateControllerManager", func() {
 					Crt: &certString,
 					Key: &keyString,
 				},
-				Configuration: &imports.Configuration{
-					ComponentConfiguration: &componentConfig,
-				},
+				Config: &componentConfig,
 			},
 		}
 	})
@@ -137,7 +135,7 @@ var _ = Describe("ValidateControllerManager", func() {
 		})
 
 		It("should forbid TLS ServerCertPath in the component configuration", func() {
-			controllerManagerConfiguration.ComponentConfiguration.ComponentConfiguration = &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
+			controllerManagerConfiguration.ComponentConfiguration.Config = &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
 				Server: controllermanagerconfigv1alpha1.ServerConfiguration{
 					HTTPS: controllermanagerconfigv1alpha1.HTTPSServer{
 						TLS: controllermanagerconfigv1alpha1.TLSServer{
@@ -156,7 +154,7 @@ var _ = Describe("ValidateControllerManager", func() {
 		})
 
 		It("should forbid TLS ServerKeyPath in the component configuration", func() {
-			controllerManagerConfiguration.ComponentConfiguration.ComponentConfiguration = &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
+			controllerManagerConfiguration.ComponentConfiguration.Config = &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
 				Server: controllermanagerconfigv1alpha1.ServerConfiguration{
 					HTTPS: controllermanagerconfigv1alpha1.HTTPSServer{
 						TLS: controllermanagerconfigv1alpha1.TLSServer{
@@ -175,7 +173,7 @@ var _ = Describe("ValidateControllerManager", func() {
 		})
 
 		It("should forbid specifiying a Garden kubeconfig in the component configuration", func() {
-			controllerManagerConfiguration.ComponentConfiguration.ComponentConfiguration = &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
+			controllerManagerConfiguration.ComponentConfiguration.Config = &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
 				GardenClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 					Kubeconfig: "almost valid kubeconfig",
 				},
@@ -193,7 +191,7 @@ var _ = Describe("ValidateControllerManager", func() {
 		// Demonstrate that the ControllerManager component configuration is validated.
 		// Otherwise, the component might fail after deployment by the landscaper
 		It("should forbid invalid configurations", func() {
-			controllerManagerConfiguration.ComponentConfiguration.ComponentConfiguration = &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
+			controllerManagerConfiguration.ComponentConfiguration.Config = &controllermanagerconfigv1alpha1.ControllerManagerConfiguration{
 				LogLevel: "invalid log level",
 			}
 

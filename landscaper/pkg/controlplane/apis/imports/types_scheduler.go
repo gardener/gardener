@@ -14,6 +14,8 @@
 
 package imports
 
+import "k8s.io/apimachinery/pkg/runtime"
+
 // GardenerScheduler contains the configuration of the Gardener Scheduler
 type GardenerScheduler struct {
 	// DeploymentConfiguration contains optional configurations for
@@ -25,8 +27,8 @@ type GardenerScheduler struct {
 
 // SchedulerComponentConfiguration contains the component configuration of the Gardener Scheduler
 type SchedulerComponentConfiguration struct {
-	// Component specifies values for the Gardener Scheduler component configuration
+	// Config specifies values for the Gardener Scheduler component configuration
 	// Please see example/20-componentconfig-gardener-scheduler.yaml for what
 	// can be configured here
-	*Configuration
+	Config runtime.Object
 }

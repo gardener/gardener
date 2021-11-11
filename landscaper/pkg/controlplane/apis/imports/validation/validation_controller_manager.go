@@ -46,11 +46,11 @@ func ValidateControllerManagerComponentConfiguration(config imports.ControllerMa
 		allErrs = append(allErrs, ValidateCommonTLSServer(*config.TLS, fldPath.Child("tls"))...)
 	}
 
-	if config.Configuration != nil {
+	if config.Config != nil {
 		// Convert the Gardener controller config to an internal version
-		componentConfig, err := confighelper.ConvertControllerManagerConfiguration(config.Configuration.ComponentConfiguration)
+		componentConfig, err := confighelper.ConvertControllerManagerConfiguration(config.Config)
 		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath, config.Configuration.ComponentConfiguration, fmt.Sprintf("could not convert to Gardener controller manager configuration: %v", err)))
+			allErrs = append(allErrs, field.Invalid(fldPath, config.Config, fmt.Sprintf("could not convert to Gardener controller manager configuration: %v", err)))
 			return allErrs
 		}
 

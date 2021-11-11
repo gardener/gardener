@@ -30,12 +30,12 @@ import (
 func Convert_v1alpha1_GardenerAdmissionController_To_imports_GardenerAdmissionController(in *GardenerAdmissionController, out *imports.GardenerAdmissionController, s conversion.Scope) error {
 	// if the object is not set, then we need to manually convert the Raw bytes from runtime.RawExtension to a runtime.Object
 	// then set it on the internal version. Otherwise the component config gets lost.
-	if in.ComponentConfiguration != nil && in.ComponentConfiguration.Configuration != nil && in.ComponentConfiguration.Configuration.ComponentConfiguration.Object == nil {
-		cfg, err := admissioncontrollerencoding.DecodeAdmissionControllerConfigurationFromBytes(in.ComponentConfiguration.Configuration.ComponentConfiguration.Raw, false)
+	if in.ComponentConfiguration != nil && len(in.ComponentConfiguration.Config.Raw) > 0 && in.ComponentConfiguration.Config.Object == nil {
+		cfg, err := admissioncontrollerencoding.DecodeAdmissionControllerConfigurationFromBytes(in.ComponentConfiguration.Config.Raw, false)
 		if err != nil {
 			return err
 		}
-		in.ComponentConfiguration.Configuration.ComponentConfiguration.Object = cfg
+		in.ComponentConfiguration.Config.Object = cfg
 	}
 
 	return autoConvert_v1alpha1_GardenerAdmissionController_To_imports_GardenerAdmissionController(in, out, s)
@@ -48,8 +48,8 @@ func Convert_imports_GardenerAdmissionController_To_v1alpha1_GardenerAdmissionCo
 
 	// if the rawBytes are not set on the component configuration (runtime.RawExtension), then we need to manually convert the existing configuration of type
 	// runtime.Object to bytes.
-	if out.ComponentConfiguration != nil && out.ComponentConfiguration.Configuration != nil && out.ComponentConfiguration.Configuration.ComponentConfiguration.Raw == nil {
-		cfg, ok := out.ComponentConfiguration.Configuration.ComponentConfiguration.Object.(*admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration)
+	if out.ComponentConfiguration != nil && out.ComponentConfiguration.Config.Object != nil && out.ComponentConfiguration.Config.Raw == nil {
+		cfg, ok := out.ComponentConfiguration.Config.Object.(*admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration)
 		if !ok {
 			return fmt.Errorf("unknown AdmissionController config object type")
 		}
@@ -57,18 +57,18 @@ func Convert_imports_GardenerAdmissionController_To_v1alpha1_GardenerAdmissionCo
 		if err != nil {
 			return err
 		}
-		out.ComponentConfiguration.Configuration.ComponentConfiguration.Raw = raw
+		out.ComponentConfiguration.Config.Raw = raw
 	}
 	return nil
 }
 
 func Convert_v1alpha1_GardenerControllerManager_To_imports_GardenerControllerManager(in *GardenerControllerManager, out *imports.GardenerControllerManager, s conversion.Scope) error {
-	if in.ComponentConfiguration != nil && in.ComponentConfiguration.Configuration != nil && in.ComponentConfiguration.Configuration.ComponentConfiguration.Object == nil {
-		cfg, err := controllermanagerencoding.DecodeControllerManagerConfigurationFromBytes(in.ComponentConfiguration.Configuration.ComponentConfiguration.Raw, false)
+	if in.ComponentConfiguration != nil && len(in.ComponentConfiguration.Config.Raw) > 0 && in.ComponentConfiguration.Config.Object == nil {
+		cfg, err := controllermanagerencoding.DecodeControllerManagerConfigurationFromBytes(in.ComponentConfiguration.Config.Raw, false)
 		if err != nil {
 			return err
 		}
-		in.ComponentConfiguration.Configuration.ComponentConfiguration.Object = cfg
+		in.ComponentConfiguration.Config.Object = cfg
 	}
 
 	return autoConvert_v1alpha1_GardenerControllerManager_To_imports_GardenerControllerManager(in, out, s)
@@ -79,8 +79,8 @@ func Convert_imports_GardenerControllerManager_To_v1alpha1_GardenerControllerMan
 		return err
 	}
 
-	if out.ComponentConfiguration != nil && out.ComponentConfiguration.Configuration != nil && out.ComponentConfiguration.Configuration.ComponentConfiguration.Raw == nil {
-		cfg, ok := out.ComponentConfiguration.Configuration.ComponentConfiguration.Object.(*controllermanagerconfigv1alpha1.ControllerManagerConfiguration)
+	if out.ComponentConfiguration != nil && out.ComponentConfiguration.Config.Object != nil && out.ComponentConfiguration.Config.Raw == nil {
+		cfg, ok := out.ComponentConfiguration.Config.Object.(*controllermanagerconfigv1alpha1.ControllerManagerConfiguration)
 		if !ok {
 			return fmt.Errorf("unknown ControllerManager config object type")
 		}
@@ -88,18 +88,18 @@ func Convert_imports_GardenerControllerManager_To_v1alpha1_GardenerControllerMan
 		if err != nil {
 			return err
 		}
-		out.ComponentConfiguration.Configuration.ComponentConfiguration.Raw = raw
+		out.ComponentConfiguration.Config.Raw = raw
 	}
 	return nil
 }
 
 func Convert_v1alpha1_GardenerScheduler_To_imports_GardenerScheduler(in *GardenerScheduler, out *imports.GardenerScheduler, s conversion.Scope) error {
-	if in.ComponentConfiguration != nil && in.ComponentConfiguration.Configuration != nil && in.ComponentConfiguration.Configuration.ComponentConfiguration.Object == nil {
-		cfg, err := schedulerencoding.DecodeSchedulerConfigurationFromBytes(in.ComponentConfiguration.Configuration.ComponentConfiguration.Raw, false)
+	if in.ComponentConfiguration != nil && len(in.ComponentConfiguration.Config.Raw) > 0 && in.ComponentConfiguration.Config.Object == nil {
+		cfg, err := schedulerencoding.DecodeSchedulerConfigurationFromBytes(in.ComponentConfiguration.Config.Raw, false)
 		if err != nil {
 			return err
 		}
-		in.ComponentConfiguration.Configuration.ComponentConfiguration.Object = cfg
+		in.ComponentConfiguration.Config.Object = cfg
 	}
 
 	return autoConvert_v1alpha1_GardenerScheduler_To_imports_GardenerScheduler(in, out, s)
@@ -110,8 +110,8 @@ func Convert_imports_GardenerScheduler_To_v1alpha1_GardenerScheduler(in *imports
 		return err
 	}
 
-	if out.ComponentConfiguration != nil && out.ComponentConfiguration.Configuration != nil && out.ComponentConfiguration.Configuration.ComponentConfiguration.Raw == nil {
-		cfg, ok := out.ComponentConfiguration.Configuration.ComponentConfiguration.Object.(*schedulerconfigv1alpha1.SchedulerConfiguration)
+	if out.ComponentConfiguration != nil && out.ComponentConfiguration.Config.Object != nil && len(out.ComponentConfiguration.Config.Raw) == 0 {
+		cfg, ok := out.ComponentConfiguration.Config.Object.(*schedulerconfigv1alpha1.SchedulerConfiguration)
 		if !ok {
 			return fmt.Errorf("unknown Scheduler config object type")
 		}
@@ -119,7 +119,7 @@ func Convert_imports_GardenerScheduler_To_v1alpha1_GardenerScheduler(in *imports
 		if err != nil {
 			return err
 		}
-		out.ComponentConfiguration.Configuration.ComponentConfiguration.Raw = raw
+		out.ComponentConfiguration.Config.Raw = raw
 	}
 	return nil
 }

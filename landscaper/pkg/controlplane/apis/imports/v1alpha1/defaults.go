@@ -94,22 +94,22 @@ user:
 // SetDefaults_GardenerScheduler sets the default values for the Gardener scheduler configuration
 // in order to pass the validation
 func SetDefaults_GardenerScheduler(obj *GardenerScheduler) {
-	if obj.ComponentConfiguration == nil || obj.ComponentConfiguration.Configuration == nil {
+	if obj.ComponentConfiguration == nil || obj.ComponentConfiguration.Config.Object == nil && len(obj.ComponentConfiguration.Config.Raw) == 0 {
 		obj.ComponentConfiguration = &SchedulerComponentConfiguration{
-			Configuration: &Configuration{ComponentConfiguration: runtime.RawExtension{
+			Config: runtime.RawExtension{
 				Object: &schedulerconfigv1alpha1.SchedulerConfiguration{},
-			}},
+			},
 		}
 	}
 
-	schedulerConfig, err := encoding.DecodeSchedulerConfiguration(&obj.ComponentConfiguration.Configuration.ComponentConfiguration, false)
+	schedulerConfig, err := encoding.DecodeSchedulerConfiguration(&obj.ComponentConfiguration.Config, false)
 	if err != nil {
 		return
 	}
 
 	SetDefaultsSchedulerComponentConfiguration(schedulerConfig)
 
-	obj.ComponentConfiguration.Configuration.ComponentConfiguration = runtime.RawExtension{Object: schedulerConfig}
+	obj.ComponentConfiguration.Config = runtime.RawExtension{Object: schedulerConfig}
 }
 
 // SetDefaultsSchedulerComponentConfiguration sets defaults for the Scheduler component configuration for the Landscaper imports

@@ -68,12 +68,12 @@ func ValidateAdmissionControllerComponentConfiguration(config imports.AdmissionC
 	}
 
 	// Convert the admission controller config to an internal version
-	if config.Configuration != nil {
+	if config.Config != nil {
 		fldPathComponentConfig := fldPath.Child("config")
 
-		componentConfig, err := admissionconfighelper.ConvertAdmissionControllerConfiguration(config.Configuration.ComponentConfiguration)
+		componentConfig, err := admissionconfighelper.ConvertAdmissionControllerConfiguration(config.Config)
 		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPathComponentConfig, config.Configuration.ComponentConfiguration, fmt.Sprintf("could not convert to admission controller configuration: %v", err)))
+			allErrs = append(allErrs, field.Invalid(fldPathComponentConfig, config.Config, fmt.Sprintf("could not convert to admission controller configuration: %v", err)))
 			return allErrs
 		}
 
