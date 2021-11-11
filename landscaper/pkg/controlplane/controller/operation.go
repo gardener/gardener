@@ -26,6 +26,8 @@ import (
 	"github.com/gardener/gardener/charts"
 	exports "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
+	admissionconfighelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerconfighelper "github.com/gardener/gardener/pkg/controllermanager/apis/config/helper"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"

@@ -21,8 +21,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
-	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Helpers test", func() {
@@ -59,11 +57,6 @@ var _ = Describe("Helpers test", func() {
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: v1alpha1.SchemeGroupVersion.String(),
 					Kind:       "ControllerManagerConfiguration",
-				},
-				LeaderElection: v1alpha1.LeaderElectionConfiguration{
-					LeaderElectionConfiguration: componentbaseconfigv1alpha1.LeaderElectionConfiguration{
-						LeaderElect: pointer.Bool(false),
-					},
 				},
 			}))
 		})
