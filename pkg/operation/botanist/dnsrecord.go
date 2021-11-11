@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -213,13 +214,13 @@ func (b *Botanist) deployOrRestoreDNSRecord(ctx context.Context, dnsRecord compo
 
 // CleanupOrphanedDNSRecordSecrets cleans up secrets related to DNSRecords which may be orphaned after introducing the 'dnsrecord-' prefix
 func (b *Botanist) CleanupOrphanedDNSRecordSecrets(ctx context.Context) error {
-	err := client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name + "-" + DNSInternalName, Namespace: b.Shoot.SeedNamespace}}))
-	if err != nil {
-		return err
+	err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name + "-" + DNSInternalName, Namespace: b.Shoot.SeedNamespace}})
+	if client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("could not clean up orphaned internal DNSRecord secret: %w", err)
 	}
-	err = client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name + "-" + DNSExternalName, Namespace: b.Shoot.SeedNamespace}}))
-	if err != nil {
-		return err
+	err = b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: b.Shoot.GetInfo().Name + "-" + DNSExternalName, Namespace: b.Shoot.SeedNamespace}})
+	if client.IgnoreNotFound(err) != nil {
+		return fmt.Errorf("could not clean up orphaned external DNSRecord secret: %w", err)
 	}
 	return nil
 }
