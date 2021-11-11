@@ -139,23 +139,63 @@ func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, error) {
 		})
 
 		deployApplicationChart = graph.Add(flow.Task{
-			Name: "Deploying the application chart",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				// TODO
-
-				return nil
-			}),
+			Name:         "Deploying the application chart into the Garden cluster",
+			Fn:           flow.TaskFn(o.DeployApplicationChart),
 			Dependencies: flow.NewTaskIDs(seedAuthorizerPreparation),
 		})
 
-		generateControlPlaneKubeconfigs = graph.Add(flow.Task{
-			Name: "Generate control plane kubeconfigs",
-			Fn: flow.TaskFn(func(ctx context.Context) error {
-				// TODO generate and set on operation
+		getVirtualGardenClusterEndpoint = graph.Add(flow.Task{
+			Name:         "Determining Virtual Garden cluster endpoint",
+			Fn:           flow.TaskFn(o.GetVirtualGardenClusterEndpoint).DoIf(o.imports.VirtualGarden != nil && o.imports.VirtualGarden.Enabled),
+			Dependencies: flow.NewTaskIDs(deployApplicationChart),
+		})
 
+		generateKubeconfigGardenerAPIServer = graph.Add(flow.Task{
+			Name: "Generate kubeconfig for the Gardener API Server",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				var err error
+				if o.VirtualGardenKubeconfigGardenerAPIServer, err = o.GenerateVirtualGardenKubeconfig(ctx, deploymentNameGardenerAPIServer); err != nil {
+					return err
+				}
 				return nil
 			}).DoIf(o.imports.VirtualGarden != nil && o.imports.VirtualGarden.Enabled),
-			Dependencies: flow.NewTaskIDs(deployApplicationChart),
+			Dependencies: flow.NewTaskIDs(getVirtualGardenClusterEndpoint),
+		})
+
+		generateKubeconfigGardenerControllerManager = graph.Add(flow.Task{
+			Name: "Generate kubeconfig for the Gardener Controller Manager",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				var err error
+				if o.VirtualGardenKubeconfigGardenerControllerManager, err = o.GenerateVirtualGardenKubeconfig(ctx, deploymentNameGardenerControllerManager); err != nil {
+					return err
+				}
+				return nil
+			}).DoIf(o.imports.VirtualGarden != nil && o.imports.VirtualGarden.Enabled),
+			Dependencies: flow.NewTaskIDs(getVirtualGardenClusterEndpoint),
+		})
+
+		generateKubeconfigGardenerScheduler = graph.Add(flow.Task{
+			Name: "Generate kubeconfig for the Gardener Scheduler",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				var err error
+				if o.VirtualGardenKubeconfigGardenerScheduler, err = o.GenerateVirtualGardenKubeconfig(ctx, deploymentNameGardenerScheduler); err != nil {
+					return err
+				}
+				return nil
+			}).DoIf(o.imports.VirtualGarden != nil && o.imports.VirtualGarden.Enabled),
+			Dependencies: flow.NewTaskIDs(getVirtualGardenClusterEndpoint),
+		})
+
+		generateKubeconfigGardenerAdmissionController = graph.Add(flow.Task{
+			Name: "Generate kubeconfig for the Gardener Admission Controller",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				var err error
+				if o.VirtualGardenKubeconfigGardenerAdmissionController, err = o.GenerateVirtualGardenKubeconfig(ctx, deploymentNameGardenerAdmissionController); err != nil {
+					return err
+				}
+				return nil
+			}).DoIf(o.imports.VirtualGarden != nil && o.imports.VirtualGarden.Enabled && o.imports.GardenerAdmissionController.Enabled),
+			Dependencies: flow.NewTaskIDs(getVirtualGardenClusterEndpoint),
 		})
 
 		deployRuntimeChart = graph.Add(flow.Task{
@@ -165,7 +205,7 @@ func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, error) {
 
 				return nil
 			}),
-			Dependencies: flow.NewTaskIDs(deployApplicationChart, generateControlPlaneKubeconfigs),
+			Dependencies: flow.NewTaskIDs(deployApplicationChart, generateKubeconfigGardenerAPIServer, generateKubeconfigGardenerControllerManager, generateKubeconfigGardenerScheduler, generateKubeconfigGardenerAdmissionController),
 		})
 
 		_ = graph.Add(flow.Task{
