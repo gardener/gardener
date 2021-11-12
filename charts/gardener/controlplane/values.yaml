@@ -260,7 +260,7 @@ global:
   # Gardener admission controller configuration values
   admission:
     enabled: true
-    replicaCount: 1
+    replicaCount: 3
     serviceAccountName: gardener-admission-controller
     image:
       repository: eu.gcr.io/gardener-project/gardener/admission-controller
