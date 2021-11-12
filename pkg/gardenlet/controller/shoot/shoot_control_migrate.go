@@ -55,7 +55,7 @@ func (r *shootReconciler) prepareShootForMigration(ctx context.Context, logger l
 	if failed || ignored {
 		if syncErr := r.syncClusterResourceToSeed(ctx, shoot, project, cloudProfile, seed); syncErr != nil {
 			logger.WithError(syncErr).Infof("Not allowed to update Shoot with error, trying to sync Cluster resource again")
-			updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), nil, shoot, syncErr.Error(), gardencorev1beta1.LastOperationTypeMigrate, shoot.Status.LastErrors...)
+			updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, syncErr.Error(), gardencorev1beta1.LastOperationTypeMigrate, shoot.Status.LastErrors...)
 			return reconcile.Result{}, utilerrors.WithSuppressed(syncErr, updateErr)
 		}
 		logger.Info("Shoot is failed or ignored")
