@@ -17,7 +17,15 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
+
+// Options are options for marshalling
+type Options struct {
+	// LowerCaseKeys forces the keys to be lower case
+	// this is not applied recursively
+	LowerCaseKeys bool
+}
 
 // ToValuesMap converts the given value v to a values map, by first marshalling it to JSON,
 // and then unmarshalling the result from JSON into a values map.
@@ -28,6 +36,55 @@ func ToValuesMap(v interface{}) (map[string]interface{}, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+// ToValuesMapWithOptions converts the given value v to a values map, by first marshalling it to JSON,
+// and then unmarshalling the result from JSON into a values map.
+// If v cannot be marshalled to JSON, or if the result cannot be unmarshalled into a values map, an error is returned.
+func ToValuesMapWithOptions(v interface{}, opt Options) (map[string]interface{}, error) {
+	var m map[string]interface{}
+	if err := convert(v, &m); err != nil {
+		return nil, err
+	}
+
+	if opt.LowerCaseKeys {
+		m = toLowerCase(m)
+	}
+
+	return m, nil
+}
+
+// toLowerCase recursively ensures that the keys in a map[string]interface{} are lower-case
+func toLowerCase(input map[string]interface{}) map[string]interface{} {
+	if input == nil {
+		return nil
+	}
+
+	if len(input) == 0 {
+		return input
+	}
+
+	lowCase := make(map[string]interface{})
+	for k, v := range input {
+		if v == nil {
+			continue
+		}
+
+		newKey := strings.ToLower(k)
+
+		if m, ok := v.(map[string]interface{}); ok {
+			v = toLowerCase(m)
+		}
+
+		if m, ok := v.([]interface{}); ok {
+			for k2, v2 := range m {
+				m[k2] = toLowerCase(toMap(v2))
+			}
+			v = m
+		}
+		lowCase[newKey] = v
+	}
+	return lowCase
 }
 
 // FromValuesMap converts the given values map values to the given value v, by first marshalling it to JSON,

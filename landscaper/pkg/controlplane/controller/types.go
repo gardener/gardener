@@ -44,4 +44,13 @@ const (
 	cmNameClusterIdentity = "cluster-identity"
 	// cmDataKeyClusterIdentity is the data key for the config map containing the cluster identity
 	cmDataKeyClusterIdentity = "cluster-identity"
+
+	// deploymentNameGardenerAPIServer is the name of the Gardener API Server deployment
+	deploymentNameGardenerAPIServer = "gardener-apiserver"
+	// deploymentNameGardenerControllerManager is the name of the Gardener Controller Manager deployment
+	deploymentNameGardenerControllerManager = "gardener-controller-manager"
+	// deploymentNameGardenerScheduler is the name of the Gardener Scheduler deployment
+	deploymentNameGardenerScheduler = "gardener-scheduler"
+	// deploymentNameGardenerAdmissionController is the name of the Gardener Admission Controller deployment
+	deploymentNameGardenerAdmissionController = "gardener-admission-controller"
 )

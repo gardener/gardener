@@ -24,7 +24,7 @@ import (
 
 var _ = Describe("utils", func() {
 	Describe("secrets", func() {
-		Describe("#generateKubeconfig", func() {
+		Describe("#GenerateKubeconfig", func() {
 			var (
 				kubecfg clientcmdv1.Config
 

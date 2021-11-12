@@ -14,6 +14,8 @@
 
 package v1alpha1
 
+import "k8s.io/apimachinery/pkg/runtime"
+
 // GardenerAdmissionController contains the configuration of the Gardener Admission Controller
 type GardenerAdmissionController struct {
 	// Enabled configures whether the Gardener Admission Controller should be deployed
@@ -46,11 +48,11 @@ type AdmissionControllerComponentConfiguration struct {
 	// If left empty, generates certificates signed by the provided CA bundle.
 	// +optional
 	TLS *TLSServer `json:"tls,omitempty"`
-	// Configuration specifies values for the Gardener Admission Controller component configuration
+	// Config specifies values for the Gardener Admission Controller component configuration
 	// Please see example/20-componentconfig-gardener-admission-controller.yaml for what
 	// can be configured here
 	// +optional
-	*Configuration `json:"inline,omitempty"`
+	Config runtime.RawExtension `json:"config,omitempty"`
 }
 
 // SeedRestriction configures the SeedRestriction admission plugin

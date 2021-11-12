@@ -16,6 +16,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // GardenerControllerManager contains configurations of the Gardener Controller Manager
@@ -55,9 +56,9 @@ type ControllerManagerComponentConfiguration struct {
 	// If left empty, generates a certificate signed by the CA that also signs the TLS serving certificates of the Gardener API server.
 	// +optional
 	TLS *TLSServer `json:"tls,omitempty"`
-	// Configuration specifies values for the Gardener Controller Manager component configuration
+	// Config specifies values for the Gardener Controller Manager component configuration
 	// Please see example/20-componentconfig-gardener-controller-manager.yaml for what
 	// can be configured here
 	// +optional
-	*Configuration `json:",inline,omitempty"`
+	Config runtime.RawExtension `json:"config,omitempty"`
 }

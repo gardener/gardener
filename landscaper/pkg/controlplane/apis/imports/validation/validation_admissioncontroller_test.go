@@ -68,9 +68,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 					Crt: &certString,
 					Key: &keyString,
 				},
-				Configuration: &imports.Configuration{
-					ComponentConfiguration: &componentConfig,
-				},
+				Config: &componentConfig,
 			},
 		}
 	})
@@ -202,7 +200,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 		})
 
 		It("should forbid TLS ServerCertPath in the component configuration", func() {
-			admissionControllerConfiguration.ComponentConfiguration.ComponentConfiguration = &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
+			admissionControllerConfiguration.ComponentConfiguration.Config = &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
 				Server: admissioncontrollerconfigv1alpha1.ServerConfiguration{
 					HTTPS: admissioncontrollerconfigv1alpha1.HTTPSServer{
 						TLS: admissioncontrollerconfigv1alpha1.TLSServer{
@@ -221,7 +219,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 		})
 
 		It("should forbid specifiying a Garden kubeconfig in the component configuration", func() {
-			admissionControllerConfiguration.ComponentConfiguration.ComponentConfiguration = &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
+			admissionControllerConfiguration.ComponentConfiguration.Config = &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
 				GardenClientConnection: componentbaseconfigv1alpha1.ClientConnectionConfiguration{
 					Kubeconfig: "almost valid kubeconfig",
 				},
@@ -240,7 +238,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 		// Otherwise, the component might fail after deployment by the landscaper
 		It("should forbid invalid configurations", func() {
 			mode := admissioncontrollerconfigv1alpha1.ResourceAdmissionWebhookMode("invalid_mode")
-			admissionControllerConfiguration.ComponentConfiguration.ComponentConfiguration = &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
+			admissionControllerConfiguration.ComponentConfiguration.Config = &admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration{
 				Server: admissioncontrollerconfigv1alpha1.ServerConfiguration{
 					ResourceAdmissionConfiguration: &admissioncontrollerconfigv1alpha1.ResourceAdmissionConfiguration{
 						OperationMode: &mode,

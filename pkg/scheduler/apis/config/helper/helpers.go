@@ -43,3 +43,16 @@ func ConvertSchedulerConfiguration(obj runtime.Object) (*config.SchedulerConfigu
 	}
 	return result, nil
 }
+
+// ConvertSchedulerConfigurationExternal converts the given object to an external SchedulerConfiguration version.
+func ConvertSchedulerConfigurationExternal(obj runtime.Object) (*v1alpha1.SchedulerConfiguration, error) {
+	obj, err := scheme.ConvertToVersion(obj, v1alpha1.SchemeGroupVersion)
+	if err != nil {
+		return nil, err
+	}
+	result, ok := obj.(*v1alpha1.SchedulerConfiguration)
+	if !ok {
+		return nil, fmt.Errorf("could not convert SchedulerConfiguration to the external version")
+	}
+	return result, nil
+}

@@ -61,9 +61,7 @@ var _ = Describe("ValidateScheduler", func() {
 				VPA:            pointer.Bool(true),
 			},
 			ComponentConfiguration: &imports.SchedulerComponentConfiguration{
-				Configuration: &imports.Configuration{
-					ComponentConfiguration: &componentConfig,
-				},
+				Config: &componentConfig,
 			},
 		}
 	})

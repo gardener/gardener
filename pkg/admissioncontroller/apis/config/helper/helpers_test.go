@@ -94,6 +94,27 @@ var _ = Describe("Helpers test", func() {
 		})
 	})
 
+	Describe("#ConvertAdmissionControllerConfigurationExternal", func() {
+		internalAdmissionConfiguration := apisconfig.AdmissionControllerConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: apisconfig.SchemeGroupVersion.String(),
+				Kind:       "AdmissionControllerConfiguration",
+			},
+		}
+
+		It("should convert the internal AdmissionControllerConfiguration to an external one", func() {
+			result, err := ConvertAdmissionControllerConfigurationExternal(&internalAdmissionConfiguration)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(&apisconfigv1alpha1.AdmissionControllerConfiguration{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: apisconfigv1alpha1.SchemeGroupVersion.String(),
+					Kind:       "AdmissionControllerConfiguration",
+				},
+			}))
+		})
+	})
+
 	DescribeTable("#APIGroupMatches",
 		func(limit apisconfig.ResourceLimit, apiGroup string, matcher gomegatypes.GomegaMatcher) {
 			Expect(APIGroupMatches(limit, apiGroup)).To(matcher)

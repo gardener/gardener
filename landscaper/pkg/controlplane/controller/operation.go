@@ -23,9 +23,16 @@ import (
 	v2 "github.com/gardener/component-spec/bindings-go/apis/v2"
 	"github.com/gardener/component-spec/bindings-go/apis/v2/cdutils"
 	"github.com/gardener/component-spec/bindings-go/codec"
+	"github.com/gardener/gardener/charts"
 	exports "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
+	admissionconfighelper "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/helper"
+	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	controllermanagerconfighelper "github.com/gardener/gardener/pkg/controllermanager/apis/config/helper"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
+	schedulerconfighelper "github.com/gardener/gardener/pkg/scheduler/apis/config/helper"
+	schedulerconfigv1alpha1 "github.com/gardener/gardener/pkg/scheduler/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -68,13 +75,46 @@ type operation struct {
 	// imports contains the imports configuration.
 	imports *imports.Imports
 
+	// admissionControllerConfig is the parsed configuration of the Gardener Admission Controller
+	admissionControllerConfig *admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration
+
+	// controllerManagerConfig is the parsed configuration of the Gardener Controller Manager
+	controllerManagerConfig *controllermanagerconfigv1alpha1.ControllerManagerConfiguration
+
+	// schedulerConfig is the parsed configuration of the Gardener Scheduler
+	schedulerConfig *schedulerconfigv1alpha1.SchedulerConfiguration
+
 	// ImageReferences contains the image references for the control plane component
 	// parsed  from the component descriptor
 	ImageReferences ImageReferences
 
+	// VirtualGardenClusterEndpoint is the cluster-internal endpoint of the Virtual Garden API server
+	// Used when generating the kubeconfigs for the control plane components
+	VirtualGardenClusterEndpoint *string
+
+	// VirtualGardenKubeconfigGardenerAPIServer is the generated Kubeconfig for the Gardener API Server
+	// Only generated when deploying using a virtual garden
+	VirtualGardenKubeconfigGardenerAPIServer *string
+
+	// VirtualGardenKubeconfigGardenerControllerManager is the generated Kubeconfig for the Gardener Controller Manager
+	// Only generated when deploying using a virtual garden
+	VirtualGardenKubeconfigGardenerControllerManager *string
+
+	// VirtualGardenKubeconfigGardenerScheduler is the generated Kubeconfig for the Gardener Scheduler
+	// Only generated when deploying using a virtual garden
+	VirtualGardenKubeconfigGardenerScheduler *string
+
+	// VirtualGardenKubeconfigGardenerAdmissionController is the generated Kubeconfig for the Gardener Admission Controller
+	// Only generated when deploying using a virtual garden
+	VirtualGardenKubeconfigGardenerAdmissionController *string
+
 	// exports will be filled during the reconciliation
 	// with data to be exported to other components
 	exports exports.Exports
+
+	// chartPath is the path on the local filesystem to the chart directory
+	// exposed for testing
+	chartPath string
 }
 
 // ImageReferences contains the parsed image from the component descriptor
@@ -105,10 +145,41 @@ func NewOperation(
 		virtualGardenClient: virtualGardenClient,
 		log:                 log,
 		imports:             imports,
+		chartPath:           charts.Path,
 	}
 
 	if err := op.parseComponentDescriptor(componentDescriptorPath); err != nil {
 		return nil, err
+	}
+
+	var err error
+	if imports.GardenerAdmissionController.Enabled &&
+		imports.GardenerAdmissionController.ComponentConfiguration != nil {
+		// imports.GardenerAdmissionController.Config.Configuration != nil {
+
+		op.admissionControllerConfig, err = admissionconfighelper.ConvertAdmissionControllerConfigurationExternal(imports.GardenerAdmissionController.ComponentConfiguration.Config)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert to external admission controller configuration: %v", err)
+		}
+	}
+
+	if imports.GardenerControllerManager.ComponentConfiguration != nil &&
+		imports.GardenerControllerManager.ComponentConfiguration.Config != nil {
+
+		op.controllerManagerConfig, err = controllermanagerconfighelper.ConvertControllerManagerConfigurationExternal(imports.GardenerControllerManager.ComponentConfiguration.Config)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert to external controller manager configuration: %v", err)
+		}
+	}
+
+	if imports.GardenerScheduler != nil &&
+		imports.GardenerControllerManager.ComponentConfiguration != nil &&
+		imports.GardenerControllerManager.ComponentConfiguration.Config != nil {
+
+		op.schedulerConfig, err = schedulerconfighelper.ConvertSchedulerConfigurationExternal(imports.GardenerScheduler.ComponentConfiguration.Config)
+		if err != nil {
+			return nil, fmt.Errorf("could not convert to external scheduler configuration: %v", err)
+		}
 	}
 
 	return op, nil

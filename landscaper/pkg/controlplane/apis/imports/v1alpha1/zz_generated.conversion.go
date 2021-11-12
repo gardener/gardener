@@ -768,14 +768,8 @@ func Convert_imports_APIServerWatchCacheConfiguration_To_v1alpha1_APIServerWatch
 func autoConvert_v1alpha1_AdmissionControllerComponentConfiguration_To_imports_AdmissionControllerComponentConfiguration(in *AdmissionControllerComponentConfiguration, out *imports.AdmissionControllerComponentConfiguration, s conversion.Scope) error {
 	out.CA = (*imports.CA)(unsafe.Pointer(in.CA))
 	out.TLS = (*imports.TLSServer)(unsafe.Pointer(in.TLS))
-	if in.Configuration != nil {
-		in, out := &in.Configuration, &out.Configuration
-		*out = new(imports.Configuration)
-		if err := Convert_v1alpha1_Configuration_To_imports_Configuration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Configuration = nil
+	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.Config, &out.Config, s); err != nil {
+		return err
 	}
 	return nil
 }
@@ -788,14 +782,8 @@ func Convert_v1alpha1_AdmissionControllerComponentConfiguration_To_imports_Admis
 func autoConvert_imports_AdmissionControllerComponentConfiguration_To_v1alpha1_AdmissionControllerComponentConfiguration(in *imports.AdmissionControllerComponentConfiguration, out *AdmissionControllerComponentConfiguration, s conversion.Scope) error {
 	out.CA = (*CA)(unsafe.Pointer(in.CA))
 	out.TLS = (*TLSServer)(unsafe.Pointer(in.TLS))
-	if in.Configuration != nil {
-		in, out := &in.Configuration, &out.Configuration
-		*out = new(Configuration)
-		if err := Convert_imports_Configuration_To_v1alpha1_Configuration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Configuration = nil
+	if err := runtime.Convert_runtime_Object_To_runtime_RawExtension(&in.Config, &out.Config, s); err != nil {
+		return err
 	}
 	return nil
 }
@@ -949,14 +937,8 @@ func Convert_imports_Configuration_To_v1alpha1_Configuration(in *imports.Configu
 
 func autoConvert_v1alpha1_ControllerManagerComponentConfiguration_To_imports_ControllerManagerComponentConfiguration(in *ControllerManagerComponentConfiguration, out *imports.ControllerManagerComponentConfiguration, s conversion.Scope) error {
 	out.TLS = (*imports.TLSServer)(unsafe.Pointer(in.TLS))
-	if in.Configuration != nil {
-		in, out := &in.Configuration, &out.Configuration
-		*out = new(imports.Configuration)
-		if err := Convert_v1alpha1_Configuration_To_imports_Configuration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Configuration = nil
+	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.Config, &out.Config, s); err != nil {
+		return err
 	}
 	return nil
 }
@@ -968,14 +950,8 @@ func Convert_v1alpha1_ControllerManagerComponentConfiguration_To_imports_Control
 
 func autoConvert_imports_ControllerManagerComponentConfiguration_To_v1alpha1_ControllerManagerComponentConfiguration(in *imports.ControllerManagerComponentConfiguration, out *ControllerManagerComponentConfiguration, s conversion.Scope) error {
 	out.TLS = (*TLSServer)(unsafe.Pointer(in.TLS))
-	if in.Configuration != nil {
-		in, out := &in.Configuration, &out.Configuration
-		*out = new(Configuration)
-		if err := Convert_imports_Configuration_To_v1alpha1_Configuration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Configuration = nil
+	if err := runtime.Convert_runtime_Object_To_runtime_RawExtension(&in.Config, &out.Config, s); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1014,6 +990,7 @@ func Convert_imports_ControllerManagerDeploymentConfiguration_To_v1alpha1_Contro
 func autoConvert_v1alpha1_DNS_To_imports_DNS(in *DNS, out *imports.DNS, s conversion.Scope) error {
 	out.Domain = in.Domain
 	out.Provider = in.Provider
+	out.Zone = (*string)(unsafe.Pointer(in.Zone))
 	out.Credentials = *(*json.RawMessage)(unsafe.Pointer(&in.Credentials))
 	return nil
 }
@@ -1026,6 +1003,7 @@ func Convert_v1alpha1_DNS_To_imports_DNS(in *DNS, out *imports.DNS, s conversion
 func autoConvert_imports_DNS_To_v1alpha1_DNS(in *imports.DNS, out *DNS, s conversion.Scope) error {
 	out.Domain = in.Domain
 	out.Provider = in.Provider
+	out.Zone = (*string)(unsafe.Pointer(in.Zone))
 	out.Credentials = *(*json.RawMessage)(unsafe.Pointer(&in.Credentials))
 	return nil
 }
@@ -1350,14 +1328,8 @@ func Convert_imports_Rbac_To_v1alpha1_Rbac(in *imports.Rbac, out *Rbac, s conver
 }
 
 func autoConvert_v1alpha1_SchedulerComponentConfiguration_To_imports_SchedulerComponentConfiguration(in *SchedulerComponentConfiguration, out *imports.SchedulerComponentConfiguration, s conversion.Scope) error {
-	if in.Configuration != nil {
-		in, out := &in.Configuration, &out.Configuration
-		*out = new(imports.Configuration)
-		if err := Convert_v1alpha1_Configuration_To_imports_Configuration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Configuration = nil
+	if err := runtime.Convert_runtime_RawExtension_To_runtime_Object(&in.Config, &out.Config, s); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1368,14 +1340,8 @@ func Convert_v1alpha1_SchedulerComponentConfiguration_To_imports_SchedulerCompon
 }
 
 func autoConvert_imports_SchedulerComponentConfiguration_To_v1alpha1_SchedulerComponentConfiguration(in *imports.SchedulerComponentConfiguration, out *SchedulerComponentConfiguration, s conversion.Scope) error {
-	if in.Configuration != nil {
-		in, out := &in.Configuration, &out.Configuration
-		*out = new(Configuration)
-		if err := Convert_imports_Configuration_To_v1alpha1_Configuration(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Configuration = nil
+	if err := runtime.Convert_runtime_Object_To_runtime_RawExtension(&in.Config, &out.Config, s); err != nil {
+		return err
 	}
 	return nil
 }

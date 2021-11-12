@@ -40,4 +40,25 @@ var _ = Describe("Helpers test", func() {
 			Expect(result).To(Equal(&config.ControllerManagerConfiguration{}))
 		})
 	})
+
+	Describe("#ConvertControllerManagerConfigurationExternal", func() {
+		internalConfiguration := config.ControllerManagerConfiguration{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: config.SchemeGroupVersion.String(),
+				Kind:       "ControllerManagerConfiguration",
+			},
+		}
+
+		It("should convert the internal ControllerManagerConfiguration to an external one", func() {
+			result, err := ConvertControllerManagerConfigurationExternal(&internalConfiguration)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(Equal(&v1alpha1.ControllerManagerConfiguration{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: v1alpha1.SchemeGroupVersion.String(),
+					Kind:       "ControllerManagerConfiguration",
+				},
+			}))
+		})
+	})
 })

@@ -111,6 +111,8 @@ type DNS struct {
 	// all the supported providers in the controller registration
 	// at https://github.com/gardener/external-dns-management/blob/master/examples/controller-registration.yaml
 	Provider string
+	// Zone is the applicable cloud provider zone
+	Zone *string
 	// Credentials contains the credentials for the dns provider
 	// Expected format of the credentials depends on the the provider
 	Credentials json.RawMessage
@@ -172,6 +174,8 @@ type SeedAuthorizer struct {
 
 // CertificateRotation determines whether to regenerate the certificates that are missing in the import configuration
 // per default, missing configurations are taking from an existing Gardener installation
+// Also, see here: https://github.com/gardener/gardener/issues/4856
 type CertificateRotation struct {
+	// Rotate defines if the certificates should be rotated during this execution
 	Rotate bool
 }

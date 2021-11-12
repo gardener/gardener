@@ -16,6 +16,7 @@ package imports
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // GardenerControllerManager contains configurations of the Gardener Controller Manager
@@ -48,8 +49,8 @@ type ControllerManagerComponentConfiguration struct {
 	// uses http for /healthz endpoint, optionally serves HTTPS for metrics.
 	// If left empty, generates a certificate signed by the CA that also signs the TLS serving certificates of the Gardener API server.
 	TLS *TLSServer
-	// Configuration specifies values for the Gardener Controller Manager component configuration
+	// Config specifies values for the Gardener Controller Manager component configuration
 	// Please see example/20-componentconfig-gardener-controller-manager.yaml for what
 	// can be configured here
-	*Configuration
+	Config runtime.Object
 }

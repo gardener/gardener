@@ -115,16 +115,19 @@ type VirtualGarden struct {
 // https://github.com/gardener/gardener/blob/master/docs/extensions/dns.md
 type DNS struct {
 	// Domain is the DNS domain
-	Domain string `json:"domain,omitempty"`
+	Domain string `json:"domain"`
 	// Provider is the DNS provider name of the given domain's zone
 	// depends on the DNS extension of your choice
 	// For instance, when using Gardener External-dns-management as the DNS extension, you can find
 	// all the supported providers in the controller registration
 	// at https://github.com/gardener/external-dns-management/blob/master/examples/controller-registration.yaml
-	Provider string `json:"provider,omitempty"`
+	Provider string `json:"provider"`
+	// Zone is the applicable cloud provider zone
+	// +optional
+	Zone *string `json:"zone,omitempty"`
 	// Credentials contains the credentials for the dns provider
 	// Expected format of the credentials depends on the the provider
-	Credentials json.RawMessage `json:"credentials,omitempty"`
+	Credentials json.RawMessage `json:"credentials"`
 }
 
 // Alerting configures the Gardener installation with alerting
@@ -194,8 +197,10 @@ type SeedAuthorizer struct {
 	Enabled *bool `json:"enabled,omitempty"`
 }
 
-// CertificateRotation determines whether to regenerate the certificates that are missing in the import configuration.
-// Per default, missing configuration is taken from an existing Gardener installation
+// CertificateRotation determines whether to regenerate the certificates that are missing in the import configuration
+// per default, missing configurations are taking from an existing Gardener installation
+// Also, see here: https://github.com/gardener/gardener/issues/4856
 type CertificateRotation struct {
+	// Rotate defines if the certificates should be rotated during this execution
 	Rotate bool `json:"rotate,omitempty"`
 }

@@ -41,11 +41,11 @@ func ValidateScheduler(config imports.GardenerScheduler, fldPath *field.Path) fi
 func ValidateSchedulerComponentConfiguration(config imports.SchedulerComponentConfiguration, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if config.Configuration != nil {
+	if config.Config != nil {
 		// Convert the Gardener Scheduler config to an internal version
-		componentConfig, err := confighelper.ConvertSchedulerConfiguration(config.Configuration.ComponentConfiguration)
+		componentConfig, err := confighelper.ConvertSchedulerConfiguration(config.Config)
 		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("config"), config.Configuration.ComponentConfiguration, fmt.Sprintf("could not convert to Gardener Scheduler configuration: %v", err)))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("config"), config.Config, fmt.Sprintf("could not convert to Gardener Scheduler configuration: %v", err)))
 			return allErrs
 		}
 
