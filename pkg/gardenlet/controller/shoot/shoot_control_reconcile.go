@@ -129,6 +129,11 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.KubeAPIServerService.Wait).SkipIf(o.Shoot.HibernationEnabled && !useSNI),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Ensuring advertised addresses for the Shoot",
+			Fn:           botanist.UpdateAdvertisedAddresses,
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
+		})
 		generateSecrets = g.Add(flow.Task{
 			Name: "Generating secrets and saving them into ShootState",
 			Fn:   botanist.GenerateAndSaveSecrets,
