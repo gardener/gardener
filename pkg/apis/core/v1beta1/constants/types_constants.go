@@ -30,6 +30,9 @@ const (
 	// SecretNameCAMetricsServer is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the metrics-server of a shoot cluster.
 	SecretNameCAMetricsServer = "ca-metrics-server"
+	// SecretNameCAVPN is a constant for the name of a Kubernetes secret object that contains the CA
+	// certificate of the VPN components of a shoot cluster.
+	SecretNameCAVPN = "ca-vpn"
 	// SecretNameCloudProvider is a constant for the name of a Kubernetes secret object that contains the provider
 	// specific credentials that shall be used to create/delete the shoot.
 	SecretNameCloudProvider = "cloudprovider"
