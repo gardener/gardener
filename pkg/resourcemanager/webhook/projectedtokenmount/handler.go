@@ -77,9 +77,12 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	if serviceAccount.AutomountServiceAccountToken == nil || *serviceAccount.AutomountServiceAccountToken ||
-		pod.Spec.AutomountServiceAccountToken == nil || *pod.Spec.AutomountServiceAccountToken {
-		return admission.Allowed("auto-mounting service account token is not disabled")
+	if serviceAccount.AutomountServiceAccountToken == nil || *serviceAccount.AutomountServiceAccountToken {
+		return admission.Allowed("auto-mounting service account token is not disabled on ServiceAccount level")
+	}
+
+	if pod.Spec.AutomountServiceAccountToken != nil && !*pod.Spec.AutomountServiceAccountToken {
+		return admission.Allowed("Pod explicitly disables a service account token mount")
 	}
 
 	for _, volume := range pod.Spec.Volumes {
