@@ -8,4 +8,4 @@ Extension controllers may create these `ManagedResource`s in the shoot namespace
 
 ## Where can I find more examples and more information how to use `ManagedResource`s?
 
-Please take a look at the [respective documentation](../docs/concepts/resource-manager.md).
+Please take a look at the [respective documentation](../concepts/resource-manager.md).

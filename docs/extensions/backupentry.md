@@ -40,8 +40,8 @@ In order to support a new infrastructure provider you need to write a controller
 
 ## References and additional resources
 
-* [`BackupEntry` API Reference](https://gardener.cloud/api-reference/extensions/#extensions.gardener.cloud/v1alpha1.BackupBucket)
+* [`BackupEntry` API Reference](../api-reference/extensions.md#backupbucket)
 * [Exemplary implementation for the Azure provider](https://github.com/gardener/gardener-extension-provider-azure/tree/master/pkg/controller/backupentry)
 * [`BackupBucket` resource documentation](./backupbucket.md)
 * [Shared bucket proposal](../proposals/02-backupinfra.md)
-* [Gardener-controller-manager-component-config API specification](https://github.com/gardener/gardener/blob/master/pkg/controllermanager/apis/config/types.go#L101-#L107)
+* [Gardener-controller-manager-component-config API specification](../../pkg/controllermanager/apis/config/types.go#L101-#L107)

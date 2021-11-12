@@ -37,6 +37,6 @@ Your controller is supposed to create a new instance at the given cloud provider
 
 ## References and additional resources
 
-* [`Bastion` API Reference](https://gardener.cloud/api-reference/extensions/#extensions.gardener.cloud/v1alpha1.Bastion)
+* [`Bastion` API Reference](../api-reference/extensions.md#bastion)
 * [Exemplary implementation for the AWS provider](https://github.com/gardener/gardener-extension-provider-aws/tree/master/pkg/controller/bastion)
 * [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md)

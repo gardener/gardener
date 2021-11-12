@@ -20,7 +20,7 @@ As a shoot owner:
 - [check if you have dependencies to the `docker` container runtime](https://kubernetes.io/docs/tasks/administer-cluster/migrating-from-dockershim/check-if-dockershim-deprecation-affects-you/#find-docker-dependencies). **Note:** This is not only about your actual workload, but also concerns ops tooling as well as logging, monitoring and metric agents installed on the nodes
 - test with `containerd`:
   - create a new Shoot or add a Worker Pool to an existing one
-  - [set `.spec.provider.workers[].cri.name: containerd`](https://gardener.cloud/docs/references/core/#core.gardener.cloud/v1beta1.CRI) for your Shoot
+  - [set `.spec.provider.workers[].cri.name: containerd`](../api-reference/core.md#cri) for your Shoot
 - once testing is successful, switch to `containerd` with your production workload. You don't need to wait for kubernetes v1.22, `containerd` is considered production ready as of today
 - if you find dependencies to `docker`, set `.spec.provider.workers[].cri.name: docker` explicitly to avoid defaulting to `containerd` once you update your Shoot to kubernetes v1.22
 
