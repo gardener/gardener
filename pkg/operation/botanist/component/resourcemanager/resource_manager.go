@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/resourcemanager/webhook/projectedtokenmount"
 	"github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -812,20 +813,11 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks() []admissionr
 		matchPolicy   = admissionregistrationv1.Exact
 		sideEffect    = admissionregistrationv1.SideEffectClassNone
 
-		namespaceSelectorOperator metav1.LabelSelectorOperator
-		clientConfig              = admissionregistrationv1.WebhookClientConfig{CABundle: r.secrets.ServerCA.Data[secrets.DataKeyCertificateCA]}
+		namespaceSelectorOperator = metav1.LabelSelectorOpIn
 	)
 
-	if r.values.TargetDiffersFromSourceCluster {
-		namespaceSelectorOperator = metav1.LabelSelectorOpIn
-		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", ServiceName, r.namespace, serverServicePort, tokeninvalidator.WebhookPath))
-	} else {
+	if !r.values.TargetDiffersFromSourceCluster {
 		namespaceSelectorOperator = metav1.LabelSelectorOpNotIn
-		clientConfig.Service = &admissionregistrationv1.ServiceReference{
-			Name:      ServiceName,
-			Namespace: r.namespace,
-			Path:      pointer.String(tokeninvalidator.WebhookPath),
-		}
 	}
 
 	return []admissionregistrationv1.MutatingWebhook{
@@ -852,7 +844,38 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks() []admissionr
 			ObjectSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenInvalidation},
 			},
-			ClientConfig:            clientConfig,
+			ClientConfig:            r.buildWebhookClientConfig(tokeninvalidator.WebhookPath),
+			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
+			FailurePolicy:           &failurePolicy,
+			MatchPolicy:             &matchPolicy,
+			SideEffects:             &sideEffect,
+			TimeoutSeconds:          pointer.Int32(10),
+		},
+		{
+			Name: "projected-token-mount.resources.gardener.cloud",
+			Rules: []admissionregistrationv1.RuleWithOperations{{
+				Rule: admissionregistrationv1.Rule{
+					APIGroups:   []string{corev1.GroupName},
+					APIVersions: []string{corev1.SchemeGroupVersion.Version},
+					Resources:   []string{"pods"},
+				},
+				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+			}},
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      v1beta1constants.GardenerPurpose,
+					Operator: namespaceSelectorOperator,
+					Values:   []string{metav1.NamespaceSystem},
+				}},
+			},
+			ObjectSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{{
+					Key:      v1beta1constants.LabelApp,
+					Operator: metav1.LabelSelectorOpNotIn,
+					Values:   []string{"gardener-resource-manager"},
+				}},
+			},
+			ClientConfig:            r.buildWebhookClientConfig(projectedtokenmount.WebhookPath),
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			FailurePolicy:           &failurePolicy,
 			MatchPolicy:             &matchPolicy,
@@ -860,6 +883,22 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks() []admissionr
 			TimeoutSeconds:          pointer.Int32(10),
 		},
 	}
+}
+
+func (r *resourceManager) buildWebhookClientConfig(path string) admissionregistrationv1.WebhookClientConfig {
+	clientConfig := admissionregistrationv1.WebhookClientConfig{CABundle: r.secrets.ServerCA.Data[secrets.DataKeyCertificateCA]}
+
+	if r.values.TargetDiffersFromSourceCluster {
+		clientConfig.URL = pointer.String(fmt.Sprintf("https://%s.%s:%d%s", ServiceName, r.namespace, serverServicePort, path))
+	} else {
+		clientConfig.Service = &admissionregistrationv1.ServiceReference{
+			Name:      ServiceName,
+			Namespace: r.namespace,
+			Path:      &path,
+		}
+	}
+
+	return clientConfig
 }
 
 func (r *resourceManager) getLabels() map[string]string {

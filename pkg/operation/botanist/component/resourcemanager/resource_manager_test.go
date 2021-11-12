@@ -573,6 +573,44 @@ var _ = Describe("ResourceManager", func() {
 					SideEffects:             &sideEffect,
 					TimeoutSeconds:          pointer.Int32(10),
 				},
+				{
+					Name: "projected-token-mount.resources.gardener.cloud",
+					Rules: []admissionregistrationv1.RuleWithOperations{{
+						Rule: admissionregistrationv1.Rule{
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
+							Resources:   []string{"pods"},
+						},
+						Operations: []admissionregistrationv1.OperationType{"CREATE"},
+					}},
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{{
+							Key:      "gardener.cloud/purpose",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   []string{"kube-system"},
+						}},
+					},
+					ObjectSelector: &metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{{
+							Key:      "app",
+							Operator: metav1.LabelSelectorOpNotIn,
+							Values:   []string{"gardener-resource-manager"},
+						}},
+					},
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						CABundle: caBundle,
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "gardener-resource-manager",
+							Namespace: deployNamespace,
+							Path:      pointer.String("/webhooks/mount-projected-service-account-token"),
+						},
+					},
+					AdmissionReviewVersions: []string{"v1beta1", "v1"},
+					FailurePolicy:           &failurePolicy,
+					MatchPolicy:             &matchPolicy,
+					SideEffects:             &sideEffect,
+					TimeoutSeconds:          pointer.Int32(10),
+				},
 			},
 		}
 		mutatingWebhookConfigurationYAML := `apiVersion: admissionregistration.k8s.io/v1
@@ -612,6 +650,38 @@ webhooks:
     - UPDATE
     resources:
     - secrets
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1beta1
+  - v1
+  clientConfig:
+    caBundle: ` + utils.EncodeBase64(caBundle) + `
+    url: https://gardener-resource-manager.` + deployNamespace + `:443/webhooks/mount-projected-service-account-token
+  failurePolicy: Fail
+  matchPolicy: Exact
+  name: projected-token-mount.resources.gardener.cloud
+  namespaceSelector:
+    matchExpressions:
+    - key: gardener.cloud/purpose
+      operator: In
+      values:
+      - kube-system
+  objectSelector:
+    matchExpressions:
+    - key: app
+      operator: NotIn
+      values:
+      - gardener-resource-manager
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
   sideEffects: None
   timeoutSeconds: 10
 `
