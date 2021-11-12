@@ -868,6 +868,7 @@ var _ = Describe("validator", func() {
 					})
 
 					It("update should fail because the new Seed specified in shoot manifest has non-tolerated taints", func() {
+						oldShoot.Spec.SeedName = pointer.String("old-seed")
 						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
 
 						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -877,6 +878,22 @@ var _ = Describe("validator", func() {
 
 						err := admissionHandler.Admit(context.TODO(), attrs, nil)
 						Expect(err).To(HaveOccurred())
+					})
+
+					It("update should pass because the Seed stays the same, even if it has non-tolerated taints", func() {
+						oldShoot.Spec.SeedName = pointer.String("seed")
+						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+
+						// Modify the Shoot spec to avoid an early exit optimization during the admission
+						shoot.Spec.Provider.Workers[0].Maximum = 10
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).ToNot(HaveOccurred())
 					})
 
 					It("create should pass because shoot tolerates all taints of the seed", func() {
@@ -900,6 +917,17 @@ var _ = Describe("validator", func() {
 						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
 						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Update, &metav1.UpdateOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).ToNot(HaveOccurred())
+					})
+
+					It("delete should pass even if the Seed specified in shoot manifest has non-tolerated taints", func() {
+						seed.Spec.Taints = []core.SeedTaint{{Key: core.SeedTaintProtected}}
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(nil, &shoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.UpdateOptions{}, false, nil)
 
 						err := admissionHandler.Admit(context.TODO(), attrs, nil)
 						Expect(err).ToNot(HaveOccurred())
@@ -991,6 +1019,31 @@ var _ = Describe("validator", func() {
 
 						err := admissionHandler.Admit(context.TODO(), attrs, nil)
 						Expect(err).To(MatchError(ContainSubstring("already has the maximum number of shoots scheduled on it")))
+					})
+
+					It("should allow Shoot deletion even though seed's allocatable capacity is exhausted / over exhausted", func() {
+						seed.Status.Allocatable = corev1.ResourceList{"shoots": allocatableShoots}
+
+						otherShoot := shoot.DeepCopy()
+						otherShoot.Name = "other-shoot-1"
+						otherShoot.Spec.SeedName = &seedName
+						Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
+
+						otherShoot = shoot.DeepCopy()
+						otherShoot.Name = "other-shoot-2"
+						otherShoot.Spec.SeedName = &seedName
+						Expect(coreInformerFactory.Core().InternalVersion().Shoots().Informer().GetStore().Add(otherShoot)).To(Succeed())
+
+						// admission for DELETION uses the old Shoot object
+						oldShoot.Spec.SeedName = &seedName
+
+						Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+						Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+						attrs := admission.NewAttributesRecord(&shoot, oldShoot, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Delete, &metav1.DeleteOptions{}, false, nil)
+
+						err := admissionHandler.Admit(context.TODO(), attrs, nil)
+						Expect(err).ToNot(HaveOccurred())
 					})
 				})
 			})

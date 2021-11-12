@@ -294,6 +294,10 @@ func (c *validationContext) validateProjectMembership(a admission.Attributes) er
 }
 
 func (c *validationContext) validateScheduling(a admission.Attributes, shootLister corelisters.ShootLister, seedLister corelisters.SeedLister) error {
+	if a.GetOperation() == admission.Delete {
+		return nil
+	}
+
 	var (
 		shootIsBeingScheduled          = c.oldShoot.Spec.SeedName == nil && c.shoot.Spec.SeedName != nil
 		shootIsBeingRescheduled        = c.oldShoot.Spec.SeedName != nil && c.shoot.Spec.SeedName != nil && *c.shoot.Spec.SeedName != *c.oldShoot.Spec.SeedName
