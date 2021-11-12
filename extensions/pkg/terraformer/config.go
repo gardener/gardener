@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -75,9 +75,20 @@ func (t *terraformer) SetOwnerRef(owner *metav1.OwnerReference) Terraformer {
 	return t
 }
 
+// UseV1 configures if it should use flags compatible with terraformer@v1.
+// If not specified explicitly, flags compatible with terraformer@v2 will be used.
+//
+// Deprecated: terraformer@v1 is deprecated. Consider switching to terraformer@v2 instead.
+func (t *terraformer) UseV1(v1 bool) Terraformer {
+	t.useV1 = v1
+	return t
+}
+
 // UseV2 configures if it should use flags compatible with terraformer@v2.
+// TODO (acumino): The func is preserved for backwards compatibility. Remove in a future version.
+//
+// Deprecated: terraformer@v2 is the default version, hence it is no longer needed to specify it explicitly.
 func (t *terraformer) UseV2(v2 bool) Terraformer {
-	t.useV2 = v2
 	return t
 }
 

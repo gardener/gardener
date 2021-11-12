@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 )
 
 // terraformer is a struct containing configuration parameters for the Terraform script it acts on.
-// * useV2 indicates if it should use flags compatible with terraformer@v2 (defaults to false)
+// * useV1 indicates if it should use flags compatible with terraformer@v1 (defaults to false)
 // * purpose is a one-word description depicting what the Terraformer does (e.g. 'infrastructure').
 // * namespace is the namespace in which the Terraformer will act.
 // * image is the Docker image name of the Terraformer image.
@@ -47,7 +47,7 @@ import (
 // * deadlineCleaning is the timeout to wait Terraformer Pods to be cleaned up.
 // * deadlinePod is the time to wait apply/destroy Pod to be completed.
 type terraformer struct {
-	useV2 bool
+	useV1 bool
 
 	logger       logr.Logger
 	client       client.Client
@@ -102,6 +102,15 @@ const (
 
 // Terraformer is the Terraformer interface.
 type Terraformer interface {
+	// UseV1 configures if it should use flags compatible with terraformer@v1.
+	// If not specified explicitly, flags compatible with terraformer@v2 will be used.
+	//
+	// Deprecated: terraformer@v1 is deprecated. Consider switching to terraformer@v2 instead.
+	UseV1(bool) Terraformer
+	// UseV2 configures if it should use flags compatible with terraformer@v2.
+	// TODO (acumino): The func is preserved for backwards compatibility. Remove in a future version.
+	//
+	// Deprecated: terraformer@v2 is the default version, hence it is no longer needed to specify it explicitly.
 	UseV2(bool) Terraformer
 	SetLogLevel(string) Terraformer
 	SetEnvVars(envVars ...corev1.EnvVar) Terraformer

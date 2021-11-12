@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -397,20 +397,19 @@ func (t *terraformer) deployTerraformerPod(ctx context.Context, generateName, co
 }
 
 func (t *terraformer) computeTerraformerCommand(command string) []string {
-	if t.useV2 {
+	if t.useV1 {
 		return []string{
-			"/terraformer",
+			"/terraformer.sh",
 			command,
-			"--zap-log-level=" + t.logLevel,
-			"--configuration-configmap-name=" + t.configName,
-			"--state-configmap-name=" + t.stateName,
-			"--variables-secret-name=" + t.variablesName,
 		}
 	}
-
 	return []string{
-		"/terraformer.sh",
+		"/terraformer",
 		command,
+		"--zap-log-level=" + t.logLevel,
+		"--configuration-configmap-name=" + t.configName,
+		"--state-configmap-name=" + t.stateName,
+		"--variables-secret-name=" + t.variablesName,
 	}
 }
 
@@ -430,7 +429,7 @@ func getTerraformerCommand(pod *corev1.Pod) string {
 func (t *terraformer) env() []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
-	if !t.useV2 {
+	if t.useV1 {
 		envVars = append(envVars, []corev1.EnvVar{
 			{Name: "MAX_BACKOFF_SEC", Value: "60"},
 			{Name: "MAX_TIME_SEC", Value: "1800"},
