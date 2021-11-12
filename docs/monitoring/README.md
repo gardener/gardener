@@ -49,3 +49,24 @@ Deployed in the shoot control plane namespace. Important scrape targets:
 - blackbox-exporter used to measure [connectivity](connectivity.md)
 
 **Purpose**: Monitor all relevant components belonging to a shoot cluster managed by Gardener. Shoot owners can view the metrics in Grafana dashboards and receive [alerts](user_alerts.md) based on these metrics. Gardener operators will receive a different set of [alerts](operator_alerts.md). For alerting internals refer to [this](alerting.md) document.
+
+## Collect all Shoot Prometheus with remote write
+
+An optional collection of all Shoot Prometheus metrics to a central prometheus (or cortex) instance is possible with the `monitoring.shoot` setting in `GardenletConfiguration`:
+```
+monitoring:
+  shoot:
+    remoteWrite:
+      url: https://remoteWriteUrl # remote write URL
+      keep:# metrics that should be forwarded to the external write endpoint. If empty all metrics get forwarded
+      - kube_pod_container_info
+      queueConfig: | # queue_config of prometheus remote write as multiline string
+        max_shards: 100
+        batch_send_deadline: 20s
+        min_backoff: 500ms
+        max_backoff: 60s
+    externalLabels: # add additional labels to metrics to identify it on the central instance
+      additional: label
+```
+
+If basic auth is needed it can be set via secret in garden namespace (Gardener API Server). [Example secret](../../example/10-secret-remote-write.yaml)

@@ -143,3 +143,16 @@ featureGates:
 #       serviceExternalIP: 10.8.10.11 # Optional external ip for the ingress gateway load balancer.
 #       labels:
 #         network: internal
+# monitoring:
+#   shoot:
+#     remoteWrite:
+#       url: https://remoteWriteUrl # remote write URL
+#       keep:# metrics that should be forwarded to the external write endpoint. If empty all metrics get forwarded
+#       - kube_pod_container_info
+#       queueConfig: | # queue_config of prometheus remote write as multiline string
+#         max_shards: 100
+#         batch_send_deadline: 20s
+#         min_backoff: 500ms
+#         max_backoff: 60s
+#     externalLabels: # add additional labels to metrics to identify it on the central instance
+#       additional: label
