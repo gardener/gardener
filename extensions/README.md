@@ -34,11 +34,9 @@ Check out these repositories for implementations of the Gardener Extension contr
 ### Operating System
 
 - [CoreOS/FlatCar](https://github.com/gardener/gardener-extension-os-coreos)
-- [CoreOS/FlatCar (Alicloud)](https://github.com/gardener/gardener-extension-os-coreos-alicloud)
 - [GardenLinux](https://github.com/gardener/gardener-extension-os-gardenlinux)
 - [Debian/Ubuntu (MetalStack)](https://github.com/metal-stack/os-metal-extension)
 - [Ubuntu](https://github.com/gardener/gardener-extension-os-ubuntu)
-- [Ubuntu (Alicloud)](https://github.com/gardener/gardener-extension-os-ubuntu-alicloud)
 - [SuSE CHost](https://github.com/gardener/gardener-extension-os-suse-chost)
 
 ### Container Runtime
