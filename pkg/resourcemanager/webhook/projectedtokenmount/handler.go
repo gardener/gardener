@@ -71,7 +71,9 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 	}
 
 	serviceAccount := &corev1.ServiceAccount{}
-	if err := h.targetClient.Get(ctx, kutil.Key(pod.Namespace, pod.Spec.ServiceAccountName), serviceAccount); err != nil {
+
+	// We use `req.Namespace` instead of `pod.Namespace` due to https://github.com/kubernetes/kubernetes/issues/88282.
+	if err := h.targetClient.Get(ctx, kutil.Key(req.Namespace, pod.Spec.ServiceAccountName), serviceAccount); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 

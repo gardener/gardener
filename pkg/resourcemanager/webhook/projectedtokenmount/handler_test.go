@@ -70,12 +70,10 @@ var _ = Describe("Handler", func() {
 		request = admission.Request{
 			AdmissionRequest: admissionv1.AdmissionRequest{
 				Operation: admissionv1.Create,
+				Namespace: namespace,
 			},
 		}
 		pod = &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespace,
-			},
 			Spec: corev1.PodSpec{
 				AutomountServiceAccountToken: pointer.Bool(false),
 				ServiceAccountName:           serviceAccountName,
