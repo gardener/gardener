@@ -413,10 +413,11 @@ func copyKubernetesBinariesFromHyperkubeImageForVersionsLess119(hyperkubeImage *
 
 func copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119(hyperkubeImage *imagevector.Image) string {
 	return `
-  HYPERKUBE_CONTAINER_ID="$(/usr/bin/docker run --rm -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `")"
+  HYPERKUBE_CONTAINER_ID="$(/usr/bin/docker run -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `")"
   /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
   /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
-  /usr/bin/docker stop "$HYPERKUBE_CONTAINER_ID"`
+  /usr/bin/docker stop "$HYPERKUBE_CONTAINER_ID"
+  /usr/bin/docker rm "$HYPERKUBE_CONTAINER_ID"`
 }
 
 const scriptCopyKubernetesBinary = `#!/bin/bash -eu
