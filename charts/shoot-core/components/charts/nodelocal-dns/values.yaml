@@ -9,3 +9,5 @@ clusterDNS: __PILLAR__CLUSTER__DNS__
 dnsServer:  ""
 nodeLocal: 169.254.20.10
 domain: cluster.local
+forceTcpToClusterDNS: true
+forceTcpToUpstreamDNS: true

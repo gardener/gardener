@@ -10,7 +10,11 @@ Corefile: |
       loop
       bind {{ .Values.nodeLocal }} {{ .Values.dnsServer }}
       forward . {{ .Values.clusterDNS }} {
+{{- if .Values.forceTcpToClusterDNS }}
               force_tcp
+{{- else }}
+              prefer_udp
+{{- end }}
       }
       prometheus :{{ .Values.prometheus.port }}
       health {{ .Values.nodeLocal }}:8080
@@ -22,7 +26,11 @@ Corefile: |
       loop
       bind {{ .Values.nodeLocal }} {{ .Values.dnsServer }}
       forward . {{ .Values.clusterDNS }} {
+{{- if .Values.forceTcpToClusterDNS }}
               force_tcp
+{{- else }}
+              prefer_udp
+{{- end }}
       }
       prometheus :{{ .Values.prometheus.port }}
       }
@@ -33,7 +41,11 @@ Corefile: |
       loop
       bind {{ .Values.nodeLocal }} {{ .Values.dnsServer }}
       forward . {{ .Values.clusterDNS }} {
+{{- if .Values.forceTcpToClusterDNS }}
               force_tcp
+{{- else }}
+              prefer_udp
+{{- end }}
       }
       prometheus :{{ .Values.prometheus.port }}
       }
@@ -44,7 +56,11 @@ Corefile: |
       loop
       bind {{ .Values.nodeLocal }} {{ .Values.dnsServer }}
       forward . __PILLAR__UPSTREAM__SERVERS__ {
+{{- if .Values.forceTcpToUpstreamDNS }}
               force_tcp
+{{- else }}
+              prefer_udp
+{{- end }}
       }
       prometheus :{{ .Values.prometheus.port }}
       }
