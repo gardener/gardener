@@ -57,10 +57,10 @@ spec:
       {{- if not .Values.global.apiserver.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.apiserver.serviceAccountName is required" .Values.global.apiserver.serviceAccountName }}
       {{- end }}
-      {{- if gt (int .Values.global.apiserver.replicaCount) 1 }}
+      {{- if or .Values.global.apiserver.hvpa.enabled (gt (int .Values.global.apiserver.replicaCount) 1) }}
       affinity:
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
+          preferredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchExpressions:
               - key: app
