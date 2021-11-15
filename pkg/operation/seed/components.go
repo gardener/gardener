@@ -43,6 +43,7 @@ import (
 	scalerapi "github.com/gardener/dependency-watchdog/pkg/scaler/api"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/component-base/version"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -241,7 +242,9 @@ func defaultExternalAuthzServer(
 		return extAuthServer, nil
 	}
 
-	vpnSeedDeployments := &appsv1.DeploymentList{}
+	vpnSeedDeployments := &metav1.PartialObjectMetadataList{}
+	vpnSeedDeployments.SetGroupVersionKind(appsv1.SchemeGroupVersion.WithKind("DeploymentList"))
+
 	if err := c.List(ctx, vpnSeedDeployments, client.MatchingLabels(map[string]string{v1beta1constants.LabelApp: v1beta1constants.DeploymentNameVPNSeedServer}), client.Limit(1)); err != nil {
 		return nil, err
 	}
