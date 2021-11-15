@@ -33,5 +33,6 @@ var _ = Describe("Util", func() {
 		Entry("with old shoot technical ID", "shoot-dev-example--f6c6fca8-9c99-11e9-829b-2a33b5079af0", "shoot-dev-example", "f6c6fca8-9c99-11e9-829b-2a33b5079af0"),
 		Entry("with new shoot technical ID", "shoot--dev--example--f6c6fca8-9c99-11e9-829b-2a33b5079af0", "shoot--dev--example", "f6c6fca8-9c99-11e9-829b-2a33b5079af0"),
 		Entry("without -- deliminator", "shoot-dev-example-f6c6fca8-9c99-11e9-829b-2a33b5079af0", "shoot-dev-example-f6c6fca8-9c99-11e9-829b-2a33b5079af0", "shoot-dev-example-f6c6fca8-9c99-11e9-829b-2a33b5079af0"),
+		Entry("with source- prefix", "source-shoot--dev--example--f6c6fca8-9c99-11e9-829b-2a33b5079af0", "shoot--dev--example", "f6c6fca8-9c99-11e9-829b-2a33b5079af0"),
 	)
 })
