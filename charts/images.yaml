@@ -278,11 +278,11 @@ images:
 - name: istio-proxy
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/proxyv2
-  tag: "1.10.5-distroless"
+  tag: "1.10.2-distroless"
 - name: istio-istiod
   sourceRepository: github.com/istio/istio
   repository: gcr.io/istio-release/pilot
-  tag: "1.10.5-distroless"
+  tag: "1.10.2-distroless"
 
 # External Authorization Server for the Istio Endpoint of Reversed VPN
 - name: ext-authz-server
