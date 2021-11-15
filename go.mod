@@ -9,6 +9,7 @@ require (
 	github.com/ahmetb/gen-crd-api-reference-docs v0.2.0
 	github.com/bronze1man/yaml2json v0.0.0-20201022121239-82e774ec909d
 	github.com/coreos/go-systemd/v22 v22.3.2
+	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/envoyproxy/go-control-plane v0.9.9-0.20210217033140-668b12f5399d
 	github.com/frankban/quicktest v1.13.1 // indirect
 	github.com/gardener/component-spec/bindings-go v0.0.33
@@ -40,6 +41,7 @@ require (
 	github.com/spf13/viper v1.8.1
 	github.com/texttheater/golang-levenshtein v0.0.0-20191208221605-eb6844b05fc6
 	github.com/ulikunitz/xz v0.5.10 // indirect
+	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	go.uber.org/automaxprocs v1.4.0
 	go.uber.org/goleak v1.1.10
 	go.uber.org/zap v1.19.0
@@ -80,6 +82,7 @@ require (
 replace (
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible // keep this value in sync with k8s.io/apiserver
 	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.9.4
+	github.com/gardener/etcd-druid => github.com/gardener/etcd-druid v0.0.0-20211108164812-abb907da2180
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.5.5 // keep this value in sync with k8s.io/apiserver
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.0 // keep this value in sync with sigs.k8s.io/controller-runtime
 	google.golang.org/grpc => google.golang.org/grpc v1.38.0 // keep this value in sync with k8s.io/apiserver

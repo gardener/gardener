@@ -277,7 +277,7 @@ func getGardenletClusterRole(labels map[string]string) *rbacv1.ClusterRole {
 			},
 			{
 				APIGroups: []string{"druid.gardener.cloud"},
-				Resources: []string{"etcds"},
+				Resources: []string{"etcds", "etcdcopybackupstasks"},
 				Verbs:     []string{"create", "delete", "get", "list", "watch", "patch", "update"},
 			},
 			{
