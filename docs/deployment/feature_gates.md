@@ -34,8 +34,6 @@ The following tables are a summary of the feature gates that you can set on diff
 | ReversedVPN | `false` | `Alpha` | `1.22` | |
 | AdminKubeconfigRequest | `false` | `Alpha` | `1.24` | |
 | UseDNSRecords | `false` | `Alpha` | `1.27` | |
-| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | `1.31` |
-| DisallowKubeconfigRotationForShootInDeletion | `true` | `Beta` | `1.32` | |
 | RotateSSHKeypairOnMaintenance | `false` | `Alpha` | `1.28` | |
 | DenyInvalidExtensionResources | `false` | `Alpha` | `1.31` | |
 
@@ -51,6 +49,9 @@ The following tables are a summary of the feature gates that you can set on diff
 | MountHostCADirectories | `true` | `Beta` | `1.26` | `1.27` |
 | MountHostCADirectories | `true` | `GA` | `1.27` | |
 | MountHostCADirectories | | `Removed` | `1.30` | |
+| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | `1.31` |
+| DisallowKubeconfigRotationForShootInDeletion | `true` | `Beta` | `1.32` | `1.35` |
+| DisallowKubeconfigRotationForShootInDeletion | `true` | `GA` | `1.36` | |
 
 ## Using a feature
 

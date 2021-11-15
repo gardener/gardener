@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -2210,9 +2210,8 @@ var _ = Describe("Shoot Validation Tests", func() {
 		})
 
 		Describe("kubeconfig rotation", func() {
-			DescribeTable("DisallowKubeconfigRotationForShootInDeletion=true",
+			DescribeTable("DisallowKubeconfigRotationForShootInDeletion",
 				func(oldAnnotations, newAnnotations map[string]string, newSetDeletionTimestamp, expectedError bool) {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.DisallowKubeconfigRotationForShootInDeletion, true)()
 					now := metav1.NewTime(time.Now())
 					newShoot := prepareShootForUpdate(shoot)
 					if oldAnnotations != nil {
@@ -2245,34 +2244,6 @@ var _ = Describe("Shoot Validation Tests", func() {
 				Entry("should allow update request for cluster in deletion with already requested kubeconfig rotation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials", "foo": "bar"}, true, false),
 				Entry("should not allow kubeconfig rotation for cluster in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true, true),
 				Entry("should not allow kubeconfig rotation for cluster in deletion with already requested operation", map[string]string{"gardener.cloud/operation": "some-other-operation"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true, true),
-			)
-
-			DescribeTable("DisallowKubeconfigRotationForShootInDeletion=false",
-				func(oldAnnotations, newAnnotations map[string]string, newSetDeletionTimestamp bool) {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.DisallowKubeconfigRotationForShootInDeletion, false)()
-					now := metav1.NewTime(time.Now())
-					newShoot := prepareShootForUpdate(shoot)
-					if oldAnnotations != nil {
-						shoot.Annotations = oldAnnotations
-					}
-
-					if newSetDeletionTimestamp {
-						newShoot.DeletionTimestamp = &now
-					}
-					newShoot.Annotations = newAnnotations
-
-					errorList := ValidateShootObjectMetaUpdate(newShoot.ObjectMeta, shoot.ObjectMeta, field.NewPath("metadata"))
-
-					Expect(errorList).To(HaveLen(0))
-				},
-				Entry("should allow kubeconfig rotation for cluster not in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, false),
-				Entry("should allow reconcile operation for cluster in deletion", nil, map[string]string{"gardener.cloud/operation": "reconcile"}, true),
-				Entry("should allow any annotations for cluster in deletion", nil, map[string]string{"foo": "bar"}, true),
-				Entry("should allow other update request for cluster in deletion and already requested kubeconfig rotation operation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"gardener.cloud/operation": "reconcile"}, true),
-				Entry("should allow any annotations for cluster in deletion with already requested kubeconfig rotation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"foo": "bar"}, true),
-				Entry("should allow update request for cluster in deletion with already requested kubeconfig rotation", map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials", "foo": "bar"}, true),
-				Entry("should allow kubeconfig rotation for cluster in deletion", nil, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true),
-				Entry("should allow kubeconfig rotation for cluster in deletion with already requested operation", map[string]string{"gardener.cloud/operation": "some-other-operation"}, map[string]string{"gardener.cloud/operation": "rotate-kubeconfig-credentials"}, true),
 			)
 		})
 	})

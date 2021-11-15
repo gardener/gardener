@@ -147,11 +147,6 @@ func ValidateShootObjectMetaUpdate(newMeta, oldMeta metav1.ObjectMeta, fldPath *
 
 // validateShootKubeconfigRotation validates that shoot in deletion cannot rotate its kubeconfig.
 func validateShootKubeconfigRotation(newMeta, oldMeta metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
-	// if the feature gate `DisallowKubeconfigRotationForShootInDeletion` is disabled, allow kubeconfig rotation
-	if !utilfeature.DefaultFeatureGate.Enabled(features.DisallowKubeconfigRotationForShootInDeletion) {
-		return field.ErrorList{}
-	}
-
 	if newMeta.DeletionTimestamp == nil {
 		return field.ErrorList{}
 	}

@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2021 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ var featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
 	features.SeedChange:                                   {Default: false, PreRelease: featuregate.Alpha},
 	features.AdminKubeconfigRequest:                       {Default: false, PreRelease: featuregate.Alpha},
 	features.UseDNSRecords:                                {Default: false, PreRelease: featuregate.Alpha},
-	features.DisallowKubeconfigRotationForShootInDeletion: {Default: true, PreRelease: featuregate.Beta},
+	features.DisallowKubeconfigRotationForShootInDeletion: {Default: true, PreRelease: featuregate.GA, LockToDefault: true}, // TODO (@acumino): remove DisallowKubeconfigRotationForShootInDeletion in v1.38.
 }
 
 // RegisterFeatureGates registers the feature gates of the Gardener API Server.
