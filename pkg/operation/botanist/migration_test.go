@@ -16,10 +16,16 @@ package botanist_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
+	mockbackupntry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry/mock"
+	mocketcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/mock"
 	mockcontainerruntime "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime/mock"
 	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane/mock"
 	mockextension "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/extension/mock"
@@ -27,7 +33,12 @@ import (
 	mockoperatingsystemconfig "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/operatingsystemconfig/mock"
 	mockworker "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker/mock"
 	mockcomponent "github.com/gardener/gardener/pkg/operation/botanist/component/mock"
+	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
@@ -175,6 +186,190 @@ var _ = Describe("migration", func() {
 			err := botanist.DestroyAllExtensionResources(ctx)
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(Equal(fakeErr), Equal(fakeErr)))
+		})
+	})
+
+	Describe("#IsCopyOfBackupsRequired", func() {
+		var (
+			etcdMain          *mocketcd.MockInterface
+			backupEntry       *mockbackupntry.MockInterface
+			sourceBackupEntry *mockbackupntry.MockInterface
+			fakeErr           = errors.New("Fake error")
+		)
+
+		BeforeEach(func() {
+			botanist.Shoot.SetInfo(&v1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "bar",
+					Namespace: "foo",
+				},
+				Status: v1beta1.ShootStatus{
+					LastOperation: &v1beta1.LastOperation{
+						Type: v1beta1.LastOperationTypeRestore,
+					},
+				},
+			})
+			botanist.Seed = &seed.Seed{}
+			botanist.Seed.SetInfo(&v1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "seed",
+					Namespace: "garden",
+					UID:       "new-seed",
+				},
+				Spec: v1beta1.SeedSpec{
+					Backup: &v1beta1.SeedBackup{
+						Provider: "gcp",
+					},
+				},
+			})
+
+			etcdMain = mocketcd.NewMockInterface(ctrl)
+			backupEntry = mockbackupntry.NewMockInterface(ctrl)
+			sourceBackupEntry = mockbackupntry.NewMockInterface(ctrl)
+			botanist.Shoot.Components.ControlPlane = &shootpkg.ControlPlane{
+				EtcdMain: etcdMain,
+			}
+			botanist.Shoot.Components.BackupEntry = backupEntry
+			botanist.Shoot.Components.SourceBackupEntry = sourceBackupEntry
+		})
+
+		Context("CopyEtcdBackups feature gate disabled", func() {
+			It("should return false if CopyEtcdBackups feature gate is not enabled", func() {
+				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, false)()
+				copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(copyRequired).To(BeFalse())
+			})
+		})
+
+		Context("CopyEtcdBackups feature gate enabled", func() {
+			var restoreFeatureGate func()
+
+			BeforeEach(func() {
+				restoreFeatureGate = test.WithFeatureGate(gardenletfeatures.FeatureGate, features.CopyEtcdBackupsDuringControlPlaneMigration, true)
+			})
+
+			AfterEach(func() {
+				restoreFeatureGate()
+			})
+
+			It("should return false if lastOpreation is not restore", func() {
+				botanist.Shoot.GetInfo().Status.LastOperation.Type = v1beta1.LastOperationTypeReconcile
+				copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(copyRequired).To(BeFalse())
+			})
+
+			It("should return false if seed backup is not set", func() {
+				botanist.Seed.GetInfo().Spec.Backup = nil
+				copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(copyRequired).To(BeFalse())
+			})
+
+			It("should return false if lastOperation is nil", func() {
+				botanist.Shoot.GetInfo().Status.LastOperation = nil
+				copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(copyRequired).To(BeFalse())
+			})
+
+			Context("Last operation is restore and etcd main exists", func() {
+				It("should return false if etcd main resource has been deployed", func() {
+					etcdMain.EXPECT().Get(ctx)
+					copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(copyRequired).To(BeFalse())
+				})
+
+				It("should return error if retrieval of etcd main resource fials", func() {
+					etcdMain.EXPECT().Get(ctx).Return(nil, fakeErr)
+					copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+					Expect(err).To(MatchError(fakeErr))
+					Expect(copyRequired).To(BeFalse())
+				})
+
+			})
+
+			Context("Last operation is restore and etcd main does not exist", func() {
+				BeforeEach(func() {
+					etcdMain.EXPECT().Get(ctx).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, "etcd-main"))
+				})
+
+				It("should return an error if backupentry retrieval fails", func() {
+					backupEntry.EXPECT().Get(ctx).Return(nil, fakeErr)
+					copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+					Expect(err).To(MatchError(fakeErr))
+					Expect(copyRequired).To(BeFalse())
+				})
+
+				It("should return an error if backupentry is not found", func() {
+					backupEntryNotFoundErr := apierrors.NewNotFound(schema.GroupResource{}, "backupentry")
+					backupEntry.EXPECT().Get(ctx).Return(nil, backupEntryNotFoundErr)
+					copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+					Expect(err).To(MatchError(backupEntryNotFoundErr))
+					Expect(copyRequired).To(BeFalse())
+				})
+
+				It("should return true if backupentry.Spec.BucketName has not been switched to the new seed", func() {
+					backupEntry.EXPECT().Get(ctx).Return(&v1beta1.BackupEntry{
+						Spec: v1beta1.BackupEntrySpec{
+							BucketName: "old-seed",
+						},
+					}, nil)
+					copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+					Expect(err).To(Succeed())
+					Expect(copyRequired).To(BeTrue())
+				})
+			})
+
+			Context("Last operation is restore, etcd-main resource exists and backupentry.Spec.BucketName is switched to the new seed", func() {
+				BeforeEach(func() {
+					etcdMain.EXPECT().Get(ctx).Return(nil, apierrors.NewNotFound(schema.GroupResource{}, "etcd-main"))
+					backupEntry.EXPECT().Get(ctx).Return(&v1beta1.BackupEntry{
+						Spec: v1beta1.BackupEntrySpec{
+							BucketName: string(botanist.Seed.GetInfo().UID),
+						},
+					}, nil)
+				})
+
+				It("should return error if source backupentry does not exist", func() {
+					sourceBackupEntryNotFoundErr := apierrors.NewNotFound(schema.GroupResource{}, "source-backupentry")
+					sourceBackupEntry.EXPECT().Get(ctx).Return(nil, sourceBackupEntryNotFoundErr)
+					copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+					Expect(err).To(MatchError(sourceBackupEntryNotFoundErr))
+					Expect(copyRequired).To(BeFalse())
+				})
+
+				It("should return an error if source backupentry retrieval fails", func() {
+					sourceBackupEntry.EXPECT().Get(ctx).Return(nil, fakeErr)
+					copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+					Expect(err).To(MatchError(fakeErr))
+					Expect(copyRequired).To(BeFalse())
+				})
+
+				It("should return an error if source backupentry and destination backupentry point to the same bucket", func() {
+					sourceBackupEntry.EXPECT().Get(ctx).Return(&v1beta1.BackupEntry{
+						Spec: v1beta1.BackupEntrySpec{
+							BucketName: string(botanist.Seed.GetInfo().UID),
+						},
+					}, nil)
+					copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+					Expect(err).To(HaveOccurred())
+					Expect(copyRequired).To(BeFalse())
+				})
+
+				It("should return true if source backupentry and destination backupentry point to different buckets", func() {
+					sourceBackupEntry.EXPECT().Get(ctx).Return(&v1beta1.BackupEntry{
+						Spec: v1beta1.BackupEntrySpec{
+							BucketName: "old-seed",
+						},
+					}, nil)
+					copyRequired, err := botanist.IsCopyOfBackupsRequired(ctx)
+					Expect(err).To(Succeed())
+					Expect(copyRequired).To(BeTrue())
+				})
+			})
 		})
 	})
 })

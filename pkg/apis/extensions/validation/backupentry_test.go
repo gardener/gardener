@@ -93,7 +93,7 @@ var _ = Describe("BackupEntry validation tests", func() {
 			}))))
 		})
 
-		It("should prevent updating the type, region or bucketName", func() {
+		It("should prevent updating the type or region", func() {
 			newBackupEntry := prepareBackupEntryForUpdate(be)
 			newBackupEntry.Spec.Type = "changed-type"
 			newBackupEntry.Spec.Region = "changed-region"
@@ -107,9 +107,6 @@ var _ = Describe("BackupEntry validation tests", func() {
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.region"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.bucketName"),
 			}))))
 		})
 
