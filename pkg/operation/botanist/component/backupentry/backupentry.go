@@ -23,6 +23,8 @@ import (
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
+	"github.com/gardener/gardener/pkg/features"
+	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
@@ -68,7 +70,7 @@ func New(
 	values *Values,
 	waitInterval time.Duration,
 	waitTimeout time.Duration,
-) component.DeployMigrateWaiter {
+) Interface {
 	return &backupEntry{
 		client:       client,
 		logger:       logger,
@@ -83,6 +85,17 @@ func New(
 			},
 		},
 	}
+}
+
+// Interface contains functions for a BackupEntry deployer.
+type Interface interface {
+	component.DeployMigrateWaiter
+	// Get retrieves and returns the BackupEntry resource based on the configured values.
+	Get(context.Context) (*gardencorev1beta1.BackupEntry, error)
+	// GetActualBucketName returns the name of the BackupBucket that this BackupEntry was created with.
+	GetActualBucketName() string
+	// SetBucketName sets the name of the BackupBucket for this BackupEntry.
+	SetBucketName(string)
 }
 
 type backupEntry struct {
@@ -150,11 +163,12 @@ func (b *backupEntry) WaitMigrate(ctx context.Context) error {
 // If the BackupEntry was deleted it will be recreated.
 func (b *backupEntry) Restore(ctx context.Context, _ *gardencorev1alpha1.ShootState) error {
 	bucketName := b.values.BucketName
-
-	if err := b.client.Get(ctx, kutil.Key(b.values.Namespace, b.values.Name), b.backupEntry); err == nil {
-		bucketName = b.backupEntry.Spec.BucketName
-	} else if client.IgnoreNotFound(err) != nil {
-		return err
+	if !gardenletfeatures.FeatureGate.Enabled(features.CopyEtcdBackupsDuringControlPlaneMigration) {
+		if err := b.client.Get(ctx, kutil.Key(b.values.Namespace, b.values.Name), b.backupEntry); err == nil {
+			bucketName = b.backupEntry.Spec.BucketName
+		} else if client.IgnoreNotFound(err) != nil {
+			return err
+		}
 	}
 	return b.reconcile(ctx, b.backupEntry, b.values.SeedName, bucketName, v1beta1constants.GardenerOperationRestore)
 }
@@ -181,8 +195,32 @@ func (b *backupEntry) reconcile(ctx context.Context, backupEntry *gardencorev1be
 	return err
 }
 
-// Destroy is not implemented yet.
-func (b *backupEntry) Destroy(_ context.Context) error { return nil }
+// Destroy deletes the BackupEntry resource
+func (b *backupEntry) Destroy(ctx context.Context) error {
+	return kutil.DeleteObject(
+		ctx,
+		b.client,
+		b.backupEntry,
+	)
+}
 
 // WaitCleanup is not implemented yet.
 func (b *backupEntry) WaitCleanup(_ context.Context) error { return nil }
+
+// Get retrieves and returns the BackupEntry resource based on the configured values.
+func (b *backupEntry) Get(ctx context.Context) (*gardencorev1beta1.BackupEntry, error) {
+	if err := b.client.Get(ctx, client.ObjectKeyFromObject(b.backupEntry), b.backupEntry); err != nil {
+		return nil, err
+	}
+	return b.backupEntry, nil
+}
+
+// GetActualBucketName returns the name of the BackupBucket that this BackupEntry was created with.
+func (b *backupEntry) GetActualBucketName() string {
+	return b.backupEntry.Spec.BucketName
+}
+
+// SetBackupBucket sets the name of the BackupBucket for this BackupEntry.
+func (b *backupEntry) SetBucketName(name string) {
+	b.values.BucketName = name
+}

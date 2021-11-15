@@ -25,16 +25,17 @@ var (
 	// FeatureGate is a shared global FeatureGate for Gardenlet flags.
 	FeatureGate  = featuregate.NewFeatureGate()
 	featureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-		features.Logging:                       {Default: false, PreRelease: featuregate.Alpha},
-		features.HVPA:                          {Default: false, PreRelease: featuregate.Alpha},
-		features.HVPAForShootedSeed:            {Default: false, PreRelease: featuregate.Alpha},
-		features.ManagedIstio:                  {Default: true, PreRelease: featuregate.Beta},
-		features.APIServerSNI:                  {Default: true, PreRelease: featuregate.Beta},
-		features.CachedRuntimeClients:          {Default: true, PreRelease: featuregate.Beta},
-		features.SeedKubeScheduler:             {Default: false, PreRelease: featuregate.Alpha},
-		features.ReversedVPN:                   {Default: false, PreRelease: featuregate.Alpha},
-		features.UseDNSRecords:                 {Default: false, PreRelease: featuregate.Alpha},
-		features.DenyInvalidExtensionResources: {Default: false, PreRelease: featuregate.Alpha},
+		features.Logging:                                    {Default: false, PreRelease: featuregate.Alpha},
+		features.HVPA:                                       {Default: false, PreRelease: featuregate.Alpha},
+		features.HVPAForShootedSeed:                         {Default: false, PreRelease: featuregate.Alpha},
+		features.ManagedIstio:                               {Default: true, PreRelease: featuregate.Beta},
+		features.APIServerSNI:                               {Default: true, PreRelease: featuregate.Beta},
+		features.CachedRuntimeClients:                       {Default: true, PreRelease: featuregate.Beta},
+		features.SeedKubeScheduler:                          {Default: false, PreRelease: featuregate.Alpha},
+		features.ReversedVPN:                                {Default: false, PreRelease: featuregate.Alpha},
+		features.UseDNSRecords:                              {Default: false, PreRelease: featuregate.Alpha},
+		features.DenyInvalidExtensionResources:              {Default: false, PreRelease: featuregate.Alpha},
+		features.CopyEtcdBackupsDuringControlPlaneMigration: {Default: false, PreRelease: featuregate.Alpha},
 	}
 )
 

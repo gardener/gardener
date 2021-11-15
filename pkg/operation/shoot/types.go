@@ -23,10 +23,12 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/clusteridentity"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcd"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
@@ -94,18 +96,20 @@ type Shoot struct {
 
 // Components contains different components deployed in the Shoot cluster.
 type Components struct {
-	BackupEntry      component.DeployMigrateWaiter
-	ControlPlane     *ControlPlane
-	Extensions       *Extensions
-	NetworkPolicies  component.Deployer
-	SystemComponents *SystemComponents
-	Logging          *Logging
+	BackupEntry       backupentry.Interface
+	SourceBackupEntry backupentry.Interface
+	ControlPlane      *ControlPlane
+	Extensions        *Extensions
+	NetworkPolicies   component.Deployer
+	SystemComponents  *SystemComponents
+	Logging           *Logging
 }
 
 // ControlPlane contains references to K8S control plane components.
 type ControlPlane struct {
 	EtcdMain              etcd.Interface
 	EtcdEvents            etcd.Interface
+	EtcdCopyBackupsTask   etcdcopybackupstask.Interface
 	KubeAPIServerService  component.DeployWaiter
 	KubeAPIServerSNI      component.DeployWaiter
 	KubeAPIServerSNIPhase component.Phase

@@ -107,6 +107,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// control plane components
+	o.Shoot.Components.ControlPlane.EtcdCopyBackupsTask = b.DefaultEtcdCopyBackupsTask()
 	o.Shoot.Components.ControlPlane.EtcdMain, err = b.DefaultEtcd(v1beta1constants.ETCDRoleMain, etcd.ClassImportant)
 	if err != nil {
 		return nil, err
@@ -156,6 +157,7 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	}
 
 	// other components
+	o.Shoot.Components.SourceBackupEntry = b.SourceBackupEntry()
 	o.Shoot.Components.BackupEntry = b.DefaultCoreBackupEntry()
 	o.Shoot.Components.NetworkPolicies, err = b.DefaultNetworkPolicies(sniPhase)
 	if err != nil {
