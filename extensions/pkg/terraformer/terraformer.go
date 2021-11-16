@@ -247,18 +247,18 @@ func (t *terraformer) execute(ctx context.Context, command string) error {
 			podLogger.Info("Terraformer pod finished with error")
 
 			if terminationMessage != "" {
-				podLogger.V(1).Info("Termination message of Terraformer pod: " + terminationMessage)
+				podLogger.Info("Termination message of Terraformer pod: " + terminationMessage)
 			} else if ctx.Err() != nil {
-				podLogger.V(1).Info("Context error: " + ctx.Err().Error())
+				podLogger.Info("Context error: " + ctx.Err().Error())
 			} else {
 				// fall back to pod logs as termination message
-				podLogger.V(1).Info("Fetching logs of Terraformer pod as termination message is empty")
+				podLogger.Info("Fetching logs of Terraformer pod as termination message is empty")
 				terminationMessage, err = t.retrievePodLogs(ctx, podLogger, pod)
 				if err != nil {
 					podLogger.Error(err, "Could not retrieve logs of Terraformer pod")
 					return err
 				}
-				podLogger.V(1).Info("Logs of Terraformer pod: " + terminationMessage)
+				podLogger.Info("Logs of Terraformer pod: " + terminationMessage)
 			}
 		}
 
