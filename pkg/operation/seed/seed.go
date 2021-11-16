@@ -1091,7 +1091,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	extAuthzServer, err := defaultExternalAuthzServer(seedClient, kubernetesVersion.String(), imageVector)
+	extAuthzServer, err := defaultExternalAuthzServer(ctx, seedClient, kubernetesVersion.String(), imageVector)
 	if err != nil {
 		return err
 	}
@@ -1155,7 +1155,7 @@ func runCreateSeedFlow(
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying external authz server",
-			Fn:           flow.TaskFn(extAuthzServer.Deploy).DoIf(gardenletfeatures.FeatureGate.Enabled(features.ManagedIstio)),
+			Fn:           extAuthzServer.Deploy,
 			Dependencies: flow.NewTaskIDs(deployResourceManager),
 		})
 	)
