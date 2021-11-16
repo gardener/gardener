@@ -206,6 +206,19 @@ var _ = Describe("helper", func() {
 			})
 		})
 
+		DescribeTable("#RemoveConditions",
+			func(conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType, expectedResult []gardencorev1beta1.Condition) {
+				Expect(RemoveConditions(conditions, conditionTypes...)).To(Equal(expectedResult))
+			},
+			Entry("remove foo", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, []gardencorev1beta1.ConditionType{"foo"},
+				[]gardencorev1beta1.Condition{{Type: "bar"}}),
+			Entry("remove bar", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, []gardencorev1beta1.ConditionType{"bar"},
+				[]gardencorev1beta1.Condition{{Type: "foo"}}),
+			Entry("don't remove anything", []gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}, nil,
+				[]gardencorev1beta1.Condition{{Type: "foo"}, {Type: "bar"}}),
+			Entry("remove from an empty slice", nil, []gardencorev1beta1.ConditionType{"foo"}, nil),
+		)
+
 		Describe("#GetCondition", func() {
 			It("should return the found condition", func() {
 				var (

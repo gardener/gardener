@@ -84,6 +84,8 @@ type ControllerManagerControllerConfiguration struct {
 	ShootReference *ShootReferenceControllerConfiguration
 	// ShootRetry defines the configuration of the ShootRetry controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
 	ShootRetry *ShootRetryControllerConfiguration
+	// ShootConditions defines the configuration of the ShootConditions controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
+	ShootConditions *ShootConditionsControllerConfiguration
 	// ManagedSeedSet defines the configuration of the ManagedSeedSet controller.
 	ManagedSeedSet *ManagedSeedSetControllerConfiguration
 }
@@ -263,6 +265,16 @@ type ShootRetryControllerConfiguration struct {
 	ConcurrentSyncs int
 	// RetryPeriod is the retry period for retrying failed Shoots that match certain criterion.
 	RetryPeriod *metav1.Duration
+}
+
+// ShootConditionsControllerConfiguration defines the configuration of the
+// ShootConditions controller.
+type ShootConditionsControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	SyncPeriod metav1.Duration
 }
 
 // ManagedSeedSetControllerConfiguration defines the configuration of the

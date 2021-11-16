@@ -124,6 +124,23 @@ func MergeConditions(oldConditions []gardencorev1beta1.Condition, newConditions 
 	return out
 }
 
+// RemoveConditions removes the conditions with the given types from the given conditions slice.
+func RemoveConditions(conditions []gardencorev1beta1.Condition, conditionTypes ...gardencorev1beta1.ConditionType) []gardencorev1beta1.Condition {
+	conditionTypesMap := make(map[gardencorev1beta1.ConditionType]struct{})
+	for _, conditionType := range conditionTypes {
+		conditionTypesMap[conditionType] = struct{}{}
+	}
+
+	var newConditions []gardencorev1beta1.Condition
+	for _, condition := range conditions {
+		if _, ok := conditionTypesMap[condition.Type]; !ok {
+			newConditions = append(newConditions, condition)
+		}
+	}
+
+	return newConditions
+}
+
 // ConditionsNeedUpdate returns true if the <existingConditions> must be updated based on <newConditions>.
 func ConditionsNeedUpdate(existingConditions, newConditions []gardencorev1beta1.Condition) bool {
 	return existingConditions == nil || !apiequality.Semantic.DeepEqual(newConditions, existingConditions)
