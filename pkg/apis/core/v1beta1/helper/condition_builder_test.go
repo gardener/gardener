@@ -21,8 +21,10 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("Builder", func() {
@@ -34,6 +36,8 @@ var _ = Describe("Builder", func() {
 		bazReason          = "Baz"
 		fubarMessage       = "FuBar"
 		unitializedMessage = `The condition has been initialized but its semantic check has not been performed yet.`
+		unspecifiedMessage = `No message given.`
+		unspecifiedReason  = "Unspecified"
 		initializedReason  = "ConditionInitialized"
 	)
 
@@ -149,27 +153,73 @@ var _ = Describe("Builder", func() {
 		})
 
 		Context("#WithMessage", func() {
-			JustBeforeEach(func() {
+			DescribeTable("New condition", func(message *string, expectedMessage string) {
+				if message != nil {
+					bldr.WithMessage(*message)
+				}
+
 				result, updated = bldr.
 					WithNowFunc(defaultTimeFunc).
-					WithMessage(fubarMessage).
 					Build()
-			})
 
-			It("should mark the result as updated", func() {
 				Expect(updated).To(BeTrue())
-			})
 
-			It("should return correct result", func() {
 				Expect(result).To(Equal(gardencorev1beta1.Condition{
 					Type:               conditionType,
 					Status:             unknowStatus,
 					LastTransitionTime: defaultTime,
 					LastUpdateTime:     defaultTime,
 					Reason:             initializedReason,
-					Message:            fubarMessage,
+					Message:            expectedMessage,
 				}))
-			})
+			},
+				Entry("message is not set", nil, unitializedMessage),
+				Entry("empty message is set", pointer.String(""), unspecifiedMessage),
+				Entry("message is set", pointer.StringPtr(fubarMessage), fubarMessage),
+			)
+
+			DescribeTable("With old condition", func(message *string, previousMessage, expectedMessage string) {
+				lastUpdateTime := metav1.NewTime(time.Unix(11, 0))
+
+				if message != nil {
+					bldr.WithMessage(*message)
+				}
+
+				result, updated = bldr.
+					WithNowFunc(defaultTimeFunc).
+					WithOldCondition(gardencorev1beta1.Condition{
+						Type:               conditionType,
+						Status:             fooStatus,
+						LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
+						LastUpdateTime:     lastUpdateTime,
+						Reason:             bazReason,
+						Message:            previousMessage,
+						Codes:              codes,
+					}).
+					WithCodes(codes...).
+					Build()
+
+				if message != nil && *message != previousMessage || previousMessage == "" {
+					Expect(updated).To(BeTrue())
+					lastUpdateTime = defaultTime
+				}
+
+				Expect(result).To(Equal(gardencorev1beta1.Condition{
+					Type:               conditionType,
+					Status:             fooStatus,
+					LastTransitionTime: metav1.NewTime(time.Unix(10, 0)),
+					LastUpdateTime:     lastUpdateTime,
+					Reason:             bazReason,
+					Message:            expectedMessage,
+					Codes:              codes,
+				}))
+			},
+				Entry("message is not set", nil, fubarMessage, fubarMessage),
+				Entry("message was previously empty", nil, "", unitializedMessage),
+				Entry("empty message is set", pointer.String(""), fubarMessage, unspecifiedMessage),
+				Entry("message is the same", pointer.StringPtr("another message"), "another message", "another message"),
+				Entry("message changed", pointer.StringPtr("another message"), fubarMessage, "another message"),
+			)
 		})
 
 		Context("#WithCodes", func() {
