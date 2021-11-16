@@ -39,7 +39,7 @@ type defaultConditionBuilder struct {
 	old           gardencorev1beta1.Condition
 	status        gardencorev1beta1.ConditionStatus
 	conditionType gardencorev1beta1.ConditionType
-	reason        string
+	reason        *string
 	message       *string
 	codes         []gardencorev1beta1.ErrorCode
 	nowFunc       func() metav1.Time
@@ -74,7 +74,7 @@ func (b *defaultConditionBuilder) WithStatus(status gardencorev1beta1.ConditionS
 
 // WithReason sets the reason of the condition.
 func (b *defaultConditionBuilder) WithReason(reason string) ConditionBuilder {
-	b.reason = reason
+	b.reason = &reason
 	return b
 }
 
@@ -126,11 +126,7 @@ func (b *defaultConditionBuilder) Build() (new gardencorev1beta1.Condition, upda
 		new.Status = gardencorev1beta1.ConditionUnknown
 	}
 
-	if b.reason != "" {
-		new.Reason = b.reason
-	} else if b.reason == "" && b.old.Reason == "" {
-		new.Reason = "ConditionInitialized"
-	}
+	new.Reason = b.buildReason()
 
 	new.Message = b.buildMessage()
 
@@ -162,4 +158,19 @@ func (b *defaultConditionBuilder) buildMessage() string {
 		return "The condition has been initialized but its semantic check has not been performed yet."
 	}
 	return b.old.Message
+}
+
+func (b *defaultConditionBuilder) buildReason() string {
+	if reason := b.reason; reason != nil {
+		if *reason != "" {
+			return *reason
+		}
+		// We need to set a condition reason in this case because when the condition is updated the next time
+		// without specifying a reason we want to retain this reason instead of toggling to `b.old.Reason == ""`.
+		return "Unspecified"
+	}
+	if b.old.Reason == "" {
+		return "ConditionInitialized"
+	}
+	return b.old.Reason
 }
