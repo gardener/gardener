@@ -138,6 +138,10 @@ type BackupSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+	// CompactionResources defines the compute Resources required by compaction job.
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
+	// +optional
+	CompactionResources *corev1.ResourceRequirements `json:"compactionResources,omitempty"`
 	// FullSnapshotSchedule defines the cron standard schedule for full snapshots.
 	// +optional
 	FullSnapshotSchedule *string `json:"fullSnapshotSchedule,omitempty"`
@@ -159,9 +163,6 @@ type BackupSpec struct {
 	// EnableProfiling defines if profiling should be enabled for the etcd-backup-restore-sidecar
 	// +optional
 	EnableProfiling *bool `json:"enableProfiling,omitempty"`
-	// BackupCompactionSchedule defines the cron standard for compacting the snapstore
-	// +optional
-	BackupCompactionSchedule *string `json:"backupCompactionSchedule,omitempty"`
 	// EtcdSnapshotTimeout defines the timeout duration for etcd FullSnapshot operation
 	// +optional
 	EtcdSnapshotTimeout *metav1.Duration `json:"etcdSnapshotTimeout,omitempty"`

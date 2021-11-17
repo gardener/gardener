@@ -52,6 +52,11 @@ func (in *BackupSpec) DeepCopyInto(out *BackupSpec) {
 		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.CompactionResources != nil {
+		in, out := &in.CompactionResources, &out.CompactionResources
+		*out = new(v1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.FullSnapshotSchedule != nil {
 		in, out := &in.FullSnapshotSchedule, &out.FullSnapshotSchedule
 		*out = new(string)
@@ -85,11 +90,6 @@ func (in *BackupSpec) DeepCopyInto(out *BackupSpec) {
 	if in.EnableProfiling != nil {
 		in, out := &in.EnableProfiling, &out.EnableProfiling
 		*out = new(bool)
-		**out = **in
-	}
-	if in.BackupCompactionSchedule != nil {
-		in, out := &in.BackupCompactionSchedule, &out.BackupCompactionSchedule
-		*out = new(string)
 		**out = **in
 	}
 	if in.EtcdSnapshotTimeout != nil {
