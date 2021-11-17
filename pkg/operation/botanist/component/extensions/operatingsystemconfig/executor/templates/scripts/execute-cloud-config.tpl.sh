@@ -79,27 +79,49 @@ fi
 
 echo "Checking whether we need to preload a new hyperkube image..."
 if [[ "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" != "{{ .hyperkubeImage }}" ]]; then
+  if ! {{ .pathDockerBinary }} info &> /dev/null ; then
+    echo "docker daemon is not available, cannot preload hyperkube image"
+    exit 1
+  fi
+
   echo "Preloading hyperkube image ({{ .hyperkubeImage }}) because last downloaded image ($LAST_DOWNLOADED_HYPERKUBE_IMAGE) is outdated"
-  {{ .pathDockerBinary }} pull "{{ .hyperkubeImage }}"
+  if ! {{ .pathDockerBinary }} pull "{{ .hyperkubeImage }}" ; then
+    echo "hyperkube image preload failed"
+    exit 1
+  fi
+
+  # append image reference checksum to copied filenames in order to easily check if copying the binaries succeeded
+  hyperkubeImageSHA="{{ .hyperkubeImage | sha256sum }}"
 
   echo "Starting temporary hyperkube container to copy binaries to host"
 
 {{- if semverCompare "< 1.17" .kubernetesVersion }}
-  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}" /bin/sh -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS"
-  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}" /bin/sh -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS"
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}" /bin/sh -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}" /bin/sh -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
 {{- else if semverCompare "< 1.19" .kubernetesVersion }}
-  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS"
-  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS"
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
+  {{ .pathDockerBinary }} run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "{{ .hyperkubeImage }}" -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
 {{- else }}
-  HYPERKUBE_CONTAINER_ID="$({{ .pathDockerBinary }} run --rm -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}")"
-  {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS"
-  {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS"
+  HYPERKUBE_CONTAINER_ID="$({{ .pathDockerBinary }} run -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "{{ .hyperkubeImage }}")"
+  {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
+  {{ .pathDockerBinary }} cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
   {{ .pathDockerBinary }} stop "$HYPERKUBE_CONTAINER_ID"
+  {{ .pathDockerBinary }} rm "$HYPERKUBE_CONTAINER_ID"
 {{- end }}
-  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet"
-  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl"
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
 
-  echo "{{ .hyperkubeImage }}" > "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE"
+  if ! [ -f "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA" -a -f "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA" ]; then
+    echo "extracting kubernetes binaries from hyperkube image failed"
+    exit 1
+  fi
+
+  # only write to $PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE if copy operation succeeded
+  # this is done to retry failed operations on the execution
+  mv "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA" "$PATH_HYPERKUBE_DOWNLOADS/kubelet" && \
+    mv "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA" "$PATH_HYPERKUBE_DOWNLOADS/kubectl" && \
+    echo "{{ .hyperkubeImage }}" > "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE"
+
   LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
 else
   echo "No need to preload new hyperkube image because binaries for $LAST_DOWNLOADED_HYPERKUBE_IMAGE were found in $PATH_HYPERKUBE_DOWNLOADS"

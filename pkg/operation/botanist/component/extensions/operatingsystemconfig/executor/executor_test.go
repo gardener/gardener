@@ -221,15 +221,36 @@ fi
 
 echo "Checking whether we need to preload a new hyperkube image..."
 if [[ "$LAST_DOWNLOADED_HYPERKUBE_IMAGE" != "` + hyperkubeImage.String() + `" ]]; then
+  if ! /usr/bin/docker info &> /dev/null ; then
+    echo "docker daemon is not available, cannot preload hyperkube image"
+    exit 1
+  fi
+
   echo "Preloading hyperkube image (` + hyperkubeImage.String() + `) because last downloaded image ($LAST_DOWNLOADED_HYPERKUBE_IMAGE) is outdated"
-  /usr/bin/docker pull "` + hyperkubeImage.String() + `"
+  if ! /usr/bin/docker pull "` + hyperkubeImage.String() + `" ; then
+    echo "hyperkube image preload failed"
+    exit 1
+  fi
+
+  # append image reference checksum to copied filenames in order to easily check if copying the binaries succeeded
+  hyperkubeImageSHA="7eb590a802776879e4db84c42ec60a2bd2094659ed3773252753287b880912fb"
 
   echo "Starting temporary hyperkube container to copy binaries to host"` +
 		copyKubernetesBinariesFn(hyperkubeImage) + `
-  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet"
-  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl"
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
+  chmod +x "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
 
-  echo "` + hyperkubeImage.String() + `" > "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE"
+  if ! [ -f "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA" -a -f "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA" ]; then
+    echo "extracting kubernetes binaries from hyperkube image failed"
+    exit 1
+  fi
+
+  # only write to $PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE if copy operation succeeded
+  # this is done to retry failed operations on the execution
+  mv "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA" "$PATH_HYPERKUBE_DOWNLOADS/kubelet" && \
+    mv "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA" "$PATH_HYPERKUBE_DOWNLOADS/kubectl" && \
+    echo "` + hyperkubeImage.String() + `" > "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE"
+
   LAST_DOWNLOADED_HYPERKUBE_IMAGE="$(cat "$PATH_LAST_DOWNLOADED_HYPERKUBE_IMAGE")"
 else
   echo "No need to preload new hyperkube image because binaries for $LAST_DOWNLOADED_HYPERKUBE_IMAGE were found in $PATH_HYPERKUBE_DOWNLOADS"
@@ -380,22 +401,23 @@ date +%s > "$PATH_EXECUTION_LAST_DATE"
 
 func copyKubernetesBinariesFromHyperkubeImageForVersionsLess117(hyperkubeImage *imagevector.Image) string {
 	return `
-  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `" /bin/sh -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS"
-  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `" /bin/sh -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS"`
+  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `" /bin/sh -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
+  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `" /bin/sh -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"`
 }
 
 func copyKubernetesBinariesFromHyperkubeImageForVersionsLess119(hyperkubeImage *imagevector.Image) string {
 	return `
-  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "` + hyperkubeImage.String() + `" -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS"
-  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "` + hyperkubeImage.String() + `" -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS"`
+  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "` + hyperkubeImage.String() + `" -c "cp /usr/local/bin/kubelet $PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
+  /usr/bin/docker run --rm -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw --entrypoint /bin/sh "` + hyperkubeImage.String() + `" -c "cp /usr/local/bin/kubectl $PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"`
 }
 
 func copyKubernetesBinariesFromHyperkubeImageForVersionsGreaterEqual119(hyperkubeImage *imagevector.Image) string {
 	return `
-  HYPERKUBE_CONTAINER_ID="$(/usr/bin/docker run --rm -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `")"
-  /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS"
-  /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS"
-  /usr/bin/docker stop "$HYPERKUBE_CONTAINER_ID"`
+  HYPERKUBE_CONTAINER_ID="$(/usr/bin/docker run -d -v "$PATH_HYPERKUBE_DOWNLOADS":"$PATH_HYPERKUBE_DOWNLOADS":rw "` + hyperkubeImage.String() + `")"
+  /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubelet "$PATH_HYPERKUBE_DOWNLOADS/kubelet-$hyperkubeImageSHA"
+  /usr/bin/docker cp   "$HYPERKUBE_CONTAINER_ID":/kubectl "$PATH_HYPERKUBE_DOWNLOADS/kubectl-$hyperkubeImageSHA"
+  /usr/bin/docker stop "$HYPERKUBE_CONTAINER_ID"
+  /usr/bin/docker rm "$HYPERKUBE_CONTAINER_ID"`
 }
 
 const scriptCopyKubernetesBinary = `#!/bin/bash -eu
