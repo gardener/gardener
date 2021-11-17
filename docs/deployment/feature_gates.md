@@ -40,6 +40,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` |        |
 | DenyInvalidExtensionResources                | `false` | `Alpha` | `1.31` |        |
 | WorkerPoolKubernetesVersion                  | `false` | `Alpha` | `1.35` |        |
+| CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
 
 ## Feature gates for graduated or deprecated features
 
@@ -106,3 +107,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `RotateSSHKeypairOnMaintenance` enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager. Details can be found in [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md).
 * `DenyInvalidExtensionResources` causes the `seed-admission-controller` to deny invalid extension resources, instead of just logging validation errors.
 * `WorkerPoolKubernetesVersion` allows to overwrite the Kubernetes version used for shoot clusters per worker pool (see [this document](../usage/worker_pool_k8s_versions.md))
+* `CopyEtcdBackupsDuringControlPlaneMigration` enables the copy of etcd backups from the object store of the source seed to the object store of the destination seed during control plane migration.
