@@ -24,6 +24,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/dependencywatchdog"
@@ -52,6 +53,7 @@ import (
 func defaultEtcdDruid(
 	c client.Client,
 	seedVersion string,
+	conf *config.GardenletConfiguration,
 	imageVector imagevector.ImageVector,
 	imageVectorOverwrites map[string]string,
 ) (component.DeployWaiter, error) {
@@ -65,7 +67,7 @@ func defaultEtcdDruid(
 		imageVectorOverwrite = &val
 	}
 
-	return etcd.NewBootstrapper(c, v1beta1constants.GardenNamespace, image.String(), imageVectorOverwrite), nil
+	return etcd.NewBootstrapper(c, v1beta1constants.GardenNamespace, conf, image.String(), imageVectorOverwrite), nil
 }
 
 func defaultKubeScheduler(c client.Client, imageVector imagevector.ImageVector, kubernetesVersion *semver.Version) (component.DeployWaiter, error) {

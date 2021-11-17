@@ -83,6 +83,10 @@ type GardenletConfiguration struct {
 	// by the Gardenlet in the seed clusters.
 	// +optional
 	SNI *SNI `json:"sni,omitempty"`
+	// ETCDConfig contains an optional configuration for the
+	// backup compaction feature in etcdbr
+	// +optional
+	ETCDConfig *ETCDConfig `json:"etcdConfig,omitempty"`
 	// ExposureClassHandlers is a list of optional of exposure class handlers.
 	// +optional
 	ExposureClassHandlers []ExposureClassHandler `json:"exposureClassHandlers,omitempty"`
@@ -482,6 +486,55 @@ type SNIIngress struct {
 	// Defaults to "istio: ingressgateway".
 	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
+}
+
+// ETCDConfig contains ETCD related configs
+type ETCDConfig struct {
+	// ETCDController contains config specific to ETCD controller
+	// +optional
+	ETCDController *ETCDController `json:"etcdController,omitempty"`
+	// CustodianController contains config specific to custodian controller
+	// +optional
+	CustodianController *CustodianController `json:"custodianController,omitempty"`
+	// BackupCompactionController contains config specific to backup compaction controller
+	// +optional
+	BackupCompactionController *BackupCompactionController `json:"backupCompactionController,omitempty"`
+}
+
+// ETCDController contains config specific to ETCD controller
+type ETCDController struct {
+	// Workers specify number of worker threads in ETCD controller
+	// Defaults to 3
+	// +optional
+	Workers *int64 `json:"etcdControllerWorkers,omitempty"`
+}
+
+// CustodianController contains config specific to custodian controller
+type CustodianController struct {
+	// Workers specify number of worker threads in custodian controller
+	// Defaults to 3
+	// +optional
+	Workers *int64 `json:"custodianControllerWorkers,omitempty"`
+}
+
+// BackupCompactionController contains config specific to backup compaction controller
+type BackupCompactionController struct {
+	// Workers specify number of worker threads in backup compaction controller
+	// Defaults to 3
+	// +optional
+	Workers *int64 `json:"compactionControllerWorkers,omitempty"`
+	// EnableBackupCompaction enables automatic compaction of etcd backups
+	// Defaults to false
+	// +optional
+	EnableBackupCompaction *bool `json:"enableBackupCompaction,omitempty"`
+	// EventsThreshold defines total number of etcd events that can be allowed before a backup compaction job is triggered
+	// Defaults to 1 Million events
+	// +optional
+	EventsThreshold *int64 `json:"eventsThreshold,omitempty"`
+	// ActiveDeadlineDuration defines duration after which a running backup compaction job will be killed
+	// Defaults to 3 hours
+	// +optional
+	ActiveDeadlineDuration *metav1.Duration `json:"activeDeadlineDuration,omitempty"`
 }
 
 // ExposureClassHandler contains configuration for an exposure class handler.

@@ -144,6 +144,16 @@ featureGates:
 #       serviceExternalIP: 10.8.10.11 # Optional external ip for the ingress gateway load balancer.
 #       labels:
 #         network: internal
+etcdConfig:
+  etcdController:
+    workers: 3
+  custodianController:
+    workers: 3
+  backupCompactionController:
+    workers: 3
+    enableBackupCompaction: true
+    eventsThreshold: 1000000
+    activeDeadlineDuration: "3h"
 # monitoring:
 #   shoot:
 #     remoteWrite:

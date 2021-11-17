@@ -67,6 +67,9 @@ type GardenletConfiguration struct {
 	// SNI contains an optional configuration for the APIServerSNI feature used
 	// by the Gardenlet in the seed clusters.
 	SNI *SNI
+	// ETCDConfig contains an optional configuration for the
+	// backup compaction feature of ETCD backup-restore functionality.
+	ETCDConfig *ETCDConfig
 	// ExposureClassHandlers is a list of optional of exposure class handlers.
 	ExposureClassHandlers []ExposureClassHandler
 	// MonitoringConfig is optional and adds additional settings for the monitoring stack.
@@ -401,6 +404,46 @@ type SNIIngress struct {
 	// Labels of the ingressgateway
 	// Defaults to "istio: ingressgateway".
 	Labels map[string]string
+}
+
+// ETCDConfig contains ETCD related configs
+type ETCDConfig struct {
+	// ETCDController contains config specific to ETCD controller
+	ETCDController *ETCDController
+	// CustodianController contains config specific to custodian controller
+	CustodianController *CustodianController
+	// BackupCompactionController contains config specific to backup compaction controller
+	BackupCompactionController *BackupCompactionController
+}
+
+// ETCDController contains config specific to ETCD controller
+type ETCDController struct {
+	// Workers specify number of worker threads in ETCD controller
+	// Defaults to 3
+	Workers *int64
+}
+
+// CustodianController contains config specific to custodian controller
+type CustodianController struct {
+	// Workers specify number of worker threads in custodian controller
+	// Defaults to 3
+	Workers *int64
+}
+
+// BackupCompactionController contains config specific to backup compaction controller
+type BackupCompactionController struct {
+	// Workers specify number of worker threads in backup compaction controller
+	// Defaults to 3
+	Workers *int64
+	// EnableBackupCompaction enables automatic compaction of etcd backups
+	// Defaults to false
+	EnableBackupCompaction *bool
+	// EventsThreshold defines total number of etcd events that can be allowed before a backup compaction job is triggered
+	// Defaults to 1 Million events
+	EventsThreshold *int64
+	// ActiveDeadlineDuration defines duration after which a running backup compaction job will be killed
+	// Defaults to 3 hours
+	ActiveDeadlineDuration *metav1.Duration
 }
 
 // ExposureClassHandler contains configuration for an exposure class handler.
