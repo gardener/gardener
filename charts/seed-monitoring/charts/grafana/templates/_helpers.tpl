@@ -82,7 +82,7 @@ grafana-{{ .Values.role }}-datasources-{{ include "grafana.datasources.data" . |
 {{ end }}
 {{ end }}
 {{- if .Values.extensions.dashboards }}
-{{- toString .Values.extensions.dashboards | indent 2 }}
+{{- toString .Values.extensions.dashboards }}
 {{ end }}
 {{- end -}}
 
