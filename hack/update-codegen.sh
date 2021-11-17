@@ -381,7 +381,7 @@ if [[ $# -gt 0 && "$1" == "--parallel" ]]; then
     scheduler_groups \
     gardenlet_groups \
     shoottolerationrestriction_groups \
-    landscapergardenlet_groups
+    landscapergardenlet_groups \
     landscapercontrolplane_groups
 else
   authentication_groups
