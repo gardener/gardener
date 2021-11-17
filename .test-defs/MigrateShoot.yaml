@@ -17,4 +17,4 @@ spec:
     -kubecfg="$TM_KUBECONFIG_PATH/gardener.config"
     -mr-exclude-list="$MR_EXCLUDE_LIST"
     -resources-with-generated-name="$RESOURCES_WITH_GENERATED_NAME"
-  image: eu.gcr.io/gardener-project/3rd/golang:1.17.2
+  image: eu.gcr.io/gardener-project/3rd/golang:1.17.3
