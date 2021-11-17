@@ -71,6 +71,7 @@ const (
 	mountPathTLSAuth        = "/srv/secrets/tlsauth"
 	mountPathDH             = "/srv/secrets/dh"
 	volumeNameEnvoyConfig   = "envoy-config"
+	envoyMetricsPort        = 15000
 )
 
 // Interface contains functions for a vpn-seed-server deployer.
@@ -551,6 +552,11 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 				Port:       EnvoyPort,
 				TargetPort: intstr.FromInt(EnvoyPort),
 			},
+			{
+				Name:       "metrics",
+				Port:       envoyMetricsPort,
+				TargetPort: intstr.FromInt(envoyMetricsPort),
+			},
 		}
 		service.Spec.Selector = map[string]string{
 			v1beta1constants.LabelApp: DeploymentName,
@@ -742,6 +748,33 @@ var envoyConfig = `static_resources:
             accept_http_10: true
           upgrade_configs:
           - upgrade_type: CONNECT
+  - name: metrics_listener
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: ` + fmt.Sprintf("%d", envoyMetricsPort) + `
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: stats_server
+          route_config:
+            virtual_hosts:
+            - name: admin_interface
+              domains:
+              - "*"
+              routes:
+              - match:
+                  prefix: "/metrics"
+                  headers:
+                  - name: ":method"
+                    exact_match: GET
+                route:
+                  cluster: prometheus_stats
+                  prefix_rewrite: "/stats/prometheus"
+          http_filters:
+          - name: envoy.filters.http.router
   clusters:
   - name: dynamic_forward_proxy_cluster
     connect_timeout: 20s
@@ -752,4 +785,19 @@ var envoyConfig = `static_resources:
         "@type": type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
         dns_cache_config:
           name: dynamic_forward_proxy_cache_config
-          dns_lookup_family: V4_ONLY`
+          dns_lookup_family: V4_ONLY
+  - name: prometheus_stats
+    connect_timeout: 0.25s
+    type: static
+    load_assignment:
+      cluster_name: prometheus_stats
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              pipe:
+                path: /var/run/envoy.admin
+admin:
+  address:
+    pipe:
+      path: /var/run/envoy.admin`

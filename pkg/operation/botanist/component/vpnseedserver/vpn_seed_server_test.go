@@ -147,6 +147,33 @@ var _ = Describe("VpnSeedServer", func() {
             accept_http_10: true
           upgrade_configs:
           - upgrade_type: CONNECT
+  - name: metrics_listener
+    address:
+      socket_address:
+        address: 0.0.0.0
+        port_value: 15000
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: stats_server
+          route_config:
+            virtual_hosts:
+            - name: admin_interface
+              domains:
+              - "*"
+              routes:
+              - match:
+                  prefix: "/metrics"
+                  headers:
+                  - name: ":method"
+                    exact_match: GET
+                route:
+                  cluster: prometheus_stats
+                  prefix_rewrite: "/stats/prometheus"
+          http_filters:
+          - name: envoy.filters.http.router
   clusters:
   - name: dynamic_forward_proxy_cluster
     connect_timeout: 20s
@@ -157,7 +184,22 @@ var _ = Describe("VpnSeedServer", func() {
         "@type": type.googleapis.com/envoy.extensions.clusters.dynamic_forward_proxy.v3.ClusterConfig
         dns_cache_config:
           name: dynamic_forward_proxy_cache_config
-          dns_lookup_family: V4_ONLY`,
+          dns_lookup_family: V4_ONLY
+  - name: prometheus_stats
+    connect_timeout: 0.25s
+    type: static
+    load_assignment:
+      cluster_name: prometheus_stats
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              pipe:
+                path: /var/run/envoy.admin
+admin:
+  address:
+    pipe:
+      path: /var/run/envoy.admin`,
 			},
 		}
 
@@ -514,6 +556,11 @@ var _ = Describe("VpnSeedServer", func() {
 						Name:       "http-proxy",
 						Port:       9443,
 						TargetPort: intstr.FromInt(9443),
+					},
+					{
+						Name:       "metrics",
+						Port:       15000,
+						TargetPort: intstr.FromInt(15000),
 					},
 				},
 				Selector: map[string]string{
