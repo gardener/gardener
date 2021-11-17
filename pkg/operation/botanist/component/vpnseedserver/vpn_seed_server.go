@@ -716,6 +716,28 @@ var envoyConfig = `static_resources:
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           stat_prefix: ingress_http
+          access_log:
+          - name: envoy.access_loggers.stdout
+            filter:
+              or_filter:
+                filters:
+                - status_code_filter:
+                    comparison:
+                      op: GE
+                      value:
+                        default_value: 500
+                        runtime_key: "null"
+                - duration_filter:
+                    comparison:
+                      op: GE
+                      value:
+                        default_value: 1000
+                        runtime_key: "null"
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+              log_format:
+                text_format_source:
+                  inline_string: "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% rx %BYTES_SENT% tx %DURATION%ms \"%DOWNSTREAM_REMOTE_ADDRESS%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
           route_config:
             name: local_route
             virtual_hosts:
