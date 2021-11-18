@@ -544,9 +544,9 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 
 	// TODO (voelzmo): remove this 'if' statement once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
 	if a.GetOperation() == admission.Create {
-		_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(c.shoot.Spec.Provider.InfrastructureConfig.Raw, nil, nil)
-		if gvk.Version == runtime.APIVersionInternal {
-			allErrs = append(allErrs, field.Invalid(path.Child("infrastructureConfig"), gvk, "must not use apiVersion 'internal'"))
+		err := c.validateAPIVersionForRawExtension(path.Child("infrastructureConfig"), c.shoot.Spec.Provider.InfrastructureConfig)
+		if err != nil {
+			allErrs = append(allErrs)
 		}
 	}
 
@@ -579,6 +579,14 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 	}
 
 	return allErrs
+}
+
+func (c *validationContext) validateAPIVersionForRawExtension(path *field.Path, extension *runtime.RawExtension) error {
+	_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(extension.Raw, nil, nil)
+	if gvk.Version == runtime.APIVersionInternal {
+		return field.Invalid(path, gvk, "must not use apiVersion 'internal'")
+	}
+	return nil
 }
 
 func validateVolumeSize(volumeTypeConstraints []core.VolumeType, machineTypeConstraints []core.MachineType, machineType string, volume *core.Volume) (bool, string) {
