@@ -846,7 +846,6 @@ func Convert_config_ServerConfiguration_To_v1alpha1_ServerConfiguration(in *conf
 
 func autoConvert_v1alpha1_ShootConditionsControllerConfiguration_To_config_ShootConditionsControllerConfiguration(in *ShootConditionsControllerConfiguration, out *config.ShootConditionsControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.SyncPeriod = in.SyncPeriod
 	return nil
 }
 
@@ -857,7 +856,6 @@ func Convert_v1alpha1_ShootConditionsControllerConfiguration_To_config_ShootCond
 
 func autoConvert_config_ShootConditionsControllerConfiguration_To_v1alpha1_ShootConditionsControllerConfiguration(in *config.ShootConditionsControllerConfiguration, out *ShootConditionsControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.SyncPeriod = in.SyncPeriod
 	return nil
 }
 

@@ -348,6 +348,8 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 	// Update Shoot status (conditions, constraints) if necessary
 	if gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) ||
 		gardencorev1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
+		// Rebuild shoot conditions and constraints to ensure that only the conditions and constraints with the
+		// correct types will be updated, and any other conditions will remain intact
 		conditions := buildShootConditions(shoot.Status.Conditions, updatedConditions, conditionTypes)
 		constraints := buildShootConditions(shoot.Status.Constraints, updatedConstraints, constraintTypes)
 		log.Debugf("[SHOOT CARE] Updating shoot status conditions and constraints")
@@ -367,6 +369,8 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 	return nil
 }
 
+// buildShootConditions builds and returns the shoot conditions using the given shoot conditions as a base,
+// by first removing all conditions with the given types and then merging the given conditions (which must be of the same types).
 func buildShootConditions(shootConditions []gardencorev1beta1.Condition, conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType) []gardencorev1beta1.Condition {
 	result := gardencorev1beta1helper.RemoveConditions(shootConditions, conditionTypes...)
 	result = gardencorev1beta1helper.MergeConditions(result, conditions...)

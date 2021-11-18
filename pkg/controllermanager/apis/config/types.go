@@ -273,8 +273,6 @@ type ShootConditionsControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
-	// SyncPeriod is the duration how often the existing resources are reconciled.
-	SyncPeriod metav1.Duration
 }
 
 // ManagedSeedSetControllerConfiguration defines the configuration of the

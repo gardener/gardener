@@ -19,7 +19,6 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -66,18 +65,16 @@ func (c *Controller) filterSeedForShootConditions(obj, oldObj, _ client.Object, 
 }
 
 // NewShootConditionsReconciler creates a reconcile.Reconciler that updates the conditions of a shoot that is registered as seed.
-func NewShootConditionsReconciler(logger logrus.FieldLogger, gardenClient client.Client, cfg *config.ShootConditionsControllerConfiguration) reconcile.Reconciler {
+func NewShootConditionsReconciler(logger logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
 	return &shootConditionsReconciler{
 		logger:       logger,
 		gardenClient: gardenClient,
-		cfg:          cfg,
 	}
 }
 
 type shootConditionsReconciler struct {
 	logger       logrus.FieldLogger
 	gardenClient client.Client
-	cfg          *config.ShootConditionsControllerConfiguration
 }
 
 func (r *shootConditionsReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -119,10 +116,6 @@ func (r *shootConditionsReconciler) Reconcile(ctx context.Context, request recon
 		}
 	}
 
-	// If the shoot is still registered as seed, requeue after the configured sync period
-	if seed != nil {
-		return reconcile.Result{RequeueAfter: r.cfg.SyncPeriod.Duration}, nil
-	}
 	return reconcile.Result{}, nil
 }
 

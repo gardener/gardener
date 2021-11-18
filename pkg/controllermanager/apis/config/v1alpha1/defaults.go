@@ -142,9 +142,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	if obj.Controllers.ShootConditions == nil {
 		obj.Controllers.ShootConditions = &ShootConditionsControllerConfiguration{
 			ConcurrentSyncs: 5,
-			SyncPeriod: metav1.Duration{
-				Duration: 30 * time.Second,
-			},
 		}
 	}
 
