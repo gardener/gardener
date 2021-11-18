@@ -1,0 +1,2 @@
+resourceMappings:
+  "https://github.com/gardener/gardener": "REPO_PATH"
