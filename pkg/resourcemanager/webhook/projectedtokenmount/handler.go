@@ -27,7 +27,6 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -62,16 +61,11 @@ func (h *handler) Handle(ctx context.Context, req admission.Request) admission.R
 		return admission.Errored(http.StatusUnprocessableEntity, err)
 	}
 
-	if metav1.HasLabel(pod.ObjectMeta, resourcesv1alpha1.ProjectedTokenSkip) {
-		return admission.Allowed("pod explicitly opts out of projected service account token mount")
-	}
-
 	if len(pod.Spec.ServiceAccountName) == 0 || pod.Spec.ServiceAccountName == "default" {
 		return admission.Allowed("service account not specified or defaulted")
 	}
 
 	serviceAccount := &corev1.ServiceAccount{}
-
 	// We use `req.Namespace` instead of `pod.Namespace` due to https://github.com/kubernetes/kubernetes/issues/88282.
 	if err := h.targetClient.Get(ctx, kutil.Key(req.Namespace, pod.Spec.ServiceAccountName), serviceAccount); err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)

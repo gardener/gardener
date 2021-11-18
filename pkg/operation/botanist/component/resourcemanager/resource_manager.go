@@ -775,7 +775,7 @@ func (r *resourceManager) ensureMutatingWebhookConfiguration(ctx context.Context
 
 	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, mutatingWebhookConfiguration, func() error {
 		mutatingWebhookConfiguration.Labels = appLabel()
-		mutatingWebhookConfiguration.Webhooks = r.getMutatingWebhookConfigurationWebhooks()
+		mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), r.buildWebhookClientConfig)
 		return nil
 	})
 	return err
@@ -797,7 +797,7 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	)
 
 	mutatingWebhookConfiguration.Labels = appLabel()
-	mutatingWebhookConfiguration.Webhooks = r.getMutatingWebhookConfigurationWebhooks()
+	mutatingWebhookConfiguration.Webhooks = GetMutatingWebhookConfigurationWebhooks(r.buildWebhookNamespaceSelector(), r.buildWebhookClientConfig)
 
 	data, err := registry.AddAllAndSerialize(mutatingWebhookConfiguration)
 	if err != nil {
@@ -807,18 +807,14 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	return managedresources.CreateForShoot(ctx, r.client, r.namespace, ManagedResourceName, false, data)
 }
 
-func (r *resourceManager) getMutatingWebhookConfigurationWebhooks() []admissionregistrationv1.MutatingWebhook {
+// GetMutatingWebhookConfigurationWebhooks returns the MutatingWebhooks for the resourcemanager component for reuse
+// between the component and integration tests.
+func GetMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSelector, buildClientConfigFn func(string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.MutatingWebhook {
 	var (
 		failurePolicy = admissionregistrationv1.Fail
 		matchPolicy   = admissionregistrationv1.Exact
 		sideEffect    = admissionregistrationv1.SideEffectClassNone
-
-		namespaceSelectorOperator = metav1.LabelSelectorOpIn
 	)
-
-	if !r.values.TargetDiffersFromSourceCluster {
-		namespaceSelectorOperator = metav1.LabelSelectorOpNotIn
-	}
 
 	return []admissionregistrationv1.MutatingWebhook{
 		{
@@ -834,17 +830,11 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks() []admissionr
 					admissionregistrationv1.Update,
 				},
 			}},
-			NamespaceSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{{
-					Key:      v1beta1constants.GardenerPurpose,
-					Operator: namespaceSelectorOperator,
-					Values:   []string{metav1.NamespaceSystem},
-				}},
-			},
+			NamespaceSelector: namespaceSelector,
 			ObjectSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{resourcesv1alpha1.ResourceManagerPurpose: resourcesv1alpha1.LabelPurposeTokenInvalidation},
 			},
-			ClientConfig:            r.buildWebhookClientConfig(tokeninvalidator.WebhookPath),
+			ClientConfig:            buildClientConfigFn(tokeninvalidator.WebhookPath),
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			FailurePolicy:           &failurePolicy,
 			MatchPolicy:             &matchPolicy,
@@ -861,27 +851,42 @@ func (r *resourceManager) getMutatingWebhookConfigurationWebhooks() []admissionr
 				},
 				Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
 			}},
-			NamespaceSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{{
-					Key:      v1beta1constants.GardenerPurpose,
-					Operator: namespaceSelectorOperator,
-					Values:   []string{metav1.NamespaceSystem},
-				}},
-			},
+			NamespaceSelector: namespaceSelector,
 			ObjectSelector: &metav1.LabelSelector{
-				MatchExpressions: []metav1.LabelSelectorRequirement{{
-					Key:      v1beta1constants.LabelApp,
-					Operator: metav1.LabelSelectorOpNotIn,
-					Values:   []string{"gardener-resource-manager"},
-				}},
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      resourcesv1alpha1.ProjectedTokenSkip,
+						Operator: metav1.LabelSelectorOpDoesNotExist,
+					},
+					{
+						Key:      v1beta1constants.LabelApp,
+						Operator: metav1.LabelSelectorOpNotIn,
+						Values:   []string{"gardener-resource-manager"},
+					},
+				},
 			},
-			ClientConfig:            r.buildWebhookClientConfig(projectedtokenmount.WebhookPath),
+			ClientConfig:            buildClientConfigFn(projectedtokenmount.WebhookPath),
 			AdmissionReviewVersions: []string{admissionv1beta1.SchemeGroupVersion.Version, admissionv1.SchemeGroupVersion.Version},
 			FailurePolicy:           &failurePolicy,
 			MatchPolicy:             &matchPolicy,
 			SideEffects:             &sideEffect,
 			TimeoutSeconds:          pointer.Int32(10),
 		},
+	}
+}
+
+func (r *resourceManager) buildWebhookNamespaceSelector() *metav1.LabelSelector {
+	namespaceSelectorOperator := metav1.LabelSelectorOpIn
+	if !r.values.TargetDiffersFromSourceCluster {
+		namespaceSelectorOperator = metav1.LabelSelectorOpNotIn
+	}
+
+	return &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{{
+			Key:      v1beta1constants.GardenerPurpose,
+			Operator: namespaceSelectorOperator,
+			Values:   []string{metav1.NamespaceSystem},
+		}},
 	}
 }
 

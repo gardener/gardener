@@ -17,6 +17,7 @@ package tokeninvalidator_test
 import (
 	"bytes"
 
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	. "github.com/onsi/ginkgo"
@@ -145,6 +146,7 @@ var _ = Describe("TokenInvalidator tests", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "foo",
 				Namespace: secret.Namespace,
+				Labels:    map[string]string{resourcesv1alpha1.ProjectedTokenSkip: "true"},
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{{

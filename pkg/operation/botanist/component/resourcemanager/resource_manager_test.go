@@ -591,11 +591,17 @@ var _ = Describe("ResourceManager", func() {
 						}},
 					},
 					ObjectSelector: &metav1.LabelSelector{
-						MatchExpressions: []metav1.LabelSelectorRequirement{{
-							Key:      "app",
-							Operator: metav1.LabelSelectorOpNotIn,
-							Values:   []string{"gardener-resource-manager"},
-						}},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "projected-token-mount.resources.gardener.cloud/skip",
+								Operator: metav1.LabelSelectorOpDoesNotExist,
+							},
+							{
+								Key:      "app",
+								Operator: metav1.LabelSelectorOpNotIn,
+								Values:   []string{"gardener-resource-manager"},
+							},
+						},
 					},
 					ClientConfig: admissionregistrationv1.WebhookClientConfig{
 						CABundle: caBundle,
@@ -669,6 +675,8 @@ webhooks:
       - kube-system
   objectSelector:
     matchExpressions:
+    - key: projected-token-mount.resources.gardener.cloud/skip
+      operator: DoesNotExist
     - key: app
       operator: NotIn
       values:

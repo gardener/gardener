@@ -138,13 +138,6 @@ var _ = Describe("Handler", func() {
 				}))
 			},
 
-			Entry("explicit opt out",
-				func() {
-					pod.Labels = map[string]string{"projected-token-mount.resources.gardener.cloud/skip": "true"}
-				},
-				"pod explicitly opts out of projected service account token mount",
-			),
-
 			Entry("service account name is empty",
 				func() {
 					pod.Spec.ServiceAccountName = ""
