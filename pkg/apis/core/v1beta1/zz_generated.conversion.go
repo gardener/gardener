@@ -5092,6 +5092,7 @@ func Convert_core_Worker_To_v1beta1_Worker(in *core.Worker, out *Worker, s conve
 
 func autoConvert_v1beta1_WorkerKubernetes_To_core_WorkerKubernetes(in *WorkerKubernetes, out *core.WorkerKubernetes, s conversion.Scope) error {
 	out.Kubelet = (*core.KubeletConfig)(unsafe.Pointer(in.Kubelet))
+	out.Version = (*string)(unsafe.Pointer(in.Version))
 	return nil
 }
 
@@ -5102,6 +5103,7 @@ func Convert_v1beta1_WorkerKubernetes_To_core_WorkerKubernetes(in *WorkerKuberne
 
 func autoConvert_core_WorkerKubernetes_To_v1beta1_WorkerKubernetes(in *core.WorkerKubernetes, out *WorkerKubernetes, s conversion.Scope) error {
 	out.Kubelet = (*KubeletConfig)(unsafe.Pointer(in.Kubelet))
+	out.Version = (*string)(unsafe.Pointer(in.Version))
 	return nil
 }
 

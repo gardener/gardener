@@ -33,17 +33,18 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -65,6 +66,7 @@ var _ = Describe("Worker", func() {
 		region                       = "local"
 		sshPublicKey                 = []byte("very-public")
 		kubernetesVersion            = semver.MustParse("1.15.5")
+		workerKubernetesVersion      = "1.16.6"
 		infrastructureProviderStatus = &runtime.RawExtension{Raw: []byte(`{"baz":"foo"}`)}
 
 		worker1Name                           = "worker1"
@@ -195,6 +197,9 @@ var _ = Describe("Worker", func() {
 							Version: &worker2MachineImageVersion,
 						},
 					},
+					Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+						Version: &workerKubernetesVersion,
+					},
 				},
 			},
 		}
@@ -260,6 +265,7 @@ var _ = Describe("Worker", func() {
 						},
 					},
 					KubeletDataVolumeName:            &worker1KubeletDataVolumeName,
+					KubernetesVersion:                pointer.String(kubernetesVersion.String()),
 					Zones:                            []string{worker1Zone1, worker1Zone2},
 					MachineControllerManagerSettings: worker1MCMSettings,
 				},
@@ -280,7 +286,8 @@ var _ = Describe("Worker", func() {
 						Name:    worker2MachineImageName,
 						Version: worker2MachineImageVersion,
 					},
-					UserData: worker2UserData,
+					KubernetesVersion: &workerKubernetesVersion,
+					UserData:          worker2UserData,
 				},
 			},
 		}

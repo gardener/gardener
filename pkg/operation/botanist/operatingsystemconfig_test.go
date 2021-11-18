@@ -230,20 +230,22 @@ var _ = Describe("operatingsystemconfig", func() {
 			kubernetesInterfaceShoot *mockkubernetes.MockInterface
 			kubernetesClientShoot    *mockclient.MockClient
 
-			namespace = "shoot--foo--bar"
-			imageVec  = imagevector.ImageVector{{Name: "hyperkube"}}
+			namespace      = "shoot--foo--bar"
+			hyperkubeImage = &imagevector.ImageSource{Name: "hyperkube", Tag: pointer.String("v")}
+			imageVec       = imagevector.ImageVector{hyperkubeImage}
 
 			worker1Name            = "worker1"
 			worker1OriginalContent = "w1content"
 			worker1OriginalCommand = "/foo"
 			worker1OriginalUnits   = []string{"w1u1", "w1u2"}
-			worker1Key             = "cloud-config-" + worker1Name + "-77ac3"
+			worker1Key             = operatingsystemconfig.Key(worker1Name, semver.MustParse(kubernetesVersion))
 
 			worker2Name                  = "worker2"
 			worker2OriginalContent       = "w2content"
 			worker2OriginalCommand       = "/bar"
 			worker2OriginalUnits         = []string{"w2u2", "w2u2", "w2u3"}
-			worker2Key                   = "cloud-config-" + worker2Name + "-77ac3"
+			worker2KubernetesVersion     = "4.5.6"
+			worker2Key                   = operatingsystemconfig.Key(worker2Name, semver.MustParse(worker2KubernetesVersion))
 			worker2KubeletDataVolumeName = "vol"
 
 			workerNameToOperatingSystemConfigMaps = map[string]*operatingsystemconfig.OperatingSystemConfigs{
@@ -277,7 +279,7 @@ var _ = Describe("operatingsystemconfig", func() {
 			botanist.K8sShootClient = kubernetesInterfaceShoot
 
 			botanist.Shoot.SeedNamespace = namespace
-			botanist.Shoot.KubernetesVersion = semver.MustParse("1.2.3")
+			botanist.Shoot.KubernetesVersion = semver.MustParse(kubernetesVersion)
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Provider: gardencorev1beta1.Provider{
@@ -290,6 +292,9 @@ var _ = Describe("operatingsystemconfig", func() {
 								KubeletDataVolumeName: &worker2KubeletDataVolumeName,
 								DataVolumes: []gardencorev1beta1.DataVolume{
 									{Name: worker2KubeletDataVolumeName},
+								},
+								Kubernetes: &gardencorev1beta1.WorkerKubernetes{
+									Version: &worker2KubernetesVersion,
 								},
 							},
 						},
@@ -330,20 +335,20 @@ var _ = Describe("operatingsystemconfig", func() {
 					return []byte(fmt.Sprintf("%s_%s_%s_%s_%s_%s", cloudConfigUserData, hyperkubeImage.String(), kubernetesVersion, kubeletDataVolume, reloadConfigCommand, units)), params.executorScriptFnError
 				}
 
+				// operating system config maps retrieval for the worker pools
+				operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(params.workerNameToOperatingSystemConfigMaps)
+
 				// image vector for retrieval of required images
 				botanist.ImageVector = params.imageVector
 
 				if params.imageVector != nil {
-					// operating system config maps retrieval for the worker pools
-					operatingSystemConfig.EXPECT().WorkerNameToOperatingSystemConfigsMap().Return(params.workerNameToOperatingSystemConfigMaps)
-
 					if params.downloaderGenerateRBACResourcesFnError == nil &&
 						params.executorScriptFnError == nil &&
 						params.workerNameToOperatingSystemConfigMaps != nil {
 
 						// managed resource secret reconciliation for executor scripts for worker pools
 						// worker pool 1
-						worker1ExecutorScript, _ := ExecutorScriptFn([]byte(worker1OriginalContent), &imagevector.Image{Tag: pointer.String("v")}, kubernetesVersion, nil, worker1OriginalCommand, worker1OriginalUnits)
+						worker1ExecutorScript, _ := ExecutorScriptFn([]byte(worker1OriginalContent), hyperkubeImage.ToImage(&kubernetesVersion), kubernetesVersion, nil, worker1OriginalCommand, worker1OriginalUnits)
 						kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker1Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 						kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
@@ -369,7 +374,7 @@ metadata:
 						})
 
 						// worker pool 2
-						worker2ExecutorScript, _ := ExecutorScriptFn([]byte(worker2OriginalContent), &imagevector.Image{Tag: pointer.String("v")}, kubernetesVersion, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits)
+						worker2ExecutorScript, _ := ExecutorScriptFn([]byte(worker2OriginalContent), hyperkubeImage.ToImage(&worker2KubernetesVersion), worker2KubernetesVersion, &gardencorev1beta1.DataVolume{Name: worker2KubeletDataVolumeName}, worker2OriginalCommand, worker2OriginalUnits)
 						kubernetesClientSeed.EXPECT().Get(ctx, kutil.Key(namespace, "managedresource-shoot-cloud-config-execution-"+worker2Name), gomock.AssignableToTypeOf(&corev1.Secret{}))
 						kubernetesClientSeed.EXPECT().Update(ctx, &corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
@@ -453,7 +458,8 @@ metadata:
 
 			Entry("should fail because the images cannot be found",
 				tableTestParams{
-					imageVector: nil,
+					imageVector:                           nil,
+					workerNameToOperatingSystemConfigMaps: workerNameToOperatingSystemConfigMaps,
 				},
 				func(err error) {
 					Expect(err).To(MatchError(ContainSubstring("could not find image")))

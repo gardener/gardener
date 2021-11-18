@@ -53,6 +53,8 @@ apiserver_flags="
   --feature-gates SeedChange=true \
   --feature-gates AdminKubeconfigRequest=true \
   --feature-gates UseDNSRecords=true \
+  --feature-gates DisallowKubeconfigRotationForShootInDeletion=true \
+  --feature-gates WorkerPoolKubernetesVersion=true \
   --shoot-admin-kubeconfig-max-expiration=1h \
   --enable-admission-plugins=ShootVPAEnabledByDefault \
   --v 2"

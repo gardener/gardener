@@ -148,10 +148,45 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		shootLogger.Error(fmt.Sprintf("Could not maintain machine image version: %s", err.Error()))
 	}
 
-	reasonForKubernetesUpdate, err := MaintainKubernetesVersion(shoot, cloudProfile)
+	reasonForKubernetesUpdate, err := maintainKubernetesVersion(shoot.Spec.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+		shoot.Spec.Kubernetes.Version = v
+		return nil
+	})
 	if err != nil {
 		// continue execution to allow the machine image version update
 		shootLogger.Error(fmt.Sprintf("Could not maintain kubernetes version: %s", err.Error()))
+	}
+
+	shootSemver, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return err
+	}
+
+	// Now its time to update worker pool kubernetes version if specified
+	var reasonsForWorkerPoolKubernetesUpdate = make(map[string]string)
+	for i, w := range shoot.Spec.Provider.Workers {
+		if w.Kubernetes == nil || w.Kubernetes.Version == nil {
+			continue
+		}
+
+		reasonForWorkerPoolKubernetesUpdate, err := maintainKubernetesVersion(*w.Kubernetes.Version, shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion, cloudProfile, func(v string) error {
+			workerPoolSemver, err := semver.NewVersion(v)
+			if err != nil {
+				return err
+			}
+			// If during autoupdate a worker pool kubernetes gets forcefully updated to the next minor which might be higher than the same minor of the shoot, take this
+			if workerPoolSemver.GreaterThan(shootSemver) {
+				workerPoolSemver = shootSemver
+			}
+			v = workerPoolSemver.String()
+			shoot.Spec.Provider.Workers[i].Kubernetes.Version = &v
+			return nil
+		})
+		if err != nil {
+			// continue execution to allow the machine image version update
+			shootLogger.Error(fmt.Sprintf("Could not maintain kubernetes version for worker pool:%s: %s", w.Name, err.Error()))
+		}
+		reasonsForWorkerPoolKubernetesUpdate[w.Name] = reasonForWorkerPoolKubernetesUpdate
 	}
 
 	// do not add reconcile annotation if shoot was once set to failed or if shoot is already in an ongoing reconciliation
@@ -205,6 +240,12 @@ func (r *shootMaintenanceReconciler) reconcile(ctx context.Context, shoot *garde
 		shootLogger.Debugf("[SHOOT MAINTENANCE] Updating %s", reasonForKubernetesUpdate)
 	}
 
+	for name, reason := range reasonsForWorkerPoolKubernetesUpdate {
+		r.recorder.Eventf(shoot, corev1.EventTypeNormal, gardencorev1beta1.ShootEventK8sVersionMaintenance, "%s",
+			fmt.Sprintf("Updated worker pool %q %s.", name, reason))
+		shootLogger.Debugf("[SHOOT MAINTENANCE] Updating worker pool %q %s", name, reason)
+	}
+
 	shootLogger.Infof("[SHOOT MAINTENANCE] completed")
 	return nil
 }
@@ -239,9 +280,9 @@ func MaintainMachineImages(shootLogger *logrus.Entry, shoot *gardencorev1beta1.S
 	return reasonsForUpdate, nil
 }
 
-// MaintainKubernetesVersion updates a Shoot's Kubernetes version if necessary and returns the reason why an update was done
-func MaintainKubernetesVersion(shoot *gardencorev1beta1.Shoot, profile *gardencorev1beta1.CloudProfile) (string, error) {
-	shouldBeUpdated, reason, isExpired, err := shouldKubernetesVersionBeUpdated(shoot, profile)
+// maintainKubernetesVersion updates a Shoot's Kubernetes version if necessary and returns the reason why an update was done
+func maintainKubernetesVersion(kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile, updateFunc func(string) error) (string, error) {
+	shouldBeUpdated, reason, isExpired, err := shouldKubernetesVersionBeUpdated(kubernetesVersion, autoUpdate, profile)
 	if err != nil {
 		return "", err
 	}
@@ -249,21 +290,24 @@ func MaintainKubernetesVersion(shoot *gardencorev1beta1.Shoot, profile *gardenco
 		return "", nil
 	}
 
-	updatedKubernetesVersion, err := determineKubernetesVersion(shoot, profile, isExpired)
+	updatedKubernetesVersion, err := determineKubernetesVersion(kubernetesVersion, profile, isExpired)
 	if err != nil {
 		return "", err
 	}
 	if updatedKubernetesVersion == "" {
 		return "", nil
 	}
-	reasonForKubernetesUpdate := fmt.Sprintf("Kubernetes version %q to version %q. Reason: %s", shoot.Spec.Kubernetes.Version, updatedKubernetesVersion, reason)
-	shoot.Spec.Kubernetes.Version = updatedKubernetesVersion
+	reasonForKubernetesUpdate := fmt.Sprintf("Kubernetes version %q to version %q. Reason: %s", kubernetesVersion, updatedKubernetesVersion, reason)
+	err = updateFunc(updatedKubernetesVersion)
+	if err != nil {
+		return "", err
+	}
 	return reasonForKubernetesUpdate, err
 }
 
-func determineKubernetesVersion(shoot *gardencorev1beta1.Shoot, profile *gardencorev1beta1.CloudProfile, isExpired bool) (string, error) {
+func determineKubernetesVersion(kubernetesVersion string, profile *gardencorev1beta1.CloudProfile, isExpired bool) (string, error) {
 	// get latest version that qualifies for a patch update
-	newerPatchVersionFound, latestPatchVersion, err := gardencorev1beta1helper.GetKubernetesVersionForPatchUpdate(profile, shoot.Spec.Kubernetes.Version)
+	newerPatchVersionFound, latestPatchVersion, err := gardencorev1beta1helper.GetKubernetesVersionForPatchUpdate(profile, kubernetesVersion)
 	if err != nil {
 		return "", fmt.Errorf("failure while determining the latest Kubernetes patch version in the CloudProfile: %s", err.Error())
 	}
@@ -273,13 +317,13 @@ func determineKubernetesVersion(shoot *gardencorev1beta1.Shoot, profile *gardenc
 	// no newer patch version found & is expired -> forcefully update to latest patch of next minor version
 	if isExpired {
 		// get latest version that qualifies for a minor update
-		newMinorAvailable, latestPatchVersionNewMinor, err := gardencorev1beta1helper.GetKubernetesVersionForMinorUpdate(profile, shoot.Spec.Kubernetes.Version)
+		newMinorAvailable, latestPatchVersionNewMinor, err := gardencorev1beta1helper.GetKubernetesVersionForMinorUpdate(profile, kubernetesVersion)
 		if err != nil {
 			return "", fmt.Errorf("failure while determining newer Kubernetes minor version in the CloudProfile: %s", err.Error())
 		}
 		// cannot update as there is no consecutive minor version available (e.g shoot is on 1.16.X, but there is only 1.18.X, available and not 1.17.X)
 		if !newMinorAvailable {
-			return "", fmt.Errorf("cannot perform minor Kubernetes version update for expired Kubernetes version %q. No suitable version found in CloudProfile - this is most likely a misconfiguration of the CloudProfile", shoot.Spec.Kubernetes.Version)
+			return "", fmt.Errorf("cannot perform minor Kubernetes version update for expired Kubernetes version %q. No suitable version found in CloudProfile - this is most likely a misconfiguration of the CloudProfile", kubernetesVersion)
 		}
 
 		return latestPatchVersionNewMinor, nil
@@ -287,8 +331,8 @@ func determineKubernetesVersion(shoot *gardencorev1beta1.Shoot, profile *gardenc
 	return "", nil
 }
 
-func shouldKubernetesVersionBeUpdated(shoot *gardencorev1beta1.Shoot, profile *gardencorev1beta1.CloudProfile) (shouldBeUpdated bool, reason string, isExpired bool, error error) {
-	versionExistsInCloudProfile, version, err := gardencorev1beta1helper.KubernetesVersionExistsInCloudProfile(profile, shoot.Spec.Kubernetes.Version)
+func shouldKubernetesVersionBeUpdated(kubernetesVersion string, autoUpdate bool, profile *gardencorev1beta1.CloudProfile) (shouldBeUpdated bool, reason string, isExpired bool, error error) {
+	versionExistsInCloudProfile, version, err := gardencorev1beta1helper.KubernetesVersionExistsInCloudProfile(profile, kubernetesVersion)
 	if err != nil {
 		return false, "", false, err
 	}
@@ -304,7 +348,7 @@ func shouldKubernetesVersionBeUpdated(shoot *gardencorev1beta1.Shoot, profile *g
 		return true, updateReason, true, nil
 	}
 
-	if shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion {
+	if autoUpdate {
 		updateReason = "AutoUpdate of Kubernetes version configured"
 		return true, updateReason, false, nil
 	}

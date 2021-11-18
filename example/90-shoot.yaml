@@ -67,6 +67,7 @@ spec:
     #   effect: NoSchedule
     # caBundle: <some-ca-bundle-to-be-installed-to-all-nodes-in-this-pool>
     # kubernetes:
+    #   version: 1.14.3 # This can only be specified if the WorkerPoolKubernetesVersion feature gate is enabled.
     #   kubelet:
     #     cpuCFSQuota: true
     #     failSwapOn: true

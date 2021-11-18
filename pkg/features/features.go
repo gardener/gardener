@@ -109,4 +109,9 @@ const (
 	// owner: @vanjiii
 	// alpha: v1.31.0
 	DenyInvalidExtensionResources featuregate.Feature = "DenyInvalidExtensionResources"
+
+	// WorkerPoolKubernetesVersion allows to overwrite the Kubernetes version used for shoot clusters per worker pool.
+	// owner: @rfranzke @majst01 @mwennrich
+	// alpha: v1.35.0
+	WorkerPoolKubernetesVersion featuregate.Feature = "WorkerPoolKubernetesVersion"
 )

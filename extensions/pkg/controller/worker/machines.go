@@ -119,7 +119,11 @@ func (m MachineDeployments) HasSecret(secretName string) bool {
 
 // WorkerPoolHash returns a hash value for a given worker pool and a given cluster resource.
 func WorkerPoolHash(pool extensionsv1alpha1.WorkerPool, cluster *extensionscontroller.Cluster, additionalData ...string) (string, error) {
-	shootVersionMajorMinor, err := util.VersionMajorMinor(cluster.Shoot.Spec.Kubernetes.Version)
+	kubernetesVersion := cluster.Shoot.Spec.Kubernetes.Version
+	if pool.KubernetesVersion != nil {
+		kubernetesVersion = *pool.KubernetesVersion
+	}
+	shootVersionMajorMinor, err := util.VersionMajorMinor(kubernetesVersion)
 	if err != nil {
 		return "", err
 	}

@@ -18,40 +18,41 @@ The following tables are a summary of the feature gates that you can set on diff
 
 ## Feature gates for Alpha or Beta features
 
-| Feature | Default | Stage | Since | Until |
-| --- | --- | --- | --- | --- |
-| Logging | `false` | `Alpha` | `0.13` | |
-| HVPA | `false` | `Alpha` | `0.31` | |
-| HVPAForShootedSeed | `false` | `Alpha` | `0.32` | |
-| ManagedIstio | `false` | `Alpha` | `1.5` | `1.18` |
-| ManagedIstio | `true` | `Beta` | `1.19` | |
-| APIServerSNI | `false` | `Alpha` | `1.7` | `1.18` |
-| APIServerSNI | `true` | `Beta` | `1.19` | |
-| CachedRuntimeClients | `false` | `Alpha` | `1.7` | `1.33` |
-| CachedRuntimeClients | `true` | `Beta` | `1.34` | |
-| SeedChange | `false` | `Alpha` | `1.12` | |
-| SeedKubeScheduler | `false` | `Alpha` | `1.15` | |
-| ReversedVPN | `false` | `Alpha` | `1.22` | |
-| AdminKubeconfigRequest | `false` | `Alpha` | `1.24` | |
-| UseDNSRecords | `false` | `Alpha` | `1.27` | |
-| RotateSSHKeypairOnMaintenance | `false` | `Alpha` | `1.28` | |
-| DenyInvalidExtensionResources | `false` | `Alpha` | `1.31` | |
+| Feature                                      | Default | Stage   | Since  | Until  |
+| -------------------------------------------- | ------- | ------- | ------ | ------ |
+| Logging                                      | `false` | `Alpha` | `0.13` |        |
+| HVPA                                         | `false` | `Alpha` | `0.31` |        |
+| HVPAForShootedSeed                           | `false` | `Alpha` | `0.32` |        |
+| ManagedIstio                                 | `false` | `Alpha` | `1.5`  | `1.18` |
+| ManagedIstio                                 | `true`  | `Beta`  | `1.19` |        |
+| APIServerSNI                                 | `false` | `Alpha` | `1.7`  | `1.18` |
+| APIServerSNI                                 | `true`  | `Beta`  | `1.19` |        |
+| CachedRuntimeClients                         | `false` | `Alpha` | `1.7`  | `1.33` |
+| CachedRuntimeClients                         | `true`  | `Beta`  | `1.34` |        |
+| SeedChange                                   | `false` | `Alpha` | `1.12` |        |
+| SeedKubeScheduler                            | `false` | `Alpha` | `1.15` |        |
+| ReversedVPN                                  | `false` | `Alpha` | `1.22` |        |
+| AdminKubeconfigRequest                       | `false` | `Alpha` | `1.24` |        |
+| UseDNSRecords                                | `false` | `Alpha` | `1.27` |        |
+| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | `1.31` |
+| DisallowKubeconfigRotationForShootInDeletion | `true`  | `Beta`  | `1.32` | `1.35` |
+| DisallowKubeconfigRotationForShootInDeletion | `true`  | `GA`    | `1.36` |        |
+| RotateSSHKeypairOnMaintenance                | `false` | `Alpha` | `1.28` |        |
+| DenyInvalidExtensionResources                | `false` | `Alpha` | `1.31` |        |
+| WorkerPoolKubernetesVersion                  | `false` | `Alpha` | `1.35` |        |
 
 ## Feature gates for graduated or deprecated features
 
-| Feature | Default | Stage | Since | Until |
-| --- | --- | --- | --- | --- |
-| NodeLocalDNS | `false` | `Alpha` | `1.7` | |
-| NodeLocalDNS | | `Removed` | `1.26` | |
-| KonnectivityTunnel | `false` | `Alpha` | `1.6` | |
-| KonnectivityTunnel | | `Removed` | `1.27` | |
-| MountHostCADirectories | `false` | `Alpha` | `1.11` | `1.25` |
-| MountHostCADirectories | `true` | `Beta` | `1.26` | `1.27` |
-| MountHostCADirectories | `true` | `GA` | `1.27` | |
-| MountHostCADirectories | | `Removed` | `1.30` | |
-| DisallowKubeconfigRotationForShootInDeletion | `false` | `Alpha` | `1.28` | `1.31` |
-| DisallowKubeconfigRotationForShootInDeletion | `true` | `Beta` | `1.32` | `1.35` |
-| DisallowKubeconfigRotationForShootInDeletion | `true` | `GA` | `1.36` | |
+| Feature                | Default | Stage     | Since  | Until  |
+| ---------------------- | ------- | --------- | ------ | ------ |
+| NodeLocalDNS           | `false` | `Alpha`   | `1.7`  |        |
+| NodeLocalDNS           |         | `Removed` | `1.26` |        |
+| KonnectivityTunnel     | `false` | `Alpha`   | `1.6`  |        |
+| KonnectivityTunnel     |         | `Removed` | `1.27` |        |
+| MountHostCADirectories | `false` | `Alpha`   | `1.11` | `1.25` |
+| MountHostCADirectories | `true`  | `Beta`    | `1.26` | `1.27` |
+| MountHostCADirectories | `true`  | `GA`      | `1.27` |        |
+| MountHostCADirectories |         | `Removed` | `1.30` |        |
 
 ## Using a feature
 
@@ -104,3 +105,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `DisallowKubeconfigRotationForShootInDeletion` when enabled, does not allow kubeconfig rotation to be requested for shoot cluster that is already in deletion phase, i.e. `metadata.deletionTimestamp` is set.
 * `RotateSSHKeypairOnMaintenance` enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager. Details can be found in [GEP-15](../proposals/15-manage-bastions-and-ssh-key-pair-rotation.md).
 * `DenyInvalidExtensionResources` causes the `seed-admission-controller` to deny invalid extension resources, instead of just logging validation errors.
+* `WorkerPoolKubernetesVersion` allows to overwrite the Kubernetes version used for shoot clusters per worker pool (see [this document](../usage/worker_pool_k8s_versions.md))

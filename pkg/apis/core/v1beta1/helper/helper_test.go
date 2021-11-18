@@ -2076,4 +2076,16 @@ var _ = Describe("helper", func() {
 			}, map[string]int{"seed": 1, "seed2": 3, "seed3": 2, "seed4": 1})
 		})
 	})
+
+	DescribeTable("#CalculateEffectiveKubernetesVersion",
+		func(controlPlaneVersion *semver.Version, workerKubernetes *gardencorev1beta1.WorkerKubernetes, expectedRes *semver.Version) {
+			res, err := CalculateEffectiveKubernetesVersion(controlPlaneVersion, workerKubernetes)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(res).To(Equal(expectedRes))
+		},
+
+		Entry("workerKubernetes = nil", semver.MustParse("1.2.3"), nil, semver.MustParse("1.2.3")),
+		Entry("workerKubernetes.version = nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{}, semver.MustParse("1.2.3")),
+		Entry("workerKubernetes.version != nil", semver.MustParse("1.2.3"), &gardencorev1beta1.WorkerKubernetes{Version: pointer.String("4.5.6")}, semver.MustParse("4.5.6")),
+	)
 })

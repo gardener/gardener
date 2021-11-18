@@ -43,6 +43,7 @@ If such changes would be backwards-incompatible then we usually follow one of th
 We consider shoot upgrades to change either the
 
 * Kubernetes version (`.spec.kubernetes.version`)
+* Kubernetes version of the worker pool if specified (`.spec.provider.workers[].kubernetes.version`)
 * Machine image version of at least one worker pool (`.spec.provider.workers[].machine.image.version`)
 
 Generally, an upgrade is also performed through a reconciliation of the `Shoot` resource, i.e., the same concepts like for [shoot updates](#updates) apply.
@@ -83,6 +84,7 @@ The complete list of fields that trigger a rolling update:
 * `.spec.provider.workers[].volume.size`
 * `.spec.provider.workers[].providerConfig`
 * `.spec.provider.workers[].cri.name`
+* `.spec.provider.workers[].kubernetes.version` (except for patch version changes)
 
 Generally, the provider extension controllers might have additional constraints for changes leading to rolling updates, so please consult the respective documentation as well.
 

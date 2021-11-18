@@ -363,19 +363,21 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		}
 	}
 
-	var (
-		workerPoolKubeProxyImages = make(map[string]workerPoolKubeProxyImage)
-		kubernetesVersion         = b.Shoot.GetInfo().Spec.Kubernetes.Version
-	)
+	workerPoolKubeProxyImages := make(map[string]workerPoolKubeProxyImage)
 
 	for _, worker := range b.Shoot.GetInfo().Spec.Provider.Workers {
-		image, err := b.ImageVector.FindImage(charts.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion), imagevector.TargetVersion(kubernetesVersion))
+		kubernetesVersion, err := gardencorev1beta1helper.CalculateEffectiveKubernetesVersion(b.Shoot.KubernetesVersion, worker.Kubernetes)
 		if err != nil {
 			return nil, err
 		}
 
-		key := workerPoolKubeProxyImagesKey(worker.Name, kubernetesVersion)
-		workerPoolKubeProxyImages[key] = workerPoolKubeProxyImage{worker.Name, kubernetesVersion, image.String()}
+		image, err := b.ImageVector.FindImage(charts.ImageNameKubeProxy, imagevector.RuntimeVersion(kubernetesVersion.String()), imagevector.TargetVersion(kubernetesVersion.String()))
+		if err != nil {
+			return nil, err
+		}
+
+		key := workerPoolKubeProxyImagesKey(worker.Name, kubernetesVersion.String())
+		workerPoolKubeProxyImages[key] = workerPoolKubeProxyImage{worker.Name, kubernetesVersion.String(), image.String()}
 	}
 
 	nodeList := &corev1.NodeList{}

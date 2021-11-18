@@ -57,6 +57,7 @@
 * [Trigger shoot operations](usage/shoot_operations.md)
 * [Troubleshooting guide](usage/trouble_shooting_guide.md)
 * [Trusted TLS certificate for shoot control planes](usage/trusted-tls-for-control-planes.md)
+* [Controlling the Kubernetes versions for specific worker pools](usage/worker_pool_k8s_versions.md)
 
 ## [API Reference](api-reference/README.md)
 

@@ -1355,6 +1355,70 @@ var _ = Describe("validator", func() {
 
 					Expect(err).To(BeForbiddenError())
 				})
+
+				It("should choose the default kubernetes version if only major.minor is given in a worker group", func() {
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.18")}
+					highestPatchVersion := core.ExpirableVersion{Version: "1.18.5"}
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.18.0"}, highestPatchVersion)
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+
+					Expect(*shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(highestPatchVersion.Version))
+				})
+
+				It("should work to create a cluster without a worker group kubernetes version set", func() {
+					shoot.Spec.Kubernetes.Version = "1.18.5"
+					highestPatchVersion := core.ExpirableVersion{Version: "1.18.5"}
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.18.0"}, highestPatchVersion)
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+
+					Expect(shoot.Spec.Provider.Workers[0].Kubernetes).To(BeNil())
+				})
+
+				It("should work to create a cluster with a worker group kubernetes version set smaller than control plane version", func() {
+					shoot.Spec.Kubernetes.Version = "1.18.5"
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.17.0")}
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.17.0"}, core.ExpirableVersion{Version: "1.18.5"})
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+
+					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(pointer.String("1.17.0")))
+				})
+
+				It("should work to create a cluster with a worker group kubernetes version set equal to control plane version", func() {
+					shoot.Spec.Kubernetes.Version = "1.18.5"
+					shoot.Spec.Provider.Workers[0].Kubernetes = &core.WorkerKubernetes{Version: pointer.String("1.18.5")}
+					cloudProfile.Spec.Kubernetes.Versions = append(cloudProfile.Spec.Kubernetes.Versions, core.ExpirableVersion{Version: "1.17.0"}, core.ExpirableVersion{Version: "1.18.5"})
+
+					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
+					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
+
+					attrs := admission.NewAttributesRecord(&shoot, nil, core.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, &metav1.CreateOptions{}, false, nil)
+
+					Expect(admissionHandler.Admit(context.TODO(), attrs, nil)).To(Succeed())
+
+					Expect(shoot.Spec.Provider.Workers[0].Kubernetes.Version).To(Equal(pointer.String("1.18.5")))
+				})
 			})
 
 			Context("machine image checks", func() {

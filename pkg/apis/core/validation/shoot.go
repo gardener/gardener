@@ -247,6 +247,29 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *core.ShootSpec, newObjectMeta met
 	allErrs = append(allErrs, validateKubeControllerManagerUpdate(newSpec.Kubernetes.KubeControllerManager, oldSpec.Kubernetes.KubeControllerManager, fldPath.Child("kubernetes", "kubeControllerManager"))...)
 	allErrs = append(allErrs, ValidateProviderUpdate(&newSpec.Provider, &oldSpec.Provider, fldPath.Child("provider"))...)
 
+	for i, newWorker := range newSpec.Provider.Workers {
+		oldWorker := newWorker
+		for _, ow := range oldSpec.Provider.Workers {
+			if ow.Name == newWorker.Name {
+				oldWorker = ow
+				break
+			}
+		}
+		idxPath := fldPath.Child("provider", "workers").Index(i)
+
+		oldKubernetesVersion := oldSpec.Kubernetes.Version
+		newKubernetesVersion := newSpec.Kubernetes.Version
+		if oldWorker.Kubernetes != nil && oldWorker.Kubernetes.Version != nil {
+			oldKubernetesVersion = *oldWorker.Kubernetes.Version
+		}
+		if newWorker.Kubernetes != nil && newWorker.Kubernetes.Version != nil {
+			newKubernetesVersion = *newWorker.Kubernetes.Version
+		}
+
+		// worker kubernetes versions must not be downgraded and must not skip a minor
+		allErrs = append(allErrs, validateKubernetesVersionUpdate(newKubernetesVersion, oldKubernetesVersion, idxPath.Child("kubernetes", "version"))...)
+	}
+
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Type, oldSpec.Networking.Type, fldPath.Child("networking", "type"))...)
 	if oldSpec.Networking.Pods != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Networking.Pods, oldSpec.Networking.Pods, fldPath.Child("networking", "pods"))...)
@@ -470,6 +493,7 @@ func validateDNSUpdate(new, old *core.DNS, seedGotAssigned bool, fldPath *field.
 	return allErrs
 }
 
+// validateKubernetesVersionUpdate ensures that new version is newer than old version and does not skip one minor
 func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -500,6 +524,37 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 	}
 	if skippingMinorVersion {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version upgrade cannot skip a minor version"))
+	}
+
+	return allErrs
+}
+
+// validateWorkerGroupAndControlPlaneKubernetesVersion ensures that new version is newer than old version and does not skip two minor
+func validateWorkerGroupAndControlPlaneKubernetesVersion(controlPlaneVersion, workerGroupVersion string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// worker group kubernetes version must not be higher than controlplane version
+	uplift, err := versionutils.CompareVersions(workerGroupVersion, ">", controlPlaneVersion)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, controlPlaneVersion, err.Error()))
+	}
+	if uplift {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "worker group kubernetes version must not be higher than control plane version"))
+	}
+
+	// Forbid Kubernetes version upgrade which skips a minor version
+	workerVersion, err := semver.NewVersion(workerGroupVersion)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, workerGroupVersion, err.Error()))
+	}
+	threeMinorSkewVersion := workerVersion.IncMinor().IncMinor().IncMinor()
+
+	versionSkewViolation, err := versionutils.CompareVersions(controlPlaneVersion, ">=", threeMinorSkewVersion.String())
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, controlPlaneVersion, err.Error()))
+	}
+	if versionSkewViolation {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "worker group kubernetes version must be at most two minor versions behind control plane version"))
 	}
 
 	return allErrs
@@ -1044,8 +1099,20 @@ func ValidateWorker(worker core.Worker, kubernetesVersion string, fldPath *field
 	if len(worker.Taints) > 0 {
 		allErrs = append(allErrs, validateTaints(worker.Taints, fldPath.Child("taints"))...)
 	}
-	if worker.Kubernetes != nil && worker.Kubernetes.Kubelet != nil {
-		allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, kubernetesVersion, isDockerConfigured([]core.Worker{worker}), fldPath.Child("kubernetes", "kubelet"))...)
+	if worker.Kubernetes != nil {
+		if worker.Kubernetes.Version != nil {
+			if !utilfeature.DefaultFeatureGate.Enabled(features.WorkerPoolKubernetesVersion) {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("kubernetes", "version"), "worker pool kubernetes version may only be set if WorkerPoolKubernetesVersion feature gate is enabled"))
+			} else {
+				workerGroupKubernetesVersion := *worker.Kubernetes.Version
+				allErrs = append(allErrs, validateWorkerGroupAndControlPlaneKubernetesVersion(kubernetesVersion, workerGroupKubernetesVersion, fldPath.Child("kubernetes", "version"))...)
+				kubernetesVersion = workerGroupKubernetesVersion
+			}
+		}
+
+		if worker.Kubernetes.Kubelet != nil {
+			allErrs = append(allErrs, ValidateKubeletConfig(*worker.Kubernetes.Kubelet, kubernetesVersion, isDockerConfigured([]core.Worker{worker}), fldPath.Child("kubernetes", "kubelet"))...)
+		}
 	}
 
 	if worker.CABundle != nil {

@@ -99,6 +99,10 @@ spec:
                       description: KubeletDataVolumeName contains the name of a dataVolume
                         that should be used for storing kubelet state.
                       type: string
+                    kubernetesVersion:
+                      description: KubernetesVersion is the kubernetes version in
+                        this worker pool
+                      type: string
                     labels:
                       additionalProperties:
                         type: string
