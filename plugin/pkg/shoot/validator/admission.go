@@ -240,10 +240,14 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	validationContext.addMetadataAnnotations(a)
 
 	var allErrs field.ErrorList
+	// TODO (voelzmo): remove this 'if' statement once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
+	if a.GetOperation() == admission.Create {
+		allErrs = append(allErrs, validationContext.validateAPIVersionForRawExtensions()...)
+	}
 	allErrs = append(allErrs, validationContext.validateShootNetworks()...)
 	allErrs = append(allErrs, validationContext.validateKubernetes()...)
 	allErrs = append(allErrs, validationContext.validateRegion()...)
-	allErrs = append(allErrs, validationContext.validateProvider(a)...)
+	allErrs = append(allErrs, validationContext.validateProvider()...)
 
 	dnsErrors, err := validationContext.validateDNSDomainUniqueness(v.shootLister)
 	if err != nil {
@@ -530,7 +534,7 @@ func (c *validationContext) validateKubernetes() field.ErrorList {
 	return allErrs
 }
 
-func (c *validationContext) validateProvider(a admission.Attributes) field.ErrorList {
+func (c *validationContext) validateProvider() field.ErrorList {
 	var (
 		allErrs field.ErrorList
 		path    = field.NewPath("spec", "provider")
@@ -540,24 +544,6 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		allErrs = append(allErrs, field.Invalid(path.Child("type"), c.shoot.Spec.Provider.Type, fmt.Sprintf("provider type in shoot must equal provider type of referenced CloudProfile: %q", c.cloudProfile.Spec.Type)))
 		// exit early, all other validation errors will be misleading
 		return allErrs
-	}
-
-	// TODO (voelzmo): remove this 'if' statement once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
-	if a.GetOperation() == admission.Create {
-		err := c.validateAPIVersionForRawExtension(path.Child("infrastructureConfig"), c.shoot.Spec.Provider.InfrastructureConfig)
-		if err != nil {
-			allErrs = append(allErrs, err)
-		}
-
-		err = c.validateAPIVersionForRawExtension(path.Child("controlPlaneConfig"), c.shoot.Spec.Provider.ControlPlaneConfig)
-		if err != nil {
-			allErrs = append(allErrs, err)
-		}
-
-		err = c.validateAPIVersionForRawExtension(path.Child("networkConfig"), c.shoot.Spec.Networking.ProviderConfig)
-		if err != nil {
-			allErrs = append(allErrs, err)
-		}
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {
@@ -591,17 +577,41 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 	return allErrs
 }
 
-func (c *validationContext) validateAPIVersionForRawExtension(path *field.Path, extension *runtime.RawExtension) *field.Error {
-	if extension == nil {
-		return nil
+func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList {
+	var allErrs field.ErrorList
+	type ext struct {
+		path   *field.Path
+		rawExt *runtime.RawExtension
 	}
-	// we ignore any errors while trying to parse the GVK from the RawExtension, because we don't actually want to validate against the Scheme (k8s doesn't know about the extension's GVK anyways)
-	// and the RawExtension could contain arbitrary json. However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
-	_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(extension.Raw, nil, nil)
-	if gvk.Version == runtime.APIVersionInternal {
-		return field.Invalid(path, gvk, "must not use apiVersion 'internal'")
+	extensions := []ext{
+		{path: field.NewPath("spec", "provider", "infrastructureConfig"), rawExt: c.shoot.Spec.Provider.InfrastructureConfig},
+		{path: field.NewPath("spec", "provider", "controlPlaneConfig"), rawExt: c.shoot.Spec.Provider.ControlPlaneConfig},
+		{path: field.NewPath("spec", "networking", "providerConfig"), rawExt: c.shoot.Spec.Networking.ProviderConfig},
 	}
-	return nil
+	for _, extension := range extensions {
+		if extension.rawExt == nil {
+			continue
+		}
+		// we ignore any errors while trying to parse the GVK from the RawExtension, because we don't actually want to validate against the Scheme (k8s doesn't know about the extension's GVK anyways)
+		// and the RawExtension could contain arbitrary json. However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
+		_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(extension.rawExt.Raw, nil, nil)
+		if gvk.Version == runtime.APIVersionInternal {
+			allErrs = append(allErrs, field.Invalid(extension.path, gvk, "must not use apiVersion 'internal'"))
+		}
+	}
+
+	for i, worker := range c.shoot.Spec.Provider.Workers {
+		if worker.ProviderConfig == nil {
+			continue
+		}
+		// we ignore any errors while trying to parse the GVK from the RawExtension, because we don't actually want to validate against the Scheme (k8s doesn't know about the extension's GVK anyways)
+		// and the RawExtension could contain arbitrary json. However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
+		_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(worker.ProviderConfig.Raw, nil, nil)
+		if gvk.Version == runtime.APIVersionInternal {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("providerConfig"), gvk, "must not use apiVersion 'internal'"))
+		}
+	}
+	return allErrs
 }
 
 func validateVolumeSize(volumeTypeConstraints []core.VolumeType, machineTypeConstraints []core.MachineType, machineType string, volume *core.Volume) (bool, string) {

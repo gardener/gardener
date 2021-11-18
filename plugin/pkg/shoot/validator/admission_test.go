@@ -2149,6 +2149,26 @@ var _ = Describe("validator", func() {
 "kind": "NetworkConfig",
 "backend": "bird",
 "ipam": {"type": "host-local", "cidr": "usePodCIDR"}}`)}
+
+					// TODO: this is actually image-specific providerconfig. WorkerConfig can be found here https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/30-worker.yaml#L113-L123
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{
+						Name: "worker-with-internal-providerConfig",
+						Machine: core.Machine{
+							Type: "machine-type-1",
+						},
+						Minimum: 1,
+						Maximum: 1,
+						Volume: &core.Volume{
+							VolumeSize: "40Gi",
+							Type:       &volumeType,
+						},
+						Zones: []string{"europe-a"},
+						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
+"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/__internal",
+"kind": "OperatingSystemConfiguration",
+"memoryTopology": "3",
+"systemMemory": "7x"}`)},
+					})
 				})
 				It("ensures new clusters cannot use the apiVersion 'internal'", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2162,6 +2182,7 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("Kind=InfrastructureConfig: must not use apiVersion 'internal'"))
 					Expect(err.Error()).To(ContainSubstring("Kind=ControlPlaneConfig: must not use apiVersion 'internal'"))
 					Expect(err.Error()).To(ContainSubstring("Kind=NetworkConfig: must not use apiVersion 'internal'"))
+					Expect(err.Error()).To(ContainSubstring("Kind=OperatingSystemConfiguration: must not use apiVersion 'internal'"))
 				})
 
 				// TODO (voelzmo): remove this test and the associated production code once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
@@ -2204,6 +2225,24 @@ var _ = Describe("validator", func() {
 "kind": "NetworkConfig",
 "backend": "bird",
 "ipam": {"type": "host-local", "cidr": "usePodCIDR"}}`)}
+					shoot.Spec.Provider.Workers[1] = core.Worker{
+						Name: "worker-with-internal-providerConfig",
+						Machine: core.Machine{
+							Type: "machine-type-1",
+						},
+						Minimum: 1,
+						Maximum: 1,
+						Volume: &core.Volume{
+							VolumeSize: "40Gi",
+							Type:       &volumeType,
+						},
+						Zones: []string{"europe-a"},
+						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
+"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/v1alpha1",
+"kind": "OperatingSystemConfiguration",
+"memoryTopology": "3",
+"systemMemory": "7x"}`)},
+					}
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
