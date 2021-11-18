@@ -546,7 +546,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 	if a.GetOperation() == admission.Create {
 		err := c.validateAPIVersionForRawExtension(path.Child("infrastructureConfig"), c.shoot.Spec.Provider.InfrastructureConfig)
 		if err != nil {
-			allErrs = append(allErrs)
+			allErrs = append(allErrs, err)
 		}
 	}
 
@@ -581,7 +581,9 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 	return allErrs
 }
 
-func (c *validationContext) validateAPIVersionForRawExtension(path *field.Path, extension *runtime.RawExtension) error {
+func (c *validationContext) validateAPIVersionForRawExtension(path *field.Path, extension *runtime.RawExtension) *field.Error {
+	// we ignore any errors while trying to parse the GVK from the RawExtension, because we don't actually want to validate against the Scheme (k8s doesn't know about the extension's GVK anyways)
+	// and the RawExtension could contain arbitrary json. However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
 	_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(extension.Raw, nil, nil)
 	if gvk.Version == runtime.APIVersionInternal {
 		return field.Invalid(path, gvk, "must not use apiVersion 'internal'")
