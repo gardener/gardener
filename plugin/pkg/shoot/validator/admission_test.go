@@ -2134,6 +2134,14 @@ var _ = Describe("validator", func() {
 "networks": {"vnet": {"cidr": "10.250.0.0/16"}}
 }`),
 					}
+
+					shoot.Spec.Provider.ControlPlaneConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+"apiVersion": "aws.provider.extensions.gardener.cloud/__internal",
+"kind": "ControlPlaneConfig",
+"cloudControllerManager": {"featureGates": { "CustomResourceValidation": true}},
+"storage": {"managedDefaultClass": false}}`),
+					}
 				})
 
 				It("ensures new clusters cannot use the apiVersion 'internal'", func() {
@@ -2145,7 +2153,8 @@ var _ = Describe("validator", func() {
 					err := admissionHandler.Admit(context.TODO(), attrs, nil)
 
 					Expect(err).To(BeForbiddenError())
-					Expect(err.Error()).To(ContainSubstring("must not use apiVersion 'internal'"))
+					Expect(err.Error()).To(ContainSubstring("Kind=InfrastructureConfig: must not use apiVersion 'internal'"))
+					Expect(err.Error()).To(ContainSubstring("Kind=ControlPlaneConfig: must not use apiVersion 'internal'"))
 				})
 
 				// TODO (voelzmo): remove this test and the associated production code once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
@@ -2174,6 +2183,13 @@ var _ = Describe("validator", func() {
 }`),
 					}
 
+					shoot.Spec.Provider.ControlPlaneConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+"apiVersion": "aws.provider.extensions.gardener.cloud/v1alpha1",
+"kind": "ControlPlaneConfig",
+"cloudControllerManager": {"featureGates": { "CustomResourceValidation": true}},
+"storage": {"managedDefaultClass": false}}`),
+					}
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())

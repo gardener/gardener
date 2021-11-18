@@ -548,6 +548,11 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		if err != nil {
 			allErrs = append(allErrs, err)
 		}
+
+		err = c.validateAPIVersionForRawExtension(path.Child("controlPlaneConfig"), c.shoot.Spec.Provider.ControlPlaneConfig)
+		if err != nil {
+			allErrs = append(allErrs, err)
+		}
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {
