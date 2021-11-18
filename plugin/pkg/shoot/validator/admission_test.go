@@ -2142,8 +2142,14 @@ var _ = Describe("validator", func() {
 "cloudControllerManager": {"featureGates": { "CustomResourceValidation": true}},
 "storage": {"managedDefaultClass": false}}`),
 					}
-				})
 
+					shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+"apiVersion": "calico.networking.extensions.gardener.cloud/__internal",
+"kind": "NetworkConfig",
+"backend": "bird",
+"ipam": {"type": "host-local", "cidr": "usePodCIDR"}}`)}
+				})
 				It("ensures new clusters cannot use the apiVersion 'internal'", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -2155,6 +2161,7 @@ var _ = Describe("validator", func() {
 					Expect(err).To(BeForbiddenError())
 					Expect(err.Error()).To(ContainSubstring("Kind=InfrastructureConfig: must not use apiVersion 'internal'"))
 					Expect(err.Error()).To(ContainSubstring("Kind=ControlPlaneConfig: must not use apiVersion 'internal'"))
+					Expect(err.Error()).To(ContainSubstring("Kind=NetworkConfig: must not use apiVersion 'internal'"))
 				})
 
 				// TODO (voelzmo): remove this test and the associated production code once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
@@ -2190,6 +2197,13 @@ var _ = Describe("validator", func() {
 "cloudControllerManager": {"featureGates": { "CustomResourceValidation": true}},
 "storage": {"managedDefaultClass": false}}`),
 					}
+
+					shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+"apiVersion": "calico.networking.extensions.gardener.cloud/v1alpha1",
+"kind": "NetworkConfig",
+"backend": "bird",
+"ipam": {"type": "host-local", "cidr": "usePodCIDR"}}`)}
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().Seeds().Informer().GetStore().Add(&seed)).To(Succeed())
