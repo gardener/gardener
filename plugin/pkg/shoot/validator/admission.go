@@ -582,6 +582,9 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 }
 
 func (c *validationContext) validateAPIVersionForRawExtension(path *field.Path, extension *runtime.RawExtension) *field.Error {
+	if extension == nil {
+		return nil
+	}
 	// we ignore any errors while trying to parse the GVK from the RawExtension, because we don't actually want to validate against the Scheme (k8s doesn't know about the extension's GVK anyways)
 	// and the RawExtension could contain arbitrary json. However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
 	_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(extension.Raw, nil, nil)
