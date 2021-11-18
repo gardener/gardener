@@ -503,6 +503,19 @@ admin:
 					{
 						From: []networkingv1.NetworkPolicyPeer{
 							{
+								PodSelector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										v1beta1constants.GardenRole: v1beta1constants.GardenRoleMonitoring,
+										v1beta1constants.LabelApp:   v1beta1constants.StatefulSetNamePrometheus,
+										v1beta1constants.LabelRole:  v1beta1constants.GardenRoleMonitoring,
+									},
+								},
+							},
+						},
+					},
+					{
+						From: []networkingv1.NetworkPolicyPeer{
+							{
 								// we don't want to modify existing labels on the istio namespace
 								NamespaceSelector: &metav1.LabelSelector{},
 								PodSelector: &metav1.LabelSelector{
