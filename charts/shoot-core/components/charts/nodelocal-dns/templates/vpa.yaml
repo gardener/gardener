@@ -4,11 +4,6 @@ kind: VerticalPodAutoscaler
 metadata:
   name: node-local-dns
   namespace: {{ .Release.Namespace }}
-spec:
-  targetRef:
-    apiVersion: {{ include "daemonsetversion" . }}
-    kind: DaemonSet
-    name: node-local-dns
-  updatePolicy:
-    updateMode: "Auto"
+  annotations:
+      resources.gardener.cloud/mode: Ignore
 {{- end }}

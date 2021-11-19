@@ -3,15 +3,5 @@ kind: RoleBinding
 metadata:
   name: gardener.cloud:psp:node-local-dns
   namespace: kube-system
-  labels:
-    app: node-local-dns
   annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: gardener.cloud:psp:kube-system:node-local-dns
-subjects:
-- kind: ServiceAccount
-  name: node-local-dns
-  namespace: kube-system
+      resources.gardener.cloud/mode: Ignore

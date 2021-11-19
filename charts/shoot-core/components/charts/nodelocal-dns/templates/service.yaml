@@ -4,17 +4,5 @@ kind: Service
 metadata:
   name: kube-dns-upstream
   namespace: kube-system
-  labels:
-    k8s-app: kube-dns-upstream
-spec:
-  ports:
-    - name: dns
-      port: 53
-      protocol: UDP
-      targetPort: 8053
-    - name: dns-tcp
-      port: 53
-      protocol: TCP
-      targetPort: 8053
-  selector:
-    k8s-app: kube-dns
+  annotations:
+    resources.gardener.cloud/mode: Ignore

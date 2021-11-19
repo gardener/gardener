@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/coredns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/nodelocaldns"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnshoot"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
@@ -343,6 +344,11 @@ func (h *Health) checkSystemComponents(
 	if versionConstraintGreaterEqual138.Check(checker.gardenerVersion) {
 		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
 		managedResources = append(managedResources, vpnshoot.ManagedResourceName)
+	}
+
+	if versionConstraintGreaterEqual138.Check(checker.gardenerVersion) && h.shoot.NodeLocalDNSEnabled {
+		// TODO: Add this ManagedResource unconditionally to the `managedResourcesShoot` in a future version.
+		managedResources = append(managedResources, nodelocaldns.ManagedResourceName)
 	}
 
 	for _, name := range managedResources {
