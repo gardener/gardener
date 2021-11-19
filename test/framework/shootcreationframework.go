@@ -151,12 +151,10 @@ func validateShootCreationConfig(cfg *ShootCreationConfig) {
 		cfg.allowPrivilegedContainers = &parsedBool
 	}
 
-	if !StringSet(cfg.infrastructureProviderConfig) {
-		ginkgo.Fail(fmt.Sprintf("you need to specify the filepath to the infrastructureProviderConfig for the provider '%s'", cfg.shootProviderType))
-	}
-
-	if !FileExists(cfg.infrastructureProviderConfig) {
-		ginkgo.Fail(fmt.Sprintf("path to the infrastructureProviderConfig of the Shoot is invalid: %s", cfg.infrastructureProviderConfig))
+	if StringSet(cfg.infrastructureProviderConfig) {
+		if !FileExists(cfg.infrastructureProviderConfig) {
+			ginkgo.Fail(fmt.Sprintf("you need to specify the filepath to the infrastructureProviderConfig for the provider '%s'", cfg.shootProviderType))
+		}
 	}
 
 	if StringSet(cfg.controlPlaneProviderConfig) {
