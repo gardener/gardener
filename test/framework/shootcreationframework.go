@@ -407,8 +407,12 @@ func (f *ShootCreationFramework) CreateShoot(ctx context.Context, initializeShoo
 func (f *ShootCreationFramework) InitializeShootWithFlags(ctx context.Context) error {
 	// if running in test machinery, test will be executed from root of the project
 	if !FileExists(fmt.Sprintf(".%s", f.Config.shootYamlPath)) {
-		// locally, we need find the example shoot
-		f.Config.shootYamlPath = filepath.Join(f.TemplatesDir, f.Config.shootYamlPath)
+		path := f.Config.shootYamlPath
+		if !filepath.IsAbs(f.Config.shootYamlPath) {
+			// locally, we need find the example shoot
+			path = filepath.Join(f.TemplatesDir, f.Config.shootYamlPath)
+		}
+		f.Config.shootYamlPath = path
 		if !FileExists(f.Config.shootYamlPath) {
 			return fmt.Errorf("shoot template should exist")
 		}
