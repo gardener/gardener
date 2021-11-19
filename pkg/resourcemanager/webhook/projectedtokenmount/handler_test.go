@@ -70,16 +70,13 @@ var _ = Describe("Handler", func() {
 		request = admission.Request{
 			AdmissionRequest: admissionv1.AdmissionRequest{
 				Operation: admissionv1.Create,
+				Namespace: namespace,
 			},
 		}
 		pod = &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespace,
-			},
 			Spec: corev1.PodSpec{
-				AutomountServiceAccountToken: pointer.Bool(false),
-				ServiceAccountName:           serviceAccountName,
-				Containers:                   []corev1.Container{{}, {}},
+				ServiceAccountName: serviceAccountName,
+				Containers:         []corev1.Container{{}, {}},
 			},
 		}
 		serviceAccount = &corev1.ServiceAccount{
@@ -141,13 +138,6 @@ var _ = Describe("Handler", func() {
 				}))
 			},
 
-			Entry("explicit opt out",
-				func() {
-					pod.Labels = map[string]string{"projected-token-mount.resources.gardener.cloud/skip": "true"}
-				},
-				"pod explicitly opts out of projected service account token mount",
-			),
-
 			Entry("service account name is empty",
 				func() {
 					pod.Spec.ServiceAccountName = ""
@@ -193,7 +183,7 @@ var _ = Describe("Handler", func() {
 					AdmissionResponse: admissionv1.AdmissionResponse{
 						Allowed: true,
 						Result: &metav1.Status{
-							Reason: "auto-mounting service account token is not disabled",
+							Reason: "auto-mounting service account token is not disabled on ServiceAccount level",
 							Code:   http.StatusOK,
 						},
 					},
@@ -206,15 +196,27 @@ var _ = Describe("Handler", func() {
 			Entry("ServiceAccount's automountServiceAccountToken=true", func() {
 				serviceAccount.AutomountServiceAccountToken = pointer.Bool(true)
 			}),
-			Entry("Pod's automountServiceAccountToken=nil", func() {
-				serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
-				pod.Spec.AutomountServiceAccountToken = nil
-			}),
-			Entry("Pod's automountServiceAccountToken=true", func() {
-				serviceAccount.AutomountServiceAccountToken = pointer.Bool(false)
-				pod.Spec.AutomountServiceAccountToken = pointer.Bool(true)
-			}),
 		)
+
+		It("should not mutate because pod explicitly disables the service account mount", func() {
+			pod.Spec.AutomountServiceAccountToken = pointer.Bool(false)
+
+			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
+
+			objData, err := runtime.Encode(encoder, pod)
+			Expect(err).NotTo(HaveOccurred())
+			request.Object.Raw = objData
+
+			Expect(handler.Handle(ctx, request)).To(Equal(admission.Response{
+				AdmissionResponse: admissionv1.AdmissionResponse{
+					Allowed: true,
+					Result: &metav1.Status{
+						Reason: "Pod explicitly disables a service account token mount",
+						Code:   http.StatusOK,
+					},
+				},
+			}))
+		})
 
 		It("should not mutate because pod already has a projected token volume", func() {
 			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())

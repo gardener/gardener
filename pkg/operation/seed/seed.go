@@ -290,7 +290,7 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secret
 // deployCertificates deploys CA and TLS certificates inside the garden namespace
 // It takes a map[string]*corev1.Secret object which contains secrets that have already been deployed inside that namespace to avoid duplication errors.
 func deployCertificates(ctx context.Context, seed *Seed, c client.Client, existingSecretsMap map[string]*corev1.Secret) (map[string]*corev1.Secret, error) {
-	_, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(ctx, c, existingSecretsMap, wantedCertificateAuthorities, v1beta1constants.GardenNamespace)
+	caSecrets, certificateAuthorities, err := secretsutils.GenerateCertificateAuthorities(ctx, c, existingSecretsMap, wantedCertificateAuthorities, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -303,6 +303,10 @@ func deployCertificates(ctx context.Context, seed *Seed, c client.Client, existi
 	secrets, err := secretsutils.GenerateClusterSecrets(ctx, c, existingSecretsMap, wantedSecretsList, v1beta1constants.GardenNamespace)
 	if err != nil {
 		return nil, err
+	}
+
+	for ca, secret := range caSecrets {
+		secrets[ca] = secret
 	}
 
 	return secrets, nil
@@ -1071,7 +1075,7 @@ func runCreateSeedFlow(
 	if err != nil {
 		return err
 	}
-	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, deployedSecretsMap[resourcemanager.SecretNameServer])
+	gardenerResourceManager, err := defaultGardenerResourceManager(seedClient, imageVector, deployedSecretsMap[caSeed], deployedSecretsMap[resourcemanager.SecretNameServer])
 	if err != nil {
 		return err
 	}

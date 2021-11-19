@@ -61,6 +61,12 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 		return reconcile.Result{}, fmt.Errorf("could not fetch ServiceAccount: %w", err)
 	}
 
+	if !metav1.HasLabel(secret.ObjectMeta, resourcesv1alpha1.ResourceManagerPurpose) {
+		if err := r.addPurposeLabel(ctx, secret); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
 	if metav1.HasLabel(serviceAccount.ObjectMeta, resourcesv1alpha1.StaticTokenSkip) ||
 		serviceAccount.AutomountServiceAccountToken == nil ||
 		*serviceAccount.AutomountServiceAccountToken {
@@ -88,12 +94,22 @@ func (r *reconciler) Reconcile(ctx context.Context, request reconcile.Request) (
 	return reconcile.Result{}, r.addConsiderLabel(ctx, secret)
 }
 
+func (r *reconciler) addPurposeLabel(ctx context.Context, secret *metav1.PartialObjectMetadata) error {
+	return r.patchSecret(ctx, secret, func() {
+		metav1.SetMetaDataLabel(&secret.ObjectMeta, resourcesv1alpha1.ResourceManagerPurpose, resourcesv1alpha1.LabelPurposeTokenInvalidation)
+	})
+}
+
 func (r *reconciler) addConsiderLabel(ctx context.Context, secret *metav1.PartialObjectMetadata) error {
-	return r.patchSecret(ctx, secret, func() { metav1.SetMetaDataLabel(&secret.ObjectMeta, resourcesv1alpha1.StaticTokenConsider, "true") })
+	return r.patchSecret(ctx, secret, func() {
+		metav1.SetMetaDataLabel(&secret.ObjectMeta, resourcesv1alpha1.StaticTokenConsider, "true")
+	})
 }
 
 func (r *reconciler) removeConsiderLabel(ctx context.Context, secret *metav1.PartialObjectMetadata) error {
-	return r.patchSecret(ctx, secret, func() { delete(secret.Labels, resourcesv1alpha1.StaticTokenConsider) })
+	return r.patchSecret(ctx, secret, func() {
+		delete(secret.Labels, resourcesv1alpha1.StaticTokenConsider)
+	})
 }
 
 func (r *reconciler) patchSecret(ctx context.Context, secret *metav1.PartialObjectMetadata, transform func()) error {

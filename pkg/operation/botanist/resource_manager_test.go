@@ -28,6 +28,7 @@ import (
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var _ = Describe("ResourceManager", func() {
@@ -49,23 +50,27 @@ var _ = Describe("ResourceManager", func() {
 		var (
 			resourceManager *mockresourcemanager.MockInterface
 
-			ctx              = context.TODO()
-			fakeErr          = fmt.Errorf("fake err")
-			secretName       = "gardener-resource-manager"
-			secretNameServer = "gardener-resource-manager-server"
-			secretNameRootCA = "ca"
-			seedNamespace    = "fake-seed-ns"
-			checksum         = "1234"
-			checksumServer   = "5678"
-			checksumRootCA   = "9012"
+			ctx           = context.TODO()
+			seedNamespace = "fake-seed-ns"
+			fakeErr       = fmt.Errorf("fake err")
+
+			secretName         = "gardener-resource-manager"
+			secretNameServer   = "gardener-resource-manager-server"
+			secretNameCA       = "ca"
+			checksum           = "1234"
+			checksumServer     = "5678"
+			checksumCA         = "9012"
+			secretDataServerCA = map[string][]byte{"ca.crt": []byte("cert")}
 		)
 
 		BeforeEach(func() {
 			resourceManager = mockresourcemanager.NewMockInterface(ctrl)
 
 			botanist.StoreCheckSum(secretName, checksum)
+			botanist.StoreCheckSum(secretNameCA, checksumCA)
 			botanist.StoreCheckSum(secretNameServer, checksumServer)
-			botanist.StoreCheckSum(secretNameRootCA, checksumRootCA)
+
+			botanist.StoreSecret(secretNameCA, &corev1.Secret{Data: secretDataServerCA})
 
 			botanist.Shoot = &shootpkg.Shoot{
 				Components: &shootpkg.Components{
@@ -78,8 +83,9 @@ var _ = Describe("ResourceManager", func() {
 
 			resourceManager.EXPECT().SetSecrets(resourcemanager.Secrets{
 				Kubeconfig: component.Secret{Name: secretName, Checksum: checksum},
+				ServerCA:   component.Secret{Name: secretNameCA, Checksum: checksumCA, Data: secretDataServerCA},
 				Server:     component.Secret{Name: secretNameServer, Checksum: checksumServer},
-				RootCA:     &component.Secret{Name: secretNameRootCA, Checksum: checksumRootCA},
+				RootCA:     &component.Secret{Name: secretNameCA, Checksum: checksumCA},
 			})
 		})
 

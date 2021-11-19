@@ -86,6 +86,18 @@ var _ = Describe("TokenInvalidator", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("should add the purpose label", func() {
+			Expect(fakeClient.Create(ctx, secretPartialObjectMeta)).To(Succeed())
+			Expect(fakeClient.Create(ctx, serviceAccount)).To(Succeed())
+
+			result, err := ctrl.Reconcile(ctx, request)
+			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
+			Expect(secret.Labels).To(HaveKeyWithValue("resources.gardener.cloud/purpose", "token-invalidator"))
+		})
+
 		Context("remove consider label", func() {
 			BeforeEach(func() {
 				secretPartialObjectMeta.Labels = map[string]string{"token-invalidator.resources.gardener.cloud/consider": "true"}
@@ -98,7 +110,7 @@ var _ = Describe("TokenInvalidator", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)).To(Succeed())
-				Expect(secret.Labels).To(BeNil())
+				Expect(secret.Labels).NotTo(HaveKeyWithValue("token-invalidator.resources.gardener.cloud/consider", "true"))
 			})
 
 			It("AutomountServiceAccountToken=nil", func() {

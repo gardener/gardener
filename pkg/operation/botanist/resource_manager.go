@@ -45,16 +45,18 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 	image = &imagevector.Image{Repository: repository, Tag: &tag}
 
 	cfg := resourcemanager.Values{
-		AlwaysUpdate:                        pointer.Bool(true),
-		ClusterIdentity:                     b.Seed.GetInfo().Status.ClusterIdentity,
-		ConcurrentSyncs:                     pointer.Int32(20),
-		HealthSyncPeriod:                    utils.DurationPtr(time.Minute),
-		MaxConcurrentHealthWorkers:          pointer.Int32(10),
-		MaxConcurrentTokenRequestorWorkers:  pointer.Int32(10),
-		MaxConcurrentRootCAPublisherWorkers: pointer.Int32(10),
-		SyncPeriod:                          utils.DurationPtr(time.Minute),
-		TargetDisableCache:                  pointer.Bool(true),
-		WatchedNamespace:                    pointer.String(b.Shoot.SeedNamespace),
+		AlwaysUpdate:                         pointer.Bool(true),
+		ClusterIdentity:                      b.Seed.GetInfo().Status.ClusterIdentity,
+		ConcurrentSyncs:                      pointer.Int32(20),
+		HealthSyncPeriod:                     utils.DurationPtr(time.Minute),
+		MaxConcurrentHealthWorkers:           pointer.Int32(10),
+		MaxConcurrentTokenInvalidatorWorkers: pointer.Int32(5),
+		MaxConcurrentTokenRequestorWorkers:   pointer.Int32(5),
+		MaxConcurrentRootCAPublisherWorkers:  pointer.Int32(5),
+		TargetDiffersFromSourceCluster:       true,
+		SyncPeriod:                           utils.DurationPtr(time.Minute),
+		TargetDisableCache:                   pointer.Bool(true),
+		WatchedNamespace:                     pointer.String(b.Shoot.SeedNamespace),
 	}
 
 	// ensure grm is present during hibernation (if the cluster is not hibernated yet) to reconcile any changes to
@@ -79,6 +81,7 @@ func (b *Botanist) DefaultResourceManager() (resourcemanager.Interface, error) {
 func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	b.Shoot.Components.ControlPlane.ResourceManager.SetSecrets(resourcemanager.Secrets{
 		Kubeconfig: component.Secret{Name: resourcemanager.SecretName, Checksum: b.LoadCheckSum(resourcemanager.SecretName)},
+		ServerCA:   component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster), Data: b.LoadSecret(v1beta1constants.SecretNameCACluster).Data},
 		Server:     component.Secret{Name: resourcemanager.SecretNameServer, Checksum: b.LoadCheckSum(resourcemanager.SecretNameServer)},
 		RootCA:     &component.Secret{Name: v1beta1constants.SecretNameCACluster, Checksum: b.LoadCheckSum(v1beta1constants.SecretNameCACluster)},
 	})

@@ -18,9 +18,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	tokeninvalidatorcontroller "github.com/gardener/gardener/pkg/resourcemanager/controller/tokeninvalidator"
 	tokeninvalidatorwebhook "github.com/gardener/gardener/pkg/resourcemanager/webhook/tokeninvalidator"
-	"github.com/gardener/gardener/test/framework"
 
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo"
@@ -30,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -100,22 +99,11 @@ var _ = AfterSuite(func() {
 	By("stopping manager")
 	mgrCancel()
 
-	By("running cleanup actions")
-	framework.RunCleanupActions()
-
 	By("stopping test environment")
 	Expect(testEnv.Stop()).To(Succeed())
 })
 
 func getMutatingWebhookConfigurations() []admissionregistrationv1.MutatingWebhookConfiguration {
-	var (
-		scope              = admissionregistrationv1.AllScopes
-		sideEffects        = admissionregistrationv1.SideEffectClassNone
-		failurePolicy      = admissionregistrationv1.Fail
-		matchPolicy        = admissionregistrationv1.Exact
-		reinvocationPolicy = admissionregistrationv1.NeverReinvocationPolicy
-	)
-
 	return []admissionregistrationv1.MutatingWebhookConfiguration{
 		{
 			TypeMeta: metav1.TypeMeta{
@@ -125,32 +113,13 @@ func getMutatingWebhookConfigurations() []admissionregistrationv1.MutatingWebhoo
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gardener-resource-manager",
 			},
-			Webhooks: []admissionregistrationv1.MutatingWebhook{{
-				Name:                    "token-invalidator.resources.gardener.cloud",
-				AdmissionReviewVersions: []string{"v1", "v1beta1"},
-				ClientConfig: admissionregistrationv1.WebhookClientConfig{
+			Webhooks: resourcemanager.GetMutatingWebhookConfigurationWebhooks(nil, func(path string) admissionregistrationv1.WebhookClientConfig {
+				return admissionregistrationv1.WebhookClientConfig{
 					Service: &admissionregistrationv1.ServiceReference{
-						Path: pointer.String(tokeninvalidatorwebhook.WebhookPath),
+						Path: &path,
 					},
-				},
-				Rules: []admissionregistrationv1.RuleWithOperations{{
-					Rule: admissionregistrationv1.Rule{
-						APIGroups:   []string{""},
-						APIVersions: []string{"v1"},
-						Resources:   []string{"secrets"},
-						Scope:       &scope,
-					},
-					Operations: []admissionregistrationv1.OperationType{
-						admissionregistrationv1.Create,
-						admissionregistrationv1.Update,
-					},
-				}},
-				SideEffects:        &sideEffects,
-				FailurePolicy:      &failurePolicy,
-				MatchPolicy:        &matchPolicy,
-				ReinvocationPolicy: &reinvocationPolicy,
-				TimeoutSeconds:     pointer.Int32(10),
-			}},
+				}
+			}),
 		},
 	}
 }
