@@ -32,5 +32,6 @@ It is worth noting that:
 
 - When migrating from IPVS to IPTables, existing pods will continue to leverage the node-local-dns cache. 
 - When migrating from IPtables to IPVS, only newer pods will be switched to the node-local-dns cache. 
+- Switching node-local-dns off by removing the annotation can be a rather destructive operation that might result in pods without a working dns configuration. We absolutely recommend to roll the cluster if you disable node-local-dns.
 
 For more information about `node-local-dns` please refer to the [KEP](https://github.com/kubernetes/enhancements/blob/master/keps/sig-network/1024-nodelocal-cache-dns/README.md) or to the [usage documentation](https://kubernetes.io/docs/tasks/administer-cluster/nodelocaldns/). 
