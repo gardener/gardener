@@ -30,6 +30,7 @@ import (
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 	"github.com/hashicorp/go-multierror"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -150,34 +151,78 @@ func (e *ExtensionValidator) Validate(ctx context.Context, a admission.Attribute
 	case core.Kind("BackupBucket"):
 		backupBucket, ok := a.GetObject().(*core.BackupBucket)
 		if !ok {
-			return apierrors.NewBadRequest("could not convert resource into BackupBucket object")
+			return apierrors.NewBadRequest("could not convert object into BackupBucket object")
 		}
-		validationError = e.validateBackupBucket(kindToTypesMap, backupBucket.Spec)
+
+		oldBackupBucket := &core.BackupBucket{}
+		if oldObj := a.GetOldObject(); oldObj != nil {
+			oldBackupBucket, ok = oldObj.(*core.BackupBucket)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old object into BackupBucket object")
+			}
+		}
+
+		if !apiequality.Semantic.DeepEqual(backupBucket.Spec, oldBackupBucket.Spec) {
+			validationError = e.validateBackupBucket(kindToTypesMap, backupBucket.Spec)
+		}
 
 	case core.Kind("BackupEntry"):
 		backupEntry, ok := a.GetObject().(*core.BackupEntry)
 		if !ok {
-			return apierrors.NewBadRequest("could not convert resource into BackupEntry object")
+			return apierrors.NewBadRequest("could not convert object into BackupEntry object")
 		}
-		backupBucket, err := e.backupBucketLister.Get(backupEntry.Spec.BucketName)
-		if err != nil {
-			return err
+
+		oldBackupEntry := &core.BackupEntry{}
+		if oldObj := a.GetOldObject(); oldObj != nil {
+			oldBackupEntry, ok = oldObj.(*core.BackupEntry)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old object into BackupEntry object")
+			}
 		}
-		validationError = e.validateBackupEntry(kindToTypesMap, backupBucket.Spec.Provider.Type)
+
+		if !apiequality.Semantic.DeepEqual(backupEntry.Spec, oldBackupEntry.Spec) {
+			backupBucket, err := e.backupBucketLister.Get(backupEntry.Spec.BucketName)
+			if err != nil {
+				return err
+			}
+			validationError = e.validateBackupEntry(kindToTypesMap, backupBucket.Spec.Provider.Type)
+		}
 
 	case core.Kind("Seed"):
 		seed, ok := a.GetObject().(*core.Seed)
 		if !ok {
-			return apierrors.NewBadRequest("could not convert resource into Seed object")
+			return apierrors.NewBadRequest("could not convert object into Seed object")
 		}
-		validationError = e.validateSeed(kindToTypesMap, seed.Spec)
+
+		oldSeed := &core.Seed{}
+		if oldObj := a.GetOldObject(); oldObj != nil {
+			oldSeed, ok = oldObj.(*core.Seed)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old object into Seed object")
+			}
+		}
+
+		if !apiequality.Semantic.DeepEqual(seed.Spec, oldSeed.Spec) {
+			validationError = e.validateSeed(kindToTypesMap, seed.Spec)
+		}
 
 	case core.Kind("Shoot"):
 		shoot, ok := a.GetObject().(*core.Shoot)
 		if !ok {
-			return apierrors.NewBadRequest("could not convert resource into Shoot object")
+			return apierrors.NewBadRequest("could not convert object into Shoot object")
 		}
-		validationError = e.validateShoot(kindToTypesMap, shoot.Spec)
+
+		oldShoot := &core.Shoot{}
+		if oldObj := a.GetOldObject(); oldObj != nil {
+			oldShoot, ok = oldObj.(*core.Shoot)
+			if !ok {
+				return apierrors.NewBadRequest("could not convert old object into Shoot object")
+			}
+		}
+
+		if !apiequality.Semantic.DeepEqual(shoot.Spec, oldShoot.Spec) {
+			validationError = e.validateShoot(kindToTypesMap, shoot.Spec)
+		}
 	}
 
 	if validationError != nil {
