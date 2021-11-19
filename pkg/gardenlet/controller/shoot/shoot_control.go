@@ -22,7 +22,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	v1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
@@ -785,14 +784,7 @@ func (r *shootReconciler) patchShootStatusOperationError(
 	shoot.Status.LastOperation.Description = description
 	shoot.Status.LastOperation.LastUpdateTime = now
 
-	if err := gardenClient.Status().Patch(ctx, shoot, statusPatch); err != nil {
-		return err
-	}
-
-	// set shoot status label to unhealthy
-	metaPatch := client.MergeFrom(shoot.DeepCopy())
-	kutil.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(shootpkg.StatusUnhealthy))
-	return gardenClient.Patch(ctx, shoot, metaPatch)
+	return gardenClient.Status().Patch(ctx, shoot, statusPatch)
 }
 
 func lastErrorsOperationInitializationFailure(lastErrors []gardencorev1beta1.LastError, err error) []gardencorev1beta1.LastError {

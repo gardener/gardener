@@ -86,6 +86,8 @@ type ControllerManagerControllerConfiguration struct {
 	ShootRetry *ShootRetryControllerConfiguration
 	// ShootConditions defines the configuration of the ShootConditions controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
 	ShootConditions *ShootConditionsControllerConfiguration
+	// ShootStatusLabel defines the configuration of the ShootStatusLabel controller.
+	ShootStatusLabel *ShootStatusLabelControllerConfiguration
 	// ManagedSeedSet defines the configuration of the ManagedSeedSet controller.
 	ManagedSeedSet *ManagedSeedSetControllerConfiguration
 }
@@ -270,6 +272,14 @@ type ShootRetryControllerConfiguration struct {
 // ShootConditionsControllerConfiguration defines the configuration of the
 // ShootConditions controller.
 type ShootConditionsControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+}
+
+// ShootStatusLabelControllerConfiguration defines the configuration of the
+// ShootStatusLabel controller.
+type ShootStatusLabelControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int

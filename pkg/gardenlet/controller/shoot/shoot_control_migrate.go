@@ -107,7 +107,7 @@ func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Conte
 
 	err = utilerrors.HandleErrors(errorContext,
 		func(errorID string) error {
-			o.CleanShootTaskErrorAndUpdateStatusLabel(ctx, errorID)
+			o.CleanShootTaskError(ctx, errorID)
 			return nil
 		},
 		nil,
@@ -341,7 +341,7 @@ func (r *shootReconciler) runPrepareShootControlPlaneMigration(ctx context.Conte
 		Logger:           o.Logger,
 		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,
-		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
+		ErrorCleaner:     o.CleanShootTaskError,
 	}); err != nil {
 		o.Logger.Errorf("Failed to prepare Shoot %q for migration: %+v", o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))

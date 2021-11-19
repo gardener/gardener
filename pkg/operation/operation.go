@@ -455,30 +455,15 @@ func (o *Operation) ReportShootProgress(ctx context.Context, stats *flow.Stats) 
 	}
 }
 
-// CleanShootTaskErrorAndUpdateStatusLabel removes the error with taskID from the Shoot's status.LastErrors array.
-// If the status.LastErrors array is empty then status.LastErrors is also removed. It also re-evaluates the shoot status
-// in case the last error list is empty now, and if necessary, updates the status label on the shoot.
-func (o *Operation) CleanShootTaskErrorAndUpdateStatusLabel(ctx context.Context, taskID string) {
+// CleanShootTaskError removes the error with taskID from the Shoot's status.LastErrors array.
+// If the status.LastErrors array is empty then status.LastErrors is also removed.
+func (o *Operation) CleanShootTaskError(ctx context.Context, taskID string) {
 	if err := o.Shoot.UpdateInfoStatus(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
 		shoot.Status.LastErrors = gardencorev1beta1helper.DeleteLastErrorByTaskID(shoot.Status.LastErrors, taskID)
 		return nil
 	}); err != nil {
 		o.Logger.Errorf("Could not update shoot's %s/%s last errors: %v", o.Shoot.GetInfo().Namespace, o.Shoot.GetInfo().Name, err)
 		return
-	}
-
-	if len(o.Shoot.GetInfo().Status.LastErrors) == 0 {
-		if err := o.Shoot.UpdateInfo(ctx, o.K8sGardenClient.Client(), false, func(shoot *gardencorev1beta1.Shoot) error {
-			kutil.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(shootpkg.ComputeStatus(
-				shoot.Status.LastOperation,
-				shoot.Status.LastErrors,
-				shoot.Status.Conditions...,
-			)))
-			return nil
-		}); err != nil {
-			o.Logger.Errorf("Could not update shoot's %s/%s status label after removing an erroneous task: %v", o.Shoot.GetInfo().Namespace, o.Shoot.GetInfo().Name, err)
-			return
-		}
 	}
 }
 

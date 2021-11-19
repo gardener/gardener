@@ -105,6 +105,9 @@ type ControllerManagerControllerConfiguration struct {
 	// ShootConditions defines the configuration of the ShootConditions controller. If unspecified, it is defaulted with `concurrentSyncs=5`.
 	// +optional
 	ShootConditions *ShootConditionsControllerConfiguration `json:"shootConditions,omitempty"`
+	// ShootStatusLabel defines the configuration of the ShootStatusLabel controller.
+	// +optional
+	ShootStatusLabel *ShootStatusLabelControllerConfiguration `json:"shootStatusLabel,omitempty"`
 	// ManagedSeedSet defines the configuration of the ManagedSeedSet controller.
 	// +optional
 	ManagedSeedSet *ManagedSeedSetControllerConfiguration `json:"managedSeedSet,omitempty"`
@@ -305,6 +308,14 @@ type ShootRetryControllerConfiguration struct {
 // ShootConditionsControllerConfiguration defines the configuration of the
 // ShootConditions controller.
 type ShootConditionsControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// ShootStatusLabelControllerConfiguration defines the configuration of the
+// ShootStatusLabel controller.
+type ShootStatusLabelControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`

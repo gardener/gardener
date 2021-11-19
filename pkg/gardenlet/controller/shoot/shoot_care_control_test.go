@@ -17,7 +17,6 @@ package shoot_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -280,7 +279,6 @@ var _ = Describe("Shoot Care Control", func() {
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 					Expect(updatedShoot.Status.Constraints).To(BeEmpty())
-					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
 				It("should remove conditions / constraints", func() {
 					apiServerCondition := gardencorev1beta1.Condition{
@@ -305,7 +303,6 @@ var _ = Describe("Shoot Care Control", func() {
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
 					Expect(updatedShoot.Status.Constraints).To(BeEmpty())
-					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
 			})
 
@@ -339,7 +336,6 @@ var _ = Describe("Shoot Care Control", func() {
 					updatedShoot := &gardencorev1beta1.Shoot{}
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(BeEmpty())
-					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
 				It("should not amend existing conditions / constraints", func() {
 					apiServerCondition := gardencorev1beta1.Condition{
@@ -364,7 +360,6 @@ var _ = Describe("Shoot Care Control", func() {
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(ConsistOf(apiServerCondition))
 					Expect(updatedShoot.Status.Constraints).To(ConsistOf(hibernationConstraint))
-					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
 			})
 
@@ -438,7 +433,6 @@ var _ = Describe("Shoot Care Control", func() {
 					Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 					Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 					Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
-					Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 				})
 
 				Context("when shoot doesn't have a last operation", func() {
@@ -465,7 +459,6 @@ var _ = Describe("Shoot Care Control", func() {
 						Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
-						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 					})
 				})
 
@@ -485,7 +478,6 @@ var _ = Describe("Shoot Care Control", func() {
 						Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
 						Expect(updatedShoot.Status.Constraints).To(ConsistOf(constraints))
-						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusUnhealthy)))
 					})
 				})
 
@@ -570,53 +562,10 @@ var _ = Describe("Shoot Care Control", func() {
 						updatedShoot := &gardencorev1beta1.Shoot{}
 						Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
 						Expect(updatedShoot.Status.Conditions).To(ConsistOf(conditions))
-						Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 					})
 				})
 
 			})
-		})
-	})
-
-	Describe("#PatchShootStatusLabel", func() {
-		It("should set label if not present", func() {
-			Expect(gardenClient.Create(ctx, shoot)).To(Succeed(), "preparing shoot for test should succeed")
-
-			Expect(PatchShootStatusLabel(ctx, gardenClient, shoot, string(operationshoot.StatusHealthy))).To(Succeed())
-
-			updatedShoot := &gardencorev1beta1.Shoot{}
-			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
-			Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
-		})
-		It("should set label if status changed", func() {
-			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy))
-			Expect(gardenClient.Create(ctx, shoot)).To(Succeed(), "preparing shoot for test should succeed")
-
-			Expect(PatchShootStatusLabel(ctx, gardenClient, shoot, string(operationshoot.StatusProgressing))).To(Succeed())
-
-			updatedShoot := &gardencorev1beta1.Shoot{}
-			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
-			Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusProgressing)))
-		})
-		It("should return error if Patch fails", func() {
-			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy))
-			Expect(gardenClient.Create(ctx, shoot)).To(Succeed(), "preparing shoot for test should succeed")
-
-			gardenClient = failingPatchClient{fmt.Errorf("fake"), gardenClient}
-
-			Expect(PatchShootStatusLabel(ctx, gardenClient, shoot, string(operationshoot.StatusProgressing))).To(MatchError("fake"))
-		})
-		It("should not touch label if status is unchanged", func() {
-			metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy))
-			Expect(gardenClient.Create(ctx, shoot)).To(Succeed(), "preparing shoot for test should succeed")
-
-			gardenClient = failingPatchClient{fmt.Errorf("should call Patch"), gardenClient}
-
-			Expect(PatchShootStatusLabel(ctx, gardenClient, shoot, string(operationshoot.StatusHealthy))).To(Succeed())
-
-			updatedShoot := &gardencorev1beta1.Shoot{}
-			Expect(gardenClient.Get(ctx, client.ObjectKeyFromObject(shoot), updatedShoot)).To(Succeed())
-			Expect(updatedShoot.ObjectMeta.Labels).Should(HaveKeyWithValue(v1beta1constants.ShootStatus, string(operationshoot.StatusHealthy)))
 		})
 	})
 })
