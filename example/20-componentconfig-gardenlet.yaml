@@ -101,7 +101,7 @@ featureGates:
   APIServerSNI: true
   CachedRuntimeClients: true
   SeedKubeScheduler: false
-  ReversedVPN: false
+  ReversedVPN: true
   UseDNSRecords: true
   DenyInvalidExtensionResources: true
 # seedConfig:
