@@ -225,6 +225,10 @@ groups:
   - record: seed:kube_pod_container_status_restarts_total:sum_by_container
     expr: sum(kube_pod_container_status_restarts_total) by (container)
 
+  # Recording rules for container restart count per gardener or extension namespace
+  - record: seed:kube_pod_container_status_restarts_total:max_by_namespace
+    expr: max by(namespace) (increase(kube_pod_container_status_restarts_total{namespace=~"garden|extension.+"}[1h]))
+
   # Recording rules for deployment spec replicas per deployment
   - record: seed:kube_deployment_spec_replicas:sum_by_deployment
     expr: sum(kube_deployment_spec_replicas) by (deployment)
