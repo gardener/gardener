@@ -39,15 +39,16 @@ const (
 
 // Webhook is the specification of a webhook.
 type Webhook struct {
-	Name     string
-	Kind     string
-	Provider string
-	Path     string
-	Target   string
-	Types    []client.Object
-	Webhook  *admission.Webhook
-	Handler  http.Handler
-	Selector *metav1.LabelSelector
+	Name           string
+	Kind           string
+	Provider       string
+	Path           string
+	Target         string
+	Types          []client.Object
+	Webhook        *admission.Webhook
+	Handler        http.Handler
+	Selector       *metav1.LabelSelector
+	ObjectSelector *metav1.LabelSelector
 }
 
 // Args contains Webhook creation arguments.
