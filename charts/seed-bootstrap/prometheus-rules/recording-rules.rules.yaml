@@ -1,6 +1,11 @@
 groups:
 - name: recording-rules.rules
   rules:
+
+  # detect an issue when the persistent volume is not mounted properly, and instead the local disk is used
+  - record: seed:persistentvolume:inconsistent_size
+    expr: abs(1 - kubelet_volume_stats_capacity_bytes / on(namespace, persistentvolumeclaim) kube_persistentvolumeclaim_resource_requests_storage_bytes) > 0.05
+
   # Recording rules for the sum of the usage per container
   - record: seed:container_cpu_usage_seconds_total:sum_by_container
     expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (container)

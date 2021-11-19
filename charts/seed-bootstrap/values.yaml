@@ -148,6 +148,7 @@ allowedMetrics:
   - process_open_fds
 
   kubeStateMetrics:
+  - kube_persistentvolumeclaim_resource_requests_storage_bytes
   - kube_daemonset_metadata_generation
   - kube_daemonset_status_current_number_scheduled
   - kube_daemonset_status_desired_number_scheduled
