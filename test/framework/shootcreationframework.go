@@ -48,6 +48,7 @@ type ShootCreationConfig struct {
 	shootK8sVersion               string
 	externalDomain                string
 	workerZone                    string
+	networkingType                string
 	networkingPods                string
 	networkingServices            string
 	networkingNodes               string
@@ -252,6 +253,10 @@ func mergeShootCreationConfig(base, overwrite *ShootCreationConfig) *ShootCreati
 		base.workerZone = overwrite.workerZone
 	}
 
+	if StringSet(overwrite.networkingType) {
+		base.networkingType = overwrite.networkingType
+	}
+
 	if StringSet(overwrite.networkingPods) {
 		base.networkingPods = overwrite.networkingPods
 	}
@@ -325,6 +330,7 @@ func RegisterShootCreationFrameworkFlags() *ShootCreationConfig {
 	flag.StringVar(&newCfg.shootK8sVersion, "k8s-version", "", "kubernetes version to use for the shoot.")
 	flag.StringVar(&newCfg.externalDomain, "external-domain", "", "external domain to use for the shoot. If not set, will use the default domain.")
 	flag.StringVar(&newCfg.workerZone, "worker-zone", "", "zone to use for every worker of the shoot.")
+	flag.StringVar(&newCfg.networkingType, "networking-type", "calico", "the spec.networking.type to use for this shoot. Optional. Defaults to calico.")
 	flag.StringVar(&newCfg.networkingPods, "networking-pods", "", "the spec.networking.pods to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.networkingServices, "networking-services", "", "the spec.networking.services to use for this shoot. Optional.")
 	flag.StringVar(&newCfg.networkingNodes, "networking-nodes", "", "the spec.networking.nodes to use for this shoot. Optional.")
