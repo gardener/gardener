@@ -23,19 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-// AddWorkerForName adds a valid worker to the shoot for the given machine image name. Returns an error if the machine image cannot be found in the CloudProfile.
-func AddWorkerForName(shoot *gardencorev1beta1.Shoot, cloudProfile *gardencorev1beta1.CloudProfile, machineImageName *string, workerZone string) error {
-	found, image, err := helper.DetermineMachineImageForName(cloudProfile, *machineImageName)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return fmt.Errorf("could not find machine image '%s' in CloudProfile '%s'", *machineImageName, cloudProfile.Name)
-	}
-
-	return AddWorker(shoot, cloudProfile, image, workerZone)
-}
-
 // setShootWorkerSettings sets the Shoot's worker settings from the given config
 func setShootWorkerSettings(shoot *gardencorev1beta1.Shoot, cfg *ShootCreationConfig, cloudProfile *gardencorev1beta1.CloudProfile) error {
 	if StringSet(cfg.workersConfig) {
