@@ -248,10 +248,6 @@ var _ = Describe("eventhandler", func() {
 			h.OnUpdate(shoot, 42)
 		})
 
-		It("should not enqueue anything if the resource version hasn't changed", func() {
-			h.OnUpdate(shoot, shoot)
-		})
-
 		It("should not enqueue anything if the new and old objects don't have a controller ref", func() {
 			shoot.OwnerReferences = nil
 			newShoot.OwnerReferences = nil
