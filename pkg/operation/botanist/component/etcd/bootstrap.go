@@ -32,6 +32,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	coordinationv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -130,13 +131,18 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				},
 				{
 					APIGroups: []string{batchv1.GroupName},
-					Resources: []string{"jobs", "cronjobs"},
-					Verbs:     []string{"get", "list", "patch", "update", "watch", "create", "delete"},
+					Resources: []string{"jobs"},
+					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+				},
+				{
+					APIGroups: []string{batchv1beta1.GroupName},
+					Resources: []string{"cronjobs"},
+					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
 				{
 					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
 					Resources: []string{"etcds", "etcdcopybackupstasks"},
-					Verbs:     []string{"get", "list", "watch", "update", "patch"},
+					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 				},
 				{
 					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
@@ -147,12 +153,6 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 					APIGroups: []string{coordinationv1.GroupName},
 					Resources: []string{"leases"},
 					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-				},
-				{
-					APIGroups:     []string{coordinationv1.GroupName},
-					Resources:     []string{"leases"},
-					ResourceNames: []string{"druid-leader-election"},
-					Verbs:         []string{"get", "update", "patch", "list"},
 				},
 				{
 					APIGroups: []string{corev1.GroupName},

@@ -165,14 +165,25 @@ rules:
   - batch
   resources:
   - jobs
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - batch
+  resources:
   - cronjobs
   verbs:
   - get
   - list
-  - patch
-  - update
   - watch
   - create
+  - update
+  - patch
   - delete
 - apiGroups:
   - druid.gardener.cloud
@@ -183,8 +194,10 @@ rules:
   - get
   - list
   - watch
+  - create
   - update
   - patch
+  - delete
 - apiGroups:
   - druid.gardener.cloud
   resources:
@@ -209,17 +222,6 @@ rules:
   - update
   - patch
   - delete
-- apiGroups:
-  - coordination.k8s.io
-  resourceNames:
-  - druid-leader-election
-  resources:
-  - leases
-  verbs:
-  - get
-  - update
-  - patch
-  - list
 - apiGroups:
   - ""
   resources:

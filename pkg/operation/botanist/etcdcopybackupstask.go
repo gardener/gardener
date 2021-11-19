@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
-	"github.com/gardener/gardener/extensions/pkg/controller/backupentry/genericactuator"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -55,19 +54,19 @@ func (b *Botanist) DeployEtcdCopyBackupsTask(ctx context.Context) error {
 		return err
 	}
 
-	sourceSecrtName := fmt.Sprintf("%s-%s", backupentry.SourcePrefix, genericactuator.BackupSecretName)
+	sourceSecretName := fmt.Sprintf("%s-%s", backupentry.SourcePrefix, v1beta1constants.BackupSecretName)
 	sourceSecret := &corev1.Secret{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, sourceSecrtName), sourceSecret); err != nil {
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, sourceSecretName), sourceSecret); err != nil {
 		return err
 	}
 	secret := &corev1.Secret{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, genericactuator.BackupSecretName), secret); err != nil {
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, v1beta1constants.BackupSecretName), secret); err != nil {
 		return err
 	}
 
 	provider := druidv1alpha1.StorageProvider(b.Seed.GetInfo().Spec.Backup.Provider)
-	sourceContainer := string(sourceSecret.Data[genericactuator.DataKeyBackupBucketName])
-	container := string(secret.Data[genericactuator.DataKeyBackupBucketName])
+	sourceContainer := string(sourceSecret.Data[v1beta1constants.DataKeyBackupBucketName])
+	container := string(secret.Data[v1beta1constants.DataKeyBackupBucketName])
 
 	b.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.SetSourceStore(druidv1alpha1.StoreSpec{
 		Provider:  &provider,

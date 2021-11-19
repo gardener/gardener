@@ -30,6 +30,7 @@ import (
 	mockedcdcopybackupstask "github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask/mock"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/test"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -111,8 +112,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 				expectedWaitTimeout:        Equal(etcdcopybackupstask.DefaultTimeout),
 			}
 
-			oldNewEtcdCopyBackupsTask := NewEtcdCopyBackupsTask
-			defer func() { NewEtcdCopyBackupsTask = oldNewEtcdCopyBackupsTask }()
+			defer test.WithVars(&NewEtcdCopyBackupsTask, validator.NewEtcdCopyBackupsTask)()
 			NewEtcdCopyBackupsTask = validator.NewEtcdCopyBackupsTask
 
 			etcdCopyBackupsTask := botanist.DefaultEtcdCopyBackupsTask()

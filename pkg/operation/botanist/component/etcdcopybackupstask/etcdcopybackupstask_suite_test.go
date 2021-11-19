@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestBackupEntry(t *testing.T) {
+func TestEtcdCopyBackupsTask(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Botanist Component EtcdCopyBackupsTask Suite")
 }
