@@ -169,6 +169,10 @@ config.yaml: |
       {{- if .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds }}
 {{ toYaml .Values.global.gardenlet.config.controllers.shootCare.conditionThresholds | indent 6 }}
       {{- end }}
+    {{- if .Values.global.gardenlet.config.controllers.shootSecret }}
+    shootSecret:
+      concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootSecret.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootSecret.concurrentSyncs }}
+    {{- end }}
     shootStateSync:
       concurrentSyncs: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs is required" .Values.global.gardenlet.config.controllers.shootStateSync.concurrentSyncs }}
       syncPeriod: {{ required ".Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod is required" .Values.global.gardenlet.config.controllers.shootStateSync.syncPeriod }}
@@ -179,6 +183,9 @@ config.yaml: |
       waitSyncPeriod: {{ required ".Values.global.gardenlet.config.controllers.managedSeed.waitSyncPeriod is required" .Values.global.gardenlet.config.controllers.managedSeed.waitSyncPeriod }}
       {{- if .Values.global.gardenlet.config.controllers.managedSeed.syncJitterPeriod }}
       syncJitterPeriod: {{ .Values.global.gardenlet.config.controllers.managedSeed.syncJitterPeriod }}
+      {{- end }}
+      {{- if .Values.global.gardenlet.config.controllers.managedSeed.jitterUpdates }}
+      jitterUpdates: {{ .Values.global.gardenlet.config.controllers.managedSeed.jitterUpdates }}
       {{- end }}
     {{- end }}
     shootMigration:

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -839,16 +840,30 @@ func ComputeExpectedGardenletConfiguration(
 }
 
 // VerifyGardenletComponentConfigConfigMap verifies that the actual Gardenlet component config config map equals the expected config map.
-func VerifyGardenletComponentConfigConfigMap(ctx context.Context, c client.Client, universalDecoder runtime.Decoder, expectedGardenletConfig gardenletconfigv1alpha1.GardenletConfiguration, expectedLabels map[string]string) {
+func VerifyGardenletComponentConfigConfigMap(
+	ctx context.Context,
+	c client.Client,
+	universalDecoder runtime.Decoder,
+	expectedGardenletConfig gardenletconfigv1alpha1.GardenletConfiguration,
+	expectedLabels map[string]string,
+	uniqueName string,
+) {
 	componentConfigCm := getEmptyGardenletConfigMap()
 	expectedComponentConfigCm := getEmptyGardenletConfigMap()
 	expectedComponentConfigCm.Labels = expectedLabels
 
-	Expect(c.Get(
-		ctx,
-		kutil.Key(componentConfigCm.Namespace, componentConfigCm.Name),
-		componentConfigCm,
-	)).ToNot(HaveOccurred())
+	if err := c.Get(ctx, kutil.Key(componentConfigCm.Namespace, uniqueName), componentConfigCm); err != nil {
+		if !apierrors.IsNotFound(err) {
+			ginkgo.Fail(err.Error())
+		}
+		list := &corev1.ConfigMapList{}
+		Expect(c.List(ctx, list)).ToNot(HaveOccurred())
+		cmNames := ""
+		for _, cm := range list.Items {
+			cmNames += " " + cm.Name
+		}
+		ginkgo.Fail("Could not find unique gardenlet configmap, possibly the unique name has changed. Found:" + cmNames)
+	}
 
 	Expect(componentConfigCm.Labels).To(DeepEqual(expectedComponentConfigCm.Labels))
 
@@ -873,7 +888,15 @@ func getEmptyGardenletConfigMap() *corev1.ConfigMap {
 // ComputeExpectedGardenletDeploymentSpec computes the expected Gardenlet deployment spec based on input parameters
 // needs to equal exactly what is deployed via the helm chart (including defaults set in the helm chart)
 // as a consequence, if non-optional changes to the helm chart are made, these tests will fail by design
-func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagement.GardenletDeployment, image seedmanagement.Image, componentConfigUsesTlsServerConfig bool, gardenClientConnectionKubeconfig, seedClientConnectionKubeconfig *string, expectedLabels map[string]string, imageVectorOverwrite, componentImageVectorOverwrites *string) (appsv1.DeploymentSpec, error) {
+func ComputeExpectedGardenletDeploymentSpec(
+	deploymentConfiguration *seedmanagement.GardenletDeployment,
+	image seedmanagement.Image,
+	componentConfigUsesTlsServerConfig bool,
+	gardenClientConnectionKubeconfig, seedClientConnectionKubeconfig *string,
+	expectedLabels map[string]string,
+	imageVectorOverwrite, componentImageVectorOverwrites *string,
+	uniqueName map[string]string,
+) (appsv1.DeploymentSpec, error) {
 	if image.Repository == nil || image.Tag == nil {
 		return appsv1.DeploymentSpec{}, fmt.Errorf("the image repository and tag must be provided")
 	}
@@ -1018,7 +1041,7 @@ func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagem
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "gardenlet-imagevector-overwrite",
+						Name: uniqueName["gardenlet-imagevector-overwrite"],
 					},
 				},
 			},
@@ -1040,7 +1063,7 @@ func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagem
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "gardenlet-imagevector-overwrite-components",
+						Name: uniqueName["gardenlet-imagevector-overwrite-components"],
 					},
 				},
 			},
@@ -1057,7 +1080,7 @@ func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagem
 			Name: "gardenlet-kubeconfig-garden",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: "gardenlet-kubeconfig-garden",
+					SecretName: uniqueName["gardenlet-kubeconfig-garden"],
 				},
 			},
 		})
@@ -1073,7 +1096,7 @@ func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagem
 			Name: "gardenlet-kubeconfig-seed",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: "gardenlet-kubeconfig-seed",
+					SecretName: uniqueName["gardenlet-kubeconfig-seed"],
 				},
 			},
 		})
@@ -1092,7 +1115,7 @@ func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagem
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: "gardenlet-configmap",
+					Name: uniqueName["gardenlet-configmap"],
 				},
 			},
 		},
@@ -1109,7 +1132,7 @@ func ComputeExpectedGardenletDeploymentSpec(deploymentConfiguration *seedmanagem
 			Name: "gardenlet-cert",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: "gardenlet-cert",
+					SecretName: uniqueName["gardenlet-cert"],
 				},
 			},
 		})
@@ -1137,7 +1160,8 @@ func VerifyGardenletDeployment(ctx context.Context,
 	usesTLSBootstrapping bool,
 	expectedLabels map[string]string,
 	imageVectorOverwrite,
-	componentImageVectorOverwrites *string) {
+	componentImageVectorOverwrites *string,
+	uniqueName map[string]string) {
 	deployment := getEmptyGardenletDeployment()
 	expectedDeployment := getEmptyGardenletDeployment()
 	expectedDeployment.Labels = expectedLabels
@@ -1149,26 +1173,27 @@ func VerifyGardenletDeployment(ctx context.Context,
 	)).ToNot(HaveOccurred())
 
 	Expect(deployment.ObjectMeta.Labels).To(DeepEqual(expectedDeployment.ObjectMeta.Labels))
-	Expect(deployment.Spec.Template.Annotations["checksum/configmap-gardenlet-config"]).ToNot(BeEmpty())
+
+	assertResourceReferenceExists(uniqueName["gardenlet-configmap"], "config-", deployment.Spec.Template.Annotations)
 
 	if imageVectorOverwrite != nil {
-		Expect(deployment.Spec.Template.Annotations["checksum/configmap-gardenlet-imagevector-overwrite"]).ToNot(BeEmpty())
+		assertResourceReferenceExists(uniqueName["gardenlet-imagevector-overwrite"], "config-", deployment.Spec.Template.Annotations)
 	}
 
 	if componentImageVectorOverwrites != nil {
-		Expect(deployment.Spec.Template.Annotations["checksum/configmap-gardenlet-imagevector-overwrite-components"]).ToNot(BeEmpty())
+		assertResourceReferenceExists(uniqueName["gardenlet-imagevector-overwrite-components"], "config-", deployment.Spec.Template.Annotations)
 	}
 
 	if componentConfigHasTLSServerConfig {
-		Expect(deployment.Spec.Template.Annotations["checksum/secret-gardenlet-cert"]).ToNot(BeEmpty())
+		assertResourceReferenceExists(uniqueName["gardenlet-cert"], "secret-", deployment.Spec.Template.Annotations)
 	}
 
 	if hasGardenClientConnectionKubeconfig {
-		Expect(deployment.Spec.Template.Annotations["checksum/secret-gardenlet-kubeconfig-garden"]).ToNot(BeEmpty())
+		assertResourceReferenceExists(uniqueName["gardenlet-kubeconfig-garden"], "secret-", deployment.Spec.Template.Annotations)
 	}
 
 	if hasSeedClientConnectionKubeconfig {
-		Expect(deployment.Spec.Template.Annotations["checksum/secret-gardenlet-kubeconfig-seed"]).ToNot(BeEmpty())
+		assertResourceReferenceExists(uniqueName["gardenlet-kubeconfig-seed"], "secret-", deployment.Spec.Template.Annotations)
 	}
 
 	if usesTLSBootstrapping {
@@ -1185,6 +1210,11 @@ func VerifyGardenletDeployment(ctx context.Context,
 	deployment.Spec.Template.Annotations = nil
 	expectedDeploymentSpec.Template.Annotations = nil
 	Expect(deployment.Spec).To(DeepEqual(expectedDeploymentSpec))
+}
+
+func assertResourceReferenceExists(secretName, prefix string, annotations map[string]string) {
+	suffix := utils.ComputeSHA256Hex([]byte(secretName))[:8]
+	Expect(annotations["reference.resources.gardener.cloud/"+prefix+suffix]).To(Equal(secretName))
 }
 
 func getEmptyGardenletDeployment() *appsv1.Deployment {
