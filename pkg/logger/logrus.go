@@ -47,12 +47,22 @@ func NewLogger(logLevel string, format string) *logrus.Logger {
 		panic("The specified log level is not supported.")
 	}
 
-	var formatter logrus.Formatter
+	var (
+		// for symmetry with zap
+		fieldMap = logrus.FieldMap{
+			logrus.FieldKeyTime:  "ts",
+			logrus.FieldKeyLevel: "level",
+			logrus.FieldKeyMsg:   "msg",
+		}
+		timestampFormat = "2006-01-02T15:04:05.000Z0700" // ISO8601
+
+		formatter logrus.Formatter
+	)
 	switch format {
 	case FormatText:
-		formatter = &logrus.TextFormatter{DisableColors: true}
+		formatter = &logrus.TextFormatter{DisableColors: true, FieldMap: fieldMap, TimestampFormat: timestampFormat}
 	case "", FormatJSON:
-		formatter = &logrus.JSONFormatter{DisableHTMLEscape: true}
+		formatter = &logrus.JSONFormatter{DisableHTMLEscape: true, FieldMap: fieldMap, TimestampFormat: timestampFormat}
 	default:
 		panic("The specified log format is not supported.")
 	}
