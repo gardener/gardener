@@ -322,6 +322,56 @@ var _ = Describe("DNSRecord", func() {
 				Spec: dns.Spec,
 			}))
 		})
+
+		Context("when the referenced secret is not prefixed with 'dnsrecord-' yet", func() {
+			BeforeEach(func() {
+				secretName = "testsecret"
+			})
+
+			It("should prefix the referenced secret of existing DNSRecords with 'dnsrecord-' when ReconcileOnce is true", func() {
+				values.ReconcileOnce = true
+				dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
+				delete(dns.Annotations, v1beta1constants.GardenerOperation)
+				// set old timestamp (e.g. added on creation / earlier Deploy call)
+				metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+				Expect(c.Create(ctx, dns)).To(Succeed())
+
+				Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+				deployedDNS := &extensionsv1alpha1.DNSRecord{}
+				err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
+					TypeMeta: metav1.TypeMeta{
+						APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+						Kind:       extensionsv1alpha1.DNSRecordResource,
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            name,
+						Namespace:       namespace,
+						ResourceVersion: "2",
+						Annotations: map[string]string{
+							v1beta1constants.GardenerTimestamp: now.UTC().String(),
+						},
+					},
+					Spec: extensionsv1alpha1.DNSRecordSpec{
+						DefaultSpec: extensionsv1alpha1.DefaultSpec{
+							Type: extensionType,
+						},
+						SecretRef: corev1.SecretReference{
+							Name:      "dnsrecord-testsecret",
+							Namespace: namespace,
+						},
+						Zone:       pointer.String(zone),
+						Name:       dnsName,
+						RecordType: extensionsv1alpha1.DNSRecordTypeA,
+						Values:     []string{address},
+						TTL:        pointer.Int64(ttl),
+					},
+				}))
+			})
+		})
+
 	})
 
 	Describe("#Wait", func() {
