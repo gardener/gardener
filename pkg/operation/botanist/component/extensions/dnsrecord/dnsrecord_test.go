@@ -323,6 +323,7 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
+		// TODO (voelzmo) remove this when all DNSRecord secrets have migrated to a prefixed version
 		Context("when the referenced secret is not prefixed with 'dnsrecord-' yet", func() {
 			BeforeEach(func() {
 				secretName = "testsecret"

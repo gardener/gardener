@@ -461,6 +461,7 @@ var _ = Describe("dnsrecord", func() {
 		})
 	})
 
+	// TODO (voelzmo) remove this when all DNSRecord secrets have migrated to a prefixed version
 	Describe("#CleanupOrphanedDNSRecordSecrets", func() {
 		var orphanedInternalSecret *corev1.Secret
 		var regularInternalSecret *corev1.Secret
