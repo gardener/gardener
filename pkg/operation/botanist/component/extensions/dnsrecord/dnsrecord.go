@@ -32,7 +32,6 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/extensions"
-	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 )
 
@@ -185,8 +184,8 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			} else {
 				// TODO (voelzmo) remove this when all DNSRecord secrets have migrated to a prefixed version
 				// Check if we need to migrate the referenced secret
-				if !strings.HasPrefix(c.dnsRecord.Spec.SecretRef.Name, botanist.DNSRecordSecretPrefix) {
-					c.dnsRecord.Spec.SecretRef.Name = fmt.Sprintf("%s-%s", botanist.DNSRecordSecretPrefix, c.dnsRecord.Spec.SecretRef.Name)
+				if !strings.HasPrefix(c.dnsRecord.Spec.SecretRef.Name, "dnsrecord-") {
+					c.dnsRecord.Spec.SecretRef.Name = fmt.Sprintf("dnsrecord-%s", c.dnsRecord.Spec.SecretRef.Name)
 				}
 				// Otherwise, just update the timestamp annotation.
 				// If the object is still annotated with the operation annotation (e.g. not reconciled yet) this will send a watch

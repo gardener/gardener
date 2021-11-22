@@ -212,9 +212,9 @@ func (b *Botanist) deployOrRestoreDNSRecord(ctx context.Context, dnsRecord compo
 	return dnsRecord.Deploy(ctx)
 }
 
-// TODO (voelzmo) remove this when all DNSRecord secrets have migrated to a prefixed version
 // CleanupOrphanedDNSRecordSecrets cleans up secrets related to DNSRecords which may be orphaned after introducing the 'dnsrecord-' prefix
 func (b *Botanist) CleanupOrphanedDNSRecordSecrets(ctx context.Context) error {
+	// TODO (voelzmo) remove this when all DNSRecord secrets have migrated to a prefixed version
 	var err error
 	shootName := b.Shoot.GetInfo().Name
 	if shootName != "gardener" {
