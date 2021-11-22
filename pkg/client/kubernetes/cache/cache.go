@@ -18,13 +18,12 @@ import (
 	"context"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/logger"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var _ cache.Cache = &aggregator{}
@@ -102,13 +101,13 @@ func (c *aggregator) Start(ctx context.Context) error {
 		go func(gvk schema.GroupVersionKind, cache runtimecache.Cache) {
 			err := cache.Start(ctx)
 			if err != nil {
-				logger.Logger.Errorf("cache failed to start for %q: %v", gvk.String(), err)
+				logf.Log.Error(err, "cache failed to start", "gvk", gvk.String())
 			}
 		}(gvk, cache)
 	}
 	go func() {
 		if err := c.fallbackCache.Start(ctx); err != nil {
-			logger.Logger.Error(err)
+			logf.Log.Error(err, "fallback cache failed to start")
 		}
 	}()
 	<-ctx.Done()
