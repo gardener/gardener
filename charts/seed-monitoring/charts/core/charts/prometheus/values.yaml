@@ -269,6 +269,7 @@ allowedMetrics:
   - reversed_vpn_envoy_cluster_external_upstream_rq_xx
   - reversed_vpn_envoy_cluster_lb_healthy_panic
   - reversed_vpn_envoy_cluster_original_dst_host_invalid
+  - reversed_vpn_envoy_cluster_upstream_cx_active
   - reversed_vpn_envoy_cluster_upstream_cx_connect_attempts_exceeded
   - reversed_vpn_envoy_cluster_upstream_cx_connect_fail
   - reversed_vpn_envoy_cluster_upstream_cx_connect_timeout
