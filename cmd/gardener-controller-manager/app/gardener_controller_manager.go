@@ -42,6 +42,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"go.uber.org/automaxprocs/maxprocs"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -224,6 +225,12 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 		if err := flag.Value.Set(fmt.Sprintf("%d", cfg.KubernetesLogLevel)); err != nil {
 			return nil, err
 		}
+	}
+
+	if _, err := maxprocs.Set(maxprocs.Logger(func(s string, i ...interface{}) {
+		log.Info(fmt.Sprintf(s, i...))
+	})); err != nil {
+		log.Error(err, "failed to set GOMAXPROCS")
 	}
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets

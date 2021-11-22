@@ -23,8 +23,6 @@ import (
 	"github.com/gardener/gardener/cmd/gardener-controller-manager/app"
 	"github.com/gardener/gardener/cmd/utils"
 	"github.com/gardener/gardener/pkg/controllermanager/features"
-
-	_ "go.uber.org/automaxprocs"
 )
 
 func main() {
