@@ -32,7 +32,6 @@ import (
 	_ "github.com/gardener/gardener/test/integration/shoots/logging"
 	_ "github.com/gardener/gardener/test/integration/shoots/operatingsystem"
 	_ "github.com/gardener/gardener/test/integration/shoots/operations"
-	_ "github.com/gardener/gardener/test/integration/shoots/sshrotation"
 	_ "github.com/gardener/gardener/test/integration/shoots/vpntunnel"
 )
 

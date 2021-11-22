@@ -36,6 +36,13 @@
 	Expected Output
 		- The old kubeconfig to be updated and the old file to be no longer autorized.
 
+	Test:
+		Rotate ssh keypair for a shoot cluster.
+		Annotate Shoot with "gardener.cloud/operation" = "rotate-ssh-keypair".
+	Expected Output
+		- Current ssh-keypair should be rotated.
+		- Current ssh-keypair should become "ssh-keypair.old" post rotation.
+
  **/
 
 package operations
@@ -49,11 +56,15 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 	"github.com/gardener/gardener/test/framework"
 	"github.com/gardener/gardener/test/framework/applications"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -150,4 +161,41 @@ var _ = ginkgo.Describe("Shoot operation testing", func() {
 
 		gomega.Expect(oldKubeconfig).ToNot(gomega.Equal(newKubeconfig))
 	}, reconcileTimeout)
+
+	f.Beta().Serial().CIt("should rotate the ssh keypair for a shoot cluster", func(ctx context.Context) {
+		secret := &corev1.Secret{}
+		gomega.Expect(f.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.SecretNameSSHKeyPair}, secret)).To(gomega.Succeed())
+		preRotationPrivateKey := getKeyAndValidate(secret, secrets.DataKeyRSAPrivateKey)
+		preRotationPublicKey := getKeyAndValidate(secret, secrets.DataKeySSHAuthorizedKeys)
+		err := f.UpdateShoot(ctx, func(s *gardencorev1beta1.Shoot) error {
+			metav1.SetMetaDataAnnotation(&s.ObjectMeta, v1beta1constants.GardenerOperation, v1beta1constants.ShootOperationRotateSSHKeypair)
+			return nil
+		})
+		gomega.Expect(err).To(gomega.BeNil())
+
+		gomega.Expect(f.GetShoot(ctx, f.Shoot)).To(gomega.BeNil())
+		v, ok := f.Shoot.Annotations[v1beta1constants.GardenerOperation]
+		if ok {
+			gomega.Expect(v).NotTo(gomega.Equal(v1beta1constants.ShootOperationRotateSSHKeypair))
+		}
+		gomega.Expect(f.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.SecretNameSSHKeyPair}, secret)).To(gomega.Succeed())
+		postRotationPrivateKey := getKeyAndValidate(secret, secrets.DataKeyRSAPrivateKey)
+		postRotationPublicKey := getKeyAndValidate(secret, secrets.DataKeySSHAuthorizedKeys)
+		gomega.Expect(f.SeedClient.Client().Get(ctx, client.ObjectKey{Namespace: f.ShootSeedNamespace(), Name: v1beta1constants.SecretNameOldSSHKeyPair}, secret)).To(gomega.Succeed())
+		postRotationOldPrivateKey := getKeyAndValidate(secret, secrets.DataKeyRSAPrivateKey)
+		postRotationOldPublicKey := getKeyAndValidate(secret, secrets.DataKeySSHAuthorizedKeys)
+
+		gomega.Expect(preRotationPrivateKey).NotTo(gomega.Equal(postRotationPrivateKey))
+		gomega.Expect(preRotationPublicKey).NotTo(gomega.Equal(postRotationPublicKey))
+		gomega.Expect(preRotationPrivateKey).To(gomega.Equal(postRotationOldPrivateKey))
+		gomega.Expect(preRotationPublicKey).To(gomega.Equal(postRotationOldPublicKey))
+
+	}, reconcileTimeout)
 })
+
+func getKeyAndValidate(s *corev1.Secret, field string) []byte {
+	v, ok := s.Data[field]
+	gomega.Expect(ok).To(gomega.BeTrue())
+	gomega.Expect(v).ToNot(gomega.BeEmpty())
+	return v
+}
