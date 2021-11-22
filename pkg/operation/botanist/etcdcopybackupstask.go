@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/etcdcopybackupstask"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -54,6 +55,11 @@ func (b *Botanist) DeployEtcdCopyBackupsTask(ctx context.Context) error {
 		return err
 	}
 
+	sourceBackupEntryName := fmt.Sprintf("%s-%s", backupentry.SourcePrefix, b.Shoot.BackupEntryName)
+	sourceBackupEntry := &extensionsv1alpha1.BackupEntry{}
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(sourceBackupEntryName), sourceBackupEntry); err != nil {
+		return err
+	}
 	sourceSecretName := fmt.Sprintf("%s-%s", backupentry.SourcePrefix, v1beta1constants.BackupSecretName)
 	sourceSecret := &corev1.Secret{}
 	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, sourceSecretName), sourceSecret); err != nil {
@@ -64,12 +70,13 @@ func (b *Botanist) DeployEtcdCopyBackupsTask(ctx context.Context) error {
 		return err
 	}
 
+	sourceProvider := druidv1alpha1.StorageProvider(sourceBackupEntry.Spec.Type)
 	provider := druidv1alpha1.StorageProvider(b.Seed.GetInfo().Spec.Backup.Provider)
 	sourceContainer := string(sourceSecret.Data[v1beta1constants.DataKeyBackupBucketName])
 	container := string(secret.Data[v1beta1constants.DataKeyBackupBucketName])
 
 	b.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.SetSourceStore(druidv1alpha1.StoreSpec{
-		Provider:  &provider,
+		Provider:  &sourceProvider,
 		SecretRef: &corev1.SecretReference{Name: sourceSecret.Name},
 		Prefix:    fmt.Sprintf("%s/etcd-%s", b.Shoot.BackupEntryName, v1beta1constants.ETCDRoleMain),
 		Container: &sourceContainer,

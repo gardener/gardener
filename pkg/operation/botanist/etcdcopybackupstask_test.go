@@ -21,6 +21,7 @@ import (
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
@@ -52,11 +53,12 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		reader           *mockclient.MockReader
 		kubernetesClient kubernetes.Interface
 
-		botanist    *Botanist
-		namespace   = "shoot--foo--bar"
-		shootName   = "bar"
-		projectName = "foo"
-		seedName    = "seed"
+		botanist        *Botanist
+		namespace       = "shoot--foo--bar"
+		shootName       = "bar"
+		projectName     = "foo"
+		seedName        = "seed"
+		backupEntryName = "backup-entry"
 	)
 
 	BeforeEach(func() {
@@ -73,7 +75,8 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		botanist.K8sSeedClient = kubernetesClient
 		botanist.Seed = &seedpkg.Seed{}
 		botanist.Shoot = &shootpkg.Shoot{
-			SeedNamespace: namespace,
+			SeedNamespace:   namespace,
+			BackupEntryName: backupEntryName,
 		}
 		botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
 			ObjectMeta: metav1.ObjectMeta{
@@ -125,9 +128,11 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 			etcdCopyBackupsTask    *mockedcdcopybackupstask.MockInterface
 			etcdBackupSecret       *corev1.Secret
 			sourceEtcdBackupSecret *corev1.Secret
+			sourceBackupEntry      *extensionsv1alpha1.BackupEntry
 
-			secretGroupResource = schema.GroupResource{Resource: "Secrets"}
-			fakeErr             = errors.New("fake err")
+			secretGroupResource      = schema.GroupResource{Resource: "Secrets"}
+			backupEntryGroupResource = schema.GroupResource{Resource: "BackupEntries"}
+			fakeErr                  = errors.New("fake err")
 		)
 
 		BeforeEach(func() {
@@ -150,6 +155,16 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 					Namespace: namespace,
 				},
 			}
+			sourceBackupEntry = &extensionsv1alpha1.BackupEntry{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "source-" + backupEntryName,
+				},
+				Spec: extensionsv1alpha1.BackupEntrySpec{
+					DefaultSpec: extensionsv1alpha1.DefaultSpec{
+						Type: "aws",
+					},
+				},
+			}
 		})
 
 		AfterEach(func() {
@@ -159,6 +174,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		It("should properly deploy EtcdCopyBackupsTask resource", func() {
 			etcdCopyBackupsTask.EXPECT().Destroy(ctx)
 			etcdCopyBackupsTask.EXPECT().WaitCleanup(ctx)
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceEtcdBackupSecret), gomock.AssignableToTypeOf(sourceEtcdBackupSecret))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdBackupSecret), gomock.AssignableToTypeOf(etcdBackupSecret))
 			etcdCopyBackupsTask.EXPECT().SetSourceStore(gomock.AssignableToTypeOf(druidv1alpha1.StoreSpec{}))
@@ -181,13 +197,22 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		It("should return an error if the etcd backup secret is not found", func() {
 			etcdCopyBackupsTask.EXPECT().Destroy(ctx)
 			etcdCopyBackupsTask.EXPECT().WaitCleanup(ctx)
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceEtcdBackupSecret), gomock.AssignableToTypeOf(sourceEtcdBackupSecret)).Return(apierrors.NewNotFound(secretGroupResource, sourceEtcdBackupSecret.Name))
+			Expect(botanist.DeployEtcdCopyBackupsTask(ctx)).To(HaveOccurred())
+		})
+
+		It("should return an error if the source backup entry is not found", func() {
+			etcdCopyBackupsTask.EXPECT().Destroy(ctx)
+			etcdCopyBackupsTask.EXPECT().WaitCleanup(ctx)
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry)).Return(apierrors.NewNotFound(backupEntryGroupResource, etcdBackupSecret.Name))
 			Expect(botanist.DeployEtcdCopyBackupsTask(ctx)).To(HaveOccurred())
 		})
 
 		It("should return an error if the source etcd backup secret is not found", func() {
 			etcdCopyBackupsTask.EXPECT().Destroy(ctx)
 			etcdCopyBackupsTask.EXPECT().WaitCleanup(ctx)
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceEtcdBackupSecret), gomock.AssignableToTypeOf(sourceEtcdBackupSecret))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdBackupSecret), gomock.AssignableToTypeOf(etcdBackupSecret)).Return(apierrors.NewNotFound(secretGroupResource, etcdBackupSecret.Name))
 			Expect(botanist.DeployEtcdCopyBackupsTask(ctx)).To(HaveOccurred())
@@ -196,6 +221,7 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 		It("should return an error if the etcd copy backup task component Deploy fails", func() {
 			etcdCopyBackupsTask.EXPECT().Destroy(ctx)
 			etcdCopyBackupsTask.EXPECT().WaitCleanup(ctx)
+			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceBackupEntry), gomock.AssignableToTypeOf(sourceBackupEntry))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(sourceEtcdBackupSecret), gomock.AssignableToTypeOf(sourceEtcdBackupSecret))
 			c.EXPECT().Get(ctx, client.ObjectKeyFromObject(etcdBackupSecret), gomock.AssignableToTypeOf(etcdBackupSecret))
 			etcdCopyBackupsTask.EXPECT().SetSourceStore(gomock.AssignableToTypeOf(druidv1alpha1.StoreSpec{}))
