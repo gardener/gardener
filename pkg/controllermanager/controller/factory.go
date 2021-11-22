@@ -85,7 +85,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	log.Info("Successfully bootstrapped Garden cluster")
 
 	// Create controllers.
-	bastionController, err := bastioncontroller.NewBastionController(ctx, f.clientMap, f.cfg.Controllers.Bastion.MaxLifetime.Duration)
+	bastionController, err := bastioncontroller.NewBastionController(ctx, log, f.clientMap, f.cfg.Controllers.Bastion.MaxLifetime.Duration)
 	if err != nil {
 		return fmt.Errorf("failed initializing Bastion controller: %w", err)
 	}

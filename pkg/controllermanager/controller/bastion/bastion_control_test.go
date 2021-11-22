@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bastion
+package bastion_test
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	operationsv1alpha1 "github.com/gardener/gardener/pkg/apis/operations/v1alpha1"
-	"github.com/gardener/gardener/pkg/logger"
+	. "github.com/gardener/gardener/pkg/controllermanager/controller/bastion"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -46,14 +46,13 @@ var _ = Describe("Controller", func() {
 		shootName   = "myshoot"
 		seedName    = "myseed"
 		ctx         = context.TODO()
-		log         = logger.NewNopLogger()
 		maxLifetime = 12 * time.Hour
 	)
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockClient = mockclient.NewMockClient(mockCtrl)
-		reconciler = NewBastionReconciler(log, mockClient, maxLifetime)
+		reconciler = NewBastionReconciler(mockClient, maxLifetime)
 	})
 
 	Describe("Reconciler", func() {
