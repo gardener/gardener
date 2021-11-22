@@ -458,7 +458,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Cleaning up orphaned DNSRecord secrets",
-			Fn:           flow.TaskFn(botanist.CleanupOrphanedDNSRecordSecrets),
+			Fn:           flow.TaskFn(botanist.CleanupOrphanedDNSRecordSecrets).DoIf(!o.Shoot.HibernationEnabled),
 			Dependencies: flow.NewTaskIDs(deployInternalDomainDNSRecord, deployExternalDomainDNSRecord, deployOwnerDomainDNSRecord, deployIngressDomainDNSRecord),
 		})
 		_ = g.Add(flow.Task{
