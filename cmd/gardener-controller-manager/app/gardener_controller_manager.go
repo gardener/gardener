@@ -38,8 +38,8 @@ import (
 	"github.com/gardener/gardener/pkg/server"
 	"github.com/gardener/gardener/pkg/server/routes"
 
+	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,6 +49,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/component-base/version"
 	"k8s.io/component-base/version/verflag"
+	runtimelog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // Options has all the context and parameters needed to run a Gardener controller manager.
@@ -192,7 +193,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 type Gardener struct {
 	Config         *config.ControllerManagerConfiguration
 	ClientMap      clientmap.ClientMap
-	Logger         *logrus.Logger
+	Log            logr.Logger
 	Recorder       record.EventRecorder
 	LeaderElection *leaderelection.LeaderElectionConfig
 	HealthManager  healthz.Manager
@@ -204,11 +205,20 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 		return nil, errors.New("config is required")
 	}
 
-	// Initialize logger
-	logger := logger.NewLogger(cfg.LogLevel, cfg.LogFormat)
-	logger.Info("Starting Gardener controller manager...")
-	logger.Infof("Version: %+v", version.Get())
-	logger.Infof("Feature Gates: %s", controllermanagerfeatures.FeatureGate.String())
+	// Initialize logrus and zap logger (for the migration period, we will use both in parallel)
+	// ignore result, only call for side-effects (set logger.Logger)
+	_ = logger.NewLogger(cfg.LogLevel, cfg.LogFormat)
+
+	log, err := logger.NewZapLogger(cfg.LogLevel, cfg.LogFormat)
+	if err != nil {
+		return nil, fmt.Errorf("error instantiating zap logger: %w", err)
+	}
+
+	// set the logger used by sigs.k8s.io/controller-runtime
+	runtimelog.SetLogger(log)
+
+	log.Info("Starting gardener-controller-manager...", "version", version.Get())
+	log.Info("Feature Gates", "featureGates", controllermanagerfeatures.FeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {
 		if err := flag.Value.Set(fmt.Sprintf("%d", cfg.KubernetesLogLevel)); err != nil {
@@ -263,7 +273,7 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 
 	return &Gardener{
 		Config:         cfg,
-		Logger:         logger,
+		Log:            log,
 		Recorder:       recorder,
 		ClientMap:      clientMap,
 		LeaderElection: leaderElectionConfig,
@@ -292,14 +302,14 @@ func (g *Gardener) Run(ctx context.Context) error {
 	if g.LeaderElection != nil {
 		g.LeaderElection.Callbacks = leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(_ context.Context) {
-				g.Logger.Info("Acquired leadership, starting controllers.")
+				g.Log.Info("Acquired leadership, starting controllers")
 				if err := run(controllerCtx); err != nil {
-					g.Logger.Errorf("failed to run controllers: %v", err)
+					g.Log.Error(err, "failed to run controllers")
 				}
 				leaderElectionCancel()
 			},
 			OnStoppedLeading: func() {
-				g.Logger.Info("Lost leadership, terminating.")
+				g.Log.Info("Lost leadership, terminating")
 				controllerCancel()
 			},
 		}

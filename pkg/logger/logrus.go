@@ -24,12 +24,14 @@ import (
 
 // Logger is the standard logger for the Gardener which is used for all messages which are not Shoot
 // cluster specific.
+// Deprecated: use logr for new code!
 var Logger *logrus.Logger
 
 // NewLogger creates a new logrus logger.
 // It uses STDERR as output channel and evaluates the value of the --log-level command line argument in order
 // to set the log level.
 // Example output: time="2017-06-08T13:00:28+02:00" level=info msg="gardener started successfully".
+// Deprecated: use logr for new code!
 func NewLogger(logLevel string, format string) *logrus.Logger {
 	var level logrus.Level
 
