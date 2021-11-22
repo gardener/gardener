@@ -54,9 +54,7 @@ import (
 )
 
 const (
-	shootName      = "foo"
 	shootNamespace = "bar"
-	seedNamespace  = "shoot--foo--bar"
 
 	externalDomain   = "foo.bar.external.example.com"
 	externalProvider = "external-provider"
@@ -72,7 +70,9 @@ const (
 
 var _ = Describe("dnsrecord", func() {
 	var (
-		ctrl *gomock.Controller
+		shootName     string
+		seedNamespace string
+		ctrl          *gomock.Controller
 
 		scheme *runtime.Scheme
 		c      client.Client
@@ -90,6 +90,8 @@ var _ = Describe("dnsrecord", func() {
 	)
 
 	BeforeEach(func() {
+		shootName = "foo"
+		seedNamespace = "shoot--foo--bar"
 		ctrl = gomock.NewController(GinkgoT())
 
 		scheme = runtime.NewScheme()
@@ -100,6 +102,10 @@ var _ = Describe("dnsrecord", func() {
 		externalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
 		internalDNSRecord = mockdnsrecord.NewMockInterface(ctrl)
 
+		cleanup = test.WithVar(&dnsrecord.TimeNow, func() time.Time { return now })
+	})
+
+	JustBeforeEach(func() {
 		b = &Botanist{
 			Operation: &operation.Operation{
 				Config: &config.GardenletConfiguration{
@@ -156,13 +162,10 @@ var _ = Describe("dnsrecord", func() {
 		renderer := cr.NewWithServerVersion(&version.Info{})
 		chartApplier := kubernetes.NewChartApplier(renderer, kubernetes.NewApplier(c, meta.NewDefaultRESTMapper([]schema.GroupVersion{})))
 		Expect(chartApplier).NotTo(BeNil(), "should return chart applier")
-
 		b.K8sSeedClient = fakeclientset.NewClientSetBuilder().
 			WithClient(c).
 			WithChartApplier(chartApplier).
 			Build()
-
-		cleanup = test.WithVar(&dnsrecord.TimeNow, func() time.Time { return now })
 	})
 
 	AfterEach(func() {
@@ -311,7 +314,7 @@ var _ = Describe("dnsrecord", func() {
 		Context("restore (DNS enabled and restore operation)", func() {
 			var shootState = &gardencorev1alpha1.ShootState{}
 
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				b.SetShootState(shootState)
 				b.Shoot.GetInfo().Status = gardencorev1beta1.ShootStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
@@ -333,7 +336,7 @@ var _ = Describe("dnsrecord", func() {
 		})
 
 		Context("destroy (DNS disabled)", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				b.Shoot.DisableDNS = true
 			})
 
@@ -367,7 +370,7 @@ var _ = Describe("dnsrecord", func() {
 		Context("restore (DNS enabled and restore operation)", func() {
 			var shootState = &gardencorev1alpha1.ShootState{}
 
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				b.SetShootState(shootState)
 				b.Shoot.GetInfo().Status = gardencorev1beta1.ShootStatus{
 					LastOperation: &gardencorev1beta1.LastOperation{
@@ -389,7 +392,7 @@ var _ = Describe("dnsrecord", func() {
 		})
 
 		Context("destroy (DNS disabled)", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				b.Shoot.DisableDNS = true
 			})
 
@@ -464,7 +467,7 @@ var _ = Describe("dnsrecord", func() {
 		var orphanedExternalSecret *corev1.Secret
 		var regularExternalSecret *corev1.Secret
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			// create an internal secret which is not prefixed with 'dnsrecord-' and is of the form '<shootName>-internal'
 			orphanedInternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName + "-" + DNSInternalName,

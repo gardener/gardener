@@ -58,7 +58,9 @@ import (
 var _ = Describe("addons", func() {
 
 	var (
-		ctrl *gomock.Controller
+		shootName     = "testShoot"
+		seedNamespace = "shoot--foo--bar"
+		ctrl          *gomock.Controller
 
 		scheme *runtime.Scheme
 		client client.Client
