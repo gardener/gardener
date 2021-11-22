@@ -19,17 +19,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
+	"github.com/golang/mock/gomock"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/version"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	mockclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/mock"
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
-	"github.com/gardener/gardener/pkg/logger"
-
-	"github.com/golang/mock/gomock"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/version"
 )
 
 var _ = Describe("GenericClientMap", func() {
@@ -62,7 +62,7 @@ var _ = Describe("GenericClientMap", func() {
 			csVersion = &version.Info{GitVersion: "1.18.0"}
 			cs.EXPECT().Version().Return(csVersion.GitVersion).AnyTimes()
 
-			cm = internal.NewGenericClientMap(factory, logger.NewNopLogger())
+			cm = internal.NewGenericClientMap(factory, logr.Discard())
 
 			origMaxRefreshInterval = internal.MaxRefreshInterval
 			internal.MaxRefreshInterval = 10 * time.Millisecond

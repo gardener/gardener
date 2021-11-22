@@ -15,36 +15,25 @@
 package builder
 
 import (
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/logger"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 )
 
 var _ = Describe("GardenClientMapBuilder", func() {
 
 	var (
-		fakeLogger      logrus.FieldLogger
 		restConfig      *rest.Config
 		uncachedObjects []client.Object
 	)
 
 	BeforeEach(func() {
-		fakeLogger = logger.NewNopLogger()
 		restConfig = &rest.Config{}
 		uncachedObjects = []client.Object{&corev1.ConfigMap{}, &gardencorev1beta1.Shoot{}}
-	})
-
-	Context("#logger", func() {
-		It("should be set correctly by WithLogger", func() {
-			builder := NewGardenClientMapBuilder().WithLogger(fakeLogger)
-			Expect(builder.logger).To(BeIdenticalTo(fakeLogger))
-		})
 	})
 
 	Context("#restConfig", func() {
@@ -62,14 +51,8 @@ var _ = Describe("GardenClientMapBuilder", func() {
 	})
 
 	Context("#Build", func() {
-		It("should fail if logger was not set", func() {
-			clientMap, err := NewGardenClientMapBuilder().Build()
-			Expect(err).To(MatchError("logger is required but not set"))
-			Expect(clientMap).To(BeNil())
-		})
-
 		It("should fail if restConfig was not set", func() {
-			clientMap, err := NewGardenClientMapBuilder().WithLogger(fakeLogger).Build()
+			clientMap, err := NewGardenClientMapBuilder().Build()
 			Expect(err).To(MatchError("restConfig is required but not set"))
 			Expect(clientMap).To(BeNil())
 		})
@@ -77,7 +60,6 @@ var _ = Describe("GardenClientMapBuilder", func() {
 		It("should succeed to build ClientMap", func() {
 			clientSet, err := NewGardenClientMapBuilder().
 				WithRESTConfig(restConfig).
-				WithLogger(fakeLogger).
 				Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(clientSet).NotTo(BeNil())

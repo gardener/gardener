@@ -338,7 +338,6 @@ func NewGardenlet(ctx context.Context, cfg *config.GardenletConfiguration) (*Gar
 		WithGardenClientMapBuilder(gardenClientMapBuilder).
 		WithSeedClientMapBuilder(seedClientMapBuilder).
 		WithShootClientMapBuilder(shootClientMapBuilder).
-		WithLogger(logger).
 		Build()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build ClientMap: %w", err)

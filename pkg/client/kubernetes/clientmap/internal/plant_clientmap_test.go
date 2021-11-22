@@ -18,16 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
-	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,6 +25,15 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 var _ = Describe("PlantClientMap", func() {
@@ -76,7 +75,7 @@ var _ = Describe("PlantClientMap", func() {
 				return fakeGardenClient, nil
 			},
 		}
-		cm = internal.NewPlantClientMap(factory, logger.NewNopLogger())
+		cm = internal.NewPlantClientMap(factory)
 	})
 
 	AfterEach(func() {

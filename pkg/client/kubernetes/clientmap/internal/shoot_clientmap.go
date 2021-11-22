@@ -18,18 +18,18 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	baseconfig "k8s.io/component-base/config"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
-
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	baseconfig "k8s.io/component-base/config"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // shootClientMap is a ClientMap for requesting and storing clients for Shoot clusters.
@@ -37,9 +37,11 @@ type shootClientMap struct {
 	clientmap.ClientMap
 }
 
-// NewShootClientMap creates a new shootClientMap with the given factory and logger.
-func NewShootClientMap(factory *ShootClientSetFactory, logger logrus.FieldLogger) clientmap.ClientMap {
+// NewShootClientMap creates a new shootClientMap with the given factory.
+func NewShootClientMap(factory *ShootClientSetFactory) clientmap.ClientMap {
+	logger := log.WithValues("clientmap", "ShootClientMap")
 	factory.clientKeyToSeedInfo = make(map[ShootClientSetKey]seedInfo)
+	factory.log = logger
 	return &shootClientMap{
 		ClientMap: NewGenericClientMap(factory, logger),
 	}
@@ -56,8 +58,8 @@ type ShootClientSetFactory struct {
 	// ClientConnectionConfiguration is the configuration that will be used by created ClientSets.
 	ClientConnectionConfig baseconfig.ClientConnectionConfiguration
 
-	// Log is a logger for logging entries related to creating Shoot ClientSets.
-	Log logrus.FieldLogger
+	// log is a logger for logging entries related to creating Shoot ClientSets.
+	log logr.Logger
 
 	clientKeyToSeedInfo map[ShootClientSetKey]seedInfo
 }
@@ -105,7 +107,7 @@ func (f *ShootClientSetFactory) NewClientSet(ctx context.Context, k clientmap.Cl
 	// load balancer of the shoot API server.
 	addr, err := LookupHost(fmt.Sprintf("%s.%s.svc", v1beta1constants.DeploymentNameKubeAPIServer, seedNamespace))
 	if err != nil {
-		f.Log.Warnf("service DNS name lookup of kube-apiserver failed (%+v), falling back to external kubeconfig", err)
+		f.log.Info("service DNS name lookup of kube-apiserver failed, falling back to external kubeconfig", "error", err)
 	} else if len(addr) > 0 {
 		secretName = v1beta1constants.SecretNameGardenerInternal
 	}

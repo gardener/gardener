@@ -230,7 +230,6 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 	clientMap, err := clientmapbuilder.NewDelegatingClientMapBuilder().
 		WithGardenClientMapBuilder(clientmapbuilder.NewGardenClientMapBuilder().WithRESTConfig(restCfg)).
 		WithPlantClientMapBuilder(clientmapbuilder.NewPlantClientMapBuilder()).
-		WithLogger(logger).
 		Build()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build ClientMap: %w", err)

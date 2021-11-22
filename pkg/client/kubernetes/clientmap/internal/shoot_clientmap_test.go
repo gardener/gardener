@@ -18,16 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
-	"github.com/gardener/gardener/pkg/logger"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -37,6 +27,15 @@ import (
 	baseconfig "k8s.io/component-base/config"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/internal"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	. "github.com/gardener/gardener/pkg/client/kubernetes/test"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 )
 
 var _ = Describe("ShootClientMap", func() {
@@ -111,9 +110,8 @@ var _ = Describe("ShootClientMap", func() {
 				return fakeSeedClientSet, nil
 			},
 			ClientConnectionConfig: clientConnectionConfig,
-			Log:                    logger.NewNopLogger(),
 		}
-		cm = internal.NewShootClientMap(factory, logger.NewNopLogger())
+		cm = internal.NewShootClientMap(factory)
 	})
 
 	AfterEach(func() {
