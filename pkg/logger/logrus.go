@@ -19,10 +19,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/gardener/gardener/pkg/utils"
-
 	"github.com/sirupsen/logrus"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 // Logger is the standard logger for the Gardener which is used for all messages which are not Shoot
@@ -101,15 +98,4 @@ func NewShootLogger(logger logrus.FieldLogger, shoot, project string) *logrus.En
 // Example output: time="2017-06-08T13:00:49+02:00" level=info msg="something" <fieldKey>=<fieldValue>.
 func NewFieldLogger(logger logrus.FieldLogger, fieldKey, fieldValue string) *logrus.Entry {
 	return logger.WithField(fieldKey, fieldValue)
-}
-
-// IDFieldName is the name of the id field for a logger.
-const IDFieldName = "process_id"
-
-// NewIDLogger extends an existing logrus logger with a randomly generated id field.
-// Example output: time="2017-06-08T13:00:49+02:00" level=info msg="something" id=123abcde.
-func NewIDLogger(logger logrus.FieldLogger) logrus.FieldLogger {
-	id, err := utils.GenerateRandomString(8)
-	utilruntime.Must(err)
-	return NewFieldLogger(logger, IDFieldName, id)
 }

@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/admissioncontroller/metrics"
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 const (
@@ -66,15 +65,10 @@ func (h *handler) InjectDecoder(d *admission.Decoder) error {
 }
 
 func (h *handler) Handle(_ context.Context, request admission.Request) admission.Response {
-	requestID, err := utils.GenerateRandomString(8)
-	if err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-	requestLogger := h.logger.WithValues(
-		logger.IDFieldName, requestID,
+	requestLogger := logger.NewIDLogger(h.logger.WithValues(
 		"user", request.UserInfo.Username,
 		"resource", request.Resource, "name", request.Name,
-	)
+	))
 	if request.Namespace != "" {
 		requestLogger = requestLogger.WithValues("namespace", request.Namespace)
 	}

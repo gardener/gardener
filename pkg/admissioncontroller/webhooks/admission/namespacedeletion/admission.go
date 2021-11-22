@@ -32,7 +32,6 @@ import (
 	acadmission "github.com/gardener/gardener/pkg/admissioncontroller/webhooks/admission"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
@@ -93,11 +92,7 @@ func (h *handler) Handle(ctx context.Context, request admission.Request) admissi
 		return acadmission.Allowed("subresources on namespaces are not handled")
 	}
 
-	requestID, err := utils.GenerateRandomString(8)
-	if err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-	requestLogger := h.logger.WithValues(logger.IDFieldName, requestID)
+	requestLogger := logger.NewIDLogger(h.logger)
 
 	// Now that all checks have been passed we can actually validate the admission request.
 	reviewResponse := h.admitNamespace(ctx, request)
