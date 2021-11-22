@@ -16,6 +16,8 @@ package dnsrecord
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -180,6 +182,10 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 				// If the DNSRecord is not yet Succeeded, reconcile it again.
 				_ = mutateFn()
 			} else {
+				// Check if we need to migrate the referenced secret
+				if !strings.HasPrefix(c.dnsRecord.Spec.SecretRef.Name, "dnsrecord-") {
+					c.dnsRecord.Spec.SecretRef.Name = fmt.Sprintf("dnsrecord-%s", c.dnsRecord.Spec.SecretRef.Name)
+				}
 				// Otherwise, just update the timestamp annotation.
 				// If the object is still annotated with the operation annotation (e.g. not reconciled yet) this will send a watch
 				// event to the extension controller triggering a new reconciliation.

@@ -50,7 +50,6 @@ import (
 const (
 	name                = "foo"
 	namespace           = "shoot--foo--bar"
-	secretName          = "testsecret"
 	extensionType       = "provider"
 	zone                = "zone"
 	dnsName             = "foo.bar.external.example.com"
@@ -60,7 +59,8 @@ const (
 
 var _ = Describe("DNSRecord", func() {
 	var (
-		ctrl *gomock.Controller
+		secretName string
+		ctrl       *gomock.Controller
 
 		c client.Client
 
@@ -81,6 +81,7 @@ var _ = Describe("DNSRecord", func() {
 	)
 
 	BeforeEach(func() {
+		secretName = "dnsrecord-testsecret"
 		ctrl = gomock.NewController(GinkgoT())
 
 		scheme := runtime.NewScheme()
@@ -102,6 +103,9 @@ var _ = Describe("DNSRecord", func() {
 			Values:     []string{address},
 			TTL:        pointer.Int64(ttl),
 		}
+	})
+
+	JustBeforeEach(func() {
 		dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 
 		dns = &extensionsv1alpha1.DNSRecord{
