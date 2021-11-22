@@ -139,6 +139,12 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 
+	if obj.Controllers.ShootConditions == nil {
+		obj.Controllers.ShootConditions = &ShootConditionsControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+
 	if obj.Controllers.Seed == nil {
 		obj.Controllers.Seed = &SeedControllerConfiguration{
 			ConcurrentSyncs: 5,

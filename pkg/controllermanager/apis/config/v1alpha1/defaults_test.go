@@ -87,6 +87,12 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Controllers.ShootReference).NotTo(BeNil())
 			Expect(obj.Controllers.ShootReference.ConcurrentSyncs).To(Equal(5))
 
+			Expect(obj.Controllers.ShootRetry).NotTo(BeNil())
+			Expect(obj.Controllers.ShootRetry.ConcurrentSyncs).To(Equal(5))
+
+			Expect(obj.Controllers.ShootConditions).NotTo(BeNil())
+			Expect(obj.Controllers.ShootConditions.ConcurrentSyncs).To(Equal(5))
+
 			Expect(obj.LogLevel).To(Equal(logger.InfoLevel))
 			Expect(obj.LogFormat).To(Equal(logger.FormatJSON))
 		})

@@ -100,13 +100,16 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 	// Check if shoot is reconciled and update ShootReconciled condition
 	if !shootReconciled(shoot) {
 		a.reconcilingInfoEventf(ms, "Waiting for shoot %s to be reconciled", kutil.ObjectName(shoot))
-		updateCondition(status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconciling, "")
+		updateCondition(status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventReconciling,
+			fmt.Sprintf("Waiting for shoot %s to be reconciled", kutil.ObjectName(shoot)))
 		return status, true, nil
 	}
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled, "")
+	updateCondition(status, seedmanagementv1alpha1.ManagedSeedShootReconciled, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled,
+		fmt.Sprintf("Shoot %s has been reconciled", kutil.ObjectName(shoot)))
 
 	// Update SeedRegistered condition
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionProgressing, gardencorev1beta1.EventReconciling, "")
+	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionProgressing, gardencorev1beta1.EventReconciling,
+		fmt.Sprintf("Registering seed %s", ms.Name))
 
 	// Get shoot client
 	shootClient, err := a.clientMap.GetClient(ctx, keys.ForShoot(shoot))
@@ -156,7 +159,8 @@ func (a *actuator) Reconcile(ctx context.Context, ms *seedmanagementv1alpha1.Man
 		}
 	}
 
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled, "")
+	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionTrue, gardencorev1beta1.EventReconciled,
+		fmt.Sprintf("Seed %s has been registered", ms.Name))
 	return status, false, nil
 }
 
@@ -174,7 +178,8 @@ func (a *actuator) Delete(ctx context.Context, ms *seedmanagementv1alpha1.Manage
 	}()
 
 	// Update SeedRegistered condition
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting, "")
+	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleting,
+		fmt.Sprintf("Unregistering seed %s", ms.Name))
 
 	// Get shoot
 	shoot := &gardencorev1beta1.Shoot{}
@@ -265,7 +270,8 @@ func (a *actuator) Delete(ctx context.Context, ms *seedmanagementv1alpha1.Manage
 		return status, true, false, nil
 	}
 
-	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleted, "")
+	updateCondition(status, seedmanagementv1alpha1.ManagedSeedSeedRegistered, gardencorev1beta1.ConditionFalse, gardencorev1beta1.EventDeleted,
+		fmt.Sprintf("Seed %s has been unregistred", ms.Name))
 	return status, false, true, nil
 }
 

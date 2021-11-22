@@ -141,11 +141,6 @@ func (h *ControlledResourceEventHandler) OnUpdate(old, new interface{}) {
 		return
 	}
 
-	// Check resource versions, as we may receive update events for all object of certain kind
-	if newObj.GetResourceVersion() == oldObj.GetResourceVersion() {
-		return
-	}
-
 	// Get the old and the new controllers, if any
 	oldController := h.getControllerOf(oldObj, 0)
 	newController := h.getControllerOf(newObj, 0)

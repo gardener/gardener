@@ -36,7 +36,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -237,25 +236,27 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 	defer cancel()
 
 	gardenClient := gardenClientSet.Client()
-	log.Debugf("[SHOOT CARE]")
+	log.Debugf("[SHOOT CARE] Starting care")
 
 	// Initialize conditions based on the current status.
-	var conditions []gardencorev1beta1.Condition
-	for _, cond := range []gardencorev1beta1.ConditionType{
+	conditionTypes := []gardencorev1beta1.ConditionType{
 		gardencorev1beta1.ShootAPIServerAvailable,
 		gardencorev1beta1.ShootControlPlaneHealthy,
 		gardencorev1beta1.ShootEveryNodeReady,
 		gardencorev1beta1.ShootSystemComponentsHealthy,
-	} {
+	}
+	var conditions []gardencorev1beta1.Condition
+	for _, cond := range conditionTypes {
 		conditions = append(conditions, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Conditions, cond))
 	}
 
 	// Initialize constraints
-	var constraints []gardencorev1beta1.Condition
-	for _, constr := range []gardencorev1beta1.ConditionType{
+	constraintTypes := []gardencorev1beta1.ConditionType{
 		gardencorev1beta1.ShootHibernationPossible,
 		gardencorev1beta1.ShootMaintenancePreconditionsSatisfied,
-	} {
+	}
+	var constraints []gardencorev1beta1.Condition
+	for _, constr := range constraintTypes {
 		constraints = append(constraints, gardencorev1beta1helper.GetOrInitCondition(shoot.Status.Constraints, constr))
 	}
 
@@ -312,7 +313,7 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 	staleExtensionHealthCheckThreshold := confighelper.StaleExtensionHealthChecksThreshold(r.config.Controllers.ShootCare.StaleExtensionHealthChecks)
 	initializeShootClients := shootClientInitializer(careCtx, o)
 
-	var updatedConditions, updatedConstraints, seedConditions []gardencorev1beta1.Condition
+	var updatedConditions, updatedConstraints []gardencorev1beta1.Condition
 
 	_ = flow.Parallel(
 		// Trigger health check
@@ -324,17 +325,6 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 				staleExtensionHealthCheckThreshold,
 				conditions,
 			)
-			return nil
-		},
-		// Fetch seed conditions if shoot is a seed
-		// TODO This logic could be moved to the managed seed controller.
-		// It should watch Seed objects and enqueue them if they belong to a ManagedSeed and the conditions have changed.
-		// Then it should update the conditions on the Shoot object.
-		func(ctx context.Context) error {
-			seedConditions, err = retrieveSeedConditions(ctx, o)
-			if err != nil {
-				o.Logger.Errorf("Error retrieving seed conditions: %+v", err)
-			}
 			return nil
 		},
 		// Trigger constraint checks
@@ -355,12 +345,15 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 		},
 	)(careCtx)
 
-	updatedConditions = append(updatedConditions, seedConditions...)
-
 	// Update Shoot status (conditions, constraints) if necessary
 	if gardencorev1beta1helper.ConditionsNeedUpdate(conditions, updatedConditions) ||
 		gardencorev1beta1helper.ConditionsNeedUpdate(constraints, updatedConstraints) {
-		if err := patchShootStatus(ctx, gardenClient, shoot, updatedConditions, updatedConstraints); err != nil {
+		// Rebuild shoot conditions and constraints to ensure that only the conditions and constraints with the
+		// correct types will be updated, and any other conditions will remain intact
+		conditions := buildShootConditions(shoot.Status.Conditions, updatedConditions, conditionTypes)
+		constraints := buildShootConditions(shoot.Status.Constraints, updatedConstraints, constraintTypes)
+		log.Debugf("[SHOOT CARE] Updating shoot status conditions and constraints")
+		if err := patchShootStatus(ctx, gardenClient, shoot, conditions, constraints); err != nil {
 			o.Logger.Errorf("Could not update Shoot status: %+v", err)
 			return nil // We do not want to run in the exponential backoff for the condition checks.
 		}
@@ -374,6 +367,14 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 	}
 
 	return nil
+}
+
+// buildShootConditions builds and returns the shoot conditions using the given shoot conditions as a base,
+// by first removing all conditions with the given types and then merging the given conditions (which must be of the same types).
+func buildShootConditions(shootConditions []gardencorev1beta1.Condition, conditions []gardencorev1beta1.Condition, conditionTypes []gardencorev1beta1.ConditionType) []gardencorev1beta1.Condition {
+	result := gardencorev1beta1helper.RemoveConditions(shootConditions, conditionTypes...)
+	result = gardencorev1beta1helper.MergeConditions(result, conditions...)
+	return result
 }
 
 // PatchShootStatusLabel patches the shoot status label if the shoot status changed
@@ -392,16 +393,4 @@ func patchShootStatus(ctx context.Context, c client.StatusClient, shoot *gardenc
 	shoot.Status.Conditions = conditions
 	shoot.Status.Constraints = constraints
 	return c.Status().Patch(ctx, shoot, patch)
-}
-
-func retrieveSeedConditions(ctx context.Context, operation *operation.Operation) ([]gardencorev1beta1.Condition, error) {
-	if operation.ManagedSeed == nil {
-		return nil, nil
-	}
-
-	seed := &gardencorev1beta1.Seed{}
-	if err := operation.K8sGardenClient.Client().Get(ctx, kutil.Key(operation.Shoot.GetInfo().Name), seed); client.IgnoreNotFound(err) != nil {
-		return nil, err
-	}
-	return seed.Status.Conditions, nil
 }

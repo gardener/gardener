@@ -25,6 +25,8 @@ import (
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/seedmanagement"
+	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -156,7 +158,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	go quotaController.Run(ctx, f.cfg.Controllers.Quota.ConcurrentSyncs)
 	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs)
 	go seedController.Run(ctx, f.cfg.Controllers.Seed.ConcurrentSyncs)
-	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs, f.cfg.Controllers.ShootRetry.ConcurrentSyncs)
+	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs, f.cfg.Controllers.ShootRetry.ConcurrentSyncs, f.cfg.Controllers.ShootConditions.ConcurrentSyncs)
 	go exposureClassController.Run(ctx, f.cfg.Controllers.ExposureClass.ConcurrentSyncs)
 	go managedSeedSetController.Run(ctx, f.cfg.Controllers.ManagedSeedSet.ConcurrentSyncs)
 
@@ -207,6 +209,19 @@ func addAllFieldIndexes(ctx context.Context, indexer client.FieldIndexer) error 
 		return []string{*shoot.Spec.SeedName}
 	}); err != nil {
 		return fmt.Errorf("failed to add indexer to Shoot Informer: %w", err)
+	}
+
+	if err := indexer.IndexField(ctx, &seedmanagementv1alpha1.ManagedSeed{}, seedmanagement.ManagedSeedShootName, func(obj client.Object) []string {
+		ms, ok := obj.(*seedmanagementv1alpha1.ManagedSeed)
+		if !ok {
+			return []string{""}
+		}
+		if ms.Spec.Shoot == nil {
+			return []string{""}
+		}
+		return []string{ms.Spec.Shoot.Name}
+	}); err != nil {
+		return fmt.Errorf("failed to add indexer to ManagedSeed Informer: %w", err)
 	}
 
 	return nil
