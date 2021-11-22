@@ -40,6 +40,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -214,6 +215,7 @@ func (r *resourceManager) Deploy(ctx context.Context) error {
 
 	if r.values.TargetDiffersFromSourceCluster {
 		fns = append(fns, r.ensureShootResources)
+		fns = append(fns, r.ensureNetworkPolicy)
 	} else {
 		fns = append(fns, r.ensureMutatingWebhookConfiguration)
 	}
@@ -807,6 +809,48 @@ func (r *resourceManager) ensureShootResources(ctx context.Context) error {
 	return managedresources.CreateForShoot(ctx, r.client, r.namespace, ManagedResourceName, false, data)
 }
 
+func (r *resourceManager) ensureNetworkPolicy(ctx context.Context) error {
+	networkPolicy := r.emptyNetworkPolicy()
+	protocol := corev1.ProtocolTCP
+	port := intstr.FromInt(serverPort)
+
+	_, err := controllerutils.GetAndCreateOrMergePatch(ctx, r.client, networkPolicy, func() error {
+		networkPolicy.Labels = r.getLabels()
+		networkPolicy.Annotations = map[string]string{
+			v1beta1constants.GardenerDescription: "Allows Egress from shoot's kube-apiserver pods to gardener-resource-manager pods.",
+		}
+		networkPolicy.Spec = networkingv1.NetworkPolicySpec{
+			PodSelector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					v1beta1constants.LabelApp:   v1beta1constants.LabelKubernetes,
+					v1beta1constants.LabelRole:  v1beta1constants.LabelAPIServer,
+					v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
+				},
+			},
+			Egress: []networkingv1.NetworkPolicyEgressRule{{
+				To: []networkingv1.NetworkPolicyPeer{{
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: appLabel(),
+					},
+				}},
+				Ports: []networkingv1.NetworkPolicyPort{{
+					Protocol: &protocol,
+					Port:     &port,
+				}},
+			}},
+			PolicyTypes: []networkingv1.PolicyType{
+				networkingv1.PolicyTypeEgress,
+			},
+		}
+		return nil
+	})
+	return err
+}
+
+func (r *resourceManager) emptyNetworkPolicy() *networkingv1.NetworkPolicy {
+	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: "allow-kube-apiserver-to-gardener-resource-manager", Namespace: r.namespace}}
+}
+
 // GetMutatingWebhookConfigurationWebhooks returns the MutatingWebhooks for the resourcemanager component for reuse
 // between the component and integration tests.
 func GetMutatingWebhookConfigurationWebhooks(namespaceSelector *metav1.LabelSelector, buildClientConfigFn func(string) admissionregistrationv1.WebhookClientConfig) []admissionregistrationv1.MutatingWebhook {
@@ -930,9 +974,10 @@ func (r *resourceManager) getDeploymentTemplateLabels() map[string]string {
 func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
 	if r.values.TargetDiffersFromSourceCluster {
 		return map[string]string{
-			v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
-			v1beta1constants.LabelNetworkPolicyToSeedAPIServer:  v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToDNS:              v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToShootAPIServer:   v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyFromShootAPIServer: v1beta1constants.LabelNetworkPolicyAllowed,
+			v1beta1constants.LabelNetworkPolicyToSeedAPIServer:    v1beta1constants.LabelNetworkPolicyAllowed,
 		}
 	}
 
