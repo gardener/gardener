@@ -516,6 +516,24 @@ var _ = Describe("dnsrecord", func() {
 			Expect(externalSecret).To(DeepDerivativeEqual(regularExternalSecret))
 		})
 
+		Context("When the Shoot name is 'gardener'", func() {
+			BeforeEach(func() {
+				shootName = "gardener"
+				seedNamespace = "shoot--gardener--bar"
+			})
+
+			It("should clean up the external orphaned secret, but keep the internal orphaned secret", func() {
+
+				Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
+				Expect(c.Get(ctx, client.ObjectKey{Name: orphanedExternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
+
+				internalSecret := &corev1.Secret{}
+				Expect(c.Get(ctx, client.ObjectKey{Name: orphanedInternalSecret.Name, Namespace: seedNamespace}, internalSecret)).To(Succeed())
+				Expect(internalSecret).To(DeepDerivativeEqual(orphanedInternalSecret))
+
+			})
+		})
+
 		It("should not fail the clean up of orphaned Secret when there are none", func() {
 			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: orphanedExternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
