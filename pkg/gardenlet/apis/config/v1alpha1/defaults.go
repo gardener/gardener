@@ -276,6 +276,14 @@ func SetDefaults_ShootControllerConfiguration(obj *ShootControllerConfiguration)
 	if obj.DNSEntryTTLSeconds == nil {
 		obj.DNSEntryTTLSeconds = pointer.Int64(120)
 	}
+
+	if obj.LeaseResyncSeconds == nil {
+		obj.LeaseResyncSeconds = pointer.Int(2)
+	}
+
+	if obj.LeaseDurationSeconds == nil {
+		obj.LeaseDurationSeconds = pointer.Int32(2)
+	}
 }
 
 // SetDefaults_ShootCareControllerConfiguration sets defaults for the shoot care controller.

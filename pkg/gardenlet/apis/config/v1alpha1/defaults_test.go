@@ -200,6 +200,8 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ReconcileInMaintenanceOnly).To(PointTo(Equal(false)))
 			Expect(obj.RetryDuration).To(PointTo(Equal(metav1.Duration{Duration: 12 * time.Hour})))
 			Expect(obj.DNSEntryTTLSeconds).To(PointTo(Equal(int64(120))))
+			Expect(obj.LeaseResyncSeconds).To(PointTo(Equal(2)))
+			Expect(obj.LeaseDurationSeconds).To(PointTo(Equal(int32(2))))
 		})
 	})
 

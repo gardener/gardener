@@ -277,6 +277,13 @@ type ShootControllerConfiguration struct {
 	// Default: 120s
 	// +optional
 	DNSEntryTTLSeconds *int64 `json:"dnsEntryTTLSeconds,omitempty"`
+
+	//adding the below line for my next task
+	// LeaseDurationSeconds defines how long the lease is valid (used for Lease.spec.leaseDurationSeconds).
+	LeaseDurationSeconds *int32 `json:"leaseDurationSeconds,omitempty" protobuf:"varint,2,opt,name=leaseDurationSeconds"`
+
+	// LeaseResyncSeconds defines how often (in seconds) the seed lease is renewed.
+	LeaseResyncSeconds *int `json:"leaseResyncSeconds,omitempty"`
 }
 
 // ShootCareControllerConfiguration defines the configuration of the ShootCare
