@@ -463,7 +463,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				waitFor := 5 * time.Minute
 
-				if v, ok := botanist.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationShootCleanupInfrastructureResourceGracePeriodSeconds]; ok {
+				if v, ok := botanist.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationShootInfrastructureCleanupWaitPeriodSeconds]; ok {
 					seconds, err := strconv.Atoi(v)
 					if err != nil {
 						return err

@@ -24,14 +24,14 @@ It is possible to override the finalization grace periods via annotations on the
 ⚠️ If `"0"` is provided then all resources are finalized immediately without waiting for any graceful deletion.
 Please be aware that this might lead to orphaned infrastructure artefacts.
 
-## Infrastructure Cleanup Grace Period
+## Infrastructure Cleanup Wait Period
 
 After all above cleanup steps have been performed and the `Infrastructure` extension resource has been deleted the gardenlet waits for a certain duration to allow controllers to properly cleanup infrastructure resources.
 
 By default, this duration is set to `5m`. Only after this time has passed the shoot deletion flow continues with the entire tear-down of the remaining control plane components (including `kube-apiserver`s, etc.).
 
-It is also possible to override this grace period via an annotations on the `Shoot`:
+It is also possible to override this wait period via an annotations on the `Shoot`:
 
-- `shoot.gardener.cloud/cleanup-infrastructure-resources-grace-period-seconds`
+- `shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds`
 
-> ℹ️️ All provided grace period values larger than the above mentioned defaults are ignored.
+> ℹ️️ All provided period values larger than the above mentioned defaults are ignored.
