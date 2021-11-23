@@ -629,7 +629,6 @@ data:
 
 {{- if .Values.reversedVPN.enabled }}
     - job_name: reversed-vpn-envoy-side-car
-      honor_labels: false
       kubernetes_sd_configs:
       - role: service
         namespaces:
