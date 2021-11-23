@@ -1055,7 +1055,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 								Allowed: false,
 								Result: &metav1.Status{
 									Code:    int32(http.StatusForbidden),
-									Message: "can only create CSRs for seed clusters",
+									Message: "can only create CSRs for seed clusters: key usages are not set to [key encipherment digital signature client auth]",
 								},
 							},
 						}))
@@ -1222,7 +1222,7 @@ yO57qEcJqG1cB7iSchFuCSTuDBbZlN0fXgn4YjiWZyb4l3BDp3rm4iJImA==
 								Allowed: false,
 								Result: &metav1.Status{
 									Code:    int32(http.StatusForbidden),
-									Message: "can only create CSRs for seed clusters",
+									Message: "can only create CSRs for seed clusters: key usages are not set to [key encipherment digital signature client auth]",
 								},
 							},
 						}))

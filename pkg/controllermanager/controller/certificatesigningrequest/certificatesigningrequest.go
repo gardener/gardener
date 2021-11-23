@@ -20,18 +20,24 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/logger"
-
+	"github.com/go-logr/logr"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	certificatesv1beta1 "k8s.io/api/certificates/v1beta1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	ctrlruntimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	"github.com/gardener/gardener/pkg/controllerutils"
+)
+
+const (
+	// ControllerName is the name of this controller.
+	ControllerName = "csr-autoapprove"
 )
 
 // Controller controls CertificateSigningRequests.
@@ -39,6 +45,7 @@ type Controller struct {
 	reconciler     reconcile.Reconciler
 	hasSyncedFuncs []cache.InformerSynced
 
+	log                    logr.Logger
 	csrQueue               workqueue.RateLimitingInterface
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -47,13 +54,9 @@ type Controller struct {
 // NewCSRController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <kubeInformerFactory>, and a <recorder> for
 // event recording. It creates a new CSR controller.
-func NewCSRController(
-	ctx context.Context,
-	clientMap clientmap.ClientMap,
-) (
-	*Controller,
-	error,
-) {
+func NewCSRController(ctx context.Context, log logr.Logger, clientMap clientmap.ClientMap) (*Controller, error) {
+	log = log.WithName(ControllerName)
+
 	gardenClient, err := clientMap.GetClient(ctx, keys.ForGarden())
 	if err != nil {
 		return nil, err
@@ -79,9 +82,11 @@ func NewCSRController(
 	}
 
 	csrController := &Controller{
-		reconciler: NewCSRReconciler(logger.Logger, gardenClient, certificatesAPIVersion),
-		csrQueue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CertificateSigningRequest"),
-		workerCh:   make(chan int),
+		reconciler: NewCSRReconciler(gardenClient, certificatesAPIVersion),
+
+		log:      log,
+		csrQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "CertificateSigningRequest"),
+		workerCh: make(chan int),
 	}
 
 	csrInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -99,7 +104,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
-		logger.Logger.Error("Timed out waiting for caches to sync")
+		c.log.Error(wait.ErrWaitTimeout, "timed out waiting for caches to sync")
 		return
 	}
 
@@ -107,14 +112,13 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	go func() {
 		for res := range c.workerCh {
 			c.numberOfRunningWorkers += res
-			logger.Logger.Debugf("Current number of running CertificateSigningRequest workers is %d", c.numberOfRunningWorkers)
 		}
 	}()
 
-	logger.Logger.Info("CertificateSigningRequest controller initialized.")
+	c.log.Info("CertificateSigningRequest controller initialized")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.csrQueue, "CertificateSigningRequest", c.reconciler, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.csrQueue, "CertificateSigningRequest", c.reconciler, &waitGroup, c.workerCh, controllerutils.WithLogger(c.log))
 	}
 
 	// Shutdown handling
@@ -123,10 +127,10 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.csrQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Debug("No running CertificateSigningRequest worker and no items left in the queues. Terminated CertificateSigningRequest controller...")
+			c.log.V(1).Info("No running CertificateSigningRequest worker and no items left in the queues. Terminating CertificateSigningRequest controller...")
 			break
 		}
-		logger.Logger.Debugf("Waiting for %d CertificateSigningRequest worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.csrQueue.Len())
+		c.log.V(1).Info("Waiting for CertificateSigningRequest workers to finish...", "numberOfRunningWorkers", c.numberOfRunningWorkers, "queueLength", c.csrQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 
