@@ -15,8 +15,11 @@
 package validation
 
 import (
+	"fmt"
+
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
+	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -87,6 +90,11 @@ func ValidateWorkerPools(pools []extensionsv1alpha1.WorkerPool, fldPath *field.P
 
 		if pool.UserData == nil {
 			allErrs = append(allErrs, field.Required(idxPath.Child("userData"), "field is required"))
+		}
+
+		for resourceName, value := range pool.NodeTemplate.Capacity {
+			path := fmt.Sprintf("capacity[\"%s\"]", resourceName)
+			allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue(string(resourceName), value, idxPath.Child("nodeTemplate", path))...)
 		}
 	}
 

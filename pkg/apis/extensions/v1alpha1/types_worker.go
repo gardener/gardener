@@ -147,6 +147,15 @@ type WorkerPool struct {
 	// KubernetesVersion is the kubernetes version in this worker pool
 	// +optional
 	KubernetesVersion *string `json:"kubernetesVersion,omitempty"`
+
+	// NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate nodeTemplate during scaling a nodeGroup from zero
+	NodeTemplate NodeTemplate `json:"nodeTemplate"`
+}
+
+// NodeTemplate contains info about resources like cpu,gpu,memory of the node
+type NodeTemplate struct {
+	//Capacity represents the total resources of the node
+	Capacity corev1.ResourceList `json:"capacity"`
 }
 
 // MachineImage contains logical information about the name and the version of the machie image that

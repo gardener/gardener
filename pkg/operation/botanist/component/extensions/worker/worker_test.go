@@ -33,13 +33,14 @@ import (
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/test"
 	. "github.com/gardener/gardener/pkg/utils/test/matchers"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/Masterminds/semver"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -107,6 +108,37 @@ var _ = Describe("Worker", func() {
 		worker2MachineImageVersion       = "worker2machineimagev1"
 		worker2UserData                  = []byte("bootstrap-me-now")
 
+		cloudProfileMachineTypes = []gardencorev1beta1.MachineType{
+			{
+				Name:   worker1MachineType,
+				CPU:    resource.MustParse("4"),
+				GPU:    resource.MustParse("1"),
+				Memory: resource.MustParse("256Gi"),
+			},
+			{
+				Name:   worker2MachineType,
+				CPU:    resource.MustParse("16"),
+				GPU:    resource.MustParse("0"),
+				Memory: resource.MustParse("512Gi"),
+			},
+		}
+
+		workerPool1NodeTemplate = &extensionsv1alpha1.NodeTemplate{
+			Capacity: corev1.ResourceList{
+				"cpu":    cloudProfileMachineTypes[0].CPU,
+				"gpu":    cloudProfileMachineTypes[0].GPU,
+				"memory": cloudProfileMachineTypes[0].Memory,
+			},
+		}
+
+		workerPool2NodeTemplate = &extensionsv1alpha1.NodeTemplate{
+			Capacity: corev1.ResourceList{
+				"cpu":    cloudProfileMachineTypes[1].CPU,
+				"gpu":    cloudProfileMachineTypes[1].GPU,
+				"memory": cloudProfileMachineTypes[1].Memory,
+			},
+		}
+
 		w, empty *extensionsv1alpha1.Worker
 		wSpec    extensionsv1alpha1.WorkerSpec
 
@@ -129,6 +161,7 @@ var _ = Describe("Worker", func() {
 			Type:                         extensionType,
 			Region:                       region,
 			KubernetesVersion:            kubernetesVersion,
+			CloudProfileMachineTypes:     cloudProfileMachineTypes,
 			SSHPublicKey:                 sshPublicKey,
 			InfrastructureProviderStatus: infrastructureProviderStatus,
 			WorkerNameToOperatingSystemConfigsMap: map[string]*operatingsystemconfig.OperatingSystemConfigs{
@@ -268,6 +301,7 @@ var _ = Describe("Worker", func() {
 					KubernetesVersion:                pointer.String(kubernetesVersion.String()),
 					Zones:                            []string{worker1Zone1, worker1Zone2},
 					MachineControllerManagerSettings: worker1MCMSettings,
+					NodeTemplate:                     *workerPool1NodeTemplate,
 				},
 				{
 					Name:           worker2Name,
@@ -288,6 +322,7 @@ var _ = Describe("Worker", func() {
 					},
 					KubernetesVersion: &workerKubernetesVersion,
 					UserData:          worker2UserData,
+					NodeTemplate:      *workerPool2NodeTemplate,
 				},
 			},
 		}
@@ -308,6 +343,7 @@ var _ = Describe("Worker", func() {
 			Expect(defaultDepWaiter.Deploy(ctx)).To(Succeed())
 
 			obj := &extensionsv1alpha1.Worker{}
+
 			err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, obj)
 			Expect(err).NotTo(HaveOccurred())
 

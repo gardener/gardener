@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -88,6 +89,14 @@ var _ = Describe("Worker validation tests", func() {
 
 			workerCopy.Spec.Pools[0] = extensionsv1alpha1.WorkerPool{}
 
+			workerCopy.Spec.Pools[0].NodeTemplate = extensionsv1alpha1.NodeTemplate{
+				Capacity: corev1.ResourceList{
+					"cpu":    resource.MustParse("-1"),
+					"gpu":    resource.MustParse("1"),
+					"memory": resource.MustParse("8Gi"),
+				},
+			}
+
 			errorList := ValidateWorker(workerCopy)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
@@ -105,6 +114,9 @@ var _ = Describe("Worker validation tests", func() {
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.pools[0].userData"),
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.pools[0].nodeTemplate.capacity[\"cpu\"]"),
 			}))))
 		})
 
