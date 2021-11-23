@@ -219,8 +219,8 @@ github.com/gardener/etcd-druid v0.1.12/go.mod h1:yZrUQY9clD8/ZXK+MmEq8OS1TaKJeip
 github.com/gardener/etcd-druid v0.1.15/go.mod h1:BHXG8N04Dl4On7Ie6cErwmpvzncNrmeb+HO7Sqrhf+A=
 github.com/gardener/etcd-druid v0.3.0/go.mod h1:uxZjZ57gIgpX554vGp495g2i8DByoS3OkVtiqsxtbwk=
 github.com/gardener/etcd-druid v0.5.0/go.mod h1:Ca2ZM9dyMdZI6k5RW4wu8CG8q5cNeF/HSE2P+hut0+g=
-github.com/gardener/etcd-druid v0.6.1-0.20211022081522-071746e9d0bd h1:u/Y/3mlnrU9zMf2Z29AfRki+PjJlbADmhUYX+sxdb5M=
-github.com/gardener/etcd-druid v0.6.1-0.20211022081522-071746e9d0bd/go.mod h1:BukSWtT9sxjCa3H4q2biJMIo52o+57MuBBifzzZkhPo=
+github.com/gardener/etcd-druid v0.7.0 h1:l1cH4VzaVbG1PSt+VTyQuzHFwworMQHK+5SXUS+7Mp8=
+github.com/gardener/etcd-druid v0.7.0/go.mod h1:mxKujGcT1iduAa9bos1LWMEJUIOlOL/TegicbsiH2Vk=
 github.com/gardener/external-dns-management v0.7.3/go.mod h1:Y3om11E865x4aQ7cmcHjknb8RMgCO153huRb/SvP+9o=
 github.com/gardener/external-dns-management v0.7.7/go.mod h1:egCe/FPOsUbXA4WV0ne3h7nAD/nLT09hNt/FQQXK+ec=
 github.com/gardener/external-dns-management v0.7.18 h1:15uIyFfZSbR8fivnXvqb1Dvv4QqzfNYxEFUQ9K+mpsE=

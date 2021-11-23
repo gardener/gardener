@@ -15,11 +15,16 @@
 package backupentry
 
 import (
+	"fmt"
 	"strings"
 )
 
+// SourcePrefix is the prefix for names of resources related to source backupentries when copying backups.
+const SourcePrefix = "source"
+
 // ExtractShootDetailsFromBackupEntryName returns Shoot resource technicalID its UID from provided <backupEntryName>.
 func ExtractShootDetailsFromBackupEntryName(backupEntryName string) (shootTechnicalID, shootUID string) {
+	backupEntryName = strings.TrimPrefix(backupEntryName, fmt.Sprintf("%s-", SourcePrefix))
 	tokens := strings.Split(backupEntryName, "--")
 	shootUID = tokens[len(tokens)-1]
 	shootTechnicalID = strings.TrimSuffix(backupEntryName, "--"+shootUID)

@@ -13,7 +13,7 @@ require (
 	github.com/frankban/quicktest v1.13.1 // indirect
 	github.com/gardener/component-spec/bindings-go v0.0.33
 	github.com/gardener/dependency-watchdog v0.6.1-0.20210623112844-96f73d5dc311
-	github.com/gardener/etcd-druid v0.6.1-0.20211022081522-071746e9d0bd
+	github.com/gardener/etcd-druid v0.7.0
 	github.com/gardener/external-dns-management v0.7.18
 	github.com/gardener/hvpa-controller v0.3.1
 	github.com/gardener/landscaper/apis v0.7.0

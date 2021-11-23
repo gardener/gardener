@@ -109,6 +109,8 @@ type Interface interface {
 	SetBackupConfig(config *BackupConfig)
 	// SetHVPAConfig sets the HVPA configuration.
 	SetHVPAConfig(config *HVPAConfig)
+	// Get retrieves the Etcd resource
+	Get(context.Context) (*druidv1alpha1.Etcd, error)
 }
 
 // New creates a new instance of DeployWaiter for the Etcd.
@@ -584,6 +586,14 @@ func (e *etcd) ServiceDNSNames() []string {
 		[]string{fmt.Sprintf("etcd-%s-local", e.role)},
 		kutil.DNSNamesForService(fmt.Sprintf("etcd-%s-client", e.role), e.namespace)...,
 	)
+}
+
+// Get retrieves the Etcd resource
+func (e *etcd) Get(ctx context.Context) (*druidv1alpha1.Etcd, error) {
+	if err := e.client.Get(ctx, client.ObjectKeyFromObject(e.etcd), e.etcd); err != nil {
+		return nil, err
+	}
+	return e.etcd, nil
 }
 
 func (e *etcd) SetSecrets(secrets Secrets)                 { e.secrets = secrets }

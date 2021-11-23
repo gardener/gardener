@@ -56,8 +56,6 @@ func ValidateBackupEntrySpec(spec *core.BackupEntrySpec, fldPath *field.Path) fi
 func ValidateBackupEntrySpecUpdate(newSpec, oldSpec *core.BackupEntrySpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.BucketName, oldSpec.BucketName, fldPath.Child("bucketName"))...)
-
 	return allErrs
 }
 

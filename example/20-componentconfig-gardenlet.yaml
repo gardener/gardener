@@ -104,6 +104,7 @@ featureGates:
   ReversedVPN: false
   UseDNSRecords: true
   DenyInvalidExtensionResources: true
+  CopyEtcdBackupsDuringControlPlaneMigration: false
 # seedConfig:
 #   metadata:
 #     name: my-seed

@@ -114,4 +114,10 @@ const (
 	// owner: @rfranzke @majst01 @mwennrich
 	// alpha: v1.35.0
 	WorkerPoolKubernetesVersion featuregate.Feature = "WorkerPoolKubernetesVersion"
+
+	// CopyEtcdBackupsDuringControlPlaneMigration enables the copy of etcd backups from the object store of the source seed
+	// to the object store of the destination seed during control plane migration.
+	// owner: @plkokanov
+	// alpha: v1.37.0
+	CopyEtcdBackupsDuringControlPlaneMigration featuregate.Feature = "CopyEtcdBackupsDuringControlPlaneMigration"
 )

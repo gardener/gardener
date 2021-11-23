@@ -105,10 +105,11 @@ github.com/gardener/component-spec/bindings-go/utils/selector
 ## explicit
 github.com/gardener/dependency-watchdog/pkg/restarter/api
 github.com/gardener/dependency-watchdog/pkg/scaler/api
-# github.com/gardener/etcd-druid v0.6.1-0.20211022081522-071746e9d0bd
+# github.com/gardener/etcd-druid v0.7.0
 ## explicit
 github.com/gardener/etcd-druid/api/v1alpha1
 github.com/gardener/etcd-druid/api/validation
+github.com/gardener/etcd-druid/pkg/utils
 # github.com/gardener/external-dns-management v0.7.18
 ## explicit
 github.com/gardener/external-dns-management/pkg/apis/dns

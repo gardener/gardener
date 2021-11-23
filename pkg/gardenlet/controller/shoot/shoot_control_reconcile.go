@@ -38,9 +38,10 @@ import (
 func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	// We create the botanists (which will do the actual work).
 	var (
-		botanist        *botanistpkg.Botanist
-		tasksWithErrors []string
-		err             error
+		botanist                *botanistpkg.Botanist
+		tasksWithErrors         []string
+		isCopyOfBackupsRequired bool
+		err                     error
 	)
 
 	for _, lastError := range o.Shoot.GetInfo().Status.LastErrors {
@@ -68,6 +69,10 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		}),
 		errors.ToExecute("Check required extensions", func() error {
 			return botanist.WaitUntilRequiredExtensionsReady(ctx)
+		}),
+		errors.ToExecute("Check if copy of backups is required", func() error {
+			isCopyOfBackupsRequired, err = botanist.IsCopyOfBackupsRequired(ctx)
+			return err
 		}),
 	)
 
@@ -211,20 +216,50 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 			}).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(!staticNodesCIDR),
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
 		})
+		deploySourceBackupEntry = g.Add(flow.Task{
+			Name:         "Deploying source backup entry",
+			Fn:           flow.TaskFn(botanist.DeploySourceBackupEntry).DoIf(isCopyOfBackupsRequired),
+			Dependencies: flow.NewTaskIDs(deployOwnerDomainDNSRecord),
+		})
+		waitUntilSourceBackupEntryInGardenReconciled = g.Add(flow.Task{
+			Name:         "Waiting until the source backup entry has been reconciled",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.SourceBackupEntry.Wait).DoIf(isCopyOfBackupsRequired),
+			Dependencies: flow.NewTaskIDs(deploySourceBackupEntry),
+		})
 		deployBackupEntryInGarden = g.Add(flow.Task{
 			Name:         "Deploying backup entry",
 			Fn:           flow.TaskFn(botanist.DeployBackupEntry).DoIf(allowBackup),
-			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployOwnerDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(ensureShootStateExists, deployOwnerDomainDNSRecord, waitUntilSourceBackupEntryInGardenReconciled),
 		})
 		waitUntilBackupEntryInGardenReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the backup entry has been reconciled",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.BackupEntry.Wait).DoIf(allowBackup),
 			Dependencies: flow.NewTaskIDs(deployBackupEntryInGarden),
 		})
+		copyEtcdBackups = g.Add(flow.Task{
+			Name:         "Copying etcd backups to new seed's backup bucket",
+			Fn:           flow.TaskFn(botanist.DeployEtcdCopyBackupsTask).DoIf(isCopyOfBackupsRequired),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled, waitUntilSourceBackupEntryInGardenReconciled),
+		})
+		waitUntilEtcdBackupsCopied = g.Add(flow.Task{
+			Name:         "Waiting until etcd backups are copied",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.Wait).DoIf(isCopyOfBackupsRequired),
+			Dependencies: flow.NewTaskIDs(copyEtcdBackups),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying copy etcd backups task resource",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.ControlPlane.EtcdCopyBackupsTask.Destroy).DoIf(isCopyOfBackupsRequired),
+			Dependencies: flow.NewTaskIDs(waitUntilEtcdBackupsCopied),
+		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
 			Fn:           flow.TaskFn(botanist.DeployEtcd).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupEntryInGardenReconciled, waitUntilEtcdBackupsCopied),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Destroying source backup entry",
+			Fn:           flow.TaskFn(botanist.Shoot.Components.SourceBackupEntry.Destroy).DoIf(allowBackup),
+			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
