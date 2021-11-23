@@ -1,28 +1,15 @@
+# TODO(shafeeqes): Delete this Helm chart in a future version.
 ---
 apiVersion: {{ template "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: system:gardener.cloud:vpn-seed
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - services
-  resourceNames:
-  - vpn-shoot
-  verbs:
-  - get
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 ---
 apiVersion: {{ template "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: system:gardener.cloud:vpn-seed
   annotations:
-    resources.gardener.cloud/delete-on-invalid-update: "true"
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:gardener.cloud:vpn-seed
-subjects:
-- kind: User
-  name: vpn-seed
+    resources.gardener.cloud/mode: Ignore

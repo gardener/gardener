@@ -1,14 +1,8 @@
+# TODO(shafeeqes): Delete this Helm chart in a future version.
+---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: gardener.cloud:psp:kube-system:vpn-shoot
-rules:
-- apiGroups:
-  - policy
-  - extensions
-  resourceNames:
-  - gardener.kube-system.vpn-shoot
-  resources:
-  - podsecuritypolicies
-  verbs:
-  - use
+  annotations:
+    resources.gardener.cloud/mode: Ignore

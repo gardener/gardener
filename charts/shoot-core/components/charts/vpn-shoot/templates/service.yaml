@@ -1,3 +1,5 @@
+# TODO(shafeeqes): Delete this Helm chart in a future version.
+---
 {{- if not .Values.reversedVPN.enabled }}
 ---
 apiVersion: v1
@@ -5,15 +7,6 @@ kind: Service
 metadata:
   name: vpn-shoot
   namespace: kube-system
-  labels:
-    app: vpn-shoot
-spec:
-  selector:
-    app: vpn-shoot
-  type: LoadBalancer
-  ports:
-  - name: openvpn
-    protocol: TCP
-    port: 4314
-    targetPort: 1194
+  annotations:
+    resources.gardener.cloud/mode: Ignore
 {{- end }}
