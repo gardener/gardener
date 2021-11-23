@@ -18,16 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
-	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
-	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
-	"github.com/gardener/gardener/pkg/logger"
-	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
-	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
+	"github.com/go-logr/logr"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -40,6 +31,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions/core/v1beta1"
+	fakeclientmap "github.com/gardener/gardener/pkg/client/kubernetes/clientmap/fake"
+	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
+	fakeclientset "github.com/gardener/gardener/pkg/client/kubernetes/fake"
+	mockcache "github.com/gardener/gardener/pkg/mock/controller-runtime/cache"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 )
 
 var _ = Describe("Controller", func() {
@@ -76,7 +76,7 @@ var _ = Describe("Controller", func() {
 			)
 
 			var err error
-			controller, err = NewCloudProfileController(ctx, fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(), fakeclientset.NewClientSetBuilder().WithCache(clientCache).Build()).Build(), &record.FakeRecorder{}, logger.NewNopLogger())
+			controller, err = NewCloudProfileController(ctx, logr.Discard(), fakeclientmap.NewClientMapBuilder().WithClientSetForKey(keys.ForGarden(), fakeclientset.NewClientSetBuilder().WithCache(clientCache).Build()).Build(), &record.FakeRecorder{})
 			Expect(err).To(Not(HaveOccurred()))
 
 			cloudProfileName = "test-cloudprofile"
@@ -156,7 +156,7 @@ var _ = Describe("Controller", func() {
 		BeforeEach(func() {
 			cloudProfileName = "test-cloudprofile"
 			fakeErr = fmt.Errorf("fake err")
-			reconciler = NewCloudProfileReconciler(logger.NewNopLogger(), c, &record.FakeRecorder{})
+			reconciler = NewCloudProfileReconciler(c, &record.FakeRecorder{})
 			cloudProfile = &gardencorev1beta1.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            cloudProfileName,
