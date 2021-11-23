@@ -31,9 +31,13 @@ var _ = Describe("Shoot Utils", func() {
 			},
 			Entry("healthy - healthy", StatusHealthy, StatusHealthy, StatusHealthy),
 			Entry("healthy - progressing", StatusHealthy, StatusProgressing, StatusProgressing),
+			Entry("healthy - unknown", StatusHealthy, StatusUnknown, StatusUnknown),
 			Entry("healthy - unhealthy", StatusHealthy, StatusUnhealthy, StatusUnhealthy),
 			Entry("progressing - progressing", StatusProgressing, StatusProgressing, StatusProgressing),
+			Entry("progressing - unknown", StatusProgressing, StatusUnknown, StatusUnknown),
 			Entry("progressing - unhealthy", StatusProgressing, StatusUnhealthy, StatusUnhealthy),
+			Entry("unknown - unknown", StatusUnknown, StatusUnknown, StatusUnknown),
+			Entry("unknown - unhealthy", StatusUnknown, StatusUnhealthy, StatusUnhealthy),
 			Entry("unhealthy - unhealthy", StatusUnhealthy, StatusUnhealthy, StatusUnhealthy),
 		)
 
@@ -43,7 +47,7 @@ var _ = Describe("Shoot Utils", func() {
 			},
 			Entry("ConditionTrue", gardencorev1beta1.ConditionTrue, StatusHealthy),
 			Entry("ConditionProgressing", gardencorev1beta1.ConditionProgressing, StatusProgressing),
-			Entry("ConditionUnknown", gardencorev1beta1.ConditionUnknown, StatusUnhealthy),
+			Entry("ConditionUnknown", gardencorev1beta1.ConditionUnknown, StatusUnknown),
 			Entry("ConditionFalse", gardencorev1beta1.ConditionFalse, StatusUnhealthy),
 		)
 
@@ -63,7 +67,7 @@ var _ = Describe("Shoot Utils", func() {
 				{Status: gardencorev1beta1.ConditionTrue},
 				{Status: gardencorev1beta1.ConditionProgressing},
 				{Status: gardencorev1beta1.ConditionUnknown},
-			}, StatusUnhealthy),
+			}, StatusUnknown),
 			Entry("false condition", []gardencorev1beta1.Condition{
 				{Status: gardencorev1beta1.ConditionTrue},
 				{Status: gardencorev1beta1.ConditionProgressing},
@@ -104,6 +108,8 @@ var _ = Describe("Shoot Utils", func() {
 				&gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateError}, nil, nil, StatusUnhealthy),
 			Entry("lastOperation.State is LastOperationStateSucceeded with healthy conditions",
 				&gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}, nil, nil, StatusHealthy),
+			Entry("lastOperation.State is LastOperationStateSucceeded with unknown conditions",
+				&gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}, nil, []gardencorev1beta1.Condition{{Status: gardencorev1beta1.ConditionUnknown}}, StatusUnknown),
 			Entry("lastOperation.State is LastOperationStateSucceeded with unhealthy conditions",
 				&gardencorev1beta1.LastOperation{State: gardencorev1beta1.LastOperationStateSucceeded}, nil, []gardencorev1beta1.Condition{{Status: gardencorev1beta1.ConditionFalse}}, StatusUnhealthy),
 			Entry("lastOperation.Type is LastOperationTypeCreate and lastOperation.State is LastOperationStateSucceeded with unhealthy conditions",

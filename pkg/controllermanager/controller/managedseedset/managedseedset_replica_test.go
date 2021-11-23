@@ -279,6 +279,8 @@ var _ = Describe("Replica", func() {
 			shoot(nil, "", "", operationshoot.StatusProgressing, false), operationshoot.StatusProgressing),
 		Entry("should return unhealthy",
 			shoot(nil, "", "", operationshoot.StatusUnhealthy, false), operationshoot.StatusUnhealthy),
+		Entry("should return unknown",
+			shoot(nil, "", "", operationshoot.StatusUnknown, false), operationshoot.StatusUnknown),
 	)
 
 	DescribeTable("#IsDeletable",
