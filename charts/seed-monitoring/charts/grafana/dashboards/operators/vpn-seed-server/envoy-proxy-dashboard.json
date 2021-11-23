@@ -46,7 +46,7 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
         "y": 1
       },
@@ -79,9 +79,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "reversed_vpn_envoy_cluster_upstream_cx_active{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
+          "expr": "envoy_cluster_upstream_cx_active{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}",
           "interval": "",
-          "legendFormat": "total active connections",
+          "legendFormat": "active connections",
           "refId": "A"
         }
       ],
@@ -89,7 +89,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Total active connections",
+      "title": "Active connections",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -106,11 +106,12 @@
       "yaxes": [
         {
           "$$hashKey": "object:119",
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -142,8 +143,105 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "hiddenSeries": false,
+      "id": 21,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.5.11",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "envoy_cluster_upstream_cx_connect_timeout{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}",
+          "interval": "",
+          "legendFormat": "connection timeouts",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Connection timeouts",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:717",
+          "decimals": 0,
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:718",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
         "y": 1
       },
       "hiddenSeries": false,
@@ -175,7 +273,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "reversed_vpn_envoy_cluster_upstream_cx_connect_fail{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
+          "expr": "envoy_cluster_upstream_cx_connect_fail{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}",
           "interval": "",
           "legendFormat": "failed connections",
           "refId": "A"
@@ -202,11 +300,12 @@
       "yaxes": [
         {
           "$$hashKey": "object:826",
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -243,102 +342,6 @@
         "y": 9
       },
       "hiddenSeries": false,
-      "id": 21,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.5.11",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "exemplar": true,
-          "expr": "reversed_vpn_envoy_cluster_upstream_cx_connect_timeout{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
-          "interval": "",
-          "legendFormat": "connection timeouts",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Connection timeouts",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:717",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:718",
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 9
-      },
-      "hiddenSeries": false,
       "id": 40,
       "legend": {
         "avg": false,
@@ -367,14 +370,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99,sum(rate(reversed_vpn_envoy_cluster_upstream_cx_connect_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99,sum(rate(envoy_cluster_upstream_cx_connect_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])) by (le))",
           "interval": "",
           "legendFormat": "99 quantil",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.95,sum(rate(reversed_vpn_envoy_cluster_upstream_cx_connect_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.95,sum(rate(envoy_cluster_upstream_cx_connect_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])) by (le))",
           "hide": false,
           "interval": "",
           "legendFormat": "95 quantil",
@@ -382,7 +385,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.90,sum(rate(reversed_vpn_envoy_cluster_upstream_cx_connect_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.90,sum(rate(envoy_cluster_upstream_cx_connect_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])) by (le))",
           "hide": false,
           "interval": "",
           "legendFormat": "90 quantil",
@@ -410,11 +413,12 @@
       "yaxes": [
         {
           "$$hashKey": "object:1719",
+          "decimals": null,
           "format": "ms",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -431,6 +435,76 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 43,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.11",
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (le)(rate(envoy_cluster_upstream_cx_connect_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval]))",
+          "format": "heatmap",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Connection establishment heatmap",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "upper",
+      "yBucketNumber": null,
+      "yBucketSize": null
     },
     {
       "aliasColors": {},
@@ -480,14 +554,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99,sum(rate(reversed_vpn_envoy_cluster_upstream_cx_length_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99,sum(rate(envoy_cluster_upstream_cx_length_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])) by (le))",
           "interval": "",
           "legendFormat": "99 quantil",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.95,sum(rate(reversed_vpn_envoy_cluster_upstream_cx_length_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.95,sum(rate(envoy_cluster_upstream_cx_length_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])) by (le))",
           "hide": false,
           "interval": "",
           "legendFormat": "95 quantil",
@@ -495,7 +569,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.90,sum(rate(reversed_vpn_envoy_cluster_upstream_cx_length_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.90,sum(rate(envoy_cluster_upstream_cx_length_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])) by (le))",
           "hide": false,
           "interval": "",
           "legendFormat": "90 quantil",
@@ -527,7 +601,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -546,6 +620,76 @@
       }
     },
     {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 44,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.11",
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (le)(rate(envoy_cluster_upstream_cx_length_ms_bucket{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval]))",
+          "format": "heatmap",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Upstream connection length heatmap",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "upper",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -561,8 +705,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 17
+        "x": 0,
+        "y": 25
       },
       "hiddenSeries": false,
       "id": 42,
@@ -593,14 +737,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.99,sum(rate(reversed_vpn_envoy_http_downstream_cx_length_ms_bucket{envoy_http_conn_manager_prefix=\"ingress_http\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.99,sum(rate(envoy_http_downstream_cx_length_ms_bucket{envoy_http_conn_manager_prefix=\"ingress_http\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])) by (le))",
           "interval": "",
           "legendFormat": "99 quantil",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.95,sum(rate(reversed_vpn_envoy_http_downstream_cx_length_ms_bucket{envoy_http_conn_manager_prefix=\"ingress_http\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.95,sum(rate(envoy_http_downstream_cx_length_ms_bucket{envoy_http_conn_manager_prefix=\"ingress_http\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])) by (le))",
           "hide": false,
           "interval": "",
           "legendFormat": "95 quantil",
@@ -608,7 +752,7 @@
         },
         {
           "exemplar": true,
-          "expr": "histogram_quantile(0.90,sum(rate(reversed_vpn_envoy_http_downstream_cx_length_ms_bucket{envoy_http_conn_manager_prefix=\"ingress_http\"}[$__rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.90,sum(rate(envoy_http_downstream_cx_length_ms_bucket{envoy_http_conn_manager_prefix=\"ingress_http\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])) by (le))",
           "hide": false,
           "interval": "",
           "legendFormat": "90 quantil",
@@ -640,7 +784,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -659,13 +803,83 @@
       }
     },
     {
+      "cards": {
+        "cardPadding": null,
+        "cardRound": null
+      },
+      "color": {
+        "cardColor": "#b4ff00",
+        "colorScale": "sqrt",
+        "colorScheme": "interpolateOranges",
+        "exponent": 0.5,
+        "mode": "spectrum"
+      },
+      "dataFormat": "tsbuckets",
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "heatmap": {},
+      "hideZeroBuckets": true,
+      "highlightCards": true,
+      "id": 45,
+      "legend": {
+        "show": true
+      },
+      "pluginVersion": "7.5.11",
+      "reverseYBuckets": false,
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "sum by (le)(rate(envoy_http_downstream_cx_length_ms_bucket{envoy_http_conn_manager_prefix=\"ingress_http\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval]))",
+          "format": "heatmap",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{le}}",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Donwstream connection length heatmap",
+      "tooltip": {
+        "show": true,
+        "showHistogram": true
+      },
+      "type": "heatmap",
+      "xAxis": {
+        "show": true
+      },
+      "xBucketNumber": null,
+      "xBucketSize": null,
+      "yAxis": {
+        "decimals": null,
+        "format": "ms",
+        "logBase": 1,
+        "max": null,
+        "min": null,
+        "show": true,
+        "splitFactor": null
+      },
+      "yBucketBound": "upper",
+      "yBucketNumber": null,
+      "yBucketSize": null
+    },
+    {
       "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 25
+        "y": 33
       },
       "id": 17,
       "panels": [],
@@ -688,7 +902,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 34
       },
       "hiddenSeries": false,
       "id": 9,
@@ -719,9 +933,9 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "irate(reversed_vpn_envoy_cluster_upstream_rq_total{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[2m])",
+          "expr": "rate(envoy_cluster_upstream_rq_total{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])",
           "interval": "",
-          "legendFormat": "total requests",
+          "legendFormat": "requests",
           "refId": "A"
         }
       ],
@@ -729,7 +943,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Total requests",
+      "title": "Requests",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -750,7 +964,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -784,7 +998,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 34
       },
       "hiddenSeries": false,
       "id": 24,
@@ -815,7 +1029,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "irate(reversed_vpn_envoy_cluster_upstream_rq_completed{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[2m])",
+          "expr": "rate(envoy_cluster_upstream_rq_completed{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "completed requests",
           "refId": "A"
@@ -846,7 +1060,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -880,7 +1094,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 34
+        "y": 42
       },
       "hiddenSeries": false,
       "id": 25,
@@ -911,7 +1125,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "reversed_vpn_envoy_cluster_upstream_rq_retry{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
+          "expr": "envoy_cluster_upstream_rq_retry{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}",
           "interval": "",
           "legendFormat": "request retries",
           "refId": "A"
@@ -947,11 +1161,12 @@
         },
         {
           "$$hashKey": "object:120",
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         }
       ],
@@ -976,7 +1191,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 34
+        "y": 42
       },
       "hiddenSeries": false,
       "id": 26,
@@ -1007,7 +1222,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "reversed_vpn_envoy_cluster_upstream_rq_retry_limit_exceeded{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
+          "expr": "envoy_cluster_upstream_rq_retry_limit_exceeded{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}",
           "interval": "",
           "legendFormat": "request retry limit exceeded",
           "refId": "A"
@@ -1043,11 +1258,12 @@
         },
         {
           "$$hashKey": "object:120",
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         }
       ],
@@ -1072,7 +1288,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 42
+        "y": 50
       },
       "hiddenSeries": false,
       "id": 27,
@@ -1103,7 +1319,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "reversed_vpn_envoy_cluster_upstream_rq_retry_overflow{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
+          "expr": "envoy_cluster_upstream_rq_retry_overflow{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}",
           "interval": "",
           "legendFormat": "request retry overflow",
           "refId": "A"
@@ -1139,11 +1355,12 @@
         },
         {
           "$$hashKey": "object:120",
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         }
       ],
@@ -1168,7 +1385,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 42
+        "y": 50
       },
       "hiddenSeries": false,
       "id": 28,
@@ -1199,14 +1416,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "reversed_vpn_envoy_cluster_upstream_rq_rx_reset{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
+          "expr": "envoy_cluster_upstream_rq_rx_reset{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}",
           "interval": "",
           "legendFormat": "remote resets",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "reversed_vpn_envoy_cluster_upstream_rq_tx_reset{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
+          "expr": "envoy_cluster_upstream_rq_tx_reset{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "local resets",
@@ -1234,11 +1451,12 @@
       "yaxes": [
         {
           "$$hashKey": "object:119",
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -1263,7 +1481,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 58
       },
       "id": 15,
       "panels": [],
@@ -1287,7 +1505,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 51
+        "y": 59
       },
       "hiddenSeries": false,
       "id": 11,
@@ -1318,14 +1536,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "irate(reversed_vpn_envoy_cluster_upstream_cx_rx_bytes_total{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[2m])",
+          "expr": "rate(envoy_cluster_upstream_cx_rx_bytes_total{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "in",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "irate(reversed_vpn_envoy_cluster_upstream_cx_tx_bytes_total{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[2m])",
+          "expr": "rate(envoy_cluster_upstream_cx_tx_bytes_total{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "out",
@@ -1392,7 +1610,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 51
+        "y": 59
       },
       "hiddenSeries": false,
       "id": 13,
@@ -1423,14 +1641,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "irate(reversed_vpn_envoy_http_downstream_cx_rx_bytes_total{envoy_http_conn_manager_prefix=\"ingress_http\"}[2m])",
+          "expr": "rate(envoy_http_downstream_cx_rx_bytes_total{envoy_http_conn_manager_prefix=\"ingress_http\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "in",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "irate(reversed_vpn_envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=\"ingress_http\"}[2m])",
+          "expr": "rate(envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=\"ingress_http\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])",
           "hide": false,
           "interval": "",
           "legendFormat": "out",
@@ -1487,7 +1705,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 67
       },
       "id": 6,
       "panels": [],
@@ -1511,7 +1729,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 60
+        "y": 68
       },
       "hiddenSeries": false,
       "id": 4,
@@ -1542,7 +1760,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(reversed_vpn_envoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\", envoy_response_code_class=\"4\"}[2m]))/ sum(rate(\nreversed_vpn_envoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[2m]))",
+          "expr": "sum(rate(envoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\", envoy_response_code_class=\"4\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval]))/ sum(rate(\nenvoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "4xx error rate",
           "refId": "A"
@@ -1608,7 +1826,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 60
+        "y": 68
       },
       "hiddenSeries": false,
       "id": 3,
@@ -1639,7 +1857,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(reversed_vpn_envoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\", envoy_response_code_class=\"5\"}[2m]))/ sum(rate(\nreversed_vpn_envoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[2m]))",
+          "expr": "sum(rate(envoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\", envoy_response_code_class=\"5\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval]))/ sum(rate(\nenvoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "5xx error rate",
           "refId": "A"
@@ -1705,7 +1923,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 69
+        "y": 77
       },
       "hiddenSeries": false,
       "id": 2,
@@ -1736,7 +1954,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(reversed_vpn_envoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\", envoy_response_code_class=\"2\"}[2m]))/ sum(rate(\nreversed_vpn_envoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[2m]))",
+          "expr": "sum(rate(envoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\", envoy_response_code_class=\"2\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval]))/ sum(rate(\nenvoy_cluster_external_upstream_rq_xx{envoy_cluster_name=\"dynamic_forward_proxy_cluster\",job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval]))",
           "interval": "",
           "legendFormat": "2xx successful response rate",
           "refId": "A"
@@ -1792,7 +2010,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 78
+        "y": 86
       },
       "id": 30,
       "panels": [],
@@ -1815,7 +2033,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 79
+        "y": 87
       },
       "hiddenSeries": false,
       "id": 32,
@@ -1846,7 +2064,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(reversed_vpn_envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_attempt{}[2m])",
+          "expr": "rate(envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_attempt{job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "dns query attempts",
           "refId": "A"
@@ -1911,7 +2129,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 79
+        "y": 87
       },
       "hiddenSeries": false,
       "id": 34,
@@ -1942,7 +2160,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(reversed_vpn_envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_failure{}[2m])",
+          "expr": "rate(envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_failure{job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "dns query failures",
           "refId": "A"
@@ -1982,7 +2200,7 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         }
       ],
@@ -2007,7 +2225,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 87
+        "y": 95
       },
       "hiddenSeries": false,
       "id": 33,
@@ -2038,7 +2256,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "rate(reversed_vpn_envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_success{}[2m])",
+          "expr": "rate(envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_success{job=\"reversed-vpn-envoy-side-car\"}[$__rate_interval])",
           "interval": "",
           "legendFormat": "successful dns queries",
           "refId": "A"
@@ -2094,7 +2312,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 95
+        "y": 103
       },
       "id": 36,
       "panels": [],
@@ -2117,7 +2335,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 96
+        "y": 104
       },
       "hiddenSeries": false,
       "id": 38,
@@ -2148,14 +2366,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "reversed_vpn_envoy_server_memory_allocated{}",
+          "expr": "envoy_server_memory_allocated{job=\"reversed-vpn-envoy-side-car\"}",
           "interval": "",
           "legendFormat": "memory allocated",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "reversed_vpn_envoy_server_memory_heap_size{}",
+          "expr": "envoy_server_memory_heap_size{job=\"reversed-vpn-envoy-side-car\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "memory heap size",
@@ -2163,7 +2381,7 @@
         },
         {
           "exemplar": true,
-          "expr": "reversed_vpn_envoy_server_memory_physical_size{}",
+          "expr": "envoy_server_memory_physical_size{job=\"reversed-vpn-envoy-side-car\"}",
           "hide": false,
           "interval": "",
           "legendFormat": "physical memory size",
@@ -2217,7 +2435,11 @@
   "refresh": "1m",
   "schemaVersion": 27,
   "style": "dark",
-  "tags": [],
+  "tags": [
+    "network",
+    "controlplane",
+    "seed"
+  ],
   "templating": {
     "list": []
   },
