@@ -19,11 +19,14 @@ import (
 	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/resourcemanager"
 	"github.com/gardener/gardener/pkg/operation/botanist/matchers"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/version"
 
 	"github.com/Masterminds/semver"
@@ -33,7 +36,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -181,7 +186,12 @@ func getValidatingWebhookConfigurations(ctx context.Context, client client.Clien
 	return validatingWebhookConfigs.Items, nil
 }
 
-func getMutatingWebhookConfigurations(ctx context.Context, client client.Client, k8sVersion *semver.Version) ([]admissionregistrationv1.MutatingWebhookConfiguration, error) {
+var (
+	notResourceManager              = utils.MustNewRequirement(v1beta1constants.LabelApp, selection.NotIn, resourcemanager.LabelValue)
+	labelSelectorNotResourceManager = labels.NewSelector().Add(notResourceManager)
+)
+
+func getMutatingWebhookConfigurations(ctx context.Context, c client.Client, k8sVersion *semver.Version) ([]admissionregistrationv1.MutatingWebhookConfiguration, error) {
 	if version.ConstraintK8sLessEqual115.Check(k8sVersion) {
 		l := &unstructured.UnstructuredList{
 			Object: map[string]interface{}{
@@ -190,7 +200,7 @@ func getMutatingWebhookConfigurations(ctx context.Context, client client.Client,
 			},
 		}
 
-		if err := client.List(ctx, l); err != nil && !meta.IsNoMatchError(err) {
+		if err := c.List(ctx, l, client.MatchingLabelsSelector{Selector: labelSelectorNotResourceManager}); err != nil && !meta.IsNoMatchError(err) {
 			return nil, err
 		}
 
@@ -215,7 +225,7 @@ func getMutatingWebhookConfigurations(ctx context.Context, client client.Client,
 	}
 
 	mutatingWebhookConfigs := &admissionregistrationv1.MutatingWebhookConfigurationList{}
-	if err := client.List(ctx, mutatingWebhookConfigs); err != nil {
+	if err := c.List(ctx, mutatingWebhookConfigs, client.MatchingLabelsSelector{Selector: labelSelectorNotResourceManager}); err != nil {
 		return nil, err
 	}
 	return mutatingWebhookConfigs.Items, nil

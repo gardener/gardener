@@ -61,6 +61,8 @@ const (
 	SecretName = "gardener-resource-manager"
 	// SecretNameServer is the name of the gardener-resource-manager server certificate secret.
 	SecretNameServer = "gardener-resource-manager-server"
+	// LabelValue is a constant for the value of the 'app' label on Kubernetes resources.
+	LabelValue = "gardener-resource-manager"
 
 	// UserName is the name that should be used for the secret that the gardener resource manager uses to
 	// authenticate itself with the kube-apiserver (e.g., the common name in its client certificate).
@@ -986,7 +988,7 @@ func (r *resourceManager) getNetworkPolicyLabels() map[string]string {
 
 func appLabel() map[string]string {
 	return map[string]string{
-		v1beta1constants.LabelApp: "gardener-resource-manager",
+		v1beta1constants.LabelApp: LabelValue,
 	}
 }
 
