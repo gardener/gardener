@@ -55,7 +55,7 @@ func NewRegistry(scheme *runtime.Scheme, codec serializer.CodecFactory, serializ
 	}
 }
 
-// Add adds the given object the registry. It computes a filename based on its type, namespace, and name. It serializes
+// Add adds the given object to the registry. It computes a filename based on its type, namespace, and name. It serializes
 // the object to YAML and stores both representations (object and serialization) in the registry.
 func (r *Registry) Add(obj client.Object) error {
 	if obj == nil || reflect.ValueOf(obj) == reflect.Zero(reflect.TypeOf(obj)) {

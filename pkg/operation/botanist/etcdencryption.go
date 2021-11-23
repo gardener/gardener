@@ -78,7 +78,7 @@ func (b *Botanist) ApplyEncryptionConfiguration(ctx context.Context) error {
 		conf   *apiserverconfigv1.EncryptionConfiguration
 	)
 	if b.Shoot.ETCDEncryption == nil {
-		return errors.New("Could not find etcd encryption configuration in ShootState")
+		return errors.New("could not find etcd encryption configuration in ShootState")
 	}
 
 	conf = etcdencryption.NewEncryptionConfiguration(b.Shoot.ETCDEncryption)
