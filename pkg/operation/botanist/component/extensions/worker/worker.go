@@ -75,8 +75,8 @@ type Values struct {
 	Workers []gardencorev1beta1.Worker
 	// KubernetesVersion is the Kubernetes version of the cluster for which the worker nodes shall be created.
 	KubernetesVersion *semver.Version
-	// CloudProfileMachineTypes is the list of machine types present in the CloudProfile referenced by the shoot
-	CloudProfileMachineTypes []gardencorev1beta1.MachineType
+	// MachineTypes is the list of machine types present in the CloudProfile referenced by the shoot
+	MachineTypes []gardencorev1beta1.MachineType
 	// SSHPublicKey is the public SSH key that shall be installed on the worker nodes.
 	SSHPublicKey []byte
 	// InfrastructureProviderStatus is the provider status of the Infrastructure resource which might be relevant for
@@ -201,17 +201,17 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 
 		// initializing nodeTemplate by fetching details from cloudprofile
 		var nodeTemplate extensionsv1alpha1.NodeTemplate
-		machineDetails := gardencorev1beta1helper.FindMachineTypeByName(w.values.CloudProfileMachineTypes, workerPool.Machine.Type)
+		machineDetails := gardencorev1beta1helper.FindMachineTypeByName(w.values.MachineTypes, workerPool.Machine.Type)
 		if machineDetails == nil {
 			return nil, fmt.Errorf("unable to initialize nodeTemplate for workerPool %q, machine type %q not found in cloudprofile", workerPool.Name, workerPool.Machine.Type)
-		} else {
-			nodeTemplate = extensionsv1alpha1.NodeTemplate{
-				Capacity: corev1.ResourceList{
-					corev1.ResourceCPU:    machineDetails.CPU,
-					"gpu":                 machineDetails.GPU,
-					corev1.ResourceMemory: machineDetails.Memory,
-				},
-			}
+		}
+
+		nodeTemplate = extensionsv1alpha1.NodeTemplate{
+			Capacity: corev1.ResourceList{
+				corev1.ResourceCPU:    machineDetails.CPU,
+				"gpu":                 machineDetails.GPU,
+				corev1.ResourceMemory: machineDetails.Memory,
+			},
 		}
 
 		pools = append(pools, extensionsv1alpha1.WorkerPool{

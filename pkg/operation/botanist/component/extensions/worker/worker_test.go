@@ -108,7 +108,7 @@ var _ = Describe("Worker", func() {
 		worker2MachineImageVersion       = "worker2machineimagev1"
 		worker2UserData                  = []byte("bootstrap-me-now")
 
-		cloudProfileMachineTypes = []gardencorev1beta1.MachineType{
+		machineTypes = []gardencorev1beta1.MachineType{
 			{
 				Name:   worker1MachineType,
 				CPU:    resource.MustParse("4"),
@@ -125,17 +125,17 @@ var _ = Describe("Worker", func() {
 
 		workerPool1NodeTemplate = &extensionsv1alpha1.NodeTemplate{
 			Capacity: corev1.ResourceList{
-				"cpu":    cloudProfileMachineTypes[0].CPU,
-				"gpu":    cloudProfileMachineTypes[0].GPU,
-				"memory": cloudProfileMachineTypes[0].Memory,
+				"cpu":    machineTypes[0].CPU,
+				"gpu":    machineTypes[0].GPU,
+				"memory": machineTypes[0].Memory,
 			},
 		}
 
 		workerPool2NodeTemplate = &extensionsv1alpha1.NodeTemplate{
 			Capacity: corev1.ResourceList{
-				"cpu":    cloudProfileMachineTypes[1].CPU,
-				"gpu":    cloudProfileMachineTypes[1].GPU,
-				"memory": cloudProfileMachineTypes[1].Memory,
+				"cpu":    machineTypes[1].CPU,
+				"gpu":    machineTypes[1].GPU,
+				"memory": machineTypes[1].Memory,
 			},
 		}
 
@@ -161,7 +161,7 @@ var _ = Describe("Worker", func() {
 			Type:                         extensionType,
 			Region:                       region,
 			KubernetesVersion:            kubernetesVersion,
-			CloudProfileMachineTypes:     cloudProfileMachineTypes,
+			MachineTypes:                 machineTypes,
 			SSHPublicKey:                 sshPublicKey,
 			InfrastructureProviderStatus: infrastructureProviderStatus,
 			WorkerNameToOperatingSystemConfigsMap: map[string]*operatingsystemconfig.OperatingSystemConfigs{
