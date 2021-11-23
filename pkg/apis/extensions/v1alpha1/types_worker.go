@@ -149,12 +149,13 @@ type WorkerPool struct {
 	KubernetesVersion *string `json:"kubernetesVersion,omitempty"`
 
 	// NodeTemplate contains resource information of the machine which is used by Cluster Autoscaler to generate nodeTemplate during scaling a nodeGroup from zero
-	NodeTemplate NodeTemplate `json:"nodeTemplate"`
+	// +optional
+	NodeTemplate *NodeTemplate `json:"nodeTemplate,omitempty"`
 }
 
-// NodeTemplate contains info about resources like cpu,gpu,memory of the node
+// NodeTemplate contains information about the expected node properties.
 type NodeTemplate struct {
-	//Capacity represents the total resources of the node
+	// Capacity represents the expected Node capacity.
 	Capacity corev1.ResourceList `json:"capacity"`
 }
 

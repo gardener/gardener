@@ -301,7 +301,7 @@ var _ = Describe("Worker", func() {
 					KubernetesVersion:                pointer.String(kubernetesVersion.String()),
 					Zones:                            []string{worker1Zone1, worker1Zone2},
 					MachineControllerManagerSettings: worker1MCMSettings,
-					NodeTemplate:                     *workerPool1NodeTemplate,
+					NodeTemplate:                     workerPool1NodeTemplate,
 				},
 				{
 					Name:           worker2Name,
@@ -322,7 +322,7 @@ var _ = Describe("Worker", func() {
 					},
 					KubernetesVersion: &workerKubernetesVersion,
 					UserData:          worker2UserData,
-					NodeTemplate:      *workerPool2NodeTemplate,
+					NodeTemplate:      workerPool2NodeTemplate,
 				},
 			},
 		}

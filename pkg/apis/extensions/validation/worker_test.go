@@ -89,7 +89,7 @@ var _ = Describe("Worker validation tests", func() {
 
 			workerCopy.Spec.Pools[0] = extensionsv1alpha1.WorkerPool{}
 
-			workerCopy.Spec.Pools[0].NodeTemplate = extensionsv1alpha1.NodeTemplate{
+			workerCopy.Spec.Pools[0].NodeTemplate = &extensionsv1alpha1.NodeTemplate{
 				Capacity: corev1.ResourceList{
 					"cpu":    resource.MustParse("-1"),
 					"gpu":    resource.MustParse("1"),
@@ -116,7 +116,7 @@ var _ = Describe("Worker validation tests", func() {
 				"Field": Equal("spec.pools[0].userData"),
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.pools[0].nodeTemplate.capacity[\"cpu\"]"),
+				"Field": Equal("spec.pools[0].nodeTemplate.capacity.cpu"),
 			}))))
 		})
 

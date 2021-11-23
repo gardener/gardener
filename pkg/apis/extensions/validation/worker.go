@@ -15,8 +15,6 @@
 package validation
 
 import (
-	"fmt"
-
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 
 	corevalidation "github.com/gardener/gardener/pkg/apis/core/validation"
@@ -92,10 +90,12 @@ func ValidateWorkerPools(pools []extensionsv1alpha1.WorkerPool, fldPath *field.P
 			allErrs = append(allErrs, field.Required(idxPath.Child("userData"), "field is required"))
 		}
 
-		for resourceName, value := range pool.NodeTemplate.Capacity {
-			path := fmt.Sprintf("capacity[\"%s\"]", resourceName)
-			allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue(string(resourceName), value, idxPath.Child("nodeTemplate", path))...)
+		if pool.NodeTemplate != nil {
+			for resourceName, value := range pool.NodeTemplate.Capacity {
+				allErrs = append(allErrs, corevalidation.ValidateResourceQuantityValue(string(resourceName), value, idxPath.Child("nodeTemplate", "capacity", string(resourceName)))...)
+			}
 		}
+
 	}
 
 	return allErrs
