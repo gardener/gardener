@@ -155,6 +155,10 @@ func New(ctx context.Context, o *operation.Operation) (*Botanist, error) {
 	if err != nil {
 		return nil, err
 	}
+	o.Shoot.Components.SystemComponents.VPNShoot, err = b.DefaultVPNShoot()
+	if err != nil {
+		return nil, err
+	}
 
 	// other components
 	o.Shoot.Components.SourceBackupEntry = b.SourceBackupEntry()
