@@ -16,8 +16,6 @@ package dnsrecord
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -182,10 +180,11 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 				// If the DNSRecord is not yet Succeeded, reconcile it again.
 				_ = mutateFn()
 			} else {
-				// TODO (voelzmo) remove this when all DNSRecord secrets have migrated to a prefixed version
+				// TODO (voelzmo): remove this when all DNSRecord secrets have migrated to a prefixed version
 				// Check if we need to migrate the referenced secret
-				if !strings.HasPrefix(c.dnsRecord.Spec.SecretRef.Name, "dnsrecord-") {
-					c.dnsRecord.Spec.SecretRef.Name = fmt.Sprintf("dnsrecord-%s", c.dnsRecord.Spec.SecretRef.Name)
+				if c.dnsRecord.Spec.SecretRef.Name != c.secret.Name {
+					metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
+					c.dnsRecord.Spec.SecretRef.Name = c.secret.Name
 				}
 				// Otherwise, just update the timestamp annotation.
 				// If the object is still annotated with the operation annotation (e.g. not reconciled yet) this will send a watch

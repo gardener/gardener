@@ -461,12 +461,14 @@ var _ = Describe("dnsrecord", func() {
 		})
 	})
 
-	// TODO (voelzmo) remove this when all DNSRecord secrets have migrated to a prefixed version
+	// TODO (voelzmo): remove this when all DNSRecord secrets have migrated to a prefixed version
 	Describe("#CleanupOrphanedDNSRecordSecrets", func() {
-		var orphanedInternalSecret *corev1.Secret
-		var regularInternalSecret *corev1.Secret
-		var orphanedExternalSecret *corev1.Secret
-		var regularExternalSecret *corev1.Secret
+		var (
+			orphanedInternalSecret *corev1.Secret
+			regularInternalSecret  *corev1.Secret
+			orphanedExternalSecret *corev1.Secret
+			regularExternalSecret  *corev1.Secret
+		)
 
 		JustBeforeEach(func() {
 			// create an internal secret which is not prefixed with 'dnsrecord-' and is of the form '<shootName>-internal'
@@ -485,7 +487,7 @@ var _ = Describe("dnsrecord", func() {
 			err = c.Create(ctx, regularInternalSecret)
 			Expect(err).ToNot(HaveOccurred())
 
-			// create an internal secret which is not prefixed with 'dnsrecord-' and is of the form '<shootName>-internal'
+			// create an external secret which is not prefixed with 'dnsrecord-' and is of the form '<shootName>-external'
 			orphanedExternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 				Name:      shootName + "-" + DNSExternalName,
 				Namespace: seedNamespace,
@@ -493,7 +495,7 @@ var _ = Describe("dnsrecord", func() {
 			err = c.Create(ctx, orphanedExternalSecret)
 			Expect(err).ToNot(HaveOccurred())
 
-			// create a regular internal secret which is prefixed with 'dnsrecord-'
+			// create a regular external secret which is prefixed with 'dnsrecord-'
 			regularExternalSecret = &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 				Name:      DNSRecordSecretPrefix + "-" + shootName + "-" + DNSExternalName,
 				Namespace: seedNamespace,
@@ -524,14 +526,12 @@ var _ = Describe("dnsrecord", func() {
 			})
 
 			It("should clean up the external orphaned secret, but keep the internal orphaned secret", func() {
-
 				Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
 				Expect(c.Get(ctx, client.ObjectKey{Name: orphanedExternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
 
 				internalSecret := &corev1.Secret{}
 				Expect(c.Get(ctx, client.ObjectKey{Name: orphanedInternalSecret.Name, Namespace: seedNamespace}, internalSecret)).To(Succeed())
 				Expect(internalSecret).To(DeepDerivativeEqual(orphanedInternalSecret))
-
 			})
 		})
 
@@ -539,7 +539,6 @@ var _ = Describe("dnsrecord", func() {
 			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
 			Expect(c.Get(ctx, client.ObjectKey{Name: orphanedExternalSecret.Name, Namespace: seedNamespace}, &corev1.Secret{})).To(BeNotFoundError())
 			Expect(b.CleanupOrphanedDNSRecordSecrets(ctx)).To(Succeed())
-
 		})
 	})
 })

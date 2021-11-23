@@ -323,7 +323,7 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
-		// TODO (voelzmo) remove this when all DNSRecord secrets have migrated to a prefixed version
+		// TODO (voelzmo): remove this when all DNSRecord secrets have migrated to a prefixed version
 		Context("when the referenced secret is not prefixed with 'dnsrecord-' yet", func() {
 			BeforeEach(func() {
 				secretName = "testsecret"
@@ -337,6 +337,7 @@ var _ = Describe("DNSRecord", func() {
 				metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
 				Expect(c.Create(ctx, dns)).To(Succeed())
 
+				values.SecretName = "dnsrecord-testsecret"
 				Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
 				deployedDNS := &extensionsv1alpha1.DNSRecord{}
@@ -352,6 +353,7 @@ var _ = Describe("DNSRecord", func() {
 						Namespace:       namespace,
 						ResourceVersion: "2",
 						Annotations: map[string]string{
+							v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
 							v1beta1constants.GardenerTimestamp: now.UTC().String(),
 						},
 					},
