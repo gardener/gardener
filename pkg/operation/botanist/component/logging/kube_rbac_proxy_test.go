@@ -26,12 +26,12 @@ import (
 	. "github.com/gardener/gardener/pkg/operation/botanist/component/logging"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
+	. "github.com/gardener/gardener/pkg/utils/test/matchers"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,24 +40,34 @@ import (
 
 var _ = Describe("KubeRBACProxy", func() {
 	const (
-		namespace = "shoot--test--namespace"
+		namespace           = "shoot--test--namespace"
+		managedResourceName = "shoot-node-logging"
+		kubeRBACProxyName   = "kube-rbac-proxy"
 	)
 
 	var (
-		ctrl                  *gomock.Controller
-		c                     *mockclient.MockClient
-		ctx                   = context.TODO()
-		kubeRBACProxyOptions  *KubeRBACProxyOptions
-		kubeRBACPtoxyDeployer component.Deployer
-		secretName            = managedresources.SecretName(ShootNodeLoggingManagedResourceName, true)
-		fakeErr               = fmt.Errorf("fake error")
-		kubeRBACProxyLabels   = map[string]string{"app": LokiKubeRBACProxyName}
-		promtailLabels        = map[string]string{"app": PromtailName}
-		keepObjects           = false
+		ctrl *gomock.Controller
+		c    *mockclient.MockClient
+
+		ctx     = context.TODO()
+		fakeErr = fmt.Errorf("fake error")
+
+		kubeRBACProxyDeployer component.Deployer
+		kubeRBACProxyOptions  *Values
+
+		managedResourceSecretName  = managedresources.SecretName(managedResourceName, true)
+		shootAccessSecretName      = "shoot-access-kube-rbac-proxy"
+		legacyKubeconfigSecretName = "kube-rbac-proxy-kubeconfig"
+
+		kubeRBACProxyLabels = map[string]string{"app": kubeRBACProxyName}
+		promtailLabels      = map[string]string{"app": PromtailName}
+		keepObjects         = false
+
+		legacyKubeconfigSecretToDelete *corev1.Secret
 	)
 
 	type newKubeRBACProxyArgs struct {
-		so  *KubeRBACProxyOptions
+		so  *Values
 		err error
 	}
 
@@ -78,21 +88,21 @@ var _ = Describe("KubeRBACProxy", func() {
 			err: errors.New("options cannot be nil"),
 		}),
 		Entry("Pass options with nil shoot client", newKubeRBACProxyArgs{
-			so: &KubeRBACProxyOptions{
+			so: &Values{
 				Client:    nil,
 				Namespace: namespace,
 			},
 			err: errors.New("client cannot be nil"),
 		}),
 		Entry("Pass options with empty", newKubeRBACProxyArgs{
-			so: &KubeRBACProxyOptions{
+			so: &Values{
 				Client:    client.NewDryRunClient(nil),
 				Namespace: "",
 			},
 			err: errors.New("namespace cannot be empty"),
 		}),
 		Entry("Pass valid options", newKubeRBACProxyArgs{
-			so: &KubeRBACProxyOptions{
+			so: &Values{
 				Client:    client.NewDryRunClient(nil),
 				Namespace: namespace,
 			},
@@ -103,60 +113,81 @@ var _ = Describe("KubeRBACProxy", func() {
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		c = mockclient.NewMockClient(ctrl)
+
+		legacyKubeconfigSecretToDelete = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: legacyKubeconfigSecretName, Namespace: namespace},
+		}
 	})
 
 	Describe("#Deploy", func() {
 		var (
-			secretToGet          *corev1.Secret
-			managedResourceToGet *resourcesv1alpha1.ManagedResource
+			managedResourceSecretToGet *corev1.Secret
+			managedResourceToGet       *resourcesv1alpha1.ManagedResource
+			shootAccessSecretToGet     *corev1.Secret
 		)
 
 		Context("Tests expecting a failure", func() {
 			BeforeEach(func() {
 				var err error
-				kubeRBACProxyOptions = &KubeRBACProxyOptions{
-					Client:                    c,
-					Namespace:                 namespace,
-					IsShootNodeLoggingEnabled: true,
+				kubeRBACProxyOptions = &Values{
+					Client:    c,
+					Namespace: namespace,
 				}
-				kubeRBACPtoxyDeployer, err = NewKubeRBACProxy(kubeRBACProxyOptions)
+				kubeRBACProxyDeployer, err = NewKubeRBACProxy(kubeRBACProxyOptions)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("should fail when the secret cannot be created", func() {
+			It("should fail when the shoot token secret cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).Return(fakeErr),
+				)
+
+				Expect(kubeRBACProxyDeployer.Deploy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should fail when the managed resource secret cannot be created", func() {
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).Return(fakeErr),
 				)
 
-				Expect(kubeRBACPtoxyDeployer.Deploy(ctx)).To(MatchError(fakeErr))
+				Expect(kubeRBACProxyDeployer.Deploy(ctx)).To(MatchError(fakeErr))
 			})
+
 			It("should fail when the managedresource cannot be created", func() {
 				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), gomock.AssignableToTypeOf(&corev1.Secret{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, ShootNodeLoggingManagedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})),
 					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).Return(fakeErr),
 				)
 
-				Expect(kubeRBACPtoxyDeployer.Deploy(ctx)).To(MatchError(fakeErr))
+				Expect(kubeRBACProxyDeployer.Deploy(ctx)).To(MatchError(fakeErr))
 			})
 		})
 
 		Context("Tests expecting a success", func() {
 			BeforeEach(func() {
-				secretToGet = &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace},
+				managedResourceSecretToGet = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace},
 				}
 				managedResourceToGet = &resourcesv1alpha1.ManagedResource{
-					ObjectMeta: metav1.ObjectMeta{Name: ShootNodeLoggingManagedResourceName, Namespace: namespace},
+					ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace},
+				}
+				shootAccessSecretToGet = &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretName, Namespace: namespace},
 				}
 			})
 
-			It("should success when IsShootNodeLoggingEnabled flag is true", func() {
-				kubeRBACProxyClusterRolebinding := &rbacv1.ClusterRoleBinding{
+			It("should succeed", func() {
+				kubeRBACProxyClusterRoleBinding := &rbacv1.ClusterRoleBinding{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:   KubeRBACProxyUserName,
+						Name:   "gardener.cloud:logging:kube-rbac-proxy",
 						Labels: kubeRBACProxyLabels,
 					},
 					RoleRef: rbacv1.RoleRef{
@@ -165,8 +196,9 @@ var _ = Describe("KubeRBACProxy", func() {
 						Name:     "system:auth-delegator",
 					},
 					Subjects: []rbacv1.Subject{{
-						Kind: rbacv1.UserKind,
-						Name: KubeRBACProxyUserName,
+						Kind:      rbacv1.ServiceAccountKind,
+						Name:      "kube-rbac-proxy",
+						Namespace: "kube-system",
 					}},
 				}
 
@@ -220,21 +252,20 @@ var _ = Describe("KubeRBACProxy", func() {
 					},
 				}
 
-				kubeRBACProxyOptions := &KubeRBACProxyOptions{
-					Client:                    c,
-					Namespace:                 namespace,
-					IsShootNodeLoggingEnabled: true,
+				kubeRBACProxyOptions := &Values{
+					Client:    c,
+					Namespace: namespace,
 				}
-				kubeRBACPtoxyDeployer, err := NewKubeRBACProxy(kubeRBACProxyOptions)
+				kubeRBACProxyDeployer, err := NewKubeRBACProxy(kubeRBACProxyOptions)
 				Expect(err).ToNot(HaveOccurred())
 
 				registry := managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
-				resources, err := registry.AddAllAndSerialize(kubeRBACProxyClusterRolebinding, promtailClusterRole, promtailClusterRoleBinding)
+				resources, err := registry.AddAllAndSerialize(kubeRBACProxyClusterRoleBinding, promtailClusterRole, promtailClusterRoleBinding)
 				Expect(err).ToNot(HaveOccurred())
 
-				secretToUpdate := &corev1.Secret{
+				managedResourceSecretToUpdate := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      secretName,
+						Name:      managedResourceSecretName,
 						Namespace: namespace,
 					},
 					Data: resources,
@@ -243,7 +274,7 @@ var _ = Describe("KubeRBACProxy", func() {
 
 				managedResourceToUpdate := &resourcesv1alpha1.ManagedResource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      ShootNodeLoggingManagedResourceName,
+						Name:      managedResourceName,
 						Namespace: namespace,
 						Labels: map[string]string{
 							"origin": "gardener",
@@ -251,7 +282,7 @@ var _ = Describe("KubeRBACProxy", func() {
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						SecretRefs: []corev1.LocalObjectReference{
-							{Name: secretName},
+							{Name: managedResourceSecretName},
 						},
 						InjectLabels: map[string]string{
 							"shoot.gardener.cloud/no-cleanup": "true",
@@ -259,60 +290,72 @@ var _ = Describe("KubeRBACProxy", func() {
 						KeepObjects: &keepObjects,
 					},
 				}
-
-				gomock.InOrder(
-					c.EXPECT().Get(ctx, kutil.Key(namespace, secretName), secretToGet),
-					c.EXPECT().Update(ctx, secretToUpdate),
-					c.EXPECT().Get(ctx, kutil.Key(namespace, ShootNodeLoggingManagedResourceName), managedResourceToGet),
-					c.EXPECT().Update(ctx, managedResourceToUpdate),
-				)
-
-				Expect(kubeRBACPtoxyDeployer.Deploy(ctx)).To(Succeed())
-			})
-
-			It("should switch to Destroy when IsShootNodeLoggingEnabled flag is false", func() {
-				kubeRBACProxyOptions := &KubeRBACProxyOptions{
-					Client:                    c,
-					Namespace:                 namespace,
-					IsShootNodeLoggingEnabled: false,
+				shootAccessSecretToPatch := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      shootAccessSecretName,
+						Namespace: namespace,
+						Annotations: map[string]string{
+							"serviceaccount.resources.gardener.cloud/name":      "kube-rbac-proxy",
+							"serviceaccount.resources.gardener.cloud/namespace": "kube-system",
+						},
+						Labels: map[string]string{
+							"resources.gardener.cloud/purpose": "token-requestor",
+						},
+					},
+					Type: corev1.SecretTypeOpaque,
 				}
-				kubeRBACPtoxyDeployer, err := NewKubeRBACProxy(kubeRBACProxyOptions)
-				Expect(err).ToNot(HaveOccurred())
 
 				gomock.InOrder(
-					c.EXPECT().Delete(ctx, managedResourceToGet),
-					c.EXPECT().Delete(ctx, secretToGet),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, shootAccessSecretName), shootAccessSecretToGet),
+					c.EXPECT().Patch(ctx, gomock.AssignableToTypeOf(&corev1.Secret{}), gomock.Any()).
+						Do(func(ctx context.Context, obj client.Object, _ client.Patch, _ ...client.PatchOption) {
+							Expect(obj).To(DeepEqual(shootAccessSecretToPatch))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceSecretName), managedResourceSecretToGet),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&corev1.Secret{})).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
+							Expect(obj).To(DeepEqual(managedResourceSecretToUpdate))
+						}),
+					c.EXPECT().Get(ctx, kutil.Key(namespace, managedResourceName), managedResourceToGet),
+					c.EXPECT().Update(ctx, gomock.AssignableToTypeOf(&resourcesv1alpha1.ManagedResource{})).
+						Do(func(ctx context.Context, obj client.Object, _ ...client.UpdateOption) {
+							Expect(obj).To(DeepEqual(managedResourceToUpdate))
+						}),
+					c.EXPECT().Delete(ctx, legacyKubeconfigSecretToDelete),
 				)
 
-				Expect(kubeRBACPtoxyDeployer.Deploy(ctx)).To(Succeed())
+				Expect(kubeRBACProxyDeployer.Deploy(ctx)).To(Succeed())
 			})
 		})
 	})
 
 	Describe("#Destroy", func() {
 		var (
-			secretToDelete          *corev1.Secret
-			managedResourceToDelete *resourcesv1alpha1.ManagedResource
+			managedResourceSecretToDelete *corev1.Secret
+			managedResourceToDelete       *resourcesv1alpha1.ManagedResource
+			shootAccessSecretToDelete     *corev1.Secret
 		)
 
 		BeforeEach(func() {
-			secretToDelete = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{Name: secretName, Namespace: namespace},
+			managedResourceSecretToDelete = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: managedResourceSecretName, Namespace: namespace},
 			}
 			managedResourceToDelete = &resourcesv1alpha1.ManagedResource{
-				ObjectMeta: metav1.ObjectMeta{Name: ShootNodeLoggingManagedResourceName, Namespace: namespace},
+				ObjectMeta: metav1.ObjectMeta{Name: managedResourceName, Namespace: namespace},
+			}
+			shootAccessSecretToDelete = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: shootAccessSecretName, Namespace: namespace},
 			}
 		})
 
 		Context("Tests expecting a failure", func() {
 			BeforeEach(func() {
 				var err error
-				kubeRBACProxyOptions = &KubeRBACProxyOptions{
-					Client:                    c,
-					Namespace:                 namespace,
-					IsShootNodeLoggingEnabled: false,
+				kubeRBACProxyOptions = &Values{
+					Client:    c,
+					Namespace: namespace,
 				}
-				kubeRBACPtoxyDeployer, err = NewKubeRBACProxy(kubeRBACProxyOptions)
+				kubeRBACProxyDeployer, err = NewKubeRBACProxy(kubeRBACProxyOptions)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -321,52 +364,57 @@ var _ = Describe("KubeRBACProxy", func() {
 					c.EXPECT().Delete(ctx, managedResourceToDelete).Return(fakeErr),
 				)
 
-				Expect(kubeRBACPtoxyDeployer.Destroy(ctx)).To(MatchError(fakeErr))
+				Expect(kubeRBACProxyDeployer.Destroy(ctx)).To(MatchError(fakeErr))
 			})
 
-			It("should fail when the secret cannot be deleted", func() {
+			It("should fail when the managed resource secret cannot be deleted", func() {
 				gomock.InOrder(
 					c.EXPECT().Delete(ctx, managedResourceToDelete),
-					c.EXPECT().Delete(ctx, secretToDelete).Return(fakeErr),
+					c.EXPECT().Delete(ctx, managedResourceSecretToDelete).Return(fakeErr),
 				)
 
-				Expect(kubeRBACPtoxyDeployer.Destroy(ctx)).To(MatchError(fakeErr))
+				Expect(kubeRBACProxyDeployer.Destroy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should fail when the shoot token secret cannot be deleted", func() {
+				gomock.InOrder(
+					c.EXPECT().Delete(ctx, managedResourceToDelete),
+					c.EXPECT().Delete(ctx, managedResourceSecretToDelete),
+					c.EXPECT().Delete(ctx, shootAccessSecretToDelete).Return(fakeErr),
+				)
+
+				Expect(kubeRBACProxyDeployer.Destroy(ctx)).To(MatchError(fakeErr))
+			})
+
+			It("should fail when the legacy kubeconfig secret cannot be deleted", func() {
+				gomock.InOrder(
+					c.EXPECT().Delete(ctx, managedResourceToDelete),
+					c.EXPECT().Delete(ctx, managedResourceSecretToDelete),
+					c.EXPECT().Delete(ctx, shootAccessSecretToDelete),
+					c.EXPECT().Delete(ctx, legacyKubeconfigSecretToDelete).Return(fakeErr),
+				)
+
+				Expect(kubeRBACProxyDeployer.Destroy(ctx)).To(MatchError(fakeErr))
 			})
 		})
 
 		Context("Tests expecting a success", func() {
 			It("Should delete successfully the managed resource and the secret", func() {
-				kubeRBACProxyOptions := &KubeRBACProxyOptions{
-					Client:                    c,
-					Namespace:                 namespace,
-					IsShootNodeLoggingEnabled: false,
+				kubeRBACProxyOptions := &Values{
+					Client:    c,
+					Namespace: namespace,
 				}
-				kubeRBACPtoxyDeployer, err := NewKubeRBACProxy(kubeRBACProxyOptions)
+				kubeRBACProxyDeployer, err := NewKubeRBACProxy(kubeRBACProxyOptions)
 				Expect(err).ToNot(HaveOccurred())
 
 				gomock.InOrder(
 					c.EXPECT().Delete(ctx, managedResourceToDelete),
-					c.EXPECT().Delete(ctx, secretToDelete),
+					c.EXPECT().Delete(ctx, managedResourceSecretToDelete),
+					c.EXPECT().Delete(ctx, shootAccessSecretToDelete),
+					c.EXPECT().Delete(ctx, legacyKubeconfigSecretToDelete),
 				)
 
-				Expect(kubeRBACPtoxyDeployer.Destroy(ctx)).To(Succeed())
-			})
-
-			It("Should delete successfully the managed resource and the secret inspete of the IsShootNodeLoggingEnabled value", func() {
-				kubeRBACProxyOptions := &KubeRBACProxyOptions{
-					Client:                    c,
-					Namespace:                 namespace,
-					IsShootNodeLoggingEnabled: true,
-				}
-				kubeRBACPtoxyDeployer, err := NewKubeRBACProxy(kubeRBACProxyOptions)
-				Expect(err).ToNot(HaveOccurred())
-
-				gomock.InOrder(
-					c.EXPECT().Delete(ctx, managedResourceToDelete),
-					c.EXPECT().Delete(ctx, secretToDelete),
-				)
-
-				Expect(kubeRBACPtoxyDeployer.Destroy(ctx)).To(Succeed())
+				Expect(kubeRBACProxyDeployer.Destroy(ctx)).To(Succeed())
 			})
 		})
 	})
