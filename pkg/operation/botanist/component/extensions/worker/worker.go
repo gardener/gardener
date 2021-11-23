@@ -203,13 +203,13 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 		var nodeTemplate extensionsv1alpha1.NodeTemplate
 		machineDetails := gardencorev1beta1helper.FindMachineTypeByName(w.values.CloudProfileMachineTypes, workerPool.Machine.Type)
 		if machineDetails == nil {
-			return nil, fmt.Errorf("unable to initialize nodeTemplate for workerPool %v, machine type not found in cloudprofile", workerPool.Name)
+			return nil, fmt.Errorf("unable to initialize nodeTemplate for workerPool %q, machine type %q not found in cloudprofile", workerPool.Name, workerPool.Machine.Type)
 		} else {
 			nodeTemplate = extensionsv1alpha1.NodeTemplate{
 				Capacity: corev1.ResourceList{
-					"cpu":    machineDetails.CPU,
-					"gpu":    machineDetails.GPU,
-					"memory": machineDetails.Memory,
+					corev1.ResourceCPU:    machineDetails.CPU,
+					"gpu":                 machineDetails.GPU,
+					corev1.ResourceMemory: machineDetails.Memory,
 				},
 			}
 		}
@@ -228,7 +228,7 @@ func (w *worker) deploy(ctx context.Context, operation string) (extensionsv1alph
 				Name:    workerPool.Machine.Image.Name,
 				Version: *workerPool.Machine.Image.Version,
 			},
-			NodeTemplate:                     nodeTemplate,
+			NodeTemplate:                     &nodeTemplate,
 			ProviderConfig:                   pConfig,
 			UserData:                         userData,
 			Volume:                           volume,
