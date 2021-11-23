@@ -1909,6 +1909,13 @@ message SeedSettingLoadBalancerServices {
   map<string, string> annotations = 1;
 }
 
+// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+message SeedSettingOwnerChecks {
+  // Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
+  // is enabled by default because it is a prerequisite for control plane migration.
+  optional bool enabled = 1;
+}
+
 // SeedSettingScheduling controls settings for scheduling decisions for the seed.
 message SeedSettingScheduling {
   // Visible controls whether the gardener-scheduler shall consider this seed when scheduling shoots. Invisible seeds
@@ -1954,6 +1961,10 @@ message SeedSettings {
   // VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
   // +optional
   optional SeedSettingVerticalPodAutoscaler verticalPodAutoscaler = 5;
+
+  // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+  // +optional
+  optional SeedSettingOwnerChecks ownerChecks = 6;
 }
 
 // SeedSpec is the specification of a Seed.

@@ -343,7 +343,7 @@ var _ = Describe("Etcd", func() {
 				}
 			})
 
-			It("should set the secrets and deploy", func() {
+			It("should set the secrets and deploy (with owner checks)", func() {
 				c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
 					backupSecret.DeepCopyInto(obj.(*corev1.Secret))
 					return nil
@@ -358,6 +358,29 @@ var _ = Describe("Etcd", func() {
 				etcdMain.EXPECT().SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
 					Name: "owner.internal.example.com",
 					ID:   "seed-identity",
+				})
+
+				etcdMain.EXPECT().Deploy(ctx)
+				etcdEvents.EXPECT().Deploy(ctx)
+				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
+			})
+
+			It("should set the secrets and deploy (without owner checks)", func() {
+				botanist.Seed.GetInfo().Spec.Settings = &gardencorev1beta1.SeedSettings{
+					OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
+						Enabled: false,
+					},
+				}
+				c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+					backupSecret.DeepCopyInto(obj.(*corev1.Secret))
+					return nil
+				})
+				etcdMain.EXPECT().SetBackupConfig(&etcd.BackupConfig{
+					Provider:             backupProvider,
+					SecretRefName:        "etcd-backup",
+					Prefix:               namespace + "--" + string(shootUID),
+					Container:            bucketName,
+					FullSnapshotSchedule: "1 12 * * *",
 				})
 
 				etcdMain.EXPECT().Deploy(ctx)

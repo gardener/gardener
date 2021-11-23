@@ -21,6 +21,7 @@ import (
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	seedmanagementv1alpha1 "github.com/gardener/gardener/pkg/apis/seedmanagement/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
@@ -110,10 +111,12 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 			FullSnapshotSchedule: snapshotSchedule,
 		})
 
-		b.Shoot.Components.ControlPlane.EtcdMain.SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
-			Name: gutil.GetOwnerDomain(b.Shoot.InternalClusterDomain),
-			ID:   *b.Seed.GetInfo().Status.ClusterIdentity,
-		})
+		if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
+			b.Shoot.Components.ControlPlane.EtcdMain.SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
+				Name: gutil.GetOwnerDomain(b.Shoot.InternalClusterDomain),
+				ID:   *b.Seed.GetInfo().Status.ClusterIdentity,
+			})
+		}
 	}
 
 	return flow.Parallel(

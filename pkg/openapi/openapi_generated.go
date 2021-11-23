@@ -153,6 +153,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector":                           schema_pkg_apis_core_v1alpha1_SeedSelector(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation":   schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices":        schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServices(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks":                 schema_pkg_apis_core_v1alpha1_SeedSettingOwnerChecks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling":                  schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS":                    schema_pkg_apis_core_v1alpha1_SeedSettingShootDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler":       schema_pkg_apis_core_v1alpha1_SeedSettingVerticalPodAutoscaler(ref),
@@ -293,6 +294,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector":                            schema_pkg_apis_core_v1beta1_SeedSelector(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation":    schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices":         schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks":                  schema_pkg_apis_core_v1beta1_SeedSettingOwnerChecks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling":                   schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS":                     schema_pkg_apis_core_v1beta1_SeedSettingShootDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler":        schema_pkg_apis_core_v1beta1_SeedSettingVerticalPodAutoscaler(ref),
@@ -6146,6 +6148,28 @@ func schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServices(ref common.Re
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_SeedSettingOwnerChecks(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It is enabled by default because it is a prerequisite for control plane migration.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_SeedSettingScheduling(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6249,11 +6273,17 @@ func schema_pkg_apis_core_v1alpha1_SeedSettings(ref common.ReferenceCallback) co
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"),
 						},
 					},
+					"ownerChecks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"},
 	}
 }
 
@@ -12855,6 +12885,28 @@ func schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref common.Ref
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_SeedSettingOwnerChecks(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It is enabled by default because it is a prerequisite for control plane migration.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_SeedSettingScheduling(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -12958,11 +13010,17 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"),
 						},
 					},
+					"ownerChecks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
 	}
 }
 

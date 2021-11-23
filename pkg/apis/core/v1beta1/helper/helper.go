@@ -881,6 +881,11 @@ func SeedSettingVerticalPodAutoscalerEnabled(settings *gardencorev1beta1.SeedSet
 	return settings == nil || settings.VerticalPodAutoscaler == nil || settings.VerticalPodAutoscaler.Enabled
 }
 
+// SeedSettingOwnerChecksEnabled returns true if the 'ownerChecks' setting is enabled.
+func SeedSettingOwnerChecksEnabled(settings *gardencorev1beta1.SeedSettings) bool {
+	return settings == nil || settings.OwnerChecks == nil || settings.OwnerChecks.Enabled
+}
+
 // DetermineMachineImageForName finds the cloud specific machine images in the <cloudProfile> for the given <name> and
 // region. In case it does not find the machine image with the <name>, it returns false. Otherwise, true and the
 // cloud-specific machine image will be returned.

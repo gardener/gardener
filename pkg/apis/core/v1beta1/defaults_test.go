@@ -232,6 +232,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeTrue())
 		})
 
 		It("should allow taints that were not allowed in version v1.12", func() {
@@ -248,6 +249,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(BeTrue())
+			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(BeTrue())
 			Expect(obj.Spec.Taints).To(HaveLen(3))
 			Expect(obj.Spec.Taints).To(Equal(taints))
 		})
@@ -258,6 +260,7 @@ var _ = Describe("Defaults", func() {
 				scheduling                = true
 				shootDNS                  = false
 				vpaEnabled                = false
+				ownerChecks               = false
 			)
 
 			obj.Spec.Settings = &SeedSettings{
@@ -265,6 +268,7 @@ var _ = Describe("Defaults", func() {
 				Scheduling:                &SeedSettingScheduling{Visible: scheduling},
 				ShootDNS:                  &SeedSettingShootDNS{Enabled: shootDNS},
 				VerticalPodAutoscaler:     &SeedSettingVerticalPodAutoscaler{Enabled: vpaEnabled},
+				OwnerChecks:               &SeedSettingOwnerChecks{Enabled: ownerChecks},
 			}
 
 			SetDefaults_Seed(obj)
@@ -273,6 +277,7 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(Equal(shootDNS))
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(Equal(vpaEnabled))
+			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(Equal(ownerChecks))
 		})
 	})
 
