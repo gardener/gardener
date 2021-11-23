@@ -21,7 +21,6 @@ import (
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
@@ -31,7 +30,6 @@ import (
 	confighelper "github.com/gardener/gardener/pkg/gardenlet/apis/config/helper"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/garden"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
@@ -40,7 +38,6 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -359,13 +356,6 @@ func (r *careReconciler) care(ctx context.Context, gardenClientSet kubernetes.In
 		}
 	}
 
-	// Update Shoot status label according to status if necessary
-	actualStatus := string(shootpkg.ComputeStatus(shoot.Status.LastOperation, shoot.Status.LastErrors, updatedConditions...))
-	if err := PatchShootStatusLabel(ctx, gardenClient, shoot, actualStatus); err != nil {
-		o.Logger.Errorf("Could not update Shoot status label: %+v", err)
-		return nil // We do not want to run in the exponential backoff for the condition checks.
-	}
-
 	return nil
 }
 
@@ -375,17 +365,6 @@ func buildShootConditions(shootConditions []gardencorev1beta1.Condition, conditi
 	result := gardencorev1beta1helper.RemoveConditions(shootConditions, conditionTypes...)
 	result = gardencorev1beta1helper.MergeConditions(result, conditions...)
 	return result
-}
-
-// PatchShootStatusLabel patches the shoot status label if the shoot status changed
-func PatchShootStatusLabel(ctx context.Context, c client.Writer, shoot *gardencorev1beta1.Shoot, actualStatus string) error {
-	if currentStatus, statusPresent := shoot.Labels[v1beta1constants.ShootStatus]; !statusPresent || currentStatus != actualStatus {
-		metaPatch := client.MergeFrom(shoot.DeepCopy())
-		metav1.SetMetaDataLabel(&shoot.ObjectMeta, v1beta1constants.ShootStatus, actualStatus)
-		return c.Patch(ctx, shoot, metaPatch)
-	}
-
-	return nil
 }
 
 func patchShootStatus(ctx context.Context, c client.StatusClient, shoot *gardencorev1beta1.Shoot, conditions, constraints []gardencorev1beta1.Condition) error {

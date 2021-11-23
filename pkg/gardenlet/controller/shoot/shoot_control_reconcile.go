@@ -53,7 +53,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 
 	err = errors.HandleErrors(errorContext,
 		func(errorID string) error {
-			o.CleanShootTaskErrorAndUpdateStatusLabel(ctx, errorID)
+			o.CleanShootTaskError(ctx, errorID)
 			return nil
 		},
 		nil,
@@ -562,7 +562,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		Logger:           o.Logger,
 		ProgressReporter: r.newProgressReporter(o.ReportShootProgress),
 		ErrorContext:     errorContext,
-		ErrorCleaner:     o.CleanShootTaskErrorAndUpdateStatusLabel,
+		ErrorCleaner:     o.CleanShootTaskError,
 	}); err != nil {
 		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
