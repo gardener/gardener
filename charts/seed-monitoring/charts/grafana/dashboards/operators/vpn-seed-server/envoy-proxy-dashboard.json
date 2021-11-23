@@ -81,7 +81,7 @@
           "exemplar": true,
           "expr": "reversed_vpn_envoy_cluster_upstream_cx_active{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "total active connections",
           "refId": "A"
         }
       ],
@@ -273,7 +273,7 @@
           "exemplar": true,
           "expr": "reversed_vpn_envoy_cluster_upstream_cx_connect_timeout{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
           "interval": "",
-          "legendFormat": "timeouts",
+          "legendFormat": "connection timeouts",
           "refId": "A"
         }
       ],
@@ -721,7 +721,7 @@
           "exemplar": true,
           "expr": "irate(reversed_vpn_envoy_cluster_upstream_rq_total{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[2m])",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "total requests",
           "refId": "A"
         }
       ],
@@ -746,7 +746,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:119",
-          "format": "short",
+          "format": "reqps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -817,7 +817,7 @@
           "exemplar": true,
           "expr": "irate(reversed_vpn_envoy_cluster_upstream_rq_completed{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}[2m])",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "completed requests",
           "refId": "A"
         }
       ],
@@ -842,7 +842,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:119",
-          "format": "short",
+          "format": "reqps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -913,7 +913,7 @@
           "exemplar": true,
           "expr": "reversed_vpn_envoy_cluster_upstream_rq_retry{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "request retries",
           "refId": "A"
         }
       ],
@@ -921,7 +921,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Requests retries",
+      "title": "Request retries",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1009,7 +1009,7 @@
           "exemplar": true,
           "expr": "reversed_vpn_envoy_cluster_upstream_rq_retry_limit_exceeded{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "request retry limit exceeded",
           "refId": "A"
         }
       ],
@@ -1105,7 +1105,7 @@
           "exemplar": true,
           "expr": "reversed_vpn_envoy_cluster_upstream_rq_retry_overflow{envoy_cluster_name=\"dynamic_forward_proxy_cluster\"}",
           "interval": "",
-          "legendFormat": "",
+          "legendFormat": "request retry overflow",
           "refId": "A"
         }
       ],
@@ -1336,7 +1336,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Upstream Network Traffic",
+      "title": "Upstream network traffic",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1353,7 +1353,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:62",
-          "format": "short",
+          "format": "Bps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1458,7 +1458,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:869",
-          "format": "short",
+          "format": "Bps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1873,7 +1873,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:1384",
-          "format": "short",
+          "format": "reqps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1969,7 +1969,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:1384",
-          "format": "short",
+          "format": "reqps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -2065,7 +2065,7 @@
       "yaxes": [
         {
           "$$hashKey": "object:1384",
-          "format": "short",
+          "format": "reqps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -2174,7 +2174,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Memory Stats",
+      "title": "Memory stats",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2250,7 +2250,7 @@
     ]
   },
   "timezone": "utc",
-  "title": "Envoy Proxy",
+  "title": "Reversed VPN Envoy Proxy",
   "uid": "OoJhS4p7z",
   "version": 1
 }
