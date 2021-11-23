@@ -23,8 +23,6 @@ import (
 	mockkubernetes "github.com/gardener/gardener/pkg/client/kubernetes/mock"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	"github.com/gardener/gardener/pkg/operation/botanist/component"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler"
 	mockclusterautoscaler "github.com/gardener/gardener/pkg/operation/botanist/component/clusterautoscaler/mock"
 	mockworker "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/worker/mock"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
@@ -90,8 +88,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 
 			ctx                = context.TODO()
 			fakeErr            = fmt.Errorf("fake err")
-			secretName         = "cluster-autoscaler"
-			checksum           = "1234"
 			namespaceUID       = types.UID("5678")
 			machineDeployments = []extensionsv1alpha1.MachineDeployment{{}}
 		)
@@ -100,7 +96,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			clusterAutoscaler = mockclusterautoscaler.NewMockInterface(ctrl)
 			worker = mockworker.NewMockInterface(ctrl)
 
-			botanist.StoreCheckSum(secretName, checksum)
 			botanist.SeedNamespaceObject = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					UID: namespaceUID,
@@ -122,9 +117,6 @@ var _ = Describe("ClusterAutoscaler", func() {
 			BeforeEach(func() {
 				botanist.Shoot.WantsClusterAutoscaler = true
 
-				clusterAutoscaler.EXPECT().SetSecrets(clusterautoscaler.Secrets{
-					Kubeconfig: component.Secret{Name: secretName, Checksum: checksum},
-				})
 				clusterAutoscaler.EXPECT().SetNamespaceUID(namespaceUID)
 				worker.EXPECT().MachineDeployments().Return(machineDeployments)
 				clusterAutoscaler.EXPECT().SetMachineDeployments(machineDeployments)

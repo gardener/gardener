@@ -21,15 +21,15 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
-	"github.com/gardener/gardener/pkg/utils/secrets"
 
-	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	autoscalingv1beta2 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta2"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,26 +46,18 @@ import (
 const (
 	// ServiceName is the name of the service of the cluster-autoscaler.
 	ServiceName = "cluster-autoscaler"
-	// SecretName is a constant for the secret name for the cluster-autoscaler's kubeconfig secret.
-	SecretName = "cluster-autoscaler"
-	// UserName is the name that should be used for the secret that the cluster-autoscaler uses to
-	// authenticate itself with the kube-apiserver (e.g., the common name in its client certificate).
-	UserName = "system:cluster-autoscaler"
 
 	managedResourceTargetName = "shoot-core-cluster-autoscaler"
 	containerName             = v1beta1constants.DeploymentNameClusterAutoscaler
 
-	portNameMetrics                 = "metrics"
-	portMetrics               int32 = 8085
-	volumeMountPathKubeconfig       = "/var/lib/cluster-autoscaler"
+	portNameMetrics       = "metrics"
+	portMetrics     int32 = 8085
 )
 
 // Interface contains functions for a cluster-autoscaler deployer.
 type Interface interface {
 	component.DeployWaiter
 	component.MonitoringComponent
-	// SetSecrets sets the secrets.
-	SetSecrets(Secrets)
 	// SetNamespaceUID sets the UID of the namespace into which the cluster-autoscaler shall be deployed.
 	SetNamespaceUID(types.UID)
 	// SetMachineDeployments sets the machine deployments.
@@ -95,17 +88,13 @@ type clusterAutoscaler struct {
 	replicas  int32
 	config    *gardencorev1beta1.ClusterAutoscaler
 
-	secrets            Secrets
 	namespaceUID       types.UID
 	machineDeployments []extensionsv1alpha1.MachineDeployment
 }
 
 func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
-	if c.secrets.Kubeconfig.Name == "" || c.secrets.Kubeconfig.Checksum == "" {
-		return fmt.Errorf("missing kubeconfig secret information")
-	}
-
 	var (
+		shootAccessSecret  = c.newShootAccessSecret()
 		serviceAccount     = c.emptyServiceAccount()
 		clusterRoleBinding = c.emptyClusterRoleBinding()
 		vpa                = c.emptyVPA()
@@ -162,6 +151,10 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
+	if err := shootAccessSecret.Reconcile(ctx, c.client); err != nil {
+		return err
+	}
+
 	if _, err := controllerutils.GetAndCreateOrMergePatch(ctx, c.client, deployment, func() error {
 		deployment.Labels = utils.MergeStringMaps(getLabels(), map[string]string{
 			v1beta1constants.GardenRole: v1beta1constants.GardenRoleControlPlane,
@@ -171,9 +164,6 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: getLabels()}
 		deployment.Spec.Template = corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					"checksum/secret-" + c.secrets.Kubeconfig.Name: c.secrets.Kubeconfig.Checksum,
-				},
 				Labels: utils.MergeStringMaps(getLabels(), map[string]string{
 					v1beta1constants.GardenRole:                         v1beta1constants.GardenRoleControlPlane,
 					v1beta1constants.LabelNetworkPolicyToDNS:            v1beta1constants.LabelNetworkPolicyAllowed,
@@ -205,7 +195,7 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 							},
 							{
 								Name:  "TARGET_KUBECONFIG",
-								Value: volumeMountPathKubeconfig + "/" + secrets.DataKeyKubeconfig,
+								Value: gutil.PathGenericKubeconfig,
 							},
 						},
 						Resources: corev1.ResourceRequirements{
@@ -218,27 +208,12 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 								corev1.ResourceMemory: resource.MustParse("3000Mi"),
 							},
 						},
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      c.secrets.Kubeconfig.Name,
-								MountPath: volumeMountPathKubeconfig,
-								ReadOnly:  true,
-							},
-						},
-					},
-				},
-				Volumes: []corev1.Volume{
-					{
-						Name: c.secrets.Kubeconfig.Name,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: c.secrets.Kubeconfig.Name,
-							},
-						},
 					},
 				},
 			},
 		}
+
+		utilruntime.Must(gutil.InjectGenericKubeconfig(deployment, shootAccessSecret.Secret.Name))
 		return nil
 	}); err != nil {
 		return err
@@ -269,12 +244,18 @@ func (c *clusterAutoscaler) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	data, err := c.computeShootResourcesData()
+	data, err := c.computeShootResourcesData(shootAccessSecret.ServiceAccountName)
 	if err != nil {
 		return err
 	}
 
-	return managedresources.CreateForShoot(ctx, c.client, c.namespace, managedResourceTargetName, false, data)
+	if err := managedresources.CreateForShoot(ctx, c.client, c.namespace, managedResourceTargetName, false, data); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObject(ctx, c.client, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cluster-autoscaler", Namespace: c.namespace}})
+
 }
 
 func getLabels() map[string]string {
@@ -293,6 +274,7 @@ func (c *clusterAutoscaler) Destroy(ctx context.Context) error {
 		c.emptyVPA(),
 		c.emptyDeployment(),
 		c.emptyClusterRoleBinding(),
+		c.newShootAccessSecret().Secret,
 		c.emptyService(),
 		c.emptyServiceAccount(),
 	)
@@ -300,7 +282,6 @@ func (c *clusterAutoscaler) Destroy(ctx context.Context) error {
 
 func (c *clusterAutoscaler) Wait(_ context.Context) error        { return nil }
 func (c *clusterAutoscaler) WaitCleanup(_ context.Context) error { return nil }
-func (c *clusterAutoscaler) SetSecrets(secrets Secrets)          { c.secrets = secrets }
 func (c *clusterAutoscaler) SetNamespaceUID(uid types.UID)       { c.namespaceUID = uid }
 func (c *clusterAutoscaler) SetMachineDeployments(machineDeployments []extensionsv1alpha1.MachineDeployment) {
 	c.machineDeployments = machineDeployments
@@ -322,6 +303,10 @@ func (c *clusterAutoscaler) emptyService() *corev1.Service {
 	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: ServiceName, Namespace: c.namespace}}
 }
 
+func (c *clusterAutoscaler) newShootAccessSecret() *gutil.ShootAccessSecret {
+	return gutil.NewShootAccessSecret(v1beta1constants.DeploymentNameClusterAutoscaler, c.namespace)
+}
+
 func (c *clusterAutoscaler) emptyDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: v1beta1constants.DeploymentNameClusterAutoscaler, Namespace: c.namespace}}
 }
@@ -339,7 +324,7 @@ func (c *clusterAutoscaler) computeCommand() []string {
 		command = []string{
 			"./cluster-autoscaler",
 			fmt.Sprintf("--address=:%d", portMetrics),
-			fmt.Sprintf("--kubeconfig=%s", volumeMountPathKubeconfig+"/"+secrets.DataKeyKubeconfig),
+			"--kubeconfig=" + gutil.PathGenericKubeconfig,
 			"--cloud-provider=mcm",
 			"--stderrthreshold=info",
 			"--skip-nodes-with-system-pods=false",
@@ -374,13 +359,13 @@ func (c *clusterAutoscaler) computeCommand() []string {
 	return command
 }
 
-func (c *clusterAutoscaler) computeShootResourcesData() (map[string][]byte, error) {
+func (c *clusterAutoscaler) computeShootResourcesData(serviceAccountName string) (map[string][]byte, error) {
 	var (
 		registry = managedresources.NewRegistry(kubernetes.ShootScheme, kubernetes.ShootCodec, kubernetes.ShootSerializer)
 
 		clusterRole = &rbacv1.ClusterRole{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "system:cluster-autoscaler-shoot",
+				Name: "gardener.cloud:target:cluster-autoscaler",
 			},
 			Rules: []rbacv1.PolicyRule{
 				{
@@ -461,7 +446,7 @@ func (c *clusterAutoscaler) computeShootResourcesData() (map[string][]byte, erro
 
 		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "system:cluster-autoscaler-shoot",
+				Name: "gardener.cloud:target:cluster-autoscaler",
 			},
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
@@ -469,8 +454,9 @@ func (c *clusterAutoscaler) computeShootResourcesData() (map[string][]byte, erro
 				Name:     clusterRole.Name,
 			},
 			Subjects: []rbacv1.Subject{{
-				Kind: rbacv1.UserKind,
-				Name: UserName,
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      serviceAccountName,
+				Namespace: metav1.NamespaceSystem,
 			}},
 		}
 	)
@@ -479,10 +465,4 @@ func (c *clusterAutoscaler) computeShootResourcesData() (map[string][]byte, erro
 		clusterRole,
 		clusterRoleBinding,
 	)
-}
-
-// Secrets is collection of secrets for the cluster-autoscaler.
-type Secrets struct {
-	// Kubeconfig is a secret which can be used by the cluster-autoscaler to communicate to the kube-apiserver.
-	Kubeconfig component.Secret
 }
