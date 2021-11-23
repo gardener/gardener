@@ -69,6 +69,7 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		b.Shoot.Components.ControlPlane.KubeScheduler,
 		b.Shoot.Components.ControlPlane.KubeControllerManager,
 		b.Shoot.Components.SystemComponents.CoreDNS,
+		b.Shoot.Components.SystemComponents.VPNShoot,
 	}
 
 	if b.Shoot.WantsClusterAutoscaler {
@@ -406,7 +407,7 @@ func getIngressClass(seed *gardencorev1beta1.Seed) (string, error) {
 	}
 
 	if seed.Status.KubernetesVersion == nil {
-		return "", fmt.Errorf("Kubernetes version is missing in status for seed %q", seed.Name)
+		return "", fmt.Errorf("kubernetes version is missing in status for seed %q", seed.Name)
 	}
 
 	greaterEqual122, err := versionutils.CompareVersions(*seed.Status.KubernetesVersion, ">=", "1.22")
