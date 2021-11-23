@@ -40,6 +40,7 @@ The following tables are a summary of the feature gates that you can set on diff
 | CopyEtcdBackupsDuringControlPlaneMigration   | `false` | `Alpha` | `1.37` |        |
 | SecretBindingProviderPopulator               | `false` | `Alpha` | `1.37` |        |
 | RequiredSecretBindingProvider                | `false` | `Alpha` | `1.37` |        |
+| ImmutableSecretBindingProvider               | `false` | `Alpha` | `1.37` |        |
 
 ## Feature gates for graduated or deprecated features
 
@@ -113,3 +114,4 @@ A *General Availability* (GA) feature is also referred to as a *stable* feature.
 * `CopyEtcdBackupsDuringControlPlaneMigration` enables the copy of etcd backups from the object store of the source seed to the object store of the destination seed during control plane migration.
 * `SecretBindingProviderPopulator` enables the SecretBinding provider populator controller in the gardener-controller-manager. The controller is responsible to populate the provider.type of the SecretBinding resource based on its current usage.
 * `RequiredSecretBindingProvider` enables a validation on Gardener API server that requires the provider type of a SecretBinding to be set and to match Shoot provider type.
+* `ImmutableSecretBindingProvider` enables a validation on Gardener API server that enforces immutability on the provider type of a SecretBinding.

@@ -157,6 +157,29 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			}))
 		})
 
+		Context("when ImmutableSecretBindingProvider=true", func() {
+			It("should forbid updating the secret binding provider", func() {
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ImmutableSecretBindingProvider, true)()
+
+				secretBinding.Provider = &core.SecretBindingProvider{
+					Type: "old-type",
+				}
+
+				newSecretBinding := prepareSecretBindingForUpdate(secretBinding)
+				newSecretBinding.Provider = &core.SecretBindingProvider{
+					Type: "new-type",
+				}
+
+				errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
+
+				Expect(errorList).To(HaveLen(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("provider"),
+				}))
+			})
+		})
+
 		It("should allow nil provider when RequiredSecretBindingProvider feature gate is not enabled", func() {
 			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.RequiredSecretBindingProvider, false)()
 

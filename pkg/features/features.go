@@ -124,4 +124,9 @@ const (
 	// owner: @ialidzhikov
 	// alpha: v1.37.0
 	RequiredSecretBindingProvider featuregate.Feature = "RequiredSecretBindingProvider"
+
+	// ImmutableSecretBindingProvider enables a validation on Gardener API server that enforces immutability on the provider type of a SecretBinding.
+	// owner: @ialidzhikov
+	// alpha: v1.37.0
+	ImmutableSecretBindingProvider featuregate.Feature = "ImmutableSecretBindingProvider"
 )

@@ -45,6 +45,9 @@ func ValidateSecretBindingUpdate(newBinding, oldBinding *core.SecretBinding) fie
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newBinding.ObjectMeta, &oldBinding.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBinding.SecretRef, oldBinding.SecretRef, field.NewPath("secretRef"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBinding.Quotas, oldBinding.Quotas, field.NewPath("quotas"))...)
+	if utilfeature.DefaultFeatureGate.Enabled(features.ImmutableSecretBindingProvider) {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBinding.Provider, oldBinding.Provider, field.NewPath("provider"))...)
+	}
 	allErrs = append(allErrs, ValidateSecretBinding(newBinding)...)
 
 	return allErrs
