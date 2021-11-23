@@ -31,8 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	"github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dns"
 	extensionsdnsrecord "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/dnsrecord"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
-	"github.com/gardener/gardener/pkg/operation/botanist/component/vpnseedserver"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -516,80 +514,6 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 		"shoot-info":              common.GenerateAddonConfig(shootInfo, true),
 		"vertical-pod-autoscaler": common.GenerateAddonConfig(verticalPodAutoscaler, b.Shoot.WantsVerticalPodAutoscaler),
 		"cluster-identity":        map[string]interface{}{"clusterIdentity": b.Shoot.GetInfo().Status.ClusterIdentity},
-	}
-
-	if b.Shoot.ReversedVPNEnabled {
-		var (
-			vpnTLSAuthSecret = b.LoadSecret(vpnseedserver.VpnSeedServerTLSAuth)
-			vpnShootSecret   = b.LoadSecret(vpnseedserver.VpnShootSecretName)
-			vpnShootConfig   = map[string]interface{}{
-				"endpoint":       b.outOfClusterAPIServerFQDN(),
-				"port":           "8132",
-				"podNetwork":     b.Shoot.Networks.Pods.String(),
-				"serviceNetwork": b.Shoot.Networks.Services.String(),
-				"tlsAuth":        vpnTLSAuthSecret.Data["vpn.tlsauth"],
-				"vpnShootSecretData": map[string]interface{}{
-					"ca":     vpnShootSecret.Data["ca.crt"],
-					"tlsCrt": vpnShootSecret.Data["tls.crt"],
-					"tlsKey": vpnShootSecret.Data["tls.key"],
-				},
-				"reversedVPN": map[string]interface{}{
-					"enabled": true,
-					"header":  "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
-				},
-				"podAnnotations": map[string]interface{}{
-					"checksum/secret-vpn-shoot-client": b.LoadCheckSum(vpnseedserver.VpnShootSecretName),
-				},
-			}
-		)
-
-		if nodeNetwork != nil {
-			vpnShootConfig["nodeNetwork"] = *nodeNetwork
-		}
-
-		vpnShoot, err := b.InjectShootShootImages(vpnShootConfig, charts.ImageNameVpnShootClient)
-		if err != nil {
-			return nil, err
-		}
-
-		values["vpn-shoot"] = common.GenerateAddonConfig(vpnShoot, true)
-	} else {
-		var (
-			vpnTLSAuthSecret = b.LoadSecret(kubeapiserver.SecretNameVPNSeedTLSAuth)
-			vpnShootSecret   = b.LoadSecret("vpn-shoot")
-			vpnShootConfig   = map[string]interface{}{
-				"podNetwork":     b.Shoot.Networks.Pods.String(),
-				"serviceNetwork": b.Shoot.Networks.Services.String(),
-				"tlsAuth":        vpnTLSAuthSecret.Data["vpn.tlsauth"],
-				"vpnShootSecretData": map[string]interface{}{
-					"ca":     vpnShootSecret.Data["ca.crt"],
-					"tlsCrt": vpnShootSecret.Data["tls.crt"],
-					"tlsKey": vpnShootSecret.Data["tls.key"],
-				},
-				"reversedVPN": map[string]interface{}{
-					"enabled": false,
-				},
-				"podAnnotations": map[string]interface{}{
-					"checksum/secret-vpn-shoot": b.LoadCheckSum("vpn-shoot"),
-				},
-			}
-		)
-
-		// OpenVPN related values
-		if openvpnDiffieHellmanSecret := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); openvpnDiffieHellmanSecret != nil {
-			vpnShootConfig["diffieHellmanKey"] = openvpnDiffieHellmanSecret.Data["dh2048.pem"]
-		}
-
-		if nodeNetwork != nil {
-			vpnShootConfig["nodeNetwork"] = *nodeNetwork
-		}
-
-		vpnShoot, err := b.InjectShootShootImages(vpnShootConfig, charts.ImageNameVpnShoot)
-		if err != nil {
-			return nil, err
-		}
-
-		values["vpn-shoot"] = common.GenerateAddonConfig(vpnShoot, true)
 	}
 
 	return b.K8sShootClient.ChartRenderer().Render(filepath.Join(charts.Path, "shoot-core", "components"), "shoot-core", metav1.NamespaceSystem, values)
