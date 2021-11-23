@@ -119,7 +119,7 @@ const (
 	// alpha: v1.37.0
 	SecretBindingProviderPopulator featuregate.Feature = "SecretBindingProviderPopulator"
 
-	// RequireSecretBindingProvider enables a validation on Gardener API server that requires the provider type of a SecretBinding to be set
+	// RequiredSecretBindingProvider enables a validation on Gardener API server that requires the provider type of a SecretBinding to be set
 	// and to match Shoot provider type.
 	// owner: @ialidzhikov
 	// alpha: v1.37.0
