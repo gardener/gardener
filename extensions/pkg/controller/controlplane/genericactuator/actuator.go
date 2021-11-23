@@ -230,8 +230,10 @@ func (a *actuator) reconcileControlPlane(
 	ctx context.Context,
 	cp *extensionsv1alpha1.ControlPlane,
 	cluster *extensionscontroller.Cluster,
-) (bool, error) {
-
+) (
+	bool,
+	error,
+) {
 	if len(a.shootWebhooks) > 0 {
 		if err := ReconcileShootWebhooks(ctx, a.client, cp.Namespace, a.providerName, a.webhookServerPort, a.shootWebhooks, cluster); err != nil {
 			return false, fmt.Errorf("could not reconcile shoot webhooks: %w", err)
@@ -239,10 +241,17 @@ func (a *actuator) reconcileControlPlane(
 	}
 
 	// Deploy secrets
-	a.logger.Info("Deploying secrets", "controlplane", kutil.ObjectName(cp))
-	deployedSecrets, err := a.secrets.Deploy(ctx, a.clientset, a.gardenerClientset, cp.Namespace)
-	if err != nil {
-		return false, fmt.Errorf("could not deploy secrets for controlplane '%s': %w", kutil.ObjectName(cp), err)
+	var (
+		deployedSecrets map[string]*corev1.Secret
+		err             error
+	)
+
+	if a.secrets != nil {
+		a.logger.Info("Deploying secrets", "controlplane", kutil.ObjectName(cp))
+		deployedSecrets, err = a.secrets.Deploy(ctx, a.clientset, a.gardenerClientset, cp.Namespace)
+		if err != nil {
+			return false, fmt.Errorf("could not deploy secrets for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		}
 	}
 
 	// Get config chart values
@@ -289,17 +298,20 @@ func (a *actuator) reconcileControlPlane(
 		}
 	}
 
-	// Get control plane chart values
-	values, err := a.vp.GetControlPlaneChartValues(ctx, cp, cluster, checksums, scaledDown)
-	if err != nil {
-		return false, err
-	}
-
 	// Apply control plane chart
 	version := cluster.Shoot.Spec.Kubernetes.Version
-	a.logger.Info("Applying control plane chart", "controlplane", kutil.ObjectName(cp))
-	if err := a.controlPlaneChart.Apply(ctx, a.chartApplier, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
-		return false, fmt.Errorf("could not apply control plane chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+
+	if a.controlPlaneChart != nil {
+		// Get control plane chart values
+		values, err := a.vp.GetControlPlaneChartValues(ctx, cp, cluster, checksums, scaledDown)
+		if err != nil {
+			return false, err
+		}
+
+		a.logger.Info("Applying control plane chart", "controlplane", kutil.ObjectName(cp))
+		if err := a.controlPlaneChart.Apply(ctx, a.chartApplier, cp.Namespace, a.imageVector, a.gardenerClientset.Version(), version, values); err != nil {
+			return false, fmt.Errorf("could not apply control plane chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		}
 	}
 
 	// Create shoot chart renderer
@@ -308,19 +320,21 @@ func (a *actuator) reconcileControlPlane(
 		return false, fmt.Errorf("could not create chart renderer for shoot '%s': %w", cp.Namespace, err)
 	}
 
-	// Get control plane shoot chart values
-	values, err = a.vp.GetControlPlaneShootChartValues(ctx, cp, cluster, checksums)
-	if err != nil {
-		return false, err
-	}
+	if a.controlPlaneShootChart != nil {
+		// Get control plane shoot chart values
+		values, err := a.vp.GetControlPlaneShootChartValues(ctx, cp, cluster, checksums)
+		if err != nil {
+			return false, err
+		}
 
-	if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootChartResourceName, false, a.client, chartRenderer, a.controlPlaneShootChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
-		return false, fmt.Errorf("could not apply control plane shoot chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, ControlPlaneShootChartResourceName, false, a.client, chartRenderer, a.controlPlaneShootChart, values, a.imageVector, metav1.NamespaceSystem, version, true, false); err != nil {
+			return false, fmt.Errorf("could not apply control plane shoot chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		}
 	}
 
 	if a.controlPlaneShootCRDsChart != nil {
 		// Get control plane shoot CRDs chart values
-		values, err = a.vp.GetControlPlaneShootCRDsChartValues(ctx, cp, cluster)
+		values, err := a.vp.GetControlPlaneShootCRDsChartValues(ctx, cp, cluster)
 		if err != nil {
 			return false, err
 		}
@@ -330,14 +344,16 @@ func (a *actuator) reconcileControlPlane(
 		}
 	}
 
-	// Get storage classes
-	values, err = a.vp.GetStorageClassesChartValues(ctx, cp, cluster)
-	if err != nil {
-		return false, err
-	}
+	if a.storageClassesChart != nil {
+		// Get storage class chart values
+		values, err := a.vp.GetStorageClassesChartValues(ctx, cp, cluster)
+		if err != nil {
+			return false, err
+		}
 
-	if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, StorageClassesChartResourceName, false, a.client, chartRenderer, a.storageClassesChart, values, a.imageVector, metav1.NamespaceSystem, version, true, true); err != nil {
-		return false, fmt.Errorf("could not apply storage classes chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		if err := managedresources.RenderChartAndCreate(ctx, cp.Namespace, StorageClassesChartResourceName, false, a.client, chartRenderer, a.storageClassesChart, values, a.imageVector, metav1.NamespaceSystem, version, true, true); err != nil {
+			return false, fmt.Errorf("could not apply storage classes chart for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		}
 	}
 
 	return requeue, nil
@@ -422,9 +438,11 @@ func (a *actuator) deleteControlPlane(
 	}
 
 	// Delete control plane objects
-	a.logger.Info("Deleting control plane objects", "controlplane", kutil.ObjectName(cp))
-	if err := a.controlPlaneChart.Delete(ctx, a.client, cp.Namespace); client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("could not delete control plane objects for controlplane '%s': %w", kutil.ObjectName(cp), err)
+	if a.controlPlaneChart != nil {
+		a.logger.Info("Deleting control plane objects", "controlplane", kutil.ObjectName(cp))
+		if err := a.controlPlaneChart.Delete(ctx, a.client, cp.Namespace); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("could not delete control plane objects for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		}
 	}
 
 	if a.configChart != nil {
@@ -435,10 +453,12 @@ func (a *actuator) deleteControlPlane(
 		}
 	}
 
-	// Delete secrets
-	a.logger.Info("Deleting secrets", "controlplane", kutil.ObjectName(cp))
-	if err := a.secrets.Delete(ctx, a.clientset, cp.Namespace); client.IgnoreNotFound(err) != nil {
-		return fmt.Errorf("could not delete secrets for controlplane '%s': %w", kutil.ObjectName(cp), err)
+	if a.secrets != nil {
+		// Delete secrets
+		a.logger.Info("Deleting secrets", "controlplane", kutil.ObjectName(cp))
+		if err := a.secrets.Delete(ctx, a.clientset, cp.Namespace); client.IgnoreNotFound(err) != nil {
+			return fmt.Errorf("could not delete secrets for controlplane '%s': %w", kutil.ObjectName(cp), err)
+		}
 	}
 
 	if len(a.shootWebhooks) > 0 {
