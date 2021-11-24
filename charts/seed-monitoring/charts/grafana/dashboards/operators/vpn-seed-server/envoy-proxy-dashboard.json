@@ -1152,11 +1152,12 @@
       "yaxes": [
         {
           "$$hashKey": "object:119",
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -1249,11 +1250,12 @@
       "yaxes": [
         {
           "$$hashKey": "object:119",
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
@@ -1346,11 +1348,12 @@
       "yaxes": [
         {
           "$$hashKey": "object:119",
+          "decimals": 0,
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": null,
+          "min": "0",
           "show": true
         },
         {
