@@ -17,6 +17,7 @@ package shoot
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -460,7 +461,20 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		timeForInfrastructureResourceCleanup = g.Add(flow.Task{
 			Name: "Waiting until time for infrastructure resource cleanup has elapsed",
 			Fn: flow.TaskFn(func(ctx context.Context) error {
-				ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+				waitFor := 5 * time.Minute
+
+				if v, ok := botanist.Shoot.GetInfo().Annotations[v1beta1constants.AnnotationShootInfrastructureCleanupWaitPeriodSeconds]; ok {
+					seconds, err := strconv.Atoi(v)
+					if err != nil {
+						return err
+					}
+
+					if newWaitFor := time.Duration(seconds) * time.Second; newWaitFor < waitFor {
+						waitFor = newWaitFor
+					}
+				}
+
+				ctx, cancel := context.WithTimeout(ctx, waitFor)
 				defer cancel()
 
 				<-ctx.Done()

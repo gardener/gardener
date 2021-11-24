@@ -388,6 +388,11 @@ const (
 	// namespaces' step. Concretely, after the specified seconds, all the finalizers of the affected resources are
 	// forcefully removed.
 	AnnotationShootCleanupNamespaceResourcesFinalizeGracePeriodSeconds = "shoot.gardener.cloud/cleanup-namespaces-finalize-grace-period-seconds"
+	// AnnotationShootInfrastructureCleanupWaitPeriodSeconds is a key for an annotation on a Shoot
+	// resource that declares the wait period in seconds for infrastructure resources cleanup. Concretely,
+	// Gardener will wait for the specified time after the Infrastructure extension object has been deleted to allow
+	// controllers to gracefully cleanup everything (default behaviour is 300s).
+	AnnotationShootInfrastructureCleanupWaitPeriodSeconds = "shoot.gardener.cloud/infrastructure-cleanup-wait-period-seconds"
 	// AnnotationReversedVPN moves the vpn-server to the seed.
 	AnnotationReversedVPN = "alpha.featuregates.shoot.gardener.cloud/reversed-vpn"
 	// AnnotationNodeLocalDNS enables a per node dns cache on the shoot cluster.
