@@ -602,7 +602,7 @@ subjects:
 							{Name: managedResourceSecretName},
 						},
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  pointer.Bool(false),
+						KeepObjects:  pointer.Bool(true),
 					},
 				}
 
