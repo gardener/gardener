@@ -184,6 +184,23 @@ spec:
                     name:
                       description: Name is the name of this worker pool.
                       type: string
+                    nodeTemplate:
+                      description: NodeTemplate contains resource information of the
+                        machine which is used by Cluster Autoscaler to generate nodeTemplate
+                        during scaling a nodeGroup from zero
+                      properties:
+                        capacity:
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: Capacity represents the expected Node capacity.
+                          type: object
+                      required:
+                      - capacity
+                      type: object
                     providerConfig:
                       description: ProviderConfig is a provider specific configuration
                         for the worker pool.

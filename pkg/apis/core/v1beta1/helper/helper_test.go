@@ -423,6 +423,16 @@ var _ = Describe("helper", func() {
 			Entry("not present", metav1.ObjectMeta{}, false),
 		)
 
+		DescribeTable("#FindMachineTypeByName",
+			func(machines []gardencorev1beta1.MachineType, name string, expectedMachine *gardencorev1beta1.MachineType) {
+				Expect(FindMachineTypeByName(machines, name)).To(Equal(expectedMachine))
+			},
+
+			Entry("no workers", nil, "", nil),
+			Entry("worker not found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "bar", nil),
+			Entry("worker found", []gardencorev1beta1.MachineType{{Name: "foo"}}, "foo", &gardencorev1beta1.MachineType{Name: "foo"}),
+		)
+
 		DescribeTable("#TaintsHave",
 			func(taints []gardencorev1beta1.SeedTaint, key string, expectation bool) {
 				Expect(TaintsHave(taints, key)).To(Equal(expectation))
