@@ -110,7 +110,7 @@ var _ = Describe("Controller", func() {
 			Expect(controllerRegQueue.Len()).To(BeZero())
 		})
 
-		It("should also add the object to controllerRegistrationQueue if DNS provider changed", func() {
+		It("should add the object to the queue if DNS provider changed", func() {
 			objWithChangedDNSProvider := obj.DeepCopy()
 			objWithChangedDNSProvider.Spec = gardencorev1beta1.SeedSpec{
 				DNS: gardencorev1beta1.SeedDNS{
@@ -119,6 +119,26 @@ var _ = Describe("Controller", func() {
 			}
 
 			c.seedUpdate(obj, objWithChangedDNSProvider)
+
+			Expect(seedQueue.Len()).To(Equal(1))
+			Expect(seedQueue.items[0]).To(Equal(seedName))
+			Expect(controllerRegQueue.Len()).To(Equal(1))
+			Expect(controllerRegQueue.items[0]).To(Equal(seedName))
+		})
+
+		It("should not add the object to the queue if DNS provider was not changed", func() {
+			c.seedUpdate(obj, obj)
+
+			Expect(seedQueue.Len()).To(Equal(1))
+			Expect(seedQueue.items[0]).To(Equal(seedName))
+			Expect(controllerRegQueue.Len()).To(BeZero())
+		})
+
+		It("should add the object to the queue if the deletion timestamp was set", func() {
+			newObj := obj.DeepCopy()
+			newObj.DeletionTimestamp = &metav1.Time{}
+
+			c.seedUpdate(obj, newObj)
 
 			Expect(seedQueue.Len()).To(Equal(1))
 			Expect(seedQueue.items[0]).To(Equal(seedName))
