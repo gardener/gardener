@@ -18,6 +18,8 @@ import (
 	"errors"
 	"time"
 
+	"k8s.io/client-go/tools/clientcmd"
+
 	"k8s.io/client-go/rest"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -26,12 +28,14 @@ import (
 
 // Config carries options for new ClientSets.
 type Config struct {
-	newRuntimeCache cache.NewCacheFunc
-	clientOptions   client.Options
-	restConfig      *rest.Config
-	cacheResync     *time.Duration
-	disableCache    bool
-	uncachedObjects []client.Object
+	newRuntimeCache   cache.NewCacheFunc
+	clientOptions     client.Options
+	restConfig        *rest.Config
+	cacheResync       *time.Duration
+	disableCache      bool
+	uncachedObjects   []client.Object
+	allowedUserFields []string
+	clientConfig      clientcmd.ClientConfig
 }
 
 // NewConfig returns a new Config with an empty REST config to allow testing ConfigFuncs without exporting
@@ -106,6 +110,22 @@ func WithUncached(objs ...client.Object) ConfigFunc {
 func WithNewCacheFunc(fn cache.NewCacheFunc) ConfigFunc {
 	return func(config *Config) error {
 		config.newRuntimeCache = fn
+		return nil
+	}
+}
+
+// WithAllowedUserFields allows to specify additional kubeconfig.user fields allowed during validation.
+func WithAllowedUserFields(allowedUserFields []string) ConfigFunc {
+	return func(config *Config) error {
+		config.allowedUserFields = allowedUserFields
+		return nil
+	}
+}
+
+// WithClientConfig adds a ClientConfig for validation at a later stage.
+func WithClientConfig(clientConfig clientcmd.ClientConfig) ConfigFunc {
+	return func(config *Config) error {
+		config.clientConfig = clientConfig
 		return nil
 	}
 }
