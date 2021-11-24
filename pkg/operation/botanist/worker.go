@@ -45,6 +45,7 @@ func (b *Botanist) DefaultWorker() worker.Interface {
 			Region:            b.Shoot.GetInfo().Spec.Region,
 			Workers:           b.Shoot.GetInfo().Spec.Provider.Workers,
 			KubernetesVersion: b.Shoot.KubernetesVersion,
+			MachineTypes:      b.Shoot.CloudProfile.Spec.MachineTypes,
 		},
 		worker.DefaultInterval,
 		worker.DefaultSevereThreshold,
