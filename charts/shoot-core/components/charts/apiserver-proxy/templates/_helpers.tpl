@@ -12,7 +12,7 @@ envoy.yaml: |-
           overload:
             global_downstream_max_connections: 10000
   admin:
-    access_log_path: /dev/stout
+    access_log_path: /dev/stdout
     address:
       pipe:
         # The admin interface should not be exposed as a TCP address.
