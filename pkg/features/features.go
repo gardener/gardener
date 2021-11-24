@@ -27,17 +27,17 @@ const (
 	// MyFeature featuregate.Feature = "MyFeature"
 
 	// Logging enables logging stack for clusters.
-	// owner @mvladev
+	// owner @vlvasilev
 	// alpha: v0.13.0
 	Logging featuregate.Feature = "Logging"
 
 	// HVPA enables simultaneous horizontal and vertical scaling in Seed Clusters.
-	// owner @amshuman-kr
+	// owner @shreyas-s-rao @voelzmo
 	// alpha: v0.31.0
 	HVPA featuregate.Feature = "HVPA"
 
 	// HVPAForShootedSeed enables simultaneous horizontal and vertical scaling in shooted seed Clusters.
-	// owner @amshuman-kr
+	// owner @shreyas-s-rao @voelzmo
 	// alpha: v0.32.0
 	HVPAForShootedSeed featuregate.Feature = "HVPAForShootedSeed"
 
@@ -45,7 +45,7 @@ const (
 	// Disable this feature if Istio is already installed in the cluster.
 	// Istio is not automatically removed if this feature is set to false.
 	// See https://github.com/gardener/gardener/blob/master/docs/usage/istio.md
-	// owner @mvladev
+	// owner @ScheererJ @DockToFuture
 	// alpha: v1.5.0
 	// beta: v1.19.0
 	ManagedIstio featuregate.Feature = "ManagedIstio"
@@ -54,7 +54,7 @@ const (
 	// for all Shoot clusters. Requires Istio to be installed in the cluster or
 	// ManagedIstio feature gate to be enabled.
 	// See https://github.com/gardener/gardener/blob/masster/docs/proposals/08-shoot-apiserver-via-sni.md
-	// owner @mvladev
+	// owner @ScheererJ @DockToFuture
 	// alpha: v1.7.0
 	// beta: v1.19.0
 	APIServerSNI featuregate.Feature = "APIServerSNI"
@@ -73,17 +73,17 @@ const (
 	SeedChange featuregate.Feature = "SeedChange"
 
 	// SeedKubeScheduler adds an additional kube-scheduler in seed clusters where the feature is enabled.
-	// owner: @mvladev
+	// owner: @ialidzhikov
 	// alpha: v1.15.0
 	SeedKubeScheduler featuregate.Feature = "SeedKubeScheduler"
 
 	// ReversedVPN moves the openvpn server to the seed.
-	// owner: @scheererj @docktofuture
+	// owner: @ScheererJ @DockToFuture
 	// alpha: v1.22.0
 	ReversedVPN featuregate.Feature = "ReversedVPN"
 
 	// AdminKubeconfigRequest enables the AdminKubeconfigRequest endpoint on shoot resources.
-	// owner: @mvladev
+	// owner: @petersutter
 	// alpha: v1.24.0
 	AdminKubeconfigRequest featuregate.Feature = "AdminKubeconfigRequest"
 
@@ -101,12 +101,12 @@ const (
 	DisallowKubeconfigRotationForShootInDeletion featuregate.Feature = "DisallowKubeconfigRotationForShootInDeletion"
 
 	// RotateSSHKeypairOnMaintenance enables SSH keypair rotation in the maintenance controller of the gardener-controller-manager.
-	// owner: @petersutter @xrstf
+	// owner: @petersutter
 	// alpha: v1.28.0
 	RotateSSHKeypairOnMaintenance featuregate.Feature = "RotateSSHKeypairOnMaintenance"
 
 	// DenyInvalidExtensionResources causes the seed-admission-controller to deny invalid extension resources (instead of just logging validation errors).
-	// owner: @vanjiii
+	// owner: @stoyanr
 	// alpha: v1.31.0
 	DenyInvalidExtensionResources featuregate.Feature = "DenyInvalidExtensionResources"
 
