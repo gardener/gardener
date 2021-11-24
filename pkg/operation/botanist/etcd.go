@@ -111,7 +111,7 @@ func (b *Botanist) DeployEtcd(ctx context.Context) error {
 			FullSnapshotSchedule: snapshotSchedule,
 		})
 
-		if gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
+		if gardenletfeatures.FeatureGate.Enabled(features.UseDNSRecords) && gardencorev1beta1helper.SeedSettingOwnerChecksEnabled(b.Seed.GetInfo().Spec.Settings) {
 			b.Shoot.Components.ControlPlane.EtcdMain.SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
 				Name: gutil.GetOwnerDomain(b.Shoot.InternalClusterDomain),
 				ID:   *b.Seed.GetInfo().Status.ClusterIdentity,
