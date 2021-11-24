@@ -277,7 +277,8 @@ var _ = Describe("KubeRBACProxy", func() {
 						Name:      managedResourceName,
 						Namespace: namespace,
 						Labels: map[string]string{
-							"origin": "gardener",
+							"origin":   "gardener",
+							"priority": "normal",
 						},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{

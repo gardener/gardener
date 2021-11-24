@@ -1055,7 +1055,8 @@ subjects:
 							Namespace:       managedResource.Namespace,
 							ResourceVersion: "1",
 							Labels: map[string]string{
-								"origin": "gardener",
+								"origin":   "gardener",
+								"priority": "normal",
 							},
 						},
 						Spec: resourcesv1alpha1.ManagedResourceSpec{

@@ -421,7 +421,7 @@ metadata:
 									Expect(obj.ObjectMeta).To(Equal(metav1.ObjectMeta{
 										Name:      "shoot-cloud-config-execution",
 										Namespace: namespace,
-										Labels:    map[string]string{"origin": "gardener"},
+										Labels:    map[string]string{"origin": "gardener", "priority": "normal"},
 									}))
 									Expect(obj.Spec.SecretRefs).To(ConsistOf(
 										corev1.LocalObjectReference{Name: "managedresource-shoot-cloud-config-execution-" + worker1Name},

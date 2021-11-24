@@ -44,6 +44,12 @@ const (
 	LabelKeyOrigin = "origin"
 	// LabelValueGardener is a value for a label on a managed resource with the value 'gardener'.
 	LabelValueGardener = "gardener"
+	// LabelKeyPriority is a key for a label on a managed resource with the value 'priority'.
+	LabelKeyPriority = "priority"
+	// LabelValueNormal is a value for a label on a managed resource with the value 'normal'.
+	LabelValueNormal = "normal"
+	// LabelValueHigh is a value for a label on a managed resource with the value 'normal'.
+	LabelValueHigh = "high"
 )
 
 // SecretName returns the name of a corev1.Secret for the given name of a resourcesv1alpha1.ManagedResource. If
@@ -73,17 +79,23 @@ func New(client client.Client, namespace, name, class string, keepObjects *bool,
 	return mr
 }
 
-// NewForShoot constructs a new ManagedResource object for the shoot's Gardener-Resource-Manager.
+// NewForShoot constructs a new ManagedResource object for the shoot's gardener-resource-manager.
 func NewForShoot(c client.Client, namespace, name string, keepObjects bool) *builder.ManagedResource {
+	return NewForShootWithPriority(c, namespace, name, keepObjects, LabelValueNormal)
+}
+
+// NewForShootWithPriority constructs a new ManagedResource object for the shoot's gardener-resource-manager
+// with the given priority label value.
+func NewForShootWithPriority(c client.Client, namespace, name string, keepObjects bool, priority string) *builder.ManagedResource {
 	var (
 		injectedLabels = map[string]string{v1beta1constants.ShootNoCleanup: "true"}
-		labels         = map[string]string{LabelKeyOrigin: LabelValueGardener}
+		labels         = map[string]string{LabelKeyOrigin: LabelValueGardener, LabelKeyPriority: priority}
 	)
 
 	return New(c, namespace, name, "", &keepObjects, labels, injectedLabels, nil)
 }
 
-// NewForSeed constructs a new ManagedResource object for the seed's Gardener-Resource-Manager.
+// NewForSeed constructs a new ManagedResource object for the seed's gardener-resource-manager.
 func NewForSeed(c client.Client, namespace, name string, keepObjects bool) *builder.ManagedResource {
 	return New(c, namespace, name, v1beta1constants.SeedResourceManagerClass, &keepObjects, nil, nil, nil)
 }
@@ -132,9 +144,14 @@ func CreateForSeed(ctx context.Context, client client.Client, namespace, name st
 
 // CreateForShoot deploys a ManagedResource CR for the shoot's gardener-resource-manager.
 func CreateForShoot(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, data map[string][]byte) error {
+	return CreateForShootWithPriority(ctx, client, namespace, name, keepObjects, LabelValueNormal, data)
+}
+
+// CreateForShootWithPriority deploys a ManagedResource CR for the shoot's gardener-resource-manager with the given priority.
+func CreateForShootWithPriority(ctx context.Context, client client.Client, namespace, name string, keepObjects bool, priority string, data map[string][]byte) error {
 	var (
 		secretName, secret = NewSecret(client, namespace, name, data, true)
-		managedResource    = NewForShoot(client, namespace, name, keepObjects).WithSecretRef(secretName)
+		managedResource    = NewForShootWithPriority(client, namespace, name, keepObjects, priority).WithSecretRef(secretName)
 	)
 
 	return deployManagedResource(ctx, secret, managedResource)

@@ -507,11 +507,21 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Fn:           botanist.Shoot.Components.Extensions.ControlPlane.WaitCleanup,
 			Dependencies: flow.NewTaskIDs(destroyControlPlane),
 		})
+		deleteHighPriorityManagedResources = g.Add(flow.Task{
+			Name:         "Deleting high priority managed resources",
+			Fn:           flow.TaskFn(botanist.DeleteHighPriorityManagedResources).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(waitUntilManagedResourcesDeleted, waitUntilControlPlaneDeleted),
+		})
+		waitUntilHighPriorityManagedResourcesDeleted = g.Add(flow.Task{
+			Name:         "Waiting until high priority managed resources have been deleted",
+			Fn:           flow.TaskFn(botanist.WaitUntilHighPriorityManagedResourcesDeleted).DoIf(cleanupShootResources).Timeout(2 * time.Minute),
+			Dependencies: flow.NewTaskIDs(deleteHighPriorityManagedResources),
+		})
 
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted, waitUntilHighPriorityManagedResourcesDeleted),
 		})
 		destroyKubeAPIServerSNI = g.Add(flow.Task{
 			Name:         "Destroying Kubernetes API server service SNI",
@@ -543,7 +553,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		destroyInfrastructure = g.Add(flow.Task{
 			Name:         "Destroying shoot infrastructure",
 			Fn:           flow.TaskFn(botanist.Shoot.Components.Extensions.Infrastructure.Destroy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilControlPlaneDeleted, waitUntilHighPriorityManagedResourcesDeleted),
 		})
 		waitUntilInfrastructureDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot infrastructure has been destroyed",
@@ -566,6 +576,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			deleteGrafana,
 			deleteKubeAPIServer,
 			waitUntilControlPlaneDeleted,
+			waitUntilHighPriorityManagedResourcesDeleted,
 			waitUntilControlPlaneExposureDeleted,
 			destroyIngressDomainDNSRecord,
 			destroyExternalDomainDNSRecord,

@@ -26,19 +26,55 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// DeleteManagedResources deletes all managed resources labeled with `origin=gardener` from the Shoot namespace in the Seed.
+// DeleteManagedResources deletes all managed resources labeled with `origin=gardener` and `priority=normal`
+// from the Shoot namespace in the Seed.
 func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
+	return b.deleteManagedResources(ctx, managedresources.LabelValueNormal)
+}
+
+// WaitUntilManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` and `priority=normal`
+// are gone or the context is cancelled.
+func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
+	return b.waitUntilManagedResourcesDeleted(ctx, managedresources.LabelValueNormal)
+}
+
+// DeleteHighPriorityManagedResources deletes all managed resources labeled with `origin=gardener` and `priority=high`
+// from the Shoot namespace in the Seed.
+func (b *Botanist) DeleteHighPriorityManagedResources(ctx context.Context) error {
+	return b.deleteManagedResources(ctx, managedresources.LabelValueHigh)
+}
+
+// WaitUntilHighPriorityManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` and `priority=high`
+// are gone or the context is cancelled.
+func (b *Botanist) WaitUntilHighPriorityManagedResourcesDeleted(ctx context.Context) error {
+	return b.waitUntilManagedResourcesDeleted(ctx, managedresources.LabelValueHigh)
+}
+
+// deleteManagedResources deletes all managed resources labeled with `origin=gardener` and `priority=<priority>`
+// from the Shoot namespace in the Seed.
+func (b *Botanist) deleteManagedResources(ctx context.Context, priority string) error {
 	return b.K8sSeedClient.Client().DeleteAllOf(
 		ctx,
 		&resourcesv1alpha1.ManagedResource{},
 		client.InNamespace(b.Shoot.SeedNamespace),
-		client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener},
+		client.MatchingLabels{
+			managedresources.LabelKeyOrigin:   managedresources.LabelValueGardener,
+			managedresources.LabelKeyPriority: priority,
+		},
 	)
 }
 
-// WaitUntilManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` are gone or the context is cancelled.
-func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
-	return b.waitUntilManagedResourceAreDeleted(ctx, client.InNamespace(b.Shoot.SeedNamespace), client.MatchingLabels{managedresources.LabelKeyOrigin: managedresources.LabelValueGardener})
+// waitUntilManagedResourcesDeleted waits until all managed resources labeled with `origin=gardener` and `priority=<priority>`
+// are gone or the context is cancelled.
+func (b *Botanist) waitUntilManagedResourcesDeleted(ctx context.Context, priority string) error {
+	return b.waitUntilManagedResourceAreDeleted(
+		ctx,
+		client.InNamespace(b.Shoot.SeedNamespace),
+		client.MatchingLabels{
+			managedresources.LabelKeyOrigin:   managedresources.LabelValueGardener,
+			managedresources.LabelKeyPriority: priority,
+		},
+	)
 }
 
 // WaitUntilAllManagedResourcesDeleted waits until all managed resources are gone or the context is cancelled.

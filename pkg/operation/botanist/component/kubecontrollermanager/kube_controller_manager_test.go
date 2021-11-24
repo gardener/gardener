@@ -595,14 +595,14 @@ subjects:
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      managedResourceName,
 						Namespace: namespace,
-						Labels:    map[string]string{"origin": "gardener"},
+						Labels:    map[string]string{"origin": "gardener", "priority": "high"},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						SecretRefs: []corev1.LocalObjectReference{
 							{Name: managedResourceSecretName},
 						},
 						InjectLabels: map[string]string{"shoot.gardener.cloud/no-cleanup": "true"},
-						KeepObjects:  pointer.Bool(true),
+						KeepObjects:  pointer.Bool(false),
 					},
 				}
 

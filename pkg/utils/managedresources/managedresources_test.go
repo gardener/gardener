@@ -106,7 +106,7 @@ var _ = Describe("managedresources", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,
 						Namespace: namespace,
-						Labels:    map[string]string{"origin": "gardener"},
+						Labels:    map[string]string{"origin": "gardener", "priority": "normal"},
 					},
 					Spec: resourcesv1alpha1.ManagedResourceSpec{
 						SecretRefs:   []corev1.LocalObjectReference{{Name: "managedresource-" + name}},
