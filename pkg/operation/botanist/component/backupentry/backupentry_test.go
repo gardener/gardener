@@ -292,8 +292,14 @@ var _ = Describe("BackupEntry", func() {
 	})
 
 	Describe("#Destroy", func() {
-		It("should be nil because it's not implemented", func() {
+		It("should not return error when it's not found", func() {
 			Expect(defaultDepWaiter.Destroy(ctx)).To(BeNil())
+		})
+
+		It("should not return error when it's deleted successfully", func() {
+			Expect(c.Create(ctx, expected)).ToNot(HaveOccurred(), "creating infrastructure succeeds")
+
+			Expect(defaultDepWaiter.Destroy(ctx)).ToNot(HaveOccurred())
 		})
 	})
 
