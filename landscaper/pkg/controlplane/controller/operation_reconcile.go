@@ -17,8 +17,9 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
-	exports "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports"
+	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports"
 	gardencorev1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/controllerutils"
 	"github.com/gardener/gardener/pkg/operation/etcdencryption"
@@ -31,13 +32,13 @@ import (
 )
 
 // Reconcile runs the reconcile operation.
-func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, error) {
+func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, bool, bool, error) {
 	var (
 		graph = flow.NewGraph("Gardener ControlPlane Reconciliation")
 
 		fetchSecretReferences = graph.Add(flow.Task{
 			Name: "Fetching import secret references",
-			Fn:   flow.TaskFn(o.FetchAndValidateConfigurationFromSecretReferences),
+			Fn:   flow.TaskFn(o.FetchAndValidateConfigurationFromSecretReferences).SkipIf(o.imports.CertificateRotation != nil && o.imports.CertificateRotation.Rotate),
 		})
 
 		getIdentity = graph.Add(flow.Task{
@@ -69,27 +70,39 @@ func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, error) {
 			}),
 		})
 
-		// needed for the helm chart values
-		generateEtcdEncryption = graph.Add(flow.Task{
-			Name: "Generating etcd encryption configuration",
-			Fn:   flow.TaskFn(o.GetOrGenerateEncryptionConfiguration).DoIf(o.imports.GardenerAPIServer.ComponentConfiguration.Encryption == nil),
-		})
-
 		getDiffieHellmann = graph.Add(flow.Task{
 			Name: "Get OpenVPN Diffie-Hellmann Key",
 			Fn:   flow.TaskFn(o.GetOrDefaultDiffieHellmannKey).DoIf(o.imports.OpenVPNDiffieHellmanKey == nil),
 		})
 
-		syncClusterState = graph.Add(flow.Task{
-			Name:         "Syncing cluster state",
+		syncExistingInstallation = graph.Add(flow.Task{
+			Name:         "Syncing with existing Gardener Installation",
 			Fn:           flow.TaskFn(o.SyncWithExistingGardenerInstallation).SkipIf(o.imports.CertificateRotation != nil && o.imports.CertificateRotation.Rotate),
 			Dependencies: flow.NewTaskIDs(fetchSecretReferences),
 		})
 
+		generateEtcdEncryption = graph.Add(flow.Task{
+			Name:         "Generating etcd encryption configuration",
+			Fn:           flow.TaskFn(o.GenerateEncryptionConfiguration).DoIf(o.imports.GardenerAPIServer.ComponentConfiguration.Encryption == nil),
+			Dependencies: flow.NewTaskIDs(syncExistingInstallation),
+		})
+
+		checkExpiringCertificates = graph.Add(flow.Task{
+			Name:         "Check for expiring certificates",
+			Fn:           flow.TaskFn(o.CheckForExpiringCertificates).SkipIf(o.imports.CertificateRotation != nil && o.imports.CertificateRotation.Rotate),
+			Dependencies: flow.NewTaskIDs(syncExistingInstallation),
+		})
+
+		prepareCompleteRotation = graph.Add(flow.Task{
+			Name:         "Prepare complete certificate rotation",
+			Fn:           flow.TaskFn(o.PrepareCompleteCertificateRotation).DoIf(o.imports.CertificateRotation != nil && o.imports.CertificateRotation.Rotate),
+			Dependencies: flow.NewTaskIDs(syncExistingInstallation),
+		})
+
 		generateCAs = graph.Add(flow.Task{
-			Name:         "Generating Certificate Authorities",
+			Name:         "Generating missing Certificate Authorities",
 			Fn:           o.GenerateCACertificates,
-			Dependencies: flow.NewTaskIDs(syncClusterState),
+			Dependencies: flow.NewTaskIDs(checkExpiringCertificates, prepareCompleteRotation),
 		})
 
 		generateAPIServerCerts = graph.Add(flow.Task{
@@ -100,7 +113,7 @@ func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, error) {
 
 		generateGACCerts = graph.Add(flow.Task{
 			Name:         "Generating Admission controller certificates",
-			Fn:           o.GenerateAdmissionControllerCertificates,
+			Fn:           flow.TaskFn(o.GenerateAdmissionControllerCertificates).DoIf(o.imports.GardenerAdmissionController.Enabled),
 			Dependencies: flow.NewTaskIDs(generateCAs),
 		})
 
@@ -139,8 +152,15 @@ func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, error) {
 		})
 
 		deployApplicationChart = graph.Add(flow.Task{
-			Name:         "Deploying the application chart into the Garden cluster",
-			Fn:           flow.TaskFn(o.DeployApplicationChart),
+			Name: "Deploying the application chart into the Garden cluster",
+			Fn: flow.TaskFn(func(ctx context.Context) error {
+				if err := o.DeployApplicationChart(ctx); err != nil {
+					return err
+				}
+
+				o.successfullyDeployedApplicationChart = true
+				return nil
+			}),
 			Dependencies: flow.NewTaskIDs(seedAuthorizerPreparation),
 		})
 
@@ -203,15 +223,22 @@ func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, error) {
 			Fn: flow.TaskFn(func(ctx context.Context) error {
 				// TODO
 
+				o.successfullyDeployedRuntimeChart = true
 				return nil
 			}),
 			Dependencies: flow.NewTaskIDs(deployApplicationChart, generateKubeconfigGardenerAPIServer, generateKubeconfigGardenerControllerManager, generateKubeconfigGardenerScheduler, generateKubeconfigGardenerAdmissionController),
 		})
 
+		updateSecretReferences = graph.Add(flow.Task{
+			Name:         "Update secret references with certificates",
+			Fn:           flow.TaskFn(o.UpdateSecretReferences).RetryUntilTimeout(5*time.Second, 5*time.Minute),
+			Dependencies: flow.NewTaskIDs(deployRuntimeChart),
+		})
+
 		_ = graph.Add(flow.Task{
 			Name:         "Verifying Control Plane setup",
 			Fn:           o.VerifyControlplane,
-			Dependencies: flow.NewTaskIDs(deployRuntimeChart),
+			Dependencies: flow.NewTaskIDs(updateSecretReferences),
 		})
 	)
 
@@ -220,22 +247,13 @@ func (o *operation) Reconcile(ctx context.Context) (*exports.Exports, error) {
 		ProgressReporter: flow.NewImmediateProgressReporter(o.progressReporter),
 	})
 
-	if err != nil {
-		return nil, err
-	}
-
-	return o.getExports(), nil
+	return o.getExports(), o.successfullyDeployedApplicationChart, o.successfullyDeployedRuntimeChart, err
 }
 
 // getExports sets the exports based on the import configuration that contains pre-configured and generated certificates
 func (o *operation) getExports() *exports.Exports {
 	// required certificates
 	o.exports.GardenerIdentity = *o.imports.Identity
-
-	o.exports.GardenerAPIServerCACrt = *o.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt
-	o.exports.GardenerAPIServerTLSServingCrt = *o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Crt
-	o.exports.GardenerAPIServerTLSServingKey = *o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Key
-
 	o.exports.OpenVPNDiffieHellmanKey = *o.imports.OpenVPNDiffieHellmanKey
 
 	encryption, err := etcdencryption.Write(o.imports.GardenerAPIServer.ComponentConfiguration.Encryption)
@@ -245,24 +263,28 @@ func (o *operation) getExports() *exports.Exports {
 		o.exports.GardenerAPIServerEncryptionConfiguration = string(encryption)
 	}
 
-	o.exports.GardenerControllerManagerTLSServingCrt = *o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Crt
-	o.exports.GardenerControllerManagerTLSServingKey = *o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Key
+	o.exports.GardenerAPIServerCA.Crt = *o.imports.GardenerAPIServer.ComponentConfiguration.CA.Crt
+	o.exports.GardenerAPIServerTLSServing.Crt = *o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Crt
+	o.exports.GardenerAPIServerTLSServing.Key = *o.imports.GardenerAPIServer.ComponentConfiguration.TLS.Key
+
+	o.exports.GardenerControllerManagerTLSServing.Crt = *o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Crt
+	o.exports.GardenerControllerManagerTLSServing.Key = *o.imports.GardenerControllerManager.ComponentConfiguration.TLS.Key
 
 	// optional
 	if o.imports.GardenerAPIServer.ComponentConfiguration.CA.Key != nil {
-		o.exports.GardenerAPIServerCAKey = *o.imports.GardenerAPIServer.ComponentConfiguration.CA.Key
+		o.exports.GardenerAPIServerCA.Key = *o.imports.GardenerAPIServer.ComponentConfiguration.CA.Key
 	}
 
 	if o.imports.GardenerAdmissionController != nil && o.imports.GardenerAdmissionController.Enabled {
 		// safely dereference, because the CA must have been either provided or generated during the reconciliation
-		o.exports.GardenerAdmissionControllerCACrt = *o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Crt
+		o.exports.GardenerAdmissionControllerCA.Crt = *o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Crt
 
 		if o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Key != nil {
-			o.exports.GardenerAdmissionControllerCAKey = *o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Key
+			o.exports.GardenerAdmissionControllerCA.Key = *o.imports.GardenerAdmissionController.ComponentConfiguration.CA.Key
 		}
 
-		o.exports.GardenerAdmissionControllerTLSServingCrt = *o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Crt
-		o.exports.GardenerAdmissionControllerTLSServingKey = *o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Key
+		o.exports.GardenerAdmissionControllerTLSServing.Crt = *o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Crt
+		o.exports.GardenerAdmissionControllerTLSServing.Key = *o.imports.GardenerAdmissionController.ComponentConfiguration.TLS.Key
 	}
 
 	return &o.exports

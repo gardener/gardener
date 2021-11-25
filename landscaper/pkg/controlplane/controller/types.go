@@ -29,10 +29,22 @@ const (
 
 	// secretNameGardenerAPIServerCert is the name of the secret mounted by the Gardener API server containing the CA bundle and TLS serving certificates
 	secretNameGardenerAPIServerCert = "gardener-apiserver-cert"
+	// secretNameGardenerAPIServerEncryptionConfig is the name of the secret mounted by the Gardener API server containing the etcd encryption config
+	secretNameGardenerAPIServerEncryptionConfig = "gardener-apiserver-encryption-config"
+	// secretNameGardenerAdmissionControllerCert is the name of the secret mounted by the Gardener Admission Controller containing its TLS serving certificates
+	secretNameGardenerAdmissionControllerCert = "gardener-admission-controller-cert"
+	// secretNameGardenerControllerManagerCert is the name of the secret mounted by the Gardener Controller Manager containing its TLS serving certificates
+	secretNameGardenerControllerManagerCert = "gardener-controller-manager-cert"
+
 	// secretNameGardenerEncryptionConfig is the name of the secret mounted by the Gardener API server containing the encryption configuration
 	secretNameGardenerEncryptionConfig = "gardener-apiserver-encryption-config"
 	// secretNameOpenVPNDiffieHellmann is the name of the secret mounted by the Gardener API server containing the OpenVPN Diffie Hellmann key
 	secretNameOpenVPNDiffieHellmann = "openvpn-diffie-hellman-key"
+
+	// secretNameLandscaperGardenerAPIServerKey is the name of the secret in the runtime cluster holding the generated private key of the Gardener API Server
+	secretNameLandscaperGardenerAPIServerKey = "landscaper-controlplane-apiserver-ca-key"
+	// secretNameLandscaperGardenerAPIServerKey is the name of the secret in the runtime cluster holding the generated private key of the Gardener API Server
+	secretNameLandscaperGardenerAdmissionControllerKey = "landscaper-controlplane-admission-controller-ca-key"
 
 	// secretDataKeyEtcdEncryption is a constant for a key in the data map that contains the config
 	// which is used to encrypt etcd data.
@@ -53,4 +65,32 @@ const (
 	deploymentNameGardenerScheduler = "gardener-scheduler"
 	// deploymentNameGardenerAdmissionController is the name of the Gardener Admission Controller deployment
 	deploymentNameGardenerAdmissionController = "gardener-admission-controller"
+
+	// mutatingWebhookNameGardenerAdmissionController is the name of the mutating webhook configuration for the Gardener Admission Controller
+	mutatingWebhookNameGardenerAdmissionController = "gardener-admission-controller"
+
+	// secretDataKeyCACrt is a key in a secret containing a CA certificate
+	secretDataKeyCACrt = "ca.crt"
+	// secretDataKeyCAKey is a key in a secret containing a CA key
+	secretDataKeyCAKey = "ca.key"
+	// secretDataKeyCAKey is a key in a secret containing a TLS serving certificate
+	secretDataKeyTLSCrt = "tls.crt"
+	// secretDataKeyCAKey is a key in a secret containing the key of a TLS serving certificate
+	secretDataKeyTLSKey = "tls.key"
+	// secretDataKeyAPIServerCrt is a key in a secret for the Gardener API Server TLS certificate
+	secretDataKeyAPIServerCrt = "gardener-apiserver.crt"
+	// secretDataKeyAPIServerKey is a key in a secret for the Gardener API Server TLS key
+	secretDataKeyAPIServerKey = "gardener-apiserver.key"
+	// secretDataKeyAPIServerEncryptionConfig is a key in a secret for the Gardener API Server encryption configuration
+	secretDataKeyAPIServerEncryptionConfig = "encryption-config.yaml"
+	// secretDataKeyControllerManagerCrt is a key in a secret for the Gardener Controller Manager TLS certificate
+	secretDataKeyControllerManagerCrt = "gardener-controller-manager.crt"
+	// secretDataKeyControllerManagerKey is a key in a secret for the Gardener Controller Manager TLS key
+	secretDataKeyControllerManagerKey = "gardener-controller-manager.key"
+	// secretDataKeyEtcdCACrt is a key in a secret containing the etcd CA
+	secretDataKeyEtcdCACrt = "etcd-client-ca.crt"
+	// secretDataKeyEtcdCrt is a key in a secret containing the etcd client certificate
+	secretDataKeyEtcdCrt = "etcd-client.crt"
+	// secretDataKeyEtcdKey is a key in a secret containing the etcd client key
+	secretDataKeyEtcdKey = "etcd-client.key"
 )
