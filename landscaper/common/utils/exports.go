@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package utils
 
 import (
 	"io/ioutil"
@@ -20,7 +20,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	exports "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports"
+	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/exports"
 )
 
 // ExportsToFile writes export data to a file.
