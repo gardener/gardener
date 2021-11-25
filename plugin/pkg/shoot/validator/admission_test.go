@@ -71,6 +71,16 @@ var _ = Describe("validator", func() {
 					ExpirableVersion: core.ExpirableVersion{
 						Version: "0.0.1",
 					},
+					CRI: []core.CRI{
+						{
+							Name: core.CRINameContainerD,
+							ContainerRuntimes: []core.ContainerRuntime{
+								{
+									Type: "test-cr",
+								},
+							},
+						},
+					},
 				},
 			}
 			volumeType        = "volume-type-1"
@@ -2153,16 +2163,49 @@ var _ = Describe("validator", func() {
 "backend": "bird",
 "ipam": {"type": "host-local", "cidr": "usePodCIDR"}}`)}
 
-					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
-						Name:    validMachineImageName,
-						Version: "0.0.1",
-						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
+					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{
+						Name: "worker-with-invalid-providerConfig",
+						Machine: core.Machine{
+							Type: "machine-type-1",
+							Image: &core.ShootMachineImage{
+								Name:    validMachineImageName,
+								Version: "0.0.1",
+								ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
 					"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/__internal",
 					"kind": "OperatingSystemConfiguration",
 					"memoryTopology": "3",
 					"systemMemory": "7x"}`)},
-					}
+							},
+						},
+						CRI: &core.CRI{
+							Name: core.CRINameContainerD,
+							ContainerRuntimes: []core.ContainerRuntime{
+								{
+									Type: "test-cr",
+									ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
+									"apiVersion": "some.api/__internal",
+									"kind": "ContainerRuntimeConfig",
+									"some-key": "some-value"}`)},
+								},
+							},
+						},
+
+						Minimum: 1,
+						Maximum: 1,
+						Volume: &core.Volume{
+							VolumeSize: "40Gi",
+							Type:       &volumeType,
+						},
+						Zones: []string{"europe-a"},
+						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
+"apiVersion": "aws.provider.extensions.gardener.cloud/__internal",
+"kind": "WorkerConfig",
+"volume": {"iops": 10000},
+"dataVolumes": [{"name": "kubelet-dir", "snapshotID": "snap-13234"}],
+"iamInstanceProfile": {"name": "my-profile", "arn": "my-instance-profile-arn"}}`)},
+					})
 				})
+
 				It("ensures new clusters cannot use the apiVersion 'internal'", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
@@ -2176,6 +2219,8 @@ var _ = Describe("validator", func() {
 					Expect(err.Error()).To(ContainSubstring("Kind=ControlPlaneConfig: must not use apiVersion 'internal'"))
 					Expect(err.Error()).To(ContainSubstring("Kind=NetworkConfig: must not use apiVersion 'internal'"))
 					Expect(err.Error()).To(ContainSubstring("Kind=OperatingSystemConfiguration: must not use apiVersion 'internal'"))
+					Expect(err.Error()).To(ContainSubstring("Kind=WorkerConfig: must not use apiVersion 'internal'"))
+					Expect(err.Error()).To(ContainSubstring("Kind=ContainerRuntimeConfig: must not use apiVersion 'internal'"))
 				})
 
 				// TODO (voelzmo): remove this test and the associated production code once we gave owners of existing Shoots a nice grace period to move away from 'internal' apiVersion
@@ -2219,7 +2264,7 @@ var _ = Describe("validator", func() {
 "backend": "bird",
 "ipam": {"type": "host-local", "cidr": "usePodCIDR"}}`)}
 
-					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+					shoot.Spec.Provider.Workers[1].Machine.Image = &core.ShootMachineImage{
 						Name:    validMachineImageName,
 						Version: "0.0.1",
 						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
@@ -2227,6 +2272,26 @@ var _ = Describe("validator", func() {
 					"kind": "OperatingSystemConfiguration",
 					"memoryTopology": "3",
 					"systemMemory": "7x"}`)},
+					}
+
+					shoot.Spec.Provider.Workers[1].ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
+"apiVersion": "aws.provider.extensions.gardener.cloud/v1alpha1",
+"kind": "WorkerConfig",
+"volume": {"iops": 10000},
+"dataVolumes": [{"name": "kubelet-dir", "snapshotID": "snap-13234"}],
+"iamInstanceProfile": {"name": "my-profile", "arn": "my-instance-profile-arn"}}`)}
+
+					shoot.Spec.Provider.Workers[1].CRI = &core.CRI{
+						Name: core.CRINameContainerD,
+						ContainerRuntimes: []core.ContainerRuntime{
+							{
+								Type: "test-cr",
+								ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
+									"apiVersion": "some.api/v1alpha1",
+									"kind": "ContainerRuntimeConfig",
+									"some-key": "some-value"}`)},
+							},
+						},
 					}
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
