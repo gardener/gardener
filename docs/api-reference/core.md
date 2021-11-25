@@ -1324,8 +1324,8 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-the account the Seed cluster has been deployed to.</p>
+<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
+cluster to be registered as Seed.</p>
 </td>
 </tr>
 <tr>
@@ -8028,8 +8028,8 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-the account the Seed cluster has been deployed to.</p>
+<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
+cluster to be registered as Seed.</p>
 </td>
 </tr>
 <tr>
@@ -8370,8 +8370,8 @@ Kubernetes core/v1.SecretReference
 </td>
 <td>
 <em>(Optional)</em>
-<p>SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-the account the Seed cluster has been deployed to.</p>
+<p>SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
+cluster to be registered as Seed.</p>
 </td>
 </tr>
 <tr>

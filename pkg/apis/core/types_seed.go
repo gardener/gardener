@@ -68,8 +68,8 @@ type SeedSpec struct {
 	Networks SeedNetworks
 	// Provider defines the provider type and region for this Seed cluster.
 	Provider SeedProvider
-	// SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-	// the account the Seed cluster has been deployed to.
+	// SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
+	// cluster to be registered as Seed.
 	SecretRef *corev1.SecretReference
 	// Settings contains certain settings for this seed cluster.
 	Settings *SeedSettings

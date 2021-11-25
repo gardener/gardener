@@ -72,8 +72,8 @@ type SeedSpec struct {
 	Networks SeedNetworks `json:"networks" protobuf:"bytes,3,opt,name=networks"`
 	// Provider defines the provider type and region for this Seed cluster.
 	Provider SeedProvider `json:"provider" protobuf:"bytes,4,opt,name=provider"`
-	// SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
-	// the account the Seed cluster has been deployed to.
+	// SecretRef is a reference to a Secret object containing the Kubeconfig of the Kubernetes
+	// cluster to be registered as Seed.
 	// +optional
 	SecretRef *corev1.SecretReference `json:"secretRef,omitempty" protobuf:"bytes,5,opt,name=secretRef"`
 	// Taints describes taints on the seed.
