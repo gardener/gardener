@@ -109,7 +109,7 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 			)
 		case backupEntryResource:
 			return a.authorize(seedName, graph.VertexTypeBackupEntry, attrs,
-				[]string{"update", "patch"},
+				[]string{"update", "patch", "delete"},
 				[]string{"create", "get", "list", "watch"},
 				[]string{"status"},
 			)
