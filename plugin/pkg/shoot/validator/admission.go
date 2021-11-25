@@ -601,15 +601,24 @@ func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {
-		if worker.ProviderConfig == nil {
+		if worker.Machine.Image.ProviderConfig == nil {
 			continue
 		}
 		// we ignore any errors while trying to parse the GVK from the RawExtension, because we don't actually want to validate against the Scheme (k8s doesn't know about the extension's GVK anyways)
 		// and the RawExtension could contain arbitrary json. However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
-		_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(worker.ProviderConfig.Raw, nil, nil)
+		_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(worker.Machine.Image.ProviderConfig.Raw, nil, nil)
 		if gvk.Version == runtime.APIVersionInternal {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("providerConfig"), gvk, "must not use apiVersion 'internal'"))
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("machine", "image", "providerConfig"), gvk, "must not use apiVersion 'internal'"))
 		}
+		//if worker.ProviderConfig == nil {
+		//	continue
+		//}
+		//// we ignore any errors while trying to parse the GVK from the RawExtension, because we don't actually want to validate against the Scheme (k8s doesn't know about the extension's GVK anyways)
+		//// and the RawExtension could contain arbitrary json. However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
+		//_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(worker.ProviderConfig.Raw, nil, nil)
+		//if gvk.Version == runtime.APIVersionInternal {
+		//	allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("providerConfig"), gvk, "must not use apiVersion 'internal'"))
+		//}
 	}
 	return allErrs
 }

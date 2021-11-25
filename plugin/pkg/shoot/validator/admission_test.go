@@ -214,6 +214,9 @@ var _ = Describe("validator", func() {
 								Name: "worker-name",
 								Machine: core.Machine{
 									Type: "machine-type-1",
+									Image: &core.ShootMachineImage{
+										Name: validMachineImageName,
+									},
 								},
 								Minimum: 1,
 								Maximum: 1,
@@ -1364,7 +1367,7 @@ var _ = Describe("validator", func() {
 				var (
 					classificationPreview = core.ClassificationPreview
 
-					imageName1 = "some-image"
+					imageName1 = validMachineImageName
 					imageName2 = "other-image"
 
 					expiredVersion          = "1.1.1"
@@ -2150,25 +2153,15 @@ var _ = Describe("validator", func() {
 "backend": "bird",
 "ipam": {"type": "host-local", "cidr": "usePodCIDR"}}`)}
 
-					// TODO: this is actually image-specific providerconfig. WorkerConfig can be found here https://github.com/gardener/gardener-extension-provider-aws/blob/master/example/30-worker.yaml#L113-L123
-					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{
-						Name: "worker-with-internal-providerConfig",
-						Machine: core.Machine{
-							Type: "machine-type-1",
-						},
-						Minimum: 1,
-						Maximum: 1,
-						Volume: &core.Volume{
-							VolumeSize: "40Gi",
-							Type:       &volumeType,
-						},
-						Zones: []string{"europe-a"},
+					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name:    validMachineImageName,
+						Version: "0.0.1",
 						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
-"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/__internal",
-"kind": "OperatingSystemConfiguration",
-"memoryTopology": "3",
-"systemMemory": "7x"}`)},
-					})
+					"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/__internal",
+					"kind": "OperatingSystemConfiguration",
+					"memoryTopology": "3",
+					"systemMemory": "7x"}`)},
+					}
 				})
 				It("ensures new clusters cannot use the apiVersion 'internal'", func() {
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2225,23 +2218,15 @@ var _ = Describe("validator", func() {
 "kind": "NetworkConfig",
 "backend": "bird",
 "ipam": {"type": "host-local", "cidr": "usePodCIDR"}}`)}
-					shoot.Spec.Provider.Workers[1] = core.Worker{
-						Name: "worker-with-internal-providerConfig",
-						Machine: core.Machine{
-							Type: "machine-type-1",
-						},
-						Minimum: 1,
-						Maximum: 1,
-						Volume: &core.Volume{
-							VolumeSize: "40Gi",
-							Type:       &volumeType,
-						},
-						Zones: []string{"europe-a"},
+
+					shoot.Spec.Provider.Workers[0].Machine.Image = &core.ShootMachineImage{
+						Name:    validMachineImageName,
+						Version: "0.0.1",
 						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
-"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/v1alpha1",
-"kind": "OperatingSystemConfiguration",
-"memoryTopology": "3",
-"systemMemory": "7x"}`)},
+					"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/v1alpha1",
+					"kind": "OperatingSystemConfiguration",
+					"memoryTopology": "3",
+					"systemMemory": "7x"}`)},
 					}
 					Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
 					Expect(coreInformerFactory.Core().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)).To(Succeed())
