@@ -24,7 +24,7 @@ import (
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation"
 	. "github.com/gardener/gardener/pkg/operation/botanist"
-	mockbackupntry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry/mock"
+	mockbackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry/mock"
 	mocketcd "github.com/gardener/gardener/pkg/operation/botanist/component/etcd/mock"
 	mockcontainerruntime "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/containerruntime/mock"
 	mockcontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane/mock"
@@ -192,8 +192,8 @@ var _ = Describe("migration", func() {
 	Describe("#IsCopyOfBackupsRequired", func() {
 		var (
 			etcdMain          *mocketcd.MockInterface
-			backupEntry       *mockbackupntry.MockInterface
-			sourceBackupEntry *mockbackupntry.MockInterface
+			backupEntry       *mockbackupentry.MockInterface
+			sourceBackupEntry *mockbackupentry.MockInterface
 			fakeErr           = errors.New("Fake error")
 		)
 
@@ -224,8 +224,8 @@ var _ = Describe("migration", func() {
 			})
 
 			etcdMain = mocketcd.NewMockInterface(ctrl)
-			backupEntry = mockbackupntry.NewMockInterface(ctrl)
-			sourceBackupEntry = mockbackupntry.NewMockInterface(ctrl)
+			backupEntry = mockbackupentry.NewMockInterface(ctrl)
+			sourceBackupEntry = mockbackupentry.NewMockInterface(ctrl)
 			botanist.Shoot.Components.ControlPlane = &shootpkg.ControlPlane{
 				EtcdMain: etcdMain,
 			}

@@ -253,7 +253,7 @@ func (r *shootReconciler) runReconcileShootFlow(ctx context.Context, o *operatio
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Destroying source backup entry",
-			Fn:           flow.TaskFn(botanist.Shoot.Components.SourceBackupEntry.Destroy).DoIf(allowBackup),
+			Fn:           flow.TaskFn(botanist.DestroySourceBackupEntry).DoIf(allowBackup),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
