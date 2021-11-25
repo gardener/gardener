@@ -2,7 +2,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:actor
+  name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:actor
   labels:
   {{ toYaml .Values.labels | indent 4 }}
   annotations:
@@ -10,7 +10,7 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:actor
+  name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:actor
 {{- if or .Values.recommender.enabled .Values.updater.enabled }}
 subjects:
 {{- if .Values.recommender.enabled }}

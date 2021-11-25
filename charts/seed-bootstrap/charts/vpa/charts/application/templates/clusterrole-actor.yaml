@@ -3,7 +3,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:actor
+  name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:actor
   labels:
   {{ toYaml .Values.labels | indent 4 }}
 rules:
