@@ -31,7 +31,7 @@ spec:
 {{ toYaml .Values.admissionController.podLabels | indent 8 }}
 {{- end }}
     spec:
-{{- if .Values.recommender.enableServiceAccount }}
+{{- if .Values.recommender.createServiceAccount }}
       serviceAccountName: vpa-recommender
 {{- else }}
       automountServiceAccountToken: false
@@ -48,7 +48,7 @@ spec:
         - --pod-recommendation-min-memory-mb=10
         - --recommendation-margin-fraction={{ .Values.recommender.recommendationMarginFraction }}
         - --recommender-interval={{ .Values.recommender.interval }}
-{{- if not .Values.recommender.enableServiceAccount }}
+{{- if not .Values.recommender.createServiceAccount }}
         env:
         - name: KUBERNETES_SERVICE_HOST
           value: kube-apiserver
@@ -69,7 +69,7 @@ spec:
             memory: 200Mi
         ports:
         - containerPort: 8080
-{{- if not .Values.recommender.enableServiceAccount }}
+{{- if not .Values.recommender.createServiceAccount }}
       volumes:
       - name: shoot-access
         projected:

@@ -69,7 +69,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 			"podLabels": utils.MergeMaps(podLabels, map[string]interface{}{
 				v1beta1constants.LabelNetworkPolicyFromShootAPIServer: "allowed",
 			}),
-			"enableServiceAccount": false,
+			"createServiceAccount": false,
 		}
 		exporter = map[string]interface{}{
 			"enabled":  false,
@@ -81,7 +81,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 				"checksum/secret-vpa-recommender": b.LoadCheckSum("vpa-recommender"),
 			},
 			"podLabels":                    podLabels,
-			"enableServiceAccount":         false,
+			"createServiceAccount":         false,
 			"recommendationMarginFraction": gardencorev1beta1.DefaultRecommendationMarginFraction,
 			"interval":                     gardencorev1beta1.DefaultRecommenderInterval,
 		}
@@ -91,7 +91,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 				"checksum/secret-vpa-updater": b.LoadCheckSum("vpa-updater"),
 			},
 			"podLabels":              podLabels,
-			"enableServiceAccount":   false,
+			"createServiceAccount":   false,
 			"evictAfterOOMThreshold": gardencorev1beta1.DefaultEvictAfterOOMThreshold,
 			"evictionRateBurst":      gardencorev1beta1.DefaultEvictionRateBurst,
 			"evictionRateLimit":      gardencorev1beta1.DefaultEvictionRateLimit,

@@ -303,12 +303,12 @@ func (b *Botanist) generateCoreAddonsChart(ctx context.Context) (*chartrenderer.
 			"application": map[string]interface{}{
 				"clusterType": "shoot",
 				"admissionController": map[string]interface{}{
-					"enableServiceAccount": false,
+					"createServiceAccount": false,
 					"controlNamespace":     b.Shoot.SeedNamespace,
 				},
-				"exporter":    map[string]interface{}{"enableServiceAccount": false},
-				"recommender": map[string]interface{}{"enableServiceAccount": false},
-				"updater":     map[string]interface{}{"enableServiceAccount": false},
+				"exporter":    map[string]interface{}{"createServiceAccount": false},
+				"recommender": map[string]interface{}{"createServiceAccount": false},
+				"updater":     map[string]interface{}{"createServiceAccount": false},
 			},
 		}
 

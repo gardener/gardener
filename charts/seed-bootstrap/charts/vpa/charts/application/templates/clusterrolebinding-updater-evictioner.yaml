@@ -13,13 +13,11 @@ roleRef:
   name: gardener.cloud:vpa:{{ .Values.clusterType }}:evictioner
 {{- if .Values.updater.enabled }}
 subjects:
-{{- if .Values.updater.enableServiceAccount }}
 - kind: ServiceAccount
   name: vpa-updater
+{{- if .Values.updater.createServiceAccount }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- kind: ServiceAccount
-  name: vpa-updater
   namespace: kube-system
 {{- end }}
 {{- end }}

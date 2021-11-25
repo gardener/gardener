@@ -13,13 +13,11 @@ roleRef:
   name: gardener.cloud:vpa:{{ .Values.clusterType }}:admission-controller
 {{- if .Values.admissionController.enabled }}
 subjects:
-{{- if .Values.admissionController.enableServiceAccount }}
 - kind: ServiceAccount
   name: vpa-admission-controller
+{{- if .Values.admissionController.createServiceAccount }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- kind: ServiceAccount
-  name: vpa-admission-controller
   namespace: kube-system
 {{- end }}
 {{- end }}

@@ -13,13 +13,11 @@ roleRef:
   name: gardener.cloud:vpa:{{ .Values.clusterType }}:metrics-reader
 {{- if .Values.recommender.enabled }}
 subjects:
-{{- if .Values.recommender.enableServiceAccount }}
 - kind: ServiceAccount
   name: vpa-recommender
+{{- if .Values.recommender.createServiceAccount }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- kind: ServiceAccount
-  name: vpa-recommender
   namespace: kube-system
 {{- end }}
 {{- end }}

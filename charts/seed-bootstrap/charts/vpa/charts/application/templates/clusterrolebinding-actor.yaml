@@ -14,24 +14,20 @@ roleRef:
 {{- if or .Values.recommender.enabled .Values.updater.enabled }}
 subjects:
 {{- if .Values.recommender.enabled }}
-{{- if .Values.recommender.enableServiceAccount }}
 - kind: ServiceAccount
   name: vpa-recommender
+{{- if .Values.recommender.createServiceAccount }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- kind: ServiceAccount
-  name: vpa-recommender
   namespace: kube-system
 {{- end }}
 {{- end }}
 {{- if .Values.updater.enabled }}
-{{- if .Values.updater.enableServiceAccount }}
 - kind: ServiceAccount
   name: vpa-updater
+{{- if .Values.updater.createServiceAccount }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- kind: ServiceAccount
-  name: vpa-updater
   namespace: kube-system
 {{- end }}
 {{- end }}
