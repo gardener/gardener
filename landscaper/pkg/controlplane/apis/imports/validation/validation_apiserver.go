@@ -73,26 +73,27 @@ func ValidateAPIServerComponentConfiguration(config imports.APIServerComponentCo
 	// validation of mandatory configuration
 	allErrs = append(allErrs, ValidateAPIServerETCDConfiguration(config.Etcd, fldPath.Child("etcd"))...)
 
+	// TODO: ADJUST TESTS - config.CA is never nil as it is defaulted now
 	// validation of optional configuration
-	if (config.CA == nil || (config.CA.Crt == nil && config.CA.SecretRef == nil)) && config.TLS != nil {
+	if (config.CA.Crt == nil && config.CA.SecretRef == nil) && (config.TLS.Crt != nil || config.TLS.SecretRef != nil) {
 		// the control plane helm chart requires the public CA bundle to validate the Gardener API server TLS certificates
 		// in the webhook configurations in the virtual garden
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("ca").Child("crt"), "Only providing the TLS serving certificates of the Gardener API server, but not the CA for verification, is forbidden."))
-	} else if config.CA != nil && config.CA.Key == nil && config.CA.SecretRef == nil && config.TLS == nil {
+	} else if config.CA.Crt != nil && config.CA.Key == nil && config.CA.SecretRef == nil && config.TLS.Crt == nil && config.TLS.SecretRef == nil {
 		// When providing a custom CA, we need to have the private key in order to generate the TLS serving certs
 		// of the Gardener API server
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("ca").Child("key"), "", "When providing a custom CA (public part) and the TLS serving Certificate of the Gardener API server are not provided, the private key of the CA is required in order to generate the TLS serving certs."))
 	}
 
-	if config.CA != nil {
+	if config.CA.Crt != nil {
 		allErrs = append(allErrs, ValidateCommonCA(*config.CA, fldPath.Child("ca"))...)
 	}
 
-	if config.TLS != nil {
+	if config.TLS.Crt != nil {
 		errors := ValidateCommonTLSServer(*config.TLS, fldPath.Child("tls"))
 
 		// only makes sense to further validate the cert against the CA, if the cert is valid in the first place
-		if len(errors) == 0 && config.TLS.Crt != nil && config.CA != nil && config.CA.Crt != nil {
+		if len(errors) == 0 && config.TLS.Crt != nil && config.CA.Crt != nil {
 			allErrs = append(allErrs, ValidateTLSServingCertificateAgainstCA(*config.TLS.Crt, *config.CA.Crt, fldPath.Child("tls").Child("crt"))...)
 		}
 		allErrs = append(allErrs, errors...)

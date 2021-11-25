@@ -46,6 +46,8 @@ var _ = Describe("ValidateImports", func() {
 					Etcd: imports.APIServerEtcdConfiguration{
 						Url: "virtual-garden-etcd-main-client.garden.svc:2379",
 					},
+					CA:  &imports.CA{},
+					TLS: &imports.TLSServer{},
 				},
 			},
 		}
@@ -65,7 +67,13 @@ var _ = Describe("ValidateImports", func() {
 		})
 
 		It("should fail: missing API server config", func() {
-			landscaperImport.GardenerAPIServer = imports.GardenerAPIServer{}
+			landscaperImport.GardenerAPIServer = imports.GardenerAPIServer{
+				ComponentConfiguration: imports.APIServerComponentConfiguration{
+					CA:  &imports.CA{},
+					TLS: &imports.TLSServer{},
+				},
+			}
+
 			errorList := ValidateLandscaperImports(landscaperImport)
 			Expect(errorList).To(HaveLen(1))
 		})
@@ -76,6 +84,8 @@ var _ = Describe("ValidateImports", func() {
 					Etcd: imports.APIServerEtcdConfiguration{
 						Url: "",
 					},
+					CA:  &imports.CA{},
+					TLS: &imports.TLSServer{},
 				},
 			}
 			errorList := ValidateLandscaperImports(landscaperImport)

@@ -45,23 +45,23 @@ func ValidateAdmissionControllerComponentConfiguration(config imports.AdmissionC
 	// providing the CA is mandatory, as it is put in the WebhookConfigurations in the virtual garden cluster to validate the TLS serving certs of the Admission Controller.
 	// In addition, the CA needs to be provided if the TLS serving certs are provided because we cannot generate a new
 	// CABundle for an existing TLS serving certificate.
-	if (config.CA == nil || (config.CA.Crt == nil && config.CA.SecretRef == nil) || len(*config.CA.Crt) == 0) && config.TLS != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("ca").Child("crt"), "It is forbidden to only providing the TLS serving certificates of the Gardener Admission Controller, but not the CA for verification."))
-	} else if config.CA != nil && config.CA.Key == nil && config.CA.SecretRef == nil && config.TLS == nil {
+	if (config.CA.Crt == nil && config.CA.SecretRef == nil) && (config.TLS.Crt != nil || config.TLS.SecretRef != nil) {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("ca").Child("crt"), "It is forbidden to only provide the TLS serving certificates of the Gardener Admission Controller, but not the CA for verification."))
+	} else if config.CA.Crt != nil && config.CA.Key == nil && config.CA.SecretRef == nil && config.TLS.Crt == nil && config.TLS.SecretRef == nil {
 		// When providing a custom CA, we need to have the private key in order to generate the TLS serving certs
 		// of the Gardener Admission Controller
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("ca").Child("key"), "", "When providing a custom CA (public part) and the TLS serving Certificate of the Gardener Admission Controller are not provided, the private key of the CA is required in order to generate the TLS serving certs."))
 	}
 
-	if config.CA != nil {
+	if config.CA.Crt != nil {
 		allErrs = append(allErrs, ValidateCommonCA(*config.CA, fldPath.Child("ca"))...)
 	}
 
-	if config.TLS != nil {
+	if config.TLS.Crt != nil {
 		errors := ValidateCommonTLSServer(*config.TLS, fldPath.Child("tls"))
 
 		// only makes sense to further validate the cert against the CA, if the cert is valid in the first place
-		if len(errors) == 0 && config.TLS.Crt != nil && config.CA != nil && config.CA.Crt != nil {
+		if len(errors) == 0 && config.TLS.Crt != nil && config.CA.Crt != nil {
 			allErrs = append(allErrs, ValidateTLSServingCertificateAgainstCA(*config.TLS.Crt, *config.CA.Crt, fldPath.Child("tls").Child("crt"))...)
 		}
 		allErrs = append(allErrs, errors...)

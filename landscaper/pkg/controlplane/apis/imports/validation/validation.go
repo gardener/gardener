@@ -224,6 +224,7 @@ func ValidateCACertificate(bundle string, fldPath *field.Path) field.ErrorList {
 	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, nil, fmt.Sprintf("the CA certificate provided cannot be parses as a X509 certificate: %s", err.Error())))
+		return allErrs
 	}
 
 	// Test if parsed key is an RSA Public Key

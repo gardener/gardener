@@ -15,6 +15,7 @@
 package validation_test
 
 import (
+	testutils "github.com/gardener/gardener/landscaper/common/test-utils"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
 	. "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/validation"
 	admissioncontrollerconfigv1alpha1 "github.com/gardener/gardener/pkg/admissioncontroller/apis/config/v1alpha1"
@@ -33,10 +34,10 @@ var _ = Describe("ValidateAdmissionController", func() {
 		admissionControllerConfiguration imports.GardenerAdmissionController
 		componentConfig                  admissioncontrollerconfigv1alpha1.AdmissionControllerConfiguration
 		path                             = field.NewPath("admissioncontroller")
-		ca                               = GenerateCACertificate("gardener.cloud:system:admissioncontroller")
+		ca                               = testutils.GenerateCACertificate("gardener.cloud:system:admissioncontroller")
 		caCrt                            = string(ca.CertificatePEM)
 		caKey                            = string(ca.PrivateKeyPEM)
-		cert                             = GenerateTLSServingCertificate(&ca)
+		cert                             = testutils.GenerateTLSServingCertificate(&ca)
 		certString                       = string(cert.CertificatePEM)
 		keyString                        = string(cert.PrivateKeyPEM)
 	)
@@ -81,20 +82,20 @@ var _ = Describe("ValidateAdmissionController", func() {
 
 		Context("CA", func() {
 			It("CA public key must be provided in order to validate the TLS serving cert of the Gardener Admission Controller server", func() {
-				admissionControllerConfiguration.ComponentConfiguration.CA = nil
+				admissionControllerConfiguration.ComponentConfiguration.CA.Crt = nil
 				errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":   Equal(field.ErrorTypeForbidden),
 						"Field":  Equal("admissioncontroller.componentConfiguration.ca.crt"),
-						"Detail": Equal("It is forbidden to only providing the TLS serving certificates of the Gardener Admission Controller, but not the CA for verification."),
+						"Detail": Equal("It is forbidden to only provide the TLS serving certificates of the Gardener Admission Controller, but not the CA for verification."),
 					})),
 				))
 			})
 
 			It("CA private key must be provided to generate TLS serving certs", func() {
 				admissionControllerConfiguration.ComponentConfiguration.CA.Key = nil
-				admissionControllerConfiguration.ComponentConfiguration.TLS = nil
+				admissionControllerConfiguration.ComponentConfiguration.TLS.Crt = nil
 				errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
 				Expect(errorList).To(ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
@@ -132,7 +133,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 
 		It("should forbid invalid TLS configuration - CA is invalid", func() {
 			admissionControllerConfiguration.ComponentConfiguration.CA.Crt = pointer.String("invalid")
-			admissionControllerConfiguration.ComponentConfiguration.TLS = nil
+			admissionControllerConfiguration.ComponentConfiguration.TLS.Crt = nil
 			errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
 			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
@@ -143,7 +144,7 @@ var _ = Describe("ValidateAdmissionController", func() {
 		})
 
 		It("should forbid invalid TLS configuration - TLS serving certificate is not signed by the provided CA", func() {
-			someUnknownCA := string(GenerateCACertificate("gardener.cloud:system:unknown").CertificatePEM)
+			someUnknownCA := string(testutils.GenerateCACertificate("gardener.cloud:system:unknown").CertificatePEM)
 			admissionControllerConfiguration.ComponentConfiguration.CA.Crt = &someUnknownCA
 			errorList := ValidateAdmissionController(admissionControllerConfiguration, path)
 			Expect(errorList).To(ConsistOf(

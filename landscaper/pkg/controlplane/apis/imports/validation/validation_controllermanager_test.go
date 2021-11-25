@@ -15,6 +15,7 @@
 package validation_test
 
 import (
+	testutils "github.com/gardener/gardener/landscaper/common/test-utils"
 	"github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports"
 	. "github.com/gardener/gardener/landscaper/pkg/controlplane/apis/imports/validation"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
@@ -33,7 +34,7 @@ var _ = Describe("ValidateControllerManager", func() {
 		controllerManagerConfiguration imports.GardenerControllerManager
 		componentConfig                controllermanagerconfigv1alpha1.ControllerManagerConfiguration
 		path                           = field.NewPath("controllermanager")
-		cert                           = GenerateTLSServingCertificate(nil)
+		cert                           = testutils.GenerateTLSServingCertificate(nil)
 		certString                     = string(cert.CertificatePEM)
 		keyString                      = string(cert.PrivateKeyPEM)
 	)
