@@ -390,6 +390,22 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent).To(PointTo(Equal(low)))
 		})
 
+		It("should default the serializeImagePulls fields", func() {
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeTrue()))
+		})
+
+		It("should not default the serializeImagePulls field", func() {
+			falseVar := false
+			obj.Spec.Kubernetes.Kubelet = &KubeletConfig{}
+			obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = &falseVar
+
+			SetDefaults_Shoot(obj)
+
+			Expect(obj.Spec.Kubernetes.Kubelet.SerializeImagePulls).To(PointTo(BeFalse()))
+		})
+
 		Context("default kubeReserved", func() {
 			var (
 				defaultKubeReservedMemory = resource.MustParse("1Gi")

@@ -236,6 +236,9 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent == nil {
 		obj.Spec.Kubernetes.Kubelet.ImageGCLowThresholdPercent = pointer.Int32(40)
 	}
+	if obj.Spec.Kubernetes.Kubelet.SerializeImagePulls == nil {
+		obj.Spec.Kubernetes.Kubelet.SerializeImagePulls = pointer.Bool(true)
+	}
 
 	var (
 		kubeReservedMemory = resource.MustParse("1Gi")
