@@ -23,20 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Masterminds/semver"
-	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/admission"
-	kubernetesscheme "k8s.io/client-go/kubernetes/scheme"
-
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/core/helper"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
@@ -47,6 +33,18 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
+
+	"github.com/Masterminds/semver"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/admission"
 )
 
 const (
@@ -579,62 +577,51 @@ func (c *validationContext) validateProvider() field.ErrorList {
 
 func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList {
 	var allErrs field.ErrorList
-	type ext struct {
-		path   *field.Path
-		rawExt *runtime.RawExtension
+
+	if usesInternalVersion, gvk := checkRawExtension(c.shoot.Spec.Provider.InfrastructureConfig); usesInternalVersion {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "infrastructureConfig"), gvk, "must not use apiVersion 'internal'"))
 	}
-	extensions := []ext{
-		{path: field.NewPath("spec", "provider", "infrastructureConfig"), rawExt: c.shoot.Spec.Provider.InfrastructureConfig},
-		{path: field.NewPath("spec", "provider", "controlPlaneConfig"), rawExt: c.shoot.Spec.Provider.ControlPlaneConfig},
-		{path: field.NewPath("spec", "networking", "providerConfig"), rawExt: c.shoot.Spec.Networking.ProviderConfig},
+
+	if usesInternalVersion, gvk := checkRawExtension(c.shoot.Spec.Provider.ControlPlaneConfig); usesInternalVersion {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "controlPlaneConfig"), gvk, "must not use apiVersion 'internal'"))
 	}
-	for _, extension := range extensions {
-		if extension.rawExt == nil {
-			continue
-		}
-		// we ignore any errors while trying to parse the GVK from the RawExtension, because we don't actually want to validate against the Scheme (k8s doesn't know about the extension's GVK anyways)
-		// and the RawExtension could contain arbitrary json. However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
-		_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(extension.rawExt.Raw, nil, nil)
-		if gvk.Version == runtime.APIVersionInternal {
-			allErrs = append(allErrs, field.Invalid(extension.path, gvk, "must not use apiVersion 'internal'"))
-		}
+
+	if usesInternalVersion, gvk := checkRawExtension(c.shoot.Spec.Networking.ProviderConfig); usesInternalVersion {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "networking", "providerConfig"), gvk, "must not use apiVersion 'internal'"))
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {
-		if worker.ProviderConfig != nil {
-
-			// we ignore any errors while trying to parse the GVK from the RawExtension, because we don't actually want to validate against the Scheme (k8s doesn't know about the extension's GVK anyways)
-			// and the RawExtension could contain arbitrary json. However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
-			_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(worker.ProviderConfig.Raw, nil, nil)
-			if gvk.Version == runtime.APIVersionInternal {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("providerConfig"), gvk, "must not use apiVersion 'internal'"))
-			}
+		if usesInternalVersion, gvk := checkRawExtension(worker.ProviderConfig); usesInternalVersion {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("providerConfig"), gvk, "must not use apiVersion 'internal'"))
 		}
-		if worker.Machine.Image.ProviderConfig != nil {
 
-			// we ignore any errors while trying to parse the GVK from the RawExtension, because we don't actually want to validate against the Scheme (k8s doesn't know about the extension's GVK anyways)
-			// and the RawExtension could contain arbitrary json. However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
-			_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(worker.Machine.Image.ProviderConfig.Raw, nil, nil)
-			if gvk.Version == runtime.APIVersionInternal {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("machine", "image", "providerConfig"), gvk, "must not use apiVersion 'internal'"))
-			}
+		if usesInternalVersion, gvk := checkRawExtension(worker.Machine.Image.ProviderConfig); usesInternalVersion {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("machine", "image", "providerConfig"), gvk, "must not use apiVersion 'internal'"))
 		}
+
 		if worker.CRI != nil && worker.CRI.ContainerRuntimes != nil {
 			for j, cr := range worker.CRI.ContainerRuntimes {
-				if cr.ProviderConfig == nil {
-					continue
-				}
-				// we ignore any errors while trying to parse the GVK from the RawExtension, because we don't actually want to validate against the Scheme (k8s doesn't know about the extension's GVK anyways)
-				// and the RawExtension could contain arbitrary json. However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
-				_, gvk, _ := serializer.NewCodecFactory(kubernetesscheme.Scheme).UniversalDecoder(corev1.SchemeGroupVersion).Decode(cr.ProviderConfig.Raw, nil, nil)
-				if gvk.Version == runtime.APIVersionInternal {
+				if usesInternalVersion, gvk := checkRawExtension(cr.ProviderConfig); usesInternalVersion {
 					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("cri", "containerRuntimes").Index(j).Child("providerConfig"), gvk, "must not use apiVersion 'internal'"))
 				}
 			}
 		}
-
 	}
 	return allErrs
+}
+
+func checkRawExtension(ext *runtime.RawExtension) (bool, string) {
+	if ext == nil {
+		return false, ""
+	}
+
+	// we ignore any errors while trying to parse the GVK from the RawExtension, because the RawExtension could contain arbitrary json.
+	// However, *if* the RawExtension is a k8s-like object, we want to ensure that only external APIs can be used.
+	_, gvk, _ := unstructured.UnstructuredJSONScheme.Decode(ext.Raw, nil, nil)
+	if gvk != nil && gvk.Version == runtime.APIVersionInternal {
+		return true, gvk.String()
+	}
+	return false, ""
 }
 
 func validateVolumeSize(volumeTypeConstraints []core.VolumeType, machineTypeConstraints []core.MachineType, machineType string, volume *core.Volume) (bool, string) {
