@@ -223,8 +223,8 @@ var _ = Describe("DNSRecord", func() {
 			Expect(dnsRecord.Deploy(ctx)).To(MatchError(testErr))
 		})
 
-		It("should deploy the DNSRecord resource if ReconcileOnce is true and the DNSRecord is not found", func() {
-			values.ReconcileOnce = true
+		It("should deploy the DNSRecord resource if ReconcileOnValueChangeOnly is true and the DNSRecord is not found", func() {
+			values.ReconcileOnValueChangeOnly = true
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 
 			Expect(dnsRecord.Deploy(ctx)).To(Succeed())
@@ -250,8 +250,8 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
-		It("should deploy the DNSRecord resource if ReconcileOnce is true and the DNSRecord is not Succeeded", func() {
-			values.ReconcileOnce = true
+		It("should deploy the DNSRecord resource if ReconcileOnValueChangeOnly is true and the DNSRecord is not Succeeded", func() {
+			values.ReconcileOnValueChangeOnly = true
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 
 			existingDNS := dns.DeepCopy()
@@ -293,8 +293,8 @@ var _ = Describe("DNSRecord", func() {
 			}))
 		})
 
-		It("should update the timestamp annotation if ReconcileOnce is true and the DNSRecord is found", func() {
-			values.ReconcileOnce = true
+		It("should update the timestamp annotation if ReconcileOnValueChangeOnly is true and the DNSRecord is found", func() {
+			values.ReconcileOnValueChangeOnly = true
 			dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 			delete(dns.Annotations, v1beta1constants.GardenerOperation)
 			// set old timestamp (e.g. added on creation / earlier Deploy call)
@@ -329,8 +329,8 @@ var _ = Describe("DNSRecord", func() {
 				secretName = "testsecret"
 			})
 
-			It("should prefix the referenced secret of existing DNSRecords with 'dnsrecord-' when ReconcileOnce is true", func() {
-				values.ReconcileOnce = true
+			It("should prefix the referenced secret of existing DNSRecords with 'dnsrecord-' when ReconcileOnValueChangeOnly is true", func() {
+				values.ReconcileOnValueChangeOnly = true
 				dnsRecord = dnsrecord.New(log, c, values, dnsrecord.DefaultInterval, dnsrecord.DefaultSevereThreshold, dnsrecord.DefaultTimeout)
 				delete(dns.Annotations, v1beta1constants.GardenerOperation)
 				// set old timestamp (e.g. added on creation / earlier Deploy call)

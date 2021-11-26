@@ -83,11 +83,11 @@ func (b *Botanist) DefaultInternalDNSRecord() extensionsdnsrecord.Interface {
 // DefaultOwnerDNSRecord creates the default deployer for the owner DNSRecord resource.
 func (b *Botanist) DefaultOwnerDNSRecord() extensionsdnsrecord.Interface {
 	values := &extensionsdnsrecord.Values{
-		Name:          b.Shoot.GetInfo().Name + "-" + DNSOwnerName,
-		SecretName:    DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + DNSInternalName,
-		Namespace:     b.Shoot.SeedNamespace,
-		ReconcileOnce: true,
-		TTL:           b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
+		Name:                       b.Shoot.GetInfo().Name + "-" + DNSOwnerName,
+		SecretName:                 DNSRecordSecretPrefix + "-" + b.Shoot.GetInfo().Name + "-" + DNSInternalName,
+		Namespace:                  b.Shoot.SeedNamespace,
+		ReconcileOnValueChangeOnly: true,
+		TTL:                        b.Config.Controllers.Shoot.DNSEntryTTLSeconds,
 	}
 	if b.NeedsInternalDNS() {
 		values.Type = b.Garden.InternalDomain.Provider
