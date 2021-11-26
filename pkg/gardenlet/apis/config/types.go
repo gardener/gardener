@@ -19,6 +19,7 @@ import (
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/klog"
@@ -374,6 +375,8 @@ type Loki struct {
 type GardenLoki struct {
 	// Priority is the priority value for the Loki
 	Priority *int32
+	// Storage is the disk storage capacity of the central Loki
+	Storage *resource.Quantity
 }
 
 // ShootNodeLogging contains configuration for the shoot node logging.
