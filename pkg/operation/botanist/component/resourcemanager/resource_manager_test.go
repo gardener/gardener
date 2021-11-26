@@ -66,7 +66,7 @@ var _ = Describe("ResourceManager", func() {
 		replicas        int32 = 1
 		healthPort      int32 = 8081
 		metricsPort     int32 = 8080
-		serverPort            = 9449
+		serverPort            = 10250
 
 		// optional configuration
 		clusterIdentity                      = "foo"

@@ -72,7 +72,7 @@ const (
 	containerName      = v1beta1constants.DeploymentNameGardenerResourceManager
 	healthPort         = 8081
 	metricsPort        = 8080
-	serverPort         = 9449
+	serverPort         = 10250
 	serverServicePort  = 443
 	roleName           = "gardener-resource-manager"
 	serviceAccountName = "gardener-resource-manager"

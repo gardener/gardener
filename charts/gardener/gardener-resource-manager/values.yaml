@@ -6,7 +6,7 @@ image:
 resources: {}
 
 serverBindAddress: 0.0.0.0
-serverPort: 9449
+serverPort: 10250
 metricsPort: 8080
 healthPort: 8081
 
