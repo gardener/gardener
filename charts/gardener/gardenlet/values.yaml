@@ -193,6 +193,7 @@ global:
     #     activeDeadlineDuration: "3h"
     # seedConfig: {}
     # logging:
+    #   enabled: false
     #   fluentBit:
     #     output: |-
     #       [Output]

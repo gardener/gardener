@@ -608,11 +608,12 @@ func ComputeExpectedGardenletConfiguration(
 		five   = 5
 		twenty = 20
 
-		logLevelInfo        = "info"
-		logFormatJson       = "json"
-		lockObjectName      = "gardenlet-leader-election"
-		lockObjectNamespace = "garden"
-		kubernetesLogLevel  = new(klog.Level)
+		logLevelInfo              = "info"
+		logFormatJson             = "json"
+		lockObjectName            = "gardenlet-leader-election"
+		lockObjectNamespace       = "garden"
+		kubernetesLogLevel        = new(klog.Level)
+		defaultCentralLokiStorage = resource.MustParse("100Gi")
 	)
 	Expect(kubernetesLogLevel.Set("0")).ToNot(HaveOccurred())
 
@@ -775,8 +776,17 @@ func ComputeExpectedGardenletConfiguration(
 			ResourceName:      lockObjectName,
 			ResourceNamespace: lockObjectNamespace,
 		},
-		LogLevel:           &logLevelInfo,
-		LogFormat:          &logFormatJson,
+		LogLevel:  &logLevelInfo,
+		LogFormat: &logFormatJson,
+		Logging: &gardenletconfigv1alpha1.Logging{
+			Enabled: pointer.BoolPtr(false),
+			Loki: &gardenletconfigv1alpha1.Loki{
+				Enabled: pointer.BoolPtr(false),
+				Garden: &gardenletconfigv1alpha1.GardenLoki{
+					Storage: &defaultCentralLokiStorage,
+				},
+			},
+		},
 		KubernetesLogLevel: kubernetesLogLevel,
 		Server: &gardenletconfigv1alpha1.ServerConfiguration{HTTPS: gardenletconfigv1alpha1.HTTPSServer{
 			Server: gardenletconfigv1alpha1.Server{
