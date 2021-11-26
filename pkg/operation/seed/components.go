@@ -158,64 +158,76 @@ func defaultDependencyWatchdogs(
 	c client.Client,
 	seedVersion string,
 	imageVector imagevector.ImageVector,
+	dwdSettings *gardencorev1beta1.SeedSettingDependencyWatchdog,
 ) (
 	dwdEndpoint component.DeployWaiter,
 	dwdProbe component.DeployWaiter,
 	err error,
 ) {
-	// Fetch component-specific dependency-watchdog configuration
-	var (
-		dependencyWatchdogEndpointConfigurationFuncs = []dependencywatchdog.EndpointConfigurationFunc{
-			func() (map[string]restarterapi.Service, error) {
-				return etcd.DependencyWatchdogEndpointConfiguration(v1beta1constants.ETCDRoleMain)
-			},
-			kubeapiserver.DependencyWatchdogEndpointConfiguration,
-		}
-		dependencyWatchdogEndpointConfigurations = restarterapi.ServiceDependants{
-			Services: make(map[string]restarterapi.Service, len(dependencyWatchdogEndpointConfigurationFuncs)),
-		}
-
-		dependencyWatchdogProbeConfigurationFuncs = []dependencywatchdog.ProbeConfigurationFunc{
-			kubeapiserver.DependencyWatchdogProbeConfiguration,
-		}
-		dependencyWatchdogProbeConfigurations = scalerapi.ProbeDependantsList{
-			Probes: make([]scalerapi.ProbeDependants, 0, len(dependencyWatchdogProbeConfigurationFuncs)),
-		}
-	)
-
-	for _, componentFn := range dependencyWatchdogEndpointConfigurationFuncs {
-		dwdConfig, err := componentFn()
-		if err != nil {
-			return nil, nil, err
-		}
-		for k, v := range dwdConfig {
-			dependencyWatchdogEndpointConfigurations.Services[k] = v
-		}
-	}
-
-	for _, componentFn := range dependencyWatchdogProbeConfigurationFuncs {
-		dwdConfig, err := componentFn()
-		if err != nil {
-			return nil, nil, err
-		}
-		dependencyWatchdogProbeConfigurations.Probes = append(dependencyWatchdogProbeConfigurations.Probes, dwdConfig...)
-	}
-
 	image, err := imageVector.FindImage(charts.ImageNameDependencyWatchdog, imagevector.RuntimeVersion(seedVersion), imagevector.TargetVersion(seedVersion))
 	if err != nil {
 		return nil, nil, err
 	}
 
-	dwdEndpoint = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dependencywatchdog.Values{
-		Role:           dependencywatchdog.RoleEndpoint,
-		Image:          image.String(),
-		ValuesEndpoint: dependencywatchdog.ValuesEndpoint{ServiceDependants: dependencyWatchdogEndpointConfigurations},
-	})
-	dwdProbe = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dependencywatchdog.Values{
-		Role:        dependencywatchdog.RoleProbe,
-		Image:       image.String(),
-		ValuesProbe: dependencywatchdog.ValuesProbe{ProbeDependantsList: dependencyWatchdogProbeConfigurations},
-	})
+	var (
+		dwdEndpointValues = dependencywatchdog.Values{Role: dependencywatchdog.RoleEndpoint, Image: image.String()}
+		dwdProbeValues    = dependencywatchdog.Values{Role: dependencywatchdog.RoleProbe, Image: image.String()}
+	)
+
+	dwdEndpoint = component.OpDestroy(dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdEndpointValues))
+	dwdProbe = component.OpDestroy(dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdProbeValues))
+
+	if dwdSettings != nil && dwdSettings.Endpoint != nil && dwdSettings.Endpoint.Enabled {
+		// Fetch component-specific dependency-watchdog configuration
+		var (
+			dependencyWatchdogEndpointConfigurationFuncs = []dependencywatchdog.EndpointConfigurationFunc{
+				func() (map[string]restarterapi.Service, error) {
+					return etcd.DependencyWatchdogEndpointConfiguration(v1beta1constants.ETCDRoleMain)
+				},
+				kubeapiserver.DependencyWatchdogEndpointConfiguration,
+			}
+			dependencyWatchdogEndpointConfigurations = restarterapi.ServiceDependants{
+				Services: make(map[string]restarterapi.Service, len(dependencyWatchdogEndpointConfigurationFuncs)),
+			}
+		)
+
+		for _, componentFn := range dependencyWatchdogEndpointConfigurationFuncs {
+			dwdConfig, err := componentFn()
+			if err != nil {
+				return nil, nil, err
+			}
+			for k, v := range dwdConfig {
+				dependencyWatchdogEndpointConfigurations.Services[k] = v
+			}
+		}
+
+		dwdEndpointValues.ValuesEndpoint = dependencywatchdog.ValuesEndpoint{ServiceDependants: dependencyWatchdogEndpointConfigurations}
+		dwdEndpoint = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdEndpointValues)
+	}
+
+	if dwdSettings != nil && dwdSettings.Probe != nil && dwdSettings.Probe.Enabled {
+		// Fetch component-specific dependency-watchdog configuration
+		var (
+			dependencyWatchdogProbeConfigurationFuncs = []dependencywatchdog.ProbeConfigurationFunc{
+				kubeapiserver.DependencyWatchdogProbeConfiguration,
+			}
+			dependencyWatchdogProbeConfigurations = scalerapi.ProbeDependantsList{
+				Probes: make([]scalerapi.ProbeDependants, 0, len(dependencyWatchdogProbeConfigurationFuncs)),
+			}
+		)
+
+		for _, componentFn := range dependencyWatchdogProbeConfigurationFuncs {
+			dwdConfig, err := componentFn()
+			if err != nil {
+				return nil, nil, err
+			}
+			dependencyWatchdogProbeConfigurations.Probes = append(dependencyWatchdogProbeConfigurations.Probes, dwdConfig...)
+		}
+
+		dwdProbeValues.ValuesProbe = dependencywatchdog.ValuesProbe{ProbeDependantsList: dependencyWatchdogProbeConfigurations}
+		dwdProbe = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdProbeValues)
+	}
+
 	return
 }
 
