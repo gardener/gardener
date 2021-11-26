@@ -151,6 +151,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedNetworks":                           schema_pkg_apis_core_v1alpha1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedProvider":                           schema_pkg_apis_core_v1alpha1_SeedProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSelector":                           schema_pkg_apis_core_v1alpha1_SeedSelector(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdog":          schema_pkg_apis_core_v1alpha1_SeedSettingDependencyWatchdog(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdogEndpoint":  schema_pkg_apis_core_v1alpha1_SeedSettingDependencyWatchdogEndpoint(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdogProbe":     schema_pkg_apis_core_v1alpha1_SeedSettingDependencyWatchdogProbe(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation":   schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices":        schema_pkg_apis_core_v1alpha1_SeedSettingLoadBalancerServices(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks":                 schema_pkg_apis_core_v1alpha1_SeedSettingOwnerChecks(ref),
@@ -292,6 +295,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedNetworks":                            schema_pkg_apis_core_v1beta1_SeedNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedProvider":                            schema_pkg_apis_core_v1beta1_SeedProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSelector":                            schema_pkg_apis_core_v1beta1_SeedSelector(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdog":           schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdog(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogEndpoint":   schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogEndpoint(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProbe":      schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogProbe(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation":    schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices":         schema_pkg_apis_core_v1beta1_SeedSettingLoadBalancerServices(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks":                  schema_pkg_apis_core_v1beta1_SeedSettingOwnerChecks(ref),
@@ -6097,6 +6103,77 @@ func schema_pkg_apis_core_v1alpha1_SeedSelector(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_SeedSettingDependencyWatchdog(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"endpoint": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Endpoint controls the endpoint settings for the dependency-watchdog for the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdogEndpoint"),
+						},
+					},
+					"probe": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Probe controls the probe settings for the dependency-watchdog for the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdogProbe"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdogEndpoint", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdogProbe"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedSettingDependencyWatchdogEndpoint(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in CrashLoopBackoff status and restarting them once their dependants become ready and available again.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_SeedSettingDependencyWatchdogProbe(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not reachable via its external ingress in order to avoid melt-down situations.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_SeedSettingExcessCapacityReservation(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6279,11 +6356,17 @@ func schema_pkg_apis_core_v1alpha1_SeedSettings(ref common.ReferenceCallback) co
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks"),
 						},
 					},
+					"dependencyWatchdog": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdog"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingDependencyWatchdog", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingOwnerChecks", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.SeedSettingVerticalPodAutoscaler"},
 	}
 }
 
@@ -12834,6 +12917,77 @@ func schema_pkg_apis_core_v1beta1_SeedSelector(ref common.ReferenceCallback) com
 	}
 }
 
+func schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdog(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"endpoint": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Endpoint controls the endpoint settings for the dependency-watchdog for the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogEndpoint"),
+						},
+					},
+					"probe": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Probe controls the probe settings for the dependency-watchdog for the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProbe"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogEndpoint", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdogProbe"},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogEndpoint(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in CrashLoopBackoff status and restarting them once their dependants become ready and available again.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1beta1_SeedSettingDependencyWatchdogProbe(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not reachable via its external ingress in order to avoid melt-down situations.",
+							Default:     false,
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_core_v1beta1_SeedSettingExcessCapacityReservation(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -13016,11 +13170,17 @@ func schema_pkg_apis_core_v1beta1_SeedSettings(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks"),
 						},
 					},
+					"dependencyWatchdog": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdog"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
+			"github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingDependencyWatchdog", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingExcessCapacityReservation", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingLoadBalancerServices", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingOwnerChecks", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingScheduling", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingShootDNS", "github.com/gardener/gardener/pkg/apis/core/v1beta1.SeedSettingVerticalPodAutoscaler"},
 	}
 }
 

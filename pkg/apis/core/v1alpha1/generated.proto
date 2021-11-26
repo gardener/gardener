@@ -1895,6 +1895,33 @@ message SeedSelector {
   repeated string providerTypes = 2;
 }
 
+// SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
+message SeedSettingDependencyWatchdog {
+  // Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
+  // +optional
+  optional SeedSettingDependencyWatchdogEndpoint endpoint = 1;
+
+  // Probe controls the probe settings for the dependency-watchdog for the seed.
+  // +optional
+  optional SeedSettingDependencyWatchdogProbe probe = 2;
+}
+
+// SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
+message SeedSettingDependencyWatchdogEndpoint {
+  // Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
+  // helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
+  // CrashLoopBackoff status and restarting them once their dependants become ready and available again.
+  optional bool enabled = 1;
+}
+
+// SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
+message SeedSettingDependencyWatchdogProbe {
+  // Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
+  // scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not
+  // reachable via its external ingress in order to avoid melt-down situations.
+  optional bool enabled = 1;
+}
+
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the seed.
 message SeedSettingExcessCapacityReservation {
   // Enabled controls whether the excess capacity reservation should be enabled.
@@ -1965,6 +1992,10 @@ message SeedSettings {
   // SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
   // +optional
   optional SeedSettingOwnerChecks ownerChecks = 6;
+
+  // DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
+  // +optional
+  optional SeedSettingDependencyWatchdog dependencyWatchdog = 7;
 }
 
 // SeedSpec is the specification of a Seed.
