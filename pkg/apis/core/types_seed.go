@@ -208,6 +208,8 @@ type SeedSettings struct {
 	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler
 	// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
 	OwnerChecks *SeedSettingOwnerChecks
+	// DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.
+	DependencyWatchdog *SeedSettingDependencyWatchdog
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
@@ -252,6 +254,30 @@ type SeedSettingVerticalPodAutoscaler struct {
 type SeedSettingOwnerChecks struct {
 	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
 	// is enabled by default because it is a prerequisite for control plane migration.
+	Enabled bool
+}
+
+// SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.
+type SeedSettingDependencyWatchdog struct {
+	// Endpoint controls the endpoint settings for the dependency-watchdog for the seed.
+	Endpoint *SeedSettingDependencyWatchdogEndpoint
+	// Probe controls the probe settings for the dependency-watchdog for the seed.
+	Probe *SeedSettingDependencyWatchdogProbe
+}
+
+// SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.
+type SeedSettingDependencyWatchdogEndpoint struct {
+	// Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
+	// helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
+	// CrashLoopBackoff status and restarting them once their dependants become ready and available again.
+	Enabled bool
+}
+
+// SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.
+type SeedSettingDependencyWatchdogProbe struct {
+	// Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
+	// scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not
+	// reachable via its external ingress in order to avoid melt-down situations.
 	Enabled bool
 }
 
