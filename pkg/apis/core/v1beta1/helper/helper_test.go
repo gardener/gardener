@@ -975,6 +975,17 @@ var _ = Describe("helper", func() {
 		Entry("dns providers and unmanaged type", &gardencorev1beta1.DNS{Providers: []gardencorev1beta1.DNSProvider{{Type: &unmanagedType}}}, true),
 	)
 
+	DescribeTable("#SeedSettingOwnerChecksEnabled",
+		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
+			Expect(SeedSettingOwnerChecksEnabled(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, true),
+		Entry("no owner checks setting", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("owner checks enabled", &gardencorev1beta1.SeedSettings{OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{Enabled: true}}, true),
+		Entry("owner checks disabled", &gardencorev1beta1.SeedSettings{OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{Enabled: false}}, false),
+	)
+
 	DescribeTable("#IsAPIServerExposureManaged",
 		func(obj metav1.Object, expected bool) {
 			Expect(IsAPIServerExposureManaged(obj)).To(Equal(expected))

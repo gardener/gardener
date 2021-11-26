@@ -119,6 +119,10 @@ func SetDefaults_Seed(obj *Seed) {
 	if obj.Spec.Settings.VerticalPodAutoscaler == nil {
 		obj.Spec.Settings.VerticalPodAutoscaler = &SeedSettingVerticalPodAutoscaler{Enabled: true}
 	}
+
+	if obj.Spec.Settings.OwnerChecks == nil {
+		obj.Spec.Settings.OwnerChecks = &SeedSettingOwnerChecks{Enabled: true}
+	}
 }
 
 // SetDefaults_Shoot sets default values for Shoot objects.

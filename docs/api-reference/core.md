@@ -7575,6 +7575,37 @@ map[string]string
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingOwnerChecks">SeedSettingOwnerChecks
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
+</p>
+<p>
+<p>SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
+is enabled by default because it is a prerequisite for control plane migration.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingScheduling">SeedSettingScheduling
 </h3>
 <p>
@@ -7756,6 +7787,20 @@ SeedSettingVerticalPodAutoscaler
 <td>
 <em>(Optional)</em>
 <p>VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ownerChecks</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingOwnerChecks">
+SeedSettingOwnerChecks
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.</p>
 </td>
 </tr>
 </tbody>

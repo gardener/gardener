@@ -261,10 +261,15 @@ var _ = Describe("Etcd", func() {
 						EtcdEvents: etcdEvents,
 					},
 				},
-				SeedNamespace:   namespace,
-				BackupEntryName: namespace + "--" + string(shootUID),
+				SeedNamespace:         namespace,
+				BackupEntryName:       namespace + "--" + string(shootUID),
+				InternalClusterDomain: "internal.example.com",
 			}
-			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{})
+			botanist.Seed.SetInfo(&gardencorev1beta1.Seed{
+				Status: gardencorev1beta1.SeedStatus{
+					ClusterIdentity: pointer.String("seed-identity"),
+				},
+			})
 			botanist.Shoot.SetInfo(&gardencorev1beta1.Shoot{
 				Spec: gardencorev1beta1.ShootSpec{
 					Maintenance: &gardencorev1beta1.Maintenance{
@@ -330,6 +335,30 @@ var _ = Describe("Etcd", func() {
 						"bucketName": []byte(bucketName),
 					},
 				}
+
+				expectGetBackupSecret = func() {
+					c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(
+						func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
+							backupSecret.DeepCopyInto(obj.(*corev1.Secret))
+							return nil
+						},
+					)
+				}
+				expectSetBackupConfig = func() {
+					etcdMain.EXPECT().SetBackupConfig(&etcd.BackupConfig{
+						Provider:             backupProvider,
+						SecretRefName:        "etcd-backup",
+						Prefix:               namespace + "--" + string(shootUID),
+						Container:            bucketName,
+						FullSnapshotSchedule: "1 12 * * *",
+					})
+				}
+				expectSetOwnerCheckConfig = func() {
+					etcdMain.EXPECT().SetOwnerCheckConfig(&etcd.OwnerCheckConfig{
+						Name: "owner.internal.example.com",
+						ID:   "seed-identity",
+					})
+				}
 			)
 
 			BeforeEach(func() {
@@ -338,21 +367,42 @@ var _ = Describe("Etcd", func() {
 				}
 			})
 
-			It("should set the secrets and deploy", func() {
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
-					backupSecret.DeepCopyInto(obj.(*corev1.Secret))
-					return nil
-				})
-				etcdMain.EXPECT().SetBackupConfig(&etcd.BackupConfig{
-					Provider:             backupProvider,
-					SecretRefName:        "etcd-backup",
-					Prefix:               namespace + "--" + string(shootUID),
-					Container:            bucketName,
-					FullSnapshotSchedule: "1 12 * * *",
-				})
+			It("should set the secrets and deploy with owner checks", func() {
+				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
 
+				expectGetBackupSecret()
+				expectSetBackupConfig()
+				expectSetOwnerCheckConfig()
 				etcdMain.EXPECT().Deploy(ctx)
 				etcdEvents.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
+			})
+
+			It("should set the secrets and deploy without owner checks if they are disabled", func() {
+				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, true)()
+				botanist.Seed.GetInfo().Spec.Settings = &gardencorev1beta1.SeedSettings{
+					OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{
+						Enabled: false,
+					},
+				}
+
+				expectGetBackupSecret()
+				expectSetBackupConfig()
+				etcdMain.EXPECT().Deploy(ctx)
+				etcdEvents.EXPECT().Deploy(ctx)
+
+				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
+			})
+
+			It("should set the secrets and deploy without owner checks if the UseDNSRecords feature gate is disabled", func() {
+				defer test.WithFeatureGate(gardenletfeatures.FeatureGate, features.UseDNSRecords, false)()
+
+				expectGetBackupSecret()
+				expectSetBackupConfig()
+				etcdMain.EXPECT().Deploy(ctx)
+				etcdEvents.EXPECT().Deploy(ctx)
+
 				Expect(botanist.DeployEtcd(ctx)).To(Succeed())
 			})
 
@@ -363,14 +413,11 @@ var _ = Describe("Etcd", func() {
 			})
 
 			It("should fail when the backup schedule cannot be determined", func() {
-				c.EXPECT().Get(ctx, kutil.Key(namespace, "etcd-backup"), gomock.AssignableToTypeOf(&corev1.Secret{})).DoAndReturn(func(ctx context.Context, key client.ObjectKey, obj client.Object) error {
-					backupSecret.DeepCopyInto(obj.(*corev1.Secret))
-					return nil
-				})
 				botanist.Shoot.GetInfo().Spec.Maintenance.TimeWindow = &gardencorev1beta1.MaintenanceTimeWindow{
 					Begin: "foobar",
 					End:   "barfoo",
 				}
+				expectGetBackupSecret()
 
 				Expect(botanist.DeployEtcd(ctx)).To(HaveOccurred())
 			})

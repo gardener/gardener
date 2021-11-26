@@ -206,6 +206,8 @@ type SeedSettings struct {
 	LoadBalancerServices *SeedSettingLoadBalancerServices
 	// VerticalPodAutoscaler controls certain settings for the vertical pod autoscaler components deployed in the seed.
 	VerticalPodAutoscaler *SeedSettingVerticalPodAutoscaler
+	// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+	OwnerChecks *SeedSettingOwnerChecks
 }
 
 // SeedSettingExcessCapacityReservation controls the excess capacity reservation for shoot control planes in the
@@ -243,6 +245,13 @@ type SeedSettingVerticalPodAutoscaler struct {
 	// Enabled controls whether the VPA components shall be deployed into the garden namespace in the seed cluster. It
 	// is enabled by default because Gardener heavily relies on a VPA being deployed. You should only disable this if
 	// your seed cluster already has another, manually/custom managed VPA deployment.
+	Enabled bool
+}
+
+// SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.
+type SeedSettingOwnerChecks struct {
+	// Enabled controls whether owner checks are enabled for shoots scheduled on this seed. It
+	// is enabled by default because it is a prerequisite for control plane migration.
 	Enabled bool
 }
 
