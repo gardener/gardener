@@ -663,7 +663,7 @@ type KubeletConfig struct {
 	ImageGCHighThresholdPercent *int32
 	// ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free.
 	ImageGCLowThresholdPercent *int32
-	//SerializeImagePulls describes whether the images are pulled one at a time.
+	// SerializeImagePulls describes whether the images are pulled one at a time.
 	SerializeImagePulls *bool
 }
 
