@@ -488,6 +488,9 @@ func (OutboundTrafficPolicy_Mode) EnumDescriptor() ([]byte, []int) {
 // +genclient
 // +k8s:deepcopy-gen=true
 // -->
+// <!-- istio code generation tags
+// +istio.io/sync-from:networking/v1alpha3/sidecar.proto
+// -->
 type Sidecar struct {
 	// Criteria used to select the specific set of pods/VMs on which this
 	// `Sidecar` configuration should be applied. If omitted, the `Sidecar`

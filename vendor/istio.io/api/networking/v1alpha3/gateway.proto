@@ -372,6 +372,9 @@ option go_package = "istio.io/api/networking/v1alpha3";
 // +genclient
 // +k8s:deepcopy-gen=true
 // -->
+// <!-- istio code generation tags
+// +istio.io/sync-start
+// -->
 message Gateway {
   // A list of server specifications.
   repeated Server servers = 1 [(google.api.field_behavior) = REQUIRED];
@@ -639,9 +642,6 @@ message ServerTLSSettings {
     // not have direct connectivity between their respective
     // endpoints. Use of this mode assumes that both the source and
     // the destination are using Istio mTLS to secure traffic.
-    // In order for this mode to be enabled, the gateway deployment
-    // must be configured with the `ISTIO_META_ROUTER_MODE=sni-dnat`
-    // environment variable.
     AUTO_PASSTHROUGH = 3;
 
     // Secure connections from the downstream using mutual TLS by
@@ -675,8 +675,8 @@ message ServerTLSSettings {
   // holds the TLS certs including the CA certificates. Applicable
   // only on Kubernetes. The secret (of type `generic`) should
   // contain the following keys and values: `key:
-  // <privateKey>` and `cert: <serverCert>`. For mutual TLS, 
-  // `cacert: <CACertificate>` can be provided in the same secret or 
+  // <privateKey>` and `cert: <serverCert>`. For mutual TLS,
+  // `cacert: <CACertificate>` can be provided in the same secret or
   // a separate secret named `<secret>-cacert`.
   // Secret of type tls for server certificates along with
   // ca.crt key for CA certificates is also supported.

@@ -194,6 +194,9 @@ option go_package = "istio.io/api/networking/v1beta1";
 // +genclient
 // +k8s:deepcopy-gen=true
 // -->
+// <!-- istio code generation tags
+// +istio.io/sync-from:networking/v1alpha3/destination_rule.proto
+// -->
 message DestinationRule {
   // The name of a service from the service registry. Service
   // names are looked up from the platform's service registry (e.g.,
@@ -403,35 +406,35 @@ message Subset {
 // {{<tabset category-name="example">}}
 // {{<tab name="v1alpha3" category-value="v1alpha3">}}
 // ```yaml
-//  apiVersion: networking.istio.io/v1alpha3
-//  kind: DestinationRule
-//  metadata:
-//    name: bookinfo-ratings
-//  spec:
-//    host: ratings.prod.svc.cluster.local
-//    trafficPolicy:
-//      loadBalancer:
-//        consistentHash:
-//          httpCookie:
-//            name: user
-//            ttl: 0s
+// apiVersion: networking.istio.io/v1alpha3
+// kind: DestinationRule
+// metadata:
+//   name: bookinfo-ratings
+// spec:
+//   host: ratings.prod.svc.cluster.local
+//   trafficPolicy:
+//     loadBalancer:
+//       consistentHash:
+//         httpCookie:
+//           name: user
+//           ttl: 0s
 // ```
 // {{</tab>}}
 //
 // {{<tab name="v1beta1" category-value="v1beta1">}}
 // ```yaml
-//  apiVersion: networking.istio.io/v1beta1
-//  kind: DestinationRule
-//  metadata:
-//    name: bookinfo-ratings
-//  spec:
-//    host: ratings.prod.svc.cluster.local
-//    trafficPolicy:
-//      loadBalancer:
-//        consistentHash:
-//          httpCookie:
-//            name: user
-//            ttl: 0s
+// apiVersion: networking.istio.io/v1beta1
+// kind: DestinationRule
+// metadata:
+//   name: bookinfo-ratings
+// spec:
+//   host: ratings.prod.svc.cluster.local
+//   trafficPolicy:
+//     loadBalancer:
+//       consistentHash:
+//         httpCookie:
+//           name: user
+//           ttl: 0s
 // ```
 // {{</tab>}}
 // {{</tabset>}}
@@ -462,8 +465,7 @@ message LoadBalancerSettings {
 
   // Consistent Hash-based load balancing can be used to provide soft
   // session affinity based on HTTP headers, cookies or other
-  // properties. This load balancing policy is applicable only for HTTP
-  // connections. The affinity to a particular destination host will be
+  // properties. The affinity to a particular destination host will be
   // lost when one or more hosts are added/removed from the destination
   // service.
   message ConsistentHashLB {
@@ -488,6 +490,7 @@ message LoadBalancerSettings {
       HTTPCookie http_cookie = 2;
 
       // Hash based on the source IP address.
+      // This is applicable for both TCP and HTTP connections.
       bool use_source_ip = 3;
 
       // Hash based on a specific HTTP query parameter.
@@ -721,6 +724,21 @@ message OutlierDetection {
   // $hide_from_docs
   int32 consecutive_errors = 1 [deprecated=true];
 
+  // Determines whether to distinguish local origin failures from external errors. If set to true
+  // consecutive_local_origin_failure is taken into account for outlier detection calculations.
+  // This should be used when you want to derive the outlier detection status based on the errors
+  // seen locally such as failure to connect, timeout while connecting etc. rather than the status code
+  // retuned by upstream service. This is especially useful when the upstream service explicitly returns
+  // a 5xx for some requests and you want to ignore those responses from upstream service while determining
+  // the outlier detection status of a host.
+  // Defaults to false.
+  bool split_external_local_origin_errors = 8;
+
+  // The number of consecutive locally originated failures before ejection
+  // occurs. Defaults to 5. Parameter takes effect only when split_external_local_origin_errors
+  // is set to true.
+  google.protobuf.UInt32Value consecutive_local_origin_failures = 9;
+
   // Number of gateway errors before a host is ejected from the connection pool.
   // When the upstream host is accessed over HTTP, a 502, 503, or 504 return
   // code qualifies as a gateway error. When the upstream host is accessed over
@@ -776,7 +794,7 @@ message OutlierDetection {
 }
 
 // SSL/TLS related settings for upstream connections. See Envoy's [TLS
-// context](https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/auth/cert.proto.html)
+// context](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto.html#common-tls-configuration)
 // for more details. These settings are common to both HTTP and TCP upstreams.
 //
 // For example, the following rule configures a client to use mutual TLS
@@ -930,7 +948,8 @@ message ClientTLSSettings {
   // same namespace with the proxy using the certificates.
   // The secret (of type `generic`)should contain the
   // following keys and values: `key: <privateKey>`,
-  // `cert: <serverCert>`, `cacert: <CACertificate>`.
+  // `cert: <clientCert>`, `cacert: <CACertificate>`.
+  // Here CACertificate is used to verify the server certificate.
   // Secret of type tls for client certificates along with
   // ca.crt key for CA certificates is also supported.
   // Only one of client certificates and CA certificate
@@ -949,6 +968,20 @@ message ClientTLSSettings {
 
   // SNI string to present to the server during TLS handshake.
   string sni = 6;
+
+  // InsecureSkipVerify specifies whether the proxy should skip verifying the
+  // CA signature and SAN for the server certificate corresponding to the host.
+  // This flag should only be set if global CA signature verifcation is
+  // enabled, `VerifyCertAtClient` environmental variable is set to `true`,
+  // but no verification is desired for a specific host. If enabled with or
+  // without `VerifyCertAtClient` enabled, verification of the CA signature and
+  // SAN will be skipped.
+  //
+  // `InsecureSkipVerify` is `false` by default.
+  // `VerifyCertAtClient` is `false` by default in Istio version 1.9 but will
+  // be `true` by default in a later version where, going forward, it will be
+  // enabled by default.
+  google.protobuf.BoolValue insecure_skip_verify = 8;
 }
 
 // Locality-weighted load balancing allows administrators to control the
@@ -1035,17 +1068,57 @@ message LocalityLoadBalancerSetting{
         string to = 2;
     };
 
-    // Optional: only one of distribute or failover can be set.
+    // Optional: only one of distribute, failover or failoverPriority can be set.
     // Explicitly specify loadbalancing weight across different zones and geographical locations.
     // Refer to [Locality weighted load balancing](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/locality_weight)
     // If empty, the locality weight is set according to the endpoints number within it.
     repeated Distribute distribute = 1;
 
-    // Optional: only failover or distribute can be set.
+    // Optional: only one of distribute, failover or failoverPriority can be set.
     // Explicitly specify the region traffic will land on when endpoints in local region becomes unhealthy.
     // Should be used together with OutlierDetection to detect unhealthy endpoints.
     // Note: if no OutlierDetection specified, this will not take effect.
     repeated Failover failover = 2;
+
+    // failoverPriority is an ordered list of labels used to sort endpoints to do priority based load balancing.
+    // This is to support traffic failover across different groups of endpoints.
+    // Suppose there are total N labels specified:
+    //
+    // 1. Endpoints matching all N labels with the client proxy have priority P(0) i.e. the highest priority.
+    // 2. Endpoints matching the first N-1 labels with the client proxy have priority P(1) i.e. second highest priority.
+    // 3. By extension of this logic, endpoints matching only the first label with the client proxy has priority P(N-1) i.e. second lowest priority.
+    // 4. All the other endpoints have priority P(N) i.e. lowest priority.
+    //
+    // Note: For a label to be considered for match, the previous labels must match, i.e. nth label would be considered matched only if first n-1 labels match.
+    //
+    // It can be any label specified on both client and server workloads.
+    // The following labels which have special semantic meaning are also supported:
+    //
+    //   - `topology.istio.io/network` is used to match the network metadata of an endpoint, which can be specified by pod/namespace label `topology.istio.io/network`, sidecar env `ISTIO_META_NETWORK` or MeshNetworks.
+    //   - `topology.istio.io/cluster` is used to match the clusterID of an endpoint, which can be specified by pod label `topology.istio.io/cluster` or pod env `ISTIO_META_CLUSTER_ID`.
+    //   - `topology.kubernetes.io/region` is used to match the region metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/region` or the deprecated label `failure-domain.beta.kubernetes.io/region`.
+    //   - `topology.kubernetes.io/zone` is used to match the zone metadata of an endpoint, which maps to Kubernetes node label `topology.kubernetes.io/zone` or the deprecated label `failure-domain.beta.kubernetes.io/zone`.
+    //   - `topology.istio.io/subzone` is used to match the subzone metadata of an endpoint, which maps to Istio node label `topology.istio.io/subzone`.
+    //
+    // The below topology config indicates the following priority levels:
+    //
+    // ```yaml
+    // failoverPriority:
+    // - "topology.istio.io/network"
+    // - "topology.kubernetes.io/region"
+    // - "topology.kubernetes.io/zone"
+    // - "topology.istio.io/subzone"
+    // ```
+    //
+    // 1. endpoints match same [network, region, zone, subzone] label with the client proxy have the highest priority.
+    // 2. endpoints have same [network, region, zone] label but different [subzone] label with the client proxy have the second highest priority.
+    // 3. endpoints have same [network, region] label but different [zone] label with the client proxy have the third highest priority.
+    // 4. endpoints have same [network] but different [region] labels with the client proxy have the fourth highest priority.
+    // 5. all the other endpoints have the same lowest priority.
+    //
+    // Optional: only one of distribute, failover or failoverPriority can be set.
+    // And it should be used together with `OutlierDetection` to detect unhealthy endpoints, otherwise has no effect.
+    repeated string failover_priority = 4;
 
     // enable locality load balancing, this is DestinationRule-level and will override mesh wide settings in entirety.
     // e.g. true means that turn on locality load balancing for this DestinationRule no matter what mesh wide settings is.
