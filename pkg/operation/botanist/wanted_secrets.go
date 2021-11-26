@@ -568,40 +568,46 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 		})
 	}
 
-	// Secret definitions for dependency-watchdog-internal and external probes
-	secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
-		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			Name: kubeapiserver.DependencyWatchdogInternalProbeSecretName,
+	if settings := b.Seed.GetInfo().Spec.Settings; settings == nil &&
+		settings.DependencyWatchdog != nil &&
+		settings.DependencyWatchdog.Probe != nil &&
+		settings.DependencyWatchdog.Probe.Enabled {
 
-			CommonName:   dependencywatchdog.UserName,
-			Organization: nil,
-			DNSNames:     nil,
-			IPAddresses:  nil,
+		// Secret definitions for dependency-watchdog-internal and external probes
+		secretList = append(secretList, &secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: kubeapiserver.DependencyWatchdogInternalProbeSecretName,
 
-			CertType:  secrets.ClientCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-		},
-		KubeConfigRequests: []secrets.KubeConfigRequest{{
-			ClusterName:   b.Shoot.SeedNamespace,
-			APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(false),
-		}},
-	}, &secrets.ControlPlaneSecretConfig{
-		CertificateSecretConfig: &secrets.CertificateSecretConfig{
-			Name: kubeapiserver.DependencyWatchdogExternalProbeSecretName,
+				CommonName:   dependencywatchdog.UserName,
+				Organization: nil,
+				DNSNames:     nil,
+				IPAddresses:  nil,
 
-			CommonName:   dependencywatchdog.UserName,
-			Organization: nil,
-			DNSNames:     nil,
-			IPAddresses:  nil,
+				CertType:  secrets.ClientCert,
+				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(false),
+			}},
+		}, &secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: kubeapiserver.DependencyWatchdogExternalProbeSecretName,
 
-			CertType:  secrets.ClientCert,
-			SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-		},
-		KubeConfigRequests: []secrets.KubeConfigRequest{{
-			ClusterName:   b.Shoot.SeedNamespace,
-			APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
-		}},
-	})
+				CommonName:   dependencywatchdog.UserName,
+				Organization: nil,
+				DNSNames:     nil,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ClientCert,
+				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
+			},
+			KubeConfigRequests: []secrets.KubeConfigRequest{{
+				ClusterName:   b.Shoot.SeedNamespace,
+				APIServerHost: b.Shoot.ComputeOutOfClusterAPIServerAddress(b.APIServerAddress, true),
+			}},
+		})
+	}
 
 	if b.Shoot.ReversedVPNEnabled {
 		secretList = append(secretList,
