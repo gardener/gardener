@@ -278,27 +278,9 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			}},
 		},
 
-		// Secret definition for kube-state-metrics
-		&secrets.ControlPlaneSecretConfig{
-			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kube-state-metrics",
-
-				CommonName:   "gardener.cloud:monitoring:kube-state-metrics",
-				Organization: []string{"gardener.cloud:monitoring"},
-				DNSNames:     nil,
-				IPAddresses:  nil,
-
-				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[v1beta1constants.SecretNameCACluster],
-			},
-
-			KubeConfigRequests: []secrets.KubeConfigRequest{{
-				ClusterName:   b.Shoot.SeedNamespace,
-				APIServerHost: b.Shoot.ComputeInClusterAPIServerAddress(true),
-			}},
-		},
-
 		// Secret definition for prometheus
+		// TODO(rfranzke): Delete this in a future release once all monitoring configurations of extensions have been
+		// adapted.
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: "prometheus",

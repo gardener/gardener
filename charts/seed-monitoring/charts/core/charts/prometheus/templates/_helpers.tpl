@@ -43,16 +43,12 @@ Drops metrics which produce lots of time-series without much gain.
   action: keep
 {{- end -}}
 
-{{- define "prometheus.tls-config.kube-cert-auth" -}}
-ca_file: /etc/prometheus/seed/ca.crt
-cert_file: /etc/prometheus/seed/prometheus.crt
-key_file: /etc/prometheus/seed/prometheus.key
-{{- end -}}
-
-{{- define "prometheus.tls-config.kube-cert-auth-insecure" -}}
-insecure_skip_verify: true
-cert_file: /etc/prometheus/seed/prometheus.crt
-key_file: /etc/prometheus/seed/prometheus.key
+{{- define "prometheus.kube-auth" -}}
+tls_config:
+  ca_file: /etc/prometheus/seed/ca.crt
+authorization:
+  type: Bearer
+  credentials_file: /var/run/secrets/gardener.cloud/shoot/token/token
 {{- end -}}
 
 {{- define "prometheus.alertmanager.namespaces" -}}

@@ -60,7 +60,6 @@ roleRef:
   kind: ClusterRole
   name: gardener.cloud:monitoring:kube-state-metrics
 subjects:
-- kind: User
-  name: garden.sapcloud.io:monitoring:kube-state-metrics
-- kind: User
-  name: gardener.cloud:monitoring:kube-state-metrics
+- kind: ServiceAccount
+  name: kube-state-metrics
+  namespace: kube-system
