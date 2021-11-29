@@ -79,7 +79,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 
 		if b.Shoot.GetInfo().DeletionTimestamp == nil {
 			if b.Shoot.ReversedVPNEnabled {
-				if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, kubeapiserver.SecretNameVPNSeed, kubeapiserver.SecretNameVPNSeedTLSAuth, "vpn-shoot"); err != nil {
+				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList, kubeapiserver.SecretNameVPNSeed, kubeapiserver.SecretNameVPNSeedTLSAuth, "vpn-shoot"); err != nil {
 					return err
 				}
 
@@ -87,7 +87,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 				// they get regenerated.
 				// TODO(rfranzke): Remove in a future version.
 				if gardenerResourceDataList.Get(v1beta1constants.SecretNameCAVPN) == nil {
-					if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList,
+					if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
 						vpnseedserver.DeploymentName,
 						kubeapiserver.SecretNameHTTPProxy,
 						vpnseedserver.VpnShootSecretName,
@@ -96,7 +96,13 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 					}
 				}
 			} else {
-				if err := b.cleanupTunnelSecrets(ctx, &gardenerResourceDataList, vpnseedserver.DeploymentName, vpnseedserver.VpnShootSecretName, vpnseedserver.VpnSeedServerTLSAuth); err != nil {
+				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList, vpnseedserver.DeploymentName, vpnseedserver.VpnShootSecretName, vpnseedserver.VpnSeedServerTLSAuth); err != nil {
+					return err
+				}
+			}
+
+			if !gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
+				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList, kubeapiserver.DependencyWatchdogInternalProbeSecretName, kubeapiserver.DependencyWatchdogExternalProbeSecretName); err != nil {
 					return err
 				}
 			}
@@ -502,8 +508,7 @@ func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 	return flow.Parallel(fns...)(ctx)
 }
 
-func (b *Botanist) cleanupTunnelSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList, secretNames ...string) error {
-	// TODO: remove when all Gardener supported versions are >= 1.18
+func (b *Botanist) cleanupSecrets(ctx context.Context, gardenerResourceDataList *gardencorev1alpha1helper.GardenerResourceDataList, secretNames ...string) error {
 	for _, secret := range secretNames {
 		if err := b.K8sSeedClient.Client().Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: secret, Namespace: b.Shoot.SeedNamespace}}); client.IgnoreNotFound(err) != nil {
 			return err

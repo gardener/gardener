@@ -7513,6 +7513,117 @@ Kubernetes meta/v1.LabelSelector
 </tr>
 </tbody>
 </table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">SeedSettingDependencyWatchdog
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettings">SeedSettings</a>)
+</p>
+<p>
+<p>SeedSettingDependencyWatchdog controls the dependency-watchdog settings for the seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>endpoint</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogEndpoint">
+SeedSettingDependencyWatchdogEndpoint
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Endpoint controls the endpoint settings for the dependency-watchdog for the seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>probe</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogProbe">
+SeedSettingDependencyWatchdogProbe
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Probe controls the probe settings for the dependency-watchdog for the seed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogEndpoint">SeedSettingDependencyWatchdogEndpoint
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">SeedSettingDependencyWatchdog</a>)
+</p>
+<p>
+<p>SeedSettingDependencyWatchdogEndpoint controls the endpoint settings for the dependency-watchdog for the seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled controls whether the endpoint controller of the dependency-watchdog should be enabled. This controller
+helps to alleviate the delay where control plane components remain unavailable by finding the respective pods in
+CrashLoopBackoff status and restarting them once their dependants become ready and available again.</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h3 id="core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdogProbe">SeedSettingDependencyWatchdogProbe
+</h3>
+<p>
+(<em>Appears on:</em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">SeedSettingDependencyWatchdog</a>)
+</p>
+<p>
+<p>SeedSettingDependencyWatchdogProbe controls the probe settings for the dependency-watchdog for the seed.</p>
+</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>enabled</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>Enabled controls whether the probe controller of the dependency-watchdog should be enabled. This controller
+scales down the kube-controller-manager of shoot clusters in case their respective kube-apiserver is not
+reachable via its external ingress in order to avoid melt-down situations.</p>
+</td>
+</tr>
+</tbody>
+</table>
 <h3 id="core.gardener.cloud/v1beta1.SeedSettingExcessCapacityReservation">SeedSettingExcessCapacityReservation
 </h3>
 <p>
@@ -7801,6 +7912,20 @@ SeedSettingOwnerChecks
 <td>
 <em>(Optional)</em>
 <p>SeedSettingOwnerChecks controls certain owner checks settings for shoots scheduled on this seed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>dependencyWatchdog</code></br>
+<em>
+<a href="#core.gardener.cloud/v1beta1.SeedSettingDependencyWatchdog">
+SeedSettingDependencyWatchdog
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DependencyWatchdog controls certain settings for the dependency-watchdog components deployed in the seed.</p>
 </td>
 </tr>
 </tbody>

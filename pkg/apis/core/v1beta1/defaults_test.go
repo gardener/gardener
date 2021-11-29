@@ -228,6 +228,7 @@ var _ = Describe("Defaults", func() {
 		It("should default the seed settings (w/o taints)", func() {
 			SetDefaults_Seed(obj)
 
+			Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
@@ -245,6 +246,7 @@ var _ = Describe("Defaults", func() {
 
 			SetDefaults_Seed(obj)
 
+			Expect(obj.Spec.Settings.DependencyWatchdog).NotTo(BeNil())
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(BeTrue())
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(BeTrue())
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(BeTrue())
@@ -256,6 +258,8 @@ var _ = Describe("Defaults", func() {
 
 		It("should not default the seed settings because they were provided", func() {
 			var (
+				dwdEndpointEnabled        = false
+				dwdProbeEnabled           = false
 				excessCapacityReservation = false
 				scheduling                = true
 				shootDNS                  = false
@@ -264,6 +268,10 @@ var _ = Describe("Defaults", func() {
 			)
 
 			obj.Spec.Settings = &SeedSettings{
+				DependencyWatchdog: &SeedSettingDependencyWatchdog{
+					Endpoint: &SeedSettingDependencyWatchdogEndpoint{Enabled: dwdEndpointEnabled},
+					Probe:    &SeedSettingDependencyWatchdogProbe{Enabled: dwdProbeEnabled},
+				},
 				ExcessCapacityReservation: &SeedSettingExcessCapacityReservation{Enabled: excessCapacityReservation},
 				Scheduling:                &SeedSettingScheduling{Visible: scheduling},
 				ShootDNS:                  &SeedSettingShootDNS{Enabled: shootDNS},
@@ -273,11 +281,45 @@ var _ = Describe("Defaults", func() {
 
 			SetDefaults_Seed(obj)
 
+			Expect(obj.Spec.Settings.DependencyWatchdog.Endpoint.Enabled).To(Equal(dwdEndpointEnabled))
+			Expect(obj.Spec.Settings.DependencyWatchdog.Probe.Enabled).To(Equal(dwdProbeEnabled))
 			Expect(obj.Spec.Settings.ExcessCapacityReservation.Enabled).To(Equal(excessCapacityReservation))
 			Expect(obj.Spec.Settings.Scheduling.Visible).To(Equal(scheduling))
 			Expect(obj.Spec.Settings.ShootDNS.Enabled).To(Equal(shootDNS))
 			Expect(obj.Spec.Settings.VerticalPodAutoscaler.Enabled).To(Equal(vpaEnabled))
 			Expect(obj.Spec.Settings.OwnerChecks.Enabled).To(Equal(ownerChecks))
+		})
+	})
+
+	Describe("#SetDefaults_SeedSettingDependencyWatchdog", func() {
+		var obj *SeedSettingDependencyWatchdog
+
+		BeforeEach(func() {
+			obj = &SeedSettingDependencyWatchdog{}
+		})
+
+		It("should default the settings", func() {
+			SetDefaults_SeedSettingDependencyWatchdog(obj)
+
+			Expect(obj.Endpoint.Enabled).To(BeTrue())
+			Expect(obj.Probe.Enabled).To(BeTrue())
+		})
+
+		It("should not default the seed settings because they were provided", func() {
+			var (
+				dwdEndpointEnabled = false
+				dwdProbeEnabled    = false
+			)
+
+			obj = &SeedSettingDependencyWatchdog{
+				Endpoint: &SeedSettingDependencyWatchdogEndpoint{Enabled: dwdEndpointEnabled},
+				Probe:    &SeedSettingDependencyWatchdogProbe{Enabled: dwdProbeEnabled},
+			}
+
+			SetDefaults_SeedSettingDependencyWatchdog(obj)
+
+			Expect(obj.Endpoint.Enabled).To(Equal(dwdEndpointEnabled))
+			Expect(obj.Probe.Enabled).To(Equal(dwdProbeEnabled))
 		})
 	})
 
