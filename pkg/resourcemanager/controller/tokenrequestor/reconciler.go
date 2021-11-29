@@ -96,7 +96,7 @@ func (r *reconciler) Reconcile(reconcileCtx context.Context, req reconcile.Reque
 		return reconcile.Result{}, nil
 	}
 
-	mustRequeue, requeueAfter, err := r.requeue(secret.Annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp])
+	mustRequeue, requeueAfter, err := r.requeue(ctx, secret.Annotations)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -142,18 +142,48 @@ func (r *reconciler) reconcileServiceAccount(ctx context.Context, secret *corev1
 }
 
 func (r *reconciler) reconcileSecret(ctx context.Context, secret *corev1.Secret, token string, renewDuration time.Duration) error {
-	patch := client.MergeFrom(secret.DeepCopy())
+	if targetSecret := getTargetSecretFromAnnotations(secret.Annotations); targetSecret != nil {
+		if _, err := controllerutil.CreateOrUpdate(ctx, r.targetClient, targetSecret, r.populateToken(targetSecret, token, renewDuration)); err != nil {
+			return err
+		}
 
-	if secret.Data == nil {
-		secret.Data = make(map[string][]byte, 1)
+		patch := client.MergeFrom(secret.DeepCopy())
+		if err := r.depopulateToken(secret)(); err != nil {
+			return err
+		}
+		return r.client.Patch(ctx, secret, patch)
 	}
 
-	if err := updateTokenInSecretData(secret.Data, token); err != nil {
+	patch := client.MergeFrom(secret.DeepCopy())
+	if err := r.populateToken(secret, token, renewDuration)(); err != nil {
 		return err
 	}
-	metav1.SetMetaDataAnnotation(&secret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
-
 	return r.client.Patch(ctx, secret, patch)
+}
+
+func (r *reconciler) populateToken(secret *corev1.Secret, token string, renewDuration time.Duration) func() error {
+	return func() error {
+		if secret.Data == nil {
+			secret.Data = make(map[string][]byte, 1)
+		}
+
+		if err := updateTokenInSecretData(secret.Data, token); err != nil {
+			return err
+		}
+
+		metav1.SetMetaDataAnnotation(&secret.ObjectMeta, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp, r.clock.Now().UTC().Add(renewDuration).Format(time.RFC3339))
+		return nil
+	}
+}
+
+func (r *reconciler) depopulateToken(secret *corev1.Secret) func() error {
+	return func() error {
+		delete(secret.Data, resourcesv1alpha1.DataKeyToken)
+		delete(secret.Data, resourcesv1alpha1.DataKeyKubeconfig)
+		delete(secret.Annotations, resourcesv1alpha1.ServiceAccountTokenRenewTimestamp)
+
+		return nil
+	}
 }
 
 func (r *reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.ServiceAccount, expirationSeconds int64) (*authenticationv1.TokenRequest, error) {
@@ -167,9 +197,21 @@ func (r *reconciler) createServiceAccountToken(ctx context.Context, sa *corev1.S
 	return r.targetCoreV1Client.ServiceAccounts(sa.Namespace).CreateToken(ctx, sa.Name, tokenRequest, metav1.CreateOptions{})
 }
 
-func (r *reconciler) requeue(renewTimestamp string) (bool, time.Duration, error) {
+func (r *reconciler) requeue(ctx context.Context, annotations map[string]string) (bool, time.Duration, error) {
+	renewTimestamp := annotations[resourcesv1alpha1.ServiceAccountTokenRenewTimestamp]
+
 	if len(renewTimestamp) == 0 {
 		return false, 0, nil
+	}
+
+	if targetSecret := getTargetSecretFromAnnotations(annotations); targetSecret != nil {
+		if err := r.targetClient.Get(ctx, client.ObjectKeyFromObject(targetSecret), targetSecret); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return false, 0, fmt.Errorf("could not read target secret: %w", err)
+			}
+			// target secret is not found, so do not requeue to make sure it gets created
+			return false, 0, nil
+		}
 	}
 
 	renewTime, err := time.Parse(time.RFC3339, renewTimestamp)
@@ -214,6 +256,24 @@ func getServiceAccountFromAnnotations(annotations map[string]string) *corev1.Ser
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      annotations[resourcesv1alpha1.ServiceAccountName],
 			Namespace: annotations[resourcesv1alpha1.ServiceAccountNamespace],
+		},
+	}
+}
+
+func getTargetSecretFromAnnotations(annotations map[string]string) *corev1.Secret {
+	var (
+		name      = annotations[resourcesv1alpha1.TokenRequestorTargetSecretName]
+		namespace = annotations[resourcesv1alpha1.TokenRequestorTargetSecretNamespace]
+	)
+
+	if name == "" || namespace == "" {
+		return nil
+	}
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
 		},
 	}
 }
