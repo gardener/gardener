@@ -1047,6 +1047,11 @@ message KubeletConfig {
   // +optional
   // Default: 40
   optional int32 imageGCLowThresholdPercent = 17;
+
+  // SerializeImagePulls describes whether the images are pulled one at a time.
+  // +optional
+  // Default: true
+  optional bool serializeImagePulls = 18;
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

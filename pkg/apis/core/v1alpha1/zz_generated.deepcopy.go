@@ -1837,6 +1837,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(int32)
 		**out = **in
 	}
+	if in.SerializeImagePulls != nil {
+		in, out := &in.SerializeImagePulls, &out.SerializeImagePulls
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

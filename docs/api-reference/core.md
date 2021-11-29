@@ -4712,6 +4712,19 @@ int32
 Default: 40</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>serializeImagePulls</code></br>
+<em>
+bool
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>SerializeImagePulls describes whether the images are pulled one at a time.
+Default: true</p>
+</td>
+</tr>
 </tbody>
 </table>
 <h3 id="core.gardener.cloud/v1beta1.KubeletConfigEviction">KubeletConfigEviction
