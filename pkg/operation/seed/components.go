@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/charts"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
+	gardencorev1beta1helper "github.com/gardener/gardener/pkg/apis/core/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -158,7 +159,7 @@ func defaultDependencyWatchdogs(
 	c client.Client,
 	seedVersion string,
 	imageVector imagevector.ImageVector,
-	dwdSettings *gardencorev1beta1.SeedSettingDependencyWatchdog,
+	seedSettings *gardencorev1beta1.SeedSettings,
 ) (
 	dwdEndpoint component.DeployWaiter,
 	dwdProbe component.DeployWaiter,
@@ -177,7 +178,7 @@ func defaultDependencyWatchdogs(
 	dwdEndpoint = component.OpDestroy(dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdEndpointValues))
 	dwdProbe = component.OpDestroy(dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdProbeValues))
 
-	if dwdSettings != nil && dwdSettings.Endpoint != nil && dwdSettings.Endpoint.Enabled {
+	if gardencorev1beta1helper.SeedSettingDependencyWatchdogEndpointEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
 		var (
 			dependencyWatchdogEndpointConfigurationFuncs = []dependencywatchdog.EndpointConfigurationFunc{
@@ -205,7 +206,7 @@ func defaultDependencyWatchdogs(
 		dwdEndpoint = dependencywatchdog.New(c, v1beta1constants.GardenNamespace, dwdEndpointValues)
 	}
 
-	if dwdSettings != nil && dwdSettings.Probe != nil && dwdSettings.Probe.Enabled {
+	if gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(seedSettings) {
 		// Fetch component-specific dependency-watchdog configuration
 		var (
 			dependencyWatchdogProbeConfigurationFuncs = []dependencywatchdog.ProbeConfigurationFunc{

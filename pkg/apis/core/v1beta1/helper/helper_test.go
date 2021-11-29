@@ -986,6 +986,30 @@ var _ = Describe("helper", func() {
 		Entry("owner checks disabled", &gardencorev1beta1.SeedSettings{OwnerChecks: &gardencorev1beta1.SeedSettingOwnerChecks{Enabled: false}}, false),
 	)
 
+	DescribeTable("#SeedSettingDependencyWatchdogEndpointEnabled",
+		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
+			Expect(SeedSettingDependencyWatchdogEndpointEnabled(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, true),
+		Entry("no dwd setting", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("no dwd endpoint setting", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{}}, true),
+		Entry("dwd endpoint enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Endpoint: &gardencorev1beta1.SeedSettingDependencyWatchdogEndpoint{Enabled: true}}}, true),
+		Entry("dwd endpoint disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Endpoint: &gardencorev1beta1.SeedSettingDependencyWatchdogEndpoint{Enabled: false}}}, false),
+	)
+
+	DescribeTable("#SeedSettingDependencyWatchdogProbeEnabled",
+		func(settings *gardencorev1beta1.SeedSettings, expected bool) {
+			Expect(SeedSettingDependencyWatchdogProbeEnabled(settings)).To(Equal(expected))
+		},
+
+		Entry("no settings", nil, true),
+		Entry("no dwd setting", &gardencorev1beta1.SeedSettings{}, true),
+		Entry("no dwd endpoint setting", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{}}, true),
+		Entry("dwd endpoint enabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{Enabled: true}}}, true),
+		Entry("dwd endpoint disabled", &gardencorev1beta1.SeedSettings{DependencyWatchdog: &gardencorev1beta1.SeedSettingDependencyWatchdog{Probe: &gardencorev1beta1.SeedSettingDependencyWatchdogProbe{Enabled: false}}}, false),
+	)
+
 	DescribeTable("#IsAPIServerExposureManaged",
 		func(obj metav1.Object, expected bool) {
 			Expect(IsAPIServerExposureManaged(obj)).To(Equal(expected))

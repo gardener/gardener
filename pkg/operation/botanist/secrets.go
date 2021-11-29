@@ -101,11 +101,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 				}
 			}
 
-			if settings := b.Seed.GetInfo().Spec.Settings; settings == nil ||
-				settings.DependencyWatchdog == nil ||
-				settings.DependencyWatchdog.Probe == nil ||
-				!settings.DependencyWatchdog.Probe.Enabled {
-
+			if !gardencorev1beta1helper.SeedSettingDependencyWatchdogProbeEnabled(b.Seed.GetInfo().Spec.Settings) {
 				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList, kubeapiserver.DependencyWatchdogInternalProbeSecretName, kubeapiserver.DependencyWatchdogExternalProbeSecretName); err != nil {
 					return err
 				}
