@@ -32,4 +32,6 @@ GO111MODULE=on \
 	    --sync-period=60s \
 	    --max-concurrent-workers=10 \
 	    --health-sync-period=60s \
-	    --health-max-concurrent-workers=10
+	    --health-max-concurrent-workers=10 \
+	    --token-requestor-max-concurrent-workers=10 \
+	    --token-invalidator-max-concurrent-workers=10
