@@ -31,7 +31,7 @@ spec:
 {{ toYaml .Values.admissionController.podLabels | indent 8 }}
 {{- end }}
     spec:
-{{- if .Values.admissionController.enableServiceAccount }}
+{{- if .Values.admissionController.createServiceAccount }}
       serviceAccountName: vpa-admission-controller
 {{- else }}
       automountServiceAccountToken: false
@@ -52,7 +52,7 @@ spec:
         image: {{ index .Values.global.images "vpa-admission-controller" }}
         imagePullPolicy: IfNotPresent
         env:
-{{- if not .Values.admissionController.enableServiceAccount }}
+{{- if not .Values.admissionController.createServiceAccount }}
         - name: KUBERNETES_SERVICE_HOST
           value: kube-apiserver
         - name: KUBERNETES_SERVICE_PORT
@@ -67,8 +67,8 @@ spec:
           - name: vpa-tls-certs
             mountPath: "/etc/tls-certs"
             readOnly: true
-{{- if not .Values.admissionController.enableServiceAccount }}
-          - name: vpa-admission-controller
+{{- if not .Values.admissionController.createServiceAccount }}
+          - name: shoot-access
             mountPath: /var/run/secrets/kubernetes.io/serviceaccount
             readOnly: true
 {{- end }}
@@ -85,9 +85,20 @@ spec:
         - name: vpa-tls-certs
           secret:
             secretName: vpa-tls-certs
-{{- if not .Values.admissionController.enableServiceAccount }}
-        - name: vpa-admission-controller
-          secret:
-            secretName: vpa-admission-controller
+{{- if not .Values.admissionController.createServiceAccount }}
+        - name: shoot-access
+          projected:
+            defaultMode: 420
+            sources:
+            - secret:
+                items:
+                - key: ca.crt
+                  path: ca.crt
+                name: ca
+            - secret:
+                items:
+                - key: token
+                  path: token
+                name: shoot-access-vpa-admission-controller
 {{- end }}
 {{- end }}

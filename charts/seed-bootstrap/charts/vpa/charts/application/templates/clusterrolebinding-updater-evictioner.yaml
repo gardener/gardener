@@ -2,7 +2,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:evictioner
+  name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:evictioner
   labels:
   {{ toYaml .Values.labels | indent 4 }}
   annotations:
@@ -10,16 +10,14 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: gardener.cloud:vpa:{{ .Values.clusterType }}:evictioner
+  name: gardener.cloud:vpa:{{ include "vpa.rbac-name-infix" . }}:evictioner
 {{- if .Values.updater.enabled }}
 subjects:
-{{- if .Values.updater.enableServiceAccount }}
 - kind: ServiceAccount
   name: vpa-updater
+{{- if .Values.updater.createServiceAccount }}
   namespace: {{ .Release.Namespace }}
 {{- else }}
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: gardener.cloud:vpa:updater
+  namespace: kube-system
 {{- end }}
 {{- end }}

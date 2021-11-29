@@ -28,6 +28,7 @@ import (
 	extensionscontrolplane "github.com/gardener/gardener/pkg/operation/botanist/component/extensions/controlplane"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	hvpav1alpha1 "github.com/gardener/hvpa-controller/api/v1alpha1"
@@ -44,6 +45,16 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 		return common.DeleteVpa(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, true)
 	}
 
+	for _, name := range []string{
+		v1beta1constants.DeploymentNameVPAAdmissionController,
+		v1beta1constants.DeploymentNameVPARecommender,
+		v1beta1constants.DeploymentNameVPAUpdater,
+	} {
+		if err := gutil.NewShootAccessSecret(name, b.Shoot.SeedNamespace).Reconcile(ctx, b.K8sSeedClient.Client()); err != nil {
+			return err
+		}
+	}
+
 	var (
 		podLabels = map[string]interface{}{
 			v1beta1constants.LabelNetworkPolicyToDNS:            "allowed",
@@ -58,7 +69,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 			"podLabels": utils.MergeMaps(podLabels, map[string]interface{}{
 				v1beta1constants.LabelNetworkPolicyFromShootAPIServer: "allowed",
 			}),
-			"enableServiceAccount": false,
+			"createServiceAccount": false,
 		}
 		exporter = map[string]interface{}{
 			"enabled":  false,
@@ -70,7 +81,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 				"checksum/secret-vpa-recommender": b.LoadCheckSum("vpa-recommender"),
 			},
 			"podLabels":                    podLabels,
-			"enableServiceAccount":         false,
+			"createServiceAccount":         false,
 			"recommendationMarginFraction": gardencorev1beta1.DefaultRecommendationMarginFraction,
 			"interval":                     gardencorev1beta1.DefaultRecommenderInterval,
 		}
@@ -80,7 +91,7 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 				"checksum/secret-vpa-updater": b.LoadCheckSum("vpa-updater"),
 			},
 			"podLabels":              podLabels,
-			"enableServiceAccount":   false,
+			"createServiceAccount":   false,
 			"evictAfterOOMThreshold": gardencorev1beta1.DefaultEvictAfterOOMThreshold,
 			"evictionRateBurst":      gardencorev1beta1.DefaultEvictionRateBurst,
 			"evictionRateLimit":      gardencorev1beta1.DefaultEvictionRateLimit,
@@ -129,7 +140,16 @@ func (b *Botanist) DeployVerticalPodAutoscaler(ctx context.Context) error {
 	}
 	values["global"] = map[string]interface{}{"images": values["images"]}
 
-	return b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values))
+	if err := b.K8sSeedClient.ChartApplier().Apply(ctx, filepath.Join(charts.Path, "seed-bootstrap", "charts", "vpa", "charts", "runtime"), b.Shoot.SeedNamespace, "vpa", kubernetes.Values(values)); err != nil {
+		return err
+	}
+
+	// TODO(rfranzke): Remove in a future release.
+	return kutil.DeleteObjects(ctx, b.K8sSeedClient.Client(),
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-admission-controller", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-recommender", Namespace: b.Shoot.SeedNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "vpa-updater", Namespace: b.Shoot.SeedNamespace}},
+	)
 }
 
 // HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.

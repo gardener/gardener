@@ -30,7 +30,7 @@ spec:
 {{ toYaml .Values.updater.podLabels | indent 8 }}
 {{- end }}
     spec:
-{{- if .Values.updater.enableServiceAccount }}
+{{- if .Values.updater.createServiceAccount }}
       serviceAccountName: vpa-updater
 {{- else }}
       automountServiceAccountToken: false
@@ -50,7 +50,7 @@ spec:
         - --updater-interval={{ .Values.updater.interval }}
         - --stderrthreshold=info
         - --v=2
-{{- if not .Values.updater.enableServiceAccount }}
+{{- if not .Values.updater.createServiceAccount }}
         env:
         - name: KUBERNETES_SERVICE_HOST
           value: kube-apiserver
@@ -63,9 +63,9 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
 {{- end }}
-{{- if not .Values.updater.enableServiceAccount }}
+{{- if not .Values.updater.createServiceAccount }}
         volumeMounts:
-        - name: vpa-updater
+        - name: shoot-access
           mountPath: /var/run/secrets/kubernetes.io/serviceaccount
           readOnly: true
 {{- end }}
@@ -78,10 +78,21 @@ spec:
             memory: 200Mi
         ports:
         - containerPort: 8080
-{{- if not .Values.updater.enableServiceAccount }}
+{{- if not .Values.updater.createServiceAccount }}
       volumes:
-      - name: vpa-updater
-        secret:
-          secretName: vpa-updater
+      - name: shoot-access
+        projected:
+          defaultMode: 420
+          sources:
+          - secret:
+              items:
+              - key: ca.crt
+                path: ca.crt
+              name: ca
+          - secret:
+              items:
+              - key: token
+                path: token
+              name: shoot-access-vpa-updater
 {{- end }}
 {{- end }}

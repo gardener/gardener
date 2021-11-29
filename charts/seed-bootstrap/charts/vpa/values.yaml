@@ -15,7 +15,7 @@ admissionController:
   enabled: true
   podAnnotations: {}
   podLabels: {}
-  enableServiceAccount: true
+  createServiceAccount: true
   caCert: abcd
   controlNamespace: abcd
   port: 10250
@@ -26,7 +26,7 @@ recommender:
   enabled: true
   podAnnotations: {}
   podLabels: {}
-  enableServiceAccount: true
+  createServiceAccount: true
   interval: 1m0s
   recommendationMarginFraction: 0.05
 
@@ -35,7 +35,7 @@ updater:
   enabled: true
   podAnnotations: {}
   podLabels: {}
-  enableServiceAccount: true
+  createServiceAccount: true
   evictAfterOOMThreshold: 48h
   evictionRateBurst: 1
   evictionRateLimit: -1

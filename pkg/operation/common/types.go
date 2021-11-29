@@ -89,15 +89,6 @@ const (
 	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	RegistrationSpecHash = "registration-spec-hash"
 
-	// VpaAdmissionControllerName is the name of the vpa-admission-controller name.
-	VpaAdmissionControllerName = "gardener.cloud:vpa:admission-controller"
-	// VpaRecommenderName is the name of the vpa-recommender name.
-	VpaRecommenderName = "gardener.cloud:vpa:recommender"
-	// VpaUpdaterName is the name of the vpa-updater name.
-	VpaUpdaterName = "gardener.cloud:vpa:updater"
-	// VpaExporterName is the name of the vpa-exporter name.
-	VpaExporterName = "gardener.cloud:vpa:exporter"
-
 	// IstioNamespace is the istio-system namespace
 	IstioNamespace = "istio-system"
 
