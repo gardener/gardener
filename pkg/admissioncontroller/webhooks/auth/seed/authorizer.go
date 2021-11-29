@@ -374,6 +374,12 @@ func (a *authorizer) hasPathFrom(seedName string, fromType graph.VertexType, att
 		namespace = ""
 	}
 
+	// If the vertex does not exist in the graph (i.e., the resource does not exist in the system) then we allow the
+	// request.
+	if attrs.GetVerb() == "delete" && !a.graph.HasVertex(fromType, namespace, attrs.GetName()) {
+		return auth.DecisionAllow, "", nil
+	}
+
 	if !a.graph.HasPathFrom(fromType, namespace, attrs.GetName(), graph.VertexTypeSeed, "", seedName) {
 		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
 		return auth.DecisionNoOpinion, fmt.Sprintf("no relationship found between seed '%s' and this object", seedName), nil
