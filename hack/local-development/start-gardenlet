@@ -56,6 +56,50 @@ else
   esac
 fi
 
+# generate seed-specific client certificate for gardenlet
+if [[ $(k8s_env) == "$NODELESS" ]]; then
+  if [[ ! -f "$(dirname $0)/local-garden/kubeconfigs/gardenlet-$SEED_NAME.conf" ]]; then
+    tmp_dir="$(mktemp -d)"
+    cat > "$tmp_dir/csr.conf" << EOF
+[req]
+req_extensions = v3_req
+distinguished_name = req_distinguished_name
+[req_distinguished_name]
+[ v3_req ]
+basicConstraints = CA:FALSE
+keyUsage = nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage = clientAuth
+EOF
+
+    openssl req -new -key "$(dirname $0)/local-garden/certificates/keys/gardenlet.key" -out "$tmp_dir/gardenlet-$SEEDNAME.csr" -subj "/CN=gardener.cloud:system:seed:$SEED_NAME/O=gardener.cloud:system:seeds" -config "$tmp_dir/csr.conf"
+    openssl x509 -req -in "$tmp_dir/gardenlet-$SEEDNAME.csr" -CA "$(dirname $0)/local-garden/certificates/certs/ca.crt" -CAkey "$(dirname $0)/local-garden/certificates/keys/ca.key" -CAcreateserial -out "$(dirname $0)/local-garden/certificates/certs/gardenlet-$SEED_NAME.crt" -days 100000 -extensions v3_req -extfile "$tmp_dir/csr.conf"
+
+    cat > "$(dirname $0)/local-garden/kubeconfigs/gardenlet-$SEED_NAME.conf" <<EOF
+---
+apiVersion: v1
+kind: Config
+current-context: local-garden
+clusters:
+- name: local-garden
+  cluster:
+    certificate-authority-data: "$(base64 -w0 $(dirname $0)/local-garden/certificates/certs/ca.crt)"
+    server: https://localhost:2443
+contexts:
+- name: local-garden
+  context:
+    cluster: local-garden
+    user: local-garden
+users:
+- name: local-garden
+  user:
+    client-certificate-data: "$(base64 -w0 $(dirname $0)/local-garden/certificates/certs/gardenlet-$SEED_NAME.crt)"
+    client-key-data: "$(base64 -w0 $(dirname $0)/local-garden/certificates/keys/gardenlet.key)"
+EOF
+  fi
+
+  GARDEN_KUBECONFIG="$(dirname $0)/local-garden/kubeconfigs/gardenlet-$SEED_NAME.conf"
+fi
+
 # cleanup a bit to make the generated configuration file look a bit neater
 tmpFile="$DEV_DIR/seed-$SEED_NAME.yaml"
 echo "$seedConfig" | yq eval 'del(
