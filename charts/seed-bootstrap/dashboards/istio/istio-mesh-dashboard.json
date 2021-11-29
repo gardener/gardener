@@ -81,13 +81,13 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(istio_tcp_received_bytes_total{destination_service_name=~\"$tcp_service\"})",
+          "expr": "sum(istio_tcp_received_bytes_total{destination_service=~\"$tcp_service\"})",
           "interval": "",
           "legendFormat": "Received",
           "refId": "A"
         },
         {
-          "expr": "sum(istio_tcp_sent_bytes_total{destination_service_name=~\"$tcp_service\"})",
+          "expr": "sum(istio_tcp_sent_bytes_total{destination_service=~\"$tcp_service\"})",
           "interval": "",
           "legendFormat": "Send",
           "refId": "B"
@@ -471,7 +471,7 @@
           "tableColumn": "",
           "targets": [
             {
-              "expr": "avg(galley_istio_networking_virtualservices)",
+              "expr": "max(pilot_k8s_cfg_events{type=\"VirtualService\", event=\"add\"}) - (max(pilot_k8s_cfg_events{type=\"VirtualService\", event=\"delete\"}) or max(up * 0))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -559,7 +559,7 @@
           "tableColumn": "",
           "targets": [
             {
-              "expr": "avg(galley_istio_networking_destinationrules)",
+              "expr": "max(pilot_k8s_cfg_events{type=\"DestinationRule\", event=\"add\"}) - (max(pilot_k8s_cfg_events{type=\"DestinationRule\", event=\"delete\"}) or max(up * 0))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -647,7 +647,7 @@
           "tableColumn": "",
           "targets": [
             {
-              "expr": "avg(galley_istio_networking_gateways)",
+              "expr": "max(pilot_k8s_cfg_events{type=\"Gateway\", event=\"add\"}) - (max(pilot_k8s_cfg_events{type=\"Gateway\", event=\"delete\"}) or max(up * 0))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A"
@@ -735,7 +735,7 @@
           "tableColumn": "",
           "targets": [
             {
-              "expr": "avg(galley_istio_authentication_meshpolicies)",
+              "expr": "max(pilot_k8s_cfg_events{type=\"WorkloadEntry\", event=\"add\"}) - (max(pilot_k8s_cfg_events{type=\"WorkloadEntry\", event=\"delete\"}) or max(up * 0))",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -745,7 +745,7 @@
           "thresholds": "",
           "timeFrom": null,
           "timeShift": null,
-          "title": "Authentication Mesh Policies",
+          "title": "Workload Entries",
           "type": "singlestat",
           "valueFontSize": "80%",
           "valueMaps": [
@@ -839,7 +839,7 @@
           "tableColumn": "",
           "targets": [
             {
-              "expr": "round(sum(irate(istio_requests_total{reporter=\"destination\"}[$__rate_interval])), 0.001)",
+              "expr": "round(sum(irate(istio_requests_total{reporter=\"source\"}[$__rate_interval])), 0.001)",
               "intervalFactor": 1,
               "refId": "A",
               "step": 4
@@ -925,7 +925,7 @@
           "tableColumn": "",
           "targets": [
             {
-              "expr": "sum(rate(istio_requests_total{reporter=\"destination\", response_code!~\"5.*\"}[$__rate_interval])) / sum(rate(istio_requests_total{reporter=\"destination\"}[$__rate_interval]))",
+              "expr": "sum(rate(istio_requests_total{reporter=\"source\", response_code!~\"5.*\"}[$__rate_interval])) / sum(rate(istio_requests_total{reporter=\"source\"}[$__rate_interval]))",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A",
@@ -1012,7 +1012,7 @@
           "tableColumn": "",
           "targets": [
             {
-              "expr": "sum(irate(istio_requests_total{reporter=\"destination\", response_code=~\"4.*\"}[$__rate_interval])) ",
+              "expr": "sum(irate(istio_requests_total{reporter=\"source\", response_code=~\"4.*\"}[$__rate_interval])) ",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A",
@@ -1099,7 +1099,7 @@
           "tableColumn": "",
           "targets": [
             {
-              "expr": "sum(irate(istio_requests_total{reporter=\"destination\", response_code=~\"5.*\"}[$__rate_interval])) ",
+              "expr": "sum(irate(istio_requests_total{reporter=\"source\", response_code=~\"5.*\"}[$__rate_interval])) ",
               "format": "time_series",
               "intervalFactor": 1,
               "refId": "A",
@@ -1326,7 +1326,7 @@
           ],
           "targets": [
             {
-              "expr": "label_join(sum(rate(istio_requests_total{reporter=\"destination\", response_code=\"200\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace, destination_service), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+              "expr": "label_join(sum(rate(istio_requests_total{reporter=\"source\", response_code=\"200\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace, destination_service), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
               "format": "table",
               "hide": false,
               "instant": true,
@@ -1335,7 +1335,7 @@
               "refId": "A"
             },
             {
-              "expr": "label_join((histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"destination\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.50, sum(rate(istio_request_duration_seconds_bucket{reporter=\"destination\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+              "expr": "label_join((histogram_quantile(0.50, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.50, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
               "format": "table",
               "hide": false,
               "instant": true,
@@ -1344,7 +1344,7 @@
               "refId": "B"
             },
             {
-              "expr": "label_join((histogram_quantile(0.90, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"destination\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.90, sum(rate(istio_request_duration_seconds_bucket{reporter=\"destination\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+              "expr": "label_join((histogram_quantile(0.90, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.90, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
               "format": "table",
               "hide": false,
               "instant": true,
@@ -1353,7 +1353,7 @@
               "refId": "D"
             },
             {
-              "expr": "label_join((histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"destination\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.99, sum(rate(istio_request_duration_seconds_bucket{reporter=\"destination\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+              "expr": "label_join((histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)) / 1000) or histogram_quantile(0.99, sum(rate(istio_request_duration_seconds_bucket{reporter=\"source\"}[$__rate_interval])) by (le, destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
               "format": "table",
               "hide": false,
               "instant": true,
@@ -1362,7 +1362,7 @@
               "refId": "E"
             },
             {
-              "expr": "label_join((sum(rate(istio_requests_total{reporter=\"destination\", response_code!~\"5.*\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace) / sum(rate(istio_requests_total{reporter=\"destination\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
+              "expr": "label_join((sum(rate(istio_requests_total{reporter=\"source\", response_code!~\"5.*\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace) / sum(rate(istio_requests_total{reporter=\"source\"}[$__rate_interval])) by (destination_workload, destination_workload_namespace)), \"destination_workload_var\", \".\", \"destination_workload\", \"destination_workload_namespace\")",
               "format": "table",
               "hide": false,
               "instant": true,

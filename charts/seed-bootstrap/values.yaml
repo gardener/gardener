@@ -260,10 +260,6 @@ allowedMetrics:
   - prometheus_target_scrapes_sample_out_of_order_total
 
   istiod:
-  - galley_istio_authentication_meshpolicies
-  - galley_istio_networking_destinationrules
-  - galley_istio_networking_gateways
-  - galley_istio_networking_virtualservices
   - galley_validation_failed
   - galley_validation_passed
   - go_goroutines
@@ -277,6 +273,7 @@ allowedMetrics:
   - pilot_conflict_outbound_listener_http_over_current_tcp
   - pilot_conflict_outbound_listener_tcp_over_current_http
   - pilot_conflict_outbound_listener_tcp_over_current_tcp
+  - pilot_k8s_cfg_events
   - pilot_proxy_convergence_time_bucket
   - pilot_proxy_convergence_time_bucket
   - pilot_services
