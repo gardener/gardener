@@ -24,6 +24,9 @@ kubernetesVersion: 1.15.1
 nodeLocalDNS:
   enabled: false
 
+reversedVPN:
+  enabled: false
+
 namespace:
   uid: 100c3bb5-48b9-4f88-96ef-48ed557d4212
 
@@ -260,6 +263,56 @@ allowedMetrics:
   - envoy_tcp_downstream_cx_rx_bytes_total
   - envoy_tcp_downstream_cx_total
   - envoy_tcp_downstream_cx_tx_bytes_total
+  reversedVPN:
+  - envoy_cluster_external_upstream_rq
+  - envoy_cluster_external_upstream_rq_completed
+  - envoy_cluster_external_upstream_rq_xx
+  - envoy_cluster_lb_healthy_panic
+  - envoy_cluster_original_dst_host_invalid
+  - envoy_cluster_upstream_cx_active
+  - envoy_cluster_upstream_cx_connect_attempts_exceeded
+  - envoy_cluster_upstream_cx_connect_fail
+  - envoy_cluster_upstream_cx_connect_timeout
+  - envoy_cluster_upstream_cx_max_requests
+  - envoy_cluster_upstream_cx_none_healthy
+  - envoy_cluster_upstream_cx_overflow
+  - envoy_cluster_upstream_cx_pool_overflow
+  - envoy_cluster_upstream_cx_protocol_error
+  - envoy_cluster_upstream_cx_rx_bytes_total
+  - envoy_cluster_upstream_cx_total
+  - envoy_cluster_upstream_cx_tx_bytes_total
+  - envoy_cluster_upstream_rq
+  - envoy_cluster_upstream_rq_completed
+  - envoy_cluster_upstream_rq_max_duration_reached
+  - envoy_cluster_upstream_rq_pending_overflow
+  - envoy_cluster_upstream_rq_per_try_timeout
+  - envoy_cluster_upstream_rq_retry
+  - envoy_cluster_upstream_rq_retry_limit_exceeded
+  - envoy_cluster_upstream_rq_retry_overflow
+  - envoy_cluster_upstream_rq_rx_reset
+  - envoy_cluster_upstream_rq_timeout
+  - envoy_cluster_upstream_rq_total
+  - envoy_cluster_upstream_rq_tx_reset
+  - envoy_cluster_upstream_rq_xx
+  - envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_attempt
+  - envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_failure
+  - envoy_dns_cache_dynamic_forward_proxy_cache_config_dns_query_success
+  - envoy_http_downstream_cx_rx_bytes_total
+  - envoy_http_downstream_cx_total
+  - envoy_http_downstream_cx_tx_bytes_total
+  - envoy_http_downstream_rq_xx
+  - envoy_http_no_route
+  - envoy_http_rq_total
+  - envoy_listener_http_downstream_rq_xx
+  - envoy_server_memory_allocated
+  - envoy_server_memory_heap_size
+  - envoy_server_memory_physical_size
+  - envoy_cluster_upstream_cx_connect_ms_bucket
+  - envoy_cluster_upstream_cx_connect_ms_sum
+  - envoy_cluster_upstream_cx_length_ms_bucket
+  - envoy_cluster_upstream_cx_length_ms_sum
+  - envoy_http_downstream_cx_length_ms_bucket
+  - envoy_http_downstream_cx_length_ms_sum
 seed:
   apiserver: https://api.foo.bar
   region: antarctica-1
