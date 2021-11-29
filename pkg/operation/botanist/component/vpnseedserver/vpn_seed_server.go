@@ -370,6 +370,14 @@ func (v *vpnSeedServer) Deploy(ctx context.Context) error {
 									Name:  "POD_NETWORK",
 									Value: v.podNetwork,
 								},
+								{
+									Name: "LOCAL_NODE_IP",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "status.hostIP",
+										},
+									},
+								},
 							},
 							ReadinessProbe: &corev1.Probe{
 								Handler: corev1.Handler{
