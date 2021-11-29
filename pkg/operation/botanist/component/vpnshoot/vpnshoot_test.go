@@ -89,7 +89,7 @@ var _ = Describe("VPNShoot", func() {
 				NodeCIDR:    nodeNetwork,
 			},
 			ReversedVPNValues: ReversedVPNValues{
-				EndPoint:    endPoint,
+				Endpoint:    endPoint,
 				OpenVPNPort: openVPNPort,
 				Header:      reversedVPNHeader,
 			},

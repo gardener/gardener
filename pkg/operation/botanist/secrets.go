@@ -90,7 +90,7 @@ func (b *Botanist) GenerateAndSaveSecrets(ctx context.Context) error {
 				if err := b.cleanupSecrets(ctx, &gardenerResourceDataList,
 					kubeapiserver.SecretNameVPNSeed,
 					kubeapiserver.SecretNameVPNSeedTLSAuth,
-					"vpn-shoot",
+					vpnshoot.SecretNameVPNShoot,
 				); err != nil {
 					return err
 				}

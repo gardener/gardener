@@ -331,7 +331,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 										corev1.ResourceCPU:    resource.MustParse("100m"),
 										corev1.ResourceMemory: resource.MustParse("100Mi"),
 									},
-									Limits: v.getResourceList(),
+									Limits: v.getResourceLimits(),
 								},
 								VolumeMounts: v.getVolumeMounts(),
 							},
@@ -454,19 +454,19 @@ type Secrets struct {
 	Server component.Secret
 }
 
-//ReversedVPNValues contains the configuration values for the ReversedVPN.
+// ReversedVPNValues contains the configuration values for the ReversedVPN.
 type ReversedVPNValues struct {
 	// Enabled marks whether ReversedVPN is enabled for the shoot
 	Enabled bool
 	// Header is the header for the ReversedVPN.
 	Header string
-	// EndPoint is the end point for the ReversedVPN.
-	EndPoint string
+	// Endpoint is the endpoint for the ReversedVPN.
+	Endpoint string
 	// OpenVPNPort is the port for the ReversedVPN.
 	OpenVPNPort int32
 }
 
-//NetworkValues contains the configuration values for the network.
+// NetworkValues contains the configuration values for the network.
 type NetworkValues struct {
 	// PodCIDR is the CIDR of the pod network.
 	PodCIDR string
@@ -503,7 +503,7 @@ func (v *vpnShoot) getEnvVars() []corev1.EnvVar {
 		envVariables = append(envVariables,
 			corev1.EnvVar{
 				Name:  "ENDPOINT",
-				Value: v.values.ReversedVPNValues.EndPoint,
+				Value: v.values.ReversedVPNValues.Endpoint,
 			},
 			corev1.EnvVar{
 				Name:  "OPENVPN_PORT",
@@ -518,7 +518,7 @@ func (v *vpnShoot) getEnvVars() []corev1.EnvVar {
 	return envVariables
 }
 
-func (v *vpnShoot) getResourceList() corev1.ResourceList {
+func (v *vpnShoot) getResourceLimits() corev1.ResourceList {
 	if v.values.VPAEnabled {
 		return corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("400m"),

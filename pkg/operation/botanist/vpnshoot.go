@@ -29,12 +29,12 @@ import (
 // DefaultVPNShoot returns a deployer for the VPNShoot
 func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 	var (
-		imageName              = charts.ImageNameVpnShoot
-		nodeNetwork            = b.Shoot.GetInfo().Spec.Networking.Nodes
-		reversedVPNHeader      string
-		reversedVPNEndPoint    string
-		reversedVPNOpenVPNPort int32
-		nodeNetworkCIDR        string
+		imageName         = charts.ImageNameVpnShoot
+		nodeNetwork       = b.Shoot.GetInfo().Spec.Networking.Nodes
+		nodeNetworkCIDR   string
+		reversedVPNValues *vpnshoot.ReversedVPNValues = &vpnshoot.ReversedVPNValues{
+			Enabled: false,
+		}
 	)
 
 	if nodeNetwork != nil {
@@ -43,9 +43,13 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 
 	if b.Shoot.ReversedVPNEnabled {
 		imageName = charts.ImageNameVpnShootClient
-		reversedVPNHeader = "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local"
-		reversedVPNEndPoint = b.outOfClusterAPIServerFQDN()
-		reversedVPNOpenVPNPort = 8132
+
+		reversedVPNValues = &vpnshoot.ReversedVPNValues{
+			Enabled:     true,
+			Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
+			Endpoint:    b.outOfClusterAPIServerFQDN(),
+			OpenVPNPort: 8132,
+		}
 	}
 
 	image, err := b.ImageVector.FindImage(imageName, imagevector.RuntimeVersion(b.ShootVersion()), imagevector.TargetVersion(b.ShootVersion()))
@@ -54,14 +58,9 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 	}
 
 	values := vpnshoot.Values{
-		Image:      image.String(),
-		VPAEnabled: b.Shoot.WantsVerticalPodAutoscaler,
-		ReversedVPNValues: vpnshoot.ReversedVPNValues{
-			Enabled:     b.Shoot.ReversedVPNEnabled,
-			Header:      reversedVPNHeader,
-			EndPoint:    reversedVPNEndPoint,
-			OpenVPNPort: reversedVPNOpenVPNPort,
-		},
+		Image:             image.String(),
+		VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
+		ReversedVPNValues: *reversedVPNValues,
 		NetworkValues: vpnshoot.NetworkValues{
 			PodCIDR:     b.Shoot.Networks.Pods.String(),
 			ServiceCIDR: b.Shoot.Networks.Services.String(),

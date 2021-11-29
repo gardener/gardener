@@ -1,7 +1,5 @@
 # TODO(shafeeqes): Delete this Helm chart in a future version.
 ---
-{{- if not .Values.reversedVPN.enabled }}
----
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,4 +7,3 @@ metadata:
   namespace: kube-system
   annotations:
     resources.gardener.cloud/mode: Ignore
-{{- end }}
