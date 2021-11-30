@@ -464,7 +464,7 @@ func (r *shootReconciler) shootHasBastions(ctx context.Context, shoot *gardencor
 func (r *shootReconciler) reconcileShoot(ctx context.Context, logger logrus.FieldLogger, gardenClient kubernetes.Interface, shoot *gardencorev1beta1.Shoot, project *gardencorev1beta1.Project, cloudProfile *gardencorev1beta1.CloudProfile, seed *gardencorev1beta1.Seed) (reconcile.Result, error) {
 	var (
 		key                                        = shootKey(shoot)
-		operationType                              = v1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
+		operationType                              = computeOperationType(shoot)
 		respectSyncPeriodOverwrite                 = r.respectSyncPeriodOverwrite()
 		failed                                     = gutil.IsShootFailed(shoot)
 		ignored                                    = gutil.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
@@ -630,7 +630,7 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 		operationTypeSwitched = false
 
 	case gardencorev1beta1.LastOperationTypeMigrate:
-		description = "Migration of Shoot cluster control plane initialized."
+		description = "Preparation of Shoot cluster for migration initialized."
 		operationTypeSwitched = false
 
 	case gardencorev1beta1.LastOperationTypeDelete:
@@ -680,8 +680,6 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		now                        = metav1.NewTime(time.Now().UTC())
 		description                string
 		setConditionsToProgressing bool
-		err                        error
-		isHibernated               = v1beta1helper.HibernationIsEnabled(shoot)
 	)
 
 	switch operationType {
@@ -690,8 +688,8 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		setConditionsToProgressing = true
 
 	case gardencorev1beta1.LastOperationTypeMigrate:
-		description = "Shoot cluster state has been successfully migrated."
-		setConditionsToProgressing = true
+		description = "Shoot cluster has been successfully prepared for migration."
+		setConditionsToProgressing = false
 
 	case gardencorev1beta1.LastOperationTypeRestore:
 		description = "Shoot cluster state has been successfully restored."
@@ -702,14 +700,15 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		setConditionsToProgressing = false
 	}
 
-	if len(shootSeedNamespace) > 0 {
-		isHibernated, err = r.isHibernationActive(ctx, shootSeedNamespace, seedName)
+	patch := client.StrategicMergeFrom(shoot.DeepCopy())
+
+	if len(shootSeedNamespace) > 0 && seedName != nil {
+		isHibernated, err := r.isHibernationActive(ctx, shootSeedNamespace, seedName)
 		if err != nil {
 			return fmt.Errorf("error updating Shoot (%s/%s) after successful reconciliation when checking for active hibernation: %w", shoot.Namespace, shoot.Name, err)
 		}
+		shoot.Status.IsHibernated = isHibernated
 	}
-
-	patch := client.StrategicMergeFrom(shoot.DeepCopy())
 
 	if setConditionsToProgressing {
 		for i, cond := range shoot.Status.Conditions {
@@ -736,8 +735,8 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		}
 	}
 
-	shoot.Status.IsHibernated = isHibernated
 	shoot.Status.RetryCycleStartTime = nil
+	shoot.Status.SeedName = seedName
 	shoot.Status.LastErrors = nil
 	shoot.Status.LastOperation = &gardencorev1beta1.LastOperation{
 		Type:           operationType,
@@ -825,6 +824,14 @@ func (r *shootReconciler) isHibernationActive(ctx context.Context, shootSeedName
 	}
 
 	return v1beta1helper.HibernationIsEnabled(shoot), nil
+}
+
+func computeOperationType(shoot *gardencorev1beta1.Shoot) gardencorev1beta1.LastOperationType {
+	lastOperation := shoot.Status.LastOperation
+	if lastOperation != nil && lastOperation.Type == gardencorev1beta1.LastOperationTypeMigrate && lastOperation.State == gardencorev1beta1.LastOperationStateSucceeded {
+		return gardencorev1beta1.LastOperationTypeRestore
+	}
+	return v1beta1helper.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
 }
 
 func shootKey(shoot *gardencorev1beta1.Shoot) string {
