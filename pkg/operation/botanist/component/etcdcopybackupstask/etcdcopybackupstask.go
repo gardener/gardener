@@ -38,6 +38,9 @@ const (
 	// DefaultTimeout is the default timeout and defines how long Gardener should wait
 	// for a successful reconciliation of an EtcdCopyBackupsTasks resource.
 	DefaultTimeout = 5 * time.Minute
+
+	// DefaultWaitForFinalSnapshotTimeout is the default timeout for waiting for a final full snapshot.
+	DefaultWaitForFinalSnapshotTimeout = 30 * time.Minute
 )
 
 // Interface contains functions to manage EtcdCopyBackupsTasks.
@@ -63,6 +66,8 @@ type Values struct {
 	MaxBackups *uint32
 	// MaxBackupAge is the maximum age in days that a backup must have in order to be copied.
 	MaxBackupAge *uint32
+	// WaitForFinalSnapshot defines the parameters for waiting for a final full snapshot before copying backups.
+	WaitForFinalSnapshot *druidv1alpha1.WaitForFinalSnapshotSpec
 }
 
 type etcdCopyBackupsTask struct {
@@ -108,6 +113,7 @@ func (e *etcdCopyBackupsTask) Deploy(ctx context.Context) error {
 	e.task.Spec.MaxBackups = e.values.MaxBackups
 	e.task.Spec.SourceStore = e.values.SourceStore
 	e.task.Spec.TargetStore = e.values.TargetStore
+	e.task.Spec.WaitForFinalSnapshot = e.values.WaitForFinalSnapshot
 	return e.client.Create(ctx, e.task)
 }
 

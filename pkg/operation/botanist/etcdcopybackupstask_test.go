@@ -109,6 +109,10 @@ var _ = Describe("EtcdCopyBackupsTask", func() {
 				expectedValues: Equal(&etcdcopybackupstask.Values{
 					Name:      botanist.Shoot.GetInfo().Name,
 					Namespace: botanist.Shoot.SeedNamespace,
+					WaitForFinalSnapshot: &druidv1alpha1.WaitForFinalSnapshotSpec{
+						Enabled: true,
+						Timeout: &metav1.Duration{Duration: etcdcopybackupstask.DefaultWaitForFinalSnapshotTimeout},
+					},
 				}),
 				expectedWaitInterval:       Equal(etcdcopybackupstask.DefaultInterval),
 				expectedWaitSevereTreshold: Equal(etcdcopybackupstask.DefaultSevereThreshold),

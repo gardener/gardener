@@ -1174,7 +1174,7 @@ var _ = Describe("Etcd", func() {
 					podName,
 					"backup-restore",
 					"/bin/sh",
-					"curl -k https://etcd-"+testRole+"-local:8080/snapshot/full",
+					"curl -k https://etcd-"+testRole+"-local:8080/snapshot/full?final=true",
 				)
 
 				Expect(etcd.Snapshot(ctx, podExecutor)).To(Succeed())
@@ -1260,7 +1260,7 @@ var _ = Describe("Etcd", func() {
 					podName,
 					"backup-restore",
 					"/bin/sh",
-					"curl -k https://etcd-"+testRole+"-local:8080/snapshot/full",
+					"curl -k https://etcd-"+testRole+"-local:8080/snapshot/full?final=true",
 				).Return(nil, fakeErr)
 
 				Expect(etcd.Snapshot(ctx, podExecutor)).To(MatchError(fakeErr))
