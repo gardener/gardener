@@ -119,14 +119,11 @@ const (
 	// alpha: v1.37.0
 	SecretBindingProviderPopulator featuregate.Feature = "SecretBindingProviderPopulator"
 
-	// RequiredSecretBindingProvider enables a validation on Gardener API server that requires the provider type of a SecretBinding to be set
-	// and to match Shoot provider type.
+	// SecretBindingProviderValidation enables validations on Gardener API server that:
+	// - requires the provider type of a SecretBinding to be set (on SecretBinding creation)
+	// - requires the SecretBinding provider type to match the Shoot provider type (on Shoot creation)
+	// - enforces immutability on the provider type of a SecretBinding
 	// owner: @ialidzhikov
-	// alpha: v1.37.0
-	RequiredSecretBindingProvider featuregate.Feature = "RequiredSecretBindingProvider"
-
-	// ImmutableSecretBindingProvider enables a validation on Gardener API server that enforces immutability on the provider type of a SecretBinding.
-	// owner: @ialidzhikov
-	// alpha: v1.37.0
-	ImmutableSecretBindingProvider featuregate.Feature = "ImmutableSecretBindingProvider"
+	// alpha: v1.38.0
+	SecretBindingProviderValidation featuregate.Feature = "SecretBindingProviderValidation"
 )

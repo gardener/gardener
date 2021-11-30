@@ -5768,7 +5768,7 @@ func schema_pkg_apis_core_v1alpha1_SecretBindingProvider(ref common.ReferenceCal
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type is the type of the provider.",
+							Description: "Type is the type of the provider.\n\nFor backwards compatibility, the field can contain multiple providers separated by a comma. However the usage of single SecretBinding (hence Secret) for different cloud providers is strongly discouraged.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",
@@ -12602,7 +12602,7 @@ func schema_pkg_apis_core_v1beta1_SecretBindingProvider(ref common.ReferenceCall
 				Properties: map[string]spec.Schema{
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type is the type of the provider.",
+							Description: "Type is the type of the provider.\n\nFor backwards compatibility, the field can contain multiple providers separated by a comma. However the usage of single SecretBinding (hence Secret) for different cloud providers is strongly discouraged.",
 							Default:     "",
 							Type:        []string{"string"},
 							Format:      "",

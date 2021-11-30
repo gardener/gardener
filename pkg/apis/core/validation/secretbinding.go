@@ -45,7 +45,7 @@ func ValidateSecretBindingUpdate(newBinding, oldBinding *core.SecretBinding) fie
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newBinding.ObjectMeta, &oldBinding.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBinding.SecretRef, oldBinding.SecretRef, field.NewPath("secretRef"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBinding.Quotas, oldBinding.Quotas, field.NewPath("quotas"))...)
-	if utilfeature.DefaultFeatureGate.Enabled(features.ImmutableSecretBindingProvider) {
+	if utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) && oldBinding.Provider != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newBinding.Provider, oldBinding.Provider, field.NewPath("provider"))...)
 	}
 	allErrs = append(allErrs, ValidateSecretBinding(newBinding)...)
@@ -87,7 +87,7 @@ func validateSecretBindingProvider(provider *core.SecretBindingProvider, fldPath
 	allErrs := field.ErrorList{}
 
 	if provider == nil {
-		if utilfeature.DefaultFeatureGate.Enabled(features.RequiredSecretBindingProvider) {
+		if utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) {
 			allErrs = append(allErrs, field.Required(fldPath, "must specify a provider"))
 		}
 

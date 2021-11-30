@@ -221,7 +221,7 @@ func (v *ValidateShoot) Admit(ctx context.Context, a admission.Attributes, o adm
 	}
 
 	var secretBinding *core.SecretBinding
-	if utilfeature.DefaultFeatureGate.Enabled(features.RequiredSecretBindingProvider) {
+	if utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) {
 		secretBinding, err = v.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.SecretBindingName)
 		if err != nil {
 			return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced secret binding: %+v", err.Error()))
@@ -564,7 +564,7 @@ func (c *validationContext) validateProvider(a admission.Attributes) field.Error
 		return allErrs
 	}
 
-	if a.GetOperation() == admission.Create && utilfeature.DefaultFeatureGate.Enabled(features.RequiredSecretBindingProvider) {
+	if a.GetOperation() == admission.Create && utilfeature.DefaultFeatureGate.Enabled(features.SecretBindingProviderValidation) {
 		if !gardencorehelper.SecretBindingHasType(c.secretBinding, c.shoot.Spec.Provider.Type) {
 			var secretBindingProviderType string
 			if c.secretBinding.Provider != nil {

@@ -16,7 +16,6 @@ package secretbinding
 
 import (
 	"context"
-	"fmt"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
@@ -69,7 +68,7 @@ func (r *secretBindingProviderPopulatorReconciler) Reconcile(ctx context.Context
 		return reconcile.Result{}, err
 	}
 
-	secretBindingLogger := logger.NewFieldLogger(r.logger, "secretbinding", fmt.Sprintf("%s/%s", secretBinding.Namespace, secretBinding.Name))
+	secretBindingLogger := logger.NewFieldLogger(r.logger, "secretbinding", kutil.ObjectName(secretBinding))
 
 	shootProviderType := shoot.Spec.Provider.Type
 	if secretBinding.Provider != nil && gardencorev1beta1helper.SecretBindingHasType(secretBinding, shootProviderType) {

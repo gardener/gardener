@@ -142,14 +142,9 @@ func (c *Controller) Run(ctx context.Context, secretBindingWorkers, secretBindin
 		c.shootQueue.ShutDown()
 	}
 
-	var (
-		secretBindingQueueLength = c.secretBindingQueue.Len()
-		queueLengths             = secretBindingQueueLength
-	)
-
+	queueLengths := c.secretBindingQueue.Len()
 	if secretBindingProviderPopulatorEnabled {
-		var shootQueueLength = c.shootQueue.Len()
-		queueLengths += shootQueueLength
+		queueLengths += c.shootQueue.Len()
 	}
 
 	for {

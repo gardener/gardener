@@ -1697,6 +1697,9 @@ message SecretBindingList {
 // SecretBindingProvider defines the provider type of the SecretBinding.
 message SecretBindingProvider {
   // Type is the type of the provider.
+  //
+  // For backwards compatibility, the field can contain multiple providers separated by a comma.
+  // However the usage of single SecretBinding (hence Secret) for different cloud providers is strongly discouraged.
   optional string type = 1;
 }
 

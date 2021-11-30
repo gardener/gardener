@@ -401,10 +401,7 @@ func GetSecretBindingTypes(secretBinding *core.SecretBinding) []string {
 }
 
 // SecretBindingHasType checks if the given SecretBinding has the given provider type.
-func SecretBindingHasType(secretBinding *core.SecretBinding, toFind string) bool {
-	if secretBinding == nil {
-		return false
-	}
+func SecretBindingHasType(secretBinding *core.SecretBinding, providerType string) bool {
 	if secretBinding.Provider == nil {
 		return false
 	}
@@ -414,5 +411,5 @@ func SecretBindingHasType(secretBinding *core.SecretBinding, toFind string) bool
 		return false
 	}
 
-	return utils.ValueExists(toFind, types)
+	return utils.ValueExists(providerType, types)
 }

@@ -269,7 +269,7 @@ var _ = Describe("validator", func() {
 			coreInformerFactory = coreinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalCoreInformerFactory(coreInformerFactory)
 
-			cleanup = test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.RequiredSecretBindingProvider, false)
+			cleanup = test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false)
 		})
 
 		AfterEach(func() {
@@ -660,9 +660,9 @@ var _ = Describe("validator", func() {
 				Expect(err).To(BeForbiddenError())
 			})
 
-			Context("when RequiredSecretBindingProvider=true", func() {
+			Context("when SecretBindingProviderValidation=true", func() {
 				It("should reject because the cloud provider in shoot and secret binding differ", func() {
-					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.RequiredSecretBindingProvider, true)()
+					defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
 
 					secretBinding.Provider = &core.SecretBindingProvider{
 						Type: "gcp",

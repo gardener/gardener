@@ -41,6 +41,9 @@ type SecretBinding struct {
 // SecretBindingProvider defines the provider type of the SecretBinding.
 type SecretBindingProvider struct {
 	// Type is the type of the provider.
+	//
+	// For backwards compatibility, the field can contain multiple providers separated by a comma.
+	// However the usage of single SecretBinding (hence Secret) for different cloud providers is strongly discouraged.
 	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
 }
 

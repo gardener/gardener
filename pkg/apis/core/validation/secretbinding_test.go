@@ -157,9 +157,9 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			}))
 		})
 
-		Context("when ImmutableSecretBindingProvider=true", func() {
+		Context("when SecretBindingProviderValidation=true", func() {
 			It("should forbid updating the secret binding provider", func() {
-				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.ImmutableSecretBindingProvider, true)()
+				defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
 
 				secretBinding.Provider = &core.SecretBindingProvider{
 					Type: "old-type",
@@ -180,8 +180,8 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			})
 		})
 
-		It("should allow nil provider when RequiredSecretBindingProvider feature gate is not enabled", func() {
-			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.RequiredSecretBindingProvider, false)()
+		It("should allow nil provider when SecretBindingProviderValidation feature gate is not enabled", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, false)()
 
 			secretBinding.Provider = nil
 
@@ -190,8 +190,8 @@ var _ = Describe("SecretBinding Validation Tests", func() {
 			Expect(errorList).To(BeEmpty())
 		})
 
-		It("should forbid nil provider when RequiredSecretBindingProvider feature gate is enabled", func() {
-			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.RequiredSecretBindingProvider, true)()
+		It("should forbid nil provider when SecretBindingProviderValidation feature gate is enabled", func() {
+			defer test.WithFeatureGate(utilfeature.DefaultFeatureGate, features.SecretBindingProviderValidation, true)()
 
 			secretBinding.Provider = nil
 

@@ -7193,6 +7193,8 @@ string
 </td>
 <td>
 <p>Type is the type of the provider.</p>
+<p>For backwards compatibility, the field can contain multiple providers separated by a comma.
+However the usage of single SecretBinding (hence Secret) for different cloud providers is strongly discouraged.</p>
 </td>
 </tr>
 </tbody>

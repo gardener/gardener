@@ -2153,7 +2153,6 @@ var _ = Describe("helper", func() {
 			Expect(actual).To(Equal(expected))
 		},
 
-		Entry("with nil SecretBinding", nil, "foo", false),
 		Entry("with empty provider field", &gardencorev1beta1.SecretBinding{}, "foo", false),
 		Entry("when single-value provider type equals to the given type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo"}}, "foo", true),
 		Entry("when single-value provider type does not match the given type", &gardencorev1beta1.SecretBinding{Provider: &gardencorev1beta1.SecretBindingProvider{Type: "foo"}}, "bar", false),
