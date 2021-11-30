@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -281,9 +282,9 @@ func (c *dnsRecord) SetValues(values []string) {
 
 func (c *dnsRecord) ValuesHaveChanged() bool {
 	return c.values.DNSName != c.dnsRecord.Spec.Name ||
-		*c.values.Zone != *c.dnsRecord.Spec.Zone ||
+		!pointer.StringEqual(c.values.Zone, c.dnsRecord.Spec.Zone) ||
 		c.values.RecordType != c.dnsRecord.Spec.RecordType ||
-		*c.values.TTL != *c.dnsRecord.Spec.TTL ||
+		!pointer.Int64Equal(c.values.TTL, c.dnsRecord.Spec.TTL) ||
 		!reflect.DeepEqual(c.values.Values, c.dnsRecord.Spec.Values) ||
 		c.secret.Name != c.dnsRecord.Spec.SecretRef.Name ||
 		c.values.Type != c.dnsRecord.Spec.Type
