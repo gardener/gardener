@@ -255,6 +255,13 @@ var _ = Describe("Handler", func() {
 				Expect(response.Patches).To(ConsistOf(
 					jsonpatch.JsonPatchOperation{
 						Operation: "add",
+						Path:      "/spec/securityContext",
+						Value: map[string]interface{}{
+							"fsGroup": float64(65534),
+						},
+					},
+					jsonpatch.JsonPatchOperation{
+						Operation: "add",
 						Path:      "/spec/volumes",
 						Value: []interface{}{
 							map[string]interface{}{
