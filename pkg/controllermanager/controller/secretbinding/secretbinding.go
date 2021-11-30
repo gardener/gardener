@@ -34,8 +34,8 @@ import (
 
 // Controller controls SecretBindings.
 type Controller struct {
-	reconciler                               reconcile.Reconciler
-	secretBindingProviderPopulatorReconciler reconcile.Reconciler
+	reconciler                      reconcile.Reconciler
+	secretBindingProviderReconciler reconcile.Reconciler
 
 	hasSyncedFuncs []cache.InformerSynced
 
@@ -73,11 +73,11 @@ func NewSecretBindingController(
 	}
 
 	secretBindingController := &Controller{
-		reconciler:                               NewSecretBindingReconciler(logger.Logger, gardenClient.Client(), recorder),
-		secretBindingProviderPopulatorReconciler: NewSecretBindingProviderPopulatorReconciler(logger.Logger, gardenClient.Client()),
-		secretBindingQueue:                       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
-		shootQueue:                               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Shoot"),
-		workerCh:                                 make(chan int),
+		reconciler:                      NewSecretBindingReconciler(logger.Logger, gardenClient.Client(), recorder),
+		secretBindingProviderReconciler: NewSecretBindingProviderReconciler(logger.Logger, gardenClient.Client()),
+		secretBindingQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "SecretBinding"),
+		shootQueue:                      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Shoot"),
+		workerCh:                        make(chan int),
 	}
 
 	secretBindingInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -96,7 +96,7 @@ func NewSecretBindingController(
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(ctx context.Context, secretBindingWorkers, secretBindingProviderPopulatorWorkers int) {
+func (c *Controller) Run(ctx context.Context, secretBindingWorkers, secretBindingProviderWorkers int) {
 	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
@@ -117,8 +117,8 @@ func (c *Controller) Run(ctx context.Context, secretBindingWorkers, secretBindin
 	for i := 0; i < secretBindingWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.secretBindingQueue, "SecretBinding", c.reconciler, &waitGroup, c.workerCh)
 	}
-	for i := 0; i < secretBindingProviderPopulatorWorkers; i++ {
-		controllerutils.CreateWorker(ctx, c.shootQueue, "SecretBinding Provider Populator", c.secretBindingProviderPopulatorReconciler, &waitGroup, c.workerCh)
+	for i := 0; i < secretBindingProviderWorkers; i++ {
+		controllerutils.CreateWorker(ctx, c.shootQueue, "SecretBinding Provider", c.secretBindingProviderReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

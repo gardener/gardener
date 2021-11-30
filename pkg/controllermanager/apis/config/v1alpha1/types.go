@@ -87,9 +87,9 @@ type ControllerManagerControllerConfiguration struct {
 	// SecretBinding defines the configuration of the SecretBinding controller.
 	// +optional
 	SecretBinding *SecretBindingControllerConfiguration `json:"secretBinding,omitempty"`
-	// SecretBindingProviderPopulator defines the configuration of the SecretBinding provider populator controller.
+	// SecretBindingProvider defines the configuration of the SecretBinding provider controller.
 	// +optional
-	SecretBindingProviderPopulator *SecretBindingProviderPopulatorControllerConfiguration `json:"secretBindingProviderPopulator,omitempty"`
+	SecretBindingProvider *SecretBindingProviderControllerConfiguration `json:"secretBindingProvider,omitempty"`
 	// Seed defines the configuration of the Seed lifecycle controller.
 	// +optional
 	Seed *SeedControllerConfiguration `json:"seed,omitempty"`
@@ -232,9 +232,9 @@ type SecretBindingControllerConfiguration struct {
 	ConcurrentSyncs int `json:"concurrentSyncs"`
 }
 
-// SecretBindingProviderPopulatorControllerConfiguration defines the configuration of the
-// SecretBinding provider populator controller.
-type SecretBindingProviderPopulatorControllerConfiguration struct {
+// SecretBindingProviderControllerConfiguration defines the configuration of the
+// SecretBinding provider controller.
+type SecretBindingProviderControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`

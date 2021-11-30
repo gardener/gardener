@@ -38,21 +38,21 @@ func (c *Controller) shootAdd(obj interface{}) {
 	c.shootQueue.Add(key)
 }
 
-// NewSecretBindingProviderPopulatorReconciler creates a new instance of a reconciler which populates
+// NewSecretBindingProviderReconciler creates a new instance of a reconciler which populates
 // the SecretBinding provider type based on the Shoot provider type.
-func NewSecretBindingProviderPopulatorReconciler(l logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
-	return &secretBindingProviderPopulatorReconciler{
+func NewSecretBindingProviderReconciler(l logrus.FieldLogger, gardenClient client.Client) reconcile.Reconciler {
+	return &secretBindingProviderReconciler{
 		logger:       l,
 		gardenClient: gardenClient,
 	}
 }
 
-type secretBindingProviderPopulatorReconciler struct {
+type secretBindingProviderReconciler struct {
 	logger       logrus.FieldLogger
 	gardenClient client.Client
 }
 
-func (r *secretBindingProviderPopulatorReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+func (r *secretBindingProviderReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	shoot := &gardencorev1beta1.Shoot{}
 	if err := r.gardenClient.Get(ctx, request.NamespacedName, shoot); err != nil {
 		if apierrors.IsNotFound(err) {

@@ -72,8 +72,8 @@ type ControllerManagerControllerConfiguration struct {
 	Quota *QuotaControllerConfiguration
 	// SecretBinding defines the configuration of the SecretBinding controller.
 	SecretBinding *SecretBindingControllerConfiguration
-	// SecretBindingProviderPopulator defines the configuration of the SecretBinding provider populator controller.
-	SecretBindingProviderPopulator *SecretBindingProviderPopulatorControllerConfiguration
+	// SecretBindingProvider defines the configuration of the SecretBinding provider controller.
+	SecretBindingProvider *SecretBindingProviderControllerConfiguration
 	// Seed defines the configuration of the Seed controller.
 	Seed *SeedControllerConfiguration
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
@@ -202,9 +202,9 @@ type SecretBindingControllerConfiguration struct {
 	ConcurrentSyncs int
 }
 
-// SecretBindingProviderPopulatorControllerConfiguration defines the configuration of the
-// SecretBinding provider populator controller.
-type SecretBindingProviderPopulatorControllerConfiguration struct {
+// SecretBindingProviderControllerConfiguration defines the configuration of the
+// SecretBinding provider controller.
+type SecretBindingProviderControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int

@@ -127,9 +127,9 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		}
 	}
 
-	if obj.Controllers.SecretBindingProviderPopulator == nil {
-		obj.Controllers.SecretBindingProviderPopulator = &SecretBindingProviderPopulatorControllerConfiguration{
-			// The SecretBinding provider populator controller is disabled by default as it is considered alpha.
+	if obj.Controllers.SecretBindingProvider == nil {
+		obj.Controllers.SecretBindingProvider = &SecretBindingProviderControllerConfiguration{
+			// The SecretBinding provider controller is disabled by default as it is considered alpha.
 			//
 			// TODO (ialidzhikov): Enable the controller by default.
 			ConcurrentSyncs: 0,

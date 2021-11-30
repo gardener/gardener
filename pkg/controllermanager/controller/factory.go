@@ -158,7 +158,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) error {
 	go plantController.Run(ctx, f.cfg.Controllers.Plant.ConcurrentSyncs)
 	go projectController.Run(ctx, f.cfg.Controllers.Project.ConcurrentSyncs)
 	go quotaController.Run(ctx, f.cfg.Controllers.Quota.ConcurrentSyncs)
-	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs, f.cfg.Controllers.SecretBindingProviderPopulator.ConcurrentSyncs)
+	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs, f.cfg.Controllers.SecretBindingProvider.ConcurrentSyncs)
 	go seedController.Run(ctx, f.cfg.Controllers.Seed.ConcurrentSyncs)
 	go shootController.Run(ctx, f.cfg.Controllers.ShootMaintenance.ConcurrentSyncs, f.cfg.Controllers.ShootQuota.ConcurrentSyncs, f.cfg.Controllers.ShootHibernation.ConcurrentSyncs, f.cfg.Controllers.ShootReference.ConcurrentSyncs, f.cfg.Controllers.ShootRetry.ConcurrentSyncs, f.cfg.Controllers.ShootConditions.ConcurrentSyncs, f.cfg.Controllers.ShootStatusLabel.ConcurrentSyncs)
 	go exposureClassController.Run(ctx, f.cfg.Controllers.ExposureClass.ConcurrentSyncs)

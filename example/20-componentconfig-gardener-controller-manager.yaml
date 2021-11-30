@@ -13,7 +13,7 @@ controllers:
     concurrentSyncs: 5
   secretBinding:
     concurrentSyncs: 5
-  secretBindingProviderPopulator:
+  secretBindingProvider:
     concurrentSyncs: 0
   seed:
     concurrentSyncs: 5
