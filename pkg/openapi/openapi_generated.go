@@ -3611,6 +3611,13 @@ func schema_pkg_apis_core_v1alpha1_KubeletConfig(ref common.ReferenceCallback) c
 							Format:      "int32",
 						},
 					},
+					"serializeImagePulls": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SerializeImagePulls describes whether the images are pulled one at a time. Default: true",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -10454,6 +10461,13 @@ func schema_pkg_apis_core_v1beta1_KubeletConfig(ref common.ReferenceCallback) co
 							Description: "ImageGCLowThresholdPercent describes the percent of the disk to which garbage collection attempts to free. Default: 40",
 							Type:        []string{"integer"},
 							Format:      "int32",
+						},
+					},
+					"serializeImagePulls": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SerializeImagePulls describes whether the images are pulled one at a time. Default: true",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 				},

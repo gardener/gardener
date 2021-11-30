@@ -848,6 +848,10 @@ type KubeletConfig struct {
 	// +optional
 	// Default: 40
 	ImageGCLowThresholdPercent *int32 `json:"imageGCLowThresholdPercent,omitempty" protobuf:"bytes,17,opt,name=imageGCLowThresholdPercent"`
+	// SerializeImagePulls describes whether the images are pulled one at a time.
+	// +optional
+	// Default: true
+	SerializeImagePulls *bool `json:"serializeImagePulls,omitempty" protobuf:"varint,18,opt,name=serializeImagePulls"`
 }
 
 // KubeletConfigEviction contains kubelet eviction thresholds supporting either a resource.Quantity or a percentage based value.

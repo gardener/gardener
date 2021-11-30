@@ -75,6 +75,7 @@ spec:
     #     podPidsLimit: 10
     #     imageGCHighThresholdPercent: 50
     #     imageGCLowThresholdPercent: 40
+    #     serializeImagePulls: true
     #     imagePullProgressDeadline: 1m
     #     maxPods: 110
     #     evictionPressureTransitionPeriod: 4m0s
@@ -208,6 +209,7 @@ spec:
   #   podPidsLimit: 10
   #   imageGCHighThresholdPercent: 50
   #   imageGCLowThresholdPercent: 40
+  #   serializeImagePulls: true
   #   imagePullProgressDeadline: 1m
   #   maxPods: 110
   #   evictionPressureTransitionPeriod: 4m0s
