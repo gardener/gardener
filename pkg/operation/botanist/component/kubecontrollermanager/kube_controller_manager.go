@@ -469,6 +469,15 @@ func (k *kubeControllerManager) computeCommand(port int32) []string {
 		fmt.Sprintf("--cluster-name=%s", k.namespace),
 		fmt.Sprintf("--cluster-signing-cert-file=%s/%s", volumeMountPathCA, secrets.DataKeyCertificateCA),
 		fmt.Sprintf("--cluster-signing-key-file=%s/%s", volumeMountPathCA, secrets.DataKeyPrivateKeyCA),
+	)
+
+	if version.ConstraintK8sGreaterEqual119.Check(k.version) {
+		command = append(command, "--cluster-signing-duration=30d")
+	} else {
+		command = append(command, "--experimental-cluster-signing-duration=30d")
+	}
+
+	command = append(command,
 		"--concurrent-deployment-syncs=50",
 		"--concurrent-endpoint-syncs=15",
 		"--concurrent-gc-syncs=30",
