@@ -152,10 +152,6 @@ func (h *handler) admitBackupBucket(ctx context.Context, seedName string, reques
 		return h.admit(seedName, backupBucket.Spec.SeedName)
 
 	case admissionv1.Delete:
-		// Allow request if seed name is not known (ambiguous case).
-		if seedName == "" {
-			return admission.Allowed("")
-		}
 		// If a gardenlet tries to delete a BackupBucket then it may only be allowed if the name is equal to the UID of
 		// the gardenlet's seed.
 		seed := &gardencorev1beta1.Seed{}
@@ -470,11 +466,6 @@ func (h *handler) admitShootState(ctx context.Context, seedName string, request 
 }
 
 func (h *handler) admit(seedName string, seedNamesForObject ...*string) admission.Response {
-	// Allow request if seed name is not known (ambiguous case).
-	if seedName == "" {
-		return admission.Allowed("")
-	}
-
 	// Allow request if one of the seed names for the object matches the seed name of the requesting user.
 	for _, seedNameForObject := range seedNamesForObject {
 		if seedNameForObject != nil && *seedNameForObject == seedName {

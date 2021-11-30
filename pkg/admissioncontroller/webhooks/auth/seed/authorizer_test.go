@@ -53,8 +53,8 @@ var _ = Describe("Seed", func() {
 		graph      *mockgraph.MockInterface
 		authorizer auth.Authorizer
 
-		seedName                string
-		seedUser, ambiguousUser user.Info
+		seedName string
+		seedUser user.Info
 	)
 
 	BeforeEach(func() {
@@ -68,10 +68,6 @@ var _ = Describe("Seed", func() {
 		seedName = "seed"
 		seedUser = &user.DefaultInfo{
 			Name:   fmt.Sprintf("%s%s", v1beta1constants.SeedUserNamePrefix, seedName),
-			Groups: []string{v1beta1constants.SeedsGroup},
-		}
-		ambiguousUser = &user.DefaultInfo{
-			Name:   fmt.Sprintf("%s%s", v1beta1constants.SeedUserNamePrefix, v1beta1constants.SeedUserNameSuffixAmbiguous),
 			Groups: []string{v1beta1constants.SeedsGroup},
 		}
 	})
@@ -193,16 +189,6 @@ var _ = Describe("Seed", func() {
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("No Object name found"))
 			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for ConfigMaps", func() {
@@ -284,16 +270,6 @@ var _ = Describe("Seed", func() {
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("No Object name found"))
 			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for SecretBindings", func() {
@@ -363,16 +339,6 @@ var _ = Describe("Seed", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("No Object name found"))
-			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
 			})
 		})
 
@@ -475,16 +441,6 @@ var _ = Describe("Seed", func() {
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("No Object name found"))
 			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for Namespaces", func() {
@@ -565,16 +521,6 @@ var _ = Describe("Seed", func() {
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("No Object name found"))
 			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for Projects", func() {
@@ -643,16 +589,6 @@ var _ = Describe("Seed", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("No Object name found"))
-			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
 			})
 		})
 
@@ -750,16 +686,6 @@ var _ = Describe("Seed", func() {
 				Entry("update w/ subresource", "update", "status"),
 				Entry("delete", "delete", ""),
 			)
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for BackupEntries", func() {
@@ -853,16 +779,6 @@ var _ = Describe("Seed", func() {
 				Entry("update w/o subresource", "update", ""),
 				Entry("update w/ subresource", "update", "status"),
 			)
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for ExposureClasses", func() {
@@ -931,16 +847,6 @@ var _ = Describe("Seed", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("No Object name found"))
-			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
 			})
 		})
 
@@ -1026,16 +932,6 @@ var _ = Describe("Seed", func() {
 				Entry("update w/o subresource", "update", ""),
 				Entry("update w/ subresource", "update", "status"),
 			)
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for ManagedSeeds", func() {
@@ -1120,16 +1016,6 @@ var _ = Describe("Seed", func() {
 				Entry("update w/o subresource", "update", ""),
 				Entry("update w/ subresource", "update", "status"),
 			)
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for ControllerInstallations", func() {
@@ -1213,16 +1099,6 @@ var _ = Describe("Seed", func() {
 				Entry("update w/o subresource", "update", ""),
 				Entry("update w/ subresource", "update", "status"),
 			)
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for corev1.Events", func() {
@@ -1430,16 +1306,6 @@ var _ = Describe("Seed", func() {
 				Entry("get", "get"),
 				Entry("update", "update"),
 			)
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for Shoots", func() {
@@ -1524,16 +1390,6 @@ var _ = Describe("Seed", func() {
 				Entry("update w/o subresource", "update", ""),
 				Entry("update w/ subresource", "update", "status"),
 			)
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for Seeds", func() {
@@ -1589,16 +1445,6 @@ var _ = Describe("Seed", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: [status]"))
-			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
 			})
 		})
 
@@ -1661,16 +1507,6 @@ var _ = Describe("Seed", func() {
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
 			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for ControllerDeployments", func() {
@@ -1718,16 +1554,6 @@ var _ = Describe("Seed", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("only the following subresources are allowed for this resource type: []"))
-			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
 			})
 
 			DescribeTable("should return correct result if path exists",
@@ -1834,16 +1660,6 @@ var _ = Describe("Seed", func() {
 				Entry("get", "get", ""),
 				Entry("get with subresource", "get", "seedclient"),
 			)
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for Secrets", func() {
@@ -1881,39 +1697,10 @@ var _ = Describe("Seed", func() {
 				Entry("watch", "watch"),
 			)
 
-			DescribeTable("should allow without consulting the graph because verb is get, list, or watch in the seed's namespace when user is ambiguous",
-				func(verb string) {
-					attrs.User = ambiguousUser
-					attrs.Namespace = "seed-foobar"
-					attrs.Verb = verb
-
-					decision, reason, err := authorizer.Authorize(ctx, attrs)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(decision).To(Equal(auth.DecisionAllow))
-					Expect(reason).To(BeEmpty())
-				},
-
-				Entry("get", "get"),
-				Entry("list", "list"),
-				Entry("watch", "watch"),
-			)
-
 			It("should allow to delete the gardenlet's bootstrap tokens without consulting the graph", func() {
 				attrs.Verb = "delete"
 				attrs.Namespace = "kube-system"
 				attrs.Name = "bootstrap-token-" + bootstraputil.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace})
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
-
-			It("should allow to delete any bootstrap tokens without consulting the graph when user is ambiguous", func() {
-				attrs.User = ambiguousUser
-				attrs.Verb = "delete"
-				attrs.Namespace = "kube-system"
-				attrs.Name = "bootstrap-token-anythingcanbehere"
 
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 				Expect(err).NotTo(HaveOccurred())
@@ -1995,16 +1782,6 @@ var _ = Describe("Seed", func() {
 				Entry("update", "update"),
 				Entry("delete", "delete"),
 			)
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for ClusterRoleBindings", func() {
@@ -2028,17 +1805,6 @@ var _ = Describe("Seed", func() {
 			It("should allow to delete the gardenlet's bootstrap cluster role binding without consulting the graph", func() {
 				attrs.Verb = "delete"
 				attrs.Name = "gardener.cloud:system:seed-bootstrapper:garden:" + seedName
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
-
-			It("should allow to delete any bootstrap cluster role binding without consulting the graph when user is ambiguous", func() {
-				attrs.User = ambiguousUser
-				attrs.Verb = "delete"
-				attrs.Name = "gardener.cloud:system:seed-bootstrapper:garden:anythingcanbehere"
 
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 				Expect(err).NotTo(HaveOccurred())
@@ -2111,16 +1877,6 @@ var _ = Describe("Seed", func() {
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("No Object name found"))
 			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
 		})
 
 		Context("when requested for ServiceAccounts", func() {
@@ -2146,18 +1902,6 @@ var _ = Describe("Seed", func() {
 				attrs.Verb = "delete"
 				attrs.Namespace = "garden"
 				attrs.Name = "gardenlet-bootstrap-" + seedName
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
-			})
-
-			It("should allow to delete any bootstrap service account without consulting the graph when user is ambiguous", func() {
-				attrs.User = ambiguousUser
-				attrs.Verb = "delete"
-				attrs.Namespace = "garden"
-				attrs.Name = "gardenlet-bootstrap-anythingcanbehere"
 
 				decision, reason, err := authorizer.Authorize(ctx, attrs)
 				Expect(err).NotTo(HaveOccurred())
@@ -2229,16 +1973,6 @@ var _ = Describe("Seed", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(decision).To(Equal(auth.DecisionNoOpinion))
 				Expect(reason).To(ContainSubstring("No Object name found"))
-			})
-
-			It("should allow because seed name is ambiguous", func() {
-				attrs.User = ambiguousUser
-
-				decision, reason, err := authorizer.Authorize(ctx, attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(decision).To(Equal(auth.DecisionAllow))
-				Expect(reason).To(BeEmpty())
 			})
 		})
 	})

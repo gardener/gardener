@@ -57,7 +57,7 @@ func GetSeedName(seedConfig *config.SeedConfig) string {
 	if seedConfig != nil {
 		return seedConfig.Name
 	}
-	return v1beta1constants.SeedUserNameSuffixAmbiguous
+	return ""
 }
 
 // GetTargetClusterName returns the target cluster of the gardenlet based on the SeedClientConnection.

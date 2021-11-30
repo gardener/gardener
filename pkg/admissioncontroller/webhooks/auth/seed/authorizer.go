@@ -202,15 +202,12 @@ func (a *authorizer) Authorize(_ context.Context, attrs auth.Attributes) (auth.D
 
 func (a *authorizer) authorizeClusterRoleBinding(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	// Allow gardenlet to delete its cluster role binding after bootstrapping (in this case, there is no `Seed` resource
-	// in the system yet, so we can't rely on the graph). Ambiguous gardenlets can delete all relevant cluster role
-	// bindings.
+	// in the system yet, so we can't rely on the graph).
 	if attrs.GetVerb() == "delete" &&
 		strings.HasPrefix(attrs.GetName(), bootstraputil.ClusterRoleBindingNamePrefix) {
 
 		managedSeedNamespace, managedSeedName := bootstraputil.MetadataFromClusterRoleBindingName(attrs.GetName())
-		if seedName == "" ||
-			(managedSeedNamespace == v1beta1constants.GardenNamespace && managedSeedName == seedName) {
-
+		if managedSeedNamespace == v1beta1constants.GardenNamespace && managedSeedName == seedName {
 			return auth.DecisionAllow, "", nil
 		}
 	}
@@ -272,22 +269,17 @@ func (a *authorizer) authorizeNamespace(seedName string, attrs auth.Attributes) 
 }
 
 func (a *authorizer) authorizeSecret(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
-	// Allow gardenlets to get/list/watch secrets in their seed-<name> namespaces. Allow ambiguous gardenlets to
-	// get/list/watch secrets secrets in all seed-* namespaces.
-	if utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) &&
-		((seedName != "" && attrs.GetNamespace() == gutil.ComputeGardenNamespace(seedName)) ||
-			(seedName == "" && strings.HasPrefix(attrs.GetNamespace(), gutil.SeedNamespaceNamePrefix))) {
-
+	// Allow gardenlets to get/list/watch secrets in their seed-<name> namespaces.
+	if utils.ValueExists(attrs.GetVerb(), []string{"get", "list", "watch"}) && attrs.GetNamespace() == gutil.ComputeGardenNamespace(seedName) {
 		return auth.DecisionAllow, "", nil
 	}
 
 	// Allow gardenlet to delete its bootstrap token (in this case, there is no `Seed` resource in the system yet, so
-	// we can't rely on the graph). Ambiguous gardenlets can delete all bootstrap tokens.
+	// we can't rely on the graph).
 	if (attrs.GetVerb() == "delete" &&
 		attrs.GetNamespace() == metav1.NamespaceSystem &&
 		strings.HasPrefix(attrs.GetName(), bootstraptokenapi.BootstrapTokenSecretPrefix)) &&
-		(seedName == "" ||
-			(attrs.GetName() == bootstraptokenapi.BootstrapTokenSecretPrefix+bootstraputil.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace}))) {
+		(attrs.GetName() == bootstraptokenapi.BootstrapTokenSecretPrefix+bootstraputil.TokenID(metav1.ObjectMeta{Name: seedName, Namespace: v1beta1constants.GardenNamespace})) {
 
 		return auth.DecisionAllow, "", nil
 	}
@@ -301,12 +293,11 @@ func (a *authorizer) authorizeSecret(seedName string, attrs auth.Attributes) (au
 
 func (a *authorizer) authorizeServiceAccount(seedName string, attrs auth.Attributes) (auth.Decision, string, error) {
 	// Allow gardenlet to delete its service account after bootstrapping (in this case, there is no `Seed` resource in
-	// the system yet, so we can't rely on the graph). Ambiguous gardenlets can delete all relevant service accounts.
+	// the system yet, so we can't rely on the graph).
 	if attrs.GetVerb() == "delete" &&
 		attrs.GetNamespace() == v1beta1constants.GardenNamespace &&
 		strings.HasPrefix(attrs.GetName(), bootstraputil.ServiceAccountNamePrefix) &&
-		(seedName == "" ||
-			strings.TrimPrefix(attrs.GetName(), bootstraputil.ServiceAccountNamePrefix) == seedName) {
+		strings.TrimPrefix(attrs.GetName(), bootstraputil.ServiceAccountNamePrefix) == seedName {
 
 		return auth.DecisionAllow, "", nil
 	}
@@ -360,11 +351,6 @@ func (a *authorizer) hasPathFrom(seedName string, fromType graph.VertexType, att
 	if len(attrs.GetName()) == 0 {
 		a.logger.Info(fmt.Sprintf("SEED DENY: '%s' %#v", seedName, attrs))
 		return auth.DecisionNoOpinion, "No Object name found", nil
-	}
-
-	// Allow request if seed name is not known because a target seed cannot be used to find a path.
-	if seedName == "" {
-		return auth.DecisionAllow, "", nil
 	}
 
 	// If the request is made for a namespace then the attributes.Namespace field is not empty. It contains the name of
