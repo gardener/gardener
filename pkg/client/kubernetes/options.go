@@ -18,9 +18,8 @@ import (
 	"errors"
 	"time"
 
-	"k8s.io/client-go/tools/clientcmd"
-
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	baseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
