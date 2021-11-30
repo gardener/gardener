@@ -488,10 +488,6 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 			return err
 		}
 
-		// Initialize seed secret data
-		data := shootSecret.Data
-		data[kubernetes.KubeConfig] = shootKubeconfigSecret.Data[kubernetes.KubeConfig]
-
 		// Create or update seed secret
 		secret := &corev1.Secret{
 			ObjectMeta: kutil.ObjectMeta(spec.SecretRef.Namespace, spec.SecretRef.Name),
@@ -501,7 +497,9 @@ func (a *actuator) createOrUpdateSeedSecrets(ctx context.Context, spec *gardenco
 				*metav1.NewControllerRef(managedSeed, seedmanagementv1alpha1.SchemeGroupVersion.WithKind("ManagedSeed")),
 			}
 			secret.Type = corev1.SecretTypeOpaque
-			secret.Data = data
+			secret.Data = map[string][]byte{
+				kubernetes.KubeConfig: shootKubeconfigSecret.Data[kubernetes.KubeConfig],
+			}
 			return nil
 		}); err != nil {
 			return err
