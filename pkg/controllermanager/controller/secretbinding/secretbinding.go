@@ -23,9 +23,7 @@ import (
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap"
 	"github.com/gardener/gardener/pkg/client/kubernetes/clientmap/keys"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/controllerutils"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 
 	"k8s.io/client-go/tools/cache"
@@ -82,34 +80,24 @@ func NewSecretBindingController(
 		workerCh:                                 make(chan int),
 	}
 
-	secretBindingProviderPopulatorEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.SecretBindingProviderPopulator)
-
 	secretBindingInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    secretBindingController.secretBindingAdd,
 		UpdateFunc: secretBindingController.secretBindingUpdate,
 		DeleteFunc: secretBindingController.secretBindingDelete,
 	})
 
-	if secretBindingProviderPopulatorEnabled {
-		shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-			AddFunc: secretBindingController.shootAdd,
-		})
-	}
+	shootInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: secretBindingController.shootAdd,
+	})
 
-	secretBindingController.hasSyncedFuncs = append(secretBindingController.hasSyncedFuncs, secretBindingInformer.HasSynced)
-	if secretBindingProviderPopulatorEnabled {
-		secretBindingController.hasSyncedFuncs = append(secretBindingController.hasSyncedFuncs, shootInformer.HasSynced)
-	}
+	secretBindingController.hasSyncedFuncs = append(secretBindingController.hasSyncedFuncs, secretBindingInformer.HasSynced, shootInformer.HasSynced)
 
 	return secretBindingController, nil
 }
 
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(ctx context.Context, secretBindingWorkers, secretBindingProviderPopulatorWorkers int) {
-	var (
-		waitGroup                             sync.WaitGroup
-		secretBindingProviderPopulatorEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.SecretBindingProviderPopulator)
-	)
+	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
@@ -129,23 +117,16 @@ func (c *Controller) Run(ctx context.Context, secretBindingWorkers, secretBindin
 	for i := 0; i < secretBindingWorkers; i++ {
 		controllerutils.CreateWorker(ctx, c.secretBindingQueue, "SecretBinding", c.reconciler, &waitGroup, c.workerCh)
 	}
-	if secretBindingProviderPopulatorEnabled {
-		for i := 0; i < secretBindingProviderPopulatorWorkers; i++ {
-			controllerutils.CreateWorker(ctx, c.shootQueue, "SecretBinding Provider Populator", c.secretBindingProviderPopulatorReconciler, &waitGroup, c.workerCh)
-		}
+	for i := 0; i < secretBindingProviderPopulatorWorkers; i++ {
+		controllerutils.CreateWorker(ctx, c.shootQueue, "SecretBinding Provider Populator", c.secretBindingProviderPopulatorReconciler, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
 	<-ctx.Done()
 	c.secretBindingQueue.ShutDown()
-	if secretBindingProviderPopulatorEnabled {
-		c.shootQueue.ShutDown()
-	}
+	c.shootQueue.ShutDown()
 
-	queueLengths := c.secretBindingQueue.Len()
-	if secretBindingProviderPopulatorEnabled {
-		queueLengths += c.shootQueue.Len()
-	}
+	queueLengths := c.secretBindingQueue.Len() + c.shootQueue.Len()
 
 	for {
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {

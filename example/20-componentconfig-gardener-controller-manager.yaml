@@ -86,4 +86,3 @@ featureGates:
   CachedRuntimeClients: true
   UseDNSRecords: true
   RotateSSHKeypairOnMaintenance: false
-  SecretBindingProviderPopulator: false
