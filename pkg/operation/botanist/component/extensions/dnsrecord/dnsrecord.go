@@ -16,6 +16,7 @@ package dnsrecord
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -179,13 +180,9 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			if c.dnsRecord.Status.LastOperation != nil && c.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 				// If the DNSRecord is not yet Succeeded, reconcile it again.
 				_ = mutateFn()
+			} else if c.ValuesHaveChanged() {
+				_ = mutateFn()
 			} else {
-				// TODO (voelzmo): remove this when all DNSRecord secrets have migrated to a prefixed version
-				// Check if we need to migrate the referenced secret
-				if c.dnsRecord.Spec.SecretRef.Name != c.secret.Name {
-					metav1.SetMetaDataAnnotation(&c.dnsRecord.ObjectMeta, v1beta1constants.GardenerOperation, operation)
-					c.dnsRecord.Spec.SecretRef.Name = c.secret.Name
-				}
 				// Otherwise, just update the timestamp annotation.
 				// If the object is still annotated with the operation annotation (e.g. not reconciled yet) this will send a watch
 				// event to the extension controller triggering a new reconciliation.
@@ -280,4 +277,14 @@ func (c *dnsRecord) SetRecordType(recordType extensionsv1alpha1.DNSRecordType) {
 // SetValues sets the values in the values.
 func (c *dnsRecord) SetValues(values []string) {
 	c.values.Values = values
+}
+
+func (c *dnsRecord) ValuesHaveChanged() bool {
+	return c.values.DNSName != c.dnsRecord.Spec.Name ||
+		*c.values.Zone != *c.dnsRecord.Spec.Zone ||
+		c.values.RecordType != c.dnsRecord.Spec.RecordType ||
+		*c.values.TTL != *c.dnsRecord.Spec.TTL ||
+		!reflect.DeepEqual(c.values.Values, c.dnsRecord.Spec.Values) ||
+		c.secret.Name != c.dnsRecord.Spec.SecretRef.Name ||
+		c.values.Type != c.dnsRecord.Spec.Type
 }
