@@ -50,6 +50,8 @@ import (
 const (
 	// PluginName is the name of this admission plugin.
 	PluginName = "ShootValidator"
+
+	internalVersionErrorMsg = "must not use apiVersion 'internal'"
 )
 
 // Register registers a plugin.
@@ -578,31 +580,32 @@ func (c *validationContext) validateProvider() field.ErrorList {
 func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList {
 	var allErrs field.ErrorList
 
-	if usesInternalVersion, gvk := checkRawExtension(c.shoot.Spec.Provider.InfrastructureConfig); usesInternalVersion {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "infrastructureConfig"), gvk, "must not use apiVersion 'internal'"))
+	if ok, gvk := usesInternalVersion(c.shoot.Spec.Provider.InfrastructureConfig); ok {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "infrastructureConfig"), gvk, internalVersionErrorMsg))
 	}
 
-	if usesInternalVersion, gvk := checkRawExtension(c.shoot.Spec.Provider.ControlPlaneConfig); usesInternalVersion {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "controlPlaneConfig"), gvk, "must not use apiVersion 'internal'"))
+	if ok, gvk := usesInternalVersion(c.shoot.Spec.Provider.ControlPlaneConfig); ok {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "controlPlaneConfig"), gvk, internalVersionErrorMsg))
 	}
 
-	if usesInternalVersion, gvk := checkRawExtension(c.shoot.Spec.Networking.ProviderConfig); usesInternalVersion {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "networking", "providerConfig"), gvk, "must not use apiVersion 'internal'"))
+	if ok, gvk := usesInternalVersion(c.shoot.Spec.Networking.ProviderConfig); ok {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "networking", "providerConfig"), gvk, internalVersionErrorMsg))
 	}
 
 	for i, worker := range c.shoot.Spec.Provider.Workers {
-		if usesInternalVersion, gvk := checkRawExtension(worker.ProviderConfig); usesInternalVersion {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("providerConfig"), gvk, "must not use apiVersion 'internal'"))
+		workerPath := field.NewPath("spec", "provider", "workers").Index(i)
+		if ok, gvk := usesInternalVersion(worker.ProviderConfig); ok {
+			allErrs = append(allErrs, field.Invalid(workerPath.Child("providerConfig"), gvk, internalVersionErrorMsg))
 		}
 
-		if usesInternalVersion, gvk := checkRawExtension(worker.Machine.Image.ProviderConfig); usesInternalVersion {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("machine", "image", "providerConfig"), gvk, "must not use apiVersion 'internal'"))
+		if ok, gvk := usesInternalVersion(worker.Machine.Image.ProviderConfig); ok {
+			allErrs = append(allErrs, field.Invalid(workerPath.Child("machine", "image", "providerConfig"), gvk, internalVersionErrorMsg))
 		}
 
 		if worker.CRI != nil && worker.CRI.ContainerRuntimes != nil {
 			for j, cr := range worker.CRI.ContainerRuntimes {
-				if usesInternalVersion, gvk := checkRawExtension(cr.ProviderConfig); usesInternalVersion {
-					allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "provider", "workers").Index(i).Child("cri", "containerRuntimes").Index(j).Child("providerConfig"), gvk, "must not use apiVersion 'internal'"))
+				if ok, gvk := usesInternalVersion(cr.ProviderConfig); ok {
+					allErrs = append(allErrs, field.Invalid(workerPath.Child("cri", "containerRuntimes").Index(j).Child("providerConfig"), gvk, internalVersionErrorMsg))
 				}
 			}
 		}
@@ -610,7 +613,7 @@ func (c *validationContext) validateAPIVersionForRawExtensions() field.ErrorList
 	return allErrs
 }
 
-func checkRawExtension(ext *runtime.RawExtension) (bool, string) {
+func usesInternalVersion(ext *runtime.RawExtension) (bool, string) {
 	if ext == nil {
 		return false, ""
 	}
