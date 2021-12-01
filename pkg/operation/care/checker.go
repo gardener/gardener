@@ -496,10 +496,11 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 func (b *HealthChecker) CheckLoggingControlPlane(
 	namespace string,
 	isTestingShoot bool,
+	lokiEnabled bool,
 	condition gardencorev1beta1.Condition,
 	statefulSetLister kutil.StatefulSetLister,
 ) (*gardencorev1beta1.Condition, error) {
-	if isTestingShoot {
+	if isTestingShoot || !lokiEnabled {
 		return nil, nil
 	}
 

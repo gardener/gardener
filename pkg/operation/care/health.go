@@ -25,6 +25,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
+	gardenletconfig "github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
@@ -58,6 +59,8 @@ type Health struct {
 	shootClient            kubernetes.Interface
 
 	logger logrus.FieldLogger
+
+	gardenletConfiguration *gardenletconfig.GardenletConfiguration
 }
 
 // ShootClientInit is a function that initializes a kubernetes client for a Shoot.
@@ -71,6 +74,7 @@ func NewHealth(op *operation.Operation, shootClientInit ShootClientInit) *Health
 		initializeShootClients: shootClientInit,
 		shootClient:            op.K8sShootClient,
 		logger:                 op.Logger,
+		gardenletConfiguration: op.Config,
 	}
 }
 
@@ -277,8 +281,17 @@ func (h *Health) checkControlPlane(
 	if exitCondition, err := checker.CheckMonitoringControlPlane(h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, wantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
+
+	lokiEnabled := true
+	if h.gardenletConfiguration != nil &&
+		h.gardenletConfiguration.Logging != nil &&
+		h.gardenletConfiguration.Logging.Loki != nil &&
+		h.gardenletConfiguration.Logging.Loki.Enabled != nil {
+		lokiEnabled = *h.gardenletConfiguration.Logging.Loki.Enabled
+	}
+
 	if gardenletfeatures.FeatureGate.Enabled(features.Logging) {
-		if exitCondition, err := checker.CheckLoggingControlPlane(h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, condition, seedStatefulSetLister); err != nil || exitCondition != nil {
+		if exitCondition, err := checker.CheckLoggingControlPlane(h.shoot.SeedNamespace, h.shoot.Purpose == gardencorev1beta1.ShootPurposeTesting, lokiEnabled, condition, seedStatefulSetLister); err != nil || exitCondition != nil {
 			return exitCondition, err
 		}
 	}
