@@ -157,3 +157,12 @@ func ShallowCopyMapStringInterface(values map[string]interface{}) map[string]int
 	}
 	return copiedValues
 }
+
+// IifString returns onTrue if the condition is true, and onFalse otherwise.
+// It is similar to the ternary operator (?:) and the IIF function (see https://en.wikipedia.org/wiki/IIf) in other languages.
+func IifString(condition bool, onTrue, onFalse string) string {
+	if condition {
+		return onTrue
+	}
+	return onFalse
+}

@@ -410,7 +410,7 @@ func (r *shootReconciler) deleteShoot(ctx context.Context, logger logrus.FieldLo
 
 	o, operationErr := r.initializeOperation(ctx, logger, gardenClient, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
-		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, fmt.Sprintf("Could not initialize a new operation for Shoot deletion: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
+		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, fmt.Sprintf("Could not initialize a new operation for Shoot cluster deletion: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
 	}
 
@@ -465,6 +465,7 @@ func (r *shootReconciler) reconcileShoot(ctx context.Context, logger logrus.Fiel
 	var (
 		key                                        = shootKey(shoot)
 		operationType                              = computeOperationType(shoot)
+		isRestoring                                = operationType == gardencorev1beta1.LastOperationTypeRestore
 		respectSyncPeriodOverwrite                 = r.respectSyncPeriodOverwrite()
 		failed                                     = gutil.IsShootFailed(shoot)
 		ignored                                    = gutil.ShouldIgnoreShoot(respectSyncPeriodOverwrite, shoot)
@@ -521,7 +522,7 @@ func (r *shootReconciler) reconcileShoot(ctx context.Context, logger logrus.Fiel
 		return r.scheduleNextSync(logger, shoot, regularReconciliationIsDue, "Reconciliation allowed and due but not yet tracked (jittering next sync)"), nil
 	}
 
-	r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, "Reconciling Shoot cluster state")
+	r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciling, fmt.Sprintf("%s Shoot cluster", utils.IifString(isRestoring, "Restoring", "Reconciling")))
 	shootNamespace := shootpkg.ComputeTechnicalID(project.Name, shoot)
 	if err := r.updateShootStatusOperationStart(ctx, gardenClient.Client(), shoot, shootNamespace, operationType); err != nil {
 		return reconcile.Result{}, err
@@ -529,7 +530,8 @@ func (r *shootReconciler) reconcileShoot(ctx context.Context, logger logrus.Fiel
 
 	o, operationErr := r.initializeOperation(ctx, logger, gardenClient, shoot, project, cloudProfile, seed)
 	if operationErr != nil {
-		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, fmt.Sprintf("Could not initialize a new operation for Shoot reconciliation: %s", operationErr.Error()), operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
+		description := fmt.Sprintf("Could not initialize a new operation for Shoot cluster %s: %s", utils.IifString(isRestoring, "restoration", "reconciliation"), operationErr.Error())
+		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, description, operationType, lastErrorsOperationInitializationFailure(shoot.Status.LastErrors, operationErr)...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(operationErr, updateErr)
 	}
 
@@ -551,13 +553,13 @@ func (r *shootReconciler) reconcileShoot(ctx context.Context, logger logrus.Fiel
 
 	r.shootReconciliationDueTracker.off(key)
 
-	if flowErr := r.runReconcileShootFlow(ctx, o); flowErr != nil {
+	if flowErr := r.runReconcileShootFlow(ctx, o, operationType); flowErr != nil {
 		r.recorder.Event(shoot, corev1.EventTypeWarning, gardencorev1beta1.EventReconcileError, flowErr.Description)
 		updateErr := r.patchShootStatusOperationError(ctx, gardenClient.Client(), shoot, flowErr.Description, operationType, flowErr.LastErrors...)
 		return reconcile.Result{}, utilerrors.WithSuppressed(errors.New(flowErr.Description), updateErr)
 	}
 
-	r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, "Reconciled Shoot cluster state")
+	r.recorder.Event(shoot, corev1.EventTypeNormal, gardencorev1beta1.EventReconciled, fmt.Sprintf("%s Shoot cluster", utils.IifString(isRestoring, "Restored", "Reconciled")))
 	if err := r.patchShootStatusOperationSuccess(ctx, gardenClient.Client(), shoot, o.Shoot.SeedNamespace, &seed.Name, operationType); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -569,7 +571,7 @@ func (r *shootReconciler) reconcileShoot(ctx context.Context, logger logrus.Fiel
 	}
 
 	r.shootReconciliationDueTracker.on(key)
-	return r.scheduleNextSync(logger, shoot, false, "Reconciliation finished successfully"), nil
+	return r.scheduleNextSync(logger, shoot, false, fmt.Sprintf("%s finished successfully", utils.IifString(isRestoring, "Restoration", "Reconciliation"))), nil
 }
 
 func (r *shootReconciler) scheduleNextSync(logger logrus.FieldLogger, shoot *gardencorev1beta1.Shoot, regularReconciliationIsDue bool, reason string) reconcile.Result {
@@ -622,11 +624,11 @@ func (r *shootReconciler) updateShootStatusOperationStart(ctx context.Context, g
 
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
-		description = "Reconciliation of Shoot cluster state initialized."
+		description = "Reconciliation of Shoot cluster initialized."
 		operationTypeSwitched = false
 
 	case gardencorev1beta1.LastOperationTypeRestore:
-		description = "Restoration of Shoot cluster state initialized."
+		description = "Restoration of Shoot cluster initialized."
 		operationTypeSwitched = false
 
 	case gardencorev1beta1.LastOperationTypeMigrate:
@@ -684,7 +686,7 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 
 	switch operationType {
 	case gardencorev1beta1.LastOperationTypeCreate, gardencorev1beta1.LastOperationTypeReconcile:
-		description = "Shoot cluster state has been successfully reconciled."
+		description = "Shoot cluster has been successfully reconciled."
 		setConditionsToProgressing = true
 
 	case gardencorev1beta1.LastOperationTypeMigrate:
@@ -692,7 +694,7 @@ func (r *shootReconciler) patchShootStatusOperationSuccess(
 		setConditionsToProgressing = false
 
 	case gardencorev1beta1.LastOperationTypeRestore:
-		description = "Shoot cluster state has been successfully restored."
+		description = "Shoot cluster has been successfully restored."
 		setConditionsToProgressing = true
 
 	case gardencorev1beta1.LastOperationTypeDelete:

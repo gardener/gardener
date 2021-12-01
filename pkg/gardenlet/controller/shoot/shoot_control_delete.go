@@ -44,7 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// runDeleteShootFlow deletes a Shoot cluster entirely.
+// runDeleteShootFlow deletes a Shoot cluster.
 // It receives an Operation object <o> which stores the Shoot object and an ErrorContext which contains error from the previous operation.
 func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.Operation) *gardencorev1beta1helper.WrappedLastErrors {
 	var (
@@ -251,7 +251,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Scale up etcd main and event",
+			Name:         "Scaling up etcd main and event",
 			Fn:           flow.TaskFn(botanist.ScaleETCDToOne).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
@@ -296,7 +296,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			).InsertIf(!staticNodesCIDR),
 		})
 		scaleUpKubeAPIServer = g.Add(flow.Task{
-			Name: "Scale up Kubernetes API server",
+			Name: "Scaling up Kubernetes API server",
 			Fn: flow.TaskFn(botanist.ScaleKubeAPIServerToOne).
 				RetryUntilTimeout(defaultInterval, defaultTimeout).
 				DoIf(cleanupShootResources && kubeAPIServerDeploymentReplicas == 0),
@@ -313,7 +313,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Scale up gardener-resource-manager",
+			Name:         "Scaling up gardener-resource-manager",
 			Fn:           flow.TaskFn(botanist.ScaleGardenerResourceManagerToOne).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
 		})
@@ -341,7 +341,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilControlPlaneReady, initializeShootClients),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Scale up Kubernetes controller manager",
+			Name:         "Scaling up Kubernetes controller manager",
 			Fn:           flow.TaskFn(botanist.ScaleKubeControllerManagerToOne).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound),
 			Dependencies: flow.NewTaskIDs(deployKubeControllerManager),
 		})
@@ -626,7 +626,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		ErrorCleaner:     o.CleanShootTaskError,
 		ErrorContext:     errorContext,
 	}); err != nil {
-		o.Logger.Errorf("Error deleting Shoot %q: %+v", o.Shoot.GetInfo().Name, err)
+		o.Logger.Errorf("Failed to delete Shoot cluster %q: %+v", o.Shoot.GetInfo().Name, err)
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), flow.Errors(err))
 	}
 
@@ -636,7 +636,7 @@ func (r *shootReconciler) runDeleteShootFlow(ctx context.Context, o *operation.O
 		return gardencorev1beta1helper.NewWrappedLastErrors(gardencorev1beta1helper.FormatLastErrDescription(err), err)
 	}
 
-	o.Logger.Infof("Successfully deleted Shoot %q", o.Shoot.GetInfo().Name)
+	o.Logger.Infof("Successfully deleted Shoot cluster %q", o.Shoot.GetInfo().Name)
 	return nil
 }
 
