@@ -187,9 +187,14 @@ func (cl *cleaner) doClean(ctx context.Context, c client.Client, obj client.Obje
 		}
 	}
 
-	// Ref: https://github.com/kubernetes/kubernetes/issues/83771
 	if obj.GetDeletionTimestamp().IsZero() {
 		if err := c.Delete(ctx, obj, cleanOptions.DeleteOptions...); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			if meta.IsNoMatchError(err) {
+				return nil
+			}
 			for _, tolerate := range cleanOptions.ErrorToleration {
 				if tolerate(err) {
 					return nil
@@ -263,13 +268,16 @@ func ensureGone(ctx context.Context, c client.Client, obj client.Object) error {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
 		return err
 	}
 	return NewObjectsRemaining(obj)
 }
 
 func ensureCollectionGone(ctx context.Context, c client.Client, list client.ObjectList, opts ...client.ListOption) error {
-	if err := c.List(ctx, list, opts...); err != nil {
+	if err := c.List(ctx, list, opts...); err != nil && !meta.IsNoMatchError(err) {
 		return err
 	}
 
@@ -284,7 +292,7 @@ func (cl *cleaner) clean(ctx context.Context, c client.Client, obj client.Object
 		return err
 	}
 
-	return client.IgnoreNotFound(cl.doClean(ctx, c, obj, cleanOptions))
+	return cl.doClean(ctx, c, obj, cleanOptions)
 }
 
 func (cl *cleaner) cleanCollection(
@@ -294,13 +302,16 @@ func (cl *cleaner) cleanCollection(
 	cleanOptions *CleanOptions,
 ) error {
 	if err := c.List(ctx, list, cleanOptions.ListOptions...); err != nil {
+		if meta.IsNoMatchError(err) {
+			return nil
+		}
 		return err
 	}
 
 	tasks := make([]flow.TaskFn, 0, meta.LenList(list))
 	if err := meta.EachListItem(list, func(obj runtime.Object) error {
 		tasks = append(tasks, func(ctx context.Context) error {
-			return client.IgnoreNotFound(cl.doClean(ctx, c, obj.(client.Object), cleanOptions))
+			return cl.doClean(ctx, c, obj.(client.Object), cleanOptions)
 		})
 		return nil
 	}); err != nil {

@@ -32,6 +32,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -260,6 +261,20 @@ var _ = Describe("Cleaner", func() {
 
 				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(10))).To(Succeed())
 			})
+
+			It("should ensure that no error occurs because resource is not present in the cluster", func() {
+				var (
+					ctx     = context.TODO()
+					list    = &corev1.ConfigMapList{}
+					cleaner = NewCleaner(timeOps, NewFinalizer())
+				)
+
+				c.EXPECT().List(ctx, list).DoAndReturn(func(_ context.Context, _ *corev1.ConfigMapList, _ ...client.ListOption) error {
+					return &meta.NoResourceMatchError{}
+				})
+
+				Expect(cleaner.Clean(ctx, c, list, FinalizeGracePeriodSeconds(10))).To(Succeed())
+			})
 		})
 	})
 
@@ -351,6 +366,26 @@ var _ = Describe("Cleaner", func() {
 			)
 
 			c.EXPECT().List(ctx, &list)
+
+			Expect(goneBeforeEnsurer.EnsureGone(ctx, c, &list)).To(Not(HaveOccurred()))
+		})
+
+		It("should ensure that no error occurs because resource is not present in the cluster", func() {
+			// move timestamp of configmap ahead of time marker
+			cm1.ObjectMeta.CreationTimestamp = metav1.NewTime(before.Add(time.Second))
+
+			var (
+				ctx  = context.TODO()
+				list = corev1.ConfigMapList{
+					Items: []corev1.ConfigMap{
+						cm1,
+					},
+				}
+			)
+
+			c.EXPECT().List(ctx, &list).DoAndReturn(func(_ context.Context, _ *corev1.ConfigMapList, _ ...client.ListOptions) error {
+				return &meta.NoResourceMatchError{}
+			})
 
 			Expect(goneBeforeEnsurer.EnsureGone(ctx, c, &list)).To(Not(HaveOccurred()))
 		})
