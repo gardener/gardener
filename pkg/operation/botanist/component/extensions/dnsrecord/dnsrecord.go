@@ -281,11 +281,9 @@ func (c *dnsRecord) SetValues(values []string) {
 }
 
 func (c *dnsRecord) ValuesHaveChanged() bool {
-	return c.values.DNSName != c.dnsRecord.Spec.Name ||
+	return c.values.SecretName != c.dnsRecord.Spec.SecretRef.Name ||
 		!pointer.StringEqual(c.values.Zone, c.dnsRecord.Spec.Zone) ||
-		c.values.RecordType != c.dnsRecord.Spec.RecordType ||
-		!pointer.Int64Equal(c.values.TTL, c.dnsRecord.Spec.TTL) ||
+		c.values.DNSName != c.dnsRecord.Spec.Name ||
 		!reflect.DeepEqual(c.values.Values, c.dnsRecord.Spec.Values) ||
-		c.secret.Name != c.dnsRecord.Spec.SecretRef.Name ||
-		c.values.Type != c.dnsRecord.Spec.Type
+		!pointer.Int64Equal(c.values.TTL, c.dnsRecord.Spec.TTL)
 }

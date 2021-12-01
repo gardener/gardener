@@ -373,48 +373,6 @@ var _ = Describe("DNSRecord", func() {
 				})
 			})
 			Context("when dnsrecord values change", func() {
-				It("should reconcile when DNSName changes", func() {
-					delete(dns.Annotations, v1beta1constants.GardenerOperation)
-					// set old timestamp (e.g. added on creation / earlier Deploy call)
-					metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
-					Expect(c.Create(ctx, dns)).To(Succeed())
-
-					values.DNSName = "new-dnsname"
-					Expect(dnsRecord.Deploy(ctx)).To(Succeed())
-
-					deployedDNS := &extensionsv1alpha1.DNSRecord{}
-					err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-							Kind:       extensionsv1alpha1.DNSRecordResource,
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            name,
-							Namespace:       namespace,
-							ResourceVersion: "2",
-							Annotations: map[string]string{
-								v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-								v1beta1constants.GardenerTimestamp: now.UTC().String(),
-							},
-						},
-						Spec: extensionsv1alpha1.DNSRecordSpec{
-							DefaultSpec: extensionsv1alpha1.DefaultSpec{
-								Type: extensionType,
-							},
-							SecretRef: corev1.SecretReference{
-								Name:      secretName,
-								Namespace: namespace,
-							},
-							Zone:       pointer.String(zone),
-							Name:       "new-dnsname",
-							RecordType: extensionsv1alpha1.DNSRecordTypeA,
-							Values:     []string{address},
-							TTL:        pointer.Int64(ttl),
-						},
-					}))
-				})
 				It("should reconcile when zone changes", func() {
 					delete(dns.Annotations, v1beta1constants.GardenerOperation)
 					// set old timestamp (e.g. added on creation / earlier Deploy call)
@@ -457,13 +415,13 @@ var _ = Describe("DNSRecord", func() {
 						},
 					}))
 				})
-				It("should reconcile when RecordType changes", func() {
+				It("should reconcile when DNSName changes", func() {
 					delete(dns.Annotations, v1beta1constants.GardenerOperation)
 					// set old timestamp (e.g. added on creation / earlier Deploy call)
 					metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
 					Expect(c.Create(ctx, dns)).To(Succeed())
 
-					values.RecordType = extensionsv1alpha1.DNSRecordTypeTXT
+					values.DNSName = "new-dnsname"
 					Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
 					deployedDNS := &extensionsv1alpha1.DNSRecord{}
@@ -492,91 +450,7 @@ var _ = Describe("DNSRecord", func() {
 								Namespace: namespace,
 							},
 							Zone:       pointer.String(zone),
-							Name:       dnsName,
-							RecordType: extensionsv1alpha1.DNSRecordTypeTXT,
-							Values:     []string{address},
-							TTL:        pointer.Int64(ttl),
-						},
-					}))
-				})
-				It("should reconcile when TTL changes", func() {
-					delete(dns.Annotations, v1beta1constants.GardenerOperation)
-					// set old timestamp (e.g. added on creation / earlier Deploy call)
-					metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
-					Expect(c.Create(ctx, dns)).To(Succeed())
-
-					values.TTL = pointer.Int64(1337)
-					Expect(dnsRecord.Deploy(ctx)).To(Succeed())
-
-					deployedDNS := &extensionsv1alpha1.DNSRecord{}
-					err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-							Kind:       extensionsv1alpha1.DNSRecordResource,
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            name,
-							Namespace:       namespace,
-							ResourceVersion: "2",
-							Annotations: map[string]string{
-								v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-								v1beta1constants.GardenerTimestamp: now.UTC().String(),
-							},
-						},
-						Spec: extensionsv1alpha1.DNSRecordSpec{
-							DefaultSpec: extensionsv1alpha1.DefaultSpec{
-								Type: extensionType,
-							},
-							SecretRef: corev1.SecretReference{
-								Name:      secretName,
-								Namespace: namespace,
-							},
-							Zone:       pointer.String(zone),
-							Name:       dnsName,
-							RecordType: extensionsv1alpha1.DNSRecordTypeA,
-							Values:     []string{address},
-							TTL:        pointer.Int64(1337),
-						},
-					}))
-				})
-				It("should reconcile when Provider Type changes", func() {
-					delete(dns.Annotations, v1beta1constants.GardenerOperation)
-					// set old timestamp (e.g. added on creation / earlier Deploy call)
-					metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
-					Expect(c.Create(ctx, dns)).To(Succeed())
-
-					values.Type = "new-provider"
-					Expect(dnsRecord.Deploy(ctx)).To(Succeed())
-
-					deployedDNS := &extensionsv1alpha1.DNSRecord{}
-					err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-							Kind:       extensionsv1alpha1.DNSRecordResource,
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            name,
-							Namespace:       namespace,
-							ResourceVersion: "2",
-							Annotations: map[string]string{
-								v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-								v1beta1constants.GardenerTimestamp: now.UTC().String(),
-							},
-						},
-						Spec: extensionsv1alpha1.DNSRecordSpec{
-							DefaultSpec: extensionsv1alpha1.DefaultSpec{
-								Type: "new-provider",
-							},
-							SecretRef: corev1.SecretReference{
-								Name:      secretName,
-								Namespace: namespace,
-							},
-							Zone:       pointer.String(zone),
-							Name:       dnsName,
+							Name:       "new-dnsname",
 							RecordType: extensionsv1alpha1.DNSRecordTypeA,
 							Values:     []string{address},
 							TTL:        pointer.Int64(ttl),
@@ -622,6 +496,48 @@ var _ = Describe("DNSRecord", func() {
 							RecordType: extensionsv1alpha1.DNSRecordTypeA,
 							Values:     []string{"8.8.8.8"},
 							TTL:        pointer.Int64(ttl),
+						},
+					}))
+				})
+				It("should reconcile when TTL changes", func() {
+					delete(dns.Annotations, v1beta1constants.GardenerOperation)
+					// set old timestamp (e.g. added on creation / earlier Deploy call)
+					metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+					Expect(c.Create(ctx, dns)).To(Succeed())
+
+					values.TTL = pointer.Int64(1337)
+					Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+					deployedDNS := &extensionsv1alpha1.DNSRecord{}
+					err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
+						TypeMeta: metav1.TypeMeta{
+							APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
+							Kind:       extensionsv1alpha1.DNSRecordResource,
+						},
+						ObjectMeta: metav1.ObjectMeta{
+							Name:            name,
+							Namespace:       namespace,
+							ResourceVersion: "2",
+							Annotations: map[string]string{
+								v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
+								v1beta1constants.GardenerTimestamp: now.UTC().String(),
+							},
+						},
+						Spec: extensionsv1alpha1.DNSRecordSpec{
+							DefaultSpec: extensionsv1alpha1.DefaultSpec{
+								Type: extensionType,
+							},
+							SecretRef: corev1.SecretReference{
+								Name:      secretName,
+								Namespace: namespace,
+							},
+							Zone:       pointer.String(zone),
+							Name:       dnsName,
+							RecordType: extensionsv1alpha1.DNSRecordTypeA,
+							Values:     []string{address},
+							TTL:        pointer.Int64(1337),
 						},
 					}))
 				})
