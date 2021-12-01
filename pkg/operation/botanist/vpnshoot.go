@@ -30,21 +30,20 @@ import (
 func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 	var (
 		imageName         = charts.ImageNameVpnShoot
-		nodeNetwork       = b.Shoot.GetInfo().Spec.Networking.Nodes
 		nodeNetworkCIDR   string
-		reversedVPNValues *vpnshoot.ReversedVPNValues = &vpnshoot.ReversedVPNValues{
+		reversedVPNValues = vpnshoot.ReversedVPNValues{
 			Enabled: false,
 		}
 	)
 
-	if nodeNetwork != nil {
+	if nodeNetwork := b.Shoot.GetInfo().Spec.Networking.Nodes; nodeNetwork != nil {
 		nodeNetworkCIDR = *nodeNetwork
 	}
 
 	if b.Shoot.ReversedVPNEnabled {
 		imageName = charts.ImageNameVpnShootClient
 
-		reversedVPNValues = &vpnshoot.ReversedVPNValues{
+		reversedVPNValues = vpnshoot.ReversedVPNValues{
 			Enabled:     true,
 			Header:      "outbound|1194||" + vpnseedserver.ServiceName + "." + b.Shoot.SeedNamespace + ".svc.cluster.local",
 			Endpoint:    b.outOfClusterAPIServerFQDN(),
@@ -58,10 +57,10 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 	}
 
 	values := vpnshoot.Values{
-		Image:             image.String(),
-		VPAEnabled:        b.Shoot.WantsVerticalPodAutoscaler,
-		ReversedVPNValues: *reversedVPNValues,
-		NetworkValues: vpnshoot.NetworkValues{
+		Image:       image.String(),
+		VPAEnabled:  b.Shoot.WantsVerticalPodAutoscaler,
+		ReversedVPN: reversedVPNValues,
+		Network: vpnshoot.NetworkValues{
 			PodCIDR:     b.Shoot.Networks.Pods.String(),
 			ServiceCIDR: b.Shoot.Networks.Services.String(),
 			NodeCIDR:    nodeNetworkCIDR,
@@ -79,17 +78,17 @@ func (b *Botanist) DefaultVPNShoot() (vpnshoot.Interface, error) {
 func (b *Botanist) DeployVPNShoot(ctx context.Context) error {
 	secrets := vpnshoot.Secrets{}
 
-	checkSumDH := diffieHellmanKeyChecksum
-	openvpnDiffieHellmanSecret := map[string][]byte{"dh2048.pem": []byte(DefaultDiffieHellmanKey)}
-	if dh := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); dh != nil {
-		openvpnDiffieHellmanSecret = dh.Data
-		checkSumDH = b.LoadCheckSum(v1beta1constants.GardenRoleOpenVPNDiffieHellman)
-	}
-
 	if b.Shoot.ReversedVPNEnabled {
 		secrets.TLSAuth = component.Secret{Name: vpnseedserver.VpnSeedServerTLSAuth, Checksum: b.LoadCheckSum(vpnseedserver.VpnSeedServerTLSAuth), Data: b.LoadSecret(vpnseedserver.VpnSeedServerTLSAuth).Data}
 		secrets.Server = component.Secret{Name: vpnshoot.SecretNameVPNShootClient, Checksum: b.LoadCheckSum(vpnshoot.SecretNameVPNShootClient), Data: b.LoadSecret(vpnshoot.SecretNameVPNShootClient).Data}
 	} else {
+		checkSumDH := diffieHellmanKeyChecksum
+		openvpnDiffieHellmanSecret := map[string][]byte{"dh2048.pem": []byte(DefaultDiffieHellmanKey)}
+		if dh := b.LoadSecret(v1beta1constants.GardenRoleOpenVPNDiffieHellman); dh != nil {
+			openvpnDiffieHellmanSecret = dh.Data
+			checkSumDH = b.LoadCheckSum(v1beta1constants.GardenRoleOpenVPNDiffieHellman)
+		}
+
 		secrets.TLSAuth = component.Secret{Name: kubeapiserver.SecretNameVPNSeedTLSAuth, Checksum: b.LoadCheckSum(kubeapiserver.SecretNameVPNSeedTLSAuth), Data: b.LoadSecret(kubeapiserver.SecretNameVPNSeedTLSAuth).Data}
 		secrets.DH = &component.Secret{Name: v1beta1constants.GardenRoleOpenVPNDiffieHellman, Checksum: checkSumDH, Data: openvpnDiffieHellmanSecret}
 		secrets.Server = component.Secret{Name: vpnshoot.SecretNameVPNShoot, Checksum: b.LoadCheckSum(vpnshoot.SecretNameVPNShoot), Data: b.LoadSecret(vpnshoot.SecretNameVPNShoot).Data}

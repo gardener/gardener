@@ -83,12 +83,12 @@ var _ = Describe("VPNShoot", func() {
 
 		values = Values{
 			Image: image,
-			NetworkValues: NetworkValues{
+			Network: NetworkValues{
 				ServiceCIDR: serviceNetwork,
 				PodCIDR:     podNetwork,
 				NodeCIDR:    nodeNetwork,
 			},
-			ReversedVPNValues: ReversedVPNValues{
+			ReversedVPN: ReversedVPNValues{
 				Endpoint:    endPoint,
 				OpenVPNPort: openVPNPort,
 				Header:      reversedVPNHeader,
@@ -485,7 +485,7 @@ status:
 
 		Context("VPNShoot with ReversedVPN not enabled", func() {
 			BeforeEach(func() {
-				values.ReversedVPNValues.Enabled = false
+				values.ReversedVPN.Enabled = false
 				secrets.DH = &component.Secret{Name: secretNameDH, Checksum: secretChecksumDH, Data: secretDataDH}
 			})
 
@@ -520,7 +520,7 @@ status:
 
 		Context("VPNShoot with ReversedVPN enabled", func() {
 			BeforeEach(func() {
-				values.ReversedVPNValues.Enabled = true
+				values.ReversedVPN.Enabled = true
 			})
 
 			Context("w/o VPA", func() {

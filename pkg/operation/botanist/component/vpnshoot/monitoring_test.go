@@ -28,10 +28,7 @@ var _ = Describe("Monitoring", func() {
 	var component component.MonitoringComponent
 
 	BeforeEach(func() {
-		values := Values{
-			VPAEnabled: true,
-		}
-		component = New(nil, "", values)
+		component = New(nil, "", Values{})
 	})
 
 	It("should successfully test the alerting rules", func() {

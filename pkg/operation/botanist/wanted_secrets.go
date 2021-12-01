@@ -539,7 +539,7 @@ func (b *Botanist) generateWantedSecretConfigs(basicAuthAPIServer *secrets.Basic
 			// Secret definition for vpn-seed (OpenVPN client side)
 			&secrets.CertificateSecretConfig{
 				Name:       kubeapiserver.SecretNameVPNSeed,
-				CommonName: "vpn-seed",
+				CommonName: kubeapiserver.UserNameVPNSeed,
 				CertType:   secrets.ClientCert,
 				SigningCA:  certificateAuthorities[v1beta1constants.SecretNameCACluster],
 			},

@@ -1,0 +1,27 @@
+rule_files:
+- ../rules/vpn.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  # VPNConnectionDown
+  - series: 'probe_success{job="tunnel-probe-apiserver-proxy"}'
+    values: '0+0x20'
+  # VPNProbeAPIServerProxyFailed
+  - series: 'probe_http_status_code{job="tunnel-probe-apiserver-proxy"}'
+    values: '503+0x60'
+  alert_rule_test:
+  - eval_time: 30m
+    alertname: VPNProbeAPIServerProxyFailed
+    exp_alerts:
+    - exp_labels:
+        service: vpn-test
+        severity: critical
+        type: shoot
+        visibility: all
+        job: tunnel-probe-apiserver-proxy
+      exp_annotations:
+        description: The API Server proxy functionality is not working. Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.
+        summary: API Server Proxy not usable

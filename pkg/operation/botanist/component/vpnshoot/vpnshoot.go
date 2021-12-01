@@ -23,6 +23,7 @@ import (
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
+	"github.com/gardener/gardener/pkg/operation/botanist/component/kubeapiserver"
 	"github.com/gardener/gardener/pkg/resourcemanager/controller/garbagecollector/references"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/managedresources"
@@ -62,6 +63,10 @@ const (
 	secretNameTLSAuth = "vpn-shoot-tlsauth"
 	secretNameDH      = "vpn-shoot-dh"
 
+	volumeName        = "vpn-shoot"
+	volumeNameTLSAuth = "vpn-shoot-tlsauth"
+	volumeNameDH      = "vpn-shoot-dh"
+
 	volumeMountPathSecret    = "/srv/secrets/vpn-shoot"
 	volumeMountPathSecretTLS = "/srv/secrets/tlsauth"
 	volumeMountPathSecretDH  = "/srv/secrets/dh"
@@ -75,6 +80,28 @@ type Interface interface {
 	SetSecrets(Secrets)
 }
 
+// ReversedVPNValues contains the configuration values for the ReversedVPN.
+type ReversedVPNValues struct {
+	// Enabled marks whether ReversedVPN is enabled for the shoot
+	Enabled bool
+	// Header is the header for the ReversedVPN.
+	Header string
+	// Endpoint is the endpoint for the ReversedVPN.
+	Endpoint string
+	// OpenVPNPort is the port for the ReversedVPN.
+	OpenVPNPort int32
+}
+
+// NetworkValues contains the configuration values for the network.
+type NetworkValues struct {
+	// PodCIDR is the CIDR of the pod network.
+	PodCIDR string
+	// ServiceCIDR is the CIDR of the service network.
+	ServiceCIDR string
+	// NodeCIDR is the CIDR of the node network.
+	NodeCIDR string
+}
+
 // Values is a set of configuration values for the VPNShoot component.
 type Values struct {
 	// Image is the container image used for vpnShoot.
@@ -82,9 +109,11 @@ type Values struct {
 	// PodAnnotations is the set of additional annotations to be used for the pods.
 	PodAnnotations map[string]string
 	// VPAEnabled marks whether VerticalPodAutoscaler is enabled for the shoot.
-	VPAEnabled        bool
-	ReversedVPNValues ReversedVPNValues
-	NetworkValues     NetworkValues
+	VPAEnabled bool
+	// ReversedVPN contains the configuration values for the ReversedVPN.
+	ReversedVPN ReversedVPNValues
+	// Network contains the configuration values for the network.
+	Network NetworkValues
 }
 
 // New creates a new instance of DeployWaiter for vpnshoot
@@ -157,13 +186,16 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 			Type: corev1.SecretTypeOpaque,
 			Data: v.secrets.Server.Data,
 		}
-		secretDH *corev1.Secret
+		secretDH           *corev1.Secret
+		service            *corev1.Service
+		clusterRole        *rbacv1.ClusterRole
+		clusterRoleBinding *rbacv1.ClusterRoleBinding
 	)
 
 	utilruntime.Must(kutil.MakeUnique(secretTLSAuth))
 	utilruntime.Must(kutil.MakeUnique(secret))
 
-	if !v.values.ReversedVPNValues.Enabled {
+	if !v.values.ReversedVPN.Enabled {
 		secretDH = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      secretNameDH,
@@ -173,16 +205,62 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 			Data: v.secrets.DH.Data,
 		}
 		utilruntime.Must(kutil.MakeUnique(secretDH))
+
+		service = &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceName,
+				Namespace: metav1.NamespaceSystem,
+				Labels:    getLabels(),
+			},
+			Spec: corev1.ServiceSpec{
+				Selector: getLabels(),
+				Type:     corev1.ServiceTypeLoadBalancer,
+				Ports: []corev1.ServicePort{
+					{
+						Name:       "openvpn",
+						Port:       servicePort,
+						TargetPort: intstr.FromInt(int(containerPort)),
+						Protocol:   corev1.ProtocolTCP,
+					},
+				},
+			},
+		}
+		clusterRole = &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "system:gardener.cloud:vpn-seed",
+			},
+			Rules: []rbacv1.PolicyRule{
+				{
+					APIGroups:     []string{""},
+					Resources:     []string{"services"},
+					ResourceNames: []string{service.Name},
+					Verbs:         []string{"get"},
+				},
+			},
+		}
+		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "system:gardener.cloud:vpn-seed",
+				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     clusterRole.Name,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind: rbacv1.UserKind,
+					Name: kubeapiserver.UserNameVPNSeed,
+				},
+			},
+		}
 	}
 
 	var (
 		intStrMax  = intstr.FromString("100%")
 		intStrZero = intstr.FromString("0%")
-
-		vpa                *autoscalingv1beta2.VerticalPodAutoscaler
-		service            *corev1.Service
-		clusterRole        *rbacv1.ClusterRole
-		clusterRoleBinding *rbacv1.ClusterRoleBinding
+		vpa        *autoscalingv1beta2.VerticalPodAutoscaler
 
 		serviceAccount = &corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
@@ -245,7 +323,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups:     []string{"policy", "extensions"},
-					ResourceNames: []string{"gardener.kube-system.vpn-shoot"},
+					ResourceNames: []string{podSecurityPolicy.Name},
 					Resources:     []string{"podsecuritypolicies"},
 					Verbs:         []string{"use"},
 				},
@@ -263,7 +341,7 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 			RoleRef: rbacv1.RoleRef{
 				APIGroup: rbacv1.GroupName,
 				Kind:     "ClusterRole",
-				Name:     "gardener.cloud:psp:kube-system:vpn-shoot",
+				Name:     clusterRolePSP.Name,
 			},
 			Subjects: []rbacv1.Subject{{
 				Kind:      rbacv1.ServiceAccountKind,
@@ -344,58 +422,6 @@ func (v *vpnShoot) computeResourcesData() (map[string][]byte, error) {
 	)
 	utilruntime.Must(references.InjectAnnotations(deployment))
 
-	if !v.values.ReversedVPNValues.Enabled {
-		service = &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceName,
-				Namespace: metav1.NamespaceSystem,
-				Labels:    getLabels(),
-			},
-			Spec: corev1.ServiceSpec{
-				Selector: getLabels(),
-				Type:     corev1.ServiceTypeLoadBalancer,
-				Ports: []corev1.ServicePort{
-					{
-						Name:       "openvpn",
-						Port:       servicePort,
-						TargetPort: intstr.FromInt(int(containerPort)),
-						Protocol:   corev1.ProtocolTCP,
-					},
-				},
-			},
-		}
-		clusterRole = &rbacv1.ClusterRole{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "system:gardener.cloud:vpn-seed",
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					APIGroups:     []string{""},
-					Resources:     []string{"services"},
-					ResourceNames: []string{service.Name},
-					Verbs:         []string{"get"},
-				},
-			},
-		}
-		clusterRoleBinding = &rbacv1.ClusterRoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "system:gardener.cloud:vpn-seed",
-				Annotations: map[string]string{resourcesv1alpha1.DeleteOnInvalidUpdate: "true"},
-			},
-			RoleRef: rbacv1.RoleRef{
-				APIGroup: rbacv1.GroupName,
-				Kind:     "ClusterRole",
-				Name:     clusterRole.Name,
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind: rbacv1.UserKind,
-					Name: "vpn-seed",
-				},
-			},
-		}
-	}
-
 	if v.values.VPAEnabled {
 		vpaUpdateMode := autoscalingv1beta2.UpdateModeAuto
 		vpa = &autoscalingv1beta2.VerticalPodAutoscaler{
@@ -454,28 +480,6 @@ type Secrets struct {
 	Server component.Secret
 }
 
-// ReversedVPNValues contains the configuration values for the ReversedVPN.
-type ReversedVPNValues struct {
-	// Enabled marks whether ReversedVPN is enabled for the shoot
-	Enabled bool
-	// Header is the header for the ReversedVPN.
-	Header string
-	// Endpoint is the endpoint for the ReversedVPN.
-	Endpoint string
-	// OpenVPNPort is the port for the ReversedVPN.
-	OpenVPNPort int32
-}
-
-// NetworkValues contains the configuration values for the network.
-type NetworkValues struct {
-	// PodCIDR is the CIDR of the pod network.
-	PodCIDR string
-	// ServiceCIDR is the CIDR of the service network.
-	ServiceCIDR string
-	// NodeCIDR is the CIDR of the node network.
-	NodeCIDR string
-}
-
 func (v *vpnShoot) SetSecrets(secrets Secrets) {
 	v.secrets = secrets
 }
@@ -488,30 +492,30 @@ func (v *vpnShoot) getEnvVars() []corev1.EnvVar {
 	envVariables := []corev1.EnvVar{
 		{
 			Name:  "SERVICE_NETWORK",
-			Value: v.values.NetworkValues.ServiceCIDR,
+			Value: v.values.Network.ServiceCIDR,
 		},
 		{
 			Name:  "POD_NETWORK",
-			Value: v.values.NetworkValues.PodCIDR,
+			Value: v.values.Network.PodCIDR,
 		},
 		{
 			Name:  "NODE_NETWORK",
-			Value: v.values.NetworkValues.NodeCIDR,
+			Value: v.values.Network.NodeCIDR,
 		},
 	}
-	if v.values.ReversedVPNValues.Enabled {
+	if v.values.ReversedVPN.Enabled {
 		envVariables = append(envVariables,
 			corev1.EnvVar{
 				Name:  "ENDPOINT",
-				Value: v.values.ReversedVPNValues.Endpoint,
+				Value: v.values.ReversedVPN.Endpoint,
 			},
 			corev1.EnvVar{
 				Name:  "OPENVPN_PORT",
-				Value: strconv.Itoa(int(v.values.ReversedVPNValues.OpenVPNPort)),
+				Value: strconv.Itoa(int(v.values.ReversedVPN.OpenVPNPort)),
 			},
 			corev1.EnvVar{
 				Name:  "REVERSED_VPN_HEADER",
-				Value: v.values.ReversedVPNValues.Header,
+				Value: v.values.ReversedVPN.Header,
 			},
 		)
 	}
@@ -542,7 +546,7 @@ func (v *vpnShoot) getVolumeMounts() []corev1.VolumeMount {
 			MountPath: volumeMountPathSecretTLS,
 		},
 	}
-	if !v.values.ReversedVPNValues.Enabled {
+	if !v.values.ReversedVPN.Enabled {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      secretNameDH,
 			MountPath: volumeMountPathSecretDH,
@@ -554,7 +558,7 @@ func (v *vpnShoot) getVolumeMounts() []corev1.VolumeMount {
 func (v *vpnShoot) getVolumes(secret, secretTLSAuth, secretDH *corev1.Secret) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
-			Name: secretName,
+			Name: volumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secret.Name,
@@ -563,7 +567,7 @@ func (v *vpnShoot) getVolumes(secret, secretTLSAuth, secretDH *corev1.Secret) []
 			},
 		},
 		{
-			Name: secretNameTLSAuth,
+			Name: volumeNameTLSAuth,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretTLSAuth.Name,
@@ -572,9 +576,9 @@ func (v *vpnShoot) getVolumes(secret, secretTLSAuth, secretDH *corev1.Secret) []
 			},
 		},
 	}
-	if !v.values.ReversedVPNValues.Enabled {
+	if !v.values.ReversedVPN.Enabled {
 		volumes = append(volumes, corev1.Volume{
-			Name: secretNameDH,
+			Name: volumeNameDH,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  secretDH.Name,
