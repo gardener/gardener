@@ -373,19 +373,9 @@ var _ = Describe("DNSRecord", func() {
 				})
 			})
 			Context("when dnsrecord values change", func() {
-				It("should reconcile when zone changes", func() {
-					delete(dns.Annotations, v1beta1constants.GardenerOperation)
-					// set old timestamp (e.g. added on creation / earlier Deploy call)
-					metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
-					Expect(c.Create(ctx, dns)).To(Succeed())
-
-					values.Zone = pointer.String("new-zone")
-					Expect(dnsRecord.Deploy(ctx)).To(Succeed())
-
-					deployedDNS := &extensionsv1alpha1.DNSRecord{}
-					err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
+				var expectedDNSRecord *extensionsv1alpha1.DNSRecord
+				JustBeforeEach(func() {
+					expectedDNSRecord = &extensionsv1alpha1.DNSRecord{
 						TypeMeta: metav1.TypeMeta{
 							APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
 							Kind:       extensionsv1alpha1.DNSRecordResource,
@@ -407,13 +397,29 @@ var _ = Describe("DNSRecord", func() {
 								Name:      secretName,
 								Namespace: namespace,
 							},
-							Zone:       pointer.String("new-zone"),
+							Zone:       pointer.String(zone),
 							Name:       dnsName,
 							RecordType: extensionsv1alpha1.DNSRecordTypeA,
 							Values:     []string{address},
 							TTL:        pointer.Int64(ttl),
 						},
-					}))
+					}
+				})
+				It("should reconcile when zone changes", func() {
+					delete(dns.Annotations, v1beta1constants.GardenerOperation)
+					// set old timestamp (e.g. added on creation / earlier Deploy call)
+					metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
+					Expect(c.Create(ctx, dns)).To(Succeed())
+
+					values.Zone = pointer.String("new-zone")
+					expectedDNSRecord.Spec.Zone = pointer.String("new-zone")
+
+					Expect(dnsRecord.Deploy(ctx)).To(Succeed())
+
+					deployedDNS := &extensionsv1alpha1.DNSRecord{}
+					err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 				})
 				It("should reconcile when DNSName changes", func() {
 					delete(dns.Annotations, v1beta1constants.GardenerOperation)
@@ -422,40 +428,14 @@ var _ = Describe("DNSRecord", func() {
 					Expect(c.Create(ctx, dns)).To(Succeed())
 
 					values.DNSName = "new-dnsname"
+					expectedDNSRecord.Spec.Name = "new-dnsname"
+
 					Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
 					deployedDNS := &extensionsv1alpha1.DNSRecord{}
 					err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-							Kind:       extensionsv1alpha1.DNSRecordResource,
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            name,
-							Namespace:       namespace,
-							ResourceVersion: "2",
-							Annotations: map[string]string{
-								v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-								v1beta1constants.GardenerTimestamp: now.UTC().String(),
-							},
-						},
-						Spec: extensionsv1alpha1.DNSRecordSpec{
-							DefaultSpec: extensionsv1alpha1.DefaultSpec{
-								Type: extensionType,
-							},
-							SecretRef: corev1.SecretReference{
-								Name:      secretName,
-								Namespace: namespace,
-							},
-							Zone:       pointer.String(zone),
-							Name:       "new-dnsname",
-							RecordType: extensionsv1alpha1.DNSRecordTypeA,
-							Values:     []string{address},
-							TTL:        pointer.Int64(ttl),
-						},
-					}))
+					Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 				})
 				It("should reconcile when DNSRecord values change", func() {
 					delete(dns.Annotations, v1beta1constants.GardenerOperation)
@@ -464,40 +444,14 @@ var _ = Describe("DNSRecord", func() {
 					Expect(c.Create(ctx, dns)).To(Succeed())
 
 					values.Values = []string{"8.8.8.8"}
+					expectedDNSRecord.Spec.Values = []string{"8.8.8.8"}
+
 					Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
 					deployedDNS := &extensionsv1alpha1.DNSRecord{}
 					err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-							Kind:       extensionsv1alpha1.DNSRecordResource,
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            name,
-							Namespace:       namespace,
-							ResourceVersion: "2",
-							Annotations: map[string]string{
-								v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-								v1beta1constants.GardenerTimestamp: now.UTC().String(),
-							},
-						},
-						Spec: extensionsv1alpha1.DNSRecordSpec{
-							DefaultSpec: extensionsv1alpha1.DefaultSpec{
-								Type: extensionType,
-							},
-							SecretRef: corev1.SecretReference{
-								Name:      secretName,
-								Namespace: namespace,
-							},
-							Zone:       pointer.String(zone),
-							Name:       dnsName,
-							RecordType: extensionsv1alpha1.DNSRecordTypeA,
-							Values:     []string{"8.8.8.8"},
-							TTL:        pointer.Int64(ttl),
-						},
-					}))
+					Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 				})
 				It("should reconcile when TTL changes", func() {
 					delete(dns.Annotations, v1beta1constants.GardenerOperation)
@@ -506,40 +460,14 @@ var _ = Describe("DNSRecord", func() {
 					Expect(c.Create(ctx, dns)).To(Succeed())
 
 					values.TTL = pointer.Int64(1337)
+					expectedDNSRecord.Spec.TTL = pointer.Int64(1337)
+
 					Expect(dnsRecord.Deploy(ctx)).To(Succeed())
 
 					deployedDNS := &extensionsv1alpha1.DNSRecord{}
 					err := c.Get(ctx, client.ObjectKey{Name: name, Namespace: namespace}, deployedDNS)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(deployedDNS).To(DeepEqual(&extensionsv1alpha1.DNSRecord{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: extensionsv1alpha1.SchemeGroupVersion.String(),
-							Kind:       extensionsv1alpha1.DNSRecordResource,
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:            name,
-							Namespace:       namespace,
-							ResourceVersion: "2",
-							Annotations: map[string]string{
-								v1beta1constants.GardenerOperation: v1beta1constants.GardenerOperationReconcile,
-								v1beta1constants.GardenerTimestamp: now.UTC().String(),
-							},
-						},
-						Spec: extensionsv1alpha1.DNSRecordSpec{
-							DefaultSpec: extensionsv1alpha1.DefaultSpec{
-								Type: extensionType,
-							},
-							SecretRef: corev1.SecretReference{
-								Name:      secretName,
-								Namespace: namespace,
-							},
-							Zone:       pointer.String(zone),
-							Name:       dnsName,
-							RecordType: extensionsv1alpha1.DNSRecordTypeA,
-							Values:     []string{address},
-							TTL:        pointer.Int64(1337),
-						},
-					}))
+					Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 				})
 			})
 
