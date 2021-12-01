@@ -17,10 +17,12 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/gardenlet/apis/config"
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
 	gutil "github.com/gardener/gardener/pkg/utils/gardener"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -64,10 +66,11 @@ const (
 )
 
 // NewBootstrapper creates a new instance of DeployWaiter for the etcd bootstrapper.
-func NewBootstrapper(c client.Client, namespace string, image string, imageVectorOverwrite *string) component.DeployWaiter {
+func NewBootstrapper(c client.Client, namespace string, config *config.GardenletConfiguration, image string, imageVectorOverwrite *string) component.DeployWaiter {
 	return &bootstrapper{
 		client:               c,
 		namespace:            namespace,
+		config:               config,
 		image:                image,
 		imageVectorOverwrite: imageVectorOverwrite,
 	}
@@ -76,6 +79,7 @@ func NewBootstrapper(c client.Client, namespace string, image string, imageVecto
 type bootstrapper struct {
 	client               client.Client
 	namespace            string
+	config               *config.GardenletConfiguration
 	image                string
 	imageVectorOverwrite *string
 }
@@ -137,7 +141,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 				{
 					APIGroups: []string{batchv1beta1.GroupName},
 					Resources: []string{"cronjobs"},
-					Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
+					Verbs:     []string{"get", "list", "watch", "delete"},
 				},
 				{
 					APIGroups: []string{druidv1alpha1.GroupVersion.Group},
@@ -240,12 +244,7 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 								Name:            Druid,
 								Image:           b.image,
 								ImagePullPolicy: corev1.PullIfNotPresent,
-								Command: []string{
-									"/bin/etcd-druid",
-									"--enable-leader-election=true",
-									"--ignore-operation-annotation=false",
-									"--workers=50",
-								},
+								Command:         getDruidDeployCommands(b.config),
 								Resources: corev1.ResourceRequirements{
 									Requests: corev1.ResourceList{
 										corev1.ResourceCPU:    resource.MustParse("50m"),
@@ -310,6 +309,42 @@ func (b *bootstrapper) Deploy(ctx context.Context) error {
 	resources["crdEtcdCopyBackupsTask.yaml"] = []byte(etcdCopyBackupsTaskCRDYaml)
 
 	return managedresources.CreateForSeed(ctx, b.client, b.namespace, managedResourceControlName, false, resources)
+}
+
+func getDruidDeployCommands(gardenletConf *config.GardenletConfiguration) []string {
+	command := []string{"" + "/bin/etcd-druid"}
+	command = append(command, "--enable-leader-election=true")
+	command = append(command, "--ignore-operation-annotation=false")
+	if gardenletConf == nil {
+		// TODO(abdasgupta): Following line to add 50 workers is only for backward compatibility. Please, remove.
+		command = append(command, "--workers=50")
+		return command
+	}
+
+	config := gardenletConf.ETCDConfig
+	if config == nil {
+		// TODO(abdasgupta): Following line to add 50 workers is only for backward compatibility. Please, remove.
+		command = append(command, "--workers=50")
+		return command
+	}
+	if config.ETCDController != nil {
+		command = append(command, "--workers="+strconv.FormatInt(pointer.Int64Deref(config.ETCDController.Workers, 50), 10))
+	}
+
+	if config.CustodianController != nil {
+		command = append(command, "--custodian-workers="+strconv.FormatInt(pointer.Int64Deref(config.CustodianController.Workers, 10), 10))
+	}
+
+	if config.BackupCompactionController != nil {
+		command = append(command, "--compaction-workers="+strconv.FormatInt(pointer.Int64Deref(config.BackupCompactionController.Workers, 3), 10))
+		command = append(command, "--enable-backup-compaction="+strconv.FormatBool(pointer.BoolDeref(config.BackupCompactionController.EnableBackupCompaction, false)))
+		command = append(command, "--etcd-events-threshold="+strconv.FormatInt(pointer.Int64Deref(config.BackupCompactionController.EventsThreshold, 1000000), 10))
+		if config.BackupCompactionController.ActiveDeadlineDuration != nil {
+			command = append(command, "--active-deadline-duration="+config.BackupCompactionController.ActiveDeadlineDuration.Duration.String())
+		}
+	}
+
+	return command
 }
 
 func (b *bootstrapper) Destroy(ctx context.Context) error {
@@ -418,8 +453,7 @@ spec:
                   and delta snapshots of etcd
                 properties:
                   compactionResources:
-                    description: 'CompactionResources defines the compute Resources
-                      required by compaction job. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                    description: 'CompactionResources defines the compute Resources required by compaction job. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                     properties:
                       limits:
                         additionalProperties:
@@ -428,8 +462,7 @@ spec:
                           - type: string
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
-                        description: 'Limits describes the maximum amount of compute
-                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        description: 'Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                         type: object
                       requests:
                         additionalProperties:
@@ -438,10 +471,7 @@ spec:
                           - type: string
                           pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                           x-kubernetes-int-or-string: true
-                        description: 'Requests describes the minimum amount of compute
-                          resources required. If Requests is omitted for a container,
-                          it defaults to Limits if that is explicitly specified, otherwise
-                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                         type: object
                     type: object
                   compression:
@@ -483,6 +513,12 @@ spec:
                     description: FullSnapshotSchedule defines the cron standard schedule
                       for full snapshots.
                     type: string
+                  enableProfiling:
+                    description: EnableProfiling defines if profiling should be enabled for the etcd-backup-restore-sidecar
+                    type: boolean
+                  etcdSnapshotTimeout:
+                    description: EtcdSnapshotTimeout defines the timeout duration for etcd FullSnapshot operation
+                    type: string
                   garbageCollectionPeriod:
                     description: GarbageCollectionPeriod defines the period for garbage
                       collecting old backups
@@ -498,16 +534,13 @@ spec:
                     description: Image defines the etcd container image and tag
                     type: string
                   ownerCheck:
-                    description: OwnerCheck defines parameters related to checking
-                      if the cluster owner, as specified in the owner DNS record,
-                      is the expected one.
+                    description: OwnerCheck defines parameters related to checking if the cluster owner, as specified in the owner DNS record, is the expected one.
                     properties:
                       dnsCacheTTL:
                         description: DNSCacheTTL is the DNS cache TTL for owner checks.
                         type: string
                       id:
-                        description: ID is the owner id value that is expected to
-                          be found in the owner DNS record.
+                        description: ID is the owner id value that is expected to be found in the owner DNS record.
                         type: string
                       interval:
                         description: Interval is the time interval between owner checks.
@@ -559,8 +592,7 @@ spec:
                       for storing backups.
                     properties:
                       container:
-                        description: Container is the name of the container the backup
-                          is stored at.
+                        description: Container is the name of the container the backup is stored at.
                         type: string
                       prefix:
                         description: Prefix is the prefix used for the store.
@@ -569,8 +601,7 @@ spec:
                         description: Provider is the name of the backup provider.
                         type: string
                       secretRef:
-                        description: SecretRef is the reference to the secret which
-                          used to connect to the backup store.
+                        description: SecretRef is the reference to the secret which used to connect to the backup store.
                         properties:
                           name:
                             description: Name is unique within a namespace to reference
@@ -651,13 +682,8 @@ spec:
                   clientPort:
                     format: int32
                     type: integer
-                  defragmentationSchedule:
-                    description: DefragmentationSchedule defines the cron standard
-                      schedule for defragmentation of etcd.
-                    type: string
                   etcdDefragTimeout:
-                    description: EtcdDefragTimeout defines the timeout duration for
-                      etcd defrag call
+                    description: EtcdDefragTimeout defines the timeout duration for etcd defrag call
                     type: string
                   image:
                     description: Image defines the etcd container image and tag
@@ -858,8 +884,7 @@ spec:
                 format: int32
                 type: integer
               conditions:
-                description: Conditions represents the latest available observations
-                  of an etcd's current state.
+                description: Conditions represents the latest available observations of an etcd's current state.
                 items:
                   description: Condition holds the information about the state of
                     a resource.
@@ -896,8 +921,7 @@ spec:
                   type: object
                 type: array
               currentReplicas:
-                description: CurrentReplicas is the current replica count for the
-                  etcd cluster.
+                description: CurrentReplicas is the current replica count for the etcd cluster.
                 format: int32
                 type: integer
               etcd:
@@ -915,8 +939,7 @@ spec:
                     type: string
                 type: object
               labelSelector:
-                description: LabelSelector is a label query over pods that should
-                  match the replica count. It must match the pod template's labels.
+                description: LabelSelector is a label query over pods that should match the replica count. It must match the pod template's labels.
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements.
@@ -965,27 +988,23 @@ spec:
               members:
                 description: Members represents the members of the etcd cluster
                 items:
-                  description: EtcdMemberStatus holds information about a etcd cluster
-                    membership.
+                  description: EtcdMemberStatus holds information about a etcd cluster membership.
                   properties:
                     id:
                       description: ID is the ID of the etcd member.
                       type: string
                     lastTransitionTime:
-                      description: LastTransitionTime is the last time the condition's
-                        status changed.
+                      description: LastTransitionTime is the last time the condition's status changed.
                       format: date-time
                       type: string
                     name:
-                      description: Name is the name of the etcd member. It is the
-                        name of the backing ` + "`" + "Pod" + "`" + `.
+                      description: Name is the name of the etcd member. It is the name of the backing Pod.
                       type: string
                     reason:
                       description: The reason for the condition's last transition.
                       type: string
                     role:
-                      description: Role is the role in the etcd cluster, either ` + "`" + "Leader" + "`" + `
-                        or ` + "`" + "Member" + "`" + `.
+                      description: Role is the role in the etcd cluster, either Leader or Member.
                       type: string
                     status:
                       description: Status of the condition, one of True, False, Unknown.
@@ -1006,8 +1025,7 @@ spec:
                 description: Ready represents the readiness of the etcd resource.
                 type: boolean
               readyReplicas:
-                description: ReadyReplicas is the count of replicas being ready in
-                  the etcd cluster.
+                description: ReadyReplicas is the count of replicas being ready in the etcd cluster.
                 format: int32
                 type: integer
               replicas:
@@ -1018,8 +1036,7 @@ spec:
                 description: ServiceName is the name of the etcd service.
                 type: string
               updatedReplicas:
-                description: UpdatedReplicas is the count of updated replicas in the
-                  etcd cluster.
+                description: UpdatedReplicas is the count of updated replicas in the etcd cluster.
                 format: int32
                 type: integer
             type: object

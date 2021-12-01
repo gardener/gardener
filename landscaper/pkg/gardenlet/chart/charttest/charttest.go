@@ -769,6 +769,20 @@ func ComputeExpectedGardenletConfiguration(
 			Namespace:   pointer.String(gardenletconfigv1alpha1.DefaultSNIIngresNamespace),
 			Labels:      map[string]string{"app": "istio-ingressgateway", "istio": "ingressgateway"},
 		}},
+		ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
+			ETCDController: &gardenletconfigv1alpha1.ETCDController{
+				Workers: pointer.Int64(3),
+			},
+			CustodianController: &gardenletconfigv1alpha1.CustodianController{
+				Workers: pointer.Int64(3),
+			},
+			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
+				Workers:                pointer.Int64(3),
+				EnableBackupCompaction: pointer.BoolPtr(true),
+				EventsThreshold:        pointer.Int64Ptr(1000000),
+				ActiveDeadlineDuration: &metav1.Duration{Duration: time.Hour * 3},
+			},
+		},
 	}
 
 	if componentConfigUsesTlsServerConfig {
@@ -815,7 +829,22 @@ func VerifyGardenletComponentConfigConfigMap(ctx context.Context, c client.Clien
 	// unmarshal Gardenlet Configuration from deployed Config Map
 	componentConfigYaml := componentConfigCm.Data["config.yaml"]
 	Expect(componentConfigYaml).ToNot(HaveLen(0))
-	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{}
+	gardenletConfig := &gardenletconfigv1alpha1.GardenletConfiguration{
+		ETCDConfig: &gardenletconfigv1alpha1.ETCDConfig{
+			ETCDController: &gardenletconfigv1alpha1.ETCDController{
+				Workers: pointer.Int64(3),
+			},
+			CustodianController: &gardenletconfigv1alpha1.CustodianController{
+				Workers: pointer.Int64(3),
+			},
+			BackupCompactionController: &gardenletconfigv1alpha1.BackupCompactionController{
+				Workers:                pointer.Int64(3),
+				EnableBackupCompaction: pointer.BoolPtr(true),
+				EventsThreshold:        pointer.Int64Ptr(1000000),
+				ActiveDeadlineDuration: &metav1.Duration{Duration: time.Hour * 3},
+			},
+		},
+	}
 	_, _, err := universalDecoder.Decode([]byte(componentConfigYaml), nil, gardenletConfig)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(*gardenletConfig).To(DeepEqual(expectedGardenletConfig))
