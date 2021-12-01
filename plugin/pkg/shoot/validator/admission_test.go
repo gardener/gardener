@@ -2142,26 +2142,26 @@ var _ = Describe("validator", func() {
 				BeforeEach(func() {
 					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
 						Raw: []byte(`{
-"kind": "InfrastructureConfig",
-"apiVersion": "azure.provider.extensions.gardener.cloud/__internal",
-"networks": {"vnet": {"cidr": "10.250.0.0/16"}}
-}`),
+						"kind": "InfrastructureConfig",
+						"apiVersion": "azure.provider.extensions.gardener.cloud/__internal",
+						"key": "value"
+						}`),
 					}
 
 					shoot.Spec.Provider.ControlPlaneConfig = &runtime.RawExtension{
 						Raw: []byte(`{
-"apiVersion": "aws.provider.extensions.gardener.cloud/__internal",
-"kind": "ControlPlaneConfig",
-"cloudControllerManager": {"featureGates": { "CustomResourceValidation": true}},
-"storage": {"managedDefaultClass": false}}`),
+						"apiVersion": "aws.provider.extensions.gardener.cloud/__internal",
+						"kind": "ControlPlaneConfig",
+						"key": "value"
+						}`),
 					}
 
 					shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
 						Raw: []byte(`{
-"apiVersion": "calico.networking.extensions.gardener.cloud/__internal",
-"kind": "NetworkConfig",
-"backend": "bird",
-"ipam": {"type": "host-local", "cidr": "usePodCIDR"}}`)}
+						"apiVersion": "calico.networking.extensions.gardener.cloud/__internal",
+						"kind": "NetworkConfig",
+						"key": "value"
+						}`)}
 
 					shoot.Spec.Provider.Workers = append(shoot.Spec.Provider.Workers, core.Worker{
 						Name: "worker-with-invalid-providerConfig",
@@ -2170,11 +2170,12 @@ var _ = Describe("validator", func() {
 							Image: &core.ShootMachineImage{
 								Name:    validMachineImageName,
 								Version: "0.0.1",
-								ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
-					"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/__internal",
-					"kind": "OperatingSystemConfiguration",
-					"memoryTopology": "3",
-					"systemMemory": "7x"}`)},
+								ProviderConfig: &runtime.RawExtension{
+									Raw: []byte(`{
+									"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/__internal",
+									"kind": "OperatingSystemConfiguration",
+									"key": "value"
+									}`)},
 							},
 						},
 						CRI: &core.CRI{
@@ -2182,10 +2183,12 @@ var _ = Describe("validator", func() {
 							ContainerRuntimes: []core.ContainerRuntime{
 								{
 									Type: "test-cr",
-									ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
-									"apiVersion": "some.api/__internal",
-									"kind": "ContainerRuntimeConfig",
-									"some-key": "some-value"}`)},
+									ProviderConfig: &runtime.RawExtension{
+										Raw: []byte(`{
+										"apiVersion": "some.api/__internal",
+										"kind": "ContainerRuntimeConfig",
+										"some-key": "some-value"
+										}`)},
 								},
 							},
 						},
@@ -2197,12 +2200,12 @@ var _ = Describe("validator", func() {
 							Type:       &volumeType,
 						},
 						Zones: []string{"europe-a"},
-						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
-"apiVersion": "aws.provider.extensions.gardener.cloud/__internal",
-"kind": "WorkerConfig",
-"volume": {"iops": 10000},
-"dataVolumes": [{"name": "kubelet-dir", "snapshotID": "snap-13234"}],
-"iamInstanceProfile": {"name": "my-profile", "arn": "my-instance-profile-arn"}}`)},
+						ProviderConfig: &runtime.RawExtension{
+							Raw: []byte(`{
+							"apiVersion": "aws.provider.extensions.gardener.cloud/__internal",
+							"kind": "WorkerConfig",
+							"key": "value"
+							}`)},
 					})
 				})
 
@@ -2243,53 +2246,55 @@ var _ = Describe("validator", func() {
 				It("admits new clusters using other apiVersion than 'internal'", func() {
 					shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
 						Raw: []byte(`{
-"kind": "InfrastructureConfig",
-"apiVersion": "azure.provider.extensions.gardener.cloud/v1",
-"networks": {"vnet": {"cidr": "10.250.0.0/16"}}
-}`),
+						"kind": "InfrastructureConfig",
+						"apiVersion": "azure.provider.extensions.gardener.cloud/v1",
+						"key": "value"
+						}`),
 					}
 
 					shoot.Spec.Provider.ControlPlaneConfig = &runtime.RawExtension{
 						Raw: []byte(`{
-"apiVersion": "aws.provider.extensions.gardener.cloud/v1alpha1",
-"kind": "ControlPlaneConfig",
-"cloudControllerManager": {"featureGates": { "CustomResourceValidation": true}},
-"storage": {"managedDefaultClass": false}}`),
+						"apiVersion": "aws.provider.extensions.gardener.cloud/v1alpha1",
+						"kind": "ControlPlaneConfig",
+						"key": "value"
+						}`),
 					}
 
 					shoot.Spec.Networking.ProviderConfig = &runtime.RawExtension{
 						Raw: []byte(`{
-"apiVersion": "calico.networking.extensions.gardener.cloud/v1alpha1",
-"kind": "NetworkConfig",
-"backend": "bird",
-"ipam": {"type": "host-local", "cidr": "usePodCIDR"}}`)}
+						"apiVersion": "calico.networking.extensions.gardener.cloud/v1alpha1",
+						"kind": "NetworkConfig",
+						"key": "value"
+						}`)}
 
 					shoot.Spec.Provider.Workers[1].Machine.Image = &core.ShootMachineImage{
 						Name:    validMachineImageName,
 						Version: "0.0.1",
 						ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
-					"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/v1alpha1",
-					"kind": "OperatingSystemConfiguration",
-					"memoryTopology": "3",
-					"systemMemory": "7x"}`)},
+						"apiVersion": "memoryone-chost.os.extensions.gardener.cloud/v1alpha1",
+						"kind": "OperatingSystemConfiguration",
+						"key": "value"
+						}`)},
 					}
 
-					shoot.Spec.Provider.Workers[1].ProviderConfig = &runtime.RawExtension{Raw: []byte(`{
-"apiVersion": "aws.provider.extensions.gardener.cloud/v1alpha1",
-"kind": "WorkerConfig",
-"volume": {"iops": 10000},
-"dataVolumes": [{"name": "kubelet-dir", "snapshotID": "snap-13234"}],
-"iamInstanceProfile": {"name": "my-profile", "arn": "my-instance-profile-arn"}}`)}
+					shoot.Spec.Provider.Workers[1].ProviderConfig = &runtime.RawExtension{
+						Raw: []byte(`{
+						"apiVersion": "aws.provider.extensions.gardener.cloud/v1alpha1",
+						"kind": "WorkerConfig",
+						"key": "value"
+						}`)}
 
 					shoot.Spec.Provider.Workers[1].CRI = &core.CRI{
 						Name: core.CRINameContainerD,
 						ContainerRuntimes: []core.ContainerRuntime{
 							{
 								Type: "test-cr",
-								ProviderConfig: &runtime.RawExtension{Raw: []byte(`{
+								ProviderConfig: &runtime.RawExtension{
+									Raw: []byte(`{
 									"apiVersion": "some.api/v1alpha1",
 									"kind": "ContainerRuntimeConfig",
-									"some-key": "some-value"}`)},
+									"key": "value"
+									}`)},
 							},
 						},
 					}
@@ -2307,10 +2312,8 @@ var _ = Describe("validator", func() {
 			It("allows RawExtensions to contain arbitrary json blobs", func() {
 				shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
 					Raw: []byte(`{
-"this": "is",
-"valid": "json",
-"key": {"object": {"objectKey": 1337}}
-}`),
+					"key": "value"
+					}`),
 				}
 
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
@@ -2326,10 +2329,8 @@ var _ = Describe("validator", func() {
 			It("doesn't throw an error when the passed json is invalid", func() {
 				shoot.Spec.Provider.InfrastructureConfig = &runtime.RawExtension{
 					Raw: []byte(`{
-"this": "is",
-invalid: "json",
-"key": {"object": {"objectKey": 1337}}
-}`),
+					"key": invalid-value
+					}`),
 				}
 
 				Expect(coreInformerFactory.Core().InternalVersion().Projects().Informer().GetStore().Add(&project)).To(Succeed())
