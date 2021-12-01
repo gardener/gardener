@@ -16,7 +16,9 @@ package vpnshoot_test
 
 import (
 	"context"
+	"sort"
 	"strconv"
+	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
 	resourcesv1alpha1 "github.com/gardener/gardener/pkg/apis/resources/v1alpha1"
@@ -262,14 +264,9 @@ status: {}
 				out := `apiVersion: apps/v1
 kind: Deployment
 metadata:
-  annotations:`
-				if !reversedVPNEnabled {
-					out += `
-    ` + references.AnnotationKey(references.KindSecret, secretNameDHTest) + `: ` + secretNameDHTest + ``
-				}
+  annotations:
+    ` + utils.Indent(getAnnotations(reversedVPNEnabled, secretNameTest, secretNameDHTest, secretNameTLSAuthTest), 4) + ``
 				out += `
-    ` + references.AnnotationKey(references.KindSecret, secretNameTest) + `: ` + secretNameTest + `
-    ` + references.AnnotationKey(references.KindSecret, secretNameTLSAuthTest) + `: ` + secretNameTLSAuthTest + `
   creationTimestamp: null
   labels:
     app: vpn-shoot
@@ -290,15 +287,9 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      annotations:`
-				if !reversedVPNEnabled {
-					out += `
-        ` + references.AnnotationKey(references.KindSecret, secretNameDHTest) + `: ` + secretNameDHTest + ``
-				}
-
+      annotations:
+        ` + utils.Indent(getAnnotations(reversedVPNEnabled, secretNameTest, secretNameDHTest, secretNameTLSAuthTest), 8) + ``
 				out += `
-        ` + references.AnnotationKey(references.KindSecret, secretNameTest) + `: ` + secretNameTest + `
-        ` + references.AnnotationKey(references.KindSecret, secretNameTLSAuthTest) + `: ` + secretNameTLSAuthTest + `
       creationTimestamp: null
       labels:
         app: vpn-shoot
@@ -655,3 +646,16 @@ status:
 		})
 	})
 })
+
+func getAnnotations(reversedVPNEnabled bool, secretNameTest, secretNameDHTest, secretNameTLSAuthTest string) string {
+	annotations := []string{
+		references.AnnotationKey(references.KindSecret, secretNameTest) + `: ` + secretNameTest,
+		references.AnnotationKey(references.KindSecret, secretNameTLSAuthTest) + `: ` + secretNameTLSAuthTest,
+	}
+	if !reversedVPNEnabled {
+		annotations = append(annotations, ``+references.AnnotationKey(references.KindSecret, secretNameDHTest)+`: `+secretNameDHTest+``)
+	}
+
+	sort.Strings(annotations)
+	return strings.Join(annotations, "\n")
+}
