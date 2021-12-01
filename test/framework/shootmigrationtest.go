@@ -20,6 +20,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
@@ -61,10 +62,11 @@ type ShootMigrationTest struct {
 
 // ShootMigrationConfig is the configuration for a shoot migration test that will be filled with user provided data
 type ShootMigrationConfig struct {
-	TargetSeedName string
-	SourceSeedName string
-	ShootName      string
-	ShootNamespace string
+	TargetSeedName  string
+	SourceSeedName  string
+	ShootName       string
+	ShootNamespace  string
+	AddTestRunTaint string
 }
 
 // ShootComparisonElements contains details about Machines and Nodes that will be compared during the tests
@@ -96,23 +98,30 @@ func (t *ShootMigrationTest) MigrateShoot(ctx context.Context) error {
 
 	t.MigrationTime = metav1.Now()
 	return t.GardenerFramework.MigrateShoot(ctx, &t.Shoot, t.TargetSeed, func(shoot *gardencorev1beta1.Shoot) error {
-		t := gardencorev1beta1.Toleration{}
-		t.Key = SeedTaintTestRun
-		t.Value = pointer.String(GetTestRunID())
-
-		if shoot.Spec.Tolerations == nil {
-			shoot.Spec.Tolerations = make([]gardencorev1beta1.Toleration, 0)
-		} else {
-			for _, t := range shoot.Spec.Tolerations {
-				if t.Key == SeedTaintTestRun {
-					return nil
-				}
-			}
+		shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, gardencorev1beta1.SeedTaintProtected, nil)
+		if applyTestRunTaint, err := strconv.ParseBool(t.Config.AddTestRunTaint); applyTestRunTaint && err == nil {
+			shoot.Spec.Tolerations = appendToleration(shoot.Spec.Tolerations, SeedTaintTestRun, pointer.String(GetTestRunID()))
 		}
-		shoot.Spec.Tolerations = append(shoot.Spec.Tolerations, t)
-
 		return nil
 	})
+}
+
+func appendToleration(tolerations []gardencorev1beta1.Toleration, key string, value *string) []gardencorev1beta1.Toleration {
+	toleration := gardencorev1beta1.Toleration{
+		Key:   key,
+		Value: value,
+	}
+	if tolerations == nil {
+		tolerations = make([]gardencorev1beta1.Toleration, 0)
+	} else {
+		for _, t := range tolerations {
+			if t.Key == key {
+				t.Value = value
+				return tolerations
+			}
+		}
+	}
+	return append(tolerations, toleration)
 }
 
 // GetNodeNames uses the shootClient to fetch all Node names from the Shoot
