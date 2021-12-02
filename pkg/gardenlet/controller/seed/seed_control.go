@@ -311,7 +311,7 @@ func (r *reconciler) reconcile(ctx context.Context, gardenClient client.Client, 
 		return err
 	}
 
-	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient, gutil.ComputeGardenNamespace(seed.Name), log)
+	gardenSecrets, err := garden.ReadGardenSecrets(ctx, gardenClient, gutil.ComputeGardenNamespace(seed.Name), log, true)
 	if err != nil {
 		conditionSeedBootstrapped = gardencorev1beta1helper.UpdatedCondition(conditionSeedBootstrapped, gardencorev1beta1.ConditionFalse, "GardenSecretsError", err.Error())
 		_ = r.patchSeedStatus(ctx, gardenClient, log, seed, seedKubernetesVersion, capacity, allocatable, conditionSeedBootstrapped)
