@@ -227,6 +227,9 @@ func NewGardener(ctx context.Context, cfg *config.ControllerManagerConfiguration
 		}
 	}
 
+	// This is like importing the automaxprocs package for its init func (it will in turn call maxprocs.Set).
+	// Here we pass a custom logger, so that the result of the library gets logged to the same logger we use for the
+	// component itself.
 	if _, err := maxprocs.Set(maxprocs.Logger(func(s string, i ...interface{}) {
 		log.Info(fmt.Sprintf(s, i...))
 	})); err != nil {
