@@ -1,5 +1,10 @@
-#!/bin/bash -eu
+#!/bin/bash
 
+set -o errexit
+set -o nounset
+set -o pipefail
+
+{
 SECRET_NAME="{{ .secretName }}"
 
 PATH_CLOUDCONFIG_DOWNLOADER_SERVER="{{ .pathCredentialsServer }}"
@@ -25,3 +30,6 @@ echo "$CHECKSUM" > "$PATH_CLOUDCONFIG_CHECKSUM"
 
 SCRIPT="$(echo "$SECRET" | sed -rn 's/  {{ .dataKeyScript }}: (.*)/\1/p')"
 echo "$SCRIPT" | base64 -d | bash
+
+exit $?
+}
