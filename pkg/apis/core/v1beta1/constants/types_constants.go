@@ -504,6 +504,8 @@ const (
 	BackupSecretName string = "etcd-backup"
 	// DataKeyBackupBucketName is the name of a data key whose value contains the backup bucket name.
 	DataKeyBackupBucketName string = "bucketName"
+	// BackupSourcePrefix is the prefix for names of resources related to source backupentries when copying backups.
+	BackupSourcePrefix = "source"
 
 	// GardenerAudience is the identifier for Gardener controllers when interacting with the API Server
 	GardenerAudience = "gardener"

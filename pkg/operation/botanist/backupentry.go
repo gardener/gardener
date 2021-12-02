@@ -18,11 +18,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gardener/gardener/extensions/pkg/controller/backupentry"
 	gardencorev1beta1 "github.com/gardener/gardener/pkg/apis/core/v1beta1"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/features"
 	gardenletfeatures "github.com/gardener/gardener/pkg/gardenlet/features"
 	corebackupentry "github.com/gardener/gardener/pkg/operation/botanist/component/backupentry"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -69,7 +70,7 @@ func (b *Botanist) SourceBackupEntry() corebackupentry.Interface {
 		b.K8sGardenClient.Client(),
 		&corebackupentry.Values{
 			Namespace:      b.Shoot.GetInfo().Namespace,
-			Name:           fmt.Sprintf("%s-%s", backupentry.SourcePrefix, b.Shoot.BackupEntryName),
+			Name:           fmt.Sprintf("%s-%s", v1beta1constants.BackupSourcePrefix, b.Shoot.BackupEntryName),
 			ShootPurpose:   b.Shoot.GetInfo().Spec.Purpose,
 			OwnerReference: ownerRef,
 			SeedName:       b.Shoot.GetInfo().Spec.SeedName,
