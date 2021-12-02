@@ -197,6 +197,12 @@ type SeedControllerConfiguration struct {
 	ConcurrentSyncs *int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod *metav1.Duration
+	// LeaseDurationSeconds defines how long the lease is valid (used for Lease.spec.leaseDurationSeconds).
+	// Default: 2s
+	LeaseDurationSeconds *int32
+	// LeaseResyncSeconds defines how often (in seconds) the seed lease is renewed.
+	// Default: 2s
+	LeaseResyncSeconds *int32
 }
 
 // ShootControllerConfiguration defines the configuration of the Shoot
@@ -224,12 +230,6 @@ type ShootControllerConfiguration struct {
 	// DNSEntryTTLSeconds is the TTL in seconds that is being used for DNS entries when reconciling shoots.
 	// Default: 120s
 	DNSEntryTTLSeconds *int64
-	// LeaseDurationSeconds defines how long the lease is valid (used for Lease.spec.leaseDurationSeconds).
-	//Default : 2s
-	LeaseDurationSeconds *int32
-	// LeaseResyncSeconds defines how often (in seconds) the seed lease is renewed.
-	//Default: 2s
-	LeaseResyncSeconds *int
 }
 
 // ShootCareControllerConfiguration defines the configuration of the ShootCare

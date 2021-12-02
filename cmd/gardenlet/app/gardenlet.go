@@ -426,7 +426,7 @@ func (g *Gardenlet) Run(ctx context.Context) error {
 	defer controllerCancel()
 
 	// Initialize /healthz manager.
-	healthGracePeriod := time.Duration(*g.Config.Controllers.Shoot.LeaseResyncSeconds*seed.LeaseResyncGracePeriod) * time.Second
+	healthGracePeriod := time.Duration(*g.Config.Controllers.Seed.LeaseResyncSeconds*seed.LeaseResyncGracePeriod) * time.Second
 	g.HealthManager = healthz.NewPeriodicHealthz(clock.RealClock{}, healthGracePeriod)
 
 	if g.CertificateManager != nil {

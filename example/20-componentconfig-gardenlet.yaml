@@ -63,6 +63,8 @@ controllers:
   seed:
     concurrentSyncs: 5
     syncPeriod: 1m
+  # leaseDurationSeconds: 2
+  # leaseResyncSeconds: 2
   managedSeed:
     concurrentSyncs: 5
     syncPeriod: 1h

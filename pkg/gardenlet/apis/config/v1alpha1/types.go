@@ -243,6 +243,14 @@ type SeedControllerConfiguration struct {
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	// +optional
 	SyncPeriod *metav1.Duration `json:"syncPeriod,omitempty"`
+	// LeaseDurationSeconds defines how long the lease is valid (used for Lease.spec.leaseDurationSeconds).
+	// Defaults to 2
+	// +optional
+	LeaseDurationSeconds *int32 `json:"leaseDurationSeconds,omitempty"`
+	// LeaseResyncSeconds defines how often (in seconds) the seed lease is renewed.
+	// Defaults to 2
+	// +optional
+	LeaseResyncSeconds *int32 `json:"leaseResyncSeconds,omitempty"`
 }
 
 // ShootControllerConfiguration defines the configuration of the Shoot
@@ -277,13 +285,6 @@ type ShootControllerConfiguration struct {
 	// Default: 120s
 	// +optional
 	DNSEntryTTLSeconds *int64 `json:"dnsEntryTTLSeconds,omitempty"`
-
-	//adding the below line for my next task
-	// LeaseDurationSeconds defines how long the lease is valid (used for Lease.spec.leaseDurationSeconds).
-	LeaseDurationSeconds *int32 `json:"leaseDurationSeconds,omitempty" protobuf:"varint,2,opt,name=leaseDurationSeconds"`
-
-	// LeaseResyncSeconds defines how often (in seconds) the seed lease is renewed.
-	LeaseResyncSeconds *int `json:"leaseResyncSeconds,omitempty"`
 }
 
 // ShootCareControllerConfiguration defines the configuration of the ShootCare

@@ -112,8 +112,8 @@ var _ = Describe("LeaseReconciler", func() {
 
 		gardenletConf = &config.GardenletConfiguration{
 			Controllers: &config.GardenletControllerConfiguration{
-				Shoot: &config.ShootControllerConfiguration{
-					LeaseResyncSeconds:   pointer.Int(2),
+				Seed: &config.SeedControllerConfiguration{
+					LeaseResyncSeconds:   pointer.Int32(2),
 					LeaseDurationSeconds: pointer.Int32(2),
 				},
 			},
@@ -170,7 +170,7 @@ var _ = Describe("LeaseReconciler", func() {
 
 	It("reques after the LeaseResync duration successfully", func() {
 		expectedCondition = gardenletReadyCondition()
-		gardenletConf.Controllers.Shoot.LeaseResyncSeconds = pointer.Int(4)
+		gardenletConf.Controllers.Seed.LeaseResyncSeconds = pointer.Int32(4)
 		Expect(reconciler.Reconcile(ctx, request)).To(Equal(reconcile.Result{RequeueAfter: 4 * time.Second}))
 		Expect(healthManager.Get()).To(BeTrue())
 	})
@@ -179,7 +179,7 @@ var _ = Describe("LeaseReconciler", func() {
 		expectedCondition = gardenletReadyCondition()
 		expectedLease.Spec.LeaseDurationSeconds = pointer.Int32(3)
 
-		gardenletConf.Controllers.Shoot.LeaseDurationSeconds = pointer.Int32(3)
+		gardenletConf.Controllers.Seed.LeaseDurationSeconds = pointer.Int32(3)
 		request = reconcile.Request{NamespacedName: client.ObjectKeyFromObject(seed)}
 
 		_, err := reconciler.Reconcile(ctx, request)

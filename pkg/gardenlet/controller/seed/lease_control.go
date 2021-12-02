@@ -95,7 +95,7 @@ func (r *leaseReconciler) Reconcile(ctx context.Context, request reconcile.Reque
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{RequeueAfter: time.Duration(*r.config.Controllers.Shoot.LeaseResyncSeconds) * time.Second}, nil
+	return reconcile.Result{RequeueAfter: time.Duration(*r.config.Controllers.Seed.LeaseResyncSeconds) * time.Second}, nil
 }
 
 func (r *leaseReconciler) reconcile(ctx context.Context, gardenClient client.Client, seed *gardencorev1beta1.Seed) error {
@@ -191,7 +191,7 @@ func (r *leaseReconciler) newOrRenewedLease(lease *coordinationv1.Lease, holderI
 	lease.OwnerReferences = []metav1.OwnerReference{ownerReference}
 	lease.Spec = coordinationv1.LeaseSpec{
 		HolderIdentity:       pointer.String(holderIdentity),
-		LeaseDurationSeconds: r.config.Controllers.Shoot.LeaseDurationSeconds,
+		LeaseDurationSeconds: r.config.Controllers.Seed.LeaseDurationSeconds,
 		RenewTime:            &metav1.MicroTime{Time: r.nowFunc().Time},
 	}
 	return lease

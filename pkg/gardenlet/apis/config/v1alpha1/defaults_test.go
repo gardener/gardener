@@ -184,6 +184,23 @@ var _ = Describe("Defaults", func() {
 		})
 	})
 
+	Describe("#SetDefaults_SeedControllerConfiguration", func() {
+		var obj *SeedControllerConfiguration
+
+		BeforeEach(func() {
+			obj = &SeedControllerConfiguration{}
+		})
+
+		It("should default the configuration", func() {
+			SetDefaults_SeedControllerConfiguration(obj)
+
+			Expect(obj.ConcurrentSyncs).To(PointTo(Equal(DefaultControllerConcurrentSyncs)))
+			Expect(obj.SyncPeriod).To(PointTo(Equal(DefaultControllerSyncPeriod)))
+			Expect(obj.LeaseResyncSeconds).To(PointTo(Equal(int32(2))))
+			Expect(obj.LeaseDurationSeconds).To(PointTo(Equal(int32(2))))
+		})
+	})
+
 	Describe("#SetDefaults_ShootControllerConfiguration", func() {
 		var obj *ShootControllerConfiguration
 
@@ -200,8 +217,6 @@ var _ = Describe("Defaults", func() {
 			Expect(obj.ReconcileInMaintenanceOnly).To(PointTo(Equal(false)))
 			Expect(obj.RetryDuration).To(PointTo(Equal(metav1.Duration{Duration: 12 * time.Hour})))
 			Expect(obj.DNSEntryTTLSeconds).To(PointTo(Equal(int64(120))))
-			Expect(obj.LeaseResyncSeconds).To(PointTo(Equal(2)))
-			Expect(obj.LeaseDurationSeconds).To(PointTo(Equal(int32(2))))
 		})
 	})
 
