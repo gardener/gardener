@@ -180,7 +180,7 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 			if c.dnsRecord.Status.LastOperation != nil && c.dnsRecord.Status.LastOperation.State != gardencorev1beta1.LastOperationStateSucceeded {
 				// If the DNSRecord is not yet Succeeded, reconcile it again.
 				_ = mutateFn()
-			} else if c.ValuesHaveChanged() {
+			} else if c.valuesDontMatchDNSRecord() {
 				_ = mutateFn()
 			} else {
 				// Otherwise, just update the timestamp annotation.
@@ -279,7 +279,7 @@ func (c *dnsRecord) SetValues(values []string) {
 	c.values.Values = values
 }
 
-func (c *dnsRecord) ValuesHaveChanged() bool {
+func (c *dnsRecord) valuesDontMatchDNSRecord() bool {
 	return c.values.SecretName != c.dnsRecord.Spec.SecretRef.Name ||
 		!pointer.StringEqual(c.values.Zone, c.dnsRecord.Spec.Zone) ||
 		c.values.DNSName != c.dnsRecord.Spec.Name ||
