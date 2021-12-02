@@ -221,11 +221,11 @@ var _ = Describe("DNSRecord", func() {
 			Expect(dnsRecord.Deploy(ctx)).To(MatchError(testErr))
 		})
 
-		Context("When ReconcileOnValueChangeOnly is true", func() {
+		Context("When ReconcileOnChange is true", func() {
 			var expectedDNSRecord *extensionsv1alpha1.DNSRecord
 
 			BeforeEach(func() {
-				values.ReconcileOnValueChangeOnly = true
+				values.ReconcileOnChange = true
 
 				expectedDNSRecord = &extensionsv1alpha1.DNSRecord{
 					TypeMeta: metav1.TypeMeta{
@@ -244,7 +244,7 @@ var _ = Describe("DNSRecord", func() {
 				expectedDNSRecord.ResourceVersion = "2"
 			})
 
-			It("should deploy the DNSRecord resource if ReconcileOnValueChangeOnly is true and the DNSRecord is not found", func() {
+			It("should deploy the DNSRecord resource if ReconcileOnChange is true and the DNSRecord is not found", func() {
 				expectedDNSRecord.ResourceVersion = "1"
 
 				Expect(dnsRecord.Deploy(ctx)).To(Succeed())
@@ -255,7 +255,7 @@ var _ = Describe("DNSRecord", func() {
 				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 			})
 
-			It("should deploy the DNSRecord resource if ReconcileOnValueChangeOnly is true and the DNSRecord is not Succeeded", func() {
+			It("should deploy the DNSRecord resource if ReconcileOnChange is true and the DNSRecord is not Succeeded", func() {
 				existingDNS := dns.DeepCopy()
 				delete(existingDNS.Annotations, v1beta1constants.GardenerOperation)
 				metav1.SetMetaDataAnnotation(&existingDNS.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())
@@ -280,7 +280,7 @@ var _ = Describe("DNSRecord", func() {
 				Expect(deployedDNS).To(DeepEqual(expectedDNSRecord))
 			})
 
-			It("should only update the timestamp annotation if ReconcileOnValueChangeOnly is true and the DNSRecord exists with the same values", func() {
+			It("should only update the timestamp annotation if ReconcileOnChange is true and the DNSRecord exists with the same values", func() {
 				delete(dns.Annotations, v1beta1constants.GardenerOperation)
 				// set old timestamp (e.g. added on creation / earlier Deploy call)
 				metav1.SetMetaDataAnnotation(&dns.ObjectMeta, v1beta1constants.GardenerTimestamp, now.UTC().Add(-time.Second).String())

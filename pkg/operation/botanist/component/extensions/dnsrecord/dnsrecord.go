@@ -64,10 +64,9 @@ type Values struct {
 	Name string
 	// SecretName is the name of the secret referenced by the DNSRecord resource.
 	SecretName string
-	// ReconcileOnValueChangeOnly specifies that the DNSRecord resource should only be created and only reconciled when Values are changed.
-	// If Values didn't change, it is still updated with the timestamp annotation on Deploy.
-	// This mode is used for owner DNS records to avoid competing reconciliations during controlplane migrations.
-	ReconcileOnValueChangeOnly bool
+	// ReconcileOnChange specifies that the DNSRecord resource should only be reconciled when first created or if its desired state has changed compared to the current one.
+	// This mode is used for owner DNS records to avoid competing reconciliations during the control plane migration "bad case" scenario.
+	ReconcileOnChange bool
 	// Type is the type of the DNSRecord provider.
 	Type string
 	// SecretData is the secret data of the DNSRecord (containing provider credentials, etc.)
@@ -165,7 +164,7 @@ func (c *dnsRecord) deploy(ctx context.Context, operation string) (extensionsv1a
 		return nil
 	}
 
-	if c.values.ReconcileOnValueChangeOnly {
+	if c.values.ReconcileOnChange {
 		if err := c.client.Get(ctx, client.ObjectKeyFromObject(c.dnsRecord), c.dnsRecord); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return nil, err
