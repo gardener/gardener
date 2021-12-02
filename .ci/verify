@@ -42,7 +42,7 @@ if [ $use_cache = yes ] ; then
   done
 
   # run test instead of test-cov to speed-up PR verification as `-cover` flag is not "cacheable"
-  make check-generate verify
+  make check-generate verify check-docforge
 
   echo "> moving all cached dirs back to concourse cache dir"
   for cache in "${cache_dirs[@]}" ; do

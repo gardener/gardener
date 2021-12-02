@@ -22,6 +22,7 @@
 HACK_PKG_PATH              := $(shell go list -tags tools -f '{{ .Dir }}' github.com/gardener/gardener/hack)
 TOOLS_BIN_DIR              := $(TOOLS_DIR)/bin
 CONTROLLER_GEN             := $(TOOLS_BIN_DIR)/controller-gen
+DOCFORGE                   := $(TOOLS_BIN_DIR)/docforge
 GEN_CRD_API_REFERENCE_DOCS := $(TOOLS_BIN_DIR)/gen-crd-api-reference-docs
 GOIMPORTS                  := $(TOOLS_BIN_DIR)/goimports
 GOLANGCI_LINT              := $(TOOLS_BIN_DIR)/golangci-lint
@@ -39,6 +40,7 @@ YQ                         := $(TOOLS_BIN_DIR)/yq
 GOLANGCI_LINT_VERSION ?= v1.42.1
 HELM_VERSION ?= v3.5.4
 YQ_VERSION ?= v4.9.6
+DOCFORGE_VERSION ?= v0.21.0
 
 export TOOLS_BIN_DIR := $(TOOLS_BIN_DIR)
 export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
@@ -110,3 +112,7 @@ $(YAML2JSON): go.mod
 $(YQ): $(call tool_version_file,$(YQ),$(YQ_VERSION))
 	curl -L -o $(YQ) https://github.com/mikefarah/yq/releases/download/$(YQ_VERSION)/yq_$(shell uname -s | tr '[:upper:]' '[:lower:]')_$(shell uname -m | sed 's/x86_64/amd64/')
 	chmod +x $(YQ)
+
+$(DOCFORGE): $(call tool_version_file,$(DOCFORGE),$(DOCFORGE_VERSION))
+	curl -L -o $(DOCFORGE) https://github.com/gardener/docforge/releases/download/$(DOCFORGE_VERSION)/docforge-$(shell uname -s | tr '[:upper:]' '[:lower:]')-$(shell uname -m | sed 's/x86_64/amd64/')
+	chmod +x $(DOCFORGE)
